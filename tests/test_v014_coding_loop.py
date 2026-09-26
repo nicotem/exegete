@@ -828,7 +828,10 @@ class TestComparingCodersSaysWhatItCannotShow:
              "coded_by": "AI Coding Assistant"}]
         assert out["files_coded_by_neither"] == 0
         assert any("not a decision" in n for n in out["notes"])
-        assert any("intercoder reliability" in n for n in out["notes"])
+        ai_note = next(n for n in out["notes"] if "this server's AI" in n)
+        assert "the suggestions the person approved" in ai_note
+        assert "every visible coder's codings" in ai_note
+        assert "intercoder reliability" in ai_note
 
     def test_narrowed_to_one_file_only_that_file_is_named(
             self, setup_server, qualcoder_db_path):
@@ -865,3 +868,48 @@ class TestComparingCodersSaysWhatItCannotShow:
             assert "every visible coder's codings" in text
             assert "not a decision" in text
             assert "intercoder reliability" in text
+
+
+# =============================================================================
+# A PROMISE THE WHOLE LOOP RESTS ON (the claims audit's "true today, but
+# nothing keeps it true", 3): only approved items are written
+# =============================================================================
+
+class TestOnlyApprovedItemsAreWritten:
+
+    def test_apply_codings_writes_the_approved_and_nothing_else(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        rec = record(sid, item(),                               # approved
+                     item(text=COPE, code="Coping"),            # rejected
+                     item(text="This is interview text."))      # pending
+        yes, no, _ = [r["guid"] for r in rec["recorded"]]
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[yes], reject=[no])
+        assert "CODINGS APPLIED" in call("apply_codings",
+                                         coding_session_id=sid,
+                                         create_backup=False)
+        written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
+                       "WHERE owner = 'AI Coding Assistant'")
+        assert written == [{"seltext": STRESSED}]
+
+    def test_create_proposed_codes_creates_the_approved_and_nothing_else(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        out = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": n, "example_segments": [
+                {"file_id": 1, "segment_text": t}]}
+            for n, t in (("Yes code", STRESSED), ("No code", COPE),
+                         ("Later code", "This is interview text."))])
+        yes, no, _ = [r["guid"] for r in out["recorded"]]
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[yes], reject=[no])
+        created = jcall("create_proposed_codes", coding_session_id=sid,
+                        apply_coded_segments=True, create_backup=False)
+        assert created.get("success"), created
+        names = {r["name"] for r in rows(qualcoder_db_path,
+                                         "SELECT name FROM code_name")}
+        assert names == {"Stress", "Coping", "Yes code"}
+        written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
+                       "WHERE owner = 'AI Coding Assistant'")
+        assert written == [{"seltext": STRESSED}]

@@ -269,10 +269,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error with no SQLite name (Python 3.10's shape) on every interpreter.
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
-  creation of projects and the handling of existing projects: full =
-  173,612 characters (about 43.4k tokens at chars/4) over 73 tools,
-  core = 58,133 (about 14.5k) over 21, and the new opt-in lifecycle set
-  = 176,094 (about 44.0k) over 74. Moved by `pseudonymise_source`'s
+  creation of projects, the handling of existing projects and the AI
+  coding loop: full = 178,849 characters (about 44.7k tokens at
+  chars/4) over 73 tools, core = 61,264 (about 15.3k) over 21, and the
+  new opt-in lifecycle set = 181,331 (about 45.3k) over 74. The coding
+  loop moved it by 5,237 characters in `full` and 3,131 in `core`:
+  `analyze_for_coding`'s description now says what it does and what a
+  session's scope refuses, `record_suggestions`' asks for `support`,
+  `review_suggestions`', `edit_suggestion`'s, `update_suggestion_status`'s
+  (the new `reopen`), `analyze_file_with_coding`'s and `delete_coding`'s
+  say what they do (all in `core`), and `compare_coders`',
+  `cleanup_old_sessions`' and the proposal tools' descriptions grew
+  (not in `core`). Moved before that by `pseudonymise_source`'s
   description (privacy, and the caveat for two people who share a
   name; not in `core`), by `set_memo`'s, `set_project_ai_coder_name`'s,
   `select_project`'s and `get_current_project`'s (creating a project;
@@ -282,8 +290,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pseudonymise_source`'s own share now rounds to 19,000, from 18,000.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 182,532, 61,185 and
-  185,150.
+  on Python 3.11.13, in the repository's `.venv/`, 188,077, 64,488 and
+  190,695.
 
 ### Changed: the AI coding loop says what it does
 

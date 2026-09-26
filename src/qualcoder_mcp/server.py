@@ -816,24 +816,57 @@ def switch_project(project_path: str, read_only: bool = True) -> None:
         FileNotFoundError: If file doesn't exist
         RuntimeError: If database connection fails
     """
-    global db, current_project_path
+    # The new project is opened BEFORE the old connection is closed (v0.14,
+    # the claims audit's item 8), as get_db's read-write upgrade already
+    # does: a project that fails to open raises here and leaves the
+    # previous selection exactly as it was, connection and all. It used
+    # to close the old connection first, so a failed switch left the old
+    # project selected with no connection, and the next tool reconnected
+    # to it without a word.
+    _install_project(QualcoderDatabase(project_path, read_only=read_only),
+                     project_path)
 
-    # Close existing connection
-    if db is not None:
+
+def _install_project(new_db: QualcoderDatabase, project_path: str) -> None:
+    """Make an opened project the selected one, then close the previous
+    connection."""
+    global db, current_project_path
+    old_db, db = db, new_db
+    current_project_path = project_path
+    if old_db is not None and old_db is not new_db:
         try:
-            db.close()
+            old_db.close()
         except Exception as e:
             logger.warning("Error closing previous connection: %s",
                            error_label(e))
-        finally:
-            db = None
-
-    # Connect to new project (read-only by default)
-    db = QualcoderDatabase(project_path, read_only=read_only)
-    current_project_path = project_path
     # No project folder name in the log (v0.14): a single-case study is
     # often named after its participant, and the host keeps the log.
-    logger.info("Switched to the selected project (read_only=%s)", read_only)
+    logger.info("Switched to the selected project (read_only=%s)",
+                new_db.read_only)
+
+
+def project_display_name(project_path: Any) -> str:
+    """A project's name as the researcher knows it: its folder's name
+    without ".qda", whether the path names the folder or the data.qda
+    inside it (v0.14: a project selected by its data.qda was called
+    "data")."""
+    path = Path(str(project_path))
+    if path.name.lower() == "data.qda" and path.parent.suffix.lower() == ".qda":
+        path = path.parent
+    return path.stem
+
+
+def _selection_after_failure(previous: Optional[str]) -> Tuple[str, Any]:
+    """What a failed select_project says about the selection it leaves:
+    the sentence that ends its answer, and the name for its
+    `selected_project` (null when none)."""
+    if current_project_path is None:
+        return "No project is selected.", None
+    name = project_display_name(current_project_path)
+    if current_project_path == previous:
+        return (f"The previously selected project, {name}, is still "
+                f"selected."), name
+    return f"The project {name} is selected.", name
 
 
 def get_db(read_only: bool = True) -> QualcoderDatabase:
@@ -2951,7 +2984,11 @@ def select_project(project_path: str) -> str:
     If the database cannot be opened, the error says whether project-scoped
     evidence suggests an open QualCoder window (a mid-write 4.0 window can
     leave a hot journal) and otherwise points to a damaged database or a
-    backup restore.
+    backup restore. A switch that fails changes nothing: the previously
+    selected project stays selected, and every failed answer ends by
+    naming it ("The previously selected project, <name>, is still
+    selected.") or saying that no project is selected, with the name
+    under `selected_project`; a write you make next lands there.
 
     A successful selection is recorded as this machine's most recently used
     project (~/.qualcoder_mcp/mru_project.json) so that a later "no project
@@ -2967,135 +3004,152 @@ def select_project(project_path: str) -> str:
         `qualcoder_gui_signals`, and possibly a `warning` to pass on to
         the user
     """
+    previous = current_project_path
     try:
-        switch_project(project_path)
-
-        # Get basic info about the newly opened project
-        project_info = get_db().get_project_info()
-
-        result = {
-            "success": True,
-            "message": f"Switched to project: {Path(project_path).stem}",
-            "project_path": project_path,
-            "project_name": Path(project_path).stem,
-            "project_info": project_info
-        }
-        # A session that starts with a selection learns the AI coder name
-        # state at once, rather than discovering it at the first write.
-        result.update(_ai_coder_name_report())
-
-        # P1-6: remember the selection for the MRU recovery hint (the
-        # canonical data.qda path, which select_project accepts back)
-        _remember_mru_project(str(validate_qda_path(project_path)))
-
-        warnings = []
-
-        # Reads are safe while QualCoder is open, but warn: data may change
-        # underneath, and writes will be refused until QualCoder closes it
-        state, holder = qualcoder_lock_state(_current_project_folder())
-        if state == "active":
-            warnings.append(
-                f"QualCoder currently has this project open (user "
-                f"{holder or 'unknown'}). Ask the user to close the project "
-                f"in QualCoder before any coding they intend to save; all "
-                f"write operations will be refused until it is closed. Reads "
-                f"work but may return changing data."
-            )
-        else:
-            # C5/T17 + P1-5: only released QualCoder (3.x) signals "open"
-            # via the lock file; 4.0 removed the protocol, so detection
-            # falls back to best-effort heuristics (WARN rung only; the
-            # C7 in-transaction fingerprints stay the write-time backstop)
-            signals = qualcoder_gui_signals(_current_project_folder())
-            result["qualcoder_gui_signals"] = signals
-            if signals:
-                warnings.append(
-                    "This project APPEARS to be open in QualCoder: "
-                    + "; ".join(signals) + ". This is a heuristic (4.0 "
-                    "writes no lock file), so confirm with the user before "
-                    "any write. Also note: an open QualCoder 4.0 window "
-                    "will not display external changes until the project "
-                    "is reopened there."
-                )
-            else:
-                warnings.append(
-                    "Lock-gate limitation: QualCoder 4.0 builds write no "
-                    "lock file, so 4.0 detection is best-effort (no "
-                    "open-GUI signals right now; an idle 4.0 window with "
-                    "no recent AI activity leaves no file trace, so only "
-                    "the process scan could see it). Confirm with the "
-                    "user that no QualCoder window has this project open "
-                    "before writing."
-                )
-
-        # QualCoder's own open check requires "QualCoder" in project.about
-        # and refuses otherwise ("This is not a QualCoder database") —
-        # warn so the user knows QualCoder itself will not open this
-        # project (COMPAT V3)
-        if not getattr(get_db(), "qualcoder_about_ok", True):
-            warnings.append(
-                "This database does not identify itself as a QualCoder "
-                "project (project.about does not contain 'QualCoder'). "
-                "QualCoder itself would refuse to open it with 'This is "
-                "not a QualCoder database'."
-            )
-        if "|" in str(validate_qda_path(project_path)):
-            warnings.append(PIPE_PATH_WARNING)
-
-        if warnings:
-            result["warning"] = " | ".join(warnings)
-
-        return _ai_json(result, indent=2)
-
+        answer = _select_project(project_path)
     except DatabaseLockedError as e:
         logger.error("Project locked during select: %s", error_label(e))
-        return json.dumps({
-            "success": False,
-            "error": str(e)
-        })
+        answer = {"success": False, "error": str(e)}
     except UnsupportedSchemaError as e:
         logger.error("Unsupported schema during select: %s",
                      error_label(e))
-        return json.dumps({
-            "success": False,
-            "error": str(e)
-        })
+        answer = {"success": False, "error": str(e)}
     except (ValueError, FileNotFoundError) as e:
         # The kind only (v0.14): the message is the path, the project
         # folder's name in it
         logger.error("Failed to select project: %s", error_label(e))
-        if isinstance(e, DatabaseOpenError):
-            # The path IS a well-formed project, but SQLite refused its
-            # data.qda at validation time: a hot journal left by a 4.0
-            # window mid-write, or genuine corruption. Project-scoped
-            # heuristics choose the wording; the damaged-database
-            # advice is always kept (P1-5; QA round 1, F3/F22).
-            return json.dumps(_project_open_failure_result(project_path))
-        note = _unusable_folder_note(project_path)
-        if note is not None:
-            return json.dumps({
-                "success": False,
-                "error": note + " Use 'list_available_projects' to find "
-                                "valid projects."})
-        # A wrong or malformed path: no heuristic can explain it, so the
-        # deterministic recovery hint stays exactly as it was
-        return json.dumps({
-            "success": False,
-            "error": "Invalid project path or project not found. "
-                     "Use 'list_available_projects' to find valid projects."
-        })
+        answer = _select_project_refusal(project_path,
+                                         isinstance(e, DatabaseOpenError))
     except sqlite3.Error as e:
         # e.g. "database disk image is malformed" surfacing mid-read (F3)
         logger.error("SQLite error while opening project: %s",
                      error_label(e))
-        return json.dumps(_project_open_failure_result(project_path))
+        answer = _project_open_failure_result(project_path)
     except RuntimeError as e:
         logger.error("Failed to open project database: %s",
                      error_label(e))
-        return json.dumps({
-            "success": False,
-            "error": "Failed to open project database"
-        })
+        answer = {"success": False,
+                  "error": "Failed to open project database"}
+    if answer.get("success") is False:
+        # Every failed switch ends by saying what is selected now (v0.14,
+        # the claims audit's item 8): the previous project, still open,
+        # or none. A write the assistant makes next lands there.
+        sentence, name = _selection_after_failure(previous)
+        answer["error"] = f"{answer['error']} {sentence}"
+        answer["selected_project"] = name
+        return json.dumps(answer)
+    return _ai_json(answer, indent=2)
+
+
+def _select_project(project_path: str) -> Dict[str, Any]:
+    """select_project's work: the new project is opened and read before it
+    replaces the selection, so any failure up to that point leaves the
+    previous project selected and its connection open."""
+    new_db = QualcoderDatabase(project_path, read_only=True)
+    try:
+        # Get basic info about the project before it is selected
+        project_info = new_db.get_project_info()
+    except BaseException:
+        new_db.close()
+        raise
+    _install_project(new_db, project_path)
+    name = project_display_name(project_path)
+    result = {
+        "success": True,
+        "message": f"Switched to project: {name}",
+        "project_path": project_path,
+        "project_name": name,
+        "project_info": project_info
+    }
+    # A session that starts with a selection learns the AI coder name
+    # state at once, rather than discovering it at the first write.
+    result.update(_ai_coder_name_report())
+
+    # P1-6: remember the selection for the MRU recovery hint (the
+    # canonical data.qda path, which select_project accepts back)
+    _remember_mru_project(str(validate_qda_path(project_path)))
+
+    warnings = []
+
+    # Reads are safe while QualCoder is open, but warn: data may change
+    # underneath, and writes will be refused until QualCoder closes it
+    state, holder = qualcoder_lock_state(_current_project_folder())
+    if state == "active":
+        warnings.append(
+            f"QualCoder currently has this project open (user "
+            f"{holder or 'unknown'}). Ask the user to close the project "
+            f"in QualCoder before any coding they intend to save; all "
+            f"write operations will be refused until it is closed. Reads "
+            f"work but may return changing data."
+        )
+    else:
+        # C5/T17 + P1-5: only released QualCoder (3.x) signals "open"
+        # via the lock file; 4.0 removed the protocol, so detection
+        # falls back to best-effort heuristics (WARN rung only; the
+        # C7 in-transaction fingerprints stay the write-time backstop)
+        signals = qualcoder_gui_signals(_current_project_folder())
+        result["qualcoder_gui_signals"] = signals
+        if signals:
+            warnings.append(
+                "This project APPEARS to be open in QualCoder: "
+                + "; ".join(signals) + ". This is a heuristic (4.0 "
+                "writes no lock file), so confirm with the user before "
+                "any write. Also note: an open QualCoder 4.0 window "
+                "will not display external changes until the project "
+                "is reopened there."
+            )
+        else:
+            warnings.append(
+                "Lock-gate limitation: QualCoder 4.0 builds write no "
+                "lock file, so 4.0 detection is best-effort (no "
+                "open-GUI signals right now; an idle 4.0 window with "
+                "no recent AI activity leaves no file trace, so only "
+                "the process scan could see it). Confirm with the "
+                "user that no QualCoder window has this project open "
+                "before writing."
+            )
+
+    # QualCoder's own open check requires "QualCoder" in project.about
+    # and refuses otherwise ("This is not a QualCoder database") —
+    # warn so the user knows QualCoder itself will not open this
+    # project (COMPAT V3)
+    if not getattr(get_db(), "qualcoder_about_ok", True):
+        warnings.append(
+            "This database does not identify itself as a QualCoder "
+            "project (project.about does not contain 'QualCoder'). "
+            "QualCoder itself would refuse to open it with 'This is "
+            "not a QualCoder database'."
+        )
+    if "|" in str(validate_qda_path(project_path)):
+        warnings.append(PIPE_PATH_WARNING)
+
+    if warnings:
+        result["warning"] = " | ".join(warnings)
+
+    return result
+
+
+def _select_project_refusal(project_path: str,
+                            would_not_open: bool) -> Dict[str, Any]:
+    """The answer for a path select_project could not use."""
+    if would_not_open:
+        # The path IS a well-formed project, but SQLite refused its
+        # data.qda at validation time: a hot journal left by a 4.0
+        # window mid-write, or genuine corruption. Project-scoped
+        # heuristics choose the wording; the damaged-database advice is
+        # always kept (P1-5; QA round 1, F3/F22).
+        return _project_open_failure_result(project_path)
+    note = _unusable_folder_note(project_path)
+    if note is not None:
+        return {"success": False,
+                "error": note + " Use 'list_available_projects' to find "
+                                "valid projects."}
+    # A wrong or malformed path: no heuristic can explain it, so the
+    # deterministic recovery hint stays exactly as it was
+    return {"success": False,
+            "error": "Invalid project path or project not found. "
+                     "Use 'list_available_projects' to find valid "
+                     "projects."}
 
 
 # The setter's warning when the project's own coder name is not known

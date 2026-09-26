@@ -1331,9 +1331,15 @@ class TestResourcesLogNothingOverTheWire:
         assert str(wire.research) not in error
 
     def test_a_lost_connection(self, tmp_path):
-        """Selected; a mistyped second selection drops the connection; the
-        next read tries to reconnect while another program holds the
-        database, fails, and answers the no-project text with its hint."""
+        """Selected; a mistyped second selection; the next read while
+        another program holds the database.
+
+        Until v0.14 the mistyped selection dropped the connection, and
+        the read tried to reconnect and answered the no-project text.
+        Since v0.14 (server-wide, the claims audit's item 8) a failed
+        switch keeps the project selected and its connection open, so
+        the read answers the database's own fixed text; the log names
+        nothing either way."""
         import contextlib
         wire = _Wire(tmp_path)
 
@@ -1357,11 +1363,10 @@ class TestResourcesLogNothingOverTheWire:
             steps, during=lambda i: held() if i == 2
             else contextlib.nullcontext())
         assert json.loads(answers[1])["success"] is False
-        assert "Database connection lost" in stderr
+        assert "Database connection lost" not in stderr
         assert _named_lines(stderr) == [], stderr
         assert "Error reading resource" not in stderr
-        assert json.loads(answers[2])["error"].startswith(
-            "No Qualcoder project selected")
+        assert json.loads(answers[2])["error"] == server.DB_UNAVAILABLE_ERROR
 
     def test_a_file_system_error(self, tmp_path):
         """A configured project folder whose data.qda is missing: the
@@ -1476,7 +1481,12 @@ class TestPseudonymsJsonErrorsAreAnsweredByKind:
             assert expected in json.dumps(answer), answer
             assert "Failed to get project info" not in raw
         else:
-            assert answer["error"] == expected
+            # followed by the tool's own way round it (v0.14, server-wide)
+            advice = {
+                "import_text_file": server.PSEUDONYMS_JSON_ADVICE_IMPORT,
+                "pseudonymise_source":
+                    server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE}[route]
+            assert answer["error"] == expected + advice
 
 
 class TestOpeningADatabaseChainsNothing:

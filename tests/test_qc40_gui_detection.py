@@ -585,8 +585,14 @@ def _tools_running_the_process_scan():
                 and kw.value.value is False
                 for kw in node.keywords)
             if not scan_off:
-                callers.add(fn.name)
+                callers.add(_TOOL_OF_HELPER.get(fn.name, fn.name))
     return callers
+
+
+# A helper that does a tool's work, by the tool it does it for (v0.14:
+# select_project's selection moved into _select_project, so that a
+# failed switch leaves the previous project selected)
+_TOOL_OF_HELPER = {"_select_project": "select_project"}
 
 
 def _paragraph_after(text, marker):

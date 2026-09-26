@@ -85,10 +85,12 @@ class TestTheProjectMemo:
         out = json.loads(server.set_memo("project", None, "New topic"))
         assert _memo(folder) == "New topic\n#####\nmy own note: P3 is my aunt"
         assert "aunt" not in json.dumps(out)
-        # a marker in the new text is not written, so it cannot open a
-        # private part of its own
-        json.loads(server.set_memo("project", None, "A ##### B"))
-        assert _memo(folder).startswith("A \n#####\nmy own note")
+        # a marker in the new text is refused (v0.14, the claims audit's
+        # item 4), so it cannot open a private part of its own, and the
+        # memo is left as it was
+        out = json.loads(server.set_memo("project", None, "A ##### B"))
+        assert "private-note marker" in out["error"]
+        assert _memo(folder) == "New topic\n#####\nmy own note: P3 is my aunt"
         # clearing keeps the private part
         json.loads(server.set_memo("project", None, ""))
         assert _memo(folder) == "#####\nmy own note: P3 is my aunt"

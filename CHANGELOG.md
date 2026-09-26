@@ -118,6 +118,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   QualCoder orders its own by name). A folder's date is used only for a
   name that carries no time, and `list_backups` says which
   (`dated_from`).
+- **A failed switch of project changes nothing, and says so.**
+  `select_project` opens and reads the new project before it replaces
+  the selection, so a project that will not open leaves the previous one
+  selected with its connection open (the old connection used to be
+  closed first, and the next tool quietly reconnected to it), and every
+  failed answer ends by naming the project still selected, or saying
+  that none is (`selected_project`). A project selected by its
+  `data.qda` is called by its folder's name, not "data".
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,
   which every project lists, and warns when the project's own coder name
   is not known, since its refusal of the researcher's name cannot then

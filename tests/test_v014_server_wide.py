@@ -843,8 +843,11 @@ class TestTextsThatSentTheAssistantNowhere:
     def test_the_usual_places_are_reported_too(self):
         answer = json.loads(server.list_available_projects())
         assert answer["searched"]["instead_of_the_usual_places"] is False
-        assert str(Path.home() / "Documents") in \
-            answer["searched"]["folders"]
+        # the usual places, expanded in the sandbox's home (the suite
+        # never names the real Documents folder)
+        assert len(answer["searched"]["folders"]) == 4
+        assert all(Path(folder).is_relative_to(Path.home())
+                   for folder in answer["searched"]["folders"])
         doc = server.mcp._tool_manager._tools[
             "list_available_projects"].description
         assert "INSTEAD of" in doc
@@ -1204,3 +1207,80 @@ class TestBackupsDatedByTheirNames:
     ])
     def test_the_time_in_a_name(self, name, prefix, hour, expected):
         assert backup_time_from_name(name, prefix, hour) == expected
+
+
+# ---------------------------------------------------------------------------
+# A failed switch of project (the claims audit, item 8)
+# ---------------------------------------------------------------------------
+
+class TestAFailedSwitchSaysWhatIsSelected:
+
+    def test_the_previous_project_stays_selected_and_open(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        before_db = server.db
+        answer = json.loads(text_of(host_session(
+            lambda client: client.call_tool(
+                "select_project",
+                {"project_path": str(tmp_path / "Missing.qda")}))))
+        assert answer["success"] is False
+        assert answer["error"].endswith(
+            "The previously selected project, test_project, is still "
+            "selected.")
+        assert answer["selected_project"] == "test_project"
+        # the connection was never closed, and every tool agrees
+        assert server.db is before_db and server.db.conn is not None
+        assert server.current_project_path == qualcoder_db_path
+        current = json.loads(server.get_current_project())
+        assert current["project_name"] == "test_project"
+
+    def test_with_nothing_selected_it_says_so(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(server, "db", None)
+        monkeypatch.setattr(server, "current_project_path", None)
+        answer = json.loads(server.select_project(
+            str(tmp_path / "Missing.qda")))
+        assert answer["error"].endswith("No project is selected.")
+        assert answer["selected_project"] is None
+
+    def test_a_project_that_opens_but_cannot_be_read_is_not_selected(
+            self, setup_server, qualcoder_db_path, empty_db_path,
+            monkeypatch):
+        """A failure after the new project opened (its first read) closes
+        the new connection and leaves the previous selection."""
+        before_db = server.db
+        opened = []
+        real = server.QualcoderDatabase
+
+        def unreadable(path, read_only=True):
+            new = real(path, read_only=read_only)
+            opened.append(new)
+
+            def fail():
+                raise sqlite3.DatabaseError("database disk image is "
+                                            "malformed")
+            new.get_project_info = fail
+            return new
+
+        monkeypatch.setattr(server, "QualcoderDatabase", unreadable)
+        answer = json.loads(server.select_project(empty_db_path))
+        assert answer["success"] is False
+        assert "still selected" in answer["error"]
+        assert server.db is before_db
+        assert server.current_project_path == qualcoder_db_path
+        assert opened and opened[0].conn is None      # closed
+
+    def test_a_switch_that_succeeds_closes_the_old_connection(
+            self, setup_server, empty_db_path):
+        old = server.db
+        answer = json.loads(server.select_project(empty_db_path))
+        assert answer["success"] is True
+        assert old.conn is None
+        assert server.db is not old
+
+    def test_a_project_selected_by_its_database_file_keeps_its_name(
+            self, setup_server, empty_db_path):
+        """Not "data" (the claims audit, item 2): the name is the
+        folder's, whichever path selected it."""
+        answer = json.loads(server.select_project(
+            str(Path(empty_db_path) / "data.qda")))
+        assert answer["project_name"] == Path(empty_db_path).stem
+        assert answer["message"].endswith(Path(empty_db_path).stem)

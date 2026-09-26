@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -33,18 +34,27 @@ def _make_backup(project_path, suffix, age_days=0.0):
     return backup
 
 
+def _stamp(age_days):
+    """A backup name's time for a backup `age_days` old. Since v0.14 a
+    backup is dated by the time in its name, not by its folder's date
+    (the claims audit, item 3), so the name carries the age."""
+    return (datetime.now() - timedelta(days=age_days)).strftime(
+        "%Y%m%d_%H%M%S")
+
+
 @pytest.fixture
 def retention_env(setup_server, qualcoder_db_path):
     """Five MCP backups aged 0/2/5/10/20 days, one _prerestore at 5 days,
-    and one QualCoder _BKUP_ at 30 days."""
+    and one QualCoder _BKUP_ at 30 days (a name that carries no time in
+    QualCoder's form, so dated by its folder)."""
     made = {
-        "b0": _make_backup(qualcoder_db_path, "_backup_20260722_000005", 0),
-        "b2": _make_backup(qualcoder_db_path, "_backup_20260720_000004", 2),
-        "b5": _make_backup(qualcoder_db_path, "_backup_20260717_000003", 5),
+        "b0": _make_backup(qualcoder_db_path, f"_backup_{_stamp(0)}", 0),
+        "b2": _make_backup(qualcoder_db_path, f"_backup_{_stamp(2)}", 2),
+        "b5": _make_backup(qualcoder_db_path, f"_backup_{_stamp(5)}", 5),
         "pre5": _make_backup(qualcoder_db_path,
-                             "_backup_20260717_000002_prerestore", 5.5),
-        "b10": _make_backup(qualcoder_db_path, "_backup_20260712_000001", 10),
-        "b20": _make_backup(qualcoder_db_path, "_backup_20260702_000000", 20),
+                             f"_backup_{_stamp(5.5)}_prerestore", 5.5),
+        "b10": _make_backup(qualcoder_db_path, f"_backup_{_stamp(10)}", 10),
+        "b20": _make_backup(qualcoder_db_path, f"_backup_{_stamp(20)}", 20),
         "qc30": _make_backup(qualcoder_db_path, "_BKUP_2026062200", 30),
     }
     return qualcoder_db_path, made
@@ -119,13 +129,18 @@ class TestPruneBackupsPolicy:
     def test_newest_kept_floor(self, retention_env):
         """older_than_days that matches everything still keeps the newest."""
         project, made = retention_env
-        # age all backups by touching mtimes far in the past
-        for key, path in made.items():
-            if "_BKUP_" not in path.name:
-                ts = time.time() - 100 * 86400
-                os.utime(path, (ts, ts))
+        # age every MCP backup by a hundred days, in its name (the date a
+        # backup has since v0.14), keeping their order
+        ages = {"b0": 0, "b2": 2, "b5": 5, "pre5": 5.5, "b10": 10, "b20": 20}
+        for key, age in ages.items():
+            old = made[key]
+            suffix = "_prerestore" if key == "pre5" else ""
+            made[key] = old.rename(old.parent / (
+                f"{Path(project).stem}_backup_{_stamp(100 + age)}"
+                f"{suffix}.qda"))
         server.switch_project(project)
-        result = json.loads(H.execute_destructive(server.prune_backups, older_than_days=1))
+        result = json.loads(H.execute_destructive(server.prune_backups,
+                                                  older_than_days=1))
         # exactly one MCP backup survives: the newest one
         survivors = [p for p in made.values()
                      if p.exists() and "_BKUP_" not in p.name]

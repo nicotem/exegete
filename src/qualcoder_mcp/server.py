@@ -56,6 +56,7 @@ from .database import (
     private_note_refusal,
     MAX_CODER_NAME_LENGTH,
     backup_project,
+    backup_sort_key,
     unclean_backup_side_files,
     backup_database_is_link,
     BackupWithoutDatabaseError,
@@ -7765,7 +7766,10 @@ def list_backups() -> str:
     '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'mcp')
     together with QualCoder's own '<project>_BKUP_*' backups found next to
     the project (kind 'qualcoder'), newest first, so you can pick one for
-    restore_backup.
+    restore_backup. Each is dated by the time in its name, when it was
+    taken (QualCoder names its own to the hour), and backups taken in the
+    same second are listed in the order they were taken; `dated_from` is
+    'folder' only for a name that carries no time.
 
     Backups carry the whole project tree, ai_data/ included (QualCoder
     4.0's AI prompt library and chat history are non-regenerable user
@@ -7787,7 +7791,7 @@ def list_backups() -> str:
 
     Returns:
         JSON with the project name and an array of backups
-        (name, path, created, size_mb)
+        (name, path, kind, created, dated_from, age_days, size_mb)
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -7872,6 +7876,7 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     path, kind, created, age_days and size_mb.
     """
     backups: List[Dict[str, Any]] = []
+    order: Dict[str, Tuple[datetime, int]] = {}
     now = datetime.now()
     for prefix, kind in ((f"{project_folder.stem}_backup_", "mcp"),
                          (f"{project_folder.stem}_BKUP_", "qualcoder")):
@@ -7882,12 +7887,19 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                 size_bytes = sum(
                     f.stat().st_size for f in entry.rglob("*") if f.is_file()
                 )
-                created = datetime.fromtimestamp(entry.stat().st_mtime)
+                # Dated by the time in its name (v0.14,
+                # database.backup_time_from_name); the folder's date,
+                # which a copy inherits from the project, only for a
+                # name that carries none
+                created, counter, named = backup_sort_key(
+                    entry, prefix, to_the_hour=(kind == "qualcoder"))
+                order[entry.name] = (created, counter)
                 item = {
                     "name": entry.name,
                     "path": str(entry),
                     "kind": kind,
                     "created": created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "dated_from": "name" if named else "folder",
                     "age_days": round(
                         max(0.0, (now - created).total_seconds()) / 86400, 1),
                     "size_mb": round(size_bytes / (1024 * 1024), 2),
@@ -7909,7 +7921,10 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                              error_label(e))
                 continue
 
-    backups.sort(key=lambda b: b["created"], reverse=True)
+    # Newest first; the backups of one second in the order they were
+    # taken (the counter in the name), where a sort on the date string
+    # left them in the order the folder listing gave
+    backups.sort(key=lambda b: (order[b["name"]], b["name"]), reverse=True)
     return backups
 
 

@@ -1084,3 +1084,123 @@ class TestTheProjectMemoWithoutATargetId:
     def test_a_python_call_without_the_memo_is_refused(self, setup_server):
         answer = json.loads(server.set_memo("project"))
         assert answer["error"].startswith("memo is required")
+
+
+# ---------------------------------------------------------------------------
+# Backups dated by the time in their names (the claims audit, item 3)
+# ---------------------------------------------------------------------------
+
+import os
+import time
+from datetime import datetime, timedelta
+
+from qualcoder_mcp.database import backup_time_from_name
+
+
+def _backup_folder(parent, name, mtime):
+    folder = parent / name
+    folder.mkdir()
+    (folder / "data.qda").write_bytes(b"")
+    os.utime(folder, (mtime, mtime))
+    return folder
+
+
+class TestBackupsDatedByTheirNames:
+
+    def test_a_restores_safety_backup_is_new_and_not_offered_as_old(
+            self, tmp_path):
+        """The audit's run: on a project folder last written ten days
+        ago, the safety backup a restore takes inherits that date; it
+        was listed last, ten days old, and prune_backups(older_than_days
+        =5) offered it."""
+        server._apply_toolset("lifecycle")
+        projects = tmp_path / "projects"
+        projects.mkdir()
+        ten_days_ago = time.time() - 10 * 86400
+        old_name = (datetime.now() - timedelta(days=10)).strftime(
+            "Study_backup_%Y%m%d_%H%M%S.qda")
+
+        async def drive(client):
+            made = json.loads(text_of(await client.call_tool(
+                "create_project", {"name": "Study",
+                                   "directory": str(projects),
+                                   "coder_name": "Researcher"})))
+            folder = Path(made["project_path"])
+            await client.call_tool("set_project_ai_coder_name",
+                                   {"name": "AI-Test"})
+            await client.call_tool("create_code", {"name": "Trust"})
+            _backup_folder(projects, old_name, ten_days_ago)
+            os.utime(folder, (ten_days_ago, ten_days_ago))
+            listed = json.loads(text_of(await client.call_tool(
+                "list_backups", {})))["backups"]
+            target = [b for b in listed if b["name"] != old_name][0]
+            preview = json.loads(text_of(await client.call_tool(
+                "restore_backup", {"backup_path": target["path"]})))
+            done = json.loads(text_of(await client.call_tool(
+                "restore_backup", {"backup_path": target["path"],
+                                   "preview_token":
+                                       preview["preview_token"]})))
+            after = json.loads(text_of(await client.call_tool(
+                "list_backups", {})))["backups"]
+            prune = json.loads(text_of(await client.call_tool(
+                "prune_backups", {"older_than_days": 5})))
+            return done, after, prune
+
+        done, after, prune = host_session(drive)
+        assert done["success"] is True, done
+        newest = after[0]
+        assert newest["name"] not in (old_name,)
+        assert newest["age_days"] == 0.0
+        assert newest["dated_from"] == "name"
+        assert after[-1]["name"] == old_name
+        assert after[-1]["age_days"] >= 9.9
+        assert [b["name"] for b in prune["would_remove"]] == [old_name]
+
+    def test_backups_of_one_second_are_listed_in_the_order_taken(
+            self, setup_server, qualcoder_db_path):
+        folder = Path(qualcoder_db_path)
+        stamp = "test_project_backup_20260101_120000"
+        names = [f"{stamp}.qda"] + [f"{stamp}_{n}.qda"
+                                    for n in (2, 3, 4, 5, 10)]
+        # modification times in the opposite order, so a listing that
+        # used them would come out reversed
+        for index, name in enumerate(names):
+            _backup_folder(folder.parent, name, time.time() - index * 60)
+        listed = json.loads(server.list_backups())["backups"]
+        assert [b["name"] for b in listed] == list(reversed(names))
+        assert {b["created"] for b in listed} == {"2026-01-01 12:00:00"}
+
+    def test_qualcoders_backups_are_dated_to_the_hour_and_others_by_folder(
+            self, setup_server, qualcoder_db_path):
+        folder = Path(qualcoder_db_path)
+        week_ago = time.time() - 7 * 86400
+        _backup_folder(folder.parent, "test_project_BKUP_20260102_09.qda",
+                       week_ago)
+        _backup_folder(folder.parent, "test_project_backup_manual.qda",
+                       week_ago)
+        listed = {b["name"]: b for b in
+                  json.loads(server.list_backups())["backups"]}
+        qualcoder = listed["test_project_BKUP_20260102_09.qda"]
+        assert qualcoder["created"] == "2026-01-02 09:00:00"
+        assert qualcoder["dated_from"] == "name"
+        manual = listed["test_project_backup_manual.qda"]
+        assert manual["dated_from"] == "folder"
+        assert manual["age_days"] >= 6.9
+
+    @pytest.mark.parametrize("name,prefix,hour,expected", [
+        ("P_backup_20260926_232751.qda", "P_backup_", False,
+         (datetime(2026, 9, 26, 23, 27, 51), 1)),
+        ("P_backup_20260926_232751_10.qda", "P_backup_", False,
+         (datetime(2026, 9, 26, 23, 27, 51), 10)),
+        ("P_backup_20260926_232751_prerestore.qda", "P_backup_", False,
+         (datetime(2026, 9, 26, 23, 27, 51), 1)),
+        ("P_BKUP_20260926_23.qda", "P_BKUP_", True,
+         (datetime(2026, 9, 26, 23, 0, 0), 1)),
+        ("P_BKUP_20260926_23_special.qda", "P_BKUP_", True,
+         (datetime(2026, 9, 26, 23, 0, 0), 1)),
+        ("P_backup_20261399_000000.qda", "P_backup_", False, None),
+        ("P_backup_copy.qda", "P_backup_", False, None),
+        ("Q_backup_20260926_232751.qda", "P_backup_", False, None),
+    ])
+    def test_the_time_in_a_name(self, name, prefix, hour, expected):
+        assert backup_time_from_name(name, prefix, hour) == expected

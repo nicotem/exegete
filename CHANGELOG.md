@@ -106,6 +106,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that records nothing no longer rewrites the session file.
 - `set_memo`'s `target_id` may be left out for the project memo, as its
   text says (it was required by the schema).
+- **Backups are dated by the time in their names**, when they were
+  taken, not by their folders' dates, which a copy inherits from the
+  project: a restore's safety backup, taken seconds before on a project
+  last written ten days earlier, was listed last as ten days old, and
+  `prune_backups(older_than_days=5)` offered to delete it.
+  `list_backups`, `prune_backups` and `rename_file`'s search of earlier
+  names all read the name (this server's `_backup_<date>_<time>`, with
+  its `_2`, `_3` counter for backups of one second, which now keeps them
+  in the order taken; QualCoder's `_BKUP_<date>_<hour>`, to the hour, as
+  QualCoder orders its own by name). A folder's date is used only for a
+  name that carries no time, and `list_backups` says which
+  (`dated_from`).
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,
   which every project lists, and warns when the project's own coder name
   is not known, since its refusal of the researcher's name cannot then

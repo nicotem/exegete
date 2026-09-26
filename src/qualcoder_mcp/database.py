@@ -1959,6 +1959,58 @@ BACKUP_BUSY_SECONDS = 15.0
 _SQLITE_BUSY_CODES = (5, 6)   # SQLITE_BUSY, SQLITE_LOCKED
 
 
+# How a backup is dated (v0.14, the claims audit's item 3): from the
+# time in its name, which is when it was taken. The folder's own date is
+# not: a copy inherits the project folder's modification time, so a
+# restore's safety backup, taken before the restore touches the folder,
+# showed the date the project was last written, days old, and
+# prune_backups offered to delete it as old. This server names a backup
+# `<project>_backup_<YYYYmmdd_HHMMSS>.qda`, `_2`, `_3` and so on when a
+# second one is taken in the same second (`backup_project`); QualCoder
+# names its own `<project>_BKUP_<YYYYmmdd_HH>.qda`, to the hour
+# (app.py `save_backup`, 1600-1612 at 9bddf17), and orders them by name
+# (__main__.py `delete_backup_folders`, 2562-2592).
+_MCP_BACKUP_STAMP = re.compile(r"(\d{8}_\d{6})(?:_(\d+))?(?![0-9])")
+_QUALCODER_BACKUP_STAMP = re.compile(r"(\d{8}_\d{2})(?![0-9])")
+
+
+def backup_time_from_name(name: str, prefix: str,
+                          to_the_hour: bool = False
+                          ) -> Optional[Tuple[datetime, int]]:
+    """(when it was taken, its counter) read from a backup folder's name,
+    or None when the name does not carry a time.
+
+    `prefix` is `<project>_backup_` or `<project>_BKUP_`; `to_the_hour`
+    reads QualCoder's form. The counter is 1 for the first backup of a
+    second and N for the one named `_N`, so sorting by (when, counter)
+    puts the backups of one second in the order they were taken.
+    """
+    if not name.startswith(prefix):
+        return None
+    rest = name[len(prefix):]
+    match = (_QUALCODER_BACKUP_STAMP if to_the_hour
+             else _MCP_BACKUP_STAMP).match(rest)
+    if match is None:
+        return None
+    try:
+        when = datetime.strptime(match.group(1), "%Y%m%d_%H" if to_the_hour
+                                 else "%Y%m%d_%H%M%S")
+    except ValueError:
+        return None
+    counter = 1 if to_the_hour or not match.group(2) else int(match.group(2))
+    return when, counter
+
+
+def backup_sort_key(entry: Path, prefix: str, to_the_hour: bool = False
+                    ) -> Tuple[datetime, int, bool]:
+    """(when, counter, dated by its name) for a backup folder: the time in
+    its name when it has one, its modification time otherwise."""
+    stamp = backup_time_from_name(entry.name, prefix, to_the_hour)
+    if stamp is not None:
+        return stamp[0], stamp[1], True
+    return datetime.fromtimestamp(entry.stat().st_mtime), 1, False
+
+
 def unclean_backup_side_files(folder: Union[str, Path]) -> List[str]:
     """The side files that make a backup folder unclean, by name: a
     journal or a WAL file beside its `data.qda` that is not empty (a
@@ -9187,18 +9239,23 @@ class QualcoderDatabase:
             return None
         folder = Path(self.db_path).parent
         backups = []
-        for prefix in (f"{folder.stem}_backup_", f"{folder.stem}_BKUP_"):
+        for prefix, to_the_hour in ((f"{folder.stem}_backup_", False),
+                                    (f"{folder.stem}_BKUP_", True)):
             try:
                 for entry in folder.parent.glob(glob.escape(prefix) + "*.qda"):
                     try:
                         if entry.is_dir() and entry != folder:
-                            backups.append((entry.stat().st_mtime, entry))
+                            # Newest first by the time in the name (v0.14),
+                            # not the folder's date, which a copy inherits
+                            when, counter, _named = backup_sort_key(
+                                entry, prefix, to_the_hour)
+                            backups.append(((when, counter), entry))
                     except OSError:
                         continue
             except OSError:
                 continue
         backups.sort(key=lambda item: item[0], reverse=True)
-        for _mtime, entry in backups[:self.EARLIER_NAMES_BACKUP_LIMIT]:
+        for _when, entry in backups[:self.EARLIER_NAMES_BACKUP_LIMIT]:
             data = entry / "data.qda"
             try:
                 if not data.is_file():

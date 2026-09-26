@@ -976,7 +976,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 
 **Co-occurrence Analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together
-- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only
+- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with this server's AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant saw every visible coder's codings before suggesting; do not report it as intercoder reliability
 
 **Case-Code Matrix & Comparative Analysis:**
 - `get_case_code_matrix(coder)` - Create cross-tabulation of cases vs codes

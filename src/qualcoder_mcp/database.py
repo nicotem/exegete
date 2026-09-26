@@ -4891,6 +4891,33 @@ class QualcoderDatabase:
                     entry[side].append([int(row["pos0"]), int(row["pos1"])])
         return out
 
+    def files_with_text_codings_by(self, coders: List[str],
+                                   file_ids: List[int]
+                                   ) -> Dict[str, set]:
+        """Which of these files each named coder has any text coding in,
+        of any code, from the BASE table (the coders are named, as in
+        comparison_spans). compare_coders uses it to name the files where
+        only one of the two coded anything: there, every character counts
+        as a "no" for the other, who may never have coded the file."""
+        out: Dict[str, set] = {c: set() for c in coders}
+        if not coders or not file_ids:
+            return out
+        omarks = ",".join("?" for _ in coders)
+        for start in range(0, len(file_ids), 500):
+            chunk = file_ids[start:start + 500]
+            fmarks = ",".join("?" for _ in chunk)
+            try:
+                rows = self.conn.execute(
+                    f"SELECT DISTINCT owner, fid FROM code_text "
+                    f"WHERE fid IN ({fmarks}) AND owner IN ({omarks})",
+                    tuple(chunk) + tuple(coders)).fetchall()
+            except sqlite3.Error as e:
+                _raise_query_error(e, "files_with_text_codings_by",
+                                   "Failed to read which files are coded")
+            for row in rows:
+                out[row["owner"]].add(int(row["fid"]))
+        return out
+
     def coders_with_text_codings_including_hidden(self) -> List[str]:
         """Every owner with at least one text coding, sorted, HIDDEN
         CODERS INCLUDED.

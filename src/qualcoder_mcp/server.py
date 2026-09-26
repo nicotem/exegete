@@ -4915,8 +4915,12 @@ SPEAKER_SYSTEM_CODER = new_project.SPEAKER_CODER_NAME
 
 UNIT_OF_ANALYSIS = (
     "Each character (Unicode code point) of each text file's fulltext in "
-    "scope is one item; for each code, each coder's decision per "
-    "character is binary (coded with that code or not). Overlapping "
+    "scope is one item; for each code, each coder either coded the "
+    "character with that code or did not. A character a coder did not "
+    "code is not a decision: in a file that coder never coded at all, it "
+    "only means they did not code there, yet it counts as 'not coded' all "
+    "the same (files_coded_by_one_coder_only names such files; narrow "
+    "file_ids to the files both coders worked on). Overlapping "
     "segments of the same code by the same coder count a character once. "
     "Statistics are pooled over the files in scope per code, as "
     "QualCoder's Coder comparison report does, and per file with "
@@ -5062,7 +5066,23 @@ def compare_coders(coder_a: Optional[str] = None,
     UNIT OF ANALYSIS: one character of one text file. For each code, each
     coder either coded that character or did not, and a character coded
     twice by the same coder with the same code counts once. Text codings
-    only; image and audio/video comparison is not covered.
+    only; image and audio/video comparison is not covered. A character a
+    coder did not code is not a decision: every text file is in scope
+    unless you narrow it, so a file one coder never coded counts against
+    whatever the other coded there. The result names those files
+    (files_coded_by_one_coder_only); narrow file_ids to the files both
+    worked on.
+
+    COMPARING A PERSON WITH THE AI: this server's AI codings in the
+    project are the suggestions the person approved (and perhaps edited),
+    so their agreement partly counts the person's own judgement twice,
+    and the suggestions they rejected are not in the project at all. And
+    before suggesting, the assistant read each file with
+    analyze_file_with_coding, which shows every visible coder's codings
+    (every coder QualCoder shows), the person's included unless their
+    coder was hidden.
+    Such a comparison is not intercoder reliability between independent
+    coders; say so whenever you report it.
 
     TWO KAPPAS, both always present, because they answer different
     questions and QualCoder's own column is not the textbook statistic.
@@ -5367,6 +5387,23 @@ def compare_coders(coder_a: Optional[str] = None,
             len(kappa_c_values)
         overall["mean_of_codes"]["note"] = MEAN_COHEN_FEWER_CODES_NOTE
 
+    # Files where only one of the two has any text coding, of any code:
+    # there every character is a "no" for the other, who may never have
+    # coded the file (a character not coded is not a decision)
+    coded_in = db_.files_with_text_codings_by([coder_a, coder_b],
+                                              file_ids_in_scope)
+    one_only: List[Dict[str, Any]] = []
+    coded_by_neither = 0
+    for file_info in files:
+        fid = file_info["file_id"]
+        in_a, in_b = fid in coded_in[coder_a], fid in coded_in[coder_b]
+        if in_a != in_b:
+            one_only.append({"file_id": fid,
+                             "file_name": file_info["file_name"],
+                             "coded_by": coder_a if in_a else coder_b})
+        elif not in_a:
+            coded_by_neither += 1
+
     sidecar = read_sidecar(_current_project_folder())
     result: Dict[str, Any] = {
         "coder_a": coder_a,
@@ -5395,8 +5432,27 @@ def compare_coders(coder_a: Optional[str] = None,
         },
         "per_code": per_code,
         "overall": overall,
+        "files_coded_by_one_coder_only": one_only[:50],
+        "files_coded_by_neither": coded_by_neither,
         "notes": [],
     }
+    if len(one_only) > 50:
+        result["files_coded_by_one_coder_only_count"] = len(one_only)
+    if one_only:
+        result["notes"].append(
+            f"{len(one_only)} file(s) in scope hold text codings by only "
+            f"one of the two coders (files_coded_by_one_coder_only). Every "
+            f"character there counts as 'not coded' for the other, who may "
+            f"never have coded the file: that is not a decision. Narrow "
+            f"file_ids to the files both coders worked on.")
+    if _coder_role(coder_a, ai_names) == "ai_this_server" or \
+            _coder_role(coder_b, ai_names) == "ai_this_server":
+        result["notes"].append(
+            "One coder is this server's AI: its codings are the suggestions "
+            "the person approved (and perhaps edited), and the assistant saw "
+            "every visible coder's codings before suggesting. The agreement "
+            "is not between independent coders; do not report it as "
+            "intercoder reliability.")
     if clipped_total:
         result["notes"].append(
             f"{clipped_total} coding(s) reach beyond the end of their "
@@ -8959,9 +9015,22 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                                       "rather than widening the search until "
                                       "something turns up.",
             "comparing_coders": "compare_coders reports how much two coders' "
-                                "text coding agrees, per code. Use it to "
+                                "text coding agrees, per code. It can "
                                 "compare a person with the AI, or two models "
-                                "the project has used. It returns two "
+                                "the project has used, but a person with the "
+                                "AI is not two independent coders: the AI's "
+                                "codings in the project are the suggestions "
+                                "the person approved (the ones they kept, "
+                                "perhaps edited), and before suggesting, the "
+                                "assistant saw every visible coder's codings "
+                                "(analyze_file_with_coding shows them), so "
+                                "never report that agreement as intercoder "
+                                "reliability. A character a coder did not "
+                                "code is not a decision: in a file that coder "
+                                "never coded it only means they did not code "
+                                "there, so narrow the scope to the files both "
+                                "worked on (the result names the files only "
+                                "one of them coded). It returns two "
                                 "agreement coefficients and they answer "
                                 "different questions: kappa_qualcoder is "
                                 "QualCoder's own column, computed over the "

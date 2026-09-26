@@ -285,8 +285,10 @@ reports before anything is applied.
 
 `compare_coders` reports how much two named coders' text coding agrees.
 Its result carries counts, percentages and two agreement coefficients,
-and nothing else about the coding: no coded text, no memo, no character
-positions, no file paths. On a project that hides coders, naming a hidden
+and, from v0.14, the names of the files in scope that only one of the
+two coders coded (so that a reader knows where a "not coded" is not a
+decision); nothing else about the coding: no coded text, no memo, no
+character positions, no file paths. On a project that hides coders, naming a hidden
 coder is refused unless you pass `allow_hidden_coder=true`, and the
 refusal says only that a named coder is hidden, never which of the two,
 and never how many coders are hidden; the lists of coders in its other

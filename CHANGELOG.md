@@ -360,6 +360,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a merged-away proposal could be approved again and created,
   writing the same passages under two codes. A rejected proposal can
   still be approved again, and the texts now say so.
+- **Comparing coders says what its numbers cannot show.** A character a
+  coder did not code is not a decision: in a file that coder never
+  coded, it counts as "not coded" all the same. The unit-of-analysis
+  text says so (it called each character a "decision"), and the result
+  names the files in scope where only one of the two coders has any
+  text coding (`files_coded_by_one_coder_only`, up to 50, with a count
+  beyond) and counts those neither coded (`files_coded_by_neither`),
+  with a note to narrow `file_ids`. `compare_coders`' description, the
+  help, README and, when one coder is this server's AI, a note in the
+  result say that the AI's codings are the suggestions the person
+  approved and that the assistant saw every visible coder's codings
+  before suggesting, so the agreement is not between independent
+  coders and is not intercoder reliability.
 - **Texts made true:** `analyze_file_with_coding` names its four counts
   (it promised "coverage and density metrics"); `cleanup_old_sessions`
   says it deletes every project's old sessions on this computer,

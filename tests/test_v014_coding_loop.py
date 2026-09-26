@@ -799,3 +799,69 @@ class TestAProposalsApprovalBindsIt:
         for name in ("create_proposed_codes", "update_proposal_status"):
             text = " ".join(tools[name].description.split())
             assert "only if it is approved again" in text, name
+
+
+# =============================================================================
+# 5. COMPARING CODERS: WHAT A CHARACTER NOBODY CODED MEANS
+# =============================================================================
+
+class TestComparingCodersSaysWhatItCannotShow:
+
+    @staticmethod
+    def _ai_coding_in_file_2(qualcoder_db_path):
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                     "owner, date, memo) VALUES (1, 2, 'Field notes', 0, 11, "
+                     "'AI Coding Assistant', '2026-09-26 10:00:00', '')")
+        conn.commit()
+        conn.close()
+
+    def test_files_only_one_coder_coded_are_named(self, setup_server,
+                                                  qualcoder_db_path):
+        self._ai_coding_in_file_2(qualcoder_db_path)
+        out = jcall("compare_coders", coder_a="TestCoder",
+                    coder_b="AI Coding Assistant")
+        assert out["files_coded_by_one_coder_only"] == [
+            {"file_id": 1, "file_name": "interview.txt",
+             "coded_by": "TestCoder"},
+            {"file_id": 2, "file_name": "notes.txt",
+             "coded_by": "AI Coding Assistant"}]
+        assert out["files_coded_by_neither"] == 0
+        assert any("not a decision" in n for n in out["notes"])
+        assert any("intercoder reliability" in n for n in out["notes"])
+
+    def test_narrowed_to_one_file_only_that_file_is_named(
+            self, setup_server, qualcoder_db_path):
+        self._ai_coding_in_file_2(qualcoder_db_path)
+        out = jcall("compare_coders", coder_a="TestCoder",
+                    coder_b="AI Coding Assistant", file_ids=[2])
+        assert [f["file_id"] for f in out["files_coded_by_one_coder_only"]] \
+            == [2]
+
+    def test_a_file_both_coded_is_not_named(self, setup_server,
+                                            qualcoder_db_path):
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                     "owner, date, memo) VALUES (2, 1, 'This', 0, 4, "
+                     "'Colleague', '2026-09-26 10:00:00', '')")
+        conn.commit()
+        conn.close()
+        out = jcall("compare_coders", coder_a="TestCoder",
+                    coder_b="Colleague")
+        assert out["files_coded_by_one_coder_only"] == []
+        assert out["files_coded_by_neither"] == 1          # notes.txt
+        assert not any("intercoder reliability" in n for n in out["notes"])
+
+    def test_the_texts_carry_both_caveats(self):
+        unit = server.UNIT_OF_ANALYSIS
+        assert "is not a decision" in unit
+        assert "decision per character" not in unit
+        desc = " ".join(server.mcp._tool_manager._tools["compare_coders"]
+                        .description.split())
+        help_ = json.loads(server.explain_ai_coding_tools())[
+            "comparing_coders"]
+        for text in (desc, help_):
+            assert "approved" in text
+            assert "every visible coder's codings" in text
+            assert "not a decision" in text
+            assert "intercoder reliability" in text

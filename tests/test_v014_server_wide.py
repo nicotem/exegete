@@ -1284,3 +1284,116 @@ class TestAFailedSwitchSaysWhatIsSelected:
             str(Path(empty_db_path) / "data.qda")))
         assert answer["project_name"] == Path(empty_db_path).stem
         assert answer["message"].endswith(Path(empty_db_path).stem)
+
+
+# ---------------------------------------------------------------------------
+# The session files that still hold the real names (the claims audit, item
+# 2, and brief E's original item 6)
+# ---------------------------------------------------------------------------
+
+class TestSessionFilesAfterPseudonymising:
+
+    def test_the_audits_run_lists_both_sessions(self, tmp_path):
+        """On a project made by create_project (selected by its folder):
+        one suggestion session and one proposal session quote "Maria";
+        after the run both are listed, their files still hold the name,
+        and list_coding_sessions finds them by folder and by data.qda,
+        under the folder's name."""
+        server._apply_toolset("lifecycle")
+        projects = tmp_path / "projects"
+        projects.mkdir()
+
+        async def drive(client):
+            async def call(name, args):
+                return body_of(text_of(await client.call_tool(name, args)))
+            made = await call("create_project", {
+                "name": "Study", "directory": str(projects),
+                "coder_name": "Researcher"})
+            await call("set_project_ai_coder_name", {"name": "AI-Test"})
+            await call("import_text_file", {"filename": "int1.txt",
+                                            "content": TEXT_1})
+            await call("import_text_file", {"filename": "int2.txt",
+                                            "content": TEXT_2})
+            await call("create_code", {"name": "Trust"})
+            suggesting = (await call("analyze_for_coding",
+                                     {"file_ids": [1]}))["coding_session_id"]
+            recorded = await call("record_suggestions", {
+                "coding_session_id": suggesting, "suggestions": [{
+                    "file_id": 1, "code_name": "Trust",
+                    "segment_text": QUOTE, "reasoning": "stated"}]})
+            # rejected: the excerpt is still in the file
+            await call("update_suggestion_status", {
+                "coding_session_id": suggesting,
+                "reject": [recorded["recorded"][0]["guid"]]})
+            proposing = (await call("analyze_for_coding",
+                                    {"file_ids": [1]}))["coding_session_id"]
+            await call("propose_codes", {
+                "coding_session_id": proposing, "proposals": [{
+                    "name": "Reliance", "memo": "d", "rationale": "r",
+                    "example_segments": [{"file_id": 1,
+                                          "segment_text": QUOTE}]}]})
+            elsewhere = (await call("analyze_for_coding",
+                                    {"file_ids": [2]}))["coding_session_id"]
+            await call("record_suggestions", {
+                "coding_session_id": elsewhere, "suggestions": [{
+                    "file_id": 2, "code_name": "Trust",
+                    "segment_text": "the garden gate was locked",
+                    "reasoning": "r"}]})
+            mapping = [{"original": "Maria", "pseudonym": "Joan"},
+                       {"original": "Lopez", "pseudonym": "Hurst"}]
+            preview = await call("pseudonymise_source", {
+                "mapping": mapping, "file_id": 1,
+                "researcher_keeps_mapping": True})
+            done = await call("pseudonymise_source", {
+                "mapping": mapping, "file_id": 1,
+                "researcher_keeps_mapping": True,
+                "preview_token": preview["preview_token"]})
+            folder = made["project_path"]
+            by_folder = await call("list_coding_sessions",
+                                   {"project_path": folder})
+            by_file = await call("list_coding_sessions",
+                                 {"project_path": str(Path(folder)
+                                                      / "data.qda")})
+            return (suggesting, proposing, elsewhere, done, by_folder,
+                    by_file)
+
+        (suggesting, proposing, elsewhere, done, by_folder,
+         by_file) = host_session(drive)
+        assert done["success"] is True, done
+        assert done["stale_sessions"] == sorted([suggesting, proposing])
+        assert done["stale_sessions_with_work_to_apply"] == [proposing]
+        note = [n for n in done["notes"] if "coding session file" in n]
+        assert len(note) == 1 and "~/.qualcoder_mcp/sessions/" in note[0]
+        for session_id in (suggesting, proposing):
+            stored = (server.session_manager.storage_dir
+                      / f"session_{session_id}.json").read_text(
+                          encoding="utf-8")
+            assert "Maria" in stored
+        for listing in (by_folder, by_file):
+            ids = {s["coding_session_id"] for s in listing["sessions"]}
+            assert ids == {suggesting, proposing, elsewhere}
+            assert {s["project_name"] for s in listing["sessions"]} == \
+                {"Study"}
+
+    def test_the_session_list_matches_every_form_of_the_path(self, tmp_path):
+        from qualcoder_mcp.sessions import SessionManager
+        folder = tmp_path / "P.qda"
+        folder.mkdir()
+        (folder / "data.qda").write_bytes(b"")
+        forms = [str(folder), str(folder / "data.qda"),
+                 str(folder) + "/", str(tmp_path / "x" / ".." / "P.qda")]
+        canonical = {SessionManager.canonical_database_path(f)
+                     for f in forms}
+        assert canonical == {str((folder / "data.qda").resolve())}
+        # a project no longer on disk is still named by its path
+        gone = SessionManager.canonical_database_path(str(tmp_path
+                                                          / "Gone.qda"))
+        assert gone.endswith(str(Path("Gone.qda") / "data.qda"))
+
+    def test_get_current_project_names_the_folder(self, setup_server,
+                                                  qualcoder_db_path,
+                                                  monkeypatch):
+        monkeypatch.setattr(server, "current_project_path",
+                            str(Path(qualcoder_db_path) / "data.qda"))
+        current = json.loads(server.get_current_project())
+        assert current["project_name"] == "test_project"

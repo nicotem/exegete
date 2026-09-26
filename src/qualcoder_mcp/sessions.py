@@ -666,6 +666,42 @@ class SessionManager:
         filepath = self.storage_dir / f"session_{session_id}.json"
         return filepath.exists()
 
+    @staticmethod
+    def canonical_database_path(project_path: Any) -> Optional[str]:
+        """A project's database path in one form, whichever form names it
+        (v0.14, the claims audit's item 2), or None for no path.
+
+        A session records its project as the database file
+        (`<project>.qda/data.qda`, from `db.db_path`), while
+        create_project and select_project given the folder record the
+        folder, and a path may carry `~`, a link or a relative part. The
+        lists compared those as plain strings, so after create_project
+        no session matched the selected project. Both sides are made the
+        resolved `data.qda` path here, without opening anything, so a
+        moved or deleted project is compared by its name as well.
+        """
+        if project_path is None or not str(project_path).strip():
+            return None
+        try:
+            path = Path(str(project_path)).expanduser().resolve(strict=False)
+        except (OSError, RuntimeError, ValueError):
+            return str(project_path)
+        if path.is_dir() or (path.suffix.lower() == ".qda"
+                             and path.name.lower() != "data.qda"
+                             and not path.is_file()):
+            path = path / "data.qda"
+        return str(path)
+
+    @staticmethod
+    def project_name(project_path: Any) -> str:
+        """The project's name as the researcher knows it, its folder's,
+        not "data" (v0.14)."""
+        path = Path(str(project_path))
+        if path.name.lower() == "data.qda" and \
+                path.parent.suffix.lower() == ".qda":
+            path = path.parent
+        return path.stem
+
     def list_sessions(
         self,
         project_path: Optional[str] = None,
@@ -685,6 +721,8 @@ class SessionManager:
         """
         sessions = []
         cutoff_date = datetime.now() - timedelta(days=days_old)
+        # Compared as database paths, whichever form either side uses
+        wanted = self.canonical_database_path(project_path)
 
         try:
             for filepath in self.storage_dir.glob("session_*.json"):
@@ -693,7 +731,8 @@ class SessionManager:
                         data = json.load(f)
 
                     # Filter by project if specified
-                    if project_path and data['project_path'] != project_path:
+                    if wanted and self.canonical_database_path(
+                            data['project_path']) != wanted:
                         continue
 
                     # Filter by age
@@ -701,8 +740,8 @@ class SessionManager:
                     if last_modified < cutoff_date:
                         continue
 
-                    # Get project name
-                    project_name = Path(data['project_path']).stem
+                    # The project's folder name, not "data" (v0.14)
+                    project_name = self.project_name(data['project_path'])
 
                     sessions.append({
                         # API-facing key only. The on-disk file keeps

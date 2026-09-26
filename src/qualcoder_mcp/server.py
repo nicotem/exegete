@@ -849,11 +849,8 @@ def project_display_name(project_path: Any) -> str:
     """A project's name as the researcher knows it: its folder's name
     without ".qda", whether the path names the folder or the data.qda
     inside it (v0.14: a project selected by its data.qda was called
-    "data")."""
-    path = Path(str(project_path))
-    if path.name.lower() == "data.qda" and path.parent.suffix.lower() == ".qda":
-        path = path.parent
-    return path.stem
+    "data"). One rule with the session list's."""
+    return SessionManager.project_name(project_path)
 
 
 def _selection_after_failure(previous: Optional[str]) -> Tuple[str, Any]:
@@ -3574,7 +3571,7 @@ def get_current_project() -> str:
 
         result = {
             "current_project": current_project_path,
-            "project_name": Path(current_project_path).stem,
+            "project_name": project_display_name(current_project_path),
             "project_info": project_info,
             "schema": _schema_block(),
         }
@@ -4774,7 +4771,8 @@ def export_refi_qda(
         if mismatch is not None:
             return json.dumps(mismatch, indent=2)
         suggestions = list(session.suggestions)
-        project_name = f"AI Coding Suggestions ({Path(current_project_path).stem})"
+        project_name = (f"AI Coding Suggestions "
+                        f"({project_display_name(current_project_path)})")
         if not suggestions:
             return json.dumps({"error": "The session has no suggestions to export"})
     else:
@@ -4854,7 +4852,7 @@ def export_refi_qda(
                     reasoning=seg["memo"] or "",
                     confidence=0.0,  # human codings carry no AI confidence
                 ))
-        project_name = Path(current_project_path).stem
+        project_name = project_display_name(current_project_path)
         if not suggestions:
             result = {"error": "The project has no text codings to export"}
             if skipped_invalid:
@@ -8741,11 +8739,14 @@ def list_coding_sessions(
     Useful for finding previous coding sessions to review or export.
 
     Args:
-        project_path: Filter by specific project path (optional)
+        project_path: Filter by a project (optional): its folder or the
+            data.qda inside it, as select_project takes it; either form
+            finds the project's sessions
         days_old: Only show sessions from last N days (default: 30)
 
     Returns:
-        JSON with list of sessions and their metadata
+        JSON with list of sessions and their metadata, each with the
+        project's name (its folder's)
 
     Example:
         "List all my coding sessions"
@@ -12597,32 +12598,45 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
     return notes
 
 
-def _stale_sessions_for(file_ids: Sequence[int]) -> List[str]:
-    """Review sessions whose unapplied suggestions point at a rewritten file.
+def _sessions_holding_old_text(file_ids: Sequence[int]
+                               ) -> Tuple[List[str], List[str]]:
+    """The sessions of this project whose files hold an excerpt of a file
+    this run rewrote, and those among them with work still to apply.
+
+    What PRIVACY.md says the list is for: finding the files on disk that
+    still hold the old text, real names included. So every session is
+    named whose file holds such an excerpt, whatever the status (v0.14,
+    the claims audit's item 2): a suggestion's passage and the context
+    around it, applied or rejected as much as pending, and a proposed
+    code's evidence. Until v0.14 only sessions with a pending or approved
+    suggestion were named, proposals were never read, and a project
+    selected by its folder (as create_project and select_project leave
+    it) matched no session at all, because a session records the
+    database file and the two were compared as plain strings.
 
     Listed, never acted on: a session is the researcher's record and
     deleting one is their decision. Nothing fails if a session file
-    cannot be read; the list is advice, not a gate.
-
-    An `apply_codings` call on such a session fails safe anyway, because
-    the recorded excerpt still holds the real name and the
-    exact-verbatim invariant will not find it in the rewritten text.
+    cannot be read; the list is advice, not a gate. An `apply_codings`
+    or `create_proposed_codes` on such a session fails safe anyway,
+    because the recorded excerpt still holds the real name and the
+    exact-verbatim check will not find it in the rewritten text.
     """
     wanted = set(file_ids)
-    stale: List[str] = []
+    holding: List[str] = []
+    to_apply: List[str] = []
     try:
         _adopt_configured_project()
     except Exception:
-        return stale
+        return holding, to_apply
     if current_project_path is None:
-        return stale
+        return holding, to_apply
     try:
         listed = session_manager.list_sessions(
             project_path=current_project_path, days_old=36500)
     except Exception as e:
         logger.debug("Could not list sessions for stale check: %s",
                      error_label(e))
-        return stale
+        return holding, to_apply
     for meta in listed:
         session_id = meta.get("coding_session_id")
         if not session_id:
@@ -12631,12 +12645,44 @@ def _stale_sessions_for(file_ids: Sequence[int]) -> List[str]:
             session = session_manager.load_session(session_id)
         except Exception:
             continue
+        holds = pending = False
         for suggestion in session.suggestions:
-            if suggestion.status in ("pending", "approved") and \
-                    suggestion.file_id in wanted:
-                stale.append(session_id)
-                break
-    return sorted(stale)
+            if suggestion.file_id in wanted:
+                holds = True
+                pending = pending or suggestion.status in ("pending",
+                                                           "approved")
+        for proposal in session.proposed_codes:
+            if any(isinstance(segment, dict)
+                   and segment.get("file_id") in wanted
+                   for segment in proposal.example_segments or []):
+                holds = True
+                pending = pending or proposal.status in ("pending",
+                                                         "approved")
+        if holds:
+            holding.append(session_id)
+            if pending:
+                to_apply.append(session_id)
+    return sorted(holding), sorted(to_apply)
+
+
+def _sessions_note(holding: List[str], to_apply: List[str]) -> List[str]:
+    """The note that names the session files still holding the old text,
+    for the run's list of where the names remain (v0.14)."""
+    if not holding:
+        return []
+    note = (f"{len(holding)} coding session file(s) of this project "
+            f"(stale_sessions) still hold excerpts of this file's earlier "
+            f"text, real names included: a suggestion's passage and the "
+            f"text around it, or a proposed code's evidence. They are in "
+            f"this server's sessions folder (~/.qualcoder_mcp/sessions/, "
+            f"one file per session). ")
+    if to_apply:
+        note += (f"{len(to_apply)} of them have work still to apply "
+                 f"(stale_sessions_with_work_to_apply), which will be "
+                 f"refused against the new text rather than written at the "
+                 f"wrong place. ")
+    return [note + ("Nothing deletes a session but delete_coding_session, "
+                    "which is the researcher's decision.")]
 
 
 def _pseudonymise_journal_name(files: Sequence[Dict[str, Any]],
@@ -13075,7 +13121,14 @@ def pseudonymise_source(
 
     After the run, re-read the file before any further coding: every
     position after the first replacement in it has changed, and any
-    pending coding suggestion for it is stale.
+    pending coding suggestion for it is stale. The result lists, under
+    stale_sessions, every coding session of this project whose file
+    still holds an excerpt of the file's earlier text (a suggestion's
+    passage and context, whatever its status, or a proposed code's
+    evidence), and under stale_sessions_with_work_to_apply those with
+    suggestions or proposals still to apply; tell the researcher, since
+    those files hold the real names until delete_coding_session removes
+    them.
 
     QualCoder notes: an open QualCoder window does not refresh from this
     write on its own (re-selecting the file in the Files list re-reads
@@ -13830,11 +13883,14 @@ def pseudonymise_source(
             "permissions on that folder.")
     else:
         result["manifest_path"] = str(written_to)
-    result["stale_sessions"] = _stale_sessions_for(
+    holding, to_apply = _sessions_holding_old_text(
         [item["file_id"] for item in captured["written"]["files"]])
+    result["stale_sessions"] = holding
+    result["stale_sessions_with_work_to_apply"] = to_apply
     result["notes"] = _pseudonymise_notes(
         Path(backup_path).name if backup_path else None,
         file_rewritten=bool(captured["written"]["files"]))
+    result["notes"].extend(_sessions_note(holding, to_apply))
     memos = captured["written"].get("memos")
     if memos is not None:
         result["notes"].append(
@@ -15236,7 +15292,7 @@ def export_codebook(output_path: str, format: str = "csv",
 
     ro_db = get_db()
     freq = ro_db.get_codebook_frequencies()
-    project = Path(current_project_path).stem
+    project = project_display_name(current_project_path)
     n_codes = n_cats = 0
 
     if format == "csv":

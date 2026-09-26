@@ -126,6 +126,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failed answer ends by naming the project still selected, or saying
   that none is (`selected_project`). A project selected by its
   `data.qda` is called by its folder's name, not "data".
+- **After pseudonymising, the session files that still hold the real
+  names are listed.** `pseudonymise_source`'s `stale_sessions` names
+  every coding session of the project whose file holds an excerpt of
+  the rewritten file: a suggestion's passage and context whatever its
+  status, and a proposed code's evidence; the ones with work still to
+  apply are under `stale_sessions_with_work_to_apply`, and the run's
+  notes name the session files. Until now the list named only sessions
+  with suggestions still to apply, never read proposals, and was always
+  empty after `create_project`, because a session records the project's
+  database file while the selection recorded its folder, and the two
+  were compared as plain strings. `list_coding_sessions`' project filter
+  had the same fault and now finds a project's sessions by its folder
+  or its `data.qda`. The session list, `get_current_project` and the
+  exports name a project by its folder, not "data".
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,
   which every project lists, and warns when the project's own coder name
   is not known, since its refusal of the researcher's name cannot then

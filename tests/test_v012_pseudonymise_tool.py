@@ -6424,7 +6424,12 @@ class TestConcurrencyAndFaults:
 class TestStaleSessions:
 
     def _session(self, project, file_id, status="pending"):
-        session = AICodingSession(project_path=str(project),
+        # The database file, as analyze_for_coding records it (db.db_path),
+        # while the fixture selects the project by its folder, as
+        # create_project and select_project do: until v0.14 these tests
+        # recorded the folder and so matched a string real sessions
+        # never carry (the claims audit, item 2)
+        session = AICodingSession(project_path=str(project / "data.qda"),
                                   description="s", file_ids=[file_id],
                                   code_names=["Stress"], instruction="i")
         session.add_suggestion(CodingSuggestion(
@@ -6439,14 +6444,22 @@ class TestStaleSessions:
         session = self._session(project, 1)
         result = execute_from(preview_of())
         assert result["stale_sessions"] == [session.session_id]
+        assert result["stale_sessions_with_work_to_apply"] == \
+            [session.session_id]
 
     def test_a_suggestion_on_an_untouched_file_is_not_listed(self, project):
         self._session(project, 4)
         assert execute_from(preview_of())["stale_sessions"] == []
 
-    def test_an_applied_suggestion_is_not_listed(self, project):
-        self._session(project, 1, status="applied")
-        assert execute_from(preview_of())["stale_sessions"] == []
+    def test_an_applied_suggestion_is_listed_with_no_work_to_apply(
+            self, project):
+        """Its file still holds the excerpt, real name included (v0.14,
+        the claims audit's item 2), so it is listed; there is nothing
+        left to apply in it."""
+        session = self._session(project, 1, status="applied")
+        result = execute_from(preview_of())
+        assert result["stale_sessions"] == [session.session_id]
+        assert result["stale_sessions_with_work_to_apply"] == []
 
     def test_applying_a_stale_suggestion_afterwards_fails_safe(self,
                                                                project):

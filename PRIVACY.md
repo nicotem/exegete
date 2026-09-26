@@ -923,10 +923,17 @@ will ask, and the summary above depends on them:
     reopens the project and re-indexes. This server never reads or
     writes anything in there.
   - **This server's own session files** in `~/.qualcoder_mcp/sessions/`.
-    A coding session records the excerpt each suggestion refers to, so a
+    A coding session records the excerpt each suggestion refers to and
+    the text around it, and the evidence of each proposed code, so a
     session made before a run keeps the pre-pseudonymisation text on
-    disk. The run lists the affected sessions and never deletes one;
-    `delete_coding_session` is yours to call.
+    disk. The run lists every session of the project whose file holds
+    an excerpt of the rewritten file, whatever the state of its
+    suggestions and proposals (`stale_sessions`), marks those with work
+    still to apply (`stale_sessions_with_work_to_apply`), names them in
+    its notes, and never deletes one; `delete_coding_session` is yours
+    to call. (Before v0.14 the list named only sessions with suggestions
+    still to apply, never read proposals, and was empty for a project
+    selected by its folder, as `create_project` leaves it.)
   - The run manifest in `~/.qualcoder_mcp/pseudonymisation/` (the
     pseudonyms, the replacement spans, the row ids and offsets) and the
     journal entry inside the project (the pseudonyms and counts) never

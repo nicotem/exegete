@@ -374,21 +374,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error with no SQLite name (Python 3.10's shape) on every interpreter.
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
-  creation of projects and the handling of existing projects: full =
-  173,612 characters (about 43.4k tokens at chars/4) over 73 tools,
-  core = 58,133 (about 14.5k) over 21, and the new opt-in lifecycle set
-  = 176,094 (about 44.0k) over 74. Moved by `pseudonymise_source`'s
+  creation of projects, the handling of existing projects and the
+  server-wide changes: full = 180,178 characters (about 45.0k tokens at
+  chars/4) over 73 tools, core = 61,024 (about 15.3k) over 21, and the
+  new opt-in lifecycle set = 182,691 (about 45.7k) over 74. Moved by
+  every input schema's `additionalProperties: false`, the sentence on
+  the private-note marker in the fourteen tools that take a note, the
+  tools core lacks marked in core's descriptions, and the corrected
+  texts of `search_files`, `list_available_projects`, `list_backups`,
+  `select_project`, `set_memo`, `list_coding_sessions` and
+  `pseudonymise_source` (the server-wide changes); before them by
+  `pseudonymise_source`'s
   description (privacy, and the caveat for two people who share a
   name; not in `core`), by `set_memo`'s, `set_project_ai_coder_name`'s,
   `select_project`'s and `get_current_project`'s (creating a project;
   all four in `core`), and by `list_backups`'s and
   `copy_project_to_workspace`'s (both in `core`) and `restore_backup`'s
   and `link_file_to_case`'s (existing projects);
-  `pseudonymise_source`'s own share now rounds to 19,000, from 18,000.
+  `pseudonymise_source`'s own share now rounds to 19,500, from 18,000.
+  The tools' hints (annotations) are not part of this measurement.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 182,532, 61,185 and
-  185,150.
+  on Python 3.11.13, in the repository's `.venv/`, 189,158, 64,144 and
+  191,807.
 
 ## [0.13.0-alpha] - 2026-09-25
 

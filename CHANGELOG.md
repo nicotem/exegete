@@ -17,8 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `uv.lock`, and a settings form offers the tool set (`lifecycle` by
   default, so creating projects is on; `full` and `core`) and the
   folder for projects (a folder picker; by default `~/QualCoder
-  projects`, outside Documents, which iCloud and OneDrive may sync).
-  Nothing secret is asked. The package is not signed: on a personal
+  projects`, outside Documents, which iCloud and OneDrive may sync;
+  left empty, it stops the extension rather than falling back to
+  Documents). Nothing secret is asked. Every start runs
+  `uv run --frozen`, so it installs exactly the lock and never
+  re-resolves it. The install compiles nothing on any computer Claude
+  Desktop runs on: `pyproject.toml`'s `[tool.uv]` names Apple-chip and
+  Intel Macs, Windows on x64 and on Arm (and Linux), forbids building
+  `cryptography` (which `mcp` needs through `pyjwt[crypto]`; the server
+  never imports it), and pins the build backend (setuptools 84.0.0). So
+  `uv.lock` holds cryptography 50.0.1 in general, 48.0.1 for Intel Macs
+  (the last with a wheel for them; it fixes the OpenSSL its older
+  wheels bundled) and 46.0.3 for Windows on Arm (the last with a wheel
+  for it; a dependency scanner reading the lock will flag its
+  advisories, which concern code the server does not load). Without
+  this the app's install on those two computers tried to compile
+  cryptography from source and failed. The package is not signed: on a personal
   plan it installs like any other extension, and an organisation that
   requires signed extensions, or keeps an allowlist, blocks it
   (INSTALL.md says what the tester sees). INSTALL.md now starts with
@@ -31,16 +45,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   installs and starts a package the way Claude Desktop does. CI builds
   it on Linux, Windows and macOS on every run, compares the three,
   validates the manifest with the official MCPB tool (`@anthropic-ai/mcpb`
-  2.1.2, locked) and installs and starts it with the uv Claude Desktop
-  downloads.
+  2.1.2, locked), asks uv whether the lock has a wheel for every
+  computer, and installs and starts it with the uv Claude Desktop
+  downloads and the app's own short list of environment variables.
 - **`QUALCODER_MCP_WORKSPACE`** names the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` copies to; `list_available_projects`
-  searches its top level. Unset or blank, the workspace stays
-  `~/Documents/Qualcoder MCP Projects`. A relative path, or a folder
-  inside the state folder, QualCoder's settings folder or a project,
-  stops the server at start-up. The desktop extension's "Folder for
-  projects" sets it.
+  searches its top level (a usual place such as `~/Documents` is
+  walked in full, as before). Unset or blank, the workspace stays
+  `~/Documents/Qualcoder MCP Projects`, unless
+  `QUALCODER_MCP_WORKSPACE_REQUIRED=1`, which the extension sets: then a
+  blank folder stops the server. A relative path, or a folder inside
+  the state folder, QualCoder's settings folder, a project or the
+  folder the server is installed in, or a path holding `|`, stops the
+  server at start-up, with an error that names no path. The desktop
+  extension's "Folder for projects" sets it.
+- **The export tools refuse a relative `output_path`**
+  (`export_codebook`, `export_coded_segments_report`,
+  `export_frequencies_csv`, `export_case_code_matrix_csv`,
+  `export_refi_qda`), in `create_project`'s words: it was read from the
+  server's working folder, which under the extension is the extension's
+  own hidden folder, replaced by an update or an uninstall, so the
+  export was lost with it. Nothing is written; give a full path or one
+  starting with `~`.
 
 - **Creating a project from the conversation** (Experimental, opt-in):
   `create_project(name, directory, coder_name, coder_name_not_known)`

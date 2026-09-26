@@ -17,6 +17,7 @@ dependencies. These tests pin what the mandate asks of it:
 
 import asyncio
 import json
+import os
 import re
 import subprocess
 import sys
@@ -30,6 +31,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
 
 import build_desktop_extension as build           # noqa: E402
+import smoke_desktop_extension as smoke           # noqa: E402
 import qualcoder_mcp.server as server             # noqa: E402
 from qualcoder_mcp import database                # noqa: E402
 
@@ -85,6 +87,20 @@ class TestTypedOnce:
         assert manifest["support"] == meta["urls"]["Issues"]
         assert manifest["compatibility"]["runtimes"]["python"] == \
             meta["requires-python"]
+
+    @pytest.mark.parametrize("version", ["0.14.0a1", "0.14", "v0.14.0",
+                                         "0.14.0-alpha.01"])
+    def test_a_version_that_is_not_semver_is_refused(self, version):
+        project = {"project": dict(PYPROJECT["project"], version=version)}
+        with pytest.raises(build.BuildError, match="semantic version"):
+            build.build_manifest(TEMPLATE, project, [])
+
+    @pytest.mark.parametrize("version", ["0.13.0-alpha", "0.14.0",
+                                         "1.0.0-rc.1+build.5"])
+    def test_a_semver_version_is_kept_as_written(self, version):
+        project = {"project": dict(PYPROJECT["project"], version=version)}
+        assert build.build_manifest(TEMPLATE, project, [])["version"] == \
+            version
 
     def test_a_typed_field_is_refused(self):
         with pytest.raises(build.BuildError, match="version"):
@@ -164,6 +180,20 @@ class TestTheSettings:
         for mode in server._VALID_TOOLSET_MODES:
             assert f"{mode}:" in option["description"]
 
+    def test_an_empty_folder_stops_the_extension(self, monkeypatch):
+        """Fix round 1: the app lays a saved empty value over the default,
+        and blank used to mean ~/Documents. The manifest's marker makes a
+        blank folder stop the server, and the setting says so."""
+        option = TEMPLATE["user_config"]["projects_folder"]
+        assert "Leaving it empty stops the extension from starting" in \
+            option["description"]
+        for name, value in TEMPLATE["server"]["mcp_config"]["env"].items():
+            if "${" not in value:
+                monkeypatch.setenv(name, value)
+        monkeypatch.setenv(database.WORKSPACE_ENV, "")
+        problem = server._workspace_start_problem()
+        assert problem.startswith(f"{database.WORKSPACE_ENV} is empty")
+
     def test_the_folder_is_a_picker_outside_documents(self):
         option = TEMPLATE["user_config"]["projects_folder"]
         assert option["type"] == "directory"
@@ -179,6 +209,7 @@ class TestTheSettings:
         assert env == {
             "QUALCODER_MCP_TOOLSET": "${user_config.toolset}",
             database.WORKSPACE_ENV: "${user_config.projects_folder}",
+            database.WORKSPACE_REQUIRED_ENV: "1",
         }
         source = (REPO / "src" / "qualcoder_mcp" / "server.py").read_text(
             encoding="utf-8")
@@ -199,10 +230,62 @@ class TestTheSettings:
         config = server_block["mcp_config"]
         assert config["command"] == "uv"
         scripts = PYPROJECT["project"]["scripts"]
-        assert config["args"] == ["run", "--directory", "${__dirname}",
-                                  *scripts]
+        # --frozen (fix round 1): each start installs exactly the lock,
+        # never re-resolving it against a tester's own uv settings
+        assert config["args"] == ["run", "--frozen", "--directory",
+                                  "${__dirname}", *scripts]
         assert scripts["qualcoder-mcp"] == "qualcoder_mcp.server:main"
         assert (REPO / server_block["entry_point"]).is_file()
+
+
+class TestTheSmokeScriptDoesWhatTheAppDoes:
+    """scripts/smoke_desktop_extension.py stands in for Claude Desktop in
+    CI and the trials, so its substitution and environment are the
+    app's (fix round 1), read from Claude Desktop 2.9939.2's code."""
+
+    MANIFEST = {
+        "name": "qualcoder-mcp", "author": {"name": "Niccolò Tempini"},
+        "server": {"mcp_config": {
+            "command": "uv",
+            "args": ["run", "--directory", "${__dirname}", "x"],
+            "env": {"A": "${user_config.folder}",
+                    "B": "${user_config.flag}",
+                    "C": "${HOME}/plain"}}},
+        "user_config": {
+            "folder": {"default": "${HOME}/Projects"},
+            "flag": {"default": False}},
+    }
+
+    def test_a_home_inside_a_default_is_left_as_it_is(self, tmp_path):
+        config = smoke.launch_config(self.MANIFEST, tmp_path, {})
+        assert config["env"]["A"] == "${HOME}/Projects"
+        assert config["env"]["C"] == str(Path.home()) + "/plain"
+        assert config["env"]["B"] == "false"
+        assert config["args"][2] == str(tmp_path)
+
+    def test_a_saved_value_is_laid_over_the_default(self, tmp_path):
+        config = smoke.launch_config(self.MANIFEST, tmp_path,
+                                     {"folder": "/chosen", "flag": True})
+        assert config["env"]["A"] == "/chosen"
+        assert config["env"]["B"] == "true"
+
+    def test_the_server_gets_the_apps_short_list_only(self):
+        environ = {"HOME": "/h", "PATH": "/p", "USERPROFILE": "C:\\h",
+                   "APPDATA": "C:\\a", "SECRET_TOKEN": "x",
+                   "UV_INDEX_URL": "https://mirror", "SHELL": "() { :; }"}
+        env = smoke.server_environment({"env": {"A": "1"}}, environ,
+                                       extra={"UV_OFFLINE": "1"})
+        assert "SECRET_TOKEN" not in env and "UV_INDEX_URL" not in env
+        assert "SHELL" not in env            # a shell function is left out
+        assert env["A"] == "1" and env["UV_OFFLINE"] == "1"
+        assert env["PATH"] == "/p"
+        expected = ({"HOME"} if os.name != "nt" else
+                    {"USERPROFILE", "APPDATA"})
+        assert expected <= set(env)
+
+    def test_the_folder_name_is_the_apps(self):
+        assert smoke.extension_id(self.MANIFEST) == \
+            "local.mcpb.niccol-tempini.qualcoder-mcp"
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +372,190 @@ class TestTheLockShippedWithIt:
                                   requirement).groups()
             declared[name] = spec.replace(" ", "")
         assert recorded == declared
+
+
+# ---------------------------------------------------------------------------
+# A wheel for every computer (fix round 1: cryptography 50.0.1 had none
+# for Intel Macs or Windows on Arm, so the app's `uv sync` compiled it
+# and failed). The extension's Python is the .python-version's.
+# ---------------------------------------------------------------------------
+
+ENVIRONMENTS = {
+    ("darwin", "arm64"): ("macosx_", ("_arm64", "_universal2")),
+    ("darwin", "x86_64"): ("macosx_", ("_x86_64", "_universal2")),
+    ("win32", "AMD64"): ("win_amd64", ("",)),
+    ("win32", "ARM64"): ("win_arm64", ("",)),
+    ("linux", "x86_64"): ("manylinux", ("_x86_64",)),
+    ("linux", "aarch64"): ("manylinux", ("_aarch64",)),
+}
+
+
+def _marker_environment(system, machine, python=build.PYTHON_VERSION):
+    return {
+        "sys_platform": system, "platform_machine": machine,
+        "python_version": python, "python_full_version": f"{python}.0",
+        "implementation_name": "cpython",
+        "platform_python_implementation": "CPython",
+        "os_name": "nt" if system == "win32" else "posix",
+        "platform_system": {"darwin": "Darwin", "win32": "Windows",
+                            "linux": "Linux"}[system],
+        "platform_release": "", "platform_version": "", "extra": "",
+    }
+
+
+def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION):
+    """Whether a wheel's tags suit CPython `python` on that computer."""
+    stem = filename[:-len(".whl")]
+    pythons, abi, platforms = stem.split("-")[-3:]
+    minor = int(python.split(".")[1])
+
+    def python_fits(tag):
+        if tag in ("py3", f"py3{minor}", "py2.py3"):
+            return True
+        if tag.startswith("cp3") and tag[3:].isdigit():
+            return int(tag[3:]) == minor or (
+                abi == "abi3" and int(tag[3:]) <= minor)
+        return False
+
+    if not any(python_fits(t) for t in pythons.split(".")):
+        return False
+    if abi not in ("none", "abi3", f"cp3{minor}"):
+        return False
+    start, ends = ENVIRONMENTS[(system, machine)]
+    return any(p == "any" or (p.startswith(start) and
+                              any(p.endswith(e) for e in ends))
+               for p in platforms.split("."))
+
+
+def lock_wheel_gaps(lock, root, system, machine):
+    """(package, version) the lock would install for `root` on that
+    computer with no wheel that fits it."""
+    from packaging.markers import Marker
+    environment = _marker_environment(system, machine)
+    entries = {}
+    for package in lock["package"]:
+        entries.setdefault(package["name"], []).append(package)
+
+    def entry(dependency):
+        found = entries[dependency["name"]]
+        if "version" in dependency:
+            found = [p for p in found
+                     if p["version"] == dependency["version"]]
+        assert len(found) == 1, dependency
+        return found[0]
+
+    gaps, seen = [], set()
+    todo = [(entries[root][0], ())]
+    while todo:
+        package, extras = todo.pop()
+        key = (package["name"], package["version"], extras)
+        if key in seen:
+            continue
+        seen.add(key)
+        wanted = list(package.get("dependencies", []))
+        for extra in extras:
+            wanted += package.get("optional-dependencies", {}).get(extra, [])
+        for dependency in wanted:
+            marker = dependency.get("marker")
+            if marker and not Marker(marker).evaluate(environment):
+                continue
+            todo.append((entry(dependency),
+                         tuple(sorted(dependency.get("extra", [])))))
+        if package["name"] == root:
+            continue
+        wheels = [w["url"].rsplit("/", 1)[1]
+                  for w in package.get("wheels", [])]
+        if not any(_wheel_fits(w, system, machine) for w in wheels):
+            gaps.append((package["name"], package["version"]))
+    return sorted(set(gaps))
+
+
+class TestAWheelForEveryComputer:
+
+    def _lock(self):
+        with open(REPO / "uv.lock", "rb") as handle:
+            return tomllib.load(handle)
+
+    def test_uv_is_told_the_computers_and_never_to_compile(self):
+        settings = PYPROJECT["tool"]["uv"]
+        from packaging.markers import Marker
+        told = set()
+        for text in settings["required-environments"]:
+            for system, machine in ENVIRONMENTS:
+                if Marker(text).evaluate(
+                        _marker_environment(system, machine)):
+                    told.add((system, machine))
+        assert told == set(ENVIRONMENTS)
+        assert "cryptography" in settings["no-build-package"]
+        assert self._lock()["required-markers"]
+
+    def test_the_build_backend_is_pinned_for_uv(self):
+        """Build requirements are not in uv.lock, so without a pin the
+        extension's install builds the package with whatever setuptools
+        is newest that day (fix round 1). Pinned exactly, within
+        [build-system]'s own floor, and recorded in the lock."""
+        from packaging.requirements import Requirement
+        from packaging.version import Version
+        pins = PYPROJECT["tool"]["uv"]["build-constraint-dependencies"]
+        assert len(pins) == 1
+        pin = Requirement(pins[0])
+        assert pin.name == "setuptools"
+        (spec,) = pin.specifier
+        assert spec.operator == "=="
+        floor = Requirement(PYPROJECT["build-system"]["requires"][0])
+        assert floor.name == "setuptools"
+        assert Version(spec.version) in floor.specifier
+        assert self._lock()["manifest"]["build-constraints"] == [
+            {"name": "setuptools", "specifier": f"=={spec.version}"}]
+
+    @pytest.mark.parametrize("system,machine", sorted(ENVIRONMENTS))
+    def test_every_package_installed_has_a_wheel(self, system, machine):
+        assert lock_wheel_gaps(self._lock(), PYPROJECT["project"]["name"],
+                               system, machine) == []
+
+    def test_the_versions_each_computer_gets(self):
+        from packaging.markers import Marker
+        lock = self._lock()
+        crypto = {}
+        for system, machine in ENVIRONMENTS:
+            pyjwt = next(p for p in lock["package"] if p["name"] == "pyjwt")
+            for dependency in pyjwt["optional-dependencies"]["crypto"]:
+                if Marker(dependency["marker"]).evaluate(
+                        _marker_environment(system, machine)):
+                    crypto[(system, machine)] = dependency["version"]
+        assert crypto[("darwin", "x86_64")] == "48.0.1"
+        assert crypto[("win32", "ARM64")] == "46.0.3"
+
+    def test_the_check_finds_a_missing_wheel(self):
+        """The failure the gate found, in miniature: a package with only
+        an Apple-chip Mac wheel and a Windows x64 wheel."""
+        lock = {"package": [
+            {"name": "root", "version": "1", "dependencies": [
+                {"name": "native"}]},
+            {"name": "native", "version": "2", "wheels": [
+                {"url": "https://x/native-2-cp311-abi3-macosx_11_0_arm64.whl"},
+                {"url": "https://x/native-2-cp311-abi3-win_amd64.whl"}]},
+        ]}
+        assert lock_wheel_gaps(lock, "root", "darwin", "arm64") == []
+        assert lock_wheel_gaps(lock, "root", "win32", "AMD64") == []
+        assert lock_wheel_gaps(lock, "root", "darwin", "x86_64") == [
+            ("native", "2")]
+        assert lock_wheel_gaps(lock, "root", "win32", "ARM64") == [
+            ("native", "2")]
+
+    def test_the_tag_rule(self):
+        fits = _wheel_fits
+        assert fits("a-1-py3-none-any.whl", "win32", "ARM64")
+        assert fits("a-1-cp313-cp313-win_arm64.whl", "win32", "ARM64")
+        assert not fits("a-1-cp312-cp312-win_arm64.whl", "win32", "ARM64")
+        assert fits("a-1-cp311-abi3-macosx_10_9_universal2.whl",
+                    "darwin", "x86_64")
+        assert not fits("a-1-cp314-abi3-macosx_11_0_arm64.whl",
+                        "darwin", "arm64")
+        assert fits("a-1-cp313-cp313-manylinux_2_17_x86_64."
+                    "manylinux2014_x86_64.whl", "linux", "x86_64")
+        assert not fits("a-1-cp313-cp313-musllinux_1_2_x86_64.whl",
+                        "linux", "x86_64")
 
 
 class TestReadingARelease:
@@ -406,8 +673,22 @@ class TestCiBuildsIt:
         job = self._job("desktop-extension")
         upload = job.index("actions/upload-artifact@")
         validate = job.index("npm ci --ignore-scripts")
-        smoke = job.index("pip install uv==")
-        assert upload < validate < smoke
+        uv = job.index("pip install uv==0.9.7")
+        wheels = job.index("uv sync --frozen --dry-run")
+        smoke = job.index("python scripts/smoke_desktop_extension.py")
+        assert upload < validate < uv < wheels < smoke
+
+    def test_the_lock_is_asked_for_every_computer(self):
+        job = self._job("desktop-extension")
+        loop = re.search(r"for target in ([^;]+); do", job).group(1).split()
+        assert set(loop) == {
+            "aarch64-apple-darwin", "x86_64-apple-darwin",
+            "x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc",
+            "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"}
+        assert len(loop) == len(ENVIRONMENTS)
+        assert ('uv sync --frozen --dry-run --no-install-project --no-build '
+                '--python "$(cat .python-version)" --python-platform '
+                '"$target"') in job
 
     def test_the_official_validator_checks_the_manifest(self):
         job = self._job("desktop-extension")
@@ -431,6 +712,11 @@ class TestCiBuildsIt:
         assert "needs: desktop-extension" in job
         assert "pattern: desktop-extension-*" in job
         assert "sort -u | wc -l)\" -eq 1" in job
+        # and exactly three arrived: two alike would pass the line above
+        assert 'test "$(ls builds/*/*.mcpb | wc -l)" -eq 3' in job
+        platforms = re.search(r"os: \[([^\]]+)\]",
+                              self._job("desktop-extension")).group(1)
+        assert len(platforms.split(",")) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -490,3 +776,44 @@ class TestTheDocuments:
             assert "QUALCODER_MCP_WORKSPACE" in _flat(name), name
         assert "QUALCODER_MCP_WORKSPACE" in _flat("CHANGELOG.md").split(
             "## [0.13")[0]
+
+
+class TestEverySectionNamingTheOldFolderNamesTheSetting:
+    """Fix round 1 (QA, major): README and the workflow guide sent
+    researchers to `~/Documents/Qualcoder MCP Projects` on the extension
+    route, where the workspace is `~/QualCoder projects`. Checked per
+    section, not per file: README named the setting elsewhere, which a
+    per-file check would have taken as enough."""
+
+    QUALIFIERS = ("QUALCODER_MCP_WORKSPACE", "QualCoder projects",
+                  "unless the host")
+
+    @staticmethod
+    def _sections(text):
+        return re.split(r"(?m)^#{2,4} ", text)
+
+    def _offenders(self, name, text):
+        found = []
+        for section in self._sections(text):
+            flat = " ".join(section.split())
+            if "Qualcoder MCP Projects" in flat and not any(
+                    q in flat for q in self.QUALIFIERS):
+                found.append(f"{name}: {flat[:60]}")
+        return found
+
+    def test_every_shipped_document(self):
+        documents = sorted(p for p in REPO.glob("*.md")
+                           if p.name != "CHANGELOG.md")
+        assert {"README.md", "AI_CODING_WORKFLOW.md", "INSTALL.md",
+                "PRIVACY.md"} <= {p.name for p in documents}
+        offenders = []
+        for path in documents:
+            offenders += self._offenders(
+                path.name, path.read_text(encoding="utf-8"))
+        assert offenders == []
+
+    def test_the_check_would_notice(self):
+        text = ("## Workspace\n\nThe workspace is `~/Documents/Qualcoder "
+                "MCP\nProjects/`.\n\n## Other\n\nSet "
+                "QUALCODER_MCP_WORKSPACE.\n")
+        assert len(self._offenders("x", text)) == 1

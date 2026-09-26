@@ -11,13 +11,15 @@
       "command": "uv",
       "args": [
         "run",
+        "--frozen",
         "--directory",
         "${__dirname}",
         "qualcoder-mcp"
       ],
       "env": {
         "QUALCODER_MCP_TOOLSET": "${user_config.toolset}",
-        "QUALCODER_MCP_WORKSPACE": "${user_config.projects_folder}"
+        "QUALCODER_MCP_WORKSPACE": "${user_config.projects_folder}",
+        "QUALCODER_MCP_WORKSPACE_REQUIRED": "1"
       }
     }
   },
@@ -41,7 +43,7 @@
     "projects_folder": {
       "type": "directory",
       "title": "Folder for projects",
-      "description": "Where new projects are created and working copies of projects are kept. The default, QualCoder projects in your home folder (~), is outside Documents, which iCloud or OneDrive may sync; it is made when the first project needs it. If you choose another folder, choose one that no sync service keeps.",
+      "description": "Where new projects are created and working copies of projects are kept. The default, QualCoder projects in your home folder (~), is outside Documents, which iCloud or OneDrive may sync; it is made when the first project needs it. If you choose another folder, choose one that no sync service keeps. Leaving it empty stops the extension from starting.",
       "default": "~/QualCoder projects",
       "required": false
     }

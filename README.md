@@ -451,13 +451,17 @@ shows where), which registers the full set of tools plus
   subfolders, an empty database and its journal) is recognised as such
   next time, and the name refused. Its "about" line reads
   `qualcoder-mcp <version> (QualCoder schema v17)`.
-- **Where.** In the server's workspace, `~/Documents/Qualcoder MCP
-  Projects`, unless you name an existing folder (give its full path, or
-  one starting with `~`). Keep projects on a local disk that is not
-  synced (iCloud, OneDrive, Dropbox): sync services can copy the
-  database and its journal separately. On a Mac with iCloud's "Desktop
-  & Documents Folders" switched on, `~/Documents`, and so the default
-  workspace, is synced: name a folder outside it. On Windows
+- **Where.** In the server's workspace, unless you name an existing
+  folder (give its full path, or one starting with `~`). With the Claude
+  Desktop extension the workspace is its "Folder for projects", by
+  default `~/QualCoder projects`, outside Documents; otherwise it is
+  `~/Documents/Qualcoder MCP Projects`, unless the host sets another
+  folder with `QUALCODER_MCP_WORKSPACE`. The answer gives the full path.
+  Keep projects on a local disk that is not synced (iCloud, OneDrive,
+  Dropbox): sync services can copy the database and its journal
+  separately. On a Mac with iCloud's "Desktop & Documents Folders"
+  switched on, `~/Documents`, and so the standard workspace there, is
+  synced: name a folder outside it, or use the extension's default. On Windows
   where Documents has been moved (to OneDrive, say), the workspace may
   not be where QualCoder's Open dialog starts; the result gives the full
   path.
@@ -766,7 +770,7 @@ Claude can help you code your qualitative data with a conversational approval wo
 
 ### Conversational Workflow
 
-**Important**: AI coding writes directly to the database. Always work on copies in the `~/Documents/Qualcoder MCP Projects/` workspace folder. Automatic backups are created before every write, and **writes are refused while a released QualCoder (3.x) has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them the server can only warn on heuristics: make sure no QualCoder window has the project open before any write.
+**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/QualCoder projects/`), otherwise `~/Documents/Qualcoder MCP Projects/` unless the host sets another with `QUALCODER_MCP_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while a released QualCoder (3.x) has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them the server can only warn on heuristics: make sure no QualCoder window has the project open before any write.
 
 ### Quick Start Example
 

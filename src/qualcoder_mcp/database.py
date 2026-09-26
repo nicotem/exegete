@@ -872,6 +872,11 @@ def _raise_query_error(e: sqlite3.Error, where: str, message: str) -> None:
 # project folder that a sync service rewrites under the server is a
 # risk to the data. Blank means not set.
 WORKSPACE_ENV = "QUALCODER_MCP_WORKSPACE"
+# Set to 1 by a host whose form always fills the workspace (the desktop
+# extension, fix round 1): a blank value then stops the server instead
+# of falling back to the standard workspace inside ~/Documents, the
+# synced folder the setting exists to avoid.
+WORKSPACE_REQUIRED_ENV = "QUALCODER_MCP_WORKSPACE_REQUIRED"
 
 
 def standard_workspace() -> Path:
@@ -887,6 +892,13 @@ def workspace_setting_problem() -> Optional[str]:
     other start-up errors do not."""
     raw = os.environ.get(WORKSPACE_ENV)
     if raw is None or not raw.strip():
+        if os.environ.get(WORKSPACE_REQUIRED_ENV, "").strip() == "1":
+            return (f"{WORKSPACE_ENV} is empty, and this host requires a "
+                    f"folder for projects ({WORKSPACE_REQUIRED_ENV}=1): "
+                    f"choose one in the host's settings (in Claude Desktop, "
+                    f"the extension's Folder for projects). The server does "
+                    f"not fall back to ~/Documents, which iCloud or OneDrive "
+                    f"may sync.")
         return None
     try:
         given = Path(raw).expanduser()

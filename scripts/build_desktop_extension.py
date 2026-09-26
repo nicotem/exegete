@@ -65,6 +65,14 @@ GENERATED = ("name", "version", "author", "repository", "homepage",
 # plus create_project, and `core` is a subset of `full`.
 LISTED_TOOLSET = "lifecycle"
 EARLIEST_ZIP_TIME = 315532800          # 1980-01-01T00:00:00Z
+# Semantic Versioning 2.0.0's own pattern (semver.org), which the
+# specification asks of `version` and neither its schema nor the app
+# checks: pyproject's `0.13.0-alpha` passes, a PEP 440 `0.14.0a1` not.
+SEMVER = re.compile(
+    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+    r"(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+    r"(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$")
 SUMMARY_LIMIT = 240
 
 
@@ -244,6 +252,11 @@ def build_manifest(template: dict, project: dict,
                          f"build takes from pyproject.toml or the server; "
                          f"remove them there")
     meta = project["project"]
+    if not SEMVER.match(meta["version"]):
+        raise BuildError(f"pyproject.toml's version {meta['version']!r} is "
+                         f"not a semantic version (semver.org), which the "
+                         f"manifest's version must be: write it as, for "
+                         f"example, 0.14.0-alpha")
     urls = meta.get("urls", {})
     author = {"name": meta["authors"][0]["name"]}
     if urls.get("Homepage"):

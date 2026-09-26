@@ -17,7 +17,10 @@ folder as the working folder, after the app's own substitution of
 The substitution is one pass in the app's order, so a `${HOME}` inside a
 setting's default is left as it is, as the app leaves it.
 
-The caller chooses the home folder (set HOME, and USERPROFILE on
+The server gets what the app gives it: a short list of the caller's
+variables (HOME, LOGNAME, PATH, SHELL, TERM and USER; on Windows
+APPDATA, USERPROFILE, TEMP and the like) with the manifest's `env` over
+them. The caller chooses the home folder (set HOME, and USERPROFILE on
 Windows, before running this); uv, Python and the packages are fetched
 there as they would be on a tester's computer. It prints what it saw as
 JSON and exits 1 when an expectation fails.
@@ -60,6 +63,26 @@ def substitute(value, variables):
     return value
 
 
+# What the app passes a server from its own environment, then the
+# manifest's `env` over it (the app's list, the MCP SDK's; values that
+# begin with "()", shell functions, are left out).
+INHERITED = (["APPDATA", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA", "PATH",
+              "PROCESSOR_ARCHITECTURE", "SYSTEMDRIVE", "SYSTEMROOT", "TEMP",
+              "USERNAME", "USERPROFILE", "PROGRAMFILES"]
+             if os.name == "nt" else
+             ["HOME", "LOGNAME", "PATH", "SHELL", "TERM", "USER"])
+
+
+def server_environment(config: dict, environ=None, extra=None) -> dict:
+    """The environment the app starts the server with."""
+    environ = os.environ if environ is None else environ
+    env = {name: environ[name] for name in INHERITED
+           if name in environ and not environ[name].startswith("()")}
+    env.update(config.get("env", {}))
+    env.update(extra or {})
+    return env
+
+
 def launch_config(manifest: dict, folder: Path, settings: dict) -> dict:
     home = Path.home()
     variables = {"__dirname": str(folder), "pathSeparator": os.sep,
@@ -77,11 +100,11 @@ def launch_config(manifest: dict, folder: Path, settings: dict) -> dict:
     return substitute(manifest["server"]["mcp_config"], variables)
 
 
-async def ask(uv: str, config: dict, folder: Path, create: str = None):
+async def ask(uv: str, config: dict, folder: Path, create: str = None,
+              extra: dict = None):
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
-    env = dict(os.environ)
-    env.update(config.get("env", {}))
+    env = server_environment(config, extra=extra)
     params = StdioServerParameters(command=uv, args=config["args"],
                                    env=env, cwd=str(folder))
     seen = {}
@@ -175,8 +198,8 @@ def main(argv=None) -> int:
             if args.create not in names:
                 failures.append("the created project was not listed")
     if args.offline_restart:
-        os.environ["UV_OFFLINE"] = "1"
-        again = asyncio.run(ask(args.uv, config, folder))
+        again = asyncio.run(ask(args.uv, config, folder,
+                                extra={"UV_OFFLINE": "1"}))
         seen["offline_restart_tools"] = again["tools"]
         if again["tools"] != seen["tools"]:
             failures.append("the offline restart listed other tools")

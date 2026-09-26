@@ -131,3 +131,36 @@ where = ["src"]
 
 [project.scripts]
 qualcoder-mcp = "qualcoder_mcp.server:main"
+
+# For uv, which the Claude Desktop extension installs with (v0.14; pip
+# and PyPI builds ignore this table). The extension's `uv sync` must
+# never compile anything on a researcher's computer, so the lock has to
+# hold a wheel for every computer Claude Desktop runs on (and Linux,
+# for CI): tests/test_v014_desktop_extension.py checks uv.lock against
+# this list, and CI asks uv the same for each one.
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "sys_platform == 'win32' and platform_machine == 'ARM64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
+]
+# cryptography (through mcp's pyjwt[crypto]; the server never imports
+# it) is a Rust build without a wheel: without this, uv falls back to
+# compiling it, which downloads a Rust toolchain and then fails for want
+# of OpenSSL. With it, uv locks a version that has a wheel for each
+# computer: 50.0.1 in general, 48.0.1 on Intel Macs (the last with a
+# universal2 wheel) and 46.0.3 on Windows on Arm (the last with a
+# win_arm64 wheel).
+no-build-package = ["cryptography"]
+# Keeps Intel Macs on 48.0.1, which fixes the OpenSSL its older wheels
+# bundled, rather than the 46.0.3 Windows on Arm needs.
+constraint-dependencies = [
+    "cryptography>=48.0.1; sys_platform != 'win32' or platform_machine != 'ARM64'",
+]
+# The build backend uv installs the package with, pinned to the version
+# the extension's CI install used, since build requirements are not in
+# uv.lock and are otherwise the newest on the day of each install.
+build-constraint-dependencies = ["setuptools==84.0.0"]

@@ -543,6 +543,22 @@ def _host_set_workspace() -> Optional[str]:
     return str(default_workspace())
 
 
+# The usual places the listing walks, as its answer names them.
+_USUAL_SEARCH_PLACES = ["~/Documents/QualCoder_projects",
+                        "~/Documents/QualCoder", "~/QualCoder", "~/Documents"]
+
+
+def _is_one_of(folder: str, places: List[str]) -> bool:
+    """Whether `folder` is the same folder as one of `places`."""
+    def key(text):
+        try:
+            return Path(text).expanduser().resolve()
+        except (OSError, RuntimeError, ValueError):
+            return None
+    target = key(folder)
+    return target is not None and any(key(p) == target for p in places)
+
+
 def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """Discover .qda files in common locations.
 
@@ -566,21 +582,26 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
         # copy_project_to_workspace put projects there, and the folder is
         # the researcher's own choice, which may be as wide as the home
         # folder, where a recursive search would walk everything in it.
-        top_level_only = _host_set_workspace()
-        if top_level_only is not None:
-            search_paths.insert(0, top_level_only)
+        # When it is one of the usual places above, that place is walked
+        # as before and nothing is added (fix round 1: it used to lose
+        # its depth). The added entry is the first, marked by position.
+        workspace = _host_set_workspace()
+        if workspace is not None and not _is_one_of(workspace, search_paths):
+            top_level_only = workspace
+            search_paths.insert(0, workspace)
 
     projects = []
     seen_paths = set()
 
-    for search_path in search_paths:
+    for index, search_path in enumerate(search_paths):
         path = Path(search_path)
         if not path.exists():
             continue
 
         # Search recursively for .qda files (max 3 levels deep)
         try:
-            found = (path.glob("*.qda") if search_path == top_level_only
+            found = (path.glob("*.qda")
+                     if top_level_only is not None and index == 0
                      else path.rglob("*.qda"))
             for qda_file in found:
                 # Avoid duplicates and limit depth
@@ -2519,6 +2540,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
                           "at least one project in Qualcoder, or specify search_directories.",
                 "default_search_paths": [
                     p for p in (_host_set_workspace(),) if p is not None
+                    and not _is_one_of(p, _USUAL_SEARCH_PLACES)
                 ] + [
                     "~/Documents/QualCoder_projects",
                     "~/Documents/QualCoder",
@@ -4325,6 +4347,9 @@ def export_refi_qda(
     ro_db = get_db()
 
     # --- output path validation (consistent with the security posture) ---
+    relative = _relative_output_refusal(output_path)
+    if relative is not None:
+        return json.dumps({"error": relative})
     try:
         out_file = Path(output_path).expanduser().resolve()
     except (OSError, RuntimeError):
@@ -14289,6 +14314,31 @@ def _inside_state_home(out_file) -> bool:
     return home == target or home in target.parents
 
 
+def _relative_output_refusal(output_path: Any) -> Optional[str]:
+    """The refusal for an export path that is not a full path (v0.14).
+
+    A relative path is read from the server's own working folder, which
+    the host chooses and the researcher cannot see: under the Claude
+    Desktop extension it is the extension's own folder, hidden in the
+    app's data and replaced by an update or an uninstall, so an export
+    written there would be lost. create_project refuses a relative
+    folder for the same reason, in the same words.
+    """
+    if not isinstance(output_path, str):
+        return None
+    try:
+        given = Path(output_path).expanduser()
+    except (RuntimeError, ValueError):
+        return None
+    if given.is_absolute():
+        return None
+    return (f"'{output_path}' is a relative path, which would be read from "
+            f"the server's own working folder (with the Claude Desktop "
+            f"extension, a hidden folder that an update or uninstall "
+            f"replaces). Give the full path, or one starting with ~ (the "
+            f"home folder). Nothing was written.")
+
+
 def _resolve_export_path(output_path: str, suffix: str, default_name: str,
                          overwrite: bool):
     """Resolve and validate an export path (export_refi_qda posture).
@@ -14301,6 +14351,9 @@ def _resolve_export_path(output_path: str, suffix: str, default_name: str,
 
     Returns (Path, None) on success or (None, error_dict).
     """
+    relative = _relative_output_refusal(output_path)
+    if relative is not None:
+        return None, {"error": relative}
     try:
         out_file = Path(output_path).expanduser().resolve()
     except (OSError, RuntimeError):
@@ -15634,17 +15687,52 @@ def _workspace_start_problem() -> Optional[str]:
     folder = _host_set_workspace()
     if folder is None:
         return None
+    unusable = (f"{WORKSPACE_ENV} is not a folder path this server can "
+                f"use; check the folder in the host's configuration.")
+    try:
+        resolved = Path(folder).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return unusable
+    # Fix round 1: these refusals name no path, since the host keeps the
+    # server's stderr in its log (create_project's own refusals, which
+    # answer the conversation, still name the folder).
+    if any(part.name.lower().endswith(new_project.PROJECT_SUFFIX)
+           for part in (resolved,) + tuple(resolved.parents)):
+        return (f"{WORKSPACE_ENV} names a folder inside a QualCoder project "
+                f"(a folder ending in .qda); a project inside a project is "
+                f"copied into every backup of the outer one. Choose another "
+                f"folder in the host's settings.")
+    if "|" in str(resolved):
+        return (f"{WORKSPACE_ENV} names a folder whose path holds a '|'; "
+                f"QualCoder creates a project there but can never open it. "
+                f"Choose another folder in the host's settings.")
+    install = _install_folder()
+    if install is not None and (resolved == install
+                                or install in resolved.parents):
+        return (f"{WORKSPACE_ENV} names a folder inside the folder this "
+                f"server is installed in, which an update or an uninstall "
+                f"replaces, and the projects with it. Choose another folder "
+                f"in the host's settings.")
     try:
         new_project.check_parent_folder(
-            Path(folder).resolve(),
-            Path(preview_tokens_state_home()).resolve(), True,
+            resolved, Path(preview_tokens_state_home()).resolve(), True,
             Path.home() / ".qualcoder")
     except new_project.Refusal as error:
         return f"{WORKSPACE_ENV}: {error}"
     except (OSError, RuntimeError, ValueError):
-        return (f"{WORKSPACE_ENV} is not a folder path this server can "
-                f"use; check the folder in the host's configuration.")
+        return unusable
     return None
+
+
+def _install_folder() -> Optional[Path]:
+    """The folder this server's package sits in, one above `src` or
+    `site-packages`: for the Claude Desktop extension, the extension's
+    own folder, which the app replaces on an update and deletes on an
+    uninstall."""
+    try:
+        return Path(__file__).resolve().parent.parent.parent
+    except (OSError, RuntimeError):
+        return None
 
 
 def _resolve_toolset_mode() -> str:
@@ -15653,7 +15741,8 @@ def _resolve_toolset_mode() -> str:
     if raw not in _VALID_TOOLSET_MODES:
         raise ValueError(
             f"Unknown QUALCODER_MCP_TOOLSET value {raw!r}: valid values "
-            f"are 'full' (default, the standard set), 'core' (the reduced "
+            f"are 'full' (the standard set, used when the variable is not "
+            f"set), 'core' (the reduced "
             f"supervised-coding set for local models) and 'lifecycle' (the "
             f"standard set plus creating a project)."
         )

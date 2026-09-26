@@ -187,16 +187,34 @@ jobs:
           npx --no-install mcpb validate ../../../dist/mcpb/qualcoder-mcp-*/manifest.json
           npx --no-install mcpb info ../../../dist/mcpb/*.mcpb
 
+      # The uv Claude Desktop 2.9939.2 downloads when a computer has none.
+      - name: Install uv 0.9.7
+        run: pip install uv==0.9.7
+
+      # The app's `uv sync` must never compile anything on a researcher's
+      # computer (fix round 1: cryptography had no wheel for Intel Macs or
+      # Windows on Arm). Asked of the shipped lock itself, for every
+      # computer pyproject's [tool.uv] names, on the package's Python:
+      # nothing but the project may be built.
+      - name: Check the lock has a wheel for every computer
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd dist/mcpb/qualcoder-mcp-*/
+          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
+            echo "== $target"
+            uv sync --frozen --dry-run --no-install-project --no-build --python "$(cat .python-version)" --python-platform "$target"
+          done
+
       # Installed and started the way Claude Desktop 2.9939.2 does it
-      # (scripts/smoke_desktop_extension.py says how), with the uv
-      # version that app downloads when the computer has none, in a home
-      # folder of the runner's own: the server must list exactly the
-      # manifest's tools, create a project in the default folder for
-      # projects, list it, and start again with uv offline.
+      # (scripts/smoke_desktop_extension.py says how), with that uv, in a
+      # home folder of the runner's own and the app's short list of
+      # variables: the server must list exactly the manifest's tools,
+      # create a project in the default folder for projects, list it, and
+      # start again with uv offline.
       - name: Install and start it as Claude Desktop does
         shell: bash
         run: |
-          pip install uv==0.9.7
           home="$RUNNER_TEMP/extension-home"
           mkdir -p "$home"
           HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/extension-app" --expect-tools manifest --create "Pilot study" --offline-restart

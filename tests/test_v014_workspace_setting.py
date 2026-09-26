@@ -118,13 +118,67 @@ class TestTheServerChecksItAtStart:
     def test_inside_a_project_stops_the_server(self, monkeypatch, tmp_path):
         monkeypatch.setenv(ENV, str(tmp_path / "Study.qda" / "inner"))
         problem = server._workspace_start_problem()
-        assert problem.startswith(f"{ENV}: The workspace folder")
-        assert "inside the project folder 'Study.qda'" in problem
+        assert problem.startswith(f"{ENV} names a folder inside a QualCoder "
+                                  f"project")
+        assert "Study" not in problem and str(tmp_path) not in problem
+
+    @pytest.mark.parametrize("folder,words", [
+        ("Study.qda/inner", "inside a QualCoder project"),
+        ("a|b", "holds a '|'"),
+    ])
+    def test_the_refusals_name_no_path_on_stderr(self, tmp_path, folder,
+                                                 words):
+        """Fix round 1 (Security): the host keeps stderr in its log, and
+        PRIVACY.md says the start-up lines name no folder."""
+        given = str(tmp_path / "Private Name" / folder)
+        result = _start(given, tmp_path)
+        assert result.returncode == 1
+        assert words in result.stderr
+        for part in ("Private Name", "Study", str(tmp_path)):
+            assert part not in result.stderr, part
+
+    def test_the_servers_own_install_folder_is_refused(self, monkeypatch):
+        """Under the extension that is the extension's folder, which the
+        app replaces on an update and deletes on an uninstall."""
+        install = Path(server.__file__).resolve().parent.parent.parent
+        monkeypatch.setenv(ENV, str(install / "projects"))
+        problem = server._workspace_start_problem()
+        assert "inside the folder this server is installed in" in problem
+        monkeypatch.setenv(ENV, str(install.parent / "elsewhere-projects"))
+        assert server._workspace_start_problem() is None
 
     def test_qualcoders_settings_folder_is_refused(self, monkeypatch):
         monkeypatch.setenv(ENV, "~/.qualcoder/projects")
         assert "QualCoder's own settings folder" in \
             server._workspace_start_problem()
+
+    @pytest.mark.parametrize("value", ["", "  "])
+    def test_a_blank_folder_stops_the_server_when_required(self, tmp_path,
+                                                           value):
+        """Fix round 1: the extension sets the marker, so an emptied
+        Folder for projects stops the server instead of sending projects
+        to ~/Documents."""
+        home = tmp_path / "start_home"
+        home.mkdir()
+        env = os.environ.copy()
+        env.update({"HOME": str(home), "USERPROFILE": str(home), ENV: value,
+                    database.WORKSPACE_REQUIRED_ENV: "1"})
+        for name in ("QUALCODER_PROJECT_PATH", "QUALCODER_MCP_TOOLSET"):
+            env.pop(name, None)
+        result = subprocess.run(
+            [sys.executable, "-m", "qualcoder_mcp.server"], env=env,
+            input="", capture_output=True, text=True, timeout=60,
+            cwd=str(tmp_path))
+        assert result.returncode == 1
+        assert f"Error: {ENV} is empty" in result.stderr
+        assert "does not fall back to ~/Documents" in result.stderr
+
+    def test_blank_without_the_marker_is_the_standard_workspace(
+            self, monkeypatch):
+        monkeypatch.setenv(ENV, "")
+        monkeypatch.setenv(database.WORKSPACE_REQUIRED_ENV, "0")
+        assert server._workspace_start_problem() is None
+        assert database.default_workspace() == database.standard_workspace()
 
     def test_a_usable_folder_starts_and_is_not_made(self, tmp_path):
         result = _start("~/QualCoder projects", tmp_path)
@@ -203,6 +257,29 @@ class TestTheListingFindsIt:
             "~/Documents/QualCoder_projects", "~/Documents/QualCoder",
             "~/QualCoder", "~/Documents"]
 
+    @pytest.mark.parametrize("usual", ["~/Documents", "~/Documents/",
+                                       "~/QualCoder",
+                                       "~/Documents/QualCoder",
+                                       "~/Documents/QualCoder_projects"])
+    def test_a_usual_place_as_the_workspace_keeps_its_depth(
+            self, monkeypatch, usual):
+        """Fix round 1 (Security): a workspace that is one of the usual
+        places used to be searched at its top level only, hiding the
+        projects in its subfolders that were listed before."""
+        place = Path(usual).expanduser()
+        deeper = place / "Research"
+        deeper.mkdir(parents=True)
+        assert _create("Deep study", directory=deeper)["created"] is True
+        server.db.close()
+        server.db, server.current_project_path = None, None
+        before = {p["name"] for p in server.discover_projects()}
+        assert "Deep study" in before
+        monkeypatch.setenv(ENV, usual)
+        after = {p["name"] for p in server.discover_projects()}
+        assert "Deep study" in after
+        answer = json.loads(server.list_available_projects())
+        assert answer["project_count"] >= 1
+
     def test_unset_the_listing_is_as_before(self):
         answer = self._projects()
         assert answer["default_search_paths"] == [
@@ -221,6 +298,16 @@ class TestTheDescriptionsSayIt:
         text = " ".join(getattr(server, tool).__doc__.split())
         assert "~/Documents/Qualcoder MCP Projects" in text
         assert "unless the host set another" in text
+
+    def test_the_tool_set_error_is_neutral(self, monkeypatch):
+        """The extension's default is lifecycle, the variable's full: the
+        error says which is used when the variable is not set, not that
+        full is the default (fix round 1)."""
+        monkeypatch.setenv("QUALCODER_MCP_TOOLSET", "")
+        with pytest.raises(ValueError) as caught:
+            server._resolve_toolset_mode()
+        assert "(default" not in str(caught.value)
+        assert "used when the variable is not set" in str(caught.value)
 
     def test_the_listing_names_the_set_workspace(self):
         text = " ".join(server.list_available_projects.__doc__.split())
@@ -255,3 +342,39 @@ def test_an_ambient_setting_does_not_reach_the_suite(tmp_path):
         cwd=str(tmp_path))
     assert result.returncode == 0, result.stdout[-2000:] + result.stderr
     assert not elsewhere.exists()
+
+
+class TestExportsRefuseARelativePath:
+    """Fix round 1 (Security): a relative output path was read from the
+    server's working folder, under the extension its own folder, which an
+    update or uninstall replaces. Each export tool now refuses one, in
+    create_project's words, and writes nothing."""
+
+    @pytest.fixture
+    def project(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        made = _create("Export study", directory=tmp_path)
+        assert made["created"] is True, made
+        return tmp_path
+
+    @pytest.mark.parametrize("call", [
+        lambda p: server.export_codebook(p),
+        lambda p: server.export_coded_segments_report(p),
+        lambda p: server.export_frequencies_csv(p),
+        lambda p: server.export_case_code_matrix_csv(p),
+        lambda p: server.export_refi_qda(p),
+    ], ids=["codebook", "coded_segments", "frequencies", "matrix", "refi"])
+    @pytest.mark.parametrize("relative", ["out.csv", "sub/out.csv",
+                                          "out.md", "out.qdpx"])
+    def test_refused_and_nothing_written(self, project, call, relative):
+        before = set(project.rglob("*"))
+        answer = json.loads(call(relative))
+        assert "is a relative path" in answer["error"], answer
+        assert "one starting with ~" in answer["error"]
+        assert set(project.rglob("*")) == before
+
+    def test_a_full_path_still_writes(self, project):
+        answer = json.loads(server.export_codebook(
+            str(project / "codebook.csv")))
+        assert "error" not in answer, answer
+        assert (project / "codebook.csv").is_file()

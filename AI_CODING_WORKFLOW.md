@@ -29,11 +29,18 @@ This approach gives you **full control** through natural conversation with Claud
 
 ### Workspace Setup
 
-The AI coding system uses a dedicated workspace folder:
+The AI coding system uses a dedicated workspace folder. With the Claude
+Desktop extension it is the extension's "Folder for projects", by
+default:
 
 ```
-~/Documents/Qualcoder MCP Projects/
+~/QualCoder projects/
 ```
+
+Otherwise it is `~/Documents/Qualcoder MCP Projects/`, unless the host
+sets another folder with `QUALCODER_MCP_WORKSPACE`. Either way, the
+answer to `copy_project_to_workspace` (and to `create_project`) gives
+the full path: use that one.
 
 **Before ANY AI coding:**
 1. Copy your project to the workspace
@@ -84,14 +91,17 @@ Copy my project "Interview Study.qda" to the workspace for AI coding
 ```
 
 Claude will:
-- Copy the entire project folder to `~/Documents/Qualcoder MCP Projects/`
+- Copy the entire project folder to the workspace (with the Claude
+  Desktop extension `~/QualCoder projects/` by default, otherwise
+  `~/Documents/Qualcoder MCP Projects/`, unless the host set another)
 - Create unique name if one already exists
 - Report the workspace path
 
-**What you'll see:**
+**What you'll see** (the path is the one the answer gives; this example
+uses the extension's default folder):
 ```
 ✓ Copied project to workspace:
-  /Users/YOUR_NAME/Documents/Qualcoder MCP Projects/Interview Study.qda
+  /Users/YOUR_NAME/QualCoder projects/Interview Study.qda
 
   This is now your working copy for AI coding.
   Your original project is untouched.
@@ -286,7 +296,11 @@ Applying 6 approved codings...
 
 1. Open Qualcoder (a QualCoder 4.0 window that already had the project
    open must close and reopen it to show the new codings)
-2. Open the workspace project: `~/Documents/Qualcoder MCP Projects/Interview Study.qda`
+2. Open the workspace project, at the path the copy's answer gave (with
+   the Claude Desktop extension's default,
+   `~/QualCoder projects/Interview Study.qda`; otherwise
+   `~/Documents/Qualcoder MCP Projects/Interview Study.qda`, unless the
+   host set another folder)
 3. Go to **Coding > Code Text**
 4. Select the files you analysed
 5. You should see the AI-generated codings with:
@@ -302,10 +316,11 @@ Applying 6 approved codings...
 Copy "Focus Group Study.qda" to the workspace
 ```
 
-**Claude:**
+**Claude** (the path is the workspace's; here the Claude Desktop
+extension's default folder, `~/QualCoder projects/`):
 ```
 ✓ Copied project to:
-  ~/Documents/Qualcoder MCP Projects/Focus Group Study.qda
+  ~/QualCoder projects/Focus Group Study.qda
 ```
 
 **You:**
@@ -573,9 +588,12 @@ Copy the project at <path> to the workspace   (copy_project_to_workspace;
 ```
 
 **Find backups:**
-Backups are in the same folder as your workspace projects:
+Backups are in the same folder as your workspace projects (the
+workspace: with the Claude Desktop extension `~/QualCoder projects/` by
+default, otherwise `~/Documents/Qualcoder MCP Projects/`, unless the
+host set another with `QUALCODER_MCP_WORKSPACE`):
 ```
-~/Documents/Qualcoder MCP Projects/ProjectName_backup_TIMESTAMP.qda
+~/QualCoder projects/ProjectName_backup_TIMESTAMP.qda
 ```
 
 **Restore from backup:**
@@ -652,14 +670,20 @@ made.
 **Problem:** Looking in wrong location.
 
 **Solution:**
-The workspace is:
+The workspace is the folder the answer to `copy_project_to_workspace`
+named. With the Claude Desktop extension it is the extension's "Folder
+for projects" (Settings, Extensions, qualcoder-mcp), by default:
 ```
-/Users/YOUR_NAME/Documents/Qualcoder MCP Projects/
+/Users/YOUR_NAME/QualCoder projects/
 ```
+Otherwise it is `/Users/YOUR_NAME/Documents/Qualcoder MCP Projects/`,
+unless the host sets another folder with `QUALCODER_MCP_WORKSPACE`. A
+project of the same name in the other folder is an older copy (from an
+earlier install, say): open the one in the workspace.
 
 In Qualcoder:
 - File > Open Project
-- Navigate to "Qualcoder MCP Projects" folder
+- Navigate to the workspace folder
 - Select the `.qda` folder
 
 ### Claude doesn't see new changes in Qualcoder

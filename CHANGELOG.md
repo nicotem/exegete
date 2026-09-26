@@ -40,7 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Every tool says what kind of tool it is**, in the four marks MCP
   defines (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
-  `openWorldHint`): the reading tools are marked read-only, the tools
+  `openWorldHint`): the reading tools are marked read-only (all but
+  `read_pseudonym_list`, which sends every real name in the project's
+  pseudonyms file to the AI provider, so that the host asks first), the tools
   that can replace or remove work are marked destructive (the seven
   that ask for a preview among them), and none reaches beyond this
   computer. Claude Desktop runs a read-only tool without asking in a
@@ -87,6 +89,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   memo reaches "every future session": the assistant reads it when it
   looks, and is told to at the start of each coding session. README no
   longer says `add_journal_entry` updates an entry.
+- **Text holding `#####` is refused, not cut.** Every tool that writes
+  the assistant's text into a memo, a note or a journal entry
+  (`set_memo`, `add_annotation`, `update_annotation`,
+  `add_journal_entry`, the memos of `create_code`, `create_category`,
+  `create_case`, `create_attribute_type` and `import_text_file`, a
+  proposed code's definition in `propose_codes` and `update_proposal`, a
+  suggestion's reasoning in `record_suggestions`) refuses text containing
+  QualCoder's private-note marker before anything is written or backed
+  up; `apply_codings` and `create_proposed_codes` refuse an older
+  session's item that holds one. Until now the marker and what followed
+  it were dropped without a word: "##### note" deleted an annotation,
+  emptied a memo, and cut a journal entry. QualCoder's own AI server
+  drops it silently; this departs from it because the silent drop
+  destroyed notes. A call to `record_suggestions` or `propose_codes`
+  that records nothing no longer rewrites the session file.
+- `set_memo`'s `target_id` may be left out for the project memo, as its
+  text says (it was required by the schema).
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,
   which every project lists, and warns when the project's own coder name
   is not known, since its refusal of the researcher's name cannot then

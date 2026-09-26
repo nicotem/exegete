@@ -23,6 +23,7 @@ from typing import Optional, List, Dict, Any, Sequence, Tuple
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp import Context
 from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from .database import (
     QualcoderDatabase,
@@ -99,7 +100,8 @@ from .coder_comparison import (
     qualcoder_report_values,
     statistics as comparison_statistics,
 )
-from .memo_privacy import (extract_ai_memo, neutralize_marker,
+from .memo_privacy import (MARKER_REFUSED_DESCRIPTION, extract_ai_memo,
+                           neutralize_marker, private_marker_refusal,
                            strip_private_memos)
 from .preview_tokens import (
     EXPIRED,
@@ -301,6 +303,8 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
 #   each such call and checks it. False is no promise either way.
 # - openWorldHint: false throughout; every tool works on this computer's
 #   files and nothing else.
+# One tool that changes nothing is still not marked read-only:
+# read_pseudonym_list (TOOL_DISCLOSES below says why).
 #
 # What the hosts do with the hints (INSTALL.md, "What hosts do with the
 # tools' read and write marks"): Claude Desktop passes readOnlyHint on,
@@ -317,6 +321,15 @@ TOOL_CHANGES = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
                                idempotentHint=False, openWorldHint=False)
 TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
                                     idempotentHint=True, openWorldHint=False)
+# read_pseudonym_list alone (the lead's correction, 2026-09-26). It changes
+# nothing, but it sends every real name in the project's pseudonyms.json
+# to the AI provider, and the owner made it a tool of its own so that the
+# host asks before it does (v0.13). Marked read-only, it would run without
+# asking in a Cowork or Code session in auto mode, which would undo that
+# ruling; so it is marked as a tool that is not read-only, adds nothing
+# and can be repeated.
+TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                                 idempotentHint=True, openWorldHint=False)
 
 def _argument_name_for_display(name: Any) -> str:
     """An argument name as a refusal may show it: the model's own text,
@@ -3562,7 +3575,7 @@ def get_current_project() -> str:
             {"error": f"Failed to get project info: {error_text(e)}"})
 
 
-@mcp.tool(annotations=TOOL_READS)
+@mcp.tool(annotations=TOOL_DISCLOSES)
 @_tool_guard
 def read_pseudonym_list() -> str:
     """This sends every real name in the project's pseudonyms.json, with its pseudonym, to the AI provider.
@@ -6111,6 +6124,7 @@ def _validate_proposal_evidence(ro_db, items, file_cache):
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 @_with_guidance(GROUNDING_RECORD, before="SPAN STYLE")
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def record_suggestions(
     coding_session_id: str,
     suggestions: List[Dict[str, Any]],
@@ -6219,6 +6233,11 @@ def record_suggestions(
     for idx, item in enumerate(suggestions):
         if not isinstance(item, dict):
             rejected.append({"index": idx, "reason": "each suggestion must be an object"})
+            continue
+        # The reasoning becomes the applied coding's memo (v0.14)
+        marker = private_marker_refusal(item.get("reasoning"), "reasoning")
+        if marker is not None:
+            rejected.append({"index": idx, "reason": marker})
             continue
 
         # --- file ---
@@ -6339,7 +6358,10 @@ def record_suggestions(
                              for a in suggestion.span_alternatives],
         })
 
-    session_manager.save_session(session)
+    # A call that recorded nothing and replaced nothing leaves the
+    # session file as it was (v0.14: a refused suggestion writes nothing)
+    if recorded or removed_pending:
+        session_manager.save_session(session)
 
     result = {
         "coding_session_id": session_id,
@@ -6866,6 +6888,7 @@ Use `apply_codings` with session ID `{session_id}` to write approved suggestions
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def apply_codings(
     coding_session_id: str,
     create_backup: bool = True,
@@ -6981,7 +7004,12 @@ def apply_codings(
             file_cache[sugg.file_id] = ro_db.get_file_content(sugg.file_id)
         file_content = file_cache[sugg.file_id]
         fulltext = (file_content or {}).get("content") or ""
-        if file_content is None:
+        marker = private_marker_refusal(sugg.reasoning, "its reasoning")
+        if marker is not None:
+            # a session recorded before v0.14 refused the marker
+            problem = {"reason": marker + " Reject this suggestion and "
+                                          "record it again."}
+        elif file_content is None:
             problem = {"reason": f"file_id {sugg.file_id} does not exist"}
         elif _unusable_pdf_reason(file_content) is not None:
             problem = {"reason": _unusable_pdf_reason(file_content)}
@@ -7244,6 +7272,7 @@ def apply_codings(
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def import_text_file(
     filename: str,
     content: str,
@@ -7309,6 +7338,9 @@ def import_text_file(
     Returns:
         JSON with the new file's ID, name, and confirmation details
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     # Early validation before upgrading connection
     if not filename or not filename.strip():
         return json.dumps({"error": "filename must not be empty"})
@@ -9073,6 +9105,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 @_with_guidance(GROUNDING_PROPOSE, before="Args:")
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
                   replace: bool = False) -> str:
     """Record BRAND-NEW code proposals discovered in the data (inductive
@@ -9156,6 +9189,13 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         if not isinstance(item, dict):
             rejected.append({"index": idx, "reason": "each proposal must be an object"})
             continue
+        # The definition becomes the created code's memo (v0.14)
+        marker = next(filter(None, (
+            private_marker_refusal(item.get(key), key)
+            for key in ("memo", "definition"))), None)
+        if marker is not None:
+            rejected.append({"index": idx, "reason": marker})
+            continue
         name = item.get("name")
         if not isinstance(name, str) or not name.strip():
             rejected.append({"index": idx, "reason": "name (non-empty string) is required"})
@@ -9218,7 +9258,11 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
             entry["evidence_rejected"] = evidence_rejected
         recorded.append(entry)
 
-    session_manager.save_session(session)
+    # A call that recorded nothing and replaced nothing leaves the
+    # session file as it was (v0.14: a refused proposal writes
+    # nothing)
+    if recorded or removed_pending:
+        session_manager.save_session(session)
 
     result: Dict[str, Any] = {
         "coding_session_id": session_id,
@@ -9350,6 +9394,7 @@ def review_proposals(coding_session_id: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def update_proposal(coding_session_id: str, proposal_guid: str,
                     name: Optional[str] = None,
                     color: Optional[str] = None,
@@ -9383,6 +9428,9 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
             [{file_id, start_pos, end_pos, segment_text}]; positions
             optional when the excerpt is unique in the file
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     # Bridge fix: some MCP middleware strips arguments named
     # 'session_id' (reserved for its own routing); the tool
     # argument is coding_session_id, aliased for the body.
@@ -9587,6 +9635,7 @@ def update_proposal_status(coding_session_id: str,
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_proposed_codes(coding_session_id: str,
                           apply_coded_segments: bool = False,
                           create_backup: bool = True) -> str:
@@ -9668,7 +9717,11 @@ def create_proposed_codes(coding_session_id: str,
         # validation before the backup and the write).
         key = name_key(p.name)
         collision = _code_name_collisions(p.name)
-        if collision:
+        marker = private_marker_refusal(p.memo, "its definition (memo)")
+        if marker is not None:
+            # a session recorded before v0.14 refused the marker
+            problem = marker + " Set it again with update_proposal."
+        elif collision:
             problem = (f"name collides with existing code '{collision}'; "
                        f"rename the proposal (update_proposal) or apply the "
                        f"existing code instead")
@@ -9818,7 +9871,9 @@ def create_proposed_codes(coding_session_id: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-def set_memo(target_type: str, target_id: Optional[int], memo: str,
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
+def set_memo(target_type: str, target_id: Optional[int] = None,
+             memo: str = Field(...),
              create_backup: bool = True,
              allow_hidden_coder: bool = False) -> str:
     """Write (or clear) the memo on a code, category, file, coding, or
@@ -9836,10 +9891,9 @@ def set_memo(target_type: str, target_id: Optional[int], memo: str,
 
     Memo privacy (QualCoder 4.0 convention): memo text from the first
     '#####' marker onward is the researcher's private zone. This tool
-    replaces only the text before the marker; an existing private
-    section always survives the write, and a '#####' in the new text is
-    not written. Memos returned by read tools contain the public part
-    only.
+    replaces only the text before the marker, and an existing private
+    section always survives the write. Memos returned by read tools
+    contain the public part only.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -9857,7 +9911,8 @@ def set_memo(target_type: str, target_id: Optional[int], memo: str,
         target_type: What to attach the memo to: one of 'code', 'category',
                      'file', 'coding', 'case', 'project'
         target_id: The object's id (code cid / category catid / file source
-                   id / coding ctid / case caseid); null for 'project'
+                   id / coding ctid / case caseid); null, or left out, for
+                   'project'
         memo: The memo text ('' clears it)
         create_backup: Create a timestamped backup before writing (default True)
         allow_hidden_coder: Override to write on a hidden coder's coding
@@ -9871,6 +9926,16 @@ def set_memo(target_type: str, target_id: Optional[int], memo: str,
         "Note on file 3 that the audio was hard to transcribe"
         "Put the study's research questions in the project memo"
     """
+    # target_id has a default so that a project-memo call may leave it
+    # out, as the text says; memo, after it, keeps no default of its own
+    # (`Field(...)` is required in the schema), and a Python call that
+    # leaves it out is refused here rather than writing the marker object
+    if not isinstance(memo, str):
+        return json.dumps({"error": "memo is required: the memo text, or "
+                                    "'' to clear it."}, indent=2)
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     # Validate on the read-only connection before upgrading/backup
     valid = {"code", "category", "file", "coding", "case", "project"}
     if target_type not in valid:
@@ -9903,6 +9968,7 @@ def set_memo(target_type: str, target_id: Optional[int], memo: str,
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_journal_entry(name: str, entry: str,
                       create_backup: bool = True) -> str:
     """Add a research journal entry to the project.
@@ -9926,6 +9992,9 @@ def add_journal_entry(name: str, entry: str,
         "Add a journal entry titled 'Week 1 reflections' about the emerging
          boundary-setting theme"
     """
+    marker = private_marker_refusal(entry, "entry")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
@@ -9948,6 +10017,7 @@ def add_journal_entry(name: str, entry: str,
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_code(name: str, category: Optional[str] = None,
                 color: Optional[str] = None, memo: Optional[str] = None,
                 parent_code_id: Optional[int] = None,
@@ -10004,6 +10074,9 @@ def create_code(name: str, category: Optional[str] = None,
     Example:
         "Create a code 'Institutional distrust' in the Wellbeing category"
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     norm_name = normalize_name(name)
     if not norm_name:
         return json.dumps({"error": "name must be a non-empty string"})
@@ -10315,6 +10388,7 @@ def move_code_to_category(code_id: int,
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_category(name: str, parent_category: Optional[str] = None,
                     memo: Optional[str] = None,
                     create_backup: bool = True) -> str:
@@ -10348,6 +10422,9 @@ def create_category(name: str, parent_category: Optional[str] = None,
         memo: Optional category memo
         create_backup: Create a timestamped backup before writing (default True)
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     norm_name = normalize_name(name)
     if not norm_name:
         return json.dumps({"error": "name must be a non-empty string"})
@@ -13794,6 +13871,7 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
                    create_backup: bool = True) -> str:
     """Attach a note (annotation) to a text span of a file.
@@ -13806,9 +13884,6 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
     behaves, unless the note carries a '#####' private section, in which
     case the row is kept with the private section intact and only the
     public text is cleared. One annotation per coder per exact span.
-    The note is stored as its public part: a '#####' in the text you supply,
-    and everything after it, is not written, and a note that is empty once
-    that is removed is refused.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -13826,6 +13901,9 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
         `position_safety_warning`, you MUST relay it to the user: spans
         on such files can render shifted in QualCoder's editor.
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
@@ -13858,6 +13936,7 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def update_annotation(annotation_id: int, memo: str,
                       create_backup: bool = True,
                       allow_hidden_coder: bool = False) -> str:
@@ -13895,6 +13974,9 @@ def update_annotation(annotation_id: int, memo: str,
         create_backup: Create a timestamped backup before writing (default True)
         allow_hidden_coder: Override to edit a hidden coder's annotation
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     refusal = _refuse_existing_row_change(
         "annotation", annotation_id, allow_hidden_coder=allow_hidden_coder,
         deleting=False)
@@ -13983,6 +14065,7 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_case(name: str, memo: Optional[str] = None,
                 create_backup: bool = True) -> str:
     """Create a new case (participant/subject) in the project.
@@ -14014,6 +14097,9 @@ def create_case(name: str, memo: Optional[str] = None,
     Example:
         "Create a case for participant Dana"
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     norm_name = normalize_name(name)
     if not norm_name:
         return json.dumps({"error": "name must be a non-empty string"})
@@ -14671,6 +14757,7 @@ def rename_file(file_id: int, new_name: str,
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_attribute_type(name: str, applies_to: str,
                           value_type: str = "character",
                           memo: Optional[str] = None,
@@ -14707,6 +14794,9 @@ def create_attribute_type(name: str, applies_to: str,
     Example:
         "Add a numeric Age attribute for cases"
     """
+    marker = private_marker_refusal(memo, "memo")
+    if marker is not None:
+        return json.dumps({"error": marker}, indent=2)
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)

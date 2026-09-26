@@ -61,7 +61,7 @@ C1 = (False, True, True, False)
 EXPECTED_HINTS = {
     # reads
     "list_available_projects": R, "get_current_project": R,
-    "read_pseudonym_list": R, "search_coded_text": R,
+    "search_coded_text": R,
     "get_coded_segments": R, "search_files": R,
     "get_coding_frequencies": R, "search_memos": R,
     "export_code_report": R, "get_project_summary": R,
@@ -73,6 +73,10 @@ EXPECTED_HINTS = {
     "review_suggestions": R, "list_backups": R,
     "get_coding_session_info": R, "list_coding_sessions": R,
     "explain_ai_coding_tools": R, "review_proposals": R,
+    # Changes nothing, but sends every real name in pseudonyms.json to the
+    # AI provider: marked as not read-only so that hosts ask before it
+    # runs, as the owner's v0.13 ruling intends (the lead's correction)
+    "read_pseudonym_list": (False, False, True, False),
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
@@ -160,6 +164,14 @@ class TestToolAnnotations:
         for name in gated:
             assert listed[name].annotations.destructiveHint is True, name
             assert listed[name].annotations.readOnlyHint is False, name
+
+    def test_the_name_list_is_not_marked_read_only(self):
+        """The host must ask before read_pseudonym_list sends the real
+        names: a read-only mark lets Cowork and the desktop Code sessions
+        in auto mode run it without asking."""
+        hints = _listed("lifecycle")["read_pseudonym_list"].annotations
+        assert hints.readOnlyHint is False
+        assert hints.destructiveHint is False
 
     def test_no_tool_claims_the_open_world(self):
         for name, tool in _listed("lifecycle").items():
@@ -864,3 +876,211 @@ class TestTextsThatSentTheAssistantNowhere:
             encoding="utf-8")
         assert "Add or update a research journal entry" not in readme
         assert "a name already in use is refused" in readme
+
+
+# ---------------------------------------------------------------------------
+# The private-note marker in the assistant's text (the claims audit, item 4)
+# ---------------------------------------------------------------------------
+
+MARKER_TOOLS = ("set_memo", "add_annotation", "update_annotation",
+                "add_journal_entry", "create_code", "create_category",
+                "create_case", "create_attribute_type", "import_text_file",
+                "propose_codes", "update_proposal", "record_suggestions",
+                "create_proposed_codes", "apply_codings")
+
+
+async def _marker_project(client, root):
+    """A project with one of everything the marker calls touch, and the
+    ids they need."""
+    projects = root / "projects"
+    projects.mkdir()
+    made = json.loads(text_of(await client.call_tool("create_project", {
+        "name": "Notes", "directory": str(projects),
+        "coder_name": "Researcher"})))
+    for name, args in (
+            ("set_project_ai_coder_name", {"name": "AI-Test"}),
+            ("import_text_file", {"filename": "int1.txt",
+                                  "content": TEXT_1}),
+            ("create_code", {"name": "Trust", "memo": "Definition the "
+                                                      "researcher wrote"})):
+        await client.call_tool(name, args)
+    note = json.loads(text_of(await client.call_tool("add_annotation", {
+        "file_id": 1, "start_pos": 0, "end_pos": 5,
+        "memo": "Researcher note about P3"})))
+    session = json.loads(text_of(await client.call_tool(
+        "analyze_for_coding", {"file_ids": [1]})))["coding_session_id"]
+    proposed = json.loads(text_of(await client.call_tool("propose_codes", {
+        "coding_session_id": session, "proposals": [{
+            "name": "Reliance", "memo": "Leaning on others",
+            "rationale": "stated",
+            "example_segments": [{"file_id": 1, "segment_text": QUOTE}]}]})))
+    return {"folder": made["project_path"],
+            "annotation": note["annotation"]["annotation_id"],
+            "session": session,
+            "proposal": proposed["recorded"][0]["guid"]}
+
+
+def _marker_calls(ids, text):
+    session = ids["session"]
+    return {
+        "set_memo": {"target_type": "code", "target_id": 1, "memo": text},
+        "add_annotation": {"file_id": 1, "start_pos": 6, "end_pos": 11,
+                           "memo": text},
+        "update_annotation": {"annotation_id": ids["annotation"],
+                              "memo": text},
+        "add_journal_entry": {"name": "Week one", "entry": text},
+        "create_code": {"name": "Doubt", "memo": text},
+        "create_category": {"name": "Feelings", "memo": text},
+        "create_case": {"name": "P1", "memo": text},
+        "create_attribute_type": {"name": "Age", "applies_to": "case",
+                                  "value_type": "numeric", "memo": text},
+        "import_text_file": {"filename": "int2.txt", "content": TEXT_2,
+                             "memo": text},
+        "propose_codes": {"coding_session_id": session, "proposals": [{
+            "name": "Dependence", "memo": text, "rationale": "stated",
+            "example_segments": [{"file_id": 1, "segment_text": QUOTE}]}]},
+        "update_proposal": {"coding_session_id": session,
+                            "proposal_guid": ids["proposal"], "memo": text},
+        "record_suggestions": {"coding_session_id": session,
+                               "suggestions": [{
+                                   "file_id": 1, "code_name": "Trust",
+                                   "segment_text": QUOTE,
+                                   "reasoning": text}]},
+    }
+
+
+class TestTheMarkerIsRefusedBeforeAnyWrite:
+    """Text holding '#####' is refused by every tool that writes the
+    assistant's text into a memo, a note or an entry: nothing written,
+    no backup, and the refusal itself free of the marker."""
+
+    @pytest.mark.parametrize("text", ["##### Researcher note about P3",
+                                      "public text ##### private text"])
+    def test_every_such_tool_refuses_and_changes_nothing(self, tmp_path,
+                                                         text):
+        server._apply_toolset("lifecycle")
+
+        async def drive(client):
+            ids = await _marker_project(client, tmp_path)
+            answers = {}
+            for name, args in _marker_calls(ids, text).items():
+                before = work_tree(tmp_path)
+                answer = text_of(await client.call_tool(name, args))
+                answers[name] = (answer, work_tree(tmp_path) == before)
+            return answers
+
+        answers = host_session(drive)
+        for name, (answer, unchanged) in answers.items():
+            assert "private-note marker" in answer, (name, answer[:300])
+            assert "#####" not in answer, name
+            assert unchanged, name
+
+    def test_the_audits_three_runs_keep_the_notes(self, tmp_path):
+        server._apply_toolset("lifecycle")
+
+        async def drive(client):
+            ids = await _marker_project(client, tmp_path)
+            for name, args in _marker_calls(
+                    ids, "##### Researcher note about P3").items():
+                if name in ("update_annotation", "set_memo",
+                            "add_journal_entry"):
+                    await client.call_tool(name, args)
+            return ids
+
+        ids = host_session(drive)
+        db = str(Path(ids["folder"]) / "data.qda")
+        with sqlite3.connect(db) as conn:
+            assert conn.execute("select memo from annotation").fetchall() \
+                == [("Researcher note about P3",)]
+            assert conn.execute(
+                "select memo from code_name where name = 'Trust'"
+            ).fetchall() == [("Definition the researcher wrote",)]
+            assert conn.execute("select count(*) from journal"
+                                ).fetchone()[0] == 0
+
+    @pytest.mark.parametrize("tool", ["apply_codings",
+                                      "create_proposed_codes"])
+    def test_a_session_from_before_the_rule_is_refused_before_the_backup(
+            self, tmp_path, tool):
+        """A suggestion's reasoning or a proposal's definition recorded
+        by an earlier release can hold the marker; the write that would
+        cut it refuses first."""
+        server._apply_toolset("lifecycle")
+
+        async def setup(client):
+            ids = await _marker_project(client, tmp_path)
+            recorded = json.loads(text_of(await client.call_tool(
+                "record_suggestions", {
+                    "coding_session_id": ids["session"], "suggestions": [{
+                        "file_id": 1, "code_name": "Trust",
+                        "segment_text": QUOTE,
+                        "reasoning": "trust is stated"}]})))
+            ids["suggestion"] = recorded["recorded"][0]["guid"]
+            await client.call_tool("update_suggestion_status", {
+                "coding_session_id": ids["session"],
+                "approve": [ids["suggestion"]]})
+            await client.call_tool("update_proposal_status", {
+                "coding_session_id": ids["session"],
+                "approve": [ids["proposal"]]})
+            return ids
+
+        ids = host_session(setup)
+        session = server.session_manager.load_session(ids["session"])
+        if tool == "apply_codings":
+            session.get_suggestion_by_guid(ids["suggestion"]).reasoning = \
+                "public ##### the old private reason"
+        else:
+            session.get_proposal_by_guid(ids["proposal"]).memo = \
+                "##### an old definition"
+        server.session_manager.save_session(session)
+        before = work_tree(tmp_path)
+
+        answer = host_session(lambda client: client.call_tool(
+            tool, {"coding_session_id": ids["session"]}))
+        body = json.loads(text_of(answer))
+        assert "no backup was created" in body["error"]
+        assert "private-note marker" in body["failures"][0]["reason"]
+        assert "#####" not in text_of(answer)
+        assert work_tree(tmp_path) == before
+
+    def test_every_such_tool_says_so_in_its_description(self):
+        server._apply_toolset("lifecycle")
+        tools = server.mcp._tool_manager._tools
+        for name in MARKER_TOOLS:
+            doc = " ".join(tools[name].description.split())
+            assert server.MARKER_REFUSED_DESCRIPTION in doc, name
+        # and no description still promises the silent cut
+        for name, tool in tools.items():
+            doc = " ".join(tool.description.split())
+            assert "in the new text is not written" not in doc, name
+            assert "in the text you supply, and everything after it, is " \
+                "not written" not in doc, name
+
+
+class TestTheProjectMemoWithoutATargetId:
+    """The lead's addition: set_memo's text says target_id is null for
+    the project memo, and a host call that leaves it out used to be
+    refused by the schema as a missing argument."""
+
+    def test_the_schema_requires_the_memo_and_not_the_id(self):
+        listed = {t.name: t for t in
+                  host_session(lambda client: client.list_tools()).tools}
+        schema = listed["set_memo"].inputSchema
+        assert sorted(schema["required"]) == ["memo", "target_type"]
+        assert schema["properties"]["target_id"].get("default") is None
+
+    def test_a_project_memo_call_without_the_id_writes_it(
+            self, setup_server, qualcoder_db_path):
+        result = host_session(lambda client: client.call_tool(
+            "set_memo", {"target_type": "project",
+                         "memo": "A study of allotment gardens"}))
+        assert not result.isError, text_of(result)
+        assert json.loads(text_of(result))["success"] is True
+        db = str(Path(qualcoder_db_path) / "data.qda")
+        with sqlite3.connect(db) as conn:
+            assert conn.execute("select memo from project").fetchone()[0] \
+                == "A study of allotment gardens"
+
+    def test_a_python_call_without_the_memo_is_refused(self, setup_server):
+        answer = json.loads(server.set_memo("project"))
+        assert answer["error"].startswith("memo is required")

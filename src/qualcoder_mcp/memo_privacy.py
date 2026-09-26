@@ -176,3 +176,40 @@ def strip_private_memos(value: Any) -> Any:
     if isinstance(value, tuple):
         return tuple(strip_private_memos(item) for item in value)
     return value
+
+
+# What every tool that writes the assistant's text into a memo, a note or
+# a journal entry says of that text, in its description (v0.14, the
+# claims audit's item 4).
+MARKER_REFUSED_DESCRIPTION = (
+    "Text containing '#####', QualCoder's private-note marker, is refused "
+    "before anything is written or backed up: what follows the marker is "
+    "the researcher's own, written in QualCoder.")
+
+
+def private_marker_refusal(text: Any, field: str) -> Optional[str]:
+    """The refusal for assistant-supplied text that holds the private-note
+    marker, or None when it holds none (v0.14, the claims audit's item 4).
+
+    QualCoder's own AI server reduces such text to its public part and
+    writes that, silently (`merge_public_memo`, from ai_memo.py). Here that
+    silence destroyed notes: "##### Researcher note" has an empty public
+    part, so update_annotation deleted the annotation, set_memo emptied
+    the memo, and a journal entry lost everything after the marker with
+    no word said. A researcher who knows QualCoder 4.0's convention and
+    asks the assistant to "make this note private" meets exactly that.
+    So this server refuses instead, and every tool that writes the
+    assistant's text into a memo, a note or an entry checks before its
+    backup. The departure from QualCoder is deliberate, for that reason.
+
+    The refusal does not spell the marker out: this server's answers stay
+    free of it, so that a marker in any answer always means a leak.
+    """
+    if not isinstance(text, str) or PERSONAL_NOTE_MARK not in text:
+        return None
+    return (f"{field} contains QualCoder's private-note marker (five hash "
+            f"signs in a row); nothing was written. What follows that "
+            f"marker is the researcher's private note, written in QualCoder "
+            f"and never shown to the assistant, so this server does not "
+            f"write it: send the text without the marker. A note the "
+            f"researcher wants to keep private is written in QualCoder.")

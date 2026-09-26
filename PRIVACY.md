@@ -208,10 +208,18 @@ keeps the same promise:
   with the target `project`), whose public part QualCoder 4.0's own
   assistant also reads as the study's context; keep a participant's
   details below its `#####` line. An existing private zone survives every memo write
-  verbatim, and a `#####` in AI-supplied text is not written (code and
-  category names and coder names copied into provenance notes are
-  neutralised too), so the AI can never create, read, replace, or
-  delete a private zone through a memo write.
+  verbatim. Since v0.14, text the assistant supplies (a memo, an
+  annotation's note, a journal entry, a code, category, case or
+  attribute memo, an imported file's memo, a proposed code's definition,
+  a suggestion's reasoning) is refused if it contains `#####`, before
+  anything is written or backed up; before, the marker and everything
+  after it were dropped without a word, so a note that began with it was
+  emptied or, for an annotation, deleted. This departs from QualCoder's
+  own AI server, which drops the marker silently; the refusal is there
+  because the silent drop destroyed notes. Code and category names and
+  coder names copied into provenance notes are neutralised, so the AI
+  can never create, read, replace, or delete a private zone through a
+  memo write.
 - **Whole-row deletes** are the one qualification to that sentence.
   Tools that remove an entire row remove any private note on it
   together with the row: delete_coding and delete_annotation (single

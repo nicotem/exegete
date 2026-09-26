@@ -496,7 +496,12 @@ results) returns only the text before the marker, silently, and
 `search_memos` and `search_files` match the public part only. Memo
 writes (`set_memo`, `update_annotation`, the provenance notes that
 merges add) replace only the public text and keep an existing private
-section verbatim; a `#####` in AI-supplied text is never written.
+section verbatim. Since v0.14 text the assistant supplies for a memo, a
+note, a journal entry or a code's definition is refused if it contains
+`#####`, before anything is written or backed up: QualCoder's own AI
+server drops the marker and what follows it silently, which here emptied
+notes that began with it ("make this note private"), so the private part
+stays the researcher's to write in QualCoder.
 Deleting a coding or annotation whose memo carries a private note is
 refused unless `confirm_private_note_deletion=true`, and for such a row
 a backup is always taken even with `create_backup=false`; the refusal

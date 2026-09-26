@@ -250,11 +250,14 @@ class TestSetMemoMergePreserving:
               (f"pub#####{SECRET}",))
         _reopen(qualcoder_db_path)
 
-        json.loads(server.set_memo("code", 1, "evil#####fake",
-                                   create_backup=False))
+        # v0.14 (the claims audit, item 4): refused, where it used to be
+        # cut to its public part; either way the private zone is intact
+        out = json.loads(server.set_memo("code", 1, "evil#####fake",
+                                         create_backup=False))
+        assert "private-note marker" in out["error"]
         stored = _row(qualcoder_db_path,
                       "SELECT memo FROM code_name WHERE cid = 1")["memo"]
-        assert stored == f"evil#####{SECRET}"
+        assert stored == f"pub#####{SECRET}"
 
     def test_clearing_public_keeps_private_zone(self, setup_server,
                                                 qualcoder_db_path):
@@ -320,52 +323,49 @@ class TestSetMemoMergePreserving:
 
 
 class TestCreatePathsStripMarker:
+    """v0.14 (the claims audit, item 4): the create paths refuse text
+    holding the marker, where they used to store its public part only;
+    nothing is created either way the marker is placed."""
 
-    def test_create_code_memo_is_public_only(self, setup_server,
-                                             qualcoder_db_path):
+    def test_create_code_memo_is_refused(self, setup_server,
+                                         qualcoder_db_path):
         out = json.loads(server.create_code(
             "Fresh", memo="definition#####not-a-zone", create_backup=False))
-        assert out["success"] is True
-        stored = _row(qualcoder_db_path,
-                      "SELECT memo FROM code_name WHERE name = 'Fresh'")["memo"]
-        assert stored == "definition"
+        assert "private-note marker" in out["error"]
+        assert _row(qualcoder_db_path,
+                    "SELECT memo FROM code_name WHERE name = 'Fresh'") is None
 
-    def test_import_text_file_memo_is_public_only(self, setup_server,
-                                                  qualcoder_db_path):
+    def test_import_text_file_memo_is_refused(self, setup_server,
+                                              qualcoder_db_path):
         out = json.loads(server.import_text_file(
             "imported.txt", "Body text.", memo="note#####tail",
             create_backup=False))
-        assert out["success"] is True
-        stored = _row(qualcoder_db_path,
-                      "SELECT memo FROM source WHERE name = 'imported.txt'"
-                      )["memo"]
-        assert stored == "note"
+        assert "private-note marker" in out["error"]
+        assert _row(qualcoder_db_path,
+                    "SELECT memo FROM source WHERE name = 'imported.txt'"
+                    ) is None
 
-    def test_create_case_memo_is_public_only(self, setup_server,
-                                             qualcoder_db_path):
+    def test_create_case_memo_is_refused(self, setup_server,
+                                         qualcoder_db_path):
         out = json.loads(server.create_case(
             "CaseP1", memo="m#####t", create_backup=False))
-        assert out["success"] is True
-        stored = _row(qualcoder_db_path,
-                      "SELECT memo FROM cases WHERE name = 'CaseP1'")["memo"]
-        assert stored == "m"
+        assert "private-note marker" in out["error"]
+        assert _row(qualcoder_db_path,
+                    "SELECT memo FROM cases WHERE name = 'CaseP1'") is None
 
-    def test_journal_entry_is_public_only(self, setup_server,
-                                          qualcoder_db_path):
+    def test_journal_entry_is_refused(self, setup_server, qualcoder_db_path):
         out = json.loads(server.add_journal_entry(
             "P1 entry", "visible#####invisible", create_backup=False))
-        assert out["success"] is True
-        stored = _row(qualcoder_db_path,
-                      "SELECT jentry FROM journal WHERE name = 'P1 entry'"
-                      )["jentry"]
-        assert stored == "visible"
+        assert "private-note marker" in out["error"]
+        assert _row(qualcoder_db_path,
+                    "SELECT jentry FROM journal WHERE name = 'P1 entry'"
+                    ) is None
 
     def test_annotation_all_private_refused(self, setup_server,
                                             qualcoder_db_path):
         out = json.loads(server.add_annotation(
             1, 0, 4, "#####only private", create_backup=False))
-        assert "error" in out
-        assert "#####" in out["error"]
+        assert "private-note marker" in out["error"]
 
 
 class TestAnnotationUpdateMergePreserving:

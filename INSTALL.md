@@ -564,7 +564,10 @@ nothing more (`idempotentHint`); and whether it reaches anything beyond
 this computer (`openWorldHint`, never, for this server). The tools
 that only read are marked so, and so are the writing tools that can
 replace or remove work (renames, memos, deletions, merges, restores,
-exports with `overwrite`). The marks are hints to the host: the
+exports with `overwrite`). One tool that changes nothing is not
+marked read-only, on purpose: `read_pseudonym_list` sends every real
+name in the project's pseudonyms file to the AI provider, so the host
+should ask before it runs. The marks are hints to the host: the
 server's own safeguards (the approval of each suggestion, the preview
 before a deletion, the backups) do not depend on them.
 

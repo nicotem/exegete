@@ -558,14 +558,47 @@ def body_of(text):
 class HostRun:
     """Calls through one client session, checking each answer."""
 
-    def __init__(self, client, root, registered):
+    def __init__(self, client, root, registered, lock_check=False):
         self.client, self.root = client, root
         self.registered = registered
         self.tools, self.arguments = all_tool_names(), argument_names()
         self.answers, self.problems = {}, []
+        # With lock_check, every call of a tool that writes the project
+        # is first made while a live QualCoder 3.x lock is in place (the
+        # audit's "true today" item 1), once the project exists
+        self.lock_check, self.folder, self.locked = lock_check, None, {}
+
+    async def _refused_under_the_lock(self, name, arguments):
+        """The call, made while QualCoder 3.x holds the project: refused,
+        and the database and its backups unchanged. A preview-token tool's
+        preview is allowed (it reads); the execute with its token must be
+        refused."""
+        lock = self.folder / "project_in_use.lock"
+        lock.write_text(f"someone\n{time.time()}\n", encoding="utf-8")
+        try:
+            digest = _database_digest(self.folder)
+            siblings = sorted(p.name for p in self.folder.parent.iterdir())
+            answer = text_of(await self.client.call_tool(name, arguments))
+            body = body_of(answer)
+            if isinstance(body, dict) and body.get("preview_token"):
+                answer = text_of(await self.client.call_tool(
+                    name, {**arguments,
+                           "preview_token": body["preview_token"]}))
+            self.locked[name] = answer
+            if not ("open" in answer.lower() and "QualCoder" in answer):
+                self.problems.append((name, "not refused under the lock",
+                                      answer[:200]))
+            if _database_digest(self.folder) != digest or siblings != sorted(
+                    p.name for p in self.folder.parent.iterdir()):
+                self.problems.append((name, "wrote under the lock"))
+        finally:
+            lock.unlink()
 
     async def __call__(self, name, arguments, ok=True):
         hints = EXPECTED_HINTS[name]
+        if self.lock_check and self.folder is not None and not hints[0] \
+                and name not in NOT_PROJECT_WRITES:
+            await self._refused_under_the_lock(name, arguments)
         before = work_tree(self.root)
         result = await self.client.call_tool(name, arguments)
         text = text_of(result)
@@ -595,11 +628,12 @@ class HostRun:
         return body
 
 
-async def call_every_tool(client, root):
+async def call_every_tool(client, root, lock_check=False):
     """The first session and every tool after it, on a project made by
     create_project, each with arguments its description names."""
     run = HostRun(client, root,
-                  {t.name for t in (await client.list_tools()).tools})
+                  {t.name for t in (await client.list_tools()).tools},
+                  lock_check=lock_check)
     projects, exports = root / "projects", root / "exports"
     projects.mkdir()
     exports.mkdir()
@@ -609,6 +643,7 @@ async def call_every_tool(client, root):
         "name": "Study", "directory": str(projects),
         "coder_name": "Researcher"})
     folder = made["project_path"]
+    run.folder = Path(folder)
     await run("get_current_project", {})
     await run("set_project_ai_coder_name", {"name": "AI-Test"})
     await run("import_text_file", {"filename": "int1.txt",
@@ -1479,3 +1514,97 @@ class TestHiddenCodersOnTheCodebook:
         assert "qualcoder://codes/list" in privacy
         assert "[Merged from code: ..., Coder: ..., Merger date: ...]" in \
             privacy
+
+
+# ---------------------------------------------------------------------------
+# Two promises that held with nothing to keep them (the claims audit's
+# "true today" list, items 1 and 2), kept by the calls above
+# ---------------------------------------------------------------------------
+
+# Writing tools that do not write the project's database, so the
+# QualCoder lock does not stop them, each with the reason.
+NOT_PROJECT_WRITES = {
+    "select_project": "changes the selection only",
+    "create_project": "makes a new project, never an open one",
+    "set_project_ai_coder_name": "writes its settings file beside the "
+                                 "database, as its description says",
+    "copy_project_to_workspace": "reads the project, writes a copy",
+    "prune_backups": "removes backups, never the project",
+    "analyze_for_coding": "session file", "record_suggestions": "session",
+    "edit_suggestion": "session", "update_suggestion_status": "session",
+    "propose_codes": "session", "update_proposal": "session",
+    "update_proposal_status": "session", "merge_proposals": "session",
+    "delete_coding_session": "session", "cleanup_old_sessions": "sessions",
+    "export_refi_qda": "writes a file outside the project",
+    "export_codebook": "file", "export_coded_segments_report": "file",
+    "export_frequencies_csv": "file", "export_case_code_matrix_csv": "file",
+    "read_pseudonym_list": "reads only (marked so that hosts ask)",
+}
+
+
+def _database_digest(folder):
+    import hashlib
+    return hashlib.sha256((Path(folder) / "data.qda").read_bytes()
+                          ).hexdigest()
+
+
+class TestPromisesKeptOverEveryTool:
+
+    def test_every_project_write_refuses_while_qualcoder_holds_it(
+            self, tmp_path):
+        """Built from the hints, so a new writing tool is covered unless
+        it is named above with its reason: each call of the run above,
+        made first while QualCoder 3.x holds the project, is refused and
+        leaves the database and its backups as they were."""
+        server._apply_toolset("lifecycle")
+        run = host_session(lambda client: call_every_tool(
+            client, tmp_path, lock_check=True))
+        assert run.problems == [], "\n".join(map(repr, run.problems))
+        writes = {name for name, hints in EXPECTED_HINTS.items()
+                  if not hints[0] and name not in NOT_PROJECT_WRITES}
+        assert set(run.locked) == writes
+        assert len(writes) >= 25
+
+    def test_no_read_returns_a_private_note(self, tmp_path):
+        """Every read-only tool, called as above, and every resource, on a
+        project with a private part in every kind of note: the private
+        text is never in an answer."""
+        server._apply_toolset("lifecycle")
+        secret = "PRIVATE-7f3a"
+
+        async def drive(client):
+            run = await call_every_tool(client, tmp_path)
+            current = json.loads(text_of(await client.call_tool(
+                "get_current_project", {})))
+            folder = Path(current["current_project"])
+            if folder.name == "data.qda":
+                folder = folder.parent
+            with sqlite3.connect(str(folder / "data.qda")) as conn:
+                for table, column in (
+                        ("project", "memo"), ("code_name", "memo"),
+                        ("code_cat", "memo"), ("source", "memo"),
+                        ("cases", "memo"), ("code_text", "memo"),
+                        ("annotation", "memo"), ("journal", "jentry"),
+                        ("attribute_type", "memo")):
+                    conn.execute(
+                        f"update {table} set {column} = "
+                        f"coalesce({column}, '') || ' ##### {secret}'")
+            texts = []
+            for name in sorted(run.answers):
+                if EXPECTED_HINTS[name][0]:
+                    arguments = run.answers[name][0]
+                    texts.append(text_of(await client.call_tool(
+                        name, arguments)))
+            for res in (await client.list_resources()).resources:
+                got = await client.read_resource(res.uri)
+                texts.extend(c.text for c in got.contents)
+            for uri in ("qualcoder://codes/1", "qualcoder://files/1",
+                        "qualcoder://cases/1"):
+                got = await client.read_resource(uri)
+                texts.extend(c.text for c in got.contents)
+            return texts
+
+        texts = host_session(drive)
+        assert len(texts) > 30
+        leaked = [text[:200] for text in texts if secret in text]
+        assert leaked == []

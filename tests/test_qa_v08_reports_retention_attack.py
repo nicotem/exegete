@@ -14,6 +14,7 @@ import os
 import shutil
 import sqlite3
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -292,17 +293,27 @@ def _seed_backups(project_path, specs):
 
 class TestPruneBackups:
 
+    # Since v0.14 a backup is dated by the time in its name (the claims
+    # audit, item 3), so each name carries its age; the folder dates set
+    # by _seed_backups agree with it.
+    @staticmethod
+    def _name(stem, age, suffix="", qualcoder=False):
+        when = datetime.now() - timedelta(days=age)
+        if qualcoder:
+            return f"{stem}_BKUP_{when:%Y%m%d_%H}.qda"
+        return f"{stem}_backup_{when:%Y%m%d_%H%M%S}{suffix}.qda"
+
     def _seed(self, p):
         stem = Path(p).stem
-        return _seed_backups(p, [
-            (f"{stem}_backup_20260601_010101.qda", 40),
-            (f"{stem}_backup_20260710_010101.qda", 10),
-            (f"{stem}_backup_20260715_010101.qda", 5),
-            (f"{stem}_backup_20260720_010101.qda", 1),
-            (f"{stem}_backup_20260701_010101_prerestore.qda", 20),
-            (f"{stem}_BKUP_20260501_09.qda", 60),          # QualCoder decoy
-            (f"{stem}_BKUP_20260502_09.qda", 59),          # QualCoder decoy
-        ])
+        self.named = {
+            40: self._name(stem, 40), 10: self._name(stem, 10),
+            5: self._name(stem, 5), 1: self._name(stem, 1),
+            20: self._name(stem, 20, "_prerestore"),
+            60: self._name(stem, 60, qualcoder=True),      # QualCoder decoy
+            59: self._name(stem, 59, qualcoder=True),      # QualCoder decoy
+        }
+        return _seed_backups(p, [(name, age)
+                                 for age, name in self.named.items()])
 
     def test_list_backups_reports_age_days(self, setup_server,
                                            qualcoder_db_path):
@@ -332,11 +343,11 @@ class TestPruneBackups:
                      Path(qualcoder_db_path).parent.glob(f"{stem}_*")
                      if "_backup_" in p.name or "_BKUP_" in p.name}
         # the two newest MCP backups kept; BOTH QualCoder decoys untouched
-        assert f"{stem}_backup_20260720_010101.qda" in survivors
-        assert f"{stem}_backup_20260715_010101.qda" in survivors
-        assert f"{stem}_backup_20260601_010101.qda" not in survivors
-        assert f"{stem}_BKUP_20260501_09.qda" in survivors
-        assert f"{stem}_BKUP_20260502_09.qda" in survivors
+        assert self.named[1] in survivors
+        assert self.named[5] in survivors
+        assert self.named[40] not in survivors
+        assert self.named[60] in survivors
+        assert self.named[59] in survivors
 
     def test_conservative_intersection_of_both_criteria(self, setup_server,
                                                         qualcoder_db_path):
@@ -346,9 +357,9 @@ class TestPruneBackups:
         # BOTH beyond the newest-1 AND older than 30 days -> only the 40d one
         pv = json.loads(server.prune_backups(keep_last=1, older_than_days=30))
         removed = {r["name"] for r in pv["would_remove"]}
-        assert f"{stem}_backup_20260601_010101.qda" in removed
-        assert f"{stem}_backup_20260710_010101.qda" not in removed   # 10d
-        assert f"{stem}_backup_20260715_010101.qda" not in removed
+        assert self.named[40] in removed
+        assert self.named[10] not in removed   # 10d
+        assert self.named[5] not in removed
         assert not any("_BKUP_" in n for n in removed)
 
     def test_keep_floor_unless_explicit_zero(self, setup_server,

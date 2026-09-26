@@ -603,7 +603,9 @@ def test_error_propagation_and_liveness(standard_project):
                 raise AssertionError(kind)
             outcome["raised"] = None
             outcome["isError"] = bool(res.isError)
-            outcome["text"] = text_of(res)[:200]
+            # enough for a whole refusal (v0.14: a failed selection ends
+            # by naming what stays selected, past 200 characters)
+            outcome["text"] = text_of(res)[:2000]
         except McpError as e:
             outcome["raised"] = "McpError"
             outcome["text"] = str(e)[:200]

@@ -176,7 +176,9 @@ class TestNoProjectRow:
     def test_select_project_says_so_without_upgrade_advice(self, tmp_path):
         out = json.loads(server.select_project(str(self._rowless(tmp_path))))
         assert out["success"] is False
-        assert out["error"] == NO_PROJECT_ROW_MESSAGE
+        # followed by what stays selected (v0.14, server-wide)
+        assert out["error"].startswith(NO_PROJECT_ROW_MESSAGE + " ")
+        assert out["error"].endswith(" selected.")
         for wrong in ("pre-v14", "3.8", "ALLOW_UNKNOWN_SCHEMA", "newer"):
             assert wrong not in out["error"]
 

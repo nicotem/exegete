@@ -597,7 +597,11 @@ class TestTheLoopsTextsSayWhatHappens:
         assert "No preview" in text
 
     def test_edit_and_status_texts_give_the_working_advice(self):
-        assert "reopen" in self._desc("edit_suggestion")
+        text = " ".join(self._desc("edit_suggestion").split())
+        assert ("to change it, reopen it (update_suggestion_status "
+                "reopen=[guid]), edit it, and ask the user to decide "
+                "again") in text
+        assert "then approve after editing" not in text
         assert "reopen" in self._desc("update_suggestion_status")
         help_ = json.loads(server.explain_ai_coding_tools("edit_suggestion"))
         assert any("reopen" in note for note in help_["notes"])
@@ -621,3 +625,77 @@ class TestApprovalIsDescribedHonestly:
                         .read_text(encoding="utf-8").split())
         assert "cannot tell whether you gave it" in text, doc
         assert "allow once" in text.lower(), doc
+
+
+# =============================================================================
+# 3. THE CONTEXT A RESEARCHER APPROVES FROM IS THE FILE'S OWN (audit item 6)
+# =============================================================================
+
+INVENTED = "Paul said: I will quit tomorrow because of my manager."
+
+
+class TestTheContextIsTheFilesOwn:
+
+    def test_a_supplied_context_is_set_aside_and_the_file_shown(
+            self, setup_server):
+        sid = new_session()
+        rec = record(sid, item(text=COPE, code="Coping",
+                               context_before=INVENTED,
+                               context_after=INVENTED))
+        assert rec["recorded_count"] == 1
+        assert rec["context_ignored"] == 1
+        out = call("review_suggestions", coding_session_id=sid)
+        assert INVENTED not in out
+        assert "I feel stressed about deadlines. " in out   # the text before
+        assert INVENTED not in session_file(sid).read_text()
+
+    def test_an_old_sessions_invented_context_is_replaced_at_review(
+            self, setup_server, qualcoder_db_path):
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"))
+        session.add_suggestion(CodingSuggestion(
+            file_id=1, file_name="interview.txt", code_id=2,
+            code_name="Coping", start_pos=57, end_pos=78,
+            segment_text=COPE, context_before=INVENTED,
+            context_after=INVENTED))
+        server.session_manager.save_session(session)
+        out = call("review_suggestions", coding_session_id=session.session_id)
+        assert INVENTED not in out
+        assert "I feel stressed about deadlines. " in out
+
+    def test_another_project_open_shows_the_record_marked_as_such(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"))
+        session.add_suggestion(CodingSuggestion(
+            file_id=1, file_name="interview.txt", code_id=2,
+            code_name="Coping", start_pos=57, end_pos=78,
+            segment_text=COPE, context_before="stored before"))
+        server.session_manager.save_session(session)
+        import shutil
+        twin = tmp_path / "twin.qda"
+        shutil.copytree(qualcoder_db_path, twin)
+        server.current_project_path = str(twin)
+        out = call("review_suggestions", coding_session_id=session.session_id)
+        assert "stored before" in out
+        assert "as recorded; not re-read" in out
+
+    def test_a_span_the_file_no_longer_holds_shows_no_context(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        record(sid, item(text=COPE, code="Coping"))
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("UPDATE source SET fulltext = 'Something else "
+                     "entirely, now longer than the old text was.' "
+                     "WHERE id = 1")
+        conn.commit()
+        conn.close()
+        out = call("review_suggestions", coding_session_id=sid)
+        assert "no longer matches this suggestion" in out
+        assert "I feel stressed" not in out
+
+    def test_the_description_no_longer_offers_the_fields(self):
+        text = server.mcp._tool_manager._tools["record_suggestions"] \
+            .description
+        assert "auto-filled" not in text
+        assert "always taken from the file" in " ".join(text.split())

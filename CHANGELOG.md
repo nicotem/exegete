@@ -337,6 +337,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reopened and edited, or its passage recorded again (a removed
   suggestion no longer counts as a duplicate). `apply_codings` now keeps
   the coding id each suggestion became, so the match is exact.
+- **The text around a suggestion is the file's own.** The context a
+  researcher judges a span by was taken from the assistant when it sent
+  `context_before` or `context_after`, stored unchecked, and shown under
+  "Context Before" as if it were the file. `record_suggestions` now sets
+  those fields aside (and says how many), and `review_suggestions` reads
+  the context from the file when the review is made, so a session from
+  an earlier release shows the file's text too. When the session's
+  project is not the one open, the context taken from the file at record
+  time is shown and marked as such; when the file no longer holds the
+  span, no context is shown and the review says why.
 - **Texts made true:** `analyze_file_with_coding` names its four counts
   (it promised "coverage and density metrics"); `cleanup_old_sessions`
   says it deletes every project's old sessions on this computer,

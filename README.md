@@ -861,7 +861,7 @@ approved again, reopened and edited, or the passage recorded again);
 - **Direct Database Writes**: No import/export step; codings are in the project the next time it is opened in QualCoder (an open QualCoder 4.0 window does not show external changes until the project is reopened)
 - **Granular Control**: Approve, reject or reopen individual suggestions by GUID; a GUID the session does not hold is named, not passed over
 - **A session's scope holds**: the files, and the codes if you name them, that a session is started with are the only ones it accepts suggestions for; a name or id that matches nothing is listed
-- **Full Context**: See surrounding text for each suggestion
+- **Full Context**: See the file's own text around each suggestion, read from the file (the assistant cannot supply it)
 - **Verified Writes**: Suggestions are checked against the file text when
   recorded AND before writing; sessions only apply to the project they
   were created in

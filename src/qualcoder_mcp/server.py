@@ -5914,6 +5914,50 @@ def _match_code_name(codes: List[Dict[str, Any]], name: Any
     return folded[0] if len(folded) == 1 else None
 
 
+def _context_around(fulltext: str, start: int, end: int,
+                    width: int = 100) -> Tuple[str, str]:
+    """The file's own text either side of a span: what a researcher
+    judges the span by. The one place context is made."""
+    return fulltext[max(0, start - width):start], fulltext[end:end + width]
+
+
+def _live_contexts(session: AICodingSession,
+                   suggestions: List[CodingSuggestion]
+                   ) -> Tuple[Dict[str, Tuple[str, str]], set, bool]:
+    """Context read from the file now, for review.
+
+    Returns (context by GUID, GUIDs whose stored span no longer matches
+    the file, whether the session's project is the one open). The file is
+    read only when the session's project is open, since file ids mean
+    nothing in another project; a suggestion recorded before v0.14 may
+    carry a context the assistant supplied, and this is what replaces it.
+    """
+    try:
+        if _check_session_project(session) is not None:
+            return {}, set(), False
+    except Exception:
+        return {}, set(), False
+    ro_db = get_db()
+    cache: Dict[int, Optional[Dict[str, Any]]] = {}
+    live: Dict[str, Tuple[str, str]] = {}
+    stale = set()
+    for sugg in suggestions:
+        if sugg.file_id not in cache:
+            cache[sugg.file_id] = ro_db.get_file_content(sugg.file_id)
+        fc = cache[sugg.file_id]
+        text = (fc or {}).get("content") or ""
+        span = text[sugg.start_pos:sugg.end_pos] if (
+            isinstance(sugg.start_pos, int) and isinstance(sugg.end_pos, int)
+            and 0 <= sugg.start_pos < sugg.end_pos <= len(text)) else None
+        if span is not None and span in (
+                sugg.segment_text, sugg.segment_text.replace("\u2029", "\n")):
+            live[sugg.guid] = _context_around(text, sugg.start_pos,
+                                              sugg.end_pos)
+        else:
+            stale.add(sugg.guid)
+    return live, stale, True
+
+
 def _scope_refusal(session: AICodingSession, outside: str,
                    file_name: str, code_name: str) -> Dict[str, Any]:
     """Why a suggestion falls outside its session, and what the session
@@ -6046,8 +6090,10 @@ def record_suggestions(
             support (str, required): "explicit" (the passage states
             the code) or "interpretive" (you are reading it in); there
             is no numeric score,
-            reasoning (str),
-            context_before/context_after (str, optional; auto-filled)
+            reasoning (str).
+            The text shown around each suggestion at review is always
+            taken from the file; context_before and context_after are not
+            taken (a value sent is set aside, and the answer says so)
         replace: If True, discard previously recorded PENDING suggestions
                  first (approved/rejected/applied are always kept)
 
@@ -6106,6 +6152,7 @@ def record_suggestions(
     rejected = []
     skipped_duplicates = 0
     confidence_ignored = 0
+    context_ignored = 0
     unsafe_files: Dict[int, str] = {}
 
     for idx, item in enumerate(suggestions):
@@ -6208,12 +6255,13 @@ def record_suggestions(
         # slice exactly (provided text may differ by U+2029 vs newline)
         segment_text = fulltext[start_pos:end_pos]
 
-        context_before = item.get("context_before")
-        if not isinstance(context_before, str):
-            context_before = fulltext[max(0, start_pos - 100):start_pos]
-        context_after = item.get("context_after")
-        if not isinstance(context_after, str):
-            context_after = fulltext[end_pos:end_pos + 100]
+        # The context the researcher judges a span by is the file's own
+        # (v0.14, the claims audit's item 6): a supplied one was stored
+        # unchecked and shown as if it were the file
+        if "context_before" in item or "context_after" in item:
+            context_ignored += 1
+        context_before, context_after = _context_around(
+            fulltext, start_pos, end_pos)
 
         suggestion = CodingSuggestion(
             file_id=file_id,
@@ -6262,6 +6310,12 @@ def record_suggestions(
     }
     if replace:
         result["replaced_pending"] = removed_pending
+    if context_ignored:
+        result["context_ignored"] = context_ignored
+        result["context_note"] = (
+            f"{context_ignored} suggestion(s) carried context_before or "
+            f"context_after, which were set aside: the text shown around "
+            f"a suggestion is always taken from the file.")
     if confidence_ignored:
         result["confidence_ignored"] = confidence_ignored
         result["confidence_note"] = (
@@ -6292,7 +6346,9 @@ def review_suggestions(
     Shows detailed information about specific suggestions from an analysis
     session, WITH the surrounding text by default, because researchers
     judge a span by what is around it (is the quote complete? should it be
-    wider?). Use this to examine suggestions before approving/rejecting;
+    wider?). That text is the file's own, read when the review is made
+    (the session's project must be the one open; otherwise the text taken
+    from the file at record time is shown and marked as such). Use this to examine suggestions before approving/rejecting;
     if a span needs adjusting, edit_suggestion changes it in place.
 
     SPAN ALTERNATIVES: each pending, not-yet-adjusted suggestion may
@@ -6354,6 +6410,9 @@ def review_suggestions(
         output.append(missing_line)
 
     small_subset = bool(suggestion_guids) and len(suggestions) <= 5
+    live, stale = {}, set()
+    if show_context:
+        live, stale, _ = _live_contexts(session, suggestions)
 
     for i, sugg in enumerate(suggestions, 1):
         output.append(f"\n{'='*70}")
@@ -6372,12 +6431,24 @@ def review_suggestions(
         output.append(sugg.reasoning)
 
         if show_context:
-            if sugg.context_before:
-                output.append(f"\n**Context Before:**")
-                output.append(f"```\n{sugg.context_before}\n```")
-            if sugg.context_after:
-                output.append(f"\n**Context After:**")
-                output.append(f"```\n{sugg.context_after}\n```")
+            if sugg.guid in live:
+                before, after, label = *live[sugg.guid], ""
+            elif sugg.guid in stale:
+                before, after, label = "", "", ""
+                output.append(
+                    "\n**Context:** not shown: the file's text at these "
+                    "positions no longer matches this suggestion; "
+                    "re-record it")
+            else:
+                before, after = sugg.context_before, sugg.context_after
+                label = (" (as recorded; not re-read, because the "
+                         "session's project is not the one open)")
+            if before:
+                output.append(f"\n**Context Before:**{label}")
+                output.append(f"```\n{before}\n```")
+            if after:
+                output.append(f"\n**Context After:**{label}")
+                output.append(f"```\n{after}\n```")
 
         # Span alternatives: one line each, unit-glossed; previews only in
         # the show_context detail view for small guid subsets (token cost);
@@ -6649,8 +6720,8 @@ def edit_suggestion(
         # Authoritative slice + refreshed context, as at record time;
         # alternatives recomputed for the new span
         sugg.segment_text = fulltext[new_start:new_end]
-        sugg.context_before = fulltext[max(0, new_start - 100):new_start]
-        sugg.context_after = fulltext[new_end:new_end + 100]
+        sugg.context_before, sugg.context_after = _context_around(
+            fulltext, new_start, new_end)
         sugg.span_alternatives = _compute_span_alternatives(
             fulltext, new_start, new_end)
         if not db_position_safe(fulltext):

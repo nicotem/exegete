@@ -428,13 +428,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 173_612          # 73 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 58_133           # 21 tools, same environment
-    FULL_MEASURED_310 = 182_532      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 61_185
+    FULL_MEASURED = 181_876          # 73 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 59_256           # 21 tools, same environment
+    FULL_MEASURED_310 = 191_296      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 62_376
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 176_094     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 185_150
+    LIFECYCLE_MEASURED = 184_358     # 74 tools, same environment
+    LIFECYCLE_MEASURED_310 = 193_914
 
     # Why two per cent, away from the reference environment.
     #
@@ -461,11 +461,11 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "173,612"
-    CORE_CHARS = "58,133"
-    FULL_ROUNDED = "174,000"
-    CORE_ROUNDED = "58,000"
-    FULL_TOKENS = "43k"
+    FULL_CHARS = "181,876"
+    CORE_CHARS = "59,256"
+    FULL_ROUNDED = "182,000"
+    CORE_ROUNDED = "59,000"
+    FULL_TOKENS = "45k"
     CORE_TOKENS = "15k"
 
     @staticmethod
@@ -638,8 +638,8 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "176,000"
-    LIFECYCLE_TOKENS = "44k"
+    LIFECYCLE_ROUNDED = "184,000"
+    LIFECYCLE_TOKENS = "46k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
         readme = self._read("README.md")
@@ -687,11 +687,13 @@ class TestThePublishedSchemaBudget:
             self.FLAGSHIP_ROUNDED.replace(",", "")), share
 
     def test_install_advises_a_context_the_core_schema_fits_in(self):
-        """Step 4's advice is arithmetic, not a number to swap: at a 14k
-        schema the old 16k floor leaves about 2k for the transcript."""
+        """Step 4's advice is arithmetic, not a number to swap: at a 15k
+        schema the old 16k floor leaves about 1k for the transcript
+        (v0.14's reads and exports took the core schema from 14.5k to
+        14.8k tokens, so "barely 2k" became "barely 1k")."""
         install = self._read("INSTALL.md")
         assert "at least 32k for the core toolset" in install
-        assert "16k would leave barely 2k and is not workable" in install
+        assert "16k would leave barely 1k and is not workable" in install
 
     def test_the_growth_is_arithmetically_possible(self):
         """The defect that gave this away: a full delta smaller than the

@@ -267,6 +267,20 @@ project's own coder name) is refused, and the `owner` argument of
 `apply_codings` and `import_text_file` can no longer be used to write
 rows under someone else's name.
 
+## Approving AI suggestions: what the server can and cannot see
+
+Suggested codings and proposed codes are written to the project only
+once each item is marked approved (`update_suggestion_status`,
+`update_proposal_status`) and then applied (`apply_codings`,
+`create_proposed_codes`). The mark is set by a tool call the assistant
+makes when it relays your decision. The server records the approval the
+assistant reports and cannot tell whether you gave it: nothing in a tool
+call shows what you said in the conversation. What stands behind the
+mark is your host's own approval of each tool call (keep the host in its
+asking mode, and choose "allow once", not "always", for the tools that
+decide and write) and your own reading of the counts the approval step
+reports before anything is applied.
+
 ## Comparing coders
 
 `compare_coders` reports how much two named coders' text coding agrees.

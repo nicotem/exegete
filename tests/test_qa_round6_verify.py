@@ -354,7 +354,7 @@ class TestGuidanceEnvelope:
         assert payload.get("qualcoder_open", False) is False
         assert isinstance(payload["coding_session_id"], str) and payload["coding_session_id"]
         assert "session_id" not in payload  # deprecated duplicate removed in 0.12
-        assert "ANALYSIS SESSION CREATED" in payload["instructions"]
+        assert "CODING SESSION STARTED" in payload["instructions"]
         # prose still parseable the old way (back-compat pin)
         assert payload["coding_session_id"] == raw.split(
             "Session ID: `")[1].split("`")[0]

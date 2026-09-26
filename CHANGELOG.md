@@ -305,6 +305,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   measurement, and it went into the research record as if it were
   one; `min_confidence` never filtered anything. QualCoder 4.0's own
   assistant has no confidence score.
+- **`analyze_for_coding` says what it does, and its session's scope
+  holds.** It starts a session and returns the next steps; it reads no
+  file and makes no suggestion, and its description, Returns section and
+  help now say so (no "automatically"). The files, and the codes when
+  named, that a session is started with are now the only ones
+  `record_suggestions` accepts suggestions for (and the only codes
+  `edit_suggestion` can move one to); before, a session for one file and
+  one code accepted, and would write, a suggestion on any file under any
+  code. Codes created from the session's own approved proposals join it.
+  Code names are matched exactly, else ignoring letter case, the rule
+  every other code-name lookup follows ("stress" found nothing before),
+  and a file id or code name that matches nothing is listed in
+  `not_found` instead of being dropped.
+- **A decided suggestion can be reopened.** `update_suggestion_status`
+  takes `reopen`, which returns an approved, rejected or removed
+  suggestion to pending, so that it can be edited and decided again.
+  `edit_suggestion`'s description and refusals said to reject and then
+  approve after editing, which left the suggestion rejected and the edit
+  refused; they now say reopen, edit, decide again.
+- **The two decision tools say what they did not do.**
+  `update_suggestion_status` and `update_proposal_status` list GUIDs that
+  name nothing in the session (`not_found`), refuse a GUID sent in more
+  than one list (it used to be counted both ways and end rejected), and
+  say "Nothing changed" when nothing did. `review_suggestions` and
+  `review_proposals` name the GUIDs they did not find.
+- **`delete_coding` tells the session.** A coding that an AI coding
+  session applied is marked "removed" in that session (this project's
+  sessions only, and not for a hidden coder's row), and the answer names
+  the session: the suggestion can then be approved and applied again,
+  reopened and edited, or its passage recorded again (a removed
+  suggestion no longer counts as a duplicate). `apply_codings` now keeps
+  the coding id each suggestion became, so the match is exact.
+- **Texts made true:** `analyze_file_with_coding` names its four counts
+  (it promised "coverage and density metrics"); `cleanup_old_sessions`
+  says it deletes every project's old sessions on this computer,
+  approved work not yet applied included, with no preview.
+- **Approval, described honestly.** The server writes what is marked
+  approved, and the mark is set by a tool call the assistant makes; it
+  cannot tell whether the researcher gave it. The instructions the
+  server sends and the methods notes keep the rule for the assistant
+  (mark an item approved only on the researcher's word) without claiming
+  the server enforces it; README, PRIVACY.md and INSTALL.md say what
+  stands behind the mark: the host asking before each call that decides
+  or writes ("allow once"), and the researcher's own reading of the
+  counts.
 
 ### Upgrading from 0.13.x
 
@@ -321,6 +366,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memos already in your projects are never rewritten.** A coding
   applied by an earlier release keeps its "[AI Confidence: 0.85]" line;
   remove it in QualCoder if you do not want it in the record.
+- **A session started from now on refuses suggestions outside its
+  files and named codes.** Sessions from earlier releases carry no scope
+  and keep accepting any file and code, as they always did; start a new
+  session to have the scope enforced.
+- **`update_suggestion_status` refuses a GUID sent in two lists**, and
+  `update_proposal_status` one sent in both, where they used to count it
+  twice; nothing changes on such a call.
 
 ## [0.13.0-alpha] - 2026-09-25
 

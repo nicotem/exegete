@@ -25,7 +25,10 @@ FULLTEXT = ("This is interview text. I feel stressed about deadlines. "
 
 
 def _make_session(setup_server):
-    out = server.analyze_for_coding([1])
+    # Every file in the project: a v0.14 session refuses suggestions on
+    # files outside it, and these tests add the file they code first
+    out = server.analyze_for_coding(
+        [f["id"] for f in server.get_db().list_files()])
     return out.split("Session ID: `")[1].split("`")[0]
 
 

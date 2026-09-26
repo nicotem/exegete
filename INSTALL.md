@@ -746,6 +746,19 @@ Check out the main README.md for:
 - Full list of available tools
 - Advanced features (co-occurrence analysis, demographics, etc.)
 
+### Approving the AI's suggestions: your host's settings are the safeguard
+
+When the assistant suggests codings or new codes, nothing is written to
+your project until each item is marked approved and then applied. The
+server records the approval the assistant reports: it cannot tell
+whether you gave it. Two things keep that honest. Your host asks before
+each tool call: keep it asking, and when it asks about
+`update_suggestion_status`, `update_proposal_status`, `apply_codings` or
+`create_proposed_codes`, choose "allow once" rather than allowing the
+tool always. And read what the approval step reports (how many
+suggestions are approved, rejected and pending) before anything is
+applied; if the approved number is not the number you said yes to, stop.
+
 ### Try some richer queries
 
 **Rich Transcript Analysis**:

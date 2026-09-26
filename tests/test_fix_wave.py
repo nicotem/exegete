@@ -174,7 +174,7 @@ class TestSessionStartQualcoderCheck:
         assert env["qualcoder_open"] is False
         assert "action_required" not in env
         assert "STOP" not in out
-        assert "ANALYSIS SESSION CREATED" in out
+        assert "CODING SESSION STARTED" in out
 
     def test_stale_lock_consistent_shape(self, setup_server, qualcoder_db_path):
         lock = _lock_file(qualcoder_db_path)
@@ -184,7 +184,7 @@ class TestSessionStartQualcoderCheck:
             env = json.loads(out)
             assert env["qualcoder_open"] is False
             assert "action_required" not in env
-            assert "ANALYSIS SESSION CREATED" in out
+            assert "CODING SESSION STARTED" in out
         finally:
             lock.unlink()
 

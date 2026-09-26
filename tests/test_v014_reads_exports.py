@@ -129,3 +129,143 @@ class TestCaseNameResolution:
         assert sorted(c["id"] for c in out["candidates"]) == [2, 3]
         assert sql(twin_cases,
                    "SELECT COUNT(*) FROM source WHERE name = 'd.txt'") == [(0,)]
+
+
+# ===========================================================================
+# Audit item 9: the merge and delete previews say what happens to the
+# codebook (memo, sub-codes, saved-graph rows), and the token covers the
+# source's sub-codes
+# ===========================================================================
+
+from test_v17_support import make_project, add_subcode  # noqa: E402
+from qualcoder_mcp.sessions import SessionManager  # noqa: E402
+
+
+@pytest.fixture
+def ladder(tmp_path):
+    """Select a project at a given schema rung; restores the server."""
+    saved = (server.db, server.current_project_path, server.session_manager)
+    server.db = None
+    server.current_project_path = None
+    server.session_manager = SessionManager(str(tmp_path / "sessions"))
+
+    def select(version, setup=None):
+        folder = make_project(tmp_path, version)
+        if setup is not None:
+            setup(folder)
+        out = json.loads(server.select_project(str(folder)))
+        assert out.get("success") is True, out
+        return folder
+
+    yield select
+    if server.db is not None:
+        try:
+            server.db.close()
+        except Exception:
+            pass
+    server.db, server.current_project_path, server.session_manager = saved
+
+
+def _v17_with_memo_subcode_and_graph(folder):
+    """Stress (1) with a memo holding a private part and a sub-code
+    Acute (10), itself with a sub-code Sharp (11); a saved graph with a
+    node for Stress, one for Acute, and a line from Stress to Coping (2)."""
+    sql(folder, "UPDATE code_name SET memo = ? WHERE cid = 1",
+        ("Stress def\n#####\nsecret words",))
+    add_subcode(folder, 10, "Acute", supercid=1)
+    add_subcode(folder, 11, "Sharp", supercid=10)
+    sql(folder, "INSERT INTO graph (grid, name, description, date, "
+                "scene_width, scene_height) VALUES (1, 'G', '', '', 10, 10)")
+    sql(folder, "INSERT INTO gr_cdct_text_item (grid, x, y, catid, cid) "
+                "VALUES (1, 0, 0, NULL, 1)")
+    sql(folder, "INSERT INTO gr_cdct_text_item (grid, x, y, catid, cid) "
+                "VALUES (1, 5, 5, NULL, 10)")
+    sql(folder, "INSERT INTO gr_cdct_line_item (grid, fromcid, tocid) "
+                "VALUES (1, 1, 2)")
+
+
+def _graph_rows(folder):
+    return (sql(folder, "SELECT cid FROM gr_cdct_text_item ORDER BY cid"),
+            sql(folder, "SELECT fromcid, tocid FROM gr_cdct_line_item"))
+
+
+class TestCodebookPreviewsSayWhatChanges:
+
+    def test_a_v17_merge_preview_names_every_codebook_change(self, ladder):
+        folder = ladder("v17", _v17_with_memo_subcode_and_graph)
+        preview = host("merge_codes", from_code_id=1, into_code_id=2)
+        shown = preview["preview"]
+        assert shown["source_memo_carried_to_target"] is True
+        assert shown["source_code_has_memo"] is True
+        assert "Merged from code: Stress" in shown["source_memo_note"]
+        assert shown["subcodes_moved_to_target"] == [
+            {"id": 10, "name": "Acute"}]
+        assert shown["saved_graph_rows_removed"]["code_nodes"] == 1
+        assert shown["saved_graph_rows_removed"]["lines"] == 1
+        # Memo text is never quoted in a preview, private part least of all
+        assert "secret words" not in json.dumps(preview)
+        assert "Stress def" not in json.dumps(preview)
+
+        done = host("merge_codes", from_code_id=1, into_code_id=2,
+                    preview_token=preview["preview_token"])
+        assert done["success"] is True, done
+        # Every change the execute made was in the preview
+        assert sql(folder, "SELECT supercid FROM code_name WHERE cid = 10"
+                   ) == [(2,)]
+        assert sql(folder, "SELECT supercid FROM code_name WHERE cid = 11"
+                   ) == [(10,)]
+        memo = sql(folder, "SELECT memo FROM code_name WHERE cid = 2")[0][0]
+        assert "[Merged from code: Stress" in memo
+        assert _graph_rows(folder) == ([(10,)], [])
+        assert done["subcodes_reparented_to_target"] == 1
+        assert done["provenance_memo_added"] is True
+
+    def test_a_v14_merge_preview_says_the_source_memo_is_deleted(
+            self, ladder):
+        folder = ladder("v14")
+        preview = host("merge_codes", from_code_id=1, into_code_id=2)
+        shown = preview["preview"]
+        assert shown["source_memo_carried_to_target"] is False
+        assert shown["source_code_has_memo"] is True
+        assert "deleted with its row" in shown["source_memo_note"]
+        assert "backup" in shown["source_memo_note"]
+        assert "subcodes_moved_to_target" not in shown
+        assert "saved_graph_rows_removed" not in shown
+        done = host("merge_codes", from_code_id=1, into_code_id=2,
+                    preview_token=preview["preview_token"])
+        assert done["success"] is True, done
+        assert sql(folder, "SELECT memo FROM code_name WHERE cid = 2"
+                   ) == [("",)]
+        assert sql(folder, "SELECT COUNT(*) FROM code_name WHERE cid = 1"
+                   ) == [(0,)]
+
+    def test_a_sub_code_added_after_the_preview_makes_the_token_stale(
+            self, ladder):
+        folder = ladder("v17", _v17_with_memo_subcode_and_graph)
+        preview = host("merge_codes", from_code_id=1, into_code_id=2)
+        add_subcode(folder, 12, "Late", supercid=1)
+        out = host("merge_codes", from_code_id=1, into_code_id=2,
+                   preview_token=preview["preview_token"])
+        assert out.get("nothing_changed") is True, out
+        assert sql(folder, "SELECT supercid FROM code_name WHERE cid = 12"
+                   ) == [(1,)]
+        assert sql(folder, "SELECT COUNT(*) FROM code_name WHERE cid = 1"
+                   ) == [(1,)]
+
+    def test_a_delete_preview_counts_the_branchs_saved_graph_rows(
+            self, ladder):
+        folder = ladder("v17", _v17_with_memo_subcode_and_graph)
+        preview = host("delete_code", code_id=1)
+        graphs = preview["preview"]["saved_graph_rows_removed"]
+        assert graphs["code_nodes"] == 2 and graphs["lines"] == 1
+        done = host("delete_code", code_id=1, cascade=True,
+                    preview_token=preview["preview_token"])
+        assert done["success"] is True, done
+        assert _graph_rows(folder) == ([], [])
+
+    def test_no_graph_rows_no_block(self, ladder):
+        ladder("v17")
+        assert "saved_graph_rows_removed" not in host(
+            "delete_code", code_id=2)["preview"]
+        assert "saved_graph_rows_removed" not in host(
+            "merge_codes", from_code_id=2, into_code_id=1)["preview"]

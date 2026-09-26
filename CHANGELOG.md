@@ -301,6 +301,20 @@ search or a silent limit.
   `case_name` that names another case, `link_file_to_case` refuses
   instead of using the id without a word. The answer's `case_match`
   says which rule matched.
+- **The merge and delete previews say what happens to the codebook.**
+  `merge_codes` did more than its preview said, as QualCoder does. On a
+  project QualCoder 4.0 has opened (schema v16 and later) it moves the
+  source code's sub-codes under the target, adds the source code's memo
+  (its private section included, which stays private) to the target's
+  memo under a "[Merged from code: ...]" line, and removes the source
+  code's saved-graph rows; on a 3.8.2 project the source code's memo,
+  definition included, is deleted with it. The preview now names each:
+  `source_memo_carried_to_target`, `source_code_has_memo` and
+  `source_memo_note`, `subcodes_moved_to_target` by name, and
+  `saved_graph_rows_removed`; it never quotes the memo. The preview
+  token now covers the source's sub-codes, so one added after the
+  preview needs a fresh preview. `delete_code`'s preview counts the
+  saved-graph rows it removes too.
 
 ## [0.13.0-alpha] - 2026-09-25
 

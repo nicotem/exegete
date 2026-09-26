@@ -10831,6 +10831,22 @@ def merge_codes(from_code_id: int, into_code_id: int,
     codings are reassigned without de-duplication (as QualCoder does), which
     can create visual duplicates.
 
+    The codebook changes too, as in QualCoder, and the preview names each
+    change. On projects with sub-code support (v16+ schemas, QualCoder
+    4.0) the source code's sub-codes move under the target with their own
+    sub-codes (subcodes_moved_to_target); a "[Merged from code: ...,
+    Coder: ..., Merger date: ...]" line naming the source code, its owner
+    and the date is added to the target's memo, followed by the source
+    code's whole memo, its '#####' private section included, which stays
+    private; it lands before any private section on the target, which
+    survives verbatim; and the source code's nodes and lines on
+    QualCoder's saved graphs are removed (saved_graph_rows_removed). On a
+    pre-sub-code schema (QualCoder 3.8.2 parity) the source code's memo,
+    definition included, is deleted with its row; the mandatory backup
+    keeps a copy. source_memo_carried_to_target and source_memo_note say
+    which applies; the result reports provenance_memo_added and
+    subcodes_reparented_to_target.
+
     Two-step by design. Call without preview_token: nothing is written and the
     result is a preview of exactly what would change, with a preview_token.
     Show the user the preview (including the collateral breakdown and every
@@ -10901,7 +10917,10 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     whole branch (the code, every transitive sub-code, and all their
     codings) in one transaction, exactly as QualCoder's own delete. The
     preview always reports the branch, so review it before confirming.
-    Move the sub-codes first if they are needed.
+    Move the sub-codes first if they are needed. On those projects the
+    deleted codes' nodes and lines on QualCoder's saved graphs are
+    removed too, as QualCoder 4.0's own delete removes them; the preview
+    counts them (saved_graph_rows_removed).
 
     Two-step by design. Call without preview_token: nothing is written and the
     result is a preview of exactly what would change, with a preview_token.

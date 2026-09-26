@@ -7700,6 +7700,15 @@ class QualcoderDatabase:
         rows = {"source_code": self._code_rows_for_cids([from_code_id]),
                 "destination_code": self._code_rows_for_cids([into_code_id])}
         rows.update(self._coding_rows_for_cids([from_code_id]))
+        # The sub-codes the merge moves under the target (v16+), so one
+        # added, renamed or moved away after the preview makes the token
+        # stale instead of travelling without a fresh preview (v0.14,
+        # claims audit item 9).
+        caps = getattr(self, "capabilities", None)
+        if caps is not None and caps.has_supercid:
+            rows["source_subcodes"] = self._row_digest_rows(
+                "SELECT cid, name, catid FROM code_name WHERE supercid = ? "
+                "ORDER BY cid", (from_code_id,))
         rows["collisions"] = self._row_digest_rows(
             "SELECT s.ctid FROM code_text s WHERE s.cid = ? AND EXISTS ("
             "  SELECT 1 FROM code_text d WHERE d.cid = ? AND d.fid = s.fid "
@@ -7794,6 +7803,43 @@ class QualcoderDatabase:
             self.conn.execute(
                 "DELETE FROM gr_free_line_item WHERE fromcid = ? OR tocid = ?",
                 (cid, cid))
+
+    def _code_graph_preview(self, cids: Sequence[int]
+                            ) -> Optional[Dict[str, Any]]:
+        """What `_cleanup_graph_rows_for_cid` would remove for these codes.
+
+        The same gate (v16 and later, only the tables that exist) and the
+        same rows: each code's node, and every line from or to one of the
+        codes, each line counted once. None when nothing on a saved graph
+        is removed, as `_saved_graph_preview` answers for a category
+        (v0.14, claims audit item 9: the code previews said nothing of
+        these rows).
+        """
+        caps = getattr(self, "capabilities", None)
+        if caps is None or not caps.has_supercid or not cids:
+            return None
+        marks = ",".join("?" for _ in cids)
+        cids = list(cids)
+        nodes = lines = 0
+        if caps.table_exists("gr_cdct_text_item"):
+            nodes = self.conn.execute(
+                f"SELECT COUNT(*) FROM gr_cdct_text_item "
+                f"WHERE cid IN ({marks})", cids).fetchone()[0]
+        for table in ("gr_cdct_line_item", "gr_free_line_item"):
+            if caps.table_exists(table):
+                lines += self.conn.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE fromcid IN "
+                    f"({marks}) OR tocid IN ({marks})",
+                    cids + cids).fetchone()[0]
+        if not nodes and not lines:
+            return None
+        return {
+            "code_nodes": nodes,
+            "lines": lines,
+            "note": "QualCoder saved graphs: the node of each code that "
+                    "goes, and every line from or to one, are removed, as "
+                    "QualCoder 4.0's own delete and merge remove them.",
+        }
 
     # A category's own rows in QualCoder's saved graphs (v0.14): its node,
     # which has no cid, and the lines that end on that node, whose cid at
@@ -8140,7 +8186,69 @@ class QualcoderDatabase:
         hidden = self._hidden_codings_affected("cid = ?", (from_code_id,))
         if hidden is not None:
             preview["hidden_coder_codings_affected"] = hidden
+        preview.update(self._merge_codes_codebook_preview(
+            from_code_id, src, dest, caps))
         return preview
+
+    def _merge_codes_codebook_preview(self, from_code_id: int, src, dest,
+                                      caps) -> Dict[str, Any]:
+        """What a code merge does to the codebook, besides the codings.
+
+        v0.14, claims audit item 9: the preview listed the codings and
+        their owners only, while the merge also changes the codebook. On
+        a v16+ project (QualCoder 4.0) it appends the source code's memo,
+        private section included, to the target's memo under a provenance
+        line, moves the source's sub-codes under the target and removes
+        the source's saved-graph rows; on a v14/v15 project (3.8.2) the
+        source code's memo goes with its row. Both are QualCoder's own
+        behaviour (master code_tree.py:1521-1570 at 9bddf17; qc382
+        code_text.py:2772-2820), kept and now said. Memo text is never
+        quoted: only whether there is one.
+        """
+        memo_row = self.conn.execute(
+            "SELECT memo FROM code_name WHERE cid = ?",
+            (from_code_id,)).fetchone()
+        has_memo = bool(memo_row is not None
+                        and (memo_row[0] or "").strip())
+        carried = caps is not None and bool(caps.has_supercid)
+        out: Dict[str, Any] = {
+            "source_memo_carried_to_target": carried,
+            "source_code_has_memo": has_memo,
+        }
+        if carried:
+            note = (f"The target code's memo changes: a line "
+                    f"'[Merged from code: {src['name']}, Coder: ..., "
+                    f"Merger date: ...]' naming the source code, its "
+                    f"owner and the date is added to the memo of "
+                    f"'{dest['name']}'")
+            note += (", followed by the source code's whole memo, its "
+                     "'#####' private section included (which stays "
+                     "private)" if has_memo else
+                     " (the source code has no memo to carry)")
+            note += (". It lands before any private section the target "
+                     "has, as QualCoder 4.0's own merge records it.")
+            subcodes = [
+                {"id": r[0], "name": r[1]} for r in self.conn.execute(
+                    "SELECT cid, name FROM code_name WHERE supercid = ? "
+                    "ORDER BY name, cid", (from_code_id,)).fetchall()]
+            out["subcodes_moved_to_target"] = subcodes
+            if subcodes:
+                out["subcodes_note"] = (
+                    f"{len(subcodes)} sub-code(s) of '{src['name']}' move "
+                    f"under '{dest['name']}', with their own sub-codes, "
+                    f"as in QualCoder 4.0; their codings stay theirs.")
+            graphs = self._code_graph_preview([from_code_id])
+            if graphs is not None:
+                out["saved_graph_rows_removed"] = graphs
+        elif has_memo:
+            note = ("The source code's memo is deleted with its row, as "
+                    "QualCoder 3.8.2's merge does on this project's "
+                    "schema; the backup made first keeps a copy. Copy "
+                    "anything you need from it before the merge.")
+        else:
+            note = "The source code has no memo; nothing is carried."
+        out["source_memo_note"] = note
+        return out
 
     def merge_codes(self, from_code_id: int, into_code_id: int,
                     auto_commit: bool = True) -> Dict[str, Any]:
@@ -8291,6 +8399,9 @@ class QualcoderDatabase:
         hidden = self._hidden_codings_affected(where, branch)
         if hidden is not None:
             preview["hidden_coder_codings_affected"] = hidden
+        graphs = self._code_graph_preview(branch)
+        if graphs is not None:
+            preview["saved_graph_rows_removed"] = graphs
         if len(branch) > 1:
             names = self.conn.execute(
                 f"SELECT name FROM code_name WHERE cid IN ({marks}) "

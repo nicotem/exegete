@@ -44,6 +44,8 @@ from .database import (
     documents_clash_message,
     documents_name_key,
     _detect_file_type as detect_file_type,
+    unusable_pdf_block,
+    unusable_pdf_link_refusal,
     validate_id,
     validate_limit,
     MAX_LIMIT,
@@ -51,6 +53,10 @@ from .database import (
     private_note_refusal,
     MAX_CODER_NAME_LENGTH,
     backup_project,
+    unclean_backup_side_files,
+    backup_database_is_link,
+    BackupWithoutDatabaseError,
+    BACKUP_WITHOUT_DATABASE_MESSAGE,
     default_workspace,
     workspace_setting_problem,
     WORKSPACE_ENV,
@@ -453,6 +459,11 @@ def _error_answer(where: str, e: BaseException,
         return json.dumps({"error": DB_UNAVAILABLE_ERROR})
     if isinstance(e, (ValueError, TypeError)):
         return json.dumps({"error": str(e)})
+    if isinstance(e, BackupWithoutDatabaseError):
+        # A copy that would hold no database (fix round 1): its own fixed
+        # text, which carries no path
+        logger.error("No database to back up in %s", where)
+        return json.dumps({"error": BACKUP_WITHOUT_DATABASE_MESSAGE})
     if isinstance(e, FileNotFoundError):
         logger.error("Not found in %s: %s", where, error_label(e))
         return json.dumps({"error": "File or project not found."})
@@ -749,12 +760,55 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             # Neither the path nor the folder's name (v0.14)
             logger.info("Connected to the project set in "
                         "QUALCODER_PROJECT_PATH")
-        except (ValueError, FileNotFoundError, RuntimeError) as e:
+        except (DatabaseLockedError, UnsupportedSchemaError):
+            # Their own texts, which carry no path: a lock is a moment,
+            # an old schema has its advice
+            raise
+        except (ValueError, OSError, RuntimeError, sqlite3.Error) as e:
+            # One text for a configured project that cannot be opened,
+            # in every tool, without the path (fix round 1)
             logger.error("Failed to connect to database: %s",
                          error_label(e))
-            raise
+            raise ConfiguredProjectError(
+                CONFIGURED_PROJECT_UNAVAILABLE) from None
 
     return db
+
+
+CONFIGURED_PROJECT_UNAVAILABLE = (
+    "The project set in QUALCODER_PROJECT_PATH could not be opened: it was "
+    "not found, is not a QualCoder project folder, or its database will not "
+    "open. Check the path in the host's configuration; if QualCoder has the "
+    "project open, close it and retry. While the database will not open, no "
+    "tool here can read, back it up or restore it: its backups, if any, sit "
+    "beside the project folder under its name with _backup_ or _BKUP_, and "
+    "one can be copied back by hand with QualCoder closed.")
+
+
+class ConfiguredProjectError(ValueError):
+    """The configured project could not be opened (fix round 1): answered
+    with CONFIGURED_PROJECT_UNAVAILABLE by every tool."""
+
+
+def _adopt_configured_project() -> None:
+    """Make a project set in the host's configuration the current one
+    at its first use, whichever tool comes first (v0.14).
+
+    `current_project_path` is set by `select_project`, or by `get_db`
+    when it first connects to the project in `QUALCODER_PROJECT_PATH`.
+    The tools that ask "is a project selected?" before they read
+    anything (the three backup tools, `get_current_project`, the AI
+    coder name setter, the pseudonym tools, every write's owner check
+    and a session's project check) therefore answered "No Qualcoder
+    project selected" on a configured project until another tool had
+    run (plan, Appendix F). This connects first, read-only, exactly as
+    any read would. A configured path that cannot be opened raises as
+    `get_db` does, so the tool guard answers with the reason rather
+    than "no project selected".
+    """
+    if current_project_path is None and db is None \
+            and os.environ.get("QUALCODER_PROJECT_PATH"):
+        get_db()
 
 
 def _downgrade_to_readonly():
@@ -776,6 +830,39 @@ def _downgrade_to_readonly():
             logger.error("Failed to downgrade to read-only: %s",
                          error_label(e))
             db = None
+
+
+def _not_shown_block(counts: Dict[str, int], shown: str,
+                     what: str) -> Optional[Dict[str, Any]]:
+    """The disclosure a text read gives of the codings it leaves out
+    (v0.14): region codings (areas on PDF pages or images) and
+    audio/video codings, which QualCoder counts with the text codings
+    and the delete previews count too. None when there are none."""
+    region = int(counts.get("region", 0))
+    av = int(counts.get("audio_video", 0))
+    if not region and not av:
+        return None
+    return {
+        "region": region,
+        "audio_video": av,
+        "note": (f"This read {shown} text codings only. {region} region "
+                 f"coding(s) (areas on PDF pages or images) and {av} "
+                 f"audio/video coding(s) {what} are not included; "
+                 f"QualCoder counts them with the text codings, and the "
+                 f"previews of delete_code and merge_codes count them."),
+    }
+
+
+def _unusable_pdf_reason(file_content: Optional[Dict[str, Any]]
+                         ) -> Optional[str]:
+    """The refusal a coding tool gives for a PDF with no usable text
+    (v0.14), or None: its name, the kind, and the way forward."""
+    block = (file_content or {}).get("unusable_pdf")
+    if not block:
+        return None
+    return (f"file '{file_content.get('name')}' is a PDF with no usable "
+            f"text ({block['reason']}), so it cannot be coded as text: "
+            f"{block['message']}")
 
 
 def _snippet(text: Optional[str], max_len: int = 80) -> str:
@@ -1615,6 +1702,7 @@ def _resolve_write_owner(
     unset, then this host's declaration conflicting with the project's
     name, then a tool-supplied owner that is not the project's name.
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return None, {"error": _no_project_message()}
     state = read_sidecar(_current_project_folder())
@@ -1701,6 +1789,14 @@ _SKIPPED_SYMLINKS_NOTE = (
     "backups or copies; the entries named here are absent from this copy.")
 
 
+_DATABASE_AS_FILE_NOTE = (
+    "SQLite could not read the project database as a database, so this "
+    "copy holds it as a file, with any journal or WAL file that was beside "
+    "it: it may not be one committed state. list_backups marks such a "
+    "backup unclean when it holds a journal, and restore_backup refuses "
+    "it then.")
+
+
 def _attach_skipped_symlinks(result: Any, report: Optional[Dict[str, Any]],
                              prefix: str = "", always: bool = False) -> None:
     """Surface the symlinks a backup or project copy skipped (S-P1).
@@ -1719,6 +1815,12 @@ def _attach_skipped_symlinks(result: Any, report: Optional[Dict[str, Any]],
     if skipped:
         result[f"{prefix}skipped_symlink_names"] = skipped[:20]
         result[f"{prefix}skipped_symlinks_note"] = _SKIPPED_SYMLINKS_NOTE
+    # A database SQLite could not read, copied as a file (fix round 1)
+    as_file = (report or {}).get("database_copied_as_file")
+    if as_file:
+        result[f"{prefix}database_copied_as_file"] = as_file
+        result[f"{prefix}database_copied_as_file_note"] = \
+            _DATABASE_AS_FILE_NOTE
 
 
 def _skipped_symlinks_line(report: Optional[Dict[str, Any]]) -> str:
@@ -1726,11 +1828,16 @@ def _skipped_symlinks_line(report: Optional[Dict[str, Any]]) -> str:
     a tool whose result is Markdown rather than JSON (apply_codings);
     empty when nothing was skipped."""
     skipped = list((report or {}).get("skipped_symlinks") or [])
-    if not skipped:
-        return ""
-    return (f"backup_skipped_symlinks: {len(skipped)} "
-            f"({', '.join(skipped[:20])}). {_SKIPPED_SYMLINKS_NOTE} "
-            f"Relay this to the user.\n")
+    as_file = (report or {}).get("database_copied_as_file")
+    line = ""
+    if skipped:
+        line += (f"backup_skipped_symlinks: {len(skipped)} "
+                 f"({', '.join(skipped[:20])}). {_SKIPPED_SYMLINKS_NOTE} "
+                 f"Relay this to the user.\n")
+    if as_file:
+        line += (f"backup_database_copied_as_file: {as_file}. "
+                 f"{_DATABASE_AS_FILE_NOTE} Relay this to the user.\n")
+    return line
 
 
 # What a write says when it fails AFTER its backup was taken.
@@ -1814,6 +1921,19 @@ def _rollback_if_open(write_db) -> bool:
         return False
 
 
+def _backup_failed_text(locked: bool, no_database: bool = False) -> str:
+    """Why a write stopped at its backup (v0.14): a database another
+    program kept locked is said as such, not as a disk problem, and a
+    backup that would hold no database (fix round 1) says why."""
+    if no_database:
+        return BACKUP_WITHOUT_DATABASE_MESSAGE
+    if locked:
+        return (DB_LOCKED_MESSAGE + " No backup could be taken, so "
+                "nothing was written.")
+    return ("Failed to create a backup: check disk space and "
+            "permissions. Nothing was written.")
+
+
 def _write_failed_text(rolled_back: bool, backup_fail_detail: str,
                        error: Optional[BaseException] = None) -> str:
     """The failure text for a write that did not commit.
@@ -1892,8 +2012,9 @@ def _perform_write(op, create_backup: bool = True,
                 except Exception as e:
                     logger.error("Failed to create backup: %s", error_label(e))
                     return {
-                        "error": "Failed to create a backup: check disk space "
-                                 "and permissions. Nothing was written.",
+                        "error": _backup_failed_text(
+                            isinstance(e, DatabaseLockedError),
+                            isinstance(e, BackupWithoutDatabaseError)),
                         "message": f"Aborting to protect your data: "
                                    f"{backup_fail_detail}.",
                     }
@@ -1969,6 +2090,7 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
         None if the session matches the current project, otherwise a dict
         suitable for JSON error output.
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return {
             "error": "No Qualcoder project selected. Use 'list_available_projects' "
@@ -2898,6 +3020,7 @@ def set_project_ai_coder_name(name: str, note: str = "",
     Example:
         "Store this project's AI codings under the name Qwen 3.8 6bit"
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({"error": _no_project_message()})
 
@@ -3206,6 +3329,7 @@ def get_current_project() -> str:
         project still exists.
     """
     try:
+        _adopt_configured_project()
         if current_project_path is None:
             return json.dumps({
                 "current_project": None,
@@ -3263,9 +3387,10 @@ def get_current_project() -> str:
 
         return _ai_json(result, indent=2)
 
-    except (DatabaseOpenError, sqlite3.Error):
+    except (DatabaseOpenError, sqlite3.Error, ConfiguredProjectError):
         # Let the tool guard return its fixed, path-free text instead of
-        # forwarding the sqlite message (S-H4)
+        # forwarding the sqlite message (S-H4), and the configured
+        # project's one text (fix round 1)
         raise
     except Exception as e:
         return json.dumps(
@@ -3295,6 +3420,7 @@ def read_pseudonym_list() -> str:
         `present` false when the project has no such file; an error, with
         the reader's value-free message, when it cannot be read.
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({"error": _no_project_message()}, indent=2)
     report, entries = _pseudonyms_json_read()
@@ -3327,9 +3453,13 @@ def copy_project_to_workspace(
 
     The copy carries the whole project tree, ai_data/ included (the AI
     prompt library and chat history are user data), but omits the
-    regenerable ai_data/search.sqlite, sqlite sidecar files and lock
-    files, the same exclusions backups use. QualCoder rebuilds
-    search.sqlite when it opens the copy. Symlinks inside the project
+    regenerable ai_data/search.sqlite, sqlite sidecar files (the
+    database's journal and WAL files included) and lock files, the same
+    exclusions backups use. The database is copied with SQLite's own
+    online backup, so a copy taken while QualCoder is writing holds what
+    was last committed; QualCoder's own saves wait while it runs, and on
+    a database of about 4 GB or more a save in an open QualCoder window
+    can fail. QualCoder rebuilds search.sqlite when it opens the copy. Symlinks inside the project
     that point outside the project folder (or dangle) are not followed:
     they are skipped and reported (skipped_symlinks, with names), so a
     shared or untrusted project folder cannot pull outside files into
@@ -3931,6 +4061,13 @@ def get_coded_segments(code_id: int, limit: int = 100,
                               returned_so_far + len(segments), has_more,
                               next_cursor, not has_more),
                    changed)
+    not_shown = _not_shown_block(
+        db_.non_text_coding_counts(code_ids=[code_id],
+                                   file_ids=scoped_files or None,
+                                   coder=coder),
+        "shows", "of this code in this scope")
+    if not_shown is not None:
+        payload["codings_not_shown"] = not_shown
     note = _coder_visibility_note(coder)
     if note:
         if coder is None:
@@ -4178,7 +4315,17 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
         - total_coded_segments: Total count across all codes
         - codes: Array of codes with their frequencies, sorted by frequency
     """
-    frequencies = get_db().get_coding_frequencies(coder=coder)
+    db_ = get_db()
+    frequencies = db_.get_coding_frequencies(coder=coder)
+    counts = db_.non_text_coding_counts(coder=coder, by_code=True)
+    for entry in frequencies["codes"]:
+        extra = counts["per_code"].get(entry["code_id"])
+        if extra and (extra["region"] or extra["audio_video"]):
+            entry["codings_not_counted"] = dict(extra)
+    not_counted = _not_shown_block(counts["totals"], "counts",
+                                   "in this scope")
+    if not_counted is not None:
+        frequencies["codings_not_counted"] = not_counted
     note = _coder_visibility_note(coder)
     if note:
         frequencies["coder_visibility"] = note
@@ -4570,7 +4717,25 @@ def get_project_summary() -> str:
     for file in files:
         file_type = file["type"]
         summary["file_types"][file_type] = summary["file_types"].get(file_type, 0) + 1
+    # PDFs with no usable text, named (v0.14)
+    unusable = [{"file_id": f["id"], "file_name": f["name"],
+                 "reason": f["unusable_pdf"]}
+                for f in files if f.get("unusable_pdf")]
+    if unusable:
+        summary["unusable_pdfs"] = unusable
+        summary["unusable_pdfs_note"] = (
+            "These PDF sources have no usable text, so they are not "
+            "searched and cannot be coded as text here: no_text_layer is "
+            "a PDF with no text layer (OCR it outside this server and "
+            "import the result); pdf_file_stored_as_text is a PDF that "
+            "QualCoder 3.8.2 stored as the file itself, recognised by a "
+            "heuristic (repair it with 'Restructure' in QualCoder 4.0's "
+            "PDF view). analyze_file_with_coding says more for each.")
 
+    not_counted = _not_shown_block(get_db().non_text_coding_counts(),
+                                   "counts", "in this project")
+    if not_counted is not None:
+        summary["statistics"]["codings_not_counted"] = not_counted
     note = _coder_visibility_note()
     if note:
         summary["coder_visibility"] = note
@@ -4630,13 +4795,23 @@ def analyze_file_with_coding(file_id: int) -> str:
 
     # Non-text sources: say so explicitly — an empty full_text was
     # previously indistinguishable from a genuinely empty text file (track6)
-    if not result.get("file_info", {}).get("is_text", True):
+    unusable = result.get("file_info", {}).get("unusable_pdf")
+    if unusable:
+        # A PDF with no usable text, named (v0.14); a PDF 3.8.2 stored as
+        # the file itself has its text withheld by the read
+        result["note"] = unusable["message"]
+    elif not result.get("file_info", {}).get("is_text", True):
         result["note"] = (
             f"This source is {result['file_info'].get('type', 'media')}, not "
             f"text; it has no codable text content, and its image/audio-video "
             f"codings (if any) are not shown by this tool."
         )
 
+    not_shown = _not_shown_block(
+        get_db().non_text_coding_counts(file_ids=[file_id]),
+        "shows", "on this file")
+    if not_shown is not None:
+        result["codings_not_shown"] = not_shown
     note = _coder_visibility_note()
     if note:
         result["coder_visibility"] = note
@@ -5559,6 +5734,22 @@ def analyze_for_coding(
     files_to_analyze = [f for f in all_files if f['id'] in file_ids]
     if not files_to_analyze:
         return json.dumps({"error": "No valid files found with those IDs"})
+    # A PDF with no usable text is refused here, by name (v0.14): a
+    # session on it would end in suggestions that cannot be verified
+    files_refused = [
+        {"file_id": f["id"], "file_name": f["name"],
+         **unusable_pdf_block(f["unusable_pdf"])}
+        for f in files_to_analyze if f.get("unusable_pdf")]
+    if files_refused:
+        refused_ids = {f["file_id"] for f in files_refused}
+        files_to_analyze = [f for f in files_to_analyze
+                            if f["id"] not in refused_ids]
+        file_ids = [fid for fid in file_ids if fid not in refused_ids]
+        if not files_to_analyze:
+            return json.dumps({
+                "error": "None of these files can be coded as text: each "
+                         "is a PDF with no usable text.",
+                "files_refused": files_refused}, indent=2)
 
     # Filter codes if specified
     if code_names:
@@ -5663,6 +5854,8 @@ Once Claude records and presents suggestions, you can:
         # shape (QA6-1)
         "qualcoder_open": state == "active",
     }
+    if files_refused:
+        envelope["files_refused"] = files_refused
     if state == "active":
         envelope["action_required"] = action_required
     else:
@@ -5715,6 +5908,10 @@ def _validate_proposal_evidence(ro_db, items, file_cache):
             file_cache[file_id] = ro_db.get_file_content(file_id)
         fc = file_cache[file_id]
         fulltext = (fc or {}).get("content") or ""
+        unusable = _unusable_pdf_reason(fc)
+        if unusable is not None:
+            rejected.append({"index": idx, "reason": unusable})
+            continue
         if fc is None or not fc.get("is_text") or not fulltext:
             rejected.append({"index": idx,
                              "reason": f"file_id {file_id} is not a text source"})
@@ -5869,6 +6066,10 @@ def record_suggestions(
             rejected.append({"index": idx, "reason": f"file_id {file_id} does not exist"})
             continue
         fulltext = file_content.get("content") or ""
+        unusable = _unusable_pdf_reason(file_content)
+        if unusable is not None:
+            rejected.append({"index": idx, "reason": unusable})
+            continue
         if not file_content.get("is_text") or not fulltext:
             rejected.append({
                 "index": idx,
@@ -6222,6 +6423,9 @@ def edit_suggestion(
         # sessions have none stored)
         alt_content = get_db().get_file_content(sugg.file_id)
         alt_fulltext = (alt_content or {}).get("content") or ""
+        unusable = _unusable_pdf_reason(alt_content)
+        if unusable is not None:
+            return json.dumps({"error": unusable})
         if alt_content is None or not alt_content.get("is_text") \
                 or not alt_fulltext:
             return json.dumps({
@@ -6283,6 +6487,9 @@ def edit_suggestion(
     if wants_span:
         file_content = ro_db.get_file_content(sugg.file_id)
         fulltext = (file_content or {}).get("content") or ""
+        unusable = _unusable_pdf_reason(file_content)
+        if unusable is not None:
+            return json.dumps({"error": unusable})
         if file_content is None or not file_content.get("is_text") or not fulltext:
             return json.dumps({
                 "error": f"file_id {sugg.file_id} no longer exists or is "
@@ -6609,6 +6816,8 @@ def apply_codings(
         fulltext = (file_content or {}).get("content") or ""
         if file_content is None:
             problem = {"reason": f"file_id {sugg.file_id} does not exist"}
+        elif _unusable_pdf_reason(file_content) is not None:
+            problem = {"reason": _unusable_pdf_reason(file_content)}
         elif not file_content.get("is_text") or not fulltext:
             problem = {"reason": f"file '{file_content['name']}' is not a text "
                                  f"source; text codings require text content"}
@@ -6715,8 +6924,9 @@ def apply_codings(
                     logger.error("Failed to create backup: %s", error_label(e))
                     _downgrade_to_readonly()
                     return json.dumps({
-                        "error": "Failed to create a backup: check disk space "
-                                 "and permissions. Nothing was written.",
+                        "error": _backup_failed_text(
+                            isinstance(e, DatabaseLockedError),
+                            isinstance(e, BackupWithoutDatabaseError)),
                         "message": "Aborting to protect your data: nothing was written."
                     })
 
@@ -6948,6 +7158,7 @@ def import_text_file(
     # normalised text through changes nothing.
     pseudonym_report = None
     if apply_project_pseudonyms:
+        _adopt_configured_project()
         if current_project_path is None:
             return json.dumps({"error": _no_project_message()}, indent=2)
         try:
@@ -7073,8 +7284,9 @@ def import_text_file(
                 except Exception as e:
                     logger.error("Failed to create backup: %s", error_label(e))
                     return json.dumps({
-                        "error": "Failed to create a backup: check disk space "
-                                 "and permissions. Nothing was written.",
+                        "error": _backup_failed_text(
+                            isinstance(e, DatabaseLockedError),
+                            isinstance(e, BackupWithoutDatabaseError)),
                         "message": "Aborting to protect your data."
                     })
 
@@ -7168,7 +7380,9 @@ def link_file_to_case(
     QualCoder's own "Case file manager" would create; without it, a file
     is invisible to get_codes_by_case, get_case_code_matrix, case reports
     and every other case-based analysis. Files imported with
-    import_text_file are NOT linked to any case by default.
+    import_text_file are NOT linked to any case by default. A PDF with no
+    usable text (no text layer, or the file itself stored by QualCoder
+    3.8.2) is refused: the case read would have no text from it.
 
     Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
@@ -7206,8 +7420,16 @@ def link_file_to_case(
             })
 
     # Validate the file on the read-only connection
-    if ro_db.get_file_content(file_id) is None:
+    file_content = ro_db.get_file_content(file_id)
+    if file_content is None:
         return json.dumps({"error": f"File ID {file_id} does not exist"})
+    # A PDF with no usable text is not linked, before any backup (fix
+    # round 1): the case read would have nothing, or the stored file, as
+    # its text
+    unusable = (file_content.get("unusable_pdf") or {}).get("reason")
+    if unusable is not None:
+        return json.dumps({"error": unusable_pdf_link_refusal(
+            file_content["name"], unusable)}, indent=2)
 
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
@@ -7351,8 +7573,13 @@ def list_backups() -> str:
     4.0's AI prompt library and chat history are non-regenerable user
     data), but exclude the regenerable vector-search database
     ai_data/search.sqlite (which duplicates every text source in
-    plaintext) and sqlite sidecar files, exactly like QualCoder's own
-    backups; QualCoder rebuilds search.sqlite on project open. Unlike
+    plaintext) and sqlite sidecar files, like QualCoder's own backups;
+    QualCoder rebuilds search.sqlite on project open. The project
+    database is copied with SQLite's own online backup, so a backup
+    taken while QualCoder is writing holds what was last committed, and
+    its journal and WAL files are never copied. A backup that holds
+    them (copied mid-write, or made before v0.14) is marked `unclean`
+    and restore_backup refuses it. Unlike
     QualCoder's backups, symlinks inside the project that point outside
     the project folder (or dangle) are not followed: they are skipped and
     the write result reports them (backup_skipped_symlinks), so a shared
@@ -7364,6 +7591,7 @@ def list_backups() -> str:
         JSON with the project name and an array of backups
         (name, path, created, size_mb)
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
             "error": "No Qualcoder project selected. Use 'list_available_projects' "
@@ -7373,10 +7601,17 @@ def list_backups() -> str:
     project_folder = validate_qda_path(current_project_path).parent
     backups = _collect_backups(project_folder)
 
-    return json.dumps({
+    unclean = [b["name"] for b in backups if "unclean" in b]
+    answer: Dict[str, Any] = {
         "project": project_folder.stem,
         "backup_count": len(backups),
         "backups": backups,
+    }
+    if unclean:
+        answer["unclean_backups"] = unclean
+        answer["unclean_note"] = UNCLEAN_BACKUP_NOTE
+    return json.dumps({
+        **answer,
         "notes": [
             "kind='qualcoder' backups are made by QualCoder itself on "
             "project open; they may exclude audio/video files and QualCoder "
@@ -7391,13 +7626,28 @@ def list_backups() -> str:
             "Backups include the whole project tree, ai_data/ included "
             "(QualCoder 4.0's AI prompt library and chat history are "
             "non-regenerable user data), but exclude the regenerable "
-            "vector-search database ai_data/search.sqlite and sqlite "
-            "sidecar files, exactly like QualCoder's own backups. "
-            "QualCoder rebuilds search.sqlite when the project is opened."
+            "vector-search database ai_data/search.sqlite and its sqlite "
+            "sidecar files, like QualCoder's own backups. QualCoder "
+            "rebuilds search.sqlite when the project is opened.",
+            "Since v0.14 this server copies the project database with "
+            "SQLite's own online backup, so a backup taken while QualCoder "
+            "is writing holds what was last committed, and the database's "
+            "journal and WAL files are never copied (QualCoder's own "
+            "backups copy the database as a file). A backup that holds "
+            "them is marked unclean and is not restored."
         ],
         "hint": "Use restore_backup(backup_path) to roll the project back "
                 "to one of these snapshots."
     }, indent=2)
+
+
+UNCLEAN_BACKUP_NOTE = (
+    "This backup holds its database's journal or WAL file beside it (it "
+    "was copied while a program was writing to the project; backups made "
+    "before v0.14 copied these files), or its data.qda is a link. What it "
+    "holds depends on the platform that opens it, or on where the link "
+    "points, so restore_backup refuses it; choose another backup. It can "
+    "be pruned like any other.")
 
 
 def _backup_log_name(name: str, project_folder: Path) -> str:
@@ -7432,7 +7682,7 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                     f.stat().st_size for f in entry.rglob("*") if f.is_file()
                 )
                 created = datetime.fromtimestamp(entry.stat().st_mtime)
-                backups.append({
+                item = {
                     "name": entry.name,
                     "path": str(entry),
                     "kind": kind,
@@ -7440,7 +7690,18 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                     "age_days": round(
                         max(0.0, (now - created).total_seconds()) / 86400, 1),
                     "size_mb": round(size_bytes / (1024 * 1024), 2),
-                })
+                }
+                side = unclean_backup_side_files(entry)
+                linked = backup_database_is_link(entry)
+                if side or linked:
+                    # Named, never silently used (v0.14)
+                    item["unclean"] = {"side_files": side,
+                                       "note": UNCLEAN_BACKUP_NOTE}
+                    if linked:
+                        # Its data.qda is a link (fix round 1): what it
+                        # holds is wherever the link points now
+                        item["unclean"]["linked_database"] = True
+                backups.append(item)
             except OSError as e:
                 logger.debug("Cannot stat backup %s: %s",
                              _backup_log_name(entry.name, project_folder),
@@ -7509,6 +7770,7 @@ def prune_backups(keep_last: Optional[int] = None,
     Returns:
         JSON preview (requires_confirmation) or the removal result
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
             "error": "No Qualcoder project selected. Use 'list_available_projects' "
@@ -7597,6 +7859,19 @@ def prune_backups(keep_last: Optional[int] = None,
                     "delete these backup folders. QualCoder's own _BKUP_ "
                     "backups are never touched.",
         }
+        # A kept backup restore_backup would refuse (fix round 1): a
+        # retention policy can otherwise keep only backups that cannot
+        # be restored
+        kept_unclean = [b["name"] for b in kept if "unclean" in b]
+        if kept_unclean:
+            preview["would_keep_unclean"] = kept_unclean
+            notes.append(
+                f"{len(kept_unclean)} of the {len(kept)} backup(s) this "
+                f"would keep are marked unclean, and restore_backup "
+                f"refuses them"
+                + (": none of the backups kept could be restored."
+                   if len(kept_unclean) == len(kept) else ".")
+                + " Keep more, or check list_backups first.")
         if notes:
             preview["notes"] = notes
         try:
@@ -7816,7 +8091,9 @@ def restore_backup(backup_path: str,
        longer use a lock file, so 4.0 detection is best-effort heuristics
        (qualcoder_gui_signals, reported in this tool's own preview and in
        get_current_project); never restore while any QualCoder window has
-       this project open.
+       this project open,
+    5. refuses a backup list_backups marks `unclean` (its database's
+       journal or WAL file beside it: copied mid-write).
 
     Two-step by design. Call without preview_token: nothing is changed and
     the result is a preview of exactly what would be restored, with a
@@ -7851,6 +8128,7 @@ def restore_backup(backup_path: str,
     Example:
         "Restore the project from the backup made this morning"
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
             "error": "No Qualcoder project selected. Use 'list_available_projects' "
@@ -7878,6 +8156,22 @@ def restore_backup(backup_path: str,
                      "restored."
         })
 
+    # A clean backup (v0.14): a journal or WAL file beside its database
+    # means it was copied mid-write, and what it holds depends on the
+    # platform that opens it. Refused on the preview and again on the
+    # execute, never used silently, and checked before anything opens it.
+    side = unclean_backup_side_files(backup_folder)
+    linked = backup_database_is_link(backup_folder)
+    if side or linked:
+        refusal = {
+            "error": "This backup cannot be restored: " + UNCLEAN_BACKUP_NOTE,
+            "reason": "unclean_backup",
+            "side_files": side,
+            "nothing_changed": True,
+        }
+        if linked:
+            refusal["linked_database"] = True
+        return json.dumps(refusal, indent=2)
     # The backup itself must be a valid QualCoder project
     validate_qda_path(str(backup_folder))
 
@@ -12001,6 +12295,10 @@ def _stale_sessions_for(file_ids: Sequence[int]) -> List[str]:
     """
     wanted = set(file_ids)
     stale: List[str] = []
+    try:
+        _adopt_configured_project()
+    except Exception:
+        return stale
     if current_project_path is None:
         return stale
     try:
@@ -12394,6 +12692,16 @@ def pseudonymise_source(
     repeated on each call. The notes and the report always cover the
     whole project.
 
+    Two people who share a name: one file per call gives each their own
+    pseudonym in the file text only. With rewrite_memos on, whichever
+    run carries it rewrites that name in notes across the whole project,
+    the other person's notes included, and no order of runs avoids
+    this. Keep rewrite_memos off on every run of a shared name and
+    change the notes that name either person by hand; give the second
+    person a typed mapping with save_mapping_to_project off and
+    researcher_keeps_mapping on (pseudonyms.json holds one pseudonym
+    per name).
+
     Preview first, relay the counts, the collisions and the residue to
     the user, get an explicit yes, then execute with the token.
 
@@ -12439,8 +12747,9 @@ def pseudonymise_source(
     Thomas_P01 is counted even under case_mode="exact". Every count is
     two readings, wide and whole-word, and the residue's file_text block
     counts the names left in the text of every file after the run, the
-    files this run does not touch included; a name inside a longer word
-    is reported and never substituted.
+    files this run does not touch included (not a PDF QualCoder 3.8.2
+    stored as the file itself, which holds no text); a name inside a
+    longer word is reported and never substituted.
 
     The backup keeps the real names, and so does pseudonyms.json if the
     researcher keeps one; both are the reverse key and belong somewhere
@@ -12651,6 +12960,7 @@ def pseudonymise_source(
     Returns:
         JSON: the preview and a preview_token, or the result of the run.
     """
+    _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({"error": _no_project_message()}, indent=2)
     if case_mode not in pseudo.CASE_MODES:
@@ -13350,6 +13660,11 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
+    # Refused before any backup is taken (v0.14)
+    unusable = _unusable_pdf_reason(
+        get_db().get_file_content(validate_id(file_id, "file_id")))
+    if unusable is not None:
+        return json.dumps({"error": unusable}, indent=2)
 
     def _op(wdb):
         created = wdb.add_annotation(file_id, start_pos, end_pos, memo,

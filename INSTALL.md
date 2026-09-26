@@ -342,8 +342,12 @@ variable is optional.
 - `QUALCODER_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
   If the path does not exist the server refuses to start and prints
-  "Error: Database file not found: <path>" to stderr. Without it, select
-  a project with the tools (Option A).
+  "Error: the project set in QUALCODER_PROJECT_PATH was not found; check
+  the path in the host's configuration." to stderr. The project is
+  opened by whichever tool comes first (since v0.14; before, the backup
+  tools and a few others answered "No Qualcoder project selected" until
+  another tool had run). Without it, select a project with the tools
+  (Option A).
 - `QUALCODER_MCP_TOOLSET`: `full` (default) registers 73 tools;
   `core` registers the 21-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
@@ -534,10 +538,10 @@ Experimental.
 
 **Step 3. Use the core toolset.** This server exposes 73 tools by
 default, and the serialised tool definitions alone measure about
-172,000 characters, roughly 43k tokens (measured for 0.14 under
+174,000 characters, roughly 43k tokens (measured for 0.14 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
-accounts for about 18,000 characters of that on its own, because a tool
+accounts for about 19,000 characters of that on its own, because a tool
 that rewrites the researcher's text has to say in its own definition
 what it rewrites, what it leaves behind and what the backup then
 holds; the paging, novelty-filter and sampling arguments added in 0.12
@@ -550,10 +554,10 @@ That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `QUALCODER_MCP_TOOLSET=core`
 (in the config of Step 5) to register only the 21-tool supervised
-coding set, measured at about 58,000 characters, roughly 14k tokens.
+coding set, measured at about 58,000 characters, roughly 15k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-14k tokens of schema exceed the 8k default context. When loading the
+15k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
 (that leaves about 18k tokens for your transcript excerpts and
 conversation; 16k would leave barely 2k and is not workable), or 64k if

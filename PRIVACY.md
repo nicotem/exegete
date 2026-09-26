@@ -439,7 +439,30 @@ and avoids multiplying plaintext copies of your sources across backup
 folders. A restored or copied project without `search.sqlite` is
 normal: QualCoder rebuilds it on project open.
 
-Besides `restore_backup`, which opens the backup you choose to check
+The project database is the one file not copied as a file (since
+0.14): `data.qda` is copied with SQLite's own online backup, from a
+read-only connection, so a backup or copy made while QualCoder is
+writing holds only what was last committed, and the database's journal
+and WAL files are never copied. QualCoder's ignore set does not match
+them, and a journal copied mid-write holds pages of a write that was
+never committed, which some SQLite builds then show and others refuse
+to read. A backup that holds them (copied while a program was writing,
+made before 0.14, or made by QualCoder itself) is marked `unclean` by
+`list_backups` and refused by `restore_backup`; it can still be pruned.
+The copy holds SQLite's read lock while it runs, about 1.2 seconds per
+gigabyte on a Mac's SSD, so QualCoder's own saves wait for it, and a
+save in an open QualCoder window can fail if the copy outlasts
+QualCoder's five-second wait (a database of about 4 GB or more, less on
+slower disks). A `data.qda` that is a link into the project is copied
+from the file it points to; one pointing outside the project is
+refused, and nothing is written. A damaged database is a different
+case: every tool here opens the database before it takes a backup, so
+none can back up or restore a project whose database will not open.
+Copy the whole project folder by hand, with QualCoder closed, before
+trying any repair, and keep that copy.
+
+Besides `restore_backup`, which checks that no journal or WAL file
+sits beside the database of the backup you choose, opens it to check
 it, reads its first bytes for the preview and copies it back,
 one tool reads the backups' contents: `rename_file`, to recognise a
 rename back (a name, or an ending, the file had before). Only when one of
@@ -794,7 +817,17 @@ will ask, and the summary above depends on them:
     across unread, so a name there is still there and nothing in this
     server can report it. A second run with `rewrite_memos` on also
     rewrites the journal entries this server wrote for earlier runs,
-    which the preview counts and warns about. The count is in the
+    which the preview counts and warns about. **Two people who share a
+    name:** one file per call gives each their own pseudonym in the file
+    text only. With `rewrite_memos` on, whichever run carries it
+    rewrites that name in notes across the whole project, the other
+    person's notes included, whatever the order of the runs, so a note
+    about one person can end up carrying the other person's pseudonym.
+    Keep `rewrite_memos` off on every run of a shared name and change
+    the notes that name either person by hand; give the second person a
+    typed mapping with `save_mapping_to_project` off and
+    `researcher_keeps_mapping` on, because `pseudonyms.json` holds one
+    pseudonym per name. The count is in the
     preview's `residue` block, and a name that occurs only in a
     `#####` private note is neither read nor counted. Those counts are a
     heuristic that reads wider than the rewrite does: the rewrite

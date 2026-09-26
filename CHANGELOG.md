@@ -130,6 +130,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   takes a new folder, refuses one that exists and deletes nothing (it
   used to delete `~/Documents/QDA Projects/test_project.qda` first, and
   built a project neither QualCoder nor this server would open).
+- `pseudonymise_source`'s description, the README and PRIVACY.md now
+  say that one file per call gives two people who share a name two
+  pseudonyms in the file text only: with `rewrite_memos` on, whichever
+  run carries it rewrites that name in notes across the whole project,
+  the other person's notes included, whatever the order of the runs.
+  The safe route: keep `rewrite_memos` off on every run of a shared
+  name and change the notes that name either person by hand, and give
+  the second person a typed mapping with `save_mapping_to_project` off
+  and `researcher_keeps_mapping` on (`pseudonyms.json` holds one
+  pseudonym per name). v0.13's documents promised the two pseudonyms
+  with no caveat. Only the wording changes; a switch to limit the note
+  rewrite to one file is planned.
 
 - The GPL text moved from `COPYING` to `legal/GPL-3.0.txt`, so that
   GitHub shows the project's licence as the LGPL; the text still ships
@@ -149,6 +161,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   turns it red; on Windows, whose thread clock is too coarse for a 15 ms
   count, it stays on the wall clock. It still fails when the reader's
   sweep goes back to `str.translate`.
+
+### Changed: existing projects handled honestly
+
+- **Saved graphs after a category is deleted or merged.**
+  `delete_category` and `merge_category` remove the category's own node
+  from QualCoder's saved graphs, and the lines that end on it, on
+  projects at schema v16 and later (those QualCoder 4.0 has opened), as
+  the clean-up after deleting a code already does; v14 and v15 projects
+  keep every graph row, as QualCoder 3.8.2 does. QualCoder 4.0's Graph
+  window no longer reports "Category does not exist" on every load, and
+  a later category given the same number no longer takes over the node.
+  The category's codes keep their nodes and lines: a departure from
+  QualCoder 4.0's own merge, which matches graph rows by category alone
+  and erases the kept codes' nodes and lines. The preview counts what
+  goes (`saved_graph_rows_removed`). Checked in QualCoder 4.0's own
+  Graph window.
+- **PDFs with no usable text.** A PDF with no text layer, and a PDF
+  QualCoder 3.8.2 stored as the file itself (recognised by a heuristic:
+  the PDF header within the first 1,024 characters; a real text layer
+  that quotes a PDF header there is taken for one), are named in reads
+  (`unusable_pdf`: the file resource, the case resource
+  `qualcoder://cases/{id}`, `analyze_file_with_coding`, the file list,
+  `get_project_summary`), never have the stored file returned, are not
+  content-searched and are counted and named as not searched by
+  `search_files`, are left out of the pseudonymisation preview's count
+  of names left in file text (a stored file), and are refused by the
+  coding tools (`analyze_for_coding`, `record_suggestions`,
+  `edit_suggestion`, `apply_codings`, proposal evidence,
+  `add_annotation`) and by `link_file_to_case`, with the way forward:
+  OCR outside this server, which bundles none, and for a 3.8.2 row
+  QualCoder 4.0's Restructure first. No new dependency.
+- **Region codings disclosed.** `get_coded_segments` and
+  `analyze_file_with_coding` say how many region codings (areas on PDF
+  pages or images) and audio/video codings they do not show
+  (`codings_not_shown`); `get_coding_frequencies` and
+  `get_project_summary` say how many they do not count
+  (`codings_not_counted`), so the reads agree with the delete previews,
+  and, when no coder is hidden, with QualCoder's own counts.
+- **Backups made consistently.** A backup (and a workspace copy) copies
+  the project database with SQLite's own online backup, from a
+  read-only connection, and never copies its journal or WAL file, which
+  QualCoder's backup ignore set does not match: a backup taken while
+  QualCoder was writing used to carry its journal, and then read
+  differently on different platforms (refused read-only on newer
+  SQLite, or malformed). The rest of the folder is copied as before.
+  About 1.2 seconds per gigabyte of database, measured, during which
+  QualCoder's own saves wait: on a database of about 4 GB or more a
+  save in an open QualCoder window can fail. A database kept locked for
+  more than about 15 seconds is answered as a locked database, with
+  nothing written. A `data.qda` that is a link inside the project is
+  copied the same way from the file it points to (a byte copy of it
+  could hold a write never committed); one pointing outside the
+  project is refused, with nothing written, since no backup could hold
+  the database. `list_backups` marks a backup that holds a journal or
+  WAL file that is not empty, or whose `data.qda` is a link, `unclean`,
+  `restore_backup` refuses one, and `prune_backups`' preview names the
+  unclean backups it would keep. A departure from QualCoder's own
+  backups, which copy the database as a file.
+- **A configured project at first use.** On a project set in the host's
+  configuration (`QUALCODER_PROJECT_PATH`), `list_backups`,
+  `prune_backups`, `restore_backup`, `get_current_project`,
+  `set_project_ai_coder_name`, `read_pseudonym_list` and
+  `pseudonymise_source` no longer answer "No Qualcoder project
+  selected" (or "No project currently open") when no other tool has run
+  yet. A configured project that cannot be opened is answered with one
+  text in every tool, without its path.
 
 ### Changed: privacy of the run record, error answers and the log
 
@@ -251,21 +329,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error with no SQLite name (Python 3.10's shape) on every interpreter.
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
-  creation of projects and the folder for projects: full = 172,272
-  characters (about 43.1k tokens at chars/4) over 73 tools, core =
-  57,646 (about 14.4k) over 21, and the new opt-in lifecycle set =
-  174,826 (about 43.7k) over 74. Moved by `pseudonymise_source`'s
-  description (privacy; not in `core`), by `set_memo`'s,
+  creation of projects, the handling of existing projects and the
+  folder for projects: full = 173,765 characters (about 43.4k tokens
+  at chars/4) over 73 tools, core = 58,257 (about 14.6k) over 21,
+  and the new opt-in lifecycle set = 176,319 (about 44.1k) over 74.
+  Moved by `pseudonymise_source`'s description (privacy, and the caveat
+  for two people who share a name; not in `core`), by `set_memo`'s,
   `set_project_ai_coder_name`'s, `select_project`'s and
-  `get_current_project`'s (creating a project; all four in `core`), and
-  by the workspace sentences of `copy_project_to_workspace`,
+  `get_current_project`'s (creating a project; all four in `core`), by
+  `list_backups`'s and `copy_project_to_workspace`'s (both in `core`)
+  and `restore_backup`'s and `link_file_to_case`'s (existing projects),
+  and by the workspace sentences of `copy_project_to_workspace`,
   `import_text_file`, `list_available_projects` and `create_project`
   (the folder for projects; the first and third in `core`);
-  `pseudonymise_source`'s own share rounds to 18,000 as before.
+  `pseudonymise_source`'s own share now rounds to 19,000, from 18,000.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 181,112, 60,670 and
-  183,806.
+  on Python 3.11.13, in the repository's `.venv/`, 182,697, 61,317
+  and 185,391.
 
 ## [0.13.0-alpha] - 2026-09-25
 
@@ -607,7 +688,11 @@ the project database and QualCoder's source, not in a QualCoder window.
   is now `file_id`, one required id. A mapping that is right for one
   participant is applied to that participant's file, so two people who
   share a name get two pseudonyms by running their two files with two
-  mappings. This is also the shape QualCoder itself has: its
+  mappings, in the file text (caveat added 2026-09-26, as in the
+  published release notes: with `rewrite_memos` on, a run rewrites that
+  name in notes across the whole project, so when two people share a
+  name keep it off and change their notes by hand). This is also the
+  shape QualCoder itself has: its
   `pseudonyms.json` is applied per file at import. To pseudonymise a
   project, run it file by file; with `use_project_pseudonyms` the
   mapping is read from the project's own `pseudonyms.json` each time,

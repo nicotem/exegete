@@ -1397,3 +1397,85 @@ class TestSessionFilesAfterPseudonymising:
                             str(Path(qualcoder_db_path) / "data.qda"))
         current = json.loads(server.get_current_project())
         assert current["project_name"] == "test_project"
+
+
+# ---------------------------------------------------------------------------
+# PRIVACY.md on hidden coders' names (the claims audit, item 20)
+# ---------------------------------------------------------------------------
+
+class TestHiddenCodersOnTheCodebook:
+    """The preview masks a hidden coder who owns a code or a category;
+    the codebook reads and a merge's provenance name them, as QualCoder
+    does. PRIVACY.md says so, and these tests keep the text and the
+    behaviour together."""
+
+    def _project(self, client_root):
+        server._apply_toolset("lifecycle")
+        projects = client_root / "projects"
+        projects.mkdir()
+
+        async def make(client):
+            made = json.loads(text_of(await client.call_tool(
+                "create_project", {"name": "Hidden",
+                                   "directory": str(projects),
+                                   "coder_name": "Researcher"})))
+            await client.call_tool("set_project_ai_coder_name",
+                                   {"name": "AI-Test"})
+            await client.call_tool("create_code", {"name": "Target"})
+            await client.call_tool("create_category", {"name": "Kept"})
+            return Path(made["project_path"])
+
+        folder = host_session(make)
+        with sqlite3.connect(str(folder / "data.qda")) as conn:
+            conn.execute("insert into coder_names (name, visibility) "
+                         "values ('Alice', 0)")
+            conn.execute("insert into code_name (name, memo, owner, date, "
+                         "color) values ('Alices code', 'her definition', "
+                         "'Alice', '2026-01-01', '#FF0000')")
+            conn.execute("insert into code_cat (name, memo, owner, date) "
+                         "values ('Alices category', '', 'Alice', "
+                         "'2026-01-01')")
+        server.switch_project(str(folder))
+        return folder
+
+    def test_the_resources_name_the_owner_and_the_preview_masks_it(
+            self, tmp_path):
+        self._project(tmp_path)
+
+        async def drive(client):
+            codes = await client.read_resource("qualcoder://codes/list")
+            cats = await client.read_resource(
+                "qualcoder://categories/list")
+            code_id = [c for c in json.loads(codes.contents[0].text)
+                       if c["name"] == "Alices code"][0]["id"]
+            preview = json.loads(text_of(await client.call_tool(
+                "merge_codes", {"from_code_id": code_id,
+                                "into_code_id": 1})))
+            done = json.loads(text_of(await client.call_tool(
+                "merge_codes", {"from_code_id": code_id, "into_code_id": 1,
+                                "preview_token":
+                                    preview["preview_token"]})))
+            target = await client.read_resource("qualcoder://codes/1")
+            return (json.loads(codes.contents[0].text),
+                    json.loads(cats.contents[0].text), preview, done,
+                    json.loads(target.contents[0].text))
+
+        codes, cats, preview, done, target = host_session(drive)
+        assert {c["name"]: c["owner"] for c in codes}["Alices code"] == \
+            "Alice"
+        assert {c["name"]: c["owner"] for c in cats}["Alices category"] == \
+            "Alice"
+        assert preview["preview"]["collateral"]["code_row_owner"] == \
+            "(hidden coder)"
+        assert done["success"] is True
+        assert "[Merged from code: Alices code, Coder: Alice," in \
+            target["memo"]
+
+    def test_privacy_says_the_mask_is_the_previews_only(self):
+        privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md")
+                           .read_text(encoding="utf-8").split())
+        assert ("That mask is a courtesy of the preview, not a guarantee"
+                in privacy)
+        assert "qualcoder://codes/list" in privacy
+        assert "[Merged from code: ..., Coder: ..., Merger date: ...]" in \
+            privacy

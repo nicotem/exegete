@@ -140,6 +140,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   had the same fault and now finds a project's sessions by its folder
   or its `data.qda`. The session list, `get_current_project` and the
   exports name a project by its folder, not "data".
+- PRIVACY.md no longer says a hidden coder is never named where a code
+  or category they own is concerned: the cascade previews mask the
+  owner, but the codes and categories resources name it, as QualCoder's
+  code tree does, and a merge on a QualCoder 4.0 project writes it into
+  the target's memo in QualCoder's own provenance line.
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,
   which every project lists, and warns when the project's own coder name
   is not known, since its refusal of the researcher's name cannot then

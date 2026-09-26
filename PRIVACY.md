@@ -334,7 +334,17 @@ project has the coder-visibility capability:
   operation would remove, so the researcher can see whose work is at
   stake; a hidden coder is never named there, and the owner of a code or
   category row being removed is reported as "(hidden coder)" when that
-  coder is hidden. Executing a cascade that would remove a hidden
+  coder is hidden. That mask is a courtesy of the preview, not a
+  guarantee: elsewhere a code's or a category's owner is shown as
+  QualCoder shows it, hidden or not. The `qualcoder://codes/list` and
+  `qualcoder://categories/list` resources name each row's owner, as
+  QualCoder's code tree does, and on a QualCoder 4.0 project
+  merge_codes and merge_category write the merged row's owner into the
+  target's memo, in the provenance line QualCoder's own merge writes
+  (`[Merged from code: ..., Coder: ..., Merger date: ...]`), which
+  every later read of that memo returns. Hiding a coder in QualCoder
+  hides their codings, not their name on the codebook.
+  Executing a cascade that would remove a hidden
   coder's codings requires an explicit allow_hidden_coder=true. If the visibility state cannot be read (the view exists
   but does not answer), these tools return an error and change nothing,
   with or without the override; they never assume a row is visible, and

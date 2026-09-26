@@ -399,7 +399,6 @@ def make_approved_session(env: Env) -> AICodingSession:
         file_ids=[1],
         code_names=["Stress", "Coping"],
         instruction="fi",
-        min_confidence=0.5,
     )
     for cid, cname, p0, p1, seg in [
         (1, "Stress", 0, 5, "alpha"),
@@ -409,7 +408,7 @@ def make_approved_session(env: Env) -> AICodingSession:
             file_id=1, file_name="interview.txt",
             code_id=cid, code_name=cname,
             start_pos=p0, end_pos=p1, segment_text=seg,
-            reasoning="fault injection", confidence=0.9,
+            reasoning="fault injection", support="explicit",
             status="approved",
         ))
     server.session_manager.save_session(sess)

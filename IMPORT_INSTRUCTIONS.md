@@ -5,6 +5,10 @@
 > written directly to the project database (see AI_CODING_WORKFLOW.md);
 > REFI-QDA files produced by `export_refi_qda` are for OTHER QDA
 > software, not for re-importing into the same project.
+> Since v0.14 a suggestion carries no confidence score: the memo, and
+> the export's description, say "Support: explicit" (the passage states
+> the code) or "Support: interpretive" (the assistant is reading it in)
+> before the reasoning. The memo lines below show that form.
 
 Step-by-step guide for importing AI coding suggestions into Qualcoder.
 
@@ -29,7 +33,7 @@ AI coding suggestions are exported as `.qdpx` files using the REFI-QDA standard 
 When you import a `.qdpx` file from AI coding:
 
 ✅ **Coded segments** - The text positions and code assignments
-✅ **AI memos** - Explanations for each coded segment (with confidence scores)
+✅ **AI memos** - Explanations for each coded segment (explicit or interpretive, then the reason)
 ✅ **User attribution** - All coding appears as done by "AI Coding Assistant"
 ✅ **Timestamps** - Import date/time is recorded
 
@@ -185,7 +189,7 @@ Check that coding appears correctly:
    - The code name
    - The coded text
    - "AI Coding Assistant" as the coder
-   - A memo with AI reasoning and confidence score
+   - A memo saying explicit or interpretive, then the AI reasoning
 
 #### View by Code
 
@@ -207,11 +211,13 @@ For each coded segment:
 1. Click the segment in Qualcoder
 2. View the memo (look for memo icon or panel)
 3. Read the AI's explanation
-4. Check the confidence score (shown as [AI confidence: 0.XX])
+4. Check whether it is marked explicit or interpretive (the memo's first line)
 
 **Memo format**:
 ```
-Clear expression of workplace stress related to deadlines. [AI confidence: 0.85]
+Support: explicit (the passage states it)
+
+Clear expression of workplace stress related to deadlines.
 ```
 
 ### Step 3: Review and Refine

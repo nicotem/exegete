@@ -400,7 +400,7 @@ class TestGuidanceEnvelope:
               (emoji,))
         _reload()
         sid = json.loads(server.analyze_for_coding([70]))["coding_session_id"]
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 70, "code_name": "Stress",
             "segment_text": "I feel very stressed"}]))
         assert rec["recorded_count"] == 1

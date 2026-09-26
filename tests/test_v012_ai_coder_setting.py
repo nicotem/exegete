@@ -175,12 +175,11 @@ def _approved_session(server_mod, project_path):
     from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
     session = AICodingSession(project_path=project_path,
                               description="ask flow", file_ids=[1],
-                              code_names=["Stress"], instruction="t",
-                              min_confidence=0.5)
+                              code_names=["Stress"], instruction="t")
     session.add_suggestion(CodingSuggestion(
         file_id=1, file_name="interview.txt", code_id=1, code_name="Stress",
         start_pos=0, end_pos=10, segment_text="This is in",
-        reasoning="r", confidence=0.9, status="approved"))
+        reasoning="r", support="explicit", status="approved"))
     server_mod.session_manager.save_session(session)
     return session
 
@@ -1262,12 +1261,11 @@ class TestRestartResilience:
         from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
         session = AICodingSession(
             project_path=qualcoder_db_path, description="snapshot",
-            file_ids=[1], code_names=["Stress"], instruction="t",
-            min_confidence=0.5, ai_coder_name_at_record="Qwen 3.8 6bit")
+            file_ids=[1], code_names=["Stress"], instruction="t", ai_coder_name_at_record="Qwen 3.8 6bit")
         session.add_suggestion(CodingSuggestion(
             file_id=1, file_name="interview.txt", code_id=1,
             code_name="Stress", start_pos=0, end_pos=10,
-            segment_text="This is in", reasoning="r", confidence=0.9,
+            segment_text="This is in", reasoning="r", support="explicit",
             status="approved"))
         server.session_manager.save_session(session)
         out = server.apply_codings(session.session_id, create_backup=False)

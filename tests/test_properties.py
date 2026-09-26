@@ -346,7 +346,7 @@ def test_unicode_vectors_apply_codings_seltext(fulltext, segment, p0, p1):
         sugg = CodingSuggestion(
             file_id=1, file_name="u.txt", code_id=1, code_name="c0",
             start_pos=p0, end_pos=p1, segment_text=segment,
-            reasoning="r", confidence=0.9, status="approved",
+            reasoning="r", support="explicit", status="approved",
         )
         sess = H.make_session(path, [sugg])
         raw = server.apply_codings(sess.session_id, create_backup=True)
@@ -385,7 +385,7 @@ def test_duplicate_apply_is_idempotent_no_write_no_backup():
         sugg = CodingSuggestion(
             file_id=1, file_name="d.txt", code_id=1, code_name="c0",
             start_pos=0, end_pos=5, segment_text="hello",
-            reasoning="r", confidence=0.9, status="approved",
+            reasoning="r", support="explicit", status="approved",
         )
         sess = H.make_session(path, [sugg])
         folder = Path(path)
@@ -521,7 +521,7 @@ class QualcoderWriteMachine(RuleBasedStateMachine):
             suggs.append(CodingSuggestion(
                 file_id=f["id"], file_name=f["name"], code_id=c["id"],
                 code_name=c["name"], start_pos=p0, end_pos=p1,
-                segment_text=ft[p0:p1], reasoning="r", confidence=0.9,
+                segment_text=ft[p0:p1], reasoning="r", support="explicit",
                 status="approved"))
         if not suggs:
             return

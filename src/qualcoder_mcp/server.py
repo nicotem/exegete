@@ -145,7 +145,8 @@ from .project_settings import (
     write_ai_coder_name,
 )
 from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
-                       ProposedCode)
+                       ProposedCode, support_label, support_in_words,
+                       memo_with_support)
 
 # Set up logging. The handler is installed at import, before FastMCP is
 # constructed, so the server's own plain stderr format wins over the rich
@@ -217,12 +218,23 @@ reason to withhold project data the researcher asks to see."""
 
 # Per-tool reminders (D6 section 3.5), attached where the rule applies
 GROUNDING_RECORD = """GROUNDING: reasoning states, in a sentence or two, what in segment_text
-supports the code; confidence expresses how directly the words support
-it (1.0 only where the passage states it outright, lower where you are
-interpreting). Recording nothing for a file or for a code is a valid
-outcome: tell the researcher rather than lowering the bar. Never widen,
-trim or reword an excerpt to make it fit a code; the excerpt is checked
-against the file and a non-literal one is rejected."""
+supports the code; support says how the words carry it: "explicit" where
+the passage states it, "interpretive" where you are reading into it. An
+interpretive suggestion is legitimate; mark it as such rather than
+presenting a reading as a statement. There is no score: never give a
+number. Recording nothing for a file or for a code is a valid outcome:
+tell the researcher rather than lowering the bar. Never widen, trim or
+reword an excerpt to make it fit a code; the excerpt is checked against
+the file and a non-literal one is rejected."""
+
+# record_suggestions' refusal and review_suggestions' line for a
+# suggestion with no label (owner ruling 21)
+SUPPORT_REQUIRED = (
+    "support is required: \"explicit\" (the passage states the code) or "
+    "\"interpretive\" (you are reading it in)")
+CONFIDENCE_NOT_TAKEN = (
+    "; confidence is no longer taken: this server records no score")
+SUPPORT_NOT_GIVEN = "not given (recorded before v0.14)"
 
 GROUNDING_PROPOSE = """GROUNDING (inductive coding): a proposed code names something the data
 shows, with a rationale that points to its example_segments; prefer the
@@ -4566,7 +4578,8 @@ def export_refi_qda(
                     end_pos=pos1,
                     segment_text=seg["text"] or "",
                     reasoning=seg["memo"] or "",
-                    confidence=0.0,  # human codings carry no AI confidence
+                    # No label of its own: an applied AI coding's memo
+                    # already says it in words (owner ruling 21)
                 ))
         project_name = Path(current_project_path).stem
         if not suggestions:
@@ -5596,7 +5609,6 @@ def analyze_for_coding(
     file_ids: List[int],
     code_names: Optional[List[str]] = None,
     instruction: str = "Code all relevant segments",
-    min_confidence: float = 0.7
 ) -> str:
     """Analyse files and suggest codings for user review.
 
@@ -5652,7 +5664,6 @@ def analyze_for_coding(
                      e.g. "code generous spans, full paragraphs" or
                      "keep spans to single sentences"; honour it in
                      every suggestion you record.
-        min_confidence: Minimum confidence for suggestions (0.0-1.0)
 
     Returns:
         Formatted text presenting all suggestions with:
@@ -5660,20 +5671,12 @@ def analyze_for_coding(
         - Code being applied
         - Text excerpt
         - AI reasoning
-        - Confidence score
         - Unique GUID for each suggestion
 
     Example:
         "Analyse files 1-3 for DATA PRACTICES codes"
     """
     db = get_db()
-
-    # Clamp the confidence threshold to the same [0,1] range suggestion
-    # confidences are clamped to (a threshold > 1 would filter everything)
-    try:
-        min_confidence = max(0.0, min(1.0, float(min_confidence)))
-    except (TypeError, ValueError):
-        min_confidence = 0.7
 
     # Get files and codes
     all_files = db.list_files()
@@ -5715,7 +5718,6 @@ def analyze_for_coding(
         file_ids=file_ids,
         code_names=[c['name'] for c in codes_to_use],
         instruction=instruction,
-        min_confidence=min_confidence,
         # A snapshot, not a decision: if the researcher changes the
         # project's AI coder name between recording and applying, the
         # rows are written under the NEW name (a name change never
@@ -5763,7 +5765,6 @@ Session ID: `{session.session_id}`
 - Files: {len(files_to_analyze)} files ({', '.join(f['name'] for f in files_to_analyze)})
 - Codes: {len(codes_to_use)} codes ({', '.join(c['name'] for c in codes_to_use)})
 - Instruction: "{instruction}"
-- Min confidence: {min_confidence}
 
 **IMPORTANT - NEXT STEPS:**
 
@@ -5779,7 +5780,10 @@ This session has been created and saved. Now YOU (Claude) need to:
 3. **Record your suggestions** with the `record_suggestions` tool, passing this
    session ID and a list of suggestion objects:
    `{{"file_id": ..., "code_name": "...", "start_pos": ..., "end_pos": ...,
-   "segment_text": "<exact excerpt>", "reasoning": "...", "confidence": 0.0-1.0}}`
+   "segment_text": "<exact excerpt>", "support": "explicit" or "interpretive",
+   "reasoning": "..."}}`
+   support is "explicit" where the passage states the code and
+   "interpretive" where you are reading it in; there is no score.
    Each suggestion is verified against the file text before it is stored.
 4. **Present the recorded suggestions to the user** in a clear, reviewable format
 
@@ -5937,7 +5941,10 @@ def record_suggestions(
             file_id (int, required), code_id (int) or code_name (str),
             start_pos/end_pos (int, optional if the excerpt is unique),
             segment_text (str, required; exact excerpt),
-            reasoning (str), confidence (float 0.0-1.0),
+            support (str, required): "explicit" (the passage states
+            the code) or "interpretive" (you are reading it in); there
+            is no numeric score,
+            reasoning (str),
             context_before/context_after (str, optional; auto-filled)
         replace: If True, discard previously recorded PENDING suggestions
                  first (approved/rejected/applied are always kept)
@@ -5960,7 +5967,8 @@ def record_suggestions(
         record_suggestions(coding_session_id="...", suggestions=[
             {"file_id": 4, "code_name": "Burnout", "start_pos": 96,
              "end_pos": 129, "segment_text": "by Thursday I am running on fumes",
-             "reasoning": "Explicit exhaustion metaphor", "confidence": 0.9}])
+             "support": "interpretive",
+             "reasoning": "An exhaustion metaphor; burnout is my reading"}])
     """
     # Bridge fix: some MCP middleware strips arguments named
     # 'session_id' (reserved for its own routing); the tool
@@ -5996,6 +6004,7 @@ def record_suggestions(
     recorded = []
     rejected = []
     skipped_duplicates = 0
+    confidence_ignored = 0
     unsafe_files: Dict[int, str] = {}
 
     for idx, item in enumerate(suggestions):
@@ -6059,12 +6068,20 @@ def record_suggestions(
             rejected.append({"index": idx, "reason": "segment_text (non-empty string) is required"})
             continue
 
-        # --- confidence ---
-        try:
-            confidence = float(item.get("confidence", 0.0))
-        except (TypeError, ValueError):
-            rejected.append({"index": idx, "reason": "confidence must be a number between 0.0 and 1.0"})
+        # --- support (owner ruling 21: a category, never a number) ---
+        support = item.get("support")
+        if isinstance(support, str):
+            support = support_label(support.strip().lower())
+        else:
+            support = None
+        if support is None:
+            reason = SUPPORT_REQUIRED
+            if "confidence" in item:
+                reason += CONFIDENCE_NOT_TAKEN
+            rejected.append({"index": idx, "reason": reason})
             continue
+        if "confidence" in item:
+            confidence_ignored += 1
 
         # --- positions (verified against the file text) ---
         ok, start_pos, end_pos, corrected, pos_error = _resolve_segment_positions(
@@ -6099,7 +6116,7 @@ def record_suggestions(
             end_pos=end_pos,
             segment_text=segment_text,
             reasoning=str(item.get("reasoning", "")),
-            confidence=confidence,
+            support=support,
             status="pending",
             context_before=context_before,
             context_after=context_after,
@@ -6114,6 +6131,7 @@ def record_suggestions(
             "code_name": code["name"],
             "start_pos": start_pos,
             "end_pos": end_pos,
+            "support": support,
             "positions_corrected": corrected,
             # labels only — the full alternatives (with previews) live on
             # the suggestion; review_suggestions shows them compactly
@@ -6136,6 +6154,12 @@ def record_suggestions(
     }
     if replace:
         result["replaced_pending"] = removed_pending
+    if confidence_ignored:
+        result["confidence_ignored"] = confidence_ignored
+        result["confidence_note"] = (
+            f"{confidence_ignored} suggestion(s) carried a confidence "
+            f"number, which was not recorded: this server marks each "
+            f"suggestion explicit or interpretive and keeps no score.")
     if unsafe_files:
         result["position_safety_warning"] = (
             f"File(s) {sorted(unsafe_files.values())} contain \r\n sequences "
@@ -6221,9 +6245,10 @@ def review_suggestions(
         output.append(f"\n📄 **File:** {sugg.file_name} (ID: {sugg.file_id})")
         output.append(f"🏷️  **Code:** {sugg.code_name} (ID: {sugg.code_id})")
         output.append(f"📍 **Position:** {sugg.start_pos}-{sugg.end_pos}")
-        output.append(f"💯 **Confidence:** {sugg.confidence:.2f}")
         output.append(f"\n**Segment Text:**")
         output.append(f"```\n{sugg.segment_text}\n```")
+        output.append(f"**Support:** "
+                      f"{support_in_words(sugg.support) or SUPPORT_NOT_GIVEN}")
         output.append(f"\n**AI Reasoning:**")
         output.append(sugg.reasoning)
 
@@ -6881,8 +6906,9 @@ def apply_codings(
 
             try:
                 for sugg in to_write:
-                    # Create memo with reasoning and confidence
-                    memo = f"{sugg.reasoning}\n\n[AI Confidence: {sugg.confidence:.2f}]"
+                    # The support label in words, then the reasoning;
+                    # never a number (owner ruling 21)
+                    memo = memo_with_support(sugg.reasoning, sugg.support)
 
                     # Write the authoritative fulltext slice (validated above)
                     # so seltext always equals fulltext[pos0:pos1] on disk
@@ -7018,7 +7044,10 @@ def apply_codings(
     output.extend(_already_existing_lines())
 
     output.append(f"\n\n**You can now open the project in Qualcoder to see the AI-coded segments.**")
-    output.append(f"All codings are attributed to '{owner}' with confidence scores in memos.")
+    output.append(f"All codings are attributed to '{owner}'. Each memo "
+                  f"says first whether the passage states the code "
+                  f"(explicit) or the assistant read it in (interpretive), "
+                  f"then the reason.")
     output.append(f"If one of these turns out to be wrong, `delete_coding(ctid)` removes it.")
 
     return "\n".join(output)
@@ -8640,7 +8669,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                                  "wrote nothing and made no backup.",
             "key_features": [
                 "Analyse complete transcripts with full context",
-                "Suggest coded segments with confidence scores",
+                "Suggest coded segments, each marked explicit (the passage "
+                "states it) or interpretive (the assistant reads it in); "
+                "there is no score",
                 "Every suggestion verified against the file text before storage",
                 "Review and approve/reject suggestions before applying",
                 "Apply codings directly to Qualcoder database (with automatic backup)",
@@ -8658,8 +8689,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             "parameters": {
                 "file_ids": "List of file IDs to code (required)",
                 "code_names": "Specific codes to apply, or None for all codes",
-                "instruction": "Guidance for the AI",
-                "min_confidence": "Minimum confidence threshold (0.0-1.0)"
+                "instruction": "Guidance for the AI"
             },
             "examples": [
                 {"prompt": "Code files 1, 2, and 3", "explanation": "Codes 3 files with all available codes"},
@@ -8669,7 +8699,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             "tips": [
                 "Be specific in your instruction for better results",
                 "Start with one file to test before batch coding",
-                "Use min_confidence to filter low-quality suggestions",
                 "Save the session id and pass it to every follow-up tool as coding_session_id"
             ]
         },

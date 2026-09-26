@@ -285,6 +285,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on Python 3.11.13, in the repository's `.venv/`, 182,532, 61,185 and
   185,150.
 
+### Changed: the AI coding loop says what it does
+
+- **The confidence score is gone; each suggestion is explicit or
+  interpretive** (owner ruling 21). The 0-1 `confidence` a suggestion
+  carried, and `analyze_for_coding`'s `min_confidence`, are removed
+  everywhere: the suggestions, the sessions, the review screen, the
+  grounding text, the help, the two workflow guides and the REFI-QDA
+  export. In their place each suggestion carries `support`, required:
+  `explicit` (the passage states the code) or `interpretive` (the
+  assistant is reading it in). `record_suggestions` refuses a
+  suggestion without it, and records no number when one is sent (it
+  says how many it set aside). `review_suggestions` shows the label
+  beside the quote and before the reason; an applied coding's memo
+  begins "Support: explicit (the passage states it)" or "Support:
+  interpretive (the assistant is reading into it)", then the reason,
+  and a session's REFI-QDA export says the same in each selection's
+  description. The number was a model's rating of itself, not a
+  measurement, and it went into the research record as if it were
+  one; `min_confidence` never filtered anything. QualCoder 4.0's own
+  assistant has no confidence score.
+
+### Upgrading from 0.13.x
+
+- Upgrade the package and restart the MCP host fully so it reloads the
+  tool descriptions. There is no migration step for projects.
+- **`analyze_for_coding` no longer takes `min_confidence`, and a
+  suggestion no longer takes `confidence`.** Each suggestion passed to
+  `record_suggestions` needs `support`, `"explicit"` or
+  `"interpretive"`; a suggestion without it is refused with the reason.
+  A session file written by an earlier release still loads: its
+  suggestions show "not given (recorded before v0.14)" and, once
+  applied, their memos carry the reason only. The old number is not
+  kept when the session is next saved.
+- **Memos already in your projects are never rewritten.** A coding
+  applied by an earlier release keeps its "[AI Confidence: 0.85]" line;
+  remove it in QualCoder if you do not want it in the record.
+
 ## [0.13.0-alpha] - 2026-09-25
 
 v0.13, the pseudonymisation follow-ups, as ruled from 2026-09-22 to

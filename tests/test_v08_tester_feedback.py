@@ -32,7 +32,7 @@ def _make_session(setup_server):
 def _record_one(sid, **overrides):
     item = {"file_id": 1, "code_name": "Stress",
             "segment_text": "stressed about deadlines",
-            "reasoning": "explicit stress talk", "confidence": 0.9}
+            "reasoning": "explicit stress talk", "support": "explicit"}
     item.update(overrides)
     out = json.loads(server.record_suggestions(sid, [item]))
     assert out["recorded_count"] == 1, out
@@ -317,7 +317,7 @@ class TestAmendmentSpanAlternatives:
         entries (with unit gloss + preview) live on the suggestion."""
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 1, "code_name": "Stress",
+            {"support": "explicit", "file_id": 1, "code_name": "Stress",
              "segment_text": "stressed about deadlines"}]))
         entry = out["recorded"][0]
         assert entry["alternatives"] == ["longer"]
@@ -388,7 +388,7 @@ class TestAmendmentSpanAlternatives:
         omitted. No filler alternatives, ever."""
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 1, "code_name": "Stress", "start_pos": 0,
+            {"support": "explicit", "file_id": 1, "code_name": "Stress", "start_pos": 0,
              "end_pos": len(FULLTEXT), "segment_text": FULLTEXT}]))
         entry = out["recorded"][0]
         assert entry["alternatives"] == []
@@ -413,7 +413,7 @@ class TestAmendmentSpanAlternatives:
                   long_para + "\n\nSecond paragraph.")
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 11, "code_name": "Stress",
+            {"support": "explicit", "file_id": 11, "code_name": "Stress",
              "segment_text": "A sentence about workplace stress and reporting."}]))
         session = server.session_manager.load_session(sid)
         alts = session.get_suggestion_by_guid(
@@ -518,7 +518,7 @@ class TestPanelFixtures:
         _add_file(qualcoder_db_path, 12, "crlf.txt", crlf)
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 12, "code_name": "Stress", "segment_text": S1}]))
+            {"support": "explicit", "file_id": 12, "code_name": "Stress", "segment_text": S1}]))
         session = server.session_manager.load_session(sid)
         alts = session.get_suggestion_by_guid(
             out["recorded"][0]["guid"]).span_alternatives
@@ -537,7 +537,7 @@ class TestPanelFixtures:
         seg = ("Honestly the reporting cycle meant I never had two clear "
                "days in a row to do the actual analysis work.")
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 13, "code_name": "Stress", "segment_text": seg}]))
+            {"support": "explicit", "file_id": 13, "code_name": "Stress", "segment_text": seg}]))
         session = server.session_manager.load_session(sid)
         alts = session.get_suggestion_by_guid(
             out["recorded"][0]["guid"]).span_alternatives
@@ -559,7 +559,7 @@ class TestPanelFixtures:
                       "clear days in a row to do the actual analysis work. "
                       "It just never stopped for long enough to think.")
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 13, "code_name": "Stress",
+            {"support": "explicit", "file_id": 13, "code_name": "Stress",
              "segment_text": whole_turn}]))
         labels = out["recorded"][0]["alternatives"]
         assert "longer" not in labels
@@ -570,7 +570,7 @@ class TestPanelFixtures:
         _add_file(qualcoder_db_path, 14, "u2029.txt", text)
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 14, "code_name": "Stress", "segment_text": S1}]))
+            {"support": "explicit", "file_id": 14, "code_name": "Stress", "segment_text": S1}]))
         session = server.session_manager.load_session(sid)
         alts = session.get_suggestion_by_guid(
             out["recorded"][0]["guid"]).span_alternatives
@@ -587,7 +587,7 @@ class TestPanelFixtures:
         _add_file(qualcoder_db_path, 15, "emoji.txt", emoji_text)
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 15, "code_name": "Stress", "segment_text": S1}]))
+            {"support": "explicit", "file_id": 15, "code_name": "Stress", "segment_text": S1}]))
         guid = out["recorded"][0]["guid"]
         out = json.loads(server.edit_suggestion(sid, guid,
                                                 use_alternative="longer"))
@@ -603,7 +603,7 @@ class TestPanelFixtures:
         _add_file(qualcoder_db_path, 16, "onepara.txt", one_para)
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 16, "code_name": "Stress", "segment_text": one_para}]))
+            {"support": "explicit", "file_id": 16, "code_name": "Stress", "segment_text": one_para}]))
         assert "longer" not in out["recorded"][0]["alternatives"]
 
     def test_mid_word_span_omits_shorter(self, setup_server):
@@ -611,7 +611,7 @@ class TestPanelFixtures:
         filler."""
         sid = _make_session(setup_server)
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 1, "code_name": "Stress", "start_pos": 33,
+            {"support": "explicit", "file_id": 1, "code_name": "Stress", "start_pos": 33,
              "end_pos": 50, "segment_text": FULLTEXT[33:50]}]))
         assert "shorter" not in out["recorded"][0]["alternatives"]
 
@@ -628,7 +628,7 @@ class TestPanelFixtures:
         span_text = ("1. Dr. Reyes reviewed the case notes carefully before "
                      "the session began that morning. 2. The team met after.")
         out = json.loads(server.record_suggestions(sid, [
-            {"file_id": 17, "code_name": "Stress", "segment_text": span_text}]))
+            {"support": "explicit", "file_id": 17, "code_name": "Stress", "segment_text": span_text}]))
         session = server.session_manager.load_session(sid)
         alts = session.get_suggestion_by_guid(
             out["recorded"][0]["guid"]).span_alternatives

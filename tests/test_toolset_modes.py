@@ -284,7 +284,7 @@ class TestCoreModeEndToEnd:
                                 "segment_text":
                                     "I feel stressed about deadlines",
                                 "reasoning": "explicit stress statement",
-                                "confidence": 0.9,
+                                "support": "explicit",
                             }],
                         }))
                     rec = json.loads(out)

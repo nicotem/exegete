@@ -791,7 +791,8 @@ Claude will:
 - Examine the files
 - Record its suggestions into the session (`record_suggestions`; every
   suggestion is verified against the file text before it is stored)
-- Present suggestions with reasoning and confidence scores
+- Present suggestions with their reasoning, each marked explicit (the
+  passage states the code) or interpretive (Claude is reading it in)
 
 **Step 3: Review in Chat**
 ```
@@ -801,8 +802,9 @@ Show me details about suggestion 1
 Claude shows you:
 - The text segment
 - Which code and file
+- Whether the passage states the code (explicit) or Claude is reading
+  it in (interpretive)
 - Why it was selected (reasoning)
-- Confidence score
 - Surrounding context
 
 **Step 4: Approve/Reject**
@@ -829,7 +831,11 @@ Claude will:
 ### Key Features
 
 - **Conversational Review**: Discuss suggestions with Claude before applying
-- **Confidence Scoring**: Each suggestion includes a 0.0-1.0 confidence score with reasoning
+- **Explicit or interpretive**: Each suggestion says whether the passage
+  states the code or the assistant is reading it in, beside the quote and
+  before the reason. There is no numeric score: a model's rating of its
+  own confidence is not a measurement, and the two kinds of reading are
+  what a researcher weighs. An applied coding's memo says which, in words
 - **Session Persistence**: Resume work anytime, all sessions saved to disk
 - **Automatic Backups**: Every write creates a timestamped backup first
 - **Workspace Isolation**: Work on copies in dedicated workspace folder
@@ -958,7 +964,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 - `get_cases_by_code(code_id, coder)` - Get all cases containing a specific code
 
 **AI-Assisted Coding (Conversational Workflow):**
-- `analyze_for_coding(file_ids, code_names, instruction, min_confidence)` - Create an analysis session for Claude to perform coding suggestions (returns the `coding_session_id` the other session tools take); a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside this server, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
+- `analyze_for_coding(file_ids, code_names, instruction)` - Create an analysis session for Claude to perform coding suggestions (returns the `coding_session_id` the other session tools take); a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside this server, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
 - `record_suggestions(coding_session_id, suggestions, replace)` - Record Claude's suggestions into the session (each verified against the file text; positions auto-corrected when the excerpt is unique; a PDF with no usable text is refused, as it is by `edit_suggestion`, `apply_codings`, proposal evidence and `add_annotation`)
 - `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show detailed information about specific suggestions
 - `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name)` - Adjust a pending suggestion's span or code before approval (session-only; server-computed shorter/longer alternatives)
@@ -1225,7 +1231,8 @@ Contributions are welcome! Some ideas for enhancements:
 - ✅ AI-assisted coding with REFI-QDA export (deprecated in v0.4.0)
 - ✅ Code discovery and suggestion
 - ✅ Session persistence and management
-- ✅ Confidence scoring for suggestions
+- ✅ Confidence scoring for suggestions (replaced in v0.14: each suggestion
+  is now marked explicit or interpretive, with no score)
 - ✅ Comprehensive help system
 
 **Completed in v0.4.0:**

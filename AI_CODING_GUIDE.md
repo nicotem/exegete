@@ -66,7 +66,8 @@ You:    Copy "Interview Study" to the workspace and open the copy.
 You:    Analyse files 1-3 for the codes "Workplace Stress" and
         "Coping Strategies".
 Claude: (creates a session, reads the files, records suggestions,
-         presents them with reasoning and confidence scores)
+         presents them with reasoning, each marked explicit or
+         interpretive)
 You:    Show me suggestion 3 with context.
 You:    Approve 1, 2 and 5; reject the rest.
 You:    Apply the approved codings.
@@ -93,7 +94,7 @@ approval of each suggestion.
 
 | Tool | Purpose |
 |---|---|
-| `analyze_for_coding(file_ids, code_names, instruction, min_confidence)` | Create an analysis session |
+| `analyze_for_coding(file_ids, code_names, instruction)` | Create an analysis session |
 | `record_suggestions(coding_session_id, suggestions, replace)` | Persist Claude's suggestions (text-verified) |
 | `review_suggestions(coding_session_id, suggestion_guids, show_context)` | Inspect suggestions in detail |
 | `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name)` | Adjust a pending suggestion's span or code before approval (session-only) |
@@ -122,17 +123,22 @@ approval of each suggestion.
 
 1. **Use Descriptive Instructions**: Tell Claude what patterns to look for,
    with examples of what each code covers
-2. **Set Appropriate Confidence**: Lower (0.5 to 0.6) for exploratory passes,
-   higher (0.8+) for selective coding
+2. **Say what counts as explicit**: each suggestion is marked explicit
+   (the passage states the code) or interpretive (Claude is reading it
+   in). There is no numeric score and no threshold: an interpretive
+   reading can be exactly the one you want, and it is yours to judge
 3. **Review Statistics First**: Check counts before diving into details
 4. **Iterate if Needed**: `record_suggestions(replace=true)` discards the
    pending suggestions from a previous pass
 
 ### Reviewing Suggestions
 
-1. **Check Confidence Distribution**: Are most suggestions high or low?
-2. **Review Low Confidence First**: These need the most scrutiny
-3. **Spot Check High Confidence**: Verify the AI reasoning is sound
+1. **Read the interpretive ones closely**: the label says Claude is
+   reading into the passage; check that the reading is one you share
+2. **Spot check the explicit ones**: the passage should state the code
+   in so many words; verify that it does
+3. **Read the reasoning**: it should point to the words that carry the
+   code
 4. **Use Context**: `show_context=true` shows the surrounding text
 5. **Check Boundary Precision**: The recorded positions always match the
    file text exactly, but check the *span* is what you want coded

@@ -361,12 +361,12 @@ class TestUnusablePdfsInCodingTools:
         sid = json.loads(server.analyze_for_coding([2]))["coding_session_id"]
         out = json.loads(server.record_suggestions(sid, [
             {"file_id": 4, "code_name": "Stress", "segment_text": "SAMPLE",
-             "reasoning": "r", "confidence": 0.9},
+             "reasoning": "r", "support": "explicit"},
             {"file_id": 3, "code_name": "Stress", "segment_text": "\n",
              "start_pos": 0, "end_pos": 1, "reasoning": "r",
-             "confidence": 0.9},
+             "support": "explicit"},
             {"file_id": 2, "code_name": "Stress", "segment_text": "Hume",
-             "reasoning": "r", "confidence": 0.9},
+             "reasoning": "r", "support": "explicit"},
         ]))
         reasons = {r["index"]: r["reason"] for r in out["rejected"]}
         assert "pdf_file_stored_as_text" in reasons[0]
@@ -401,7 +401,7 @@ class TestUnusablePdfsInCodingTools:
         sid = json.loads(server.analyze_for_coding([2]))["coding_session_id"]
         rec = json.loads(server.record_suggestions(sid, [
             {"file_id": 2, "code_name": "Stress", "segment_text": "Hume",
-             "reasoning": "r", "confidence": 0.9}]))
+             "reasoning": "r", "support": "explicit"}]))
         guid = rec["recorded"][0]["guid"]
         conn = sqlite3.connect(str(folder / "data.qda"))
         conn.execute("UPDATE source SET fulltext = ? WHERE id = 2",
@@ -1385,7 +1385,7 @@ class TestTheOtherAdoptions:
         server.current_project_path = None
         out = json.loads(server.record_suggestions(sid, [
             {"file_id": 1, "code_name": "Stress", "segment_text":
-             "I feel stressed", "reasoning": "r", "confidence": 0.9}]))
+             "I feel stressed", "reasoning": "r", "support": "explicit"}]))
         assert "No Qualcoder project selected" not in json.dumps(out)
         assert out.get("recorded_count") == 1, out
 

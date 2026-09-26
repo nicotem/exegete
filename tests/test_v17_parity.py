@@ -60,7 +60,7 @@ class TestT13ImportNormalization:
         sid = analyze.split("Session ID: `")[1].split("`")[0]
         fid = _sql(qualcoder_db_path,
                    "SELECT id FROM source WHERE name='norm2.txt'")[0]["id"]
-        out = json.loads(server.record_suggestions(sid, [{
+        out = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": fid, "code_name": "Stress",
             "segment_text": "beta gamma",
         }]))

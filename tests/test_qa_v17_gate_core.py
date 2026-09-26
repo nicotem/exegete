@@ -486,7 +486,7 @@ class TestC7FingerprintRace:
     def test_apply_codings_tail_rewrite_rolls_back(self, tmp_path, monkeypatch):
         p = self._p(tmp_path)
         sid = json.loads(server.analyze_for_coding([1]))["coding_session_id"]
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Coping",
             "segment_text": "I cope by exercising"}]))
         guid = rec["recorded"][0]["guid"]
@@ -579,7 +579,7 @@ class TestC7FingerprintRace:
         """Length-preserving content swap: sha256 half of the fingerprint."""
         p = self._p(tmp_path)
         sid = json.loads(server.analyze_for_coding([1]))["coding_session_id"]
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": FULLTEXT[24:55]}]))
         server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])

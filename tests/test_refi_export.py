@@ -106,7 +106,7 @@ def sample_suggestions():
             end_pos=50,
             segment_text="I feel very stressed at work.",
             reasoning="Clear stress indicator",
-            confidence=0.9,
+            support="explicit",
             status="approved",
             guid="11111111-1111-4111-8111-111111111111"
         ),
@@ -119,7 +119,7 @@ def sample_suggestions():
             end_pos=150,
             segment_text="I try to meditate daily.",
             reasoning="Positive coping strategy",
-            confidence=0.85,
+            support="explicit",
             status="approved",
             guid="22222222-2222-4222-8222-222222222222"
         ),
@@ -132,7 +132,7 @@ def sample_suggestions():
             end_pos=250,
             segment_text="The deadlines are overwhelming.",
             reasoning="Stress from deadlines",
-            confidence=0.88,
+            support="explicit",
             status="approved",
             guid="33333333-3333-4333-8333-333333333333"
         )
@@ -300,7 +300,9 @@ class TestRefiQdaExporter:
         assert desc is not None
         assert desc.text is not None
         assert "Clear stress indicator" in desc.text
-        assert "0.90" in desc.text  # Confidence score should be included
+        # The support label in words, first; never a number (ruling 21)
+        assert desc.text.startswith("Support: explicit (the passage states it)")
+        assert "0.9" not in desc.text
 
     def test_prettify_xml(self, exporter):
         """Test XML prettification."""
@@ -467,25 +469,19 @@ class TestRefiQdaExporter:
         assert len(warnings) > 0
         assert any("End position" in w and "greater than start" in w for w in warnings)
 
-    def test_validate_suggestions_invalid_confidence(self, exporter):
-        """Test validation catches invalid confidence values."""
-        invalid_suggestion = CodingSuggestion(
-            file_id=1,
-            file_name="test.txt",
-            code_id=1,
-            code_name="Valid Code",
-            start_pos=0,
-            end_pos=10,
-            segment_text="text",
-            confidence=1.5  # Out of range -- clamped to 1.0 by constructor
-        )
-
-        # Confidence is now clamped in the CodingSuggestion constructor,
-        # so the validator should not see out-of-range values
-        assert invalid_suggestion.confidence == 1.0
-        warnings = exporter.validate_suggestions([invalid_suggestion])
-        # No confidence warning since value is clamped
-        assert not any("Confidence" in w and "outside valid range" in w for w in warnings)
+    def test_a_suggestion_with_no_label_exports_its_reason_only(
+            self, exporter):
+        """A row read back from the project (or a pre-v0.14 suggestion)
+        carries no label: its description is the memo as it stands."""
+        plain = CodingSuggestion(
+            file_id=1, file_name="test.txt", code_id=1,
+            code_name="Valid Code", start_pos=0, end_pos=10,
+            segment_text="text", reasoning="A human coder's memo")
+        root = exporter.create_project_xml([plain])
+        desc = root.find(f".//{{{NAMESPACE}}}PlainTextSelection"
+                         f"/{{{NAMESPACE}}}Description")
+        assert desc.text == "A human coder's memo"
+        assert exporter.validate_suggestions([plain]) == []
 
     def test_validate_suggestions_multiple_issues(self, exporter):
         """Test validation reports multiple issues."""
@@ -507,14 +503,13 @@ class TestRefiQdaExporter:
                 start_pos=-5,  # Invalid
                 end_pos=3,  # Invalid (before start when start is corrected)
                 segment_text="text",
-                confidence=2.0  # Invalid
+                support="explicit"
             )
         ]
 
         warnings = exporter.validate_suggestions(invalid_suggestions)
 
         # Should have multiple warnings (file, code, position).
-        # Confidence no longer triggers a warning as it's clamped in constructor.
         assert len(warnings) >= 3  # At least file, code, and position errors
 
     def test_export_with_file_grouping(self, exporter, sample_suggestions, tmp_path):
@@ -573,7 +568,7 @@ class TestRefiQdaExporter:
             end_pos=10,
             segment_text="text",
             reasoning="",  # Empty reasoning
-            confidence=0.8
+            support="explicit"
         )
 
         output_file = tmp_path / "test_export.qdpx"

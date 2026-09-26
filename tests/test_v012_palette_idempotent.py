@@ -140,10 +140,10 @@ def _record(sid, items):
 
 STRESS = {"file_id": 1, "code_name": "Stress",
           "segment_text": "I feel stressed about deadlines",
-          "reasoning": "explicit", "confidence": 0.9}
+          "reasoning": "explicit", "support": "explicit"}
 COPING = {"file_id": 1, "code_name": "Coping",
           "segment_text": "I cope by exercising",
-          "reasoning": "explicit", "confidence": 0.9}
+          "reasoning": "explicit", "support": "explicit"}
 
 
 # ===========================================================================

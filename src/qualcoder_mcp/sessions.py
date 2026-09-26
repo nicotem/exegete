@@ -16,6 +16,45 @@ from .database import error_label
 logger = logging.getLogger(__name__)
 
 
+# How the words of a passage carry a suggested code (owner ruling 21,
+# v0.14): a category, never a number. `explicit`: the passage states it;
+# `interpretive`: the assistant is reading into it. A suggestion recorded
+# before v0.14 carried a 0-1 "confidence" instead; it loads with no label
+# (None), and the number is not kept.
+SUPPORT_LABELS = {
+    "explicit": "the passage states it",
+    "interpretive": "the assistant is reading into it",
+}
+
+
+def support_label(value: Any) -> Optional[str]:
+    """The label a value names ('explicit' or 'interpretive'), or None.
+
+    Only a string can name one: a list, a number or a boolean is no label
+    (and a list cannot even be looked up in a dict)."""
+    return value if isinstance(value, str) and value in SUPPORT_LABELS else None
+
+
+def support_in_words(support: Optional[str]) -> Optional[str]:
+    """'explicit (the passage states it)', or None for no label."""
+    label = support_label(support)
+    if label is None:
+        return None
+    return f"{label} ({SUPPORT_LABELS[label]})"
+
+
+def memo_with_support(reasoning: str, support: Optional[str]) -> str:
+    """The text an applied suggestion carries in its coding memo, and in a
+    REFI-QDA export's selection description: the support label in words
+    FIRST, then the reason. First, because a reason holding QualCoder's
+    '#####' private marker keeps only what comes before it, and the label
+    must survive that. No label (a pre-v0.14 suggestion): the reason only.
+    Never a number (owner ruling 21)."""
+    label = support_in_words(support)
+    parts = [f"Support: {label}" if label else "", (reasoning or "").strip()]
+    return "\n\n".join(part for part in parts if part)
+
+
 class CodingSuggestion:
     """Data class for AI-suggested coding with conversational review support."""
 
@@ -29,7 +68,7 @@ class CodingSuggestion:
         end_pos: int,
         segment_text: str,
         reasoning: str = "",
-        confidence: float = 0.0,
+        support: Optional[str] = None,
         status: str = "pending",
         context_before: str = "",
         context_after: str = "",
@@ -45,8 +84,9 @@ class CodingSuggestion:
         self.end_pos = end_pos
         self.segment_text = segment_text
         self.reasoning = reasoning  # Why this segment was coded
-        # Clamp confidence to [0.0, 1.0]
-        self.confidence = max(0.0, min(1.0, float(confidence)))
+        # 'explicit' | 'interpretive' | None (recorded before v0.14, or a
+        # row read back from the project, which carries no label)
+        self.support = support_label(support)
         self.status = status  # 'pending', 'approved', 'rejected'
         self.context_before = context_before  # Text before for context
         self.context_after = context_after  # Text after for context
@@ -73,7 +113,7 @@ class CodingSuggestion:
             "end_pos": self.end_pos,
             "segment_text": self.segment_text,
             "reasoning": self.reasoning,
-            "confidence": self.confidence,
+            "support": self.support,
             "status": self.status,
             "context_before": self.context_before,
             "context_after": self.context_after,
@@ -114,7 +154,9 @@ class CodingSuggestion:
             end_pos=data["end_pos"],
             segment_text=data["segment_text"],
             reasoning=reasoning,
-            confidence=data.get("confidence", 0.0),
+            # A pre-v0.14 file carries "confidence" (a number) and no
+            # "support": it loads with no label, and the number is dropped
+            support=data.get("support"),
             status=data.get("status", "pending"),
             context_before=data.get("context_before", ""),
             context_after=data.get("context_after", ""),
@@ -202,7 +244,6 @@ class AICodingSession:
         file_ids: Optional[List[int]] = None,
         code_names: Optional[List[str]] = None,
         instruction: str = "",
-        min_confidence: float = 0.6,
         ai_coder_name_at_record: Optional[str] = None
     ):
         self.session_id = session_id or str(uuid.uuid4())
@@ -220,7 +261,6 @@ class AICodingSession:
         self.file_ids = file_ids or []
         self.code_names = code_names or []
         self.instruction = instruction
-        self.min_confidence = min_confidence
         self.suggestions: List[CodingSuggestion] = []
         self.proposed_codes: List[ProposedCode] = []
         # Span-affordance bookkeeping (tester-feedback amendment): counts
@@ -461,7 +501,6 @@ class AICodingSession:
             "file_ids": self.file_ids,
             "code_names": self.code_names,
             "instruction": self.instruction,
-            "min_confidence": self.min_confidence,
             "ai_coder_name_at_record": self.ai_coder_name_at_record,
             "suggestions": [s.to_dict() for s in self.suggestions],
             "proposed_codes": [p.to_dict() for p in self.proposed_codes],
@@ -496,7 +535,8 @@ class AICodingSession:
             file_ids=data.get("file_ids", []),
             code_names=data.get("code_names", []),
             instruction=data.get("instruction", ""),
-            min_confidence=data.get("min_confidence", 0.6),
+            # A pre-v0.14 file's "min_confidence" is read past: it never
+            # filtered anything, and the score it referred to is gone
             # Absent in 0.11 files: no snapshot, so no warning to give
             ai_coder_name_at_record=data.get("ai_coder_name_at_record")
         )

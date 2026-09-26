@@ -37,7 +37,7 @@ class TestCodingSuggestion:
         assert suggestion.end_pos == sample_suggestion_data["end_pos"]
         assert suggestion.segment_text == sample_suggestion_data["segment_text"]
         assert suggestion.ai_memo == ""
-        assert suggestion.confidence == 0.0
+        assert suggestion.support is None
         assert suggestion.status == "pending"
         assert suggestion.guid is not None
         assert isinstance(suggestion.guid, str)
@@ -54,14 +54,14 @@ class TestCodingSuggestion:
             end_pos=sample_suggestion_data["end_pos"],
             segment_text=sample_suggestion_data["segment_text"],
             reasoning=sample_suggestion_data["reasoning"],
-            confidence=sample_suggestion_data["confidence"],
+            support=sample_suggestion_data["support"],
             status=sample_suggestion_data["status"],
             guid=guid
         )
 
         assert suggestion.reasoning == sample_suggestion_data["reasoning"]
         assert suggestion.ai_memo == sample_suggestion_data["reasoning"]  # Test backwards compatibility
-        assert suggestion.confidence == sample_suggestion_data["confidence"]
+        assert suggestion.support == sample_suggestion_data["support"]
         assert suggestion.status == sample_suggestion_data["status"]
         assert suggestion.guid == guid
 
@@ -78,7 +78,8 @@ class TestCodingSuggestion:
         assert data["end_pos"] == sample_suggestion_data["end_pos"]
         assert data["segment_text"] == sample_suggestion_data["segment_text"]
         assert data["reasoning"] == sample_suggestion_data["reasoning"]
-        assert data["confidence"] == sample_suggestion_data["confidence"]
+        assert data["support"] == sample_suggestion_data["support"]
+        assert "confidence" not in data
         assert data["status"] == sample_suggestion_data["status"]
         assert "guid" in data
 
@@ -90,7 +91,7 @@ class TestCodingSuggestion:
 
         assert suggestion.file_id == sample_suggestion_data["file_id"]
         assert suggestion.code_name == sample_suggestion_data["code_name"]
-        assert suggestion.confidence == sample_suggestion_data["confidence"]
+        assert suggestion.support == sample_suggestion_data["support"]
         assert suggestion.guid == guid
 
     def test_round_trip_serialization(self, sample_suggestion_data):
@@ -107,7 +108,7 @@ class TestCodingSuggestion:
         assert restored.end_pos == original.end_pos
         assert restored.segment_text == original.segment_text
         assert restored.ai_memo == original.ai_memo
-        assert restored.confidence == original.confidence
+        assert restored.support == original.support
         assert restored.status == original.status
         assert restored.guid == original.guid
 
@@ -125,7 +126,7 @@ class TestCodingSuggestion:
         suggestion = CodingSuggestion.from_dict(minimal_data)
 
         assert suggestion.ai_memo == ""
-        assert suggestion.confidence == 0.0
+        assert suggestion.support is None
         assert suggestion.status == "pending"
         assert suggestion.guid is not None
 
@@ -145,7 +146,7 @@ class TestAICodingSession:
         assert session.file_ids == []
         assert session.code_names == []
         assert session.instruction == ""
-        assert session.min_confidence == 0.6
+        assert not hasattr(session, "min_confidence")
         assert session.suggestions == []
         assert session.created_at is not None
         assert session.last_modified == session.created_at
@@ -164,7 +165,6 @@ class TestAICodingSession:
         assert session.file_ids == sample_session_data["file_ids"]
         assert session.code_names == sample_session_data["code_names"]
         assert session.instruction == sample_session_data["instruction"]
-        assert session.min_confidence == sample_session_data["min_confidence"]
 
     def test_add_suggestion(self, sample_session_data, sample_suggestion_data):
         """Test adding suggestions to a session."""
@@ -312,7 +312,7 @@ class TestAICodingSession:
         assert data["file_ids"] == sample_session_data["file_ids"]
         assert data["code_names"] == sample_session_data["code_names"]
         assert data["instruction"] == sample_session_data["instruction"]
-        assert data["min_confidence"] == sample_session_data["min_confidence"]
+        assert "min_confidence" not in data
         assert len(data["suggestions"]) == 1
         assert "statistics" in data
 
@@ -347,7 +347,6 @@ class TestAICodingSession:
         assert restored.file_ids == session.file_ids
         assert restored.code_names == session.code_names
         assert restored.instruction == session.instruction
-        assert restored.min_confidence == session.min_confidence
         assert len(restored.suggestions) == len(session.suggestions)
 
         # Check suggestions are preserved
@@ -598,7 +597,6 @@ class TestSessionManager:
         assert loaded.file_ids == session.file_ids
         assert loaded.code_names == session.code_names
         assert loaded.instruction == session.instruction
-        assert loaded.min_confidence == session.min_confidence
         assert loaded.created_at == session.created_at
         assert loaded.last_modified == session.last_modified
         assert len(loaded.suggestions) == 2

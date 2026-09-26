@@ -347,6 +347,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project is not the one open, the context taken from the file at record
   time is shown and marked as such; when the file no longer holds the
   span, no context is shown and the review says why.
+- **A proposal's approval binds what was approved.** Renaming,
+  redefining, recolouring, recategorising or re-evidencing an approved
+  proposal (`update_proposal`), or merging evidence into it as a target
+  (`merge_proposals`), returns it to pending, and the answer says
+  "approval withdrawn: ... show it to the researcher again". A proposal
+  merged away gets a final status, `merged` (with the GUID it went
+  into): `update_proposal_status` skips and counts it
+  (`skipped_merged`), `update_proposal` and `merge_proposals` refuse it,
+  `review_proposals` says what it went into, and it is never created.
+  Before, an approved "Isolation" renamed and redefined stayed approved,
+  and a merged-away proposal could be approved again and created,
+  writing the same passages under two codes. A rejected proposal can
+  still be approved again, and the texts now say so.
 - **Texts made true:** `analyze_file_with_coding` names its four counts
   (it promised "coverage and density metrics"); `cleanup_old_sessions`
   says it deletes every project's old sessions on this computer,

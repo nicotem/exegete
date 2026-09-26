@@ -290,7 +290,7 @@ class TestA3UpdateProposal:
 
 class TestA4MergeProposals:
 
-    def test_merge_moves_evidence_and_rejects_source(self, setup_server):
+    def test_merge_moves_evidence_and_marks_source_merged(self, setup_server):
         sid = _make_session(setup_server)
         g1 = _propose_one(sid, name="Deadline stress")
         g2 = _propose_one(sid, name="Time pressure", example_segments=[
@@ -303,7 +303,10 @@ class TestA4MergeProposals:
         assert out["evidence_moved"] == 1
         assert out["target"]["evidence_count"] == 2
         session = server.session_manager.load_session(sid)
-        assert session.get_proposal_by_guid(g2).status == "rejected"
+        # v0.14 (the claims audit's item 1): a final status, not a
+        # reversible rejection, so the source can never be created
+        assert session.get_proposal_by_guid(g2).status == "merged"
+        assert session.get_proposal_by_guid(g2).merged_into == g1
 
     def test_self_merge_refused(self, setup_server):
         sid = _make_session(setup_server)
@@ -433,8 +436,12 @@ class TestA6CreateProposedCodes:
         # no backup folder appeared
         parent = Path(qualcoder_db_path).parent
         assert not list(parent.glob("*_backup_*"))
-        # rename resolves it
-        server.update_proposal(sid, g_bad, name="Strain")
+        # rename resolves it; the rename withdraws the approval (v0.14,
+        # the claims audit's item 1), so the renamed proposal is approved
+        # again before it is created
+        renamed = json.loads(server.update_proposal(sid, g_bad, name="Strain"))
+        assert renamed["status"] == "pending"
+        server.update_proposal_status(sid, approve=[g_bad])
         out = json.loads(server.create_proposed_codes(sid))
         assert out["success"] is True
         assert {"Safe code", "Strain"} <= _code_names(qualcoder_db_path)

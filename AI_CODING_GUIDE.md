@@ -33,9 +33,13 @@ server (the conversational workflow, v0.6.0 and later).
    open)
 5. **You** open the project in QualCoder and see the codings
 
-Nothing is written without your approval, every write is backed up
-first, and mistakes can be undone (`delete_coding` for one coding,
-`restore_backup` for a whole snapshot).
+Nothing is written until each item is marked approved, every write is
+backed up first by default, and mistakes can be undone (`delete_coding`
+for one coding, `restore_backup` for a whole snapshot). The server
+records the approval Claude reports and cannot tell whether you gave
+it: keep your host asking before each tool call ("allow once" for the
+tools that decide and write), and check the counts the approval step
+reports against what you said.
 
 ## Prerequisites
 
@@ -172,7 +176,8 @@ approval of each suggestion.
 
 **Do I need an API key?** No: with Claude Desktop or a Claude login,
 Claude itself does the analysis through the conversation, and the
-server only stores and applies what you approve. (An API-key route and
+server only stores and applies what is marked approved (it cannot see
+who approved it; see above). (An API-key route and
 a fully local route exist too; see "Choosing your AI host" in the
 README.)
 

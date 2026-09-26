@@ -999,8 +999,8 @@ the full data when `coder` is given (see "Working alongside QualCoder
 **Inductive Coding (proposing new codes):**
 - `propose_codes(coding_session_id, proposals, replace)` - Record brand-new code proposals discovered in the data
 - `review_proposals(coding_session_id, proposal_guids, show_examples)` - Review proposed codes in detail before deciding
-- `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created
-- `merge_proposals(coding_session_id, from_proposal_guid, into_proposal_guid)` - Combine two proposals
+- `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created; changing an approved proposal returns it to pending, so what is created is what was approved
+- `merge_proposals(coding_session_id, from_proposal_guid, into_proposal_guid)` - Combine two proposals; the source is marked merged, a final status (it can never be approved or created), and an approved target returns to pending
 - `update_proposal_status(coding_session_id, approve, reject)` - Approve or reject proposals; GUIDs not in the session are listed, and a GUID in both lists is refused
 - `create_proposed_codes(coding_session_id, apply_coded_segments, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, optionally writing their evidence spans as codings
 

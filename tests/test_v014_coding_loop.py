@@ -699,3 +699,103 @@ class TestTheContextIsTheFilesOwn:
             .description
         assert "auto-filled" not in text
         assert "always taken from the file" in " ".join(text.split())
+
+
+# =============================================================================
+# 4. AN APPROVAL BINDS WHAT WAS APPROVED (the claims audit's item 1)
+# =============================================================================
+
+class TestAProposalsApprovalBindsIt:
+
+    @staticmethod
+    def _proposals(sid, *names):
+        evidence = {"Isolation": [{"file_id": 1, "segment_text": STRESSED}],
+                    "Mentoring": [{"file_id": 1, "segment_text": COPE}]}
+        out = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": n, "memo": f"def {n}",
+             "example_segments": evidence.get(n, [])} for n in names])
+        return [r["guid"] for r in out["recorded"]]
+
+    @staticmethod
+    def _status(sid, guid):
+        return server.session_manager.load_session(sid) \
+            .get_proposal_by_guid(guid).status
+
+    def test_a_change_after_approval_returns_it_to_pending(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        (g,) = self._proposals(sid, "Isolation")
+        call("update_proposal_status", coding_session_id=sid, approve=[g])
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, name="Loneliness", memo="changed")
+        assert out["status"] == "pending"
+        assert "approval withdrawn" in out["approval_withdrawn"]
+        created = jcall("create_proposed_codes", coding_session_id=sid,
+                        create_backup=False)
+        assert "No approved proposals" in created["error"]
+        assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
+                        "WHERE name = 'Loneliness'")
+
+    def test_a_pending_proposal_changes_without_a_word(self, setup_server):
+        sid = new_session()
+        (g,) = self._proposals(sid, "Isolation")
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, memo="refined")
+        assert out["status"] == "pending" and "approval_withdrawn" not in out
+
+    def test_a_merged_away_proposal_is_final(self, setup_server,
+                                             qualcoder_db_path):
+        sid = new_session()
+        target, source = self._proposals(sid, "Isolation", "Mentoring")
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[target, source])
+        merged = jcall("merge_proposals", coding_session_id=sid,
+                       from_proposal_guid=source, into_proposal_guid=target)
+        assert merged["source_status"] == "merged"
+        assert merged["target"]["status"] == "pending"
+        assert "approval_withdrawn" in merged
+        again = jcall("update_proposal_status", coding_session_id=sid,
+                      approve=[source, target])
+        assert again["skipped_merged"] == 1 and again["approved"] == 1
+        assert self._status(sid, source) == "merged"
+        assert "final" in jcall("update_proposal", coding_session_id=sid,
+                                proposal_guid=source, memo="x")["error"]
+        created = jcall("create_proposed_codes", coding_session_id=sid,
+                        apply_coded_segments=True, create_backup=False)
+        assert [c["name"] for c in created["created_codes"]] == ["Isolation"]
+        assert created["codings_applied"] == 2
+        assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
+                        "WHERE name = 'Mentoring'")
+        cope = rows(qualcoder_db_path, "SELECT cid FROM code_text WHERE "
+                    "seltext = ?", (COPE,))
+        assert len([r for r in cope if r["cid"] != 2]) == 1   # written once
+
+    def test_a_merged_proposal_cannot_be_merged_again(self, setup_server):
+        sid = new_session()
+        a, b, c = self._proposals(sid, "Isolation", "Mentoring", "Other")
+        call("merge_proposals", coding_session_id=sid,
+             from_proposal_guid=b, into_proposal_guid=a)
+        for src, dst in ((b, c), (c, b)):
+            out = jcall("merge_proposals", coding_session_id=sid,
+                        from_proposal_guid=src, into_proposal_guid=dst)
+            assert "merged into another proposal" in out["error"]
+
+    def test_a_merged_name_can_be_proposed_again(self, setup_server):
+        sid = new_session()
+        a, b = self._proposals(sid, "Isolation", "Mentoring")
+        call("merge_proposals", coding_session_id=sid,
+             from_proposal_guid=b, into_proposal_guid=a)
+        assert self._proposals(sid, "Mentoring")
+
+    def test_the_review_and_the_texts_say_merged(self, setup_server):
+        sid = new_session()
+        a, b = self._proposals(sid, "Isolation", "Mentoring")
+        call("merge_proposals", coding_session_id=sid,
+             from_proposal_guid=b, into_proposal_guid=a)
+        out = call("review_proposals", coding_session_id=sid)
+        assert "Status: MERGED into 'Isolation'" in out
+        tools = server.mcp._tool_manager._tools
+        assert "marked rejected" not in tools["merge_proposals"].description
+        for name in ("create_proposed_codes", "update_proposal_status"):
+            text = " ".join(tools[name].description.split())
+            assert "only if it is approved again" in text, name

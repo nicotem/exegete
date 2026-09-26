@@ -238,6 +238,14 @@ Reject guid-003, guid-005
 Session saved. Ready to apply approved codings when you're ready.
 ```
 
+**Who approves.** Claude records your decisions with
+`update_suggestion_status`. The server writes what is marked approved
+and cannot tell whether you gave the approval: check that the approved
+count is the number you said yes to, and keep your host asking before
+each tool call ("allow once" for the tools that decide and write). To
+change a decision, ask Claude to reopen the suggestion: it goes back to
+pending, can be edited, and waits for your decision again.
+
 ### Step 5: Apply Approved Codings
 
 When you're satisfied with the approvals:

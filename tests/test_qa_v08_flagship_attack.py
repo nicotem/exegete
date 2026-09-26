@@ -91,12 +91,13 @@ class TestInductiveLoop:
             memo="refined def"))
         assert up.get("success") is True, up
 
-        # merge proposals: g2's evidence unions into g1; g2 rejected
+        # merge proposals: g2's evidence unions into g1; g2 merged (final,
+        # v0.14; it used to be an ordinary, reversible rejection)
         mg = json.loads(server.merge_proposals(sid, g2, g1))
         assert mg.get("success") is True, mg
         info = json.loads(server.get_coding_session_info(sid))
         props = {p["guid"]: p for p in info["proposed_codes"]}
-        assert props[g2]["status"] == "rejected"
+        assert props[g2]["status"] == "merged"
         assert len(props[g1]["example_segments"]) == 2  # unioned evidence
 
         # review shows the refined name

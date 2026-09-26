@@ -5973,6 +5973,18 @@ def _scope_refusal(session: AICodingSession, outside: str,
             "session_codes": list(session.code_names)[:50]}
 
 
+APPROVAL_WITHDRAWN = (
+    "approval withdrawn: this proposal was approved and has changed, so it "
+    "is pending again; show it to the researcher again before approving it")
+
+
+def _proposal_merged_refusal(p) -> str:
+    return (f"Proposal '{p.name}' was merged into another proposal "
+            f"({p.merged_into}); a merged proposal is final and cannot be "
+            f"changed, approved or created. Work on the proposal it was "
+            f"merged into.")
+
+
 def _code_name_collisions(name: str) -> Optional[str]:
     """Existing code name(s) a proposal name collides with (QA5-1 style:
     exact match first, else case-insensitive matches under name_key), or
@@ -9291,7 +9303,7 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     # casefold), so two proposals that would collide on the unique(name)
     # constraint are caught here rather than after the backup.
     seen_names = {name_key(p.name) for p in session.proposed_codes
-                  if p.status != "rejected"}
+                  if p.status not in ("rejected", "merged")}
 
     for idx, item in enumerate(proposals):
         if not isinstance(item, dict):
@@ -9439,7 +9451,13 @@ def review_proposals(coding_session_id: str,
     for i, p in enumerate(proposals, 1):
         lines.append("=" * 70)
         lines.append(f"**Proposal {i}** (GUID: `{p.guid}`)")
-        lines.append(f"Status: {p.status.upper()}")
+        if p.status == "merged":
+            into = session.get_proposal_by_guid(p.merged_into)
+            lines.append(f"Status: MERGED into "
+                         f"'{into.name if into else p.merged_into}' "
+                         f"(final: never approved or created)")
+        else:
+            lines.append(f"Status: {p.status.upper()}")
         lines.append(f"🏷️  **Name:** {p.name}")
         # The colour that WILL be stored, not the one the proposal happens
         # to carry: fresh proposals are snapped when they are made, but a
@@ -9518,7 +9536,11 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
     the full corrected list (e.g. with widened spans); each span is
     verified against the file text with the same machinery as
     propose_codes. Proposals already CREATED are immutable here; edit
-    the real code with the codebook tools instead.
+    the real code with the codebook tools instead. A MERGED proposal is
+    final and is refused. Changing an APPROVED proposal returns it to
+    pending (the result says approval_withdrawn): what the researcher
+    approved is no longer what would be created, so show it to them
+    again.
 
     Args:
         coding_session_id: The session ID
@@ -9555,6 +9577,8 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
                      f"with rename_code / recolor_code / "
                      f"move_code_to_category / set_memo."
         })
+    if proposal.status == "merged":
+        return json.dumps({"error": _proposal_merged_refusal(proposal)})
 
     changes = {}
     if name is not None:
@@ -9562,7 +9586,7 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
             return json.dumps({"error": "name must be a non-empty string"})
         new_name = normalize_name(name)
         clash = any(p.guid != proposal.guid
-                    and p.status != "rejected"
+                    and p.status not in ("rejected", "merged")
                     and name_key(p.name) == name_key(new_name)
                     for p in session.proposed_codes)
         if clash:
@@ -9622,13 +9646,22 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
         return json.dumps({"error": "Nothing to change: pass at least one "
                                     "of name/color/category/memo/"
                                     "example_segments"})
+    # An approval binds what was approved (v0.14, the claims audit's
+    # item 1): a renamed, redefined or re-evidenced proposal is not the
+    # one the researcher said yes to
+    withdrawn = proposal.status == "approved"
+    if withdrawn:
+        proposal.status = "pending"
     session.last_modified = datetime.now().isoformat()
     session_manager.save_session(session)
 
     result = {"success": True, "guid": proposal.guid,
+              "status": proposal.status,
               "changes": {k: {"from": v[0], "to": v[1]}
                           for k, v in changes.items()},
               **color_disclosure}
+    if withdrawn:
+        result["approval_withdrawn"] = APPROVAL_WITHDRAWN
     if proposal.collides_with:
         result["collides_with"] = proposal.collides_with
     if evidence_rejected:
@@ -9651,12 +9684,15 @@ def merge_proposals(coding_session_id: str, from_proposal_guid: str,
     Session-only (writes nothing to the project; entirely distinct from
     merge_codes, which merges real codes in the codebook). The target
     proposal keeps its name/colour/category/definition and gains the
-    source's evidence segments (deduplicated by file and span); the
-    source proposal is marked rejected so it is never created.
+    source's evidence segments (deduplicated by file and span). The
+    source is marked MERGED, a final status: it can never be approved or
+    created, so its evidence is written once, under the target. If the
+    target was approved, it returns to pending (approval_withdrawn),
+    since its evidence changed: show it to the researcher again.
 
     Args:
         coding_session_id: The session ID
-        from_proposal_guid: The proposal merged away (becomes rejected)
+        from_proposal_guid: The proposal merged away (becomes merged)
         into_proposal_guid: The proposal that absorbs the evidence
     """
     # Bridge fix: some MCP middleware strips arguments named
@@ -9678,6 +9714,8 @@ def merge_proposals(coding_session_id: str, from_proposal_guid: str,
                 "error": f"Proposal '{p.name}' was already created; merge "
                          f"the real codes with merge_codes instead."
             })
+        if p.status == "merged":
+            return json.dumps({"error": _proposal_merged_refusal(p)})
 
     existing_spans = {(s["file_id"], s["start_pos"], s["end_pos"])
                       for s in target.example_segments}
@@ -9688,17 +9726,25 @@ def merge_proposals(coding_session_id: str, from_proposal_guid: str,
             target.example_segments.append(seg)
             existing_spans.add(key)
             moved += 1
-    source.status = "rejected"
+    source.status = "merged"
+    source.merged_into = target.guid
+    withdrawn = target.status == "approved" and moved > 0
+    if withdrawn:
+        target.status = "pending"
     session.last_modified = datetime.now().isoformat()
     session_manager.save_session(session)
-    return json.dumps({
+    result = {
         "success": True,
         "message": f"Merged proposal '{source.name}' into '{target.name}'",
         "evidence_moved": moved,
         "target": {"guid": target.guid, "name": target.name,
+                   "status": target.status,
                    "evidence_count": len(target.example_segments)},
-        "source_status": "rejected",
-    }, indent=2)
+        "source_status": "merged",
+    }
+    if withdrawn:
+        result["approval_withdrawn"] = APPROVAL_WITHDRAWN
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool()
@@ -9774,7 +9820,9 @@ def create_proposed_codes(coding_session_id: str,
     Unicode form are ignored, refuses the batch; rename the proposal
     first), the category must exist, and (when applying) every evidence
     span must still match the file text. Any failure -> nothing is
-    written. Rejected proposals and their evidence are never created.
+    written. Only APPROVED proposals are created: a rejected one is
+    created only if it is approved again, and a merged one never (its
+    evidence was merged into the proposal that absorbed it).
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with

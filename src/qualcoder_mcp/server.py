@@ -4528,13 +4528,21 @@ def search_memos(query: str, limit: int = 50) -> str:
     return json.dumps(payload, indent=2)
 
 
+# How many segments export_code_report returns (v0.14, claims audit item
+# 16: named, and said in the answer when a code has more).
+CODE_REPORT_SEGMENT_LIMIT = 1000
+
+
 @mcp.tool()
 @_tool_guard
 def export_code_report(code_name: str) -> str:
     """Generate a comprehensive report for a specific code.
 
-    This tool creates a detailed report including code metadata,
-    all coded segments, and frequency information.
+    This tool creates a detailed report including code metadata, up to
+    1,000 of its coded text segments, and frequency information. The
+    answer says how many text segments there are (segments_total) and
+    whether the report stopped short (truncated); get_coded_segments
+    pages through all of them with its cursor.
 
     Memo privacy (QualCoder 4.0 convention): this report is returned
     into the conversation, not written to a file, so every memo it
@@ -4556,7 +4564,8 @@ def export_code_report(code_name: str) -> str:
                    is refused with the code names
 
     Returns:
-        JSON object with complete code information and all coded segments
+        JSON object with the code's information, up to 1,000 of its coded
+        text segments, segments_returned, segments_total and truncated
     """
     # Find the code by name, by the codebook tools' rule: the first
     # lower() match used to pick "Trust" for "trust" when both exist
@@ -4573,14 +4582,28 @@ def export_code_report(code_name: str) -> str:
     # Get detailed information
     code_id = matching_code["id"]
     details = get_db().get_code_details(code_id)
-    segments = get_db().get_coded_text_segments(code_id, limit=1000)
+    segments = get_db().get_coded_text_segments(
+        code_id, limit=CODE_REPORT_SEGMENT_LIMIT)
+    # The report stops at 1,000 segments; it used to say nothing, while
+    # its own statistics gave the full count (v0.14, claims audit item
+    # 16). Both counts are the visible text codings on existing files.
+    total = details["statistics"]["text_segments"]
+    truncated = total > len(segments)
 
     payload = {
         "code": details,
         "code_match": code_match,
         "segments": segments,
+        "segments_returned": len(segments),
+        "segments_total": total,
+        "truncated": truncated,
         "report_generated": True
     }
+    if truncated:
+        payload["note"] = (
+            f"This report holds the first {len(segments):,} of the code's "
+            f"{total:,} text segments. get_coded_segments(code_id="
+            f"{code_id}) reads all of them, page by page with its cursor.")
     note = _coder_visibility_note()
     if note:
         payload["coder_visibility"] = note
@@ -4620,7 +4643,8 @@ def export_refi_qda(
     as two characters (e.g. NVivo) may show shifted boundaries.
 
     Known limitations (documented): cases, annotations and journals are not
-    included (code categories ARE preserved as nested codes); all
+    included (the categories above the exported codes ARE included, as
+    non-codable parent codes, and the answer's note says so); all
     selections are attributed to a single export user rather than to the
     original coders, even when the project has used several AI coder
     names. That user is named after the project's AI coder name, or,
@@ -4800,8 +4824,12 @@ def export_refi_qda(
         # coder name, this host's declaration, or the built-in default.
         # The export never asks for one (B1.11).
         "ai_user_name_source": _ai_user_name_source(),
+        # The note used to say categories were left out, while the file
+        # nests them (v0.14, claims audit item 16)
         "note": "Export includes codes, text sources and coded selections. "
-                "Categories, cases, annotations and journals are not included."
+                "The categories above the exported codes are included, as "
+                "non-codable parent codes (QualCoder's own REFI-QDA "
+                "convention); cases, annotations and journals are not."
     }
     if skipped_non_text:
         output["skipped_codings_on_non_text_sources"] = skipped_non_text
@@ -15126,6 +15154,86 @@ def _codebook_tree(ro_db):
     yield from walk(None, 0)
 
 
+def _codebook_markdown(ro_db, freq, include_memos: bool):
+    """The Markdown codebook's lines, and its category and code counts.
+
+    v0.14, claims audit item 16: the Markdown form wrote the csv and txt
+    walk, in which a level's sub-categories and codes are sorted
+    together, as headings and bullets; a heading cannot be closed, so a
+    top-level code sorting after a category read as that category's, a
+    code sorting after a sub-category read as the sub-category's, and a
+    sub-code was a bullet beside its parent. Here the codes without a
+    category come first under their own heading, each category's own
+    codes come directly under its heading, before its sub-categories,
+    and a sub-code's bullet is indented two spaces per level under its
+    parent's. Names sort case-insensitively, as in the walk. QualCoder
+    has no Markdown codebook; its ODT codebook uses the depth prefix the
+    csv and txt forms keep.
+    """
+    cats = ro_db.list_categories()
+    codes = ro_db.list_codes()
+    child_cats: Dict[Any, list] = {}
+    for c in cats:
+        child_cats.setdefault(c["parent_id"], []).append(c)
+    code_children: Dict[Any, list] = {}
+    cat_codes: Dict[Any, list] = {}
+    for c in codes:
+        parent_code = c.get("parent_code_id")
+        if parent_code is not None:
+            code_children.setdefault(parent_code, []).append(c)
+        else:
+            cat_codes.setdefault(c["category_id"], []).append(c)
+    lines: List[str] = []
+    counts = {"cats": 0, "codes": 0}
+
+    def by_name(items):
+        return sorted(items, key=lambda i: i["name"].lower())
+
+    def code_lines(code, level, seen):
+        if code["id"] in seen:
+            return
+        seen = seen | {code["id"]}
+        counts["codes"] += 1
+        pad = "  " * level
+        color = f" `{code['color']}`" if code.get("color") else ""
+        lines.append(f"{pad}- **{code['name']}**{color}: "
+                     f"{freq.get(code['id'], 0)} coding(s)")
+        memo = code.get("memo") or ""
+        if include_memos and memo:
+            lines.append(f"{pad}  > {memo}")
+        for sub in by_name(code_children.get(code["id"], [])):
+            code_lines(sub, level + 1, seen)
+
+    def category_lines(cat, depth, seen):
+        if cat["id"] in seen:
+            return
+        seen = seen | {cat["id"]}
+        counts["cats"] += 1
+        lines.append(f"{'#' * min(depth + 2, 6)} {cat['name']}")
+        memo = cat.get("memo") or ""
+        if include_memos and memo:
+            lines.append(f"> {memo}")
+        lines.append("")
+        own = by_name(cat_codes.get(cat["id"], []))
+        for code in own:
+            code_lines(code, 0, frozenset())
+        if own:
+            lines.append("")
+        for sub in by_name(child_cats.get(cat["id"], [])):
+            category_lines(sub, depth + 1, seen)
+
+    top_codes = by_name(cat_codes.get(None, []))
+    if top_codes:
+        lines.append("## Codes without a category")
+        lines.append("")
+        for code in top_codes:
+            code_lines(code, 0, frozenset())
+        lines.append("")
+    for cat in by_name(child_cats.get(None, [])):
+        category_lines(cat, 0, frozenset())
+    return lines, counts["cats"], counts["codes"]
+
+
 def _category_chain(cat_by_id, category_id):
     """Category names, immediate parent first, up to the root (the
     category leg of the coded-report chain)."""
@@ -15187,7 +15295,10 @@ def export_codebook(output_path: str, format: str = "csv",
       codebook convention), Id is `catid:N`/`cid:N`.
     - "txt": QualCoder's Codebook text shape (`...Category: X` /
       `...Code: Y, Count: N`, `MEMO:` lines when include_memos).
-    - "md": Markdown: headings per category depth, codes as bullets.
+    - "md": Markdown: codes without a category first, under their own
+      heading; then each category as a heading by its depth, its own
+      codes as bullets directly under it, before its sub-categories;
+      a sub-code's bullet indented under its parent code's.
     All files are UTF-8 with BOM (QualCoder's export encoding).
 
     Args:
@@ -15242,10 +15353,10 @@ def export_codebook(output_path: str, format: str = "csv",
         _write_csv_file(out_file, rows, quote_all=False,
                         sanitize=sanitize_formulas)
     else:
-        lines = [f"Codebook: {project}", ""]
-        for depth, kind, item in _codebook_tree(ro_db):
-            memo = item.get("memo") or ""
-            if format == "txt":
+        if format == "txt":
+            lines = [f"Codebook: {project}", ""]
+            for depth, kind, item in _codebook_tree(ro_db):
+                memo = item.get("memo") or ""
                 prefix = "..." * depth
                 if kind == "category":
                     n_cats += 1
@@ -15256,23 +15367,10 @@ def export_codebook(output_path: str, format: str = "csv",
                                  f"Count: {freq.get(item['id'], 0)}")
                 if include_memos and memo:
                     lines.append(f"{prefix}MEMO: {memo}")
-            else:  # md
-                if kind == "category":
-                    n_cats += 1
-                    lines.append(f"{'#' * min(depth + 2, 6)} {item['name']}")
-                    if include_memos and memo:
-                        lines.append(f"> {memo}")
-                    lines.append("")
-                else:
-                    n_codes += 1
-                    color = f" `{item['color']}`" if item.get("color") else ""
-                    lines.append(f"- **{item['name']}**{color}: "
-                                 f"{freq.get(item['id'], 0)} coding(s)")
-                    if include_memos and memo:
-                        lines.append(f"  > {memo}")
-        if format == "md":
-            lines.insert(0, f"# Codebook: {project}")
-            del lines[1]
+        else:  # md, its own walk (v0.14, claims audit item 16)
+            md_lines, n_cats, n_codes = _codebook_markdown(
+                ro_db, freq, include_memos)
+            lines = [f"# Codebook: {project}", ""] + md_lines
         with open(out_file, "w", encoding="utf-8-sig") as fh:
             fh.write("\n".join(lines) + "\n")
 

@@ -706,3 +706,101 @@ class TestCooccurrenceIsQualCodersRelationRule:
 
     def test_overlap_and_inclusion_still_count(self, spans):
         assert _together(3, 0) == {"Unused": 1}
+
+
+# ===========================================================================
+# Audit item 16: three exports say what they hold
+# ===========================================================================
+
+import zipfile  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+
+
+class TestExportsSayWhatTheyHold:
+
+    def _codings(self, folder, cid, n):
+        sql(folder, "UPDATE source SET fulltext = ? WHERE id = 2",
+            ("y" * (n + 10),))
+        conn = sqlite3.connect(str(Path(folder) / "data.qda"))
+        conn.executemany(
+            "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, "
+            "date, memo) VALUES (?, 2, 'y', ?, ?, 'TestCoder', "
+            "'2024-01-15', '')", [(cid, i, i + 1) for i in range(n)])
+        conn.commit()
+        conn.close()
+
+    def test_a_code_report_past_1000_segments_says_so(
+            self, setup_server, qualcoder_db_path):
+        # Coping has 1 coding in the fixture; 1,000 more make 1,001
+        self._codings(qualcoder_db_path, 2, 1000)
+        out = host("export_code_report", code_name="Coping")
+        assert out["segments_returned"] == 1000
+        assert out["segments_total"] == 1001
+        assert out["truncated"] is True
+        assert "get_coded_segments" in out["note"]
+
+    def test_a_code_report_within_the_limit_is_whole(self, setup_server):
+        out = host("export_code_report", code_name="Stress")
+        assert (out["segments_returned"], out["segments_total"],
+                out["truncated"]) == (1, 1, False)
+        assert "note" not in out
+
+    def test_the_refi_note_agrees_with_the_file(self, setup_server,
+                                                tmp_path):
+        path = tmp_path / "p.qdpx"
+        out = host("export_refi_qda", output_path=str(path))
+        assert "cases, annotations and journals are not" in out["note"]
+        with zipfile.ZipFile(path) as z:
+            name = next(n for n in z.namelist() if n.endswith(".qde"))
+            root = ET.fromstring(z.read(name))
+        parents = [e.get("name") for e in root.iter()
+                   if e.tag.endswith("Code") and e.get("isCodable") == "false"]
+        assert parents == ["Category A"]
+        assert "categories above the exported codes are included" in \
+            out["note"]
+        assert "Categories, cases" not in out["note"]
+
+    def test_the_markdown_codebook_puts_codes_where_they_belong(
+            self, tmp_path):
+        """A top-level code sorting after a category, a code sorting
+        after a sub-category, and a sub-code (v17)."""
+        saved = (server.db, server.current_project_path)
+        folder = make_project(tmp_path, "v17")
+        sql(folder, "INSERT INTO code_cat VALUES (2, 'B sub', '', 'V', "
+                    "'2024-01-15', 1)")
+        sql(folder, "INSERT INTO code_name (cid, name, memo, catid, owner, "
+                    "date, color) VALUES (5, 'Zeta top-level', '', NULL, "
+                    "'V', '2024-01-15', '#111111')")
+        sql(folder, "INSERT INTO code_name (cid, name, memo, catid, owner, "
+                    "date, color) VALUES (6, 'Inner', '', 2, 'V', "
+                    "'2024-01-15', '#222222')")
+        add_subcode(folder, 10, "Acute stress", supercid=1)
+        try:
+            server.db = None
+            assert json.loads(server.select_project(str(folder)))["success"]
+            out = host("export_codebook", output_path=str(tmp_path / "c.md"),
+                       format="md")
+            lines = Path(out["output_path"]).read_text(
+                encoding="utf-8-sig").splitlines()
+        finally:
+            if server.db is not None:
+                server.db.close()
+            server.db, server.current_project_path = saved
+        heading_of = {}
+        current = None
+        for line in lines:
+            if line.startswith("#"):
+                current = line
+            elif line.lstrip().startswith("- **"):
+                heading_of[line.split("**")[1]] = (current, line)
+        assert heading_of["Zeta top-level"][0] == \
+            "## Codes without a category"
+        assert heading_of["Stress"][0] == "## Category A"
+        assert heading_of["Coping"][0] == "## Category A"
+        assert heading_of["Inner"][0] == "### B sub"
+        # The sub-code is indented under its parent, in its parent's place
+        assert heading_of["Acute stress"][1].startswith("  - **Acute stress")
+        bullets = [line for line in lines if line.lstrip().startswith("- **")]
+        assert bullets.index(heading_of["Acute stress"][1]) == \
+            bullets.index(heading_of["Stress"][1]) + 1
+        assert (out["codes"], out["categories"]) == (5, 2)

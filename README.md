@@ -930,7 +930,7 @@ carries the complete list.
 - `get_coded_segments(code_id, limit, coder, strategy, max_chars, file_ids, cursor)` - Segments for a code, sampled by strategy (`by_document`, `diverse_by_document`, `recent_first`, `sequential`) under an optional character budget; `codings_not_shown` counts the code's region codings (areas on PDF pages or images) and audio/video codings in the same scope, which a text read does not show
 - `get_coding_frequencies(coder)` - Coding statistics: text codings per code, with `codings_not_counted` giving the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
 - `search_memos(query, limit)` - Search every kind of note (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type
-- `export_code_report(code_name)` - Detailed code report returned into the conversation (public memo text only)
+- `export_code_report(code_name)` - Detailed code report returned into the conversation (public memo text only), with up to 1,000 of the code's text segments; `segments_total` and `truncated` say when there are more, which `get_coded_segments` pages through
 - `get_project_summary()` - Comprehensive project overview, naming any PDF with no usable text and counting the region and audio/video codings the text statistics leave out
 
 On projects with the coder-visibility capability (QualCoder 3.8.2 and
@@ -1007,7 +1007,7 @@ still answers empty, and that answer is a finding.
 
 **Interchange & Report Exports (exported files keep full memos, private sections included):**
 - `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA
-- `export_codebook(output_path, format, include_memos, sanitize_formulas, overwrite)` - Codebook (codes and category tree) as CSV, txt or Markdown, matching QualCoder's Codebook export
+- `export_codebook(output_path, format, include_memos, sanitize_formulas, overwrite)` - Codebook (codes and category tree) as CSV, txt or Markdown, matching QualCoder's Codebook export; in Markdown the codes without a category come first under their own heading, each category's codes directly under its heading, and a sub-code indented under its parent
 - `export_coded_segments_report(output_path, code_names, case_names, coder, file_ids, search_text, important, include_variables, format, sanitize_formulas, overwrite)` - QualCoder's Coding Report as a file
 - `export_frequencies_csv(output_path, sanitize_formulas, overwrite)` - Code frequencies table as CSV
 - `export_case_code_matrix_csv(output_path, sanitize_formulas, overwrite)` - Case by code cross-tab as CSV

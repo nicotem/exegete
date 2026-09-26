@@ -387,6 +387,22 @@ search or a silent limit.
   coding to the start of the later is at most N, overlapping codings
   counting with a gap of 0. How the pairs are counted still differs
   from QualCoder's co-occurrence report, as the description says.
+- **Three exports say what they hold.** `export_code_report` said it
+  held "all coded segments" and stopped at 1,000 without a word, while
+  its own statistics gave the full count; it now says "up to 1,000",
+  and the answer carries `segments_returned`, `segments_total` and
+  `truncated`, with a note pointing to `get_coded_segments` for the
+  rest. `export_refi_qda`'s answer said categories were not included,
+  while the file nests them; it now says the categories above the
+  exported codes are included as non-codable parent codes, and cases,
+  annotations and journals are not. `export_codebook(format="md")` put
+  a top-level code that sorts after a category under that category's
+  heading, a code that sorts after a sub-category under the
+  sub-category's, and a sub-code beside its parent: it now lists the
+  codes without a category first under their own heading, each
+  category's own codes directly under its heading before its
+  sub-categories, and each sub-code indented under its parent. The csv
+  and txt forms, which were right, are unchanged.
 
 ## [0.13.0-alpha] - 2026-09-25
 

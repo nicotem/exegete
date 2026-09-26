@@ -356,6 +356,14 @@ search or a silent limit.
   QualCoder; `export_coded_segments_report` refuses an unknown file id
   too, and writes no file. A known id, name or coder with nothing in
   scope still answers empty or zero.
+- **"Ignores case" holds in every alphabet.** `search_coded_text`,
+  `query_by_attribute`'s `contains` and `search_memos` compared with
+  SQLite's `LIKE`, which folds only the letters A to Z: "über" did not
+  find "Über", "école" did not find "École", "ärzt" did not find
+  "Ärztin". They now compare by Python's Unicode case folding after
+  normalisation, for the match and for the count, the same on every
+  platform's SQLite, so "strasse" also finds "Straße". QualCoder's own
+  searches use `LIKE`; this is a departure in the researcher's favour.
 
 ## [0.13.0-alpha] - 2026-09-25
 

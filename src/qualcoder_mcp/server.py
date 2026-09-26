@@ -3828,7 +3828,11 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
     so it survives a restart and works from a second host.
 
     Args:
-        query: The text to search for (case-insensitive substring match)
+        query: The text to search for (a substring; letter case is
+               ignored in every alphabet, by Unicode case folding, so
+               "über" finds "Über" and "strasse" finds "Straße". A
+               departure in your favour from QualCoder's own searches,
+               which ignore case for the letters A to Z only)
         code_name: Optional - filter results to only segments coded with
                    this code. The same name after spacing and Unicode form
                    are normalised is used first, otherwise one that
@@ -4497,7 +4501,9 @@ def search_memos(query: str, limit: int = 50) -> str:
     override.
 
     Args:
-        query: The text to search for in memos
+        query: The text to search for in memos (a substring; letter case
+               is ignored in every alphabet, by Unicode case folding, so
+               "école" finds "École")
         limit: Maximum number of results to return (default 50)
 
     Returns:
@@ -5080,7 +5086,8 @@ def query_by_attribute(
         operator: 'equals' (exact match, default; numeric attributes
                   compare numerically so "5" finds a stored "5.0", and
                   "" finds cases/files whose attribute is unset),
-                  'contains' (case-insensitive substring), or
+                  'contains' (substring; letter case ignored in every
+                  alphabet, by Unicode case folding), or
                   'gt'/'gte'/'lt'/'lte' (numeric comparisons of the
                   values that are finite numbers, on a character
                   attribute too; a value that is not a number, such as

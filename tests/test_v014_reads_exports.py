@@ -514,3 +514,77 @@ class TestAHiddenCoderIsNeverNamedInARefusal:
         # bypass), not refused
         exact = host("get_coding_frequencies", coder=HIDDEN)
         assert "error" not in exact, exact
+
+
+# ===========================================================================
+# Audit item 13: "ignores case" holds in every alphabet (Unicode case
+# folding in Python, independent of the platform's SQLite)
+# ===========================================================================
+
+import unicodedata  # noqa: E402
+
+
+def fold_text(text):
+    """The oracle: Python's own Unicode case folding after NFC, written
+    here rather than imported, so the test holds the rule itself."""
+    return unicodedata.normalize(
+        "NFC", unicodedata.normalize("NFC", text).casefold())
+
+PAIRS = [("über", "Über alles"), ("école", "École de Paris"),
+         ("ärzt", "Die Ärztin kam"), ("strasse", "Die Straße")]
+
+
+@pytest.fixture
+def accented(setup_server, qualcoder_db_path):
+    """File 3 holds the four texts; each is coded with Stress, carries a
+    case attribute value, and is a file memo."""
+    folder = qualcoder_db_path
+    text = " | ".join(t for _, t in PAIRS)
+    sql(folder, "INSERT INTO source (id, name, fulltext, memo, owner, date) "
+                "VALUES (3, 'de.txt', ?, '', 'TestCoder', '2024-01-15')",
+        (text,))
+    sql(folder, "INSERT INTO attribute_type VALUES ('Beruf', '2024-01-15', "
+                "'TestCoder', '', 'case', 'character')")
+    for n, (_, phrase) in enumerate(PAIRS):
+        start = text.index(phrase)
+        sql(folder, "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                    "owner, date, memo) VALUES (1, 3, ?, ?, ?, 'TestCoder', "
+                    "'2024-01-15', '')", (phrase, start, start + len(phrase)))
+        sql(folder, "INSERT INTO cases VALUES (?, ?, '', 'TestCoder', "
+                    "'2024-01-15')", (10 + n, f"P{n}"))
+        sql(folder, "INSERT INTO attribute (name, attr_type, value, id, "
+                    "date, owner) VALUES ('Beruf', 'case', ?, ?, "
+                    "'2024-01-15', 'TestCoder')", (phrase, 10 + n))
+        sql(folder, "INSERT INTO source (id, name, fulltext, memo, owner, "
+                    "date) VALUES (?, ?, 'x', ?, 'TestCoder', '2024-01-15')",
+            (20 + n, f"m{n}.txt", phrase))
+    return folder
+
+
+class TestCaseIsIgnoredInEveryAlphabet:
+
+    @pytest.mark.parametrize("probe,phrase", PAIRS)
+    def test_search_coded_text(self, accented, probe, phrase):
+        out = host("search_coded_text", query=probe)
+        texts = [r["text"] for r in out["results"]]
+        assert texts == [phrase], out
+        assert out["total_results"] == 1
+        # The oracle is Python's own fold, not the platform's SQLite
+        assert fold_text(probe) in fold_text(texts[0])
+
+    @pytest.mark.parametrize("probe,phrase", PAIRS)
+    def test_query_by_attribute_contains(self, accented, probe, phrase):
+        out = host("query_by_attribute", attr_name="Beruf", attr_value=probe,
+                   operator="contains")
+        assert [r["attribute_value"] for r in out["results"]] == [phrase]
+
+    @pytest.mark.parametrize("probe,phrase", PAIRS)
+    def test_search_memos(self, accented, probe, phrase):
+        out = host("search_memos", query=probe)
+        assert [r["memo"] for r in out["results"]
+                if r["type"] == "file"] == [phrase], out
+
+    def test_percent_and_underscore_stay_literal(self, accented):
+        assert host("search_coded_text", query="%")["results"] == []
+        assert host("query_by_attribute", attr_name="Beruf", attr_value="_",
+                    operator="contains")["results"] == []

@@ -253,6 +253,40 @@ def normalize_name(name: Any) -> str:
     return " ".join(name.split())
 
 
+def fold_text(text: str) -> str:
+    """Text as the case-insensitive searches compare it (v0.14).
+
+    Unicode NFC, then Python's case folding, then NFC again, the fold
+    `documents_name_key` applies to file names: every alphabet's
+    capitals meet their small letters, and "Straße" meets "strasse".
+    """
+    return unicodedata.normalize(
+        "NFC", unicodedata.normalize("NFC", text).casefold())
+
+
+def text_contains(haystack: Any, needle: Any) -> bool:
+    """Whether `needle` occurs in `haystack`, letter case ignored in every
+    alphabet (claims audit item 13).
+
+    SQLite's LIKE, which search_coded_text, query_by_attribute's
+    'contains' and search_memos used, folds only the 26 ASCII letters:
+    "über" did not find "Über", "école" did not find "École". QualCoder's
+    own searches use LIKE and share that limit (report_codes.py:1723,
+    :1852 at 9bddf17); this is a named departure in the researcher's
+    favour. `%` and `_` are ordinary characters here.
+    """
+    if not isinstance(haystack, str) or not isinstance(needle, str):
+        return False
+    return fold_text(needle) in fold_text(haystack)
+
+
+def _sql_text_contains(haystack: Any, needle: Any) -> int:
+    """`text_contains` as a function SQL can call, registered on every
+    connection this module opens as `qc_text_contains`. It runs in this
+    process and changes nothing in the project file."""
+    return 1 if text_contains(haystack, needle) else 0
+
+
 def finite_number(text: Any) -> Optional[float]:
     """The number an attribute value is, or None when it is not one.
 
@@ -2629,6 +2663,15 @@ class QualcoderDatabase:
             else:
                 self.conn = sqlite3.connect(str(self.db_path), uri=False)
             self.conn.row_factory = sqlite3.Row  # Access columns by name
+            # The case-insensitive searches' comparison (v0.14, claims
+            # audit item 13), in Python on every platform's SQLite
+            try:
+                self.conn.create_function("qc_text_contains", 2,
+                                          _sql_text_contains,
+                                          deterministic=True)
+            except (TypeError, sqlite3.NotSupportedError):
+                self.conn.create_function("qc_text_contains", 2,
+                                          _sql_text_contains)
             # Enable foreign key constraints
             self.conn.execute("PRAGMA foreign_keys = ON")
             # Set busy timeout for concurrent access (5 seconds)
@@ -4633,7 +4676,8 @@ class QualcoderDatabase:
         """Search for coded text segments.
 
         Args:
-            query: Text to search for (wildcards % and _ are escaped)
+            query: Text to search for (letter case ignored in every
+                   alphabet, `text_contains`; % and _ are literal)
             code_name: Optional code name to filter by
             limit: Maximum results to return (max 5000)
             coder: Explicit coder filter; reads the BASE table filtered
@@ -4654,13 +4698,12 @@ class QualcoderDatabase:
         """
         # Validate and escape inputs
         query = validate_string(query, "query")
-        escaped_query = escape_like_pattern(query)
         limit = validate_limit(limit)
         coder = self._validate_coder(coder)
         source = self.code_text_source(coder is None)
 
-        where = ["ct.seltext LIKE ? ESCAPE '\\'"]
-        params: List[Any] = [f"%{escaped_query}%"]
+        where = ["qc_text_contains(ct.seltext, ?)"]
+        params: List[Any] = [query]
         if code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
@@ -4719,11 +4762,10 @@ class QualcoderDatabase:
                                  coder: Optional[str] = None) -> int:
         """How many rows the same search matches in total (one COUNT)."""
         query = validate_string(query, "query")
-        escaped_query = escape_like_pattern(query)
         coder = self._validate_coder(coder)
         source = self.code_text_source(coder is None)
-        where = ["ct.seltext LIKE ? ESCAPE '\\'"]
-        params: List[Any] = [f"%{escaped_query}%"]
+        where = ["qc_text_contains(ct.seltext, ?)"]
+        params: List[Any] = [query]
         if code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
@@ -5042,7 +5084,8 @@ class QualcoderDatabase:
         """Search for memos and annotations.
 
         Args:
-            query: Text to search for (wildcards % and _ are escaped)
+            query: Text to search for (letter case ignored in every
+                   alphabet, `text_contains`; % and _ are literal)
             limit: Maximum results (max 5000)
 
         Returns:
@@ -5054,14 +5097,14 @@ class QualcoderDatabase:
             RuntimeError: If database operation fails
         """
         query = validate_string(query, "query")
-        escaped_query = escape_like_pattern(query)
         limit = validate_limit(limit)
 
         results = []
 
         # Memo privacy ('#####'): match against the PUBLIC part only and
-        # return the public part only. The SQL LIKE over the full column
-        # is a cheap SUPERSET filter and carries NO LIMIT: the cap is
+        # return the public part only. The SQL filter over the full column
+        # (the same fold, `qc_text_contains`) is a SUPERSET filter, since
+        # the public part is a prefix of the column, and carries NO LIMIT: the cap is
         # enforced in Python only after the public-part check, so a row
         # whose match lives only in the private suffix never consumes
         # result budget. result_count therefore depends on public
@@ -5069,14 +5112,10 @@ class QualcoderDatabase:
         # exhaustive, as on the pre-privacy code), which is what keeps
         # the search from being a count oracle on private content
         # (QA round 1, F1).
-        query_folded = query.lower()
-
         def _public_hit(raw_memo):
             """(matches, public_text) for one candidate memo."""
             public = extract_ai_memo(raw_memo or "")
-            return query_folded in public.lower(), public
-
-        pattern = f"%{escaped_query}%"
+            return text_contains(public, query), public
 
         try:
             # Search code memos (cursor iterated, cap applied in Python
@@ -5090,9 +5129,9 @@ class QualcoderDatabase:
                     owner,
                     date
                 FROM code_name
-                WHERE memo LIKE ? ESCAPE '\\'
+                WHERE qc_text_contains(memo, ?)
                 ORDER BY cid
-            """, (pattern,))
+            """, (query,))
 
             for row in cursor:
                 matches, public_memo = _public_hit(row["memo"])
@@ -5120,9 +5159,9 @@ class QualcoderDatabase:
                         owner,
                         date
                     FROM source
-                    WHERE memo LIKE ? ESCAPE '\\'
+                    WHERE qc_text_contains(memo, ?)
                     ORDER BY id
-                """, (pattern,))
+                """, (query,))
 
                 for row in cursor:
                     matches, public_memo = _public_hit(row["memo"])
@@ -5158,9 +5197,9 @@ class QualcoderDatabase:
                         a.pos1
                     FROM {annotation_source} a
                     JOIN source s ON a.fid = s.id
-                    WHERE a.memo LIKE ? ESCAPE '\\'
+                    WHERE qc_text_contains(a.memo, ?)
                     ORDER BY a.anid
-                """, (pattern,))
+                """, (query,))
 
                 for row in cursor:
                     matches, public_memo = _public_hit(row["memo"])
@@ -5666,7 +5705,7 @@ class QualcoderDatabase:
     # found "unknown" and "n/a" on a character attribute.
     _ATTRIBUTE_OPERATORS = {
         "equals": "a.value = ?",
-        "contains": "a.value LIKE ? ESCAPE '\\'",
+        "contains": "qc_text_contains(a.value, ?)",
         "gt": None,
         "gte": None,
         "lt": None,
@@ -5750,7 +5789,7 @@ class QualcoderDatabase:
                     f"'{attr_value}'"
                 )
         elif operator == "contains":
-            bound.append(f"%{escape_like_pattern(attr_value)}%")
+            bound.append(attr_value)
         elif (operator == "equals" and attr_value != ""
               and value_type == "numeric"
               and finite_number(attr_value) is not None):

@@ -1401,6 +1401,62 @@ def _existing_case_result(rows, name: str, *, memo: Optional[str]):
     return result
 
 
+def _resolve_case_argument(cases, case_id: Optional[int],
+                           case_name: Optional[str]):
+    """The case a `case_id` and/or `case_name` argument names (v0.14).
+
+    A name is resolved by the rule create_case uses to find an existing
+    case (`_find_existing_by_name`): the same name after spacing and
+    Unicode form are normalised first, then letter case, and two or more
+    matches refused with their ids. It used to be the first case whose
+    `lower()` matched, from a list in which capitals sort first, so
+    "dana" linked a file to "Dana" when both exist (QualCoder keeps case
+    names unique byte for byte only), "DANA" was not refused as
+    ambiguous, and "Ann  Lee" was not found beside "Ann Lee". Given both
+    arguments, they must name the same case; an id that disagrees with
+    the name is refused, never silently preferred.
+
+    No parity question: QualCoder's own windows pick a case from a list,
+    and QualCoder 4.0's AI server names an existing case by its id.
+
+    Returns:
+        (case_row, match, None) or (None, None, error_dict). `match` is
+        "id", "exact" or "case_insensitive".
+    """
+    by_id = None
+    if case_id is not None:
+        by_id = next((c for c in cases if c["id"] == case_id), None)
+        if by_id is None:
+            return None, None, {"error": f"Case ID {case_id} does not exist"}
+    if case_name is None:
+        return by_id, "id", None
+    row, match, err = _find_existing_by_name(
+        cases, str(case_name), "case", "cases")
+    if err is not None:
+        if by_id is not None and any(
+                c["id"] == by_id["id"] for c in err.get("candidates", [])):
+            # The name is one of several spellings; the id picks one of
+            # them, so the two arguments agree.
+            return by_id, "id", None
+        err["hint"] = ("Give case_id to choose one of the candidates, or "
+                       "the exact spelling of the one you mean.")
+        return None, None, err
+    if row is None:
+        return None, None, {
+            "error": f"Case '{case_name}' not found",
+            "available_cases": sorted(c["name"] for c in cases)[:50],
+        }
+    if by_id is not None and row["id"] != by_id["id"]:
+        return None, None, {
+            "error": f"case_id {case_id} is the case '{by_id['name']}', but "
+                     f"case_name '{case_name}' names the case "
+                     f"'{row['name']}' (id {row['id']}). Nothing was "
+                     f"changed: give one of the two, or both naming the "
+                     f"same case.",
+        }
+    return row, match, None
+
+
 def _color_disclosure(requested: Optional[str], stored: Optional[str]) -> Dict[str, Any]:
     """color_requested / color_snapped fields for a result that stores a
     colour; empty when no colour was supplied. Case-only canonicalisation
@@ -7072,8 +7128,14 @@ def import_text_file(
                (set_project_ai_coder_name). A human coder's name is
                never used.
         create_backup: Create timestamped backup before writing (default: True)
-        case_name: Optional existing case to link the new file to
-                   (matched case-insensitively)
+        case_name: Optional existing case to link the new file to.
+                   The same name after spacing and Unicode form are
+                   normalised is used first; otherwise one that differs
+                   only by letter case. When two or more cases match
+                   (QualCoder allows "Dana" beside "dana") nothing is
+                   imported and the candidates' ids are listed; link by
+                   id afterwards with link_file_to_case. The answer's
+                   case_match says which rule matched
         apply_project_pseudonyms: Apply the project's own pseudonyms.json
                    to the text before storing it, which is what QualCoder
                    does to every text file IT imports
@@ -7188,17 +7250,12 @@ def import_text_file(
     # Resolve the target case (if any) before upgrading — an unknown case
     # must not cost a backup copy
     case = None
+    case_match = None
     if case_name is not None:
-        cases = get_db().list_cases()
-        case = next(
-            (c for c in cases if c["name"].lower() == str(case_name).lower()),
-            None
-        )
-        if case is None:
-            return json.dumps({
-                "error": f"Case '{case_name}' not found",
-                "available_cases": sorted(c["name"] for c in cases)[:50]
-            })
+        case, case_match, case_error = _resolve_case_argument(
+            get_db().list_cases(), None, case_name)
+        if case_error is not None:
+            return json.dumps(case_error, indent=2)
 
     # Refuse on pre-v14 schemas and while QualCoder has the project open
     lock_error = _write_gate_error()
@@ -7303,6 +7360,7 @@ def import_text_file(
     }
     if case_link is not None:
         output["linked_to_case"] = case_link
+        output["case_match"] = case_match
     if pseudonym_report is not None:
         output["project_pseudonyms"] = pseudonym_report
     if backup_path:
@@ -7337,7 +7395,15 @@ def link_file_to_case(
     Args:
         file_id: The source file to link
         case_id: The case to link to (or use case_name)
-        case_name: Case name, matched case-insensitively (or use case_id)
+        case_name: Case name (or use case_id). The same name after
+                   spacing and Unicode form are normalised is used first;
+                   otherwise one that differs only by letter case. When
+                   two or more cases match (QualCoder allows "Dana"
+                   beside "dana") nothing is linked and the candidates'
+                   ids are listed. Given with case_id, both must name the
+                   same case, or nothing is linked. The answer's
+                   case_match says which rule matched ("id", "exact" or
+                   "case_insensitive")
         create_backup: Create timestamped backup before writing (default: True)
 
     Returns:
@@ -7351,21 +7417,10 @@ def link_file_to_case(
     # Resolve the case
     if case_id is None and case_name is None:
         return json.dumps({"error": "Provide case_id or case_name"})
-    cases = ro_db.list_cases()
-    if case_id is not None:
-        case = next((c for c in cases if c["id"] == case_id), None)
-        if case is None:
-            return json.dumps({"error": f"Case ID {case_id} does not exist"})
-    else:
-        case = next(
-            (c for c in cases if c["name"].lower() == str(case_name).lower()),
-            None
-        )
-        if case is None:
-            return json.dumps({
-                "error": f"Case '{case_name}' not found",
-                "available_cases": sorted(c["name"] for c in cases)[:50]
-            })
+    case, case_match, case_error = _resolve_case_argument(
+        ro_db.list_cases(), case_id, case_name)
+    if case_error is not None:
+        return json.dumps(case_error, indent=2)
 
     # Validate the file on the read-only connection
     file_content = ro_db.get_file_content(file_id)
@@ -7399,6 +7454,7 @@ def link_file_to_case(
             "message": f"Linked '{link['file_name']}' to case "
                        f"'{link['case_name']}'",
             "link": link,
+            "case_match": case_match,
         }
 
     result = _perform_write(_op, create_backup=create_backup,

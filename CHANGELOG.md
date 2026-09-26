@@ -285,6 +285,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on Python 3.11.13, in the repository's `.venv/`, 182,532, 61,185 and
   185,150.
 
+### Changed: reads, queries and exports say what they found
+
+What the claims audit found in the reads, the queries and the exports:
+answers that looked like findings but came from a wrong name, a partial
+search or a silent limit.
+
+- **A case name finds the case it names.** `link_file_to_case` and
+  `import_text_file` resolve `case_name` by the rule `create_case` uses:
+  the same name after spacing and Unicode form are normalised first,
+  then one that differs only by letter case. With "Dana" and "dana" both
+  in the project, "dana" now links to "dana" (it used to link to
+  "Dana"), and "DANA" is refused with both ids instead of picking one;
+  "Ann  Lee" with two spaces finds "Ann Lee". Given both `case_id` and a
+  `case_name` that names another case, `link_file_to_case` refuses
+  instead of using the id without a word. The answer's `case_match`
+  says which rule matched.
+
 ## [0.13.0-alpha] - 2026-09-25
 
 v0.13, the pseudonymisation follow-ups, as ruled from 2026-09-22 to

@@ -656,3 +656,53 @@ class TestSearchMemosSearchesEveryKind:
         assert out["results"] == []
         assert HIDDEN not in json.dumps(out)
         assert out["coder_visibility"]["hidden_coder_filter"] == "applied"
+
+
+# ===========================================================================
+# Audit item 15: the co-occurrence rule is QualCoder's (at 0, a shared
+# character; at N, the gap between the codings)
+# ===========================================================================
+
+@pytest.fixture
+def spans(setup_server, qualcoder_db_path):
+    """Trust (3) at 0-215 ends 5 characters before Stress (1) at 220-230;
+    Coping (2) at 230-240 touches Stress's end; Unused (4) at 100-110
+    lies inside Trust."""
+    folder = qualcoder_db_path
+    sql(folder, "DELETE FROM code_text")
+    sql(folder, "INSERT INTO code_name VALUES (3, 'Trust', '', 1, "
+                "'TestCoder', '2024-01-15', '#0000FF')")
+    sql(folder, "INSERT INTO code_name VALUES (4, 'Unused', '', 1, "
+                "'TestCoder', '2024-01-15', '#00FFFF')")
+    sql(folder, "UPDATE source SET fulltext = ? WHERE id = 1", ("x" * 300,))
+    for cid, p0, p1 in ((3, 0, 215), (1, 220, 230), (2, 230, 240),
+                        (4, 100, 110)):
+        sql(folder, "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                    "owner, date, memo) VALUES (?, 1, ?, ?, ?, 'TestCoder', "
+                    "'2024-01-15', '')", (cid, "x" * (p1 - p0), p0, p1))
+    return folder
+
+
+def _together(code_id, window):
+    out = host("find_cooccurring_codes", code_id=code_id,
+               window_size=window)
+    rows = out if isinstance(out, list) else out["cooccurrences"]
+    return {r["code_name"]: r["cooccurrence_count"] for r in rows}
+
+
+class TestCooccurrenceIsQualCodersRelationRule:
+
+    def test_touching_codings_are_not_an_overlap(self, spans):
+        assert "Coping" not in _together(1, 0)
+
+    def test_a_long_coding_ending_near_is_within_the_window(self, spans):
+        """Trust ends 5 characters before Stress begins; their starts are
+        220 apart, which is what the window used to measure."""
+        assert _together(1, 10)["Trust"] == 1
+        assert "Trust" not in _together(1, 4)
+
+    def test_the_gap_counts_touching_codings_as_distance_zero(self, spans):
+        assert _together(1, 1)["Coping"] == 1
+
+    def test_overlap_and_inclusion_still_count(self, spans):
+        assert _together(3, 0) == {"Unused": 1}

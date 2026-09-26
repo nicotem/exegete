@@ -5742,8 +5742,17 @@ def find_cooccurring_codes(code_id: int, window_size: int = 0,
     Args:
         code_id: The numeric ID of the code to analyse
         window_size: How to define "co-occurrence":
-                    - 0 (default): Codes that overlap the same text segment
-                    - N > 0: Codes within N characters of each other
+                    - 0 (default): codings that share at least one
+                      character with a coding of this code (two codings
+                      that only touch, one ending where the other
+                      begins, do not)
+                    - N > 0: codings whose gap to a coding of this code,
+                      from the end of the earlier to the start of the
+                      later, is at most N characters (overlapping
+                      codings count, with a gap of 0)
+                    Which pairs are together is QualCoder's own rule
+                    (its co-occurrence report's overlap and proximity);
+                    how they are counted is not (see above)
         coder: Optional coder name (exact); analyses that coder's rows
                from the base tables, bypassing the visibility filter. A
                name with no codings anywhere in the project is refused,

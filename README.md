@@ -960,7 +960,7 @@ still answers empty, and that answer is a finding.
 - `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte` compare only values that are finite numbers, on a character attribute too, and count the rest in `values_left_out` (so "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would)
 
 **Co-occurrence Analysis:**
-- `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together
+- `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. This is QualCoder's own rule for overlap and proximity; the counts are not its co-occurrence report's
 - `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only
 
 **Case-Code Matrix & Comparative Analysis:**

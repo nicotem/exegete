@@ -376,6 +376,17 @@ search or a silent limit.
   leave out a coder hidden in QualCoder. The pseudonymisation preview's
   scope note, which said `search_memos` reaches three of its twelve note
   fields, now says it reaches all twelve.
+- **The co-occurrence window is a distance, as QualCoder measures it.**
+  `find_cooccurring_codes` counted, at `window_size` 0, two codings that
+  only touch (one ending where the other begins, no character shared)
+  as overlapping, and at N compared where the two codings START, so a
+  long coding ending five characters before another began was not
+  found at N=10. It now follows QualCoder's own relation rule
+  (`report_cooccurrence.py`, the overlap and proximity test): at 0, at
+  least one shared character; at N, the gap from the end of the earlier
+  coding to the start of the later is at most N, overlapping codings
+  counting with a gap of 0. How the pairs are counted still differs
+  from QualCoder's co-occurrence report, as the description says.
 
 ## [0.13.0-alpha] - 2026-09-25
 

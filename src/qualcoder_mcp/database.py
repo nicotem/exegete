@@ -6023,10 +6023,19 @@ class QualcoderDatabase:
         # schema is QualCoder's and must not gain indexes, so the join is
         # built in Python instead: one pass to group rows by fid, then a
         # sorted-array bisect per candidate row — O(n log n) per file.
-        # Semantics are identical to the old SQL: window_size == 0 counts
-        # closed-interval intersections (the three OR conditions reduce to
-        # o.pos0 <= t.pos1 AND o.pos1 >= t.pos0); window_size > 0 counts
-        # |o.pos0 - t.pos0| <= window; NULL positions never match.
+        # The relation rule is QualCoder's own (v0.14, claims audit item
+        # 15; report_cooccurrence.py:1392-1406 at 9bddf17): spans are
+        # half-open, so window_size == 0 counts a pair that shares at
+        # least one character (two codings that only touch are not an
+        # overlap there either: "<= so touching segments (0 shared chars)
+        # are not counted as Overlap"), and window_size N counts a pair
+        # whose gap, from the end of the earlier coding to the start of
+        # the later, is at most N characters (0 when they overlap), the
+        # distance QualCoder measures for proximity. It used to count
+        # closed intervals at 0 (touching codings counted) and, at N, a
+        # pair whose START positions were at most N apart, so a long
+        # coding ending just before another began was not found. NULL
+        # positions never match.
         source = self.code_text_source(coder is None)
         owner_sql = " AND ct.owner = ?" if coder is not None else ""
         owner_inner = " AND owner = ?" if coder is not None else ""
@@ -6048,6 +6057,8 @@ class QualcoderDatabase:
                 pos0, pos1 = r["pos0"], r["pos1"]
                 if not isinstance(pos0, int) or not isinstance(pos1, int):
                     continue  # damaged row; SQL NULL comparisons never matched
+                if pos1 < pos0:
+                    continue  # damaged row: it ends before it starts
                 if r["cid"] == code_id:
                     targets_by_fid.setdefault(r["fid"], []).append((pos0, pos1))
                 elif r["cid"] is not None:
@@ -6062,13 +6073,25 @@ class QualcoderDatabase:
                 starts = sorted(p0 for p0, _ in targets)
                 ends = sorted(p1 for _, p1 in targets)
                 for cid, o0, o1 in others:
-                    if window_size == 0:
-                        # targets with pos0 <= o1, minus targets with pos1 < o0
-                        n = (bisect.bisect_right(starts, o1)
-                             - bisect.bisect_left(ends, o0))
+                    if window_size == 0 and o1 == o0:
+                        # A coding with no characters (QualCoder writes
+                        # none): the rule, pair by pair
+                        n = sum(1 for t0, t1 in targets
+                                if (t0 == o0 and t1 == o1)
+                                or not (t1 <= o0 or t0 >= o1))
+                    elif window_size == 0:
+                        # Not proximity (t1 <= o0 or t0 >= o1): at least
+                        # one shared character. Targets with t0 < o1,
+                        # minus those with t1 <= o0, a subset of them
+                        # since t0 <= t1 <= o0 < o1.
+                        n = (bisect.bisect_left(starts, o1)
+                             - bisect.bisect_right(ends, o0))
                     else:
-                        n = (bisect.bisect_right(starts, o0 + window_size)
-                             - bisect.bisect_left(starts, o0 - window_size))
+                        # Gap at most N: t0 <= o1 + N and t1 >= o0 - N.
+                        # Targets with t0 <= o1 + N, minus those with
+                        # t1 < o0 - N (a subset of them, since t0 <= t1).
+                        n = (bisect.bisect_right(starts, o1 + window_size)
+                             - bisect.bisect_left(ends, o0 - window_size))
                     if n > 0:
                         counts[cid] = counts.get(cid, 0) + n
 

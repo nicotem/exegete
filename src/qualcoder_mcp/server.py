@@ -2834,8 +2834,14 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
             return json.dumps({"error": (
                 "search_directories must be a list of folder paths, each "
                 "a full path or one starting with ~.")}, indent=2)
+        # Relative to nothing a researcher chose (the server's working
+        # directory is the host's). On Windows a path from the root with
+        # no drive letter (a leading slash or backslash) means the current
+        # drive's root, as everywhere else on Windows, and is taken as
+        # given; a drive with no root ("C:notes") is relative and refused.
         relative = [d for d in search_directories
-                    if not Path(d).expanduser().is_absolute()]
+                    if not Path(d).expanduser().is_absolute()
+                    and not Path(d).expanduser().root]
         if relative:
             return json.dumps({"error": (
                 f"search_directories holds a relative path "

@@ -875,6 +875,15 @@ class TestTextsThatSentTheAssistantNowhere:
         assert "relative path ('relative/dir')" in answer["error"]
         assert "Nothing was searched" in answer["error"]
 
+    def test_a_path_from_the_root_is_taken_on_every_platform(self):
+        """On Windows "/nowhere" has no drive letter, so it is not
+        absolute there, but it names the current drive's root and is
+        searched, not refused (found by the Windows CI jobs)."""
+        answer = json.loads(server.list_available_projects(
+            ["/qc_nowhere_at_all"]))
+        assert answer["projects"] == []
+        assert len(answer["searched"]["not_found"]) == 1
+
     def test_the_usual_places_are_reported_too(self):
         answer = json.loads(server.list_available_projects())
         assert answer["searched"]["instead_of_the_usual_places"] is False

@@ -7620,7 +7620,10 @@ class TestProjectPseudonyms:
         assert json.loads(server.get_current_project())[
             "pseudonyms_json"] == expected
         refused = call(mapping=None, use_project_pseudonyms=True)
-        assert refused == {"error": self.NOT_REGULAR}
+        # The tool's own way round it follows the reader's message
+        # (v0.14, server-wide)
+        assert refused == {"error": self.NOT_REGULAR
+                           + server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE}
 
     @POSIX_ONLY
     def test_a_directory_is_refused_value_free(self, project):

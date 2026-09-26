@@ -841,35 +841,24 @@ class TestTheConfirmArgumentIsGone:
         assert "confirm" in out["error"], out
         assert "unexpected keyword argument" in out["error"], out
 
-    def test_an_mcp_call_that_still_passes_it_is_ignored_not_refused(
+    def test_an_mcp_call_that_still_passes_it_is_refused(
             self, setup_server, qualcoder_db_path):
-        """The measured answer, and the one the CHANGELOG states.
+        """The measured answer since v0.14 (server-wide).
 
-        Not a schema error: the argument is dropped and the call
-        behaves exactly as the same call without it, which for a
-        token-gated tool with no token is the preview. Nothing is
-        written and no backup is taken, so a 0.11-era caller still
-        cannot execute by saying yes twice.
+        Until v0.14 the argument was dropped and the call behaved as the
+        same call without it (the preview). Every tool now refuses an
+        argument it does not declare, before anything runs, so a
+        0.11-era caller is told that `confirm` is gone. Nothing is
+        written and no backup is taken either way.
         """
         import asyncio
-        plain = asyncio.run(server.mcp.call_tool("delete_code",
-                                                 {"code_id": 1}))
         stale = asyncio.run(server.mcp.call_tool(
             "delete_code", {"code_id": 1, "confirm": True}))
-
-        def payload(answer):
-            blocks = answer[0] if isinstance(answer, tuple) else answer
-            return json.loads("".join(b.text for b in blocks))
-
-        one, two = payload(plain), payload(stale)
-        assert one["requires_confirmation"] is True
-        assert two["requires_confirmation"] is True
-        assert "deprecated_argument" not in two
-        # The same answer but for the token, which is minted per call.
-        for answer in (one, two):
-            answer.pop("preview_token")
-            answer["execute_with"]["arguments"].pop("preview_token")
-        assert one == two
+        blocks = stale[0] if isinstance(stale, tuple) else stale
+        answer = json.loads("".join(b.text for b in blocks))
+        assert answer["unknown_arguments"] == ["confirm"]
+        assert "delete_code has no argument 'confirm'" in answer["error"]
+        assert "preview_token" in answer["arguments"]
         assert _backups(qualcoder_db_path) == []
         assert H.query(qualcoder_db_path,
                        "SELECT COUNT(*) AS n FROM code_name WHERE cid=1"

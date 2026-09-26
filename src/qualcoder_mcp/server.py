@@ -13,6 +13,7 @@ import sqlite3
 import tempfile
 import hashlib
 import hmac
+import difflib
 import functools
 import unicodedata
 from pathlib import Path
@@ -317,8 +318,81 @@ TOOL_CHANGES = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
                                     idempotentHint=True, openWorldHint=False)
 
+def _argument_name_for_display(name: Any) -> str:
+    """An argument name as a refusal may show it: the model's own text,
+    but never a control, line-separator or bidirectional character, and
+    never more than 64 characters (the rule the last-used hint follows)."""
+    text = str(name)
+    if forbidden_display_char(text) is not None or not text.isprintable():
+        text = text.encode("unicode_escape").decode("ascii")
+    return text if len(text) <= 64 else text[:63] + "…"
+
+
+def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
+                              arguments: Any) -> Optional[str]:
+    """The refusal for arguments a tool does not declare, or None.
+
+    The argument models FastMCP builds ignore a field they do not know,
+    so a misspelt argument used to fall back to its default in silence:
+    `apply_project_pseudonym=true` imported the real names (the claims
+    audit, item 5). The declared arguments are the tool's input schema,
+    the list the host itself was given.
+    """
+    if not isinstance(arguments, dict) or not arguments:
+        return None
+    declared = list((schema or {}).get("properties", {}))
+    unknown = [key for key in arguments if key not in declared]
+    if not unknown:
+        return None
+    shown = [_argument_name_for_display(key) for key in unknown]
+    names = ", ".join(f"'{name}'" for name in shown)
+    text = (f"{tool_name} has no argument {names}; nothing was done. An "
+            f"argument a tool does not know is refused rather than ignored, "
+            f"so that a misspelt one cannot fall back to its default "
+            f"unnoticed.")
+    for key, name in zip(unknown, shown):
+        close = difflib.get_close_matches(str(key), declared, n=1,
+                                          cutoff=0.75)
+        if close:
+            text += f" Did you mean '{close[0]}' for '{name}'?"
+    text += (f" Its arguments are: {', '.join(declared)}." if declared
+             else " It takes no arguments.")
+    return json.dumps({"error": text, "unknown_arguments": shown,
+                       "arguments": declared}, indent=2)
+
+
+class _QualcoderMCP(FastMCP):
+    """FastMCP, with every tool refusing an argument it does not declare
+    (v0.14, server-wide).
+
+    The check sits on the host's own path: `call_tool` is the method the
+    MCP request handler calls, and the one this suite's host-path tests
+    call. Every tool's input schema also says so
+    (`additionalProperties: false`), for a host that checks arguments
+    before it sends them; `add_tool` is where both the decorator and
+    `_apply_toolset` register a tool, so none is missed.
+    """
+
+    def add_tool(self, fn, name=None, *args, **kwargs):
+        super().add_tool(fn, name, *args, **kwargs)
+        tool = self._tool_manager._tools.get(name or fn.__name__)
+        if tool is not None:
+            tool.parameters["additionalProperties"] = False
+
+    async def call_tool(self, name, arguments):
+        tool = self._tool_manager.get_tool(name)
+        if tool is not None:
+            refusal = unknown_arguments_refusal(tool.name, tool.parameters,
+                                                arguments)
+            if refusal is not None:
+                # The tool's own answer shape, so the host sees an
+                # ordinary refusal and nothing ran
+                return tool.fn_metadata.convert_result(refusal)
+        return await super().call_tool(name, arguments)
+
+
 # Initialize MCP server
-mcp = FastMCP("Qualcoder", instructions=SERVER_INSTRUCTIONS)
+mcp = _QualcoderMCP("Qualcoder", instructions=SERVER_INSTRUCTIONS)
 # Advertise OUR version in the MCP handshake (serverInfo.version) instead of
 # the mcp SDK's own version, which FastMCP falls back to (track3 L-1). The
 # FastMCP constructor has no version parameter in this SDK line, so set it on
@@ -3211,9 +3285,24 @@ def _set_name_warnings(ro, state, name: str,
             "Unchanged; recorded again.")
     return warnings
 
-def _pseudonyms_json_error(e: BaseException) -> str:
+# What each tool that applies the project's pseudonyms.json adds when the
+# file cannot be read (v0.14, server-wide): the reader's own message is
+# the same for every caller, and the way round it is each tool's own.
+# import_text_file has no mapping argument, so it may not advise one.
+PSEUDONYMS_JSON_ADVICE_IMPORT = (
+    " Correct the file and import again; or import without "
+    "apply_project_pseudonyms and then replace the names with "
+    "pseudonymise_source on the new file, giving the mapping in that call "
+    "(the backup it takes first then holds the text with the real names).")
+PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE = (
+    " Correct the file and call again, or give the mapping in the call "
+    "instead (mapping, with use_project_pseudonyms false).")
+
+
+def _pseudonyms_json_error(e: BaseException, advice: str = "") -> str:
     """What an answer says when the project's pseudonyms.json could not be
-    read (v0.14 fix round 1, Security secB-3).
+    read (v0.14 fix round 1, Security secB-3), with the calling tool's
+    own way round it (`advice`) when it has one.
 
     The reader's own refusals by their message, which it writes and which
     never quote a value from the file (a `ValueError`, or its own
@@ -3226,8 +3315,9 @@ def _pseudonyms_json_error(e: BaseException) -> str:
     """
     if isinstance(e, ValueError) or (isinstance(e, OSError)
                                      and e.errno is None):
-        return str(e)
-    return f"{PSEUDONYMS_JSON_NAME} could not be read ({error_label(e)})."
+        return str(e) + advice
+    return (f"{PSEUDONYMS_JSON_NAME} could not be read ({error_label(e)})."
+            + advice)
 
 
 def _pseudonyms_json_read() -> Tuple[Dict[str, Any], Optional[List[Dict]]]:
@@ -7154,8 +7244,8 @@ def import_text_file(
             validated = pseudo.validate_mapping(entries, "exact",
                                                 may_echo_names=False)
         except (ValueError, OSError, RuntimeError) as e:
-            return json.dumps({"error": _pseudonyms_json_error(e)},
-                              indent=2)
+            return json.dumps({"error": _pseudonyms_json_error(
+                e, PSEUDONYMS_JSON_ADVICE_IMPORT)}, indent=2)
         if content.startswith("﻿"):
             content = content[1:]
         content = content.replace("\r\n", "\n").replace("\r", "\n")
@@ -12994,8 +13084,8 @@ def pseudonymise_source(
             mapping, sidecar_encoding = read_project_pseudonyms(
                 _current_project_folder())
         except (ValueError, OSError, RuntimeError) as e:
-            return json.dumps({"error": _pseudonyms_json_error(e)},
-                              indent=2)
+            return json.dumps({"error": _pseudonyms_json_error(
+                e, PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE)}, indent=2)
 
     # Whether the names in this mapping are already in the conversation.
     # They are when the caller typed them; they are NOT when they were

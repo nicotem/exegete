@@ -8,10 +8,44 @@ hints other than the table's, fails.
 """
 
 import asyncio
+import json
+import sqlite3
+from pathlib import Path
 
 import pytest
+from mcp.shared.memory import create_connected_server_and_client_session
 
 import qualcoder_mcp.server as server
+from qualcoder_mcp.database import read_project_pseudonyms
+
+
+def host_session(drive):
+    """Run `drive(client)` with an MCP client connected to this server's
+    own request handlers, the path a host's calls take (the list and
+    call handlers FastMCP registers, and the argument models behind
+    them), in memory rather than over a pipe."""
+    async def run():
+        async with create_connected_server_and_client_session(
+                server.mcp._mcp_server) as client:
+            return await drive(client)
+    return asyncio.run(run())
+
+
+def text_of(result) -> str:
+    return "\n".join(getattr(block, "text", "") for block in result.content)
+
+
+def tree(root) -> dict:
+    """Every file and folder under `root`, with size and modification
+    time: a write anywhere under it shows as a difference."""
+    root = Path(root)
+    out = {}
+    for path in sorted(root.rglob("*")):
+        stat = path.stat()
+        out[str(path.relative_to(root))] = (
+            path.is_dir(), 0 if path.is_dir() else stat.st_size,
+            stat.st_mtime_ns)
+    return out
 
 
 # (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) per
@@ -128,3 +162,132 @@ class TestToolAnnotations:
     def test_no_tool_claims_the_open_world(self):
         for name, tool in _listed("lifecycle").items():
             assert tool.annotations.openWorldHint is False, name
+
+
+class TestUnknownArgumentsRefused:
+    """An argument a tool does not declare is refused, over the host's
+    path, by every tool, and nothing runs (the claims audit, item 5)."""
+
+    def test_every_tool_refuses_an_extra_argument_and_changes_nothing(
+            self, setup_server, tmp_path):
+        server._apply_toolset("lifecycle")
+        selected = server.current_project_path
+        before = tree(tmp_path)
+
+        async def drive(client):
+            listed = (await client.list_tools()).tools
+            answers = {}
+            for tool in listed:
+                result = await client.call_tool(
+                    tool.name, {"zz_not_an_argument": 1})
+                answers[tool.name] = (result.isError, text_of(result))
+            return listed, answers
+
+        listed, answers = host_session(drive)
+        assert len(listed) == len(EXPECTED_HINTS)
+        for name, (is_error, text) in answers.items():
+            body = json.loads(text)
+            assert not is_error, name
+            assert body["unknown_arguments"] == ["zz_not_an_argument"], name
+            assert f"{name} has no argument 'zz_not_an_argument'" in \
+                body["error"], name
+            assert "nothing was done" in body["error"], name
+        assert tree(tmp_path) == before
+        assert server.current_project_path == selected
+
+    def test_a_real_call_with_one_invented_argument_writes_nothing(
+            self, setup_server, qualcoder_db_path):
+        db = str(Path(qualcoder_db_path) / "data.qda")
+        count = "select count(*) from cases where name = 'Dana'"
+        with sqlite3.connect(db) as conn:
+            assert conn.execute(count).fetchone()[0] == 0
+
+        result = host_session(lambda client: client.call_tool(
+            "create_case", {"name": "Dana", "bogus_arg": 1}))
+        body = json.loads(text_of(result))
+        assert body["unknown_arguments"] == ["bogus_arg"]
+        assert "Its arguments are: name, memo, create_backup." in \
+            body["error"]
+        with sqlite3.connect(db) as conn:
+            assert conn.execute(count).fetchone()[0] == 0
+
+    def test_the_misspelt_pseudonyms_flag_is_refused_not_ignored(
+            self, setup_server, qualcoder_db_path):
+        # The audit's run: with pseudonyms.json mapping Thomas, the
+        # one-letter slip stored "Thomas said yes." with success.
+        folder = Path(qualcoder_db_path)
+        (folder / "pseudonyms.json").write_text(json.dumps(
+            [{"original": "Thomas", "pseudonym": "Tomas"}]),
+            encoding="utf-8")
+        sources = "select count(*) from source"
+        with sqlite3.connect(str(folder / "data.qda")) as conn:
+            n_before = conn.execute(sources).fetchone()[0]
+
+        result = host_session(lambda client: client.call_tool(
+            "import_text_file", {"filename": "b.txt",
+                                 "content": "Thomas said yes.",
+                                 "apply_project_pseudonym": True}))
+        body = json.loads(text_of(result))
+        assert body["unknown_arguments"] == ["apply_project_pseudonym"]
+        assert ("Did you mean 'apply_project_pseudonyms' for "
+                "'apply_project_pseudonym'?") in body["error"]
+        with sqlite3.connect(str(folder / "data.qda")) as conn:
+            assert conn.execute(sources).fetchone()[0] == n_before
+
+    def test_every_input_schema_says_no_other_argument(self):
+        server._apply_toolset("lifecycle")
+        listed = host_session(lambda client: client.list_tools()).tools
+        assert len(listed) == len(EXPECTED_HINTS)
+        for tool in listed:
+            assert tool.inputSchema.get("additionalProperties") is False, \
+                tool.name
+
+    def test_an_unprintable_argument_name_is_shown_escaped(self):
+        text = server.unknown_arguments_refusal(
+            "create_case", {"properties": {"name": {}}},
+            {"na‮me": 1, "x" * 200: 2})
+        body = json.loads(text)
+        assert body["unknown_arguments"][0] == "na\\u202eme"
+        assert len(body["unknown_arguments"][1]) == 64
+        assert "‮" not in text
+
+
+class TestPseudonymsFileAdvice:
+    """An unreadable pseudonyms.json: each tool advises what it can do."""
+
+    def test_the_reader_no_longer_advises_an_argument(self, tmp_path,
+                                                       monkeypatch):
+        payload = '[{"original": "André", "pseudonym": "Alex"}]'
+        (tmp_path / "pseudonyms.json").write_bytes(payload.encode("cp1252"))
+        monkeypatch.setattr(
+            "qualcoder_mcp.database.locale.getpreferredencoding",
+            lambda do_setlocale=True: "UTF-8")
+        with pytest.raises(ValueError) as excinfo:
+            read_project_pseudonyms(tmp_path)
+        assert "save it as UTF-8." in str(excinfo.value)
+        assert "mapping" not in str(excinfo.value)
+
+    def test_import_text_file_advises_its_own_way_round(
+            self, setup_server, qualcoder_db_path):
+        (Path(qualcoder_db_path) / "pseudonyms.json").write_text(
+            "not json", encoding="utf-8")
+        result = host_session(lambda client: client.call_tool(
+            "import_text_file", {"filename": "b.txt",
+                                 "content": "Thomas said yes.",
+                                 "apply_project_pseudonyms": True}))
+        error = json.loads(text_of(result))["error"]
+        assert "could not be parsed" in error
+        assert "import without apply_project_pseudonyms" in error
+        assert "pseudonymise_source on the new file" in error
+        assert "give the mapping in the call instead" not in error
+
+    def test_pseudonymise_source_keeps_the_mapping_advice(
+            self, setup_server, qualcoder_db_path):
+        (Path(qualcoder_db_path) / "pseudonyms.json").write_text(
+            "not json", encoding="utf-8")
+        result = host_session(lambda client: client.call_tool(
+            "pseudonymise_source", {"file_id": 1,
+                                    "use_project_pseudonyms": True}))
+        error = json.loads(text_of(result))["error"]
+        assert "could not be parsed" in error
+        assert "give the mapping in the call instead" in error

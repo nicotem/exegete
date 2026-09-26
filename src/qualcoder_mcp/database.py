@@ -2462,8 +2462,7 @@ def read_project_pseudonyms_with_raw(project_folder: Union[str, Path]
                 f"UTF-8 nor this machine's default encoding ({encoding}). A "
                 f"file QualCoder wrote on Windows is usually in the Windows "
                 f"default encoding, which this machine cannot read; open it "
-                f"in a text editor and save it as UTF-8, or give the mapping "
-                f"in the call instead.") from None
+                f"in a text editor and save it as UTF-8.") from None
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:

@@ -73,32 +73,26 @@ class TestTheSignature:
         assert "missing" in out["error"]
         assert backups(project) == []
 
-    def test_an_mcp_call_that_still_passes_file_ids_gets_the_missing_argument(
+    def test_an_mcp_call_that_still_passes_file_ids_is_refused_by_name(
             self, project):
         """What the Upgrading note says, measured rather than expected.
 
-        The server validates a call against a model whose extra-field
-        policy is `ignore`, and no published schema carries
-        `additionalProperties`, so `file_ids` is dropped without a word:
-        a caller that has not moved to `file_id` is refused for the
-        missing required argument, and one that passes both gets the
-        same preview as `file_id` alone.
+        Until v0.14 the server validated a call against a model whose
+        extra-field policy is `ignore`, so `file_ids` was dropped without
+        a word. Every tool now refuses an argument it does not declare,
+        before anything runs, and says which one it meant: a caller that
+        has not moved to `file_id` is told so, whether or not it also
+        passes `file_id`, and nothing is written.
         """
-        with pytest.raises(Exception) as refused:
-            asyncio.run(server.mcp.call_tool(
-                "pseudonymise_source", {"mapping": MAPPING, "file_ids": [1]}))
-        assert "file_id" in str(refused.value)
-        assert "Field required" in str(refused.value)
-        both = _preview_body(asyncio.run(server.mcp.call_tool(
-            "pseudonymise_source",
-            {"mapping": MAPPING, "file_id": 1, "file_ids": [1]})))
-        alone = _preview_body(asyncio.run(server.mcp.call_tool(
-            "pseudonymise_source", {"mapping": MAPPING, "file_id": 1})))
-        for answer in (both, alone):
-            assert answer["requires_confirmation"] is True
-            answer.pop("preview_token")
-            answer["execute_with"]["arguments"].pop("preview_token")
-        assert both == alone
+        for arguments in ({"mapping": MAPPING, "file_ids": [1]},
+                          {"mapping": MAPPING, "file_id": 1,
+                           "file_ids": [1]}):
+            answer = asyncio.run(server.mcp.call_tool(
+                "pseudonymise_source", arguments))
+            blocks = answer[0] if isinstance(answer, tuple) else answer
+            body = json.loads("".join(b.text for b in blocks))
+            assert body["unknown_arguments"] == ["file_ids"]
+            assert "Did you mean 'file_id' for 'file_ids'?" in body["error"]
         assert backups(project) == []
 
 

@@ -50,6 +50,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Every tool refuses an argument it does not declare**, naming it,
+  suggesting the argument it may have meant, and listing the tool's
+  own; nothing runs. Until now such an argument was dropped in silence,
+  so a misspelt safety flag fell back to its default: with a project
+  pseudonyms file, `import_text_file(apply_project_pseudonym=true)`
+  (one letter short) imported the real names. Every input schema now
+  says `additionalProperties: false` too. This also ends two behaviours
+  the 0.13 notes describe: a call that still passes `file_ids` to
+  `pseudonymise_source`, or `confirm` to a preview-token tool, is now
+  refused by name rather than having the argument dropped.
+- When the project's `pseudonyms.json` cannot be read,
+  `import_text_file` no longer advises giving the mapping in the call,
+  an argument it does not have: it says to correct the file, or to
+  import without the flag and replace the names with
+  `pseudonymise_source`.
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,
   which every project lists, and warns when the project's own coder name
   is not known, since its refusal of the researcher's name cannot then

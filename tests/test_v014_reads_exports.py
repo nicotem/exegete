@@ -893,3 +893,100 @@ class TestSubCodeMovesAndTheCascadeSayWhatHappens:
         assert preview["execute_with"]["arguments"]["cascade"] is True
         assert "approving this preview approves the branch" in \
             preview["preview"]["note"]
+
+
+# ===========================================================================
+# Fix round 1, item 1: the Markdown codebook keeps its nesting whatever
+# the memos hold (blank lines, "- " lines, a private part)
+# ===========================================================================
+
+MEMO_SHAPES = {
+    "Stress": "Definition: pressure felt.\n\nExample: deadlines.",
+    "Coping": "- includes walking\n- excludes boredom",
+    "Trust": "public note\n#####\nprivate note",
+    "Order": "Criteria:\r\n1. includes walking\r\n\r\n2. excludes sleep",
+}
+
+
+def _md_with_memos(tmp_path):
+    saved = (server.db, server.current_project_path)
+    folder = make_project(tmp_path, "v17")
+    sql(folder, "INSERT INTO code_name (cid, name, memo, catid, owner, date, "
+                "color) VALUES (3, 'Trust', '', 1, 'V', '2024-01-15', '#1')")
+    sql(folder, "INSERT INTO code_name (cid, name, memo, catid, owner, date, "
+                "color) VALUES (4, 'Order', '', 1, 'V', '2024-01-15', '#2')")
+    for cid, name in ((1, "Stress"), (2, "Coping"), (3, "Trust"),
+                      (4, "Order")):
+        sql(folder, "UPDATE code_name SET memo = ? WHERE cid = ?",
+            (MEMO_SHAPES[name], cid))
+        add_subcode(folder, 10 + cid, f"Sub of {name}", supercid=cid)
+    sql(folder, "UPDATE code_cat SET memo = ? WHERE catid = 1",
+        ("- a category line\n\nanother paragraph",))
+    try:
+        server.db = None
+        assert json.loads(server.select_project(str(folder)))["success"]
+        out = host("export_codebook", output_path=str(tmp_path / "c.md"),
+                   format="md")
+        return Path(out["output_path"]).read_text(encoding="utf-8-sig")
+    finally:
+        if server.db is not None:
+            server.db.close()
+        server.db, server.current_project_path = saved
+
+
+class TestTheMarkdownCodebookKeepsItsNesting:
+
+    def test_every_memo_line_is_quoted_inside_its_bullet(self, tmp_path):
+        lines = _md_with_memos(tmp_path).splitlines()
+        for parent in MEMO_SHAPES:
+            start = next(i for i, line in enumerate(lines)
+                         if line.startswith(f"- **{parent}**"))
+            sub = next(i for i, line in enumerate(lines)
+                       if line.startswith(f"  - **Sub of {parent}**"))
+            between = lines[start + 1:sub]
+            assert between, parent
+            assert all(line.startswith("  >") for line in between), (
+                parent, between)
+        assert not any("\r" in line for line in lines)
+        category = lines[lines.index("## Category A") + 1:
+                         lines.index("## Category A") + 4]
+        assert category == ["> - a category line", ">",
+                            "> another paragraph"]
+
+    def test_a_commonmark_reader_nests_each_sub_code_under_its_parent(
+            self, tmp_path):
+        markdown_it = pytest.importorskip("markdown_it")
+        tokens = markdown_it.MarkdownIt("commonmark").parse(
+            _md_with_memos(tmp_path))
+        # Every list item outside a quote is recorded with the chain of
+        # items above it, whatever its text, so a memo line that became a
+        # list item shows up as a wrong parent or a stray entry
+        depth, quote, stack, found = 0, 0, [], {}
+        naming = False
+        for tok in tokens:
+            if tok.type == "blockquote_open":
+                quote += 1
+            elif tok.type == "blockquote_close":
+                quote -= 1
+            elif quote:
+                continue
+            elif tok.type == "bullet_list_open":
+                depth += 1
+            elif tok.type == "bullet_list_close":
+                depth -= 1
+            elif tok.type == "list_item_open":
+                del stack[depth - 1:]
+                stack.append(None)
+                naming = True
+            elif tok.type == "inline" and naming:
+                text = tok.content
+                name = text.split("**")[1] if text.startswith("**") else text
+                stack[-1] = name
+                found[name] = list(stack)
+                naming = False
+        for parent in MEMO_SHAPES:
+            assert found[parent] == [parent], found
+            assert found[f"Sub of {parent}"] == [parent,
+                                                 f"Sub of {parent}"], found
+        assert set(found) == set(MEMO_SHAPES) | {
+            f"Sub of {p}" for p in MEMO_SHAPES}

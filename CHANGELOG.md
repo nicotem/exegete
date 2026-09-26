@@ -405,8 +405,10 @@ search or a silent limit.
   sub-category's, and a sub-code beside its parent: it now lists the
   codes without a category first under their own heading, each
   category's own codes directly under its heading before its
-  sub-categories, and each sub-code indented under its parent. The csv
-  and txt forms, which were right, are unchanged.
+  sub-categories, and each sub-code indented under its parent, with
+  every line of a memo quoted inside its code's bullet, so a memo with
+  paragraphs or list lines keeps the nesting. The csv and txt forms,
+  which were right, are unchanged.
 - **A value the AI sets on a file or a journal entry carries the AI
   coder name.** `set_attribute` wrote the owner and the date only on a
   case; on a file or a journal entry it changed the value alone, as

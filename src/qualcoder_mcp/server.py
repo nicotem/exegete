@@ -15172,6 +15172,24 @@ def _codebook_tree(ro_db):
     yield from walk(None, 0)
 
 
+def _md_quote(memo: str, indent: str) -> List[str]:
+    """A memo as a Markdown block quote, every line of it quoted.
+
+    Fix round 1 (the QA gate's major): only the first line used to carry
+    the indent and the `> `, so a memo with a blank line, or a line
+    starting "- " or "1. ", ended the quote and the list around it, and
+    the code's sub-codes rendered beside it or under a memo line. Every
+    line now carries the bullet's content indent and its own `>`, a
+    blank one as `{indent}>`, so the quote holds the whole memo and the
+    list continues after it. Line breaks of any kind are split on, so a
+    "\r\n" memo leaves no stray "\r".
+    """
+    out = []
+    for line in memo.splitlines() or [""]:
+        out.append(f"{indent}> {line}" if line.strip() else f"{indent}>")
+    return out
+
+
 def _codebook_markdown(ro_db, freq, include_memos: bool):
     """The Markdown codebook's lines, and its category and code counts.
 
@@ -15218,7 +15236,7 @@ def _codebook_markdown(ro_db, freq, include_memos: bool):
                      f"{freq.get(code['id'], 0)} coding(s)")
         memo = code.get("memo") or ""
         if include_memos and memo:
-            lines.append(f"{pad}  > {memo}")
+            lines.extend(_md_quote(memo, f"{pad}  "))
         for sub in by_name(code_children.get(code["id"], [])):
             code_lines(sub, level + 1, seen)
 
@@ -15230,7 +15248,7 @@ def _codebook_markdown(ro_db, freq, include_memos: bool):
         lines.append(f"{'#' * min(depth + 2, 6)} {cat['name']}")
         memo = cat.get("memo") or ""
         if include_memos and memo:
-            lines.append(f"> {memo}")
+            lines.extend(_md_quote(memo, ""))
         lines.append("")
         own = by_name(cat_codes.get(cat["id"], []))
         for code in own:

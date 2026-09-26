@@ -38,6 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   after `#####` survives and is never returned. QualCoder 4.0's own
   assistant reads the public part as the study's context.
 
+- **Every tool says what kind of tool it is**, in the four marks MCP
+  defines (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
+  `openWorldHint`): the reading tools are marked read-only, the tools
+  that can replace or remove work are marked destructive (the seven
+  that ask for a preview among them), and none reaches beyond this
+  computer. Claude Desktop runs a read-only tool without asking in a
+  Cowork session in auto mode, and Claude Code runs read-only tools
+  side by side; both still ask before each call in their asking modes.
+  INSTALL.md, "What hosts do with the tools' read and write marks".
+
 ### Changed
 
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,

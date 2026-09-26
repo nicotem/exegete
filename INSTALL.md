@@ -554,6 +554,45 @@ corresponding care.
 
 ---
 
+## What hosts do with the tools' read and write marks
+
+Every tool tells the host what kind of tool it is, in the four marks
+MCP defines: whether it only reads (`readOnlyHint`); for a tool that
+writes, whether it can replace or remove something that already exists
+(`destructiveHint`) and whether calling it twice the same way changes
+nothing more (`idempotentHint`); and whether it reaches anything beyond
+this computer (`openWorldHint`, never, for this server). The tools
+that only read are marked so, and so are the writing tools that can
+replace or remove work (renames, memos, deletions, merges, restores,
+exports with `overwrite`). The marks are hints to the host: the
+server's own safeguards (the approval of each suggestion, the preview
+before a deletion, the backups) do not depend on them.
+
+What the hosts on this machine did with them, read from their programs
+on 26 September 2026 (Claude Desktop 2.9939.2, Claude Code 2.1.167);
+a later version may differ:
+
+- **Claude Desktop and Cowork**: the read-only mark is passed on with
+  each tool. In a Cowork session, or a Code session in the desktop app,
+  run in auto mode, a tool marked read-only runs without asking; in the
+  default asking mode every tool call is still asked about, reading
+  ones included, unless you chose "always allow" for it. No use of the other three marks for
+  asking was found.
+- **Claude Code**: every call of an MCP tool is asked about, whatever
+  its marks, unless you have allowed the tool in your settings. Tools
+  marked read-only may run side by side, and `/mcp` shows each tool's
+  marks (read-only, destructive, open-world).
+- **Connectors added on claude.ai** group their tools into read-only
+  and write or delete, each with its own "always allow", "needs
+  approval" or "blocked" setting (Anthropic's help page, "Use
+  connectors to extend Claude's capabilities"); a local server such as
+  this one is not one of those.
+
+Keeping the host in its asking mode, with "allow once" for anything that
+writes, keeps you in the loop for every change.
+
+---
+
 ## Other MCP hosts
 
 Any MCP host that can run local stdio servers can host qualcoder-mcp

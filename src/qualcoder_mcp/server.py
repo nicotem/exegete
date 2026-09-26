@@ -21,6 +21,7 @@ from typing import Optional, List, Dict, Any, Sequence, Tuple
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp import Context
+from mcp.types import ToolAnnotations
 
 from .database import (
     QualcoderDatabase,
@@ -279,6 +280,42 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
         return fn
     return deco
 
+
+# What each tool does, in the four hints MCP defines for a tool
+# (ToolAnnotations, present from mcp 1.9; the floor is 1.17.0). Every
+# tool carries one of the five sets below, given at its registration,
+# and tests/test_v014_server_wide.py pins each tool's set from a table,
+# so a tool registered without one fails there.
+#
+# - readOnlyHint: true only when the tool changes nothing on the
+#   computer: not the project, not a session file, not a file, not the
+#   selection. The class test calls every read-only tool and checks
+#   that the project folder and the session files are unchanged.
+# - destructiveHint (a write only): true when a call can replace or
+#   remove something that already exists (a name, a memo, a status, a
+#   file when overwrite is true, a coding, a backup); false when the
+#   tool only adds.
+# - idempotentHint (a write only): true only where a second identical
+#   call changes nothing and takes no backup; the class test repeats
+#   each such call and checks it. False is no promise either way.
+# - openWorldHint: false throughout; every tool works on this computer's
+#   files and nothing else.
+#
+# What the hosts do with the hints (INSTALL.md, "What hosts do with the
+# tools' read and write marks"): Claude Desktop passes readOnlyHint on,
+# and in a Cowork or Code session in auto mode lets a read-only tool run
+# without asking; Claude Code runs read-only tools in parallel and shows
+# the marks in /mcp, and asks before every call either way.
+TOOL_READS = ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                             idempotentHint=True, openWorldHint=False)
+TOOL_ADDS = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                            idempotentHint=False, openWorldHint=False)
+TOOL_ADDS_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
+                                 idempotentHint=True, openWorldHint=False)
+TOOL_CHANGES = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                               idempotentHint=False, openWorldHint=False)
+TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
+                                    idempotentHint=True, openWorldHint=False)
 
 # Initialize MCP server
 mcp = FastMCP("Qualcoder", instructions=SERVER_INSTRUCTIONS)
@@ -2590,7 +2627,7 @@ def get_methods_guidance() -> str:
     return METHODS_GUIDANCE
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_available_projects(search_directories: Optional[List[str]] = None) -> str:
     """Discover Qualcoder projects on your system.
@@ -2713,7 +2750,7 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
     return result
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
 def select_project(project_path: str) -> str:
     """Switch to a different Qualcoder project.
@@ -2929,7 +2966,7 @@ def _visibility_map(db_):
         return _VISIBILITY_UNREADABLE
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def set_project_ai_coder_name(name: str, note: str = "",
                               allow_hidden_coder: bool = False) -> str:
@@ -3240,7 +3277,7 @@ def _pseudonyms_json_report() -> Dict[str, Any]:
             f"shows them to the researcher.")}
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_current_project() -> str:
     """Get information about the currently open project.
@@ -3350,7 +3387,7 @@ def get_current_project() -> str:
             {"error": f"Failed to get project info: {error_text(e)}"})
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def read_pseudonym_list() -> str:
     """This sends every real name in the project's pseudonyms.json, with its pseudonym, to the AI provider.
@@ -3390,7 +3427,7 @@ def read_pseudonym_list() -> str:
     return json.dumps({"pseudonyms_json": report}, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def copy_project_to_workspace(
     source_path: str,
@@ -3632,7 +3669,7 @@ def _attach_paging(payload: Dict[str, Any], tool: str,
         payload["database_changed_note"] = DATABASE_CHANGED_NOTE
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def search_coded_text(query: str, code_name: Optional[str] = None,
                       limit: int = 50, coder: Optional[str] = None,
@@ -3819,7 +3856,7 @@ _SEGMENT_KEY_SHAPES = {
 }
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_coded_segments(code_id: int, limit: int = 100,
                        coder: Optional[str] = None,
@@ -4033,7 +4070,7 @@ def get_coded_segments(code_id: int, limit: int = 100,
     return _ai_json(payload, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def search_files(
     pattern: str,
@@ -4243,7 +4280,7 @@ def search_files(
         }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_coding_frequencies(coder: Optional[str] = None) -> str:
     """Get frequency statistics for all codes in the project.
@@ -4284,7 +4321,7 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
     return json.dumps(frequencies, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def search_memos(query: str, limit: int = 50) -> str:
     """Search through all memos and annotations in the project.
@@ -4326,7 +4363,7 @@ def search_memos(query: str, limit: int = 50) -> str:
     return json.dumps(payload, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def export_code_report(code_name: str) -> str:
     """Generate a comprehensive report for a specific code.
@@ -4382,7 +4419,7 @@ def export_code_report(code_name: str) -> str:
     return _ai_json(payload, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def export_refi_qda(
     output_path: str,
@@ -4626,7 +4663,7 @@ def export_refi_qda(
     return json.dumps(output, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_project_summary() -> str:
     """Get a comprehensive summary of the entire project.
@@ -4692,7 +4729,7 @@ def get_project_summary() -> str:
     return _ai_json(summary, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 @_with_guidance(GROUNDING_READ, before="Args:")
 def analyze_file_with_coding(file_id: int) -> str:
@@ -4783,7 +4820,7 @@ def analyze_file_with_coding(file_id: int) -> str:
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_attribute_types() -> str:
     """List all attribute types defined in the project.
@@ -4805,7 +4842,7 @@ def list_attribute_types() -> str:
     }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_file_attributes(file_id: int) -> str:
     """Get all attribute values for a specific file.
@@ -4827,7 +4864,7 @@ def get_file_attributes(file_id: int) -> str:
     }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_case_attributes(case_id: int) -> str:
     """Get all attribute values for a specific case.
@@ -4849,7 +4886,7 @@ def get_case_attributes(case_id: int) -> str:
     }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def query_by_attribute(
     attr_name: str,
@@ -5022,7 +5059,7 @@ def _coder_role(name: str, ai_names: Sequence[str]) -> str:
     return "human_or_unknown"
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def compare_coders(coder_a: Optional[str] = None,
                    coder_b: Optional[str] = None,
@@ -5410,7 +5447,7 @@ def compare_coders(coder_a: Optional[str] = None,
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def find_cooccurring_codes(code_id: int, window_size: int = 0,
                            coder: Optional[str] = None) -> str:
@@ -5463,7 +5500,7 @@ def find_cooccurring_codes(code_id: int, window_size: int = 0,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_case_code_matrix(coder: Optional[str] = None) -> str:
     """Get a matrix showing which codes appear in which cases.
@@ -5509,7 +5546,7 @@ def get_case_code_matrix(coder: Optional[str] = None) -> str:
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_codes_by_case(case_id: int, coder: Optional[str] = None) -> str:
     """Get all codes that appear in a specific case.
@@ -5547,7 +5584,7 @@ def get_codes_by_case(case_id: int, coder: Optional[str] = None) -> str:
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
     """Get all cases that contain a specific code.
@@ -5589,7 +5626,7 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
 # AI-ASSISTED CODING TOOLS (NEW CONVERSATIONAL WORKFLOW)
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 @_with_guidance(GROUNDING_RULES, METHODOLOGY_VOCABULARY, before="SPAN STYLE")
 def analyze_for_coding(
@@ -5890,7 +5927,7 @@ def _validate_proposal_evidence(ro_db, items, file_cache):
     return kept, rejected, unsafe_files
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 @_with_guidance(GROUNDING_RECORD, before="SPAN STYLE")
 def record_suggestions(
@@ -6148,7 +6185,7 @@ def record_suggestions(
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def review_suggestions(
     coding_session_id: str,
@@ -6254,7 +6291,7 @@ def review_suggestions(
     return "\n".join(output)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def edit_suggestion(
     coding_session_id: str,
@@ -6568,7 +6605,7 @@ def edit_suggestion(
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def update_suggestion_status(
     coding_session_id: str,
@@ -6646,7 +6683,7 @@ Use `apply_codings` with session ID `{session_id}` to write approved suggestions
     return output
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def apply_codings(
     coding_session_id: str,
@@ -7024,7 +7061,7 @@ def apply_codings(
     return "\n".join(output)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def import_text_file(
     filename: str,
@@ -7314,7 +7351,7 @@ def import_text_file(
     return json.dumps(output, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def link_file_to_case(
     file_id: int,
@@ -7410,7 +7447,7 @@ def link_file_to_case(
 # ERROR-RECOVERY TOOLS — delete a coding, list and restore backups
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def delete_coding(coding_id: int, create_backup: bool = True,
                   allow_hidden_coder: bool = False,
@@ -7504,7 +7541,7 @@ def delete_coding(coding_id: int, create_backup: bool = True,
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_backups() -> str:
     """List the automatic backups of the currently open project.
@@ -7660,7 +7697,7 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     return backups
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def prune_backups(keep_last: Optional[int] = None,
                   older_than_days: Optional[float] = None,
@@ -8017,7 +8054,7 @@ def _restore_pseudonyms_json_note(before: Optional[str],
             f"be the only record of a pseudonymisation mapping. {where}")
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def restore_backup(backup_path: str,
                    preview_token: Optional[str] = None) -> str:
@@ -8361,7 +8398,7 @@ def restore_backup(backup_path: str,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_coding_session_info(coding_session_id: str) -> str:
     """Get detailed information about a coding session.
@@ -8407,7 +8444,7 @@ def get_coding_session_info(coding_session_id: str) -> str:
         return json.dumps({"error": error_text(e)})
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_coding_sessions(
     project_path: Optional[str] = None,
@@ -8456,7 +8493,7 @@ def list_coding_sessions(
         return json.dumps({"error": error_text(e)})
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def delete_coding_session(coding_session_id: str) -> str:
     """Delete a saved coding session.
@@ -8496,7 +8533,7 @@ def delete_coding_session(coding_session_id: str) -> str:
         return json.dumps({"error": error_text(e)})
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def cleanup_old_sessions(days_old: int = 30) -> str:
     """Clean up old coding sessions.
@@ -8536,7 +8573,7 @@ def cleanup_old_sessions(days_old: int = 30) -> str:
 
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     """Get help and examples for AI coding tools.
@@ -8849,7 +8886,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
 # INDUCTIVE / OPEN CODING (v0.8 phase A) — propose new codes from the data
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 @_with_guidance(GROUNDING_PROPOSE, before="Args:")
 def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
@@ -9030,7 +9067,7 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def review_proposals(coding_session_id: str,
                      proposal_guids: Optional[List[str]] = None,
@@ -9127,7 +9164,7 @@ def review_proposals(coding_session_id: str,
     return "\n".join(lines)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def update_proposal(coding_session_id: str, proposal_guid: str,
                     name: Optional[str] = None,
@@ -9269,7 +9306,7 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def merge_proposals(coding_session_id: str, from_proposal_guid: str,
                     into_proposal_guid: str) -> str:
@@ -9328,7 +9365,7 @@ def merge_proposals(coding_session_id: str, from_proposal_guid: str,
     }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def update_proposal_status(coding_session_id: str,
                            approve: Optional[List[str]] = None,
@@ -9364,7 +9401,7 @@ def update_proposal_status(coding_session_id: str,
     }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def create_proposed_codes(coding_session_id: str,
                           apply_coded_segments: bool = False,
@@ -9595,7 +9632,7 @@ def create_proposed_codes(coding_session_id: str,
 # MEMO WRITING & JOURNALS (write tools)
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def set_memo(target_type: str, target_id: Optional[int], memo: str,
              create_backup: bool = True,
@@ -9680,7 +9717,7 @@ def set_memo(target_type: str, target_id: Optional[int], memo: str,
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def add_journal_entry(name: str, entry: str,
                       create_backup: bool = True) -> str:
@@ -9725,7 +9762,7 @@ def add_journal_entry(name: str, entry: str,
 # CODEBOOK EDITING (non-destructive write tools)
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
 def create_code(name: str, category: Optional[str] = None,
                 color: Optional[str] = None, memo: Optional[str] = None,
@@ -9863,7 +9900,7 @@ def create_code(name: str, category: Optional[str] = None,
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def rename_code(code_id: int, new_name: str,
                 create_backup: bool = True) -> str:
@@ -9927,7 +9964,7 @@ def rename_code(code_id: int, new_name: str,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def recolor_code(code_id: int, color: str,
                  create_backup: bool = True) -> str:
@@ -9997,7 +10034,7 @@ def recolor_code(code_id: int, color: str,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def move_code_to_category(code_id: int,
                           category: Optional[str] = None,
@@ -10092,7 +10129,7 @@ def move_code_to_category(code_id: int,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
 def create_category(name: str, parent_category: Optional[str] = None,
                     memo: Optional[str] = None,
@@ -10174,7 +10211,7 @@ def create_category(name: str, parent_category: Optional[str] = None,
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def rename_category(category_id: int, new_name: str,
                     create_backup: bool = True) -> str:
@@ -10235,7 +10272,7 @@ def rename_category(category_id: int, new_name: str,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def move_category(category_id: int, parent_category: Optional[str] = None,
                   create_backup: bool = True) -> str:
@@ -10760,7 +10797,7 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
     return result
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def merge_codes(from_code_id: int, into_code_id: int,
                 preview_token: Optional[str] = None,
@@ -10829,7 +10866,7 @@ def merge_codes(from_code_id: int, into_code_id: int,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def delete_code(code_id: int, preview_token: Optional[str] = None,
                 cascade: bool = False,
@@ -10901,7 +10938,7 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def delete_category(category_id: int,
                     preview_token: Optional[str] = None) -> str:
@@ -10965,7 +11002,7 @@ def delete_category(category_id: int,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def merge_category(from_category_id: int,
                    into_category: Optional[str] = None,
@@ -12605,7 +12642,7 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
     return manifest
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def pseudonymise_source(
     mapping: Optional[List[Dict[str, Any]]] = None,
@@ -13571,7 +13608,7 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
 # ANNOTATIONS (v0.8 D1 write tools)
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
                    create_backup: bool = True) -> str:
@@ -13635,7 +13672,7 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def update_annotation(annotation_id: int, memo: str,
                       create_backup: bool = True,
@@ -13691,7 +13728,7 @@ def update_annotation(annotation_id: int, memo: str,
     return _ai_json(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def delete_annotation(annotation_id: int, create_backup: bool = True,
                       allow_hidden_coder: bool = False,
@@ -13760,7 +13797,7 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
 # CASES (v0.8 D1 write tool)
 # ============================================================================
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
 def create_case(name: str, memo: Optional[str] = None,
                 create_backup: bool = True) -> str:
@@ -13866,7 +13903,7 @@ _RENAME_QC40_PARAGRAPH = (
     "4.0 before renaming.")
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def rename_case(case_id: int, new_name: str,
                 create_backup: bool = True) -> str:
@@ -14342,7 +14379,7 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
     return None
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
 def rename_file(file_id: int, new_name: str,
                 create_backup: bool = True) -> str:
@@ -14448,7 +14485,7 @@ def rename_file(file_id: int, new_name: str,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def create_attribute_type(name: str, applies_to: str,
                           value_type: str = "character",
@@ -14508,7 +14545,7 @@ def create_attribute_type(name: str, applies_to: str,
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def set_attribute(target_type: str, target_id: int, attribute_name: str,
                   value: str, create_backup: bool = True) -> str:
@@ -14801,7 +14838,7 @@ def _code_report_chain(cat_by_id, code_by_id, cid):
     return path_codes + _category_chain(cat_by_id, top_catid)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def export_codebook(output_path: str, format: str = "csv",
                     include_memos: bool = True,
@@ -14929,7 +14966,7 @@ def export_codebook(output_path: str, format: str = "csv",
     }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def export_coded_segments_report(
     output_path: str,
@@ -15151,7 +15188,7 @@ def export_coded_segments_report(
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def export_frequencies_csv(output_path: str,
                            sanitize_formulas: bool = False,
@@ -15332,7 +15369,7 @@ def export_frequencies_csv(output_path: str,
     }, indent=2)
 
 
-@mcp.tool()
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def export_case_code_matrix_csv(output_path: str,
                                 sanitize_formulas: bool = False,
@@ -15905,8 +15942,11 @@ CORE_TOOLSET = frozenset({
 })
 
 # The project-lifecycle tools: registered only by `lifecycle`, in this
-# order, from the module-level functions of the same names.
+# order, from the module-level functions of the same names, each with its
+# hints (create_project only adds, and a second identical call is refused
+# as a name in use, which changes nothing).
 LIFECYCLE_TOOLS = ("create_project",)
+LIFECYCLE_TOOL_ANNOTATIONS = {"create_project": TOOL_ADDS_ONCE}
 
 _VALID_TOOLSET_MODES = ("full", "core", "lifecycle")
 
@@ -15942,7 +15982,8 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
     elif mode == "lifecycle":
         for name in LIFECYCLE_TOOLS:
             if name not in mcp._tool_manager._tools:
-                mcp.add_tool(globals()[name])
+                mcp.add_tool(globals()[name],
+                             annotations=LIFECYCLE_TOOL_ANNOTATIONS[name])
     active = len(mcp._tool_manager._tools)
     logger.info(f"Toolset mode: {mode} ({active} tools registered)")
     return removed

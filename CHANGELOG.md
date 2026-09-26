@@ -333,6 +333,29 @@ search or a silent limit.
   numeric attribute, which QualCoder accepts and its report reads as
   other numbers; its refusal no longer says QualCoder blanks such input
   silently (it warns).
+- **A wrong id, name or coder is refused, not answered as nothing.**
+  These reads answered a value that is not in the project exactly as a
+  value with nothing in scope, and the assistant, told that a null
+  result is a valid result, reported "no codes in this case" or "this
+  coder coded nothing". `get_coded_segments`, `find_cooccurring_codes`,
+  `get_cases_by_code`, `get_codes_by_case`, `get_case_attributes` and
+  `get_file_attributes` refuse an id that does not exist, saying where
+  the ids are listed. `query_by_attribute` refuses an attribute name
+  that does not exist (names stay exact: "age" is refused, naming
+  "Age") or is the other kind (a file attribute queried as a case one).
+  `search_coded_text` and `export_code_report` find `code_name` as the
+  codebook tools find a code's name (the same name, then one differing
+  only by letter case, said in `code_match`); a name matching no code,
+  or two, is refused with the code names (`export_code_report` used to
+  take the first case-insensitive match). A `coder` naming nobody with
+  codings anywhere in the project is refused by `search_coded_text`,
+  `get_coded_segments`, `get_coding_frequencies`,
+  `find_cooccurring_codes`, `get_case_code_matrix`, `get_codes_by_case`,
+  `get_cases_by_code` and `export_coded_segments_report`, naming a coder
+  that differs only by letter case and never a coder hidden in
+  QualCoder; `export_coded_segments_report` refuses an unknown file id
+  too, and writes no file. A known id, name or coder with nothing in
+  scope still answers empty or zero.
 
 ## [0.13.0-alpha] - 2026-09-25
 

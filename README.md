@@ -939,6 +939,17 @@ argument read visible coders' work by default and one coder's rows from
 the full data when `coder` is given (see "Working alongside QualCoder
 4.0").
 
+A read given an id, a name or a coder that is not in the project
+refuses it, rather than answering "nothing": a code, case or file id
+that does not exist; an attribute name that is not one of that kind
+(names are exact, and the refusal names one that differs only by letter
+case, or says it is the other kind); a code name that matches no code (a
+code name is found as the codebook tools find it: the same name, then
+one differing only by letter case); and a coder with no codings anywhere
+in the project (the refusal names one that differs only by letter case,
+never a coder hidden in QualCoder). A known value with nothing in scope
+still answers empty, and that answer is a finding.
+
 **Rich Transcript Analysis:**
 - `analyze_file_with_coding(file_id)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld)
 

@@ -357,3 +357,160 @@ class TestAttributeQueriesCompareNumbersOnly:
         assert out["success"] is True, out
         assert sql(qualcoder_db_path, "SELECT value FROM attribute WHERE "
                    "name = 'Age' AND id = 1") == [(stored,)]
+
+
+# ===========================================================================
+# Audit item 12: unknown ids, attribute names, code names and coders are
+# refused across the reads, the attribute tools and the exports; a known
+# value with nothing in scope still answers empty
+# ===========================================================================
+
+@pytest.fixture
+def scoped(setup_server, qualcoder_db_path, tmp_path):
+    """Code 3 'Unused' (no codings), case 2 'Empty case' (no links, no
+    attributes), coder 'Other' with one Coping coding, and a file
+    attribute 'Source'."""
+    folder = qualcoder_db_path
+    sql(folder, "INSERT INTO code_name VALUES (3, 'Unused', '', 1, "
+                "'TestCoder', '2024-01-15', '#0000FF')")
+    sql(folder, "INSERT INTO cases VALUES (2, 'Empty case', '', "
+                "'TestCoder', '2024-01-15')")
+    sql(folder, "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                "owner, date, memo) VALUES (2, 1, 'I cope', 57, 63, "
+                "'Other', '2024-01-15', '')")
+    sql(folder, "INSERT INTO attribute_type VALUES ('Source', '2024-01-15', "
+                "'TestCoder', '', 'file', 'character')")
+    return folder
+
+
+def _out(tmp_path, name):
+    return str(tmp_path / name)
+
+
+UNKNOWN = [
+    ("get_coded_segments", {"code_id": 999}, "Code ID 999 does not exist"),
+    ("get_coded_segments", {"code_id": 1, "coder": "Nobody"},
+     "has no codings"),
+    ("search_coded_text", {"query": "I", "code_name": "Nope"},
+     "Code 'Nope' not found"),
+    ("search_coded_text", {"query": "I", "coder": "Nobody"},
+     "has no codings"),
+    ("get_coding_frequencies", {"coder": "Nobody"}, "has no codings"),
+    ("find_cooccurring_codes", {"code_id": 999},
+     "Code ID 999 does not exist"),
+    ("find_cooccurring_codes", {"code_id": 1, "coder": "Nobody"},
+     "has no codings"),
+    ("get_case_code_matrix", {"coder": "Nobody"}, "has no codings"),
+    ("get_codes_by_case", {"case_id": 99}, "Case ID 99 does not exist"),
+    ("get_codes_by_case", {"case_id": 1, "coder": "Nobody"},
+     "has no codings"),
+    ("get_cases_by_code", {"code_id": 99}, "Code ID 99 does not exist"),
+    ("get_cases_by_code", {"code_id": 1, "coder": "Nobody"},
+     "has no codings"),
+    ("get_case_attributes", {"case_id": 999}, "Case ID 999 does not exist"),
+    ("get_file_attributes", {"file_id": 999}, "File ID 999 does not exist"),
+    ("query_by_attribute", {"attr_name": "age", "attr_value": "50",
+                            "operator": "gt"}, "did you mean 'Age'"),
+    ("query_by_attribute", {"attr_name": "Source", "attr_value": "x"},
+     "'Source' is a file attribute"),
+    ("query_by_attribute", {"attr_name": "Height", "attr_value": "1"},
+     "Attribute 'Height' does not exist"),
+    ("export_code_report", {"code_name": "Nope"}, "Code 'Nope' not found"),
+]
+
+
+class TestUnknownValuesAreRefused:
+
+    @pytest.mark.parametrize("tool,args,words", UNKNOWN,
+                             ids=[f"{t}-{sorted(a)}" for t, a, _ in UNKNOWN])
+    def test_an_unknown_value_is_refused(self, scoped, tool, args, words):
+        out = host(tool, **args)
+        assert isinstance(out, dict) and words in out.get("error", ""), out
+
+    @pytest.mark.parametrize("args", [{"coder": "nobody"},
+                                      {"file_ids": [99]}])
+    def test_the_coding_report_refuses_and_writes_nothing(
+            self, scoped, tmp_path, args):
+        path = _out(tmp_path, "report.csv")
+        out = host("export_coded_segments_report", output_path=path, **args)
+        assert "error" in out, out
+        assert not Path(path).exists()
+
+    def test_a_coder_differing_only_by_letter_case_is_named(self, scoped):
+        out = host("get_coding_frequencies", coder="testcoder")
+        assert out["did_you_mean"] == ["TestCoder"]
+        assert "did you mean 'TestCoder'" in out["error"]
+
+    def test_a_code_name_in_another_letter_case_is_used_and_labelled(
+            self, scoped):
+        out = host("search_coded_text", query="stressed", code_name="stress")
+        assert out["code_filter"] == "Stress"
+        assert out["code_match"] == "case_insensitive"
+        assert out["result_count"] == 1
+
+    KNOWN_EMPTY = [
+        ("get_coded_segments", {"code_id": 3}),
+        ("get_coded_segments", {"code_id": 1, "coder": "Other"}),
+        ("search_coded_text", {"query": "zebra", "coder": "Other"}),
+        ("find_cooccurring_codes", {"code_id": 3}),
+        ("get_codes_by_case", {"case_id": 2}),
+        ("get_cases_by_code", {"code_id": 3}),
+        ("get_case_attributes", {"case_id": 2}),
+        ("query_by_attribute", {"attr_name": "Age", "attr_value": "999",
+                                "operator": "gt"}),
+    ]
+
+    @pytest.mark.parametrize("tool,args", KNOWN_EMPTY,
+                             ids=[f"{t}-{sorted(a)}" for t, a in KNOWN_EMPTY])
+    def test_a_known_value_with_nothing_in_scope_answers_empty(
+            self, scoped, tool, args):
+        out = host(tool, **args)
+        if isinstance(out, dict):
+            assert "error" not in out, out
+            counts = [out.get(k) for k in ("segments", "results", "codes",
+                                           "cases", "cooccurrences",
+                                           "attributes")
+                      if isinstance(out.get(k), list)]
+            assert counts and all(c == [] for c in counts), out
+        else:
+            assert out == []
+
+    def test_frequencies_of_a_known_coder_count_zero_where_none(self, scoped):
+        out = host("get_coding_frequencies", coder="Other")
+        by_id = {c["code_id"]: c for c in out["codes"]}
+        assert by_id[1]["frequency"] == 0 and by_id[2]["frequency"] == 1
+
+    def test_a_known_coder_and_file_write_an_empty_report(
+            self, scoped, tmp_path):
+        path = _out(tmp_path, "empty.csv")
+        out = host("export_coded_segments_report", output_path=path,
+                   coder="Other", file_ids=[2])
+        assert out.get("success") is True, out
+        assert Path(path).exists()
+
+    def test_export_code_report_takes_the_code_it_names(self, scoped):
+        sql(scoped, "INSERT INTO code_name VALUES (4, 'stress', '', 1, "
+                    "'TestCoder', '2024-01-15', '#00FFFF')")
+        out = host("export_code_report", code_name="stress")
+        assert out["code"]["id"] == 4, out["code"]
+        assert out["code_match"] == "exact"
+        both = host("export_code_report", code_name="STRESS")
+        assert sorted(c["id"] for c in both["candidates"]) == [1, 4]
+
+
+class TestAHiddenCoderIsNeverNamedInARefusal:
+
+    def test_the_listing_and_the_near_miss_leave_hidden_coders_out(
+            self, setup_server, qualcoder_db_path):
+        from test_qc40_visibility import (_apply_visibility_schema, _reopen,
+                                          HIDDEN)
+        _apply_visibility_schema(qualcoder_db_path)
+        _reopen(qualcoder_db_path)
+        out = host("get_coding_frequencies", coder=HIDDEN.upper())
+        assert HIDDEN not in json.dumps(out)
+        assert "1 more coder hidden in QualCoder" in out["error"]
+        assert "did_you_mean" not in out
+        # Named exactly, a hidden coder is read (the explicit filter's
+        # bypass), not refused
+        exact = host("get_coding_frequencies", coder=HIDDEN)
+        assert "error" not in exact, exact

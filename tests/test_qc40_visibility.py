@@ -405,11 +405,13 @@ class TestPre40CoderFilter:
         out = json.loads(server.get_coded_segments(1, coder="TestCoder"))
         assert out["segment_count"] == 1
         assert "coder_visibility" not in out
+        # v0.14 (claims audit item 12): a coder with no codings anywhere
+        # is refused; a known coder keeps the plain shape
         out = json.loads(server.get_coded_segments(1, coder="Nobody"))
-        assert out["segment_count"] == 0
+        assert "has no codings" in out["error"]
         assert "coder_visibility" not in out
         assert isinstance(json.loads(server.get_codes_by_case(
-            1, coder="Nobody")), list)
+            1, coder="TestCoder")), list)
 
     def test_blank_coder_is_no_filter_without_capability(self,
                                                          setup_server):

@@ -3589,6 +3589,111 @@ def _resolve_exclude_code_ids(db_, value: Any) -> List[int]:
     return ids
 
 
+# Where the assistant can find the ids a refusal below says do not exist.
+_ID_LISTS = {
+    "code": "get_coding_frequencies or the qualcoder://codes/list resource "
+            "lists every code with its id",
+    "file": "the qualcoder://files/list resource lists every file with its "
+            "id; search_files finds one by name",
+    "case": "the qualcoder://cases/list resource lists every case with its "
+            "id",
+}
+
+
+def _refuse_unknown_id(db_, kind: str, row_id: Any,
+                       param: str) -> Optional[Dict[str, Any]]:
+    """An unknown code, file or case id refused, or None (v0.14).
+
+    Claims audit item 12: the reads answered an id that does not exist
+    exactly as an id with nothing in scope, an empty list or a zero, and
+    the assistant, told that a null result is a valid result, reported
+    "no codes in this case". compare_coders, exclude_code_ids and
+    file_ids already refused; these are the reads written before that
+    rule. A known id with nothing in scope still answers empty.
+    """
+    validate_id(row_id, param)
+    if kind == "code":
+        missing = bool(db_.unknown_code_ids([row_id]))
+    elif kind == "file":
+        missing = bool(db_.unknown_file_ids([row_id]))
+    else:
+        missing = row_id not in {c["id"] for c in db_.list_cases()}
+    if not missing:
+        return None
+    return {"error": f"{kind.capitalize()} ID {row_id} does not exist "
+                     f"({_ID_LISTS[kind]})."}
+
+
+def _refuse_unknown_coder(db_, coder: Any) -> Optional[Dict[str, Any]]:
+    """A coder filter naming no coder in the project refused, or None.
+
+    compare_coders' rule, over every kind of coding (v0.14, claims audit
+    item 12): a name that owns no text, region or audio/video coding
+    anywhere in the project is refused, naming a coder whose name differs
+    only by letter case, spacing or Unicode form; a coder who has
+    codings, but none in the scope asked, still answers zero. A hidden
+    coder named exactly is not refused (an explicit coder filter reads
+    the base tables, as QualCoder 4.0's own AI does), but a hidden coder
+    is never named here: the listing and the near miss come from the
+    coders visible in QualCoder, with a count of the others.
+    """
+    coder = normalize_coder(coder)
+    if coder is None or not isinstance(coder, str):
+        return None
+    known = db_.coders_with_codings_including_hidden()
+    if coder in known:
+        return None
+    visibility = _visibility_map(db_)
+    if visibility is _VISIBILITY_UNREADABLE:
+        return {"error": f"Coder '{coder}' has no codings in this project, "
+                         f"so filtering by that name would find nothing. "
+                         f"Coder names are exact."}
+    shown = [n for n in known if not coder_is_hidden(visibility or {}, n)]
+    hidden = len(known) - len(shown)
+    near = [n for n in shown if name_key(n) == name_key(coder)]
+    text = (f"Coder '{coder}' has no codings in this project, so filtering "
+            f"by that name would find nothing. Coder names are exact")
+    text += (f"; did you mean '{near[0]}'?" if len(near) == 1 else ".")
+    text += f" Coders with codings: {_coder_listing(shown)}"
+    if hidden:
+        noun = "coder" if hidden == 1 else "coders"
+        text += f" (and {hidden} more {noun} hidden in QualCoder)"
+    text += "."
+    out: Dict[str, Any] = {"error": text}
+    if near:
+        out["did_you_mean"] = near
+    return out
+
+
+def _resolve_code_name_filter(db_, code_name: Optional[str]):
+    """A read's `code_name` filter resolved to the stored name (v0.14).
+
+    It was matched exactly, letter case included, and a name matching no
+    code answered "0 results" (claims audit item 12). Now the rule the
+    codebook tools use for a code's name (`_find_existing_by_name`):
+    the same name after spacing and Unicode form, then one differing
+    only by letter case; an ambiguity or no match is refused, listing
+    the codes. None or blank means no filter, as before.
+
+    Returns:
+        (stored_name or None, match or None, refusal or None)
+    """
+    if code_name is None or not str(code_name).strip():
+        return None, None, None
+    codes = db_.list_codes()
+    row, match, err = _find_existing_by_name(codes, str(code_name),
+                                             "code", "codes")
+    if err is not None:
+        return None, None, err
+    if row is None:
+        return None, None, {
+            "error": f"Code '{code_name}' not found: no code has that name "
+                     f"in any letter case.",
+            "available_codes": sorted(c["name"] for c in codes)[:50],
+        }
+    return row["name"], match, None
+
+
 def _resolve_file_ids(db_, value: Any) -> List[int]:
     """Validate file_ids and refuse unknown ids, as for code ids."""
     ids = _validate_id_list(
@@ -3724,10 +3829,17 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
 
     Args:
         query: The text to search for (case-insensitive substring match)
-        code_name: Optional - filter results to only segments coded with this code
+        code_name: Optional - filter results to only segments coded with
+                   this code. The same name after spacing and Unicode form
+                   are normalised is used first, otherwise one that
+                   differs only by letter case (code_match says which); a
+                   name that matches no code, or two, is refused with the
+                   code names
         limit: Maximum number of results per page (default 50)
-        coder: Optional coder name; reads that coder's rows from the
-               base tables, bypassing the visibility filter
+        coder: Optional coder name (exact); reads that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused, naming
+               a coder that differs only by letter case
         exclude_code_ids: Codes whose coded spans are already accounted
                for; segments overlapping them are dropped (at most 200
                ids, all of which must exist)
@@ -3741,6 +3853,13 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         exclude_ids = _resolve_exclude_code_ids(db_, exclude_code_ids)
     except ValueError as e:
         return json.dumps({"error": str(e)})
+    refusal = _refuse_unknown_coder(db_, coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    code_name, code_match, refusal = _resolve_code_name_filter(db_,
+                                                               code_name)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
 
     limit = validate_limit(limit)
     normalised_coder = normalize_coder(coder)
@@ -3833,6 +3952,8 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         "result_count": len(kept),
         "results": kept,
     }
+    if code_match is not None:
+        payload["code_match"] = code_match
     if exclude_ids:
         payload["novelty_filter"] = _novelty_block(db_, exclude_ids,
                                                    normalised_coder)
@@ -3919,10 +4040,13 @@ def get_coded_segments(code_id: int, limit: int = 100,
     is stored between calls.
 
     Args:
-        code_id: The numeric ID of the code (cid)
+        code_id: The numeric ID of the code (cid); an id that does not
+               exist is refused
         limit: Maximum number of segments per page (default 100)
-        coder: Optional coder name; reads that coder's rows from the
-               base tables, bypassing the visibility filter
+        coder: Optional coder name (exact); reads that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
         strategy: by_document, diverse_by_document, recent_first or
                sequential (default by_document)
         max_chars: Optional character budget for this page's segment
@@ -3936,6 +4060,10 @@ def get_coded_segments(code_id: int, limit: int = 100,
     """
     db_ = get_db()
     code_id = validate_id(code_id, "code_id")
+    refusal = (_refuse_unknown_id(db_, "code", code_id, "code_id")
+               or _refuse_unknown_coder(db_, coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     limit = validate_limit(limit)
     if strategy not in SEGMENT_STRATEGIES:
         return json.dumps({"error": (
@@ -4315,8 +4443,10 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
     rows from the full data instead.
 
     Args:
-        coder: Optional coder name; counts that coder's rows from the
-               base tables, bypassing the visibility filter
+        coder: Optional coder name (exact); counts that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Returns:
         JSON object with:
@@ -4324,6 +4454,9 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
         - codes: Array of codes with their frequencies, sorted by frequency
     """
     db_ = get_db()
+    refusal = _refuse_unknown_coder(db_, coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     frequencies = db_.get_coding_frequencies(coder=coder)
     counts = db_.non_text_coding_counts(coder=coder, by_code=True)
     for entry in frequencies["codes"]:
@@ -4403,24 +4536,26 @@ def export_code_report(code_name: str) -> str:
     get_coded_segments(coder=...) for that.
 
     Args:
-        code_name: The name of the code to generate a report for
+        code_name: The name of the code to generate a report for. The
+                   same name after spacing and Unicode form are
+                   normalised is used first, otherwise one that differs
+                   only by letter case; a name matching no code, or two,
+                   is refused with the code names
 
     Returns:
         JSON object with complete code information and all coded segments
     """
-    # Find the code by name
-    codes = get_db().list_codes()
-    matching_code = None
-    for code in codes:
-        if code["name"].lower() == code_name.lower():
-            matching_code = code
-            break
-
-    if not matching_code:
-        return json.dumps({
-            "error": f"Code '{code_name}' not found",
-            "available_codes": [c["name"] for c in codes]
-        })
+    # Find the code by name, by the codebook tools' rule: the first
+    # lower() match used to pick "Trust" for "trust" when both exist
+    # (v0.14, claims audit item 12)
+    stored, code_match, refusal = _resolve_code_name_filter(get_db(),
+                                                            code_name)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    if stored is None:
+        return json.dumps({"error": "code_name must not be empty"})
+    matching_code = next(c for c in get_db().list_codes()
+                         if c["name"] == stored)
 
     # Get detailed information
     code_id = matching_code["id"]
@@ -4429,6 +4564,7 @@ def export_code_report(code_name: str) -> str:
 
     payload = {
         "code": details,
+        "code_match": code_match,
         "segments": segments,
         "report_generated": True
     }
@@ -4870,11 +5006,15 @@ def get_file_attributes(file_id: int) -> str:
     (e.g., document_type, source, date_collected).
 
     Args:
-        file_id: The numeric ID of the file
+        file_id: The numeric ID of the file; an id that does not exist is
+                 refused
 
     Returns:
         JSON array of attributes with their values for this file
     """
+    refusal = _refuse_unknown_id(get_db(), "file", file_id, "file_id")
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_file_attributes(file_id)
     return _ai_json({
         "file_id": file_id,
@@ -4892,11 +5032,15 @@ def get_case_attributes(case_id: int) -> str:
     (e.g., age, gender, education_level).
 
     Args:
-        case_id: The numeric ID of the case
+        case_id: The numeric ID of the case; an id that does not exist is
+                 refused
 
     Returns:
         JSON array of attributes with their values for this case
     """
+    refusal = _refuse_unknown_id(get_db(), "case", case_id, "case_id")
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_case_attributes(case_id)
     return _ai_json({
         "case_id": case_id,
@@ -4924,7 +5068,12 @@ def query_by_attribute(
       -> query_by_attribute("Sector", "health", operator="contains")
 
     Args:
-        attr_name: Name of the attribute to query
+        attr_name: Name of the attribute to query, exactly as stored,
+                   letter case included. A name that is not an attribute
+                   of attr_type's kind is refused: the refusal names an
+                   attribute that differs only by letter case, or says
+                   when the name is the other kind's (a file attribute
+                   queried as a case one)
         attr_value: Value to compare against (a finite number for
                     gt/gte/lt/lte, such as "50" or "4.5")
         attr_type: Either 'case' or 'file' (default: 'case')
@@ -4950,6 +5099,11 @@ def query_by_attribute(
         with a note when anything was left out or the attribute is a
         character one
     """
+    if attr_type in ("case", "file") and isinstance(attr_name, str):
+        refusal = _refuse_unknown_attribute(
+            get_db().list_attribute_types(), attr_name, attr_type)
+        if refusal is not None:
+            return json.dumps(refusal, indent=2)
     found = get_db().attribute_query(attr_name, attr_value, attr_type,
                                      operator)
     payload: Dict[str, Any] = {
@@ -4984,6 +5138,41 @@ def query_by_attribute(
         if notes:
             payload["note"] = " ".join(notes)
     return _ai_json(payload, indent=2)
+
+
+def _refuse_unknown_attribute(types, attr_name: str,
+                              attr_type: str) -> Optional[Dict[str, Any]]:
+    """An attribute name that is not one of attr_type's refused, or None.
+
+    v0.14, claims audit item 12: "age" when the attribute is "Age", or a
+    file attribute queried with the default attr_type="case", answered
+    an empty list, which the assistant reported as "no participant is
+    over 50". Attribute names stay exact, as set_attribute's are (the
+    attribute_type table keys them byte for byte); the refusal names the
+    near miss and the domain a name belongs to.
+    """
+    if any(t["name"] == attr_name and t["applies_to"] == attr_type
+           for t in types):
+        return None
+    elsewhere = [t for t in types if t["name"] == attr_name]
+    if elsewhere:
+        other = elsewhere[0]["applies_to"]
+        how = (f"query it with attr_type='{other}'"
+               if other in ("case", "file")
+               else "journal attributes are not queried by this tool")
+        return {"error": f"'{attr_name}' is a {other} attribute, not a "
+                         f"{attr_type} one: {how}."}
+    near = [t for t in types if name_key(t["name"]) == name_key(attr_name)]
+    in_domain = sorted(t["name"] for t in types
+                       if t["applies_to"] == attr_type)
+    text = f"Attribute '{attr_name}' does not exist. Attribute names are exact"
+    if near:
+        text += "; did you mean " + " or ".join(
+            f"'{t['name']}' (a {t['applies_to']} attribute)"
+            for t in near) + "?"
+    else:
+        text += "."
+    return {"error": text, f"{attr_type}_attributes": in_domain[:50]}
 
 
 # The exact literal QualCoder writes as the owner of speaker-segmentation
@@ -5541,18 +5730,25 @@ def find_cooccurring_codes(code_id: int, window_size: int = 0,
         window_size: How to define "co-occurrence":
                     - 0 (default): Codes that overlap the same text segment
                     - N > 0: Codes within N characters of each other
-        coder: Optional coder name; analyses that coder's rows from the
-               base tables, bypassing the visibility filter
+        coder: Optional coder name (exact); analyses that coder's rows
+               from the base tables, bypassing the visibility filter. A
+               name with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Returns:
         JSON array of co-occurring codes, sorted by frequency; each entry
-        has code_id, code_name, color, category, cooccurrence_count
+        has code_id, code_name, color, category, cooccurrence_count. A
+        code_id that does not exist is refused
 
     Example uses:
     - "What themes appear together with 'workplace stress'?"
     - "Find patterns of co-occurring codes"
     - "Which codes never appear with 'job satisfaction'?"
     """
+    refusal = (_refuse_unknown_id(get_db(), "code", code_id, "code_id")
+               or _refuse_unknown_coder(get_db(), coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().find_code_cooccurrences(code_id, window_size,
                                               coder=coder)
     payload: Dict[str, Any] = {"cooccurrences": result}
@@ -5584,10 +5780,12 @@ def get_case_code_matrix(coder: Optional[str] = None) -> str:
     (QualCoder report-export parity).
 
     Args:
-        coder: Optional coder name. When given, counts only that coder's
-               codings, read from the full data regardless of QualCoder
-               visibility settings; when omitted, counts all visible
-               coders' codings.
+        coder: Optional coder name (exact). When given, counts only that
+               coder's codings, read from the full data regardless of
+               QualCoder visibility settings; when omitted, counts all
+               visible coders' codings. A name with no codings anywhere
+               in the project is refused, naming a coder that differs
+               only by letter case.
 
     Returns:
         JSON object with:
@@ -5602,6 +5800,9 @@ def get_case_code_matrix(coder: Optional[str] = None) -> str:
     - "Create a comparison table of themes by participant"
     - "Find cases that never mention certain codes"
     """
+    refusal = _refuse_unknown_coder(get_db(), coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_case_code_matrix(coder=coder)
     note = _coder_visibility_note(coder)
     if note:
@@ -5627,9 +5828,12 @@ def get_codes_by_case(case_id: int, coder: Optional[str] = None) -> str:
     specific coder's rows from the full data instead.
 
     Args:
-        case_id: The numeric ID of the case
-        coder: Optional coder name; counts that coder's rows from the
-               base tables, bypassing the visibility filter
+        case_id: The numeric ID of the case; an id that does not exist is
+                 refused
+        coder: Optional coder name (exact); counts that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Only codings fully contained in the case's text intervals are counted
     (QualCoder report semantics).
@@ -5638,6 +5842,10 @@ def get_codes_by_case(case_id: int, coder: Optional[str] = None) -> str:
         JSON array of codes used in this case; each entry has code_id,
         code_name, color, category, occurrence_count
     """
+    refusal = (_refuse_unknown_id(get_db(), "case", case_id, "case_id")
+               or _refuse_unknown_coder(get_db(), coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_codes_by_case(case_id, coder=coder)
     payload: Dict[str, Any] = {"codes": result}
     note = _coder_visibility_note(coder)
@@ -5665,9 +5873,12 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
     specific coder's rows from the full data instead.
 
     Args:
-        code_id: The numeric ID of the code
-        coder: Optional coder name; counts that coder's rows from the
-               base tables, bypassing the visibility filter
+        code_id: The numeric ID of the code; an id that does not exist is
+                 refused
+        coder: Optional coder name (exact); counts that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Only codings fully contained in a case's text intervals are counted
     (QualCoder report semantics).
@@ -5676,6 +5887,10 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
         JSON array of cases containing this code; each entry has case_id,
         case_name, memo, occurrence_count
     """
+    refusal = (_refuse_unknown_id(get_db(), "code", code_id, "code_id")
+               or _refuse_unknown_coder(get_db(), coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_cases_by_code(code_id, coder=coder)
     payload: Dict[str, Any] = {"cases": result}
     note = _coder_visibility_note(coder)
@@ -15104,8 +15319,11 @@ def export_coded_segments_report(
                     else unique case-insensitive match.
         case_names: Switch to CASE mode and filter to these cases
         coder: Exact coder name (default "" = all coders; exact match,
-               never a substring, like QualCoder)
-        file_ids: Restrict to these files
+               never a substring, like QualCoder). A name with no codings
+               anywhere in the project is refused, naming a coder that
+               differs only by letter case, and no file is written
+        file_ids: Restrict to these files; an id that does not exist is
+               refused and no file is written
         search_text: Only segments whose text contains this substring
         important: Only segments flagged important
         include_variables: Append `FileVar_{name}` columns (and, in case
@@ -15126,6 +15344,20 @@ def export_coded_segments_report(
     if format not in ("csv", "txt"):
         return json.dumps({"error": "format must be 'csv' or 'txt'"})
     ro_db = get_db()
+    # An unknown coder or file id wrote a report with a header and no
+    # rows, which reads as "nothing coded" (v0.14, claims audit item 12)
+    refusal = _refuse_unknown_coder(ro_db, coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    if file_ids:
+        for fid in file_ids:
+            validate_id(fid, "file_ids")
+        unknown = ro_db.unknown_file_ids(list(file_ids))
+        if unknown:
+            return json.dumps({"error": (
+                f"file_ids contains unknown file id(s): "
+                f"{', '.join(str(i) for i in unknown)} "
+                f"({_ID_LISTS['file']}).")}, indent=2)
 
     all_codes = ro_db.list_codes()
     code_ids = None

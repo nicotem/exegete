@@ -246,9 +246,12 @@ class TestE1CodedSegments:
         out = json.loads(server.export_coded_segments_report(
             str(tmp_path / "a.csv"), coder="TestCoder"))
         assert out["rows"] == 2
+        # v0.14 (claims audit item 12): a name that owns no coding is
+        # refused and no file is written, rather than a header-only file
         out = json.loads(server.export_coded_segments_report(
             str(tmp_path / "b.csv"), coder="Test"))
-        assert out["rows"] == 0
+        assert "has no codings" in out["error"]
+        assert not (tmp_path / "b.csv").exists()
 
     def test_code_filter_ci_and_unknown(self, setup_server, tmp_path):
         out = json.loads(server.export_coded_segments_report(

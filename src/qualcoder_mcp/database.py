@@ -4944,6 +4944,34 @@ class QualcoderDatabase:
                                "Failed to read the project's coders")
         return [r["owner"] for r in rows]
 
+    def coders_with_codings_including_hidden(self) -> List[str]:
+        """Every owner of a text, region or audio/video coding, sorted,
+        HIDDEN CODERS INCLUDED.
+
+        What a read's `coder` argument is checked against (v0.14, claims
+        audit item 12): a name with no coding anywhere in the project is
+        refused, where it used to answer zero as though that coder had
+        coded nothing. It reads the base tables, as an explicit coder
+        filter does, and carries the same warning as
+        `coders_with_text_codings_including_hidden`: a caller must filter
+        it with `coder_is_hidden` before any name reaches the
+        conversation.
+        """
+        names = set()
+        try:
+            tables = {r[0] for r in self.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'")}
+            for table in ("code_text", "code_image", "code_av"):
+                if table not in tables:
+                    continue
+                names.update(r[0] for r in self.conn.execute(
+                    f"SELECT DISTINCT owner FROM {table} "
+                    f"WHERE owner IS NOT NULL AND owner != ''"))
+        except sqlite3.Error as e:
+            _raise_query_error(e, "coders_with_codings_including_hidden",
+                               "Failed to read the project's coders")
+        return sorted(names)
+
     def get_coding_frequencies(self, coder: Optional[str] = None,
                                honor_visibility: bool = True
                                ) -> Dict[str, Any]:

@@ -2376,9 +2376,10 @@ class TestTheLabelsAndMemosTheResidueCounts:
         """Rewritten in v0.13, with both of the cross-check's
         corrections. The block covers the file text now, so the two
         sentences that said it did not are gone; `search_memos` reaches
-        three of the twelve note fields, so the note names those three
-        and promises nothing for the rest; and `search_files` reads
-        narrower than this block, so a researcher sent there is told."""
+        all twelve note fields since v0.14 (it reached three, and the
+        note said so), with a hidden coder's notes left out; and
+        `search_files` reads narrower than this block, so a researcher
+        sent there is told."""
         note = preview_of()["preview"]["residue"]["scope_note"]
         # Decision A, said once in the preview and once in the
         # description; since v0.13's Brief 2 the notes are named with the
@@ -2390,10 +2391,10 @@ class TestTheLabelsAndMemosTheResidueCounts:
                 "values as fields, and the file text of every file with "
                 "stored text as occurrences, under file_text." in note)
         assert "Each count is two readings, wide and whole-word." in note
-        assert ("search_memos can answer for three of the twelve fields by "
-                "name: the code notes, the file notes and the annotation "
-                "notes; the other nine have no search tool in this server "
-                "and are read in QualCoder." in note)
+        assert ("search_memos searches the public part of all twelve "
+                "fields and names each result's kind; it leaves out the "
+                "coding notes and annotations of a coder hidden in "
+                "QualCoder, which are read there." in note)
         assert ("search_files reads narrower than this block does (a plain "
                 "substring, no normalisation), so a name it does not find "
                 "may still be counted here." in note)

@@ -4331,8 +4331,9 @@ def search_files(
     Tips:
     - For finding a specific interview by participant name, use search_filename
     - For finding specific quotes or themes, use search_content
-    - For searching file memos, use search_memo (annotations and code
-      memos are searched by the search_memos tool)
+    - For searching file memos, use search_memo (every other kind of
+      note, from code and coding memos to annotations, journal entries
+      and the project memo, is searched by the search_memos tool)
     - You can combine multiple search locations
     - Once you have file_id, use analyze_file_with_coding() to get full content
     """
@@ -4480,25 +4481,30 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
 @mcp.tool()
 @_tool_guard
 def search_memos(query: str, limit: int = 50) -> str:
-    """Search through all memos and annotations in the project.
+    """Search every kind of note in the project.
 
-    This tool searches through code memos, file memos, and annotations
-    to find notes and reflections containing specific keywords. To WRITE a
-    memo, use set_memo(target_type, target_id, memo); to add a research
-    journal entry, use add_journal_entry(name, entry).
+    Searches the twelve places a note lives: the project memo, code,
+    category, file, case and attribute type memos, the memos of text,
+    region (PDF page or image) and audio/video codings (where
+    apply_codings stores the reason for each AI coding), case link
+    memos, annotations, and journal entries. Each result says its type
+    and, for a coding, a case link or an annotation, the file and the
+    positions. Results come in that order, up to limit; fewer than limit
+    means nothing was left out. To WRITE a memo, use
+    set_memo(target_type, target_id, memo); to add a research journal
+    entry, use add_journal_entry(name, entry).
 
     Memo privacy (QualCoder 4.0 convention): memo text from the first
     '#####' marker onward is private to the researcher. The search
-    matches and returns only the public part of each memo.
+    matches and returns only the public part of each memo or entry.
 
     Coder visibility (projects with the coder-visibility capability,
-    QualCoder 3.8.2 and 4.0 onwards): annotation matches
-    honour the project's per-coder visibility by default (hidden
-    coders' annotations are not returned, matching what the user sees
-    in QualCoder), and the result then carries a coder_visibility
-    block. Code and file memos have no per-coder visibility in
-    QualCoder and are always searched. This tool has no coder
-    override.
+    QualCoder 3.8.2 and 4.0 onwards): coding memos and annotations
+    honour the project's per-coder visibility by default (hidden coders'
+    notes are not returned, matching what the user sees in QualCoder),
+    and the result then carries a coder_visibility block. The other
+    notes have no per-coder visibility in QualCoder and are always
+    searched. This tool has no coder override.
 
     Args:
         query: The text to search for in memos (a substring; letter case
@@ -4507,7 +4513,8 @@ def search_memos(query: str, limit: int = 50) -> str:
         limit: Maximum number of results to return (default 50)
 
     Returns:
-        JSON array of matching memos with their type, content, and context
+        JSON object with query, result_count and results; each result
+        has type, id, name, memo (the public part), owner and date
     """
     results = get_db().search_memos(query, limit)
     payload = {

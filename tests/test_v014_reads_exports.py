@@ -588,3 +588,71 @@ class TestCaseIsIgnoredInEveryAlphabet:
         assert host("search_coded_text", query="%")["results"] == []
         assert host("query_by_attribute", attr_name="Beruf", attr_value="_",
                     operator="contains")["results"] == []
+
+
+# ===========================================================================
+# Audit item 14: search_memos searches every kind of note
+# ===========================================================================
+
+ZEBRA_NOTES = [
+    ("project", "UPDATE project SET memo = 'method: Zebra'"),
+    ("code", "UPDATE code_name SET memo = 'Zebra code' WHERE cid = 1"),
+    ("category", "UPDATE code_cat SET memo = 'Zebra cat' WHERE catid = 1"),
+    ("file", "UPDATE source SET memo = 'Zebra file' WHERE id = 2"),
+    ("case", "UPDATE cases SET memo = 'Zebra case' WHERE caseid = 1"),
+    ("attribute_type",
+     "UPDATE attribute_type SET memo = 'Zebra age' WHERE name = 'Age'"),
+    ("coding", "UPDATE code_text SET memo = 'AI reason: Zebra' "
+               "WHERE ctid = 2"),
+    ("region_coding", "INSERT INTO code_image (imid, id, x1, y1, width, "
+                      "height, cid, memo, date, owner, important) VALUES "
+                      "(1, 2, 0, 0, 5, 5, 1, 'Zebra region', '2024-01-15', "
+                      "'TestCoder', 0)"),
+    ("av_coding", "INSERT INTO code_av (avid, cid, id, pos0, pos1, memo, "
+                  "owner, date) VALUES (1, 1, 2, 0, 900, 'Zebra clip', "
+                  "'TestCoder', '2024-01-15')"),
+    ("case_link", "UPDATE case_text SET memo = 'Zebra link' WHERE id = 1"),
+    ("annotation", "INSERT INTO annotation (fid, pos0, pos1, memo, owner, "
+                   "date) VALUES (1, 0, 4, 'Zebra note', 'TestCoder', "
+                   "'2024-01-15')"),
+    ("journal", "UPDATE journal SET jentry = 'Thinking about Zebra' "
+                "WHERE jid = 1"),
+]
+
+
+class TestSearchMemosSearchesEveryKind:
+
+    def test_one_word_in_each_kind_is_found_in_each(
+            self, setup_server, qualcoder_db_path):
+        for _, statement in ZEBRA_NOTES:
+            sql(qualcoder_db_path, statement)
+        out = host("search_memos", query="zebra")
+        assert sorted(r["type"] for r in out["results"]) == sorted(
+            kind for kind, _ in ZEBRA_NOTES)
+        coding = next(r for r in out["results"] if r["type"] == "coding")
+        assert (coding["id"], coding["name"], coding["file_id"]) == (
+            2, "Coping", 1)
+        assert coding["memo"] == "AI reason: Zebra"
+
+    def test_a_private_part_is_neither_matched_nor_returned(
+            self, setup_server, qualcoder_db_path):
+        sql(qualcoder_db_path, "UPDATE code_text SET memo = "
+            "'public reason#####Zebra secret' WHERE ctid = 2")
+        sql(qualcoder_db_path, "UPDATE journal SET jentry = "
+            "'entry#####Zebra secret' WHERE jid = 1")
+        sql(qualcoder_db_path, "UPDATE project SET memo = "
+            "'method#####Zebra secret'")
+        assert host("search_memos", query="zebra")["results"] == []
+        found = host("search_memos", query="public reason")["results"]
+        assert [r["memo"] for r in found] == ["public reason"]
+
+    def test_a_hidden_coders_coding_note_is_not_returned(
+            self, setup_server, qualcoder_db_path):
+        from test_qc40_visibility import (_apply_visibility_schema, _reopen,
+                                          HIDDEN)
+        _apply_visibility_schema(qualcoder_db_path)
+        _reopen(qualcoder_db_path)
+        out = host("search_memos", query="hidden memo")
+        assert out["results"] == []
+        assert HIDDEN not in json.dumps(out)
+        assert out["coder_visibility"]["hidden_coder_filter"] == "applied"

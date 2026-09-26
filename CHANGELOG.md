@@ -364,6 +364,18 @@ search or a silent limit.
   normalisation, for the match and for the count, the same on every
   platform's SQLite, so "strasse" also finds "Straße". QualCoder's own
   searches use `LIKE`; this is a departure in the researcher's favour.
+- **`search_memos` searches every kind of note.** It read code memos,
+  file memos and annotations, three of the twelve places a note lives,
+  while its description said "all memos": a word in a coding memo
+  (where the AI's reason for each applied coding is stored) or in the
+  project memo (where the methods notes put the study's method) was not
+  found. It now also searches the project memo, category, case and
+  attribute type memos, the memos of text, region and audio/video
+  codings, case link memos and journal entries, each result named by
+  its `type`, in the public part only; coding memos, like annotations,
+  leave out a coder hidden in QualCoder. The pseudonymisation preview's
+  scope note, which said `search_memos` reaches three of its twelve note
+  fields, now says it reaches all twelve.
 
 ## [0.13.0-alpha] - 2026-09-25
 

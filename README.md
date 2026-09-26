@@ -16,7 +16,7 @@ This MCP server lets an AI assistant directly access and analyse your Qualcoder 
 - 📋 Compare codes and cases
 - 👥 **Query by demographics/attributes** (age, gender, etc.)
 - 🎯 **Create case-code matrices for comparative analysis**
-- 🗒️ Search through memos and annotations
+- 🗒️ Search every kind of note: memos, coding memos, annotations, journal entries and the project memo
 - 🤖 **AI-assisted coding**: suggest → review → approve → apply, so nothing is written until you say so
 - 🏷️ **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - 💾 **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
@@ -523,7 +523,7 @@ analytics (`get_coded_segments`, `search_coded_text`,
 `get_coding_frequencies`, `find_cooccurring_codes`,
 `get_case_code_matrix`, `get_codes_by_case`, `get_cases_by_code`, the
 codings and annotations in `analyze_file_with_coding`, and the
-annotation matches of `search_memos`) read what the user sees in
+coding-memo and annotation matches of `search_memos`) read what the user sees in
 QualCoder by default and disclose how many coders are hidden, never
 their names (with one stated exception, a project that gained the
 capability after this server connected to it; PRIVACY.md's "Coder
@@ -929,7 +929,7 @@ carries the complete list.
 - `search_coded_text(query, code_name, limit, coder, exclude_code_ids, cursor)` - Search coded segments, with the same novelty filter and paging
 - `get_coded_segments(code_id, limit, coder, strategy, max_chars, file_ids, cursor)` - Segments for a code, sampled by strategy (`by_document`, `diverse_by_document`, `recent_first`, `sequential`) under an optional character budget; `codings_not_shown` counts the code's region codings (areas on PDF pages or images) and audio/video codings in the same scope, which a text read does not show
 - `get_coding_frequencies(coder)` - Coding statistics: text codings per code, with `codings_not_counted` giving the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
-- `search_memos(query, limit)` - Search memos and annotations (public memo text only)
+- `search_memos(query, limit)` - Search every kind of note (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type
 - `export_code_report(code_name)` - Detailed code report returned into the conversation (public memo text only)
 - `get_project_summary()` - Comprehensive project overview, naming any PDF with no usable text and counting the region and audio/video codings the text statistics leave out
 

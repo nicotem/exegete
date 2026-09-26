@@ -5080,8 +5080,74 @@ class QualcoderDatabase:
             "codes": frequencies
         }
 
+    # The twelve places a note lives, in the order search_memos reads
+    # them (v0.14, claims audit item 14: it read code notes, file notes
+    # and annotations only, three of these twelve). Each entry is the
+    # result's `type`, the table or visibility view, and the SELECT's
+    # columns and joins; `memo` is the note column. The coding and
+    # annotation rows go through QualCoder's visibility views where the
+    # project declares them, as annotations already did, so a hidden
+    # coder's note is not returned. They are the twelve note fields the
+    # pseudonymisation preview counts.
+    _MEMO_SECTIONS = (
+        ("project", None,
+         "SELECT NULL AS id, 'Project memo' AS name, memo, NULL AS owner, "
+         "date FROM project WHERE {match}"),
+        ("code", None,
+         "SELECT cid AS id, name, memo, owner, date FROM code_name "
+         "WHERE {match} ORDER BY cid"),
+        ("category", None,
+         "SELECT catid AS id, name, memo, owner, date FROM code_cat "
+         "WHERE {match} ORDER BY catid"),
+        ("file", None,
+         "SELECT id, name, memo, owner, date FROM source "
+         "WHERE {match} ORDER BY id"),
+        ("case", None,
+         "SELECT caseid AS id, name, memo, owner, date FROM cases "
+         "WHERE {match} ORDER BY caseid"),
+        ("attribute_type", None,
+         "SELECT NULL AS id, name, memo, owner, date, "
+         "caseOrFile AS applies_to FROM attribute_type "
+         "WHERE {match} ORDER BY name"),
+        ("coding", ("code_text", "code_text_visible"),
+         "SELECT t.ctid AS id, c.name AS name, t.memo, t.owner, t.date, "
+         "t.fid AS file_id, s.name AS file_name, t.pos0 AS position_start, "
+         "t.pos1 AS position_end FROM {source} t "
+         "LEFT JOIN code_name c ON t.cid = c.cid "
+         "LEFT JOIN source s ON t.fid = s.id "
+         "WHERE {match} ORDER BY t.ctid"),
+        ("region_coding", ("code_image", "code_image_visible"),
+         "SELECT t.imid AS id, c.name AS name, t.memo, t.owner, t.date, "
+         "t.id AS file_id, s.name AS file_name FROM {source} t "
+         "LEFT JOIN code_name c ON t.cid = c.cid "
+         "LEFT JOIN source s ON t.id = s.id "
+         "WHERE {match} ORDER BY t.imid"),
+        ("av_coding", ("code_av", "code_av_visible"),
+         "SELECT t.avid AS id, c.name AS name, t.memo, t.owner, t.date, "
+         "t.id AS file_id, s.name AS file_name FROM {source} t "
+         "LEFT JOIN code_name c ON t.cid = c.cid "
+         "LEFT JOIN source s ON t.id = s.id "
+         "WHERE {match} ORDER BY t.avid"),
+        ("case_link", None,
+         "SELECT t.id AS id, cs.name AS name, t.memo, t.owner, t.date, "
+         "t.fid AS file_id, s.name AS file_name, t.pos0 AS position_start, "
+         "t.pos1 AS position_end FROM case_text t "
+         "LEFT JOIN cases cs ON t.caseid = cs.caseid "
+         "LEFT JOIN source s ON t.fid = s.id "
+         "WHERE {match} ORDER BY t.id"),
+        ("annotation", ("annotation", "annotation_visible"),
+         "SELECT a.anid AS id, s.name AS name, a.memo, a.owner, a.date, "
+         "a.fid AS file_id, a.pos0 AS position_start, "
+         "a.pos1 AS position_end FROM {source} a "
+         "JOIN source s ON a.fid = s.id "
+         "WHERE {match} ORDER BY a.anid"),
+        ("journal", None,
+         "SELECT jid AS id, name, jentry AS memo, owner, date FROM journal "
+         "WHERE {match} ORDER BY jid"),
+    )
+
     def search_memos(self, query: str, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
-        """Search for memos and annotations.
+        """Search every kind of note in the project.
 
         Args:
             query: Text to search for (letter case ignored in every
@@ -5089,7 +5155,10 @@ class QualcoderDatabase:
             limit: Maximum results (max 5000)
 
         Returns:
-            List of matching memos
+            List of matching notes, each with its `type` (one of the
+            twelve in `_MEMO_SECTIONS`), id, name, public memo text,
+            owner and date, and where it sits when it belongs to a
+            coding, a case link or an annotation (file, positions)
 
         Raises:
             TypeError: If parameters are wrong type
@@ -5099,125 +5168,54 @@ class QualcoderDatabase:
         query = validate_string(query, "query")
         limit = validate_limit(limit)
 
-        results = []
+        results: List[Dict[str, Any]] = []
 
         # Memo privacy ('#####'): match against the PUBLIC part only and
         # return the public part only. The SQL filter over the full column
         # (the same fold, `qc_text_contains`) is a SUPERSET filter, since
-        # the public part is a prefix of the column, and carries NO LIMIT: the cap is
-        # enforced in Python only after the public-part check, so a row
-        # whose match lives only in the private suffix never consumes
-        # result budget. result_count therefore depends on public
+        # the public part is a prefix of the column, and carries NO LIMIT:
+        # the cap is enforced in Python only after the public-part check,
+        # so a row whose match lives only in the private suffix never
+        # consumes result budget. result_count therefore depends on public
         # content alone (and result_count < limit means the search was
         # exhaustive, as on the pre-privacy code), which is what keeps
         # the search from being a count oracle on private content
-        # (QA round 1, F1).
-        def _public_hit(raw_memo):
-            """(matches, public_text) for one candidate memo."""
-            public = extract_ai_memo(raw_memo or "")
-            return text_contains(public, query), public
-
+        # (QA round 1, F1). A journal entry follows the same convention.
         try:
-            # Search code memos (cursor iterated, cap applied in Python
-            # after the public-part check; see the note above)
-            cursor = self.conn.execute("""
-                SELECT
-                    'code' as type,
-                    cid as id,
-                    name,
-                    memo,
-                    owner,
-                    date
-                FROM code_name
-                WHERE qc_text_contains(memo, ?)
-                ORDER BY cid
-            """, (query,))
-
-            for row in cursor:
-                matches, public_memo = _public_hit(row["memo"])
-                if not matches:
-                    continue
-                results.append({
-                    "type": row["type"],
-                    "id": row["id"],
-                    "name": row["name"],
-                    "memo": public_memo,
-                    "owner": row["owner"],
-                    "date": row["date"]
-                })
+            tables = {r[0] for r in self.conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type IN ('table', 'view')")}
+            for kind, visible, sql in self._MEMO_SECTIONS:
                 if len(results) >= limit:
                     break
-
-            # Search file memos (only while budget remains)
-            if len(results) < limit:
-                cursor = self.conn.execute("""
-                    SELECT
-                        'file' as type,
-                        id,
-                        name,
-                        memo,
-                        owner,
-                        date
-                    FROM source
-                    WHERE qc_text_contains(memo, ?)
-                    ORDER BY id
-                """, (query,))
-
-                for row in cursor:
-                    matches, public_memo = _public_hit(row["memo"])
-                    if not matches:
+                if visible is not None:
+                    if visible[0] not in tables:
                         continue
-                    results.append({
-                        "type": row["type"],
-                        "id": row["id"],
-                        "name": row["name"],
-                        "memo": public_memo,
-                        "owner": row["owner"],
-                        "date": row["date"]
-                    })
+                    # QualCoder's visibility view where the project
+                    # declares it; raises rather than falling back
+                    source = self._visible_source(*visible)
+                else:
+                    source = None
+                    table = sql.split(" FROM ", 1)[1].split()[0]
+                    if table not in tables:
+                        continue
+                column = "memo" if kind != "journal" else "jentry"
+                prefix = {"coding": "t.", "region_coding": "t.",
+                          "av_coding": "t.", "case_link": "t.",
+                          "annotation": "a."}.get(kind, "")
+                match = f"qc_text_contains({prefix}{column}, ?)"
+                cursor = self.conn.execute(
+                    sql.format(source=source, match=match), (query,))
+                for row in cursor:
+                    public = extract_ai_memo(row["memo"] or "")
+                    if not text_contains(public, query):
+                        continue
+                    item = {"type": kind}
+                    item.update({k: row[k] for k in row.keys()})
+                    item["memo"] = public
+                    results.append(item)
                     if len(results) >= limit:
                         break
-
-            # Search annotations (only while budget remains)
-            if len(results) < limit:
-                # P1-3: annotations honor coder visibility here
-                # too (annotation_visible when present, base table
-                # otherwise; QA round 1, F13)
-                annotation_source = self._visible_source(
-                    "annotation", "annotation_visible")
-                cursor = self.conn.execute(f"""
-                    SELECT
-                        'annotation' as type,
-                        a.anid as id,
-                        s.name,
-                        a.memo,
-                        a.owner,
-                        a.date,
-                        a.pos0,
-                        a.pos1
-                    FROM {annotation_source} a
-                    JOIN source s ON a.fid = s.id
-                    WHERE qc_text_contains(a.memo, ?)
-                    ORDER BY a.anid
-                """, (query,))
-
-                for row in cursor:
-                    matches, public_memo = _public_hit(row["memo"])
-                    if not matches:
-                        continue
-                    results.append({
-                        "type": row["type"],
-                        "id": row["id"],
-                        "name": row["name"],
-                        "memo": public_memo,
-                        "owner": row["owner"],
-                        "date": row["date"],
-                        "position_start": row["pos0"],
-                        "position_end": row["pos1"]
-                    })
-                    if len(results) >= limit:
-                        break
-
             return results
         except sqlite3.Error as e:
             _raise_query_error(e, "search_memos", "Failed to search memos")
@@ -11261,10 +11259,9 @@ class QualcoderDatabase:
             "whole-word count is the sign of a short name.")
         # One file per call (decision A), and the report is still the
         # whole project: said here once, and once in the description.
-        # `search_memos` reaches three of the twelve note fields by its
-        # own three SELECTs (code notes, file notes, annotation notes),
-        # so the note names those three and promises nothing for the
-        # rest; `search_files` matches an escaped literal with no
+        # `search_memos` reads all twelve note fields since v0.14 (it
+        # read three, the code, file and annotation notes, and the note
+        # said so); `search_files` matches an escaped literal with no
         # normalisation and no separator flexibility, so a researcher
         # sent there gets a narrower answer than this block's and is
         # told so (cross-check, both corrections).
@@ -11275,10 +11272,10 @@ class QualcoderDatabase:
             "labels and the attribute values as fields, and the file text "
             "of every file with stored text as occurrences, under "
             "file_text. Each count is two readings, wide and whole-word. "
-            "To find the notes a count points at, search_memos can answer "
-            "for three of the twelve fields by name: the code notes, the "
-            "file notes and the annotation notes; the other nine have no "
-            "search tool in this server and are read in QualCoder. "
+            "To find the notes a count points at, search_memos searches "
+            "the public part of all twelve fields and names each result's "
+            "kind; it leaves out the coding notes and annotations of a "
+            "coder hidden in QualCoder, which are read there. "
             "search_files reads narrower than this block does (a plain "
             "substring, no normalisation), so a name it does not find may "
             "still be counted here. The labels include case and file "

@@ -341,9 +341,12 @@ class TestValidationTexts:
     def test_unknown_code_ids_refused_and_sorted(self, setup_server):
         out = json.loads(server.search_coded_text(
             "x", exclude_code_ids=[42, 41]))
+        # v0.14 (server-wide): pointed at what lists every code with its
+        # id; get_project_summary lists ten, export_codebook writes a file
         assert out["error"] == (
             "exclude_code_ids contains unknown code id(s): 41, 42. Use "
-            "get_project_summary or export_codebook to list codes.")
+            "get_coding_frequencies, which lists every code with its id, "
+            "or the qualcoder://codes/list resource.")
 
     @pytest.mark.parametrize("bad", [["1"], [1.5], [True], [[1]], [0], [-3],
                                      "1,2"])
@@ -377,9 +380,13 @@ class TestValidationTexts:
 
     def test_unknown_file_ids(self, setup_server):
         out = json.loads(server.get_coded_segments(1, file_ids=[9]))
+        # v0.14 (server-wide): search_files lists nothing without a
+        # pattern, so the resource first and a name search after it
         assert out["error"] == (
-            "file_ids contains unknown file id(s): 9. Use search_files or "
-            "the qualcoder://files/list resource to list files.")
+            "file_ids contains unknown file id(s): 9. The "
+            "qualcoder://files/list resource lists every file with its id; "
+            "without it, search_files with part of the file's name as the "
+            "pattern finds it (it searches names by default).")
 
     def test_bad_file_ids_shape(self, setup_server):
         out = json.loads(server.get_coded_segments(1, file_ids=["x"]))

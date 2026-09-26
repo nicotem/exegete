@@ -373,11 +373,20 @@ class _QualcoderMCP(FastMCP):
     `_apply_toolset` register a tool, so none is missed.
     """
 
+    def __init__(self, *args, **kwargs):
+        # Each tool's description as registered, before any tool set
+        # marks the tools it names that it does not register
+        # (`_refresh_served_texts`)
+        self.original_descriptions: Dict[str, str] = {}
+        super().__init__(*args, **kwargs)
+
     def add_tool(self, fn, name=None, *args, **kwargs):
         super().add_tool(fn, name, *args, **kwargs)
         tool = self._tool_manager._tools.get(name or fn.__name__)
         if tool is not None:
             tool.parameters["additionalProperties"] = False
+            self.original_descriptions.setdefault(tool.name,
+                                                  tool.description)
 
     async def call_tool(self, name, arguments):
         tool = self._tool_manager.get_tool(name)
@@ -399,6 +408,34 @@ mcp = _QualcoderMCP("Qualcoder", instructions=SERVER_INSTRUCTIONS)
 # the wrapped low-level server, which reads the attribute at initialize time.
 from . import __version__ as _package_version  # noqa: E402
 mcp._mcp_server.version = _package_version
+
+# What follows a tool's name in a text the current tool set serves when
+# that set does not register the tool (v0.14, server-wide).
+NOT_IN_THIS_TOOL_SET = " (not available in this tool set)"
+
+
+def _mark_unregistered(text: str) -> str:
+    """`text` with every tool this server defines but the current set does
+    not register followed by NOT_IN_THIS_TOOL_SET (after its argument
+    list, when the text shows one, as in explain_ai_coding_tools('...')).
+
+    Whole names only, so create_project is not found inside
+    create_proposed_codes; a name already marked is left as it is.
+    """
+    registered = mcp._tool_manager._tools
+    missing = sorted((name for name in ALL_TOOL_NAMES
+                      if name not in registered), key=len, reverse=True)
+    if not missing or not text:
+        return text
+    pattern = re.compile(
+        r"(?<![A-Za-z0-9_])(?:" + "|".join(map(re.escape, missing))
+        + r")(?![A-Za-z0-9_])(?:\([^()\n]*\))?")
+
+    def mark(match):
+        if match.string.startswith(NOT_IN_THIS_TOOL_SET, match.end()):
+            return match.group(0)
+        return match.group(0) + NOT_IN_THIS_TOOL_SET
+    return pattern.sub(mark, text)
 
 # Global database instance and current project path
 db: Optional[QualcoderDatabase] = None
@@ -619,6 +656,17 @@ UNEXPECTED_ERROR = (
 UNEXPECTED_RESOURCE_ERROR = (
     "An unexpected error ({kind}) stopped this read; nothing more of it is "
     "reported here. If it persists, report it with the resource's address.")
+
+# Where a refusal of an unknown id sends the assistant (v0.14,
+# server-wide; the claims audit, item 17): to what lists every id.
+# get_project_summary lists only the ten codes most used, export_codebook
+# writes a file, and search_files needs a pattern.
+LIST_CODES_HINT = ("Use get_coding_frequencies, which lists every code with "
+                   "its id, or the qualcoder://codes/list resource.")
+LIST_FILES_HINT = ("The qualcoder://files/list resource lists every file "
+                   "with its id; without it, search_files with part of the "
+                   "file's name as the pattern finds it (it searches names "
+                   "by default).")
 
 # The fixed text a tool or a resource answers when the file system
 # refused it.
@@ -2681,11 +2729,14 @@ when the data base is thin and the assessment is provisional.
 
 ## How to bring a method into a session
 
-Put the method's rules into the project memo's public part (once, for
-every future session) or into analyze_for_coding's instruction (for one
-session); the session stores the instruction on disk, so it survives a
-host restart. Ask the researcher which framework applies before assuming
-one.
+Put the method's rules into the project memo's public part, where they
+last, or into analyze_for_coding's instruction, for one session; the
+session stores the instruction on disk, so it survives a host restart.
+The project memo reaches a session only when you read it: this server
+does not hand it to you, as QualCoder 4.0 hands it to its own assistant
+in every chat, so read its public part (get_project_summary or
+qualcoder://project/info) at the start of each coding session. Ask the
+researcher which framework applies before assuming one.
 """
 
 
@@ -2697,8 +2748,9 @@ one.
                 "prompts for. Static; needs no project.")
 @_resource_guard
 def get_methods_guidance() -> str:
-    """Static methods notes: no project, no database, identical on every call."""
-    return METHODS_GUIDANCE
+    """Static methods notes: no project, no database, identical on every
+    call in one tool set (a tool the set lacks is marked as such)."""
+    return _mark_unregistered(METHODS_GUIDANCE)
 
 
 @mcp.tool(annotations=TOOL_READS)
@@ -2714,31 +2766,64 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
     - ~/Documents
 
     Args:
-        search_directories: Optional list of additional directories to search
+        search_directories: Optional list of folders to search INSTEAD of
+            the usual places above, each a full path or one starting with
+            ~ (a relative path is refused). Each is searched three levels
+            deep. Leave it out, or give an empty list, for the usual
+            places.
 
     Returns:
-        JSON array of discovered projects with name, path, size, and last modified date
+        JSON object with the projects found (name, path, size, last
+        modified, in seconds since 1970), the folders searched, and which
+        of them do not exist
     """
+    usual = [
+        "~/Documents/QualCoder_projects",
+        "~/Documents/QualCoder",
+        "~/QualCoder",
+        "~/Documents",
+    ]
+    if search_directories:
+        if not isinstance(search_directories, list) or not all(
+                isinstance(d, str) and d.strip()
+                for d in search_directories):
+            return json.dumps({"error": (
+                "search_directories must be a list of folder paths, each "
+                "a full path or one starting with ~.")}, indent=2)
+        relative = [d for d in search_directories
+                    if not Path(d).expanduser().is_absolute()]
+        if relative:
+            return json.dumps({"error": (
+                f"search_directories holds a relative path "
+                f"({', '.join(repr(d) for d in relative)}); give each "
+                f"folder as a full path or one starting with ~. Nothing "
+                f"was searched.")}, indent=2)
+        wanted = list(search_directories)
+    else:
+        wanted = usual
+    folders = [str(Path(d).expanduser()) for d in wanted]
+    searched = {
+        "folders": folders,
+        "not_found": [f for f in folders if not Path(f).is_dir()],
+        "instead_of_the_usual_places": bool(search_directories),
+    }
     try:
-        projects = discover_projects(search_directories)
+        projects = discover_projects(folders)
 
         if not projects:
             return json.dumps({
                 "projects": [],
                 "message": "No Qualcoder projects found. Make sure you have created "
                           "at least one project in Qualcoder, or specify search_directories.",
-                "default_search_paths": [
-                    "~/Documents/QualCoder_projects",
-                    "~/Documents/QualCoder",
-                    "~/QualCoder",
-                    "~/Documents"
-                ]
+                "default_search_paths": usual,
+                "searched": searched,
             }, indent=2)
 
         return json.dumps({
             "project_count": len(projects),
             "projects": projects,
-            "current_project": current_project_path
+            "current_project": current_project_path,
+            "searched": searched,
         }, indent=2)
 
     except Exception as e:
@@ -3040,7 +3125,7 @@ def _visibility_map(db_):
         return _VISIBILITY_UNREADABLE
 
 
-@mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def set_project_ai_coder_name(name: str, note: str = "",
                               allow_hidden_coder: bool = False) -> str:
@@ -3655,8 +3740,8 @@ def _resolve_exclude_code_ids(db_, value: Any) -> List[int]:
     if unknown:
         listed = ", ".join(str(i) for i in unknown)
         raise ValueError(
-            f"exclude_code_ids contains unknown code id(s): {listed}. Use "
-            f"get_project_summary or export_codebook to list codes.")
+            f"exclude_code_ids contains unknown code id(s): {listed}. "
+            f"{LIST_CODES_HINT}")
     return ids
 
 
@@ -3671,9 +3756,8 @@ def _resolve_file_ids(db_, value: Any) -> List[int]:
     if unknown:
         listed = ", ".join(str(i) for i in unknown)
         raise ValueError(
-            f"file_ids contains unknown file id(s): {listed}. Use "
-            f"search_files or the qualcoder://files/list resource to list "
-            f"files.")
+            f"file_ids contains unknown file id(s): {listed}. "
+            f"{LIST_FILES_HINT}")
     return ids
 
 
@@ -4249,7 +4333,14 @@ def search_files(
             - file_name: Name of the file
             - file_type: Type (text, audio, video, image, pdf)
             - matched_in: {filename: bool, content: bool, memo: bool}
-            - match_count: Total number of matches in this file
+            - match_count: The number of matches LISTED for this file
+              (its name, its memo, and the content matches shown), not
+              the number in the file: content matches are capped by
+              max_matches_per_file
+            - content_matches_found, content_matches_excluded,
+              content_matches_shown (when content is searched): how many
+              times the pattern occurs in the file's text, how many of
+              those the novelty filter dropped, and how many are listed
             - matches: Array of match details with location and preview
 
     Examples:
@@ -7684,10 +7775,12 @@ def list_backups() -> str:
     }
     if unclean:
         answer["unclean_backups"] = unclean
-        answer["unclean_note"] = UNCLEAN_BACKUP_NOTE
+        answer["unclean_note"] = _mark_unregistered(UNCLEAN_BACKUP_NOTE)
+    # The notes and the hint name restore_backup and prune_backups, which
+    # the core set does not register; there they are marked so.
     return json.dumps({
         **answer,
-        "notes": [
+        "notes": [_mark_unregistered(note) for note in [
             "kind='qualcoder' backups are made by QualCoder itself on "
             "project open; they may exclude audio/video files and QualCoder "
             "deletes them again when a session made no changes.",
@@ -7710,9 +7803,10 @@ def list_backups() -> str:
             "journal and WAL files are never copied (QualCoder's own "
             "backups copy the database as a file). A backup that holds "
             "them is marked unclean and is not restored."
-        ],
-        "hint": "Use restore_backup(backup_path) to roll the project back "
-                "to one of these snapshots."
+        ]],
+        "hint": _mark_unregistered(
+            "Use restore_backup(backup_path) to roll the project back to "
+            "one of these snapshots.")
     }, indent=2)
 
 
@@ -11228,8 +11322,8 @@ JOURNAL_NAME_ATTEMPTS = 50
 # caller keyed on changes its name. Each names the file by id only.
 _PSEUDONYMISE_INELIGIBLE = {
     "unknown_file_id": (
-        "file_id {file_id} is not a file in this project. Use search_files "
-        "or the qualcoder://files/list resource to list files."),
+        "file_id {file_id} is not a file in this project. "
+        + LIST_FILES_HINT.replace("{", "{{").replace("}", "}}")),
     "pdf_source": (
         "file {file_id} is a PDF source; this tool rewrites text sources "
         "only, as QualCoder's own editor does."),
@@ -15537,18 +15631,21 @@ def analyze_theme(theme_name: str) -> str:
     Args:
         theme_name: The name of the code/theme to analyse
     """
-    return f"""Please analyse the theme '{theme_name}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please analyse the theme '{theme_name}' in this Qualcoder project.
 
 Use the following tools to gather information:
-1. First, use search_coded_text or list_all_codes to find the code
-2. Then use get_coded_segments to retrieve all segments for this code
+1. First find the code and its id: get_coding_frequencies lists every
+   code with its id (so does the qualcoder://codes/list resource), and
+   search_coded_text finds passages already coded that mention the theme
+2. Then use get_coded_segments with that code_id to retrieve its
+   segments, page by page until the answer says there are no more
 3. Analyse the segments and identify:
    - Key patterns and recurring ideas
    - Variations in how the theme appears
    - Relationships to other themes
    - Notable quotes or examples
 
-Ground every pattern in verbatim quotes from the coded segments. If the segments show no clear pattern, or contradict each other, say so: that is a valid result."""
+Ground every pattern in verbatim quotes from the coded segments. If the segments show no clear pattern, or contradict each other, say so: that is a valid result.""")
 
 
 @mcp.prompt()
@@ -15562,10 +15659,11 @@ def compare_codes(code1: str, code2: str) -> str:
         code1: Name of the first code
         code2: Name of the second code
     """
-    return f"""Please compare and contrast the codes '{code1}' and '{code2}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please compare and contrast the codes '{code1}' and '{code2}' in this Qualcoder project.
 
 Use these tools to gather data:
-1. Use get_coded_segments for both codes
+1. Use get_coded_segments for both codes (get_coding_frequencies gives
+   each code's id)
 2. Use get_coding_frequencies to compare usage patterns
 3. Analyse:
    - How frequently each code is used
@@ -15574,7 +15672,7 @@ Use these tools to gather data:
    - Any overlaps or relationships between them
    - Which files or cases show each code
 
-Provide a comparison grounded in verbatim segments. If the two codes do not differ in practice, say so and suggest what that means for the codebook (a merge, a sharper memo); that is a valid result."""
+Provide a comparison grounded in verbatim segments. If the two codes do not differ in practice, say so and suggest what that means for the codebook (a merge, a sharper memo); that is a valid result.""")
 
 
 @mcp.prompt()
@@ -15585,13 +15683,17 @@ def summarize_project() -> str:
     and how far its coding has progressed, without drawing analytic
     conclusions from counts.
     """
-    return """Please describe the state of this Qualcoder project.
+    return _mark_unregistered("""Please describe the state of this Qualcoder project.
 
-Use the following tools:
-1. get_project_summary - for overall statistics
-2. list_all_codes - to understand the coding scheme
-3. list_all_files - to see what data is included
-4. get_coding_frequencies - to see which codes are used most
+Use the following tools and resources:
+1. get_project_summary - for overall statistics and the number of files
+   of each type
+2. get_coding_frequencies - every code with its category and how often
+   it is used (the qualcoder://codes/list and
+   qualcoder://categories/list resources show the coding scheme too)
+3. the qualcoder://files/list resource - to see which files the project
+   holds; if you cannot read resources, ask the researcher rather than
+   guessing
 
 Describe the state of the project, not its findings: what data it
 holds (types and number of files), how the codebook is organised, and
@@ -15599,7 +15701,7 @@ which codes are used most. Counts describe coding work done so far;
 they are not results of the study. Do not draw analytic conclusions
 from this overview; if the researcher wants an analysis, propose a
 first step that fits the methodology stated in the project memo (ask
-if it is not stated)."""
+if it is not stated).""")
 
 
 @mcp.prompt()
@@ -15612,18 +15714,24 @@ def explore_case(case_name: str) -> str:
     Args:
         case_name: The name of the case to explore
     """
-    return f"""Please explore and analyse the case '{case_name}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please explore and analyse the case '{case_name}' in this Qualcoder project.
 
-Use these tools to gather information:
-1. list_all_cases to find the case
-2. get_case_info to get all text segments for this case
+Use these tools and resources to gather information:
+1. get_case_code_matrix lists every case with its id (so does the
+   qualcoder://cases/list resource); find the case there
+2. get_codes_by_case with that case_id gives the codes that appear in
+   it, get_case_attributes its attributes, and the
+   qualcoder://cases/{{case_id}} resource its text segments; if you
+   cannot read resources, ask the researcher which files belong to the
+   case and pass them to get_coded_segments as file_ids, one code at a
+   time
 3. Analyse the case data to identify:
    - Key characteristics or themes for this case
    - What makes this case unique
    - Important quotes or segments
    - How this case relates to the overall study
 
-Ground the profile in verbatim quotes from this case's segments, and keep what the data shows apart from your interpretation of it."""
+Ground the profile in verbatim quotes from this case's segments, and keep what the data shows apart from your interpretation of it.""")
 
 
 # ============================================================================
@@ -16054,11 +16162,46 @@ def _resolve_toolset_mode() -> str:
     return raw
 
 
+# Every tool this server defines, whichever set is registered now: the
+# standard set, registered at import, and the lifecycle tools.
+ALL_TOOL_NAMES = frozenset(mcp._tool_manager._tools) | frozenset(
+    LIFECYCLE_TOOLS)
+
+
+def _refresh_served_texts() -> Dict[str, Any]:
+    """Mark, in every text the registered set serves at start-up, each
+    tool it names that this set does not register (v0.14, server-wide).
+
+    The instructions and the tool descriptions are written for the full
+    set; in `core` they name tools `core` lacks (restore_backup,
+    search_memos, explain_ai_coding_tools), and a model told to call a
+    tool it cannot see is sent nowhere. The prompts and the methods
+    notes are marked when they are read (`_mark_unregistered`), since
+    they are rendered on each request.
+
+    Returns the registry entries it replaced, keyed by name, so that
+    putting back what `_apply_toolset` returns restores the registry to
+    the very objects it held.
+    """
+    tools = mcp._tool_manager._tools
+    replaced: Dict[str, Any] = {}
+    for name, tool in list(tools.items()):
+        original = mcp.original_descriptions.get(name, tool.description)
+        marked = _mark_unregistered(original)
+        if marked != tool.description:
+            replaced[name] = tool
+            tools[name] = tool.model_copy(update={"description": marked})
+    mcp._mcp_server.instructions = _mark_unregistered(SERVER_INSTRUCTIONS)
+    return replaced
+
+
 def _apply_toolset(mode: str) -> Dict[str, Any]:
     """Set the registered tool surface to the requested mode.
 
     `core` removes every tool outside CORE_TOOLSET and returns the
-    removed tools keyed by name, so tests can restore them. `lifecycle`
+    removed tools keyed by name, so tests can restore them; the tools
+    whose descriptions it replaced with marked copies (v0.14,
+    `_refresh_served_texts`) are returned with them, as they were. `lifecycle`
     adds the LIFECYCLE_TOOLS (adding one already registered changes
     nothing) and removes nothing. `full` changes nothing. The tests'
     registry-restoring fixture undoes either.
@@ -16074,6 +16217,8 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
             if name not in mcp._tool_manager._tools:
                 mcp.add_tool(globals()[name],
                              annotations=LIFECYCLE_TOOL_ANNOTATIONS[name])
+    for name, tool in _refresh_served_texts().items():
+        removed.setdefault(name, tool)
     active = len(mcp._tool_manager._tools)
     logger.info(f"Toolset mode: {mode} ({active} tools registered)")
     return removed

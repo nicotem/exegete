@@ -6284,9 +6284,10 @@ class QualcoderDatabase:
             raise UnsupportedSchemaError(reason)
         if self.read_only:
             raise RuntimeError(
-                "Database is in read-only mode. To modify data, reopen with "
-                "read_only=False. Write operations should only be performed "
-                "on project copies in the MCP workspace."
+                "Database is in read-only mode: this connection cannot "
+                "write. Every write tool opens the project for writing "
+                "itself, so this is an internal error; select the project "
+                "again with select_project and retry."
             )
 
     def _rollback_own_transaction(self, auto_commit: bool) -> None:

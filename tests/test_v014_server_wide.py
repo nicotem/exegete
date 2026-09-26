@@ -83,7 +83,7 @@ EXPECTED_HINTS = {
     "link_file_to_case": A, "create_attribute_type": A,
     "add_annotation": A,
     # replaces what exists, and a repeat changes nothing
-    "set_project_ai_coder_name": C1, "rename_code": C1,
+    "rename_code": C1,
     "rename_category": C1, "rename_case": C1, "rename_file": C1,
     "recolor_code": C1, "move_code_to_category": C1,
     "move_category": C1,
@@ -97,6 +97,8 @@ EXPECTED_HINTS = {
     "update_proposal_status": C, "merge_proposals": C, "set_memo": C,
     "merge_codes": C, "merge_category": C, "delete_code": C,
     "delete_category": C, "delete_coding": C, "delete_annotation": C,
+    # the same name again adds an entry to the name's history
+    "set_project_ai_coder_name": C,
     "set_attribute": C, "update_annotation": C,
     "pseudonymise_source": C, "restore_backup": C, "prune_backups": C,
 }
@@ -291,3 +293,574 @@ class TestPseudonymsFileAdvice:
         error = json.loads(text_of(result))["error"]
         assert "could not be parsed" in error
         assert "give the mapping in the call instead" in error
+
+
+# ---------------------------------------------------------------------------
+# The class test on names: every tool a text names is one the set serving
+# that text registers (the claims audit, item 17 and its first class test)
+# ---------------------------------------------------------------------------
+
+import ast
+import re
+
+import qualcoder_mcp
+
+# A snake_case word in running text; a path segment or an address part
+# (after / . : or -) is not a name.
+WORD = re.compile(r"(?<![A-Za-z0-9_./:-])([a-z][a-z0-9]*(?:_[a-z0-9]+)+)"
+                  r"(?![A-Za-z0-9_])")
+# The verbs this server's tool names begin with, and a few more a text
+# might invent: a word that begins so and is neither a tool nor an
+# argument is taken for a tool that does not exist.
+TOOL_SHAPED = re.compile(
+    r"^(list|get|search|create|delete|update|rename|set|add|export|import|"
+    r"analy[sz]e|record|review|edit|apply|propose|merge|move|recolou?r|"
+    r"select|copy|restore|prune|cleanup|compare|find|query|link|read|"
+    r"pseudonymise|explain|summari[sz]e|explore|remove|open|close|undo|"
+    r"show|write|fetch|load|save|run|call|count|describe|unlink)"
+    r"(_[a-z]+)+$")
+# Tool-shaped words that are not tools, each with where it comes from.
+NOT_TOOLS = {
+    "search_parameters": "a key of search_files' answer",
+    "search_index_note": "a key of rename_file's answer",
+    "save_requested": "a value of pseudonymise_source's retention record",
+    "write_support": "a key of get_project_summary's schema block",
+    "set_at": "a key of the AI coder name's record",
+}
+
+
+def all_tool_names():
+    return set(server.ALL_TOOL_NAMES)
+
+
+def argument_names():
+    names = set()
+    server._apply_toolset("lifecycle")
+    for tool in server.mcp._tool_manager._tools.values():
+        names |= set(tool.parameters.get("properties", {}))
+    return names
+
+
+def names_sent_nowhere(text, registered, tools, arguments):
+    """The tool names in `text` a model could not call in this set: a
+    server tool the set does not register, unless the text marks it so
+    right after the name (or after its argument list), and a tool-shaped
+    word that is no tool at all."""
+    bad = []
+    for match in WORD.finditer(text):
+        word = match.group(1)
+        if word in registered or word in arguments or word in NOT_TOOLS:
+            continue
+        if word in tools:
+            after = text[match.end():]
+            call = re.match(r"\([^()\n]*\)", after)
+            if call:
+                after = after[call.end():]
+            if not after.startswith(server.NOT_IN_THIS_TOOL_SET):
+                bad.append(word)
+        elif TOOL_SHAPED.match(word):
+            bad.append(word)
+    return bad
+
+
+def served_texts(mode):
+    """Every text the set `mode` serves before any project is open: the
+    instructions, the tool descriptions, the prompts, the resource
+    descriptions and the static resources, and the help topics where
+    the help tool is registered. The registry is put back afterwards,
+    so one test can read several sets."""
+    tools = server.mcp._tool_manager._tools
+    before, instructions = dict(tools), server.mcp._mcp_server.instructions
+    server._apply_toolset(mode)
+    try:
+        return _served_texts_now()
+    finally:
+        tools.clear()
+        tools.update(before)
+        server.mcp._mcp_server.instructions = instructions
+
+
+def _served_texts_now():
+
+    async def drive(client):
+        texts = {"instructions": server.mcp._mcp_server
+                 .create_initialization_options().instructions or ""}
+        listed = (await client.list_tools()).tools
+        for tool in listed:
+            texts[f"description of {tool.name}"] = tool.description or ""
+        for prompt in (await client.list_prompts()).prompts:
+            args = {a.name: "X" for a in prompt.arguments or []}
+            got = await client.get_prompt(prompt.name, args)
+            texts[f"prompt {prompt.name}"] = "\n".join(
+                m.content.text for m in got.messages)
+            texts[f"description of prompt {prompt.name}"] = \
+                prompt.description or ""
+        for res in (await client.list_resources()).resources:
+            texts[f"description of {res.uri}"] = res.description or ""
+            if str(res.uri).startswith("qualcoder://guidance/"):
+                got = await client.read_resource(res.uri)
+                texts[f"resource {res.uri}"] = "\n".join(
+                    c.text for c in got.contents)
+        for res in (await client.list_resource_templates()).resourceTemplates:
+            texts[f"description of {res.uriTemplate}"] = \
+                res.description or ""
+        if any(t.name == "explain_ai_coding_tools" for t in listed):
+            unknown = await client.call_tool("explain_ai_coding_tools",
+                                             {"tool_name": "no_such_topic"})
+            texts["help, unknown topic"] = text_of(unknown)
+            topics = json.loads(text_of(unknown))["available_tools"]
+            overview = await client.call_tool("explain_ai_coding_tools", {})
+            texts["help overview"] = text_of(overview)
+            for topic in topics:
+                got = await client.call_tool("explain_ai_coding_tools",
+                                             {"tool_name": topic})
+                texts[f"help {topic}"] = text_of(got)
+        return texts, {t.name for t in listed}
+
+    return host_session(drive)
+
+
+class TestEveryNamedToolIsThere:
+    """A model told to call a tool can call it, in every tool set."""
+
+    @pytest.mark.parametrize("mode", ["full", "core", "lifecycle"])
+    def test_every_tool_a_served_text_names_is_registered(self, mode):
+        tools, arguments = all_tool_names(), argument_names()
+        texts, registered = served_texts(mode)
+        assert len(texts) > len(registered)
+        nowhere = {where: names for where, text in texts.items()
+                   if (names := names_sent_nowhere(text, registered, tools,
+                                                   arguments))}
+        assert nowhere == {}
+
+    def test_the_prompts_name_resources_and_real_tools(self):
+        texts, _ = served_texts("full")
+        for old in ("list_all_codes", "list_all_files", "list_all_cases",
+                    "get_case_info"):
+            assert not any(old in text for text in texts.values()), old
+        assert "get_case_code_matrix" in texts["prompt explore_case"]
+        assert "qualcoder://cases/list" in texts["prompt explore_case"]
+        assert "get_coding_frequencies" in texts["prompt analyze_theme"]
+        assert "qualcoder://files/list" in texts["prompt summarize_project"]
+
+    def test_core_marks_what_it_lacks_and_full_does_not(self):
+        core, _ = served_texts("core")
+        marked = "restore_backup" + server.NOT_IN_THIS_TOOL_SET
+        assert marked in core["description of list_backups"]
+        assert ("explain_ai_coding_tools('methodology_vocabulary')"
+                + server.NOT_IN_THIS_TOOL_SET) in core["instructions"]
+        assert ("propose_codes" + server.NOT_IN_THIS_TOOL_SET
+                in core["resource qualcoder://guidance/methods"])
+        full, _ = served_texts("full")
+        assert not any(server.NOT_IN_THIS_TOOL_SET in text
+                       for text in full.values())
+
+    def test_marking_twice_marks_once(self):
+        server._apply_toolset("core")
+        once = server._mark_unregistered("restore_backup and propose_codes")
+        assert server._mark_unregistered(once) == once
+        # a longer name is never marked for a shorter one inside it
+        assert server._mark_unregistered("create_proposed_codes") == \
+            "create_proposed_codes" + server.NOT_IN_THIS_TOOL_SET
+
+
+def _sendable_literals():
+    """(module, line, text) for every string literal in the package that
+    can reach an answer: not a docstring, not a dictionary key or index,
+    not an argument of a log call, and not the label
+    `_raise_query_error` logs."""
+    package = Path(qualcoder_mcp.__file__).parent
+    for path in sorted(package.glob("*.py")):
+        tree_ = ast.parse(path.read_text(encoding="utf-8"))
+        skip = set()
+        for node in ast.walk(tree_):
+            body = getattr(node, "body", None)
+            if isinstance(node, (ast.Module, ast.FunctionDef,
+                                 ast.AsyncFunctionDef, ast.ClassDef)) and \
+                    body and isinstance(body[0], ast.Expr) and \
+                    isinstance(body[0].value, ast.Constant):
+                skip.add(id(body[0].value))
+            if isinstance(node, ast.Dict):
+                skip.update(id(k) for k in node.keys if k is not None)
+            if isinstance(node, ast.Subscript):
+                skip.update(id(n) for n in ast.walk(node.slice))
+            if isinstance(node, ast.Call):
+                func = node.func
+                name = getattr(func, "attr", getattr(func, "id", ""))
+                owner = getattr(getattr(func, "value", None), "id", "")
+                if owner == "logger" or name == "_raise_query_error":
+                    for arg in node.args:
+                        skip.update(id(n) for n in ast.walk(arg))
+                if name in ("get", "pop", "setdefault") and node.args:
+                    skip.add(id(node.args[0]))
+        for node in ast.walk(tree_):
+            if isinstance(node, ast.Constant) and \
+                    isinstance(node.value, str) and id(node) not in skip:
+                yield path.name, node.lineno, node.value
+
+
+def test_no_answer_text_names_a_tool_that_does_not_exist():
+    """The refusals and answers, read from the source: a tool-shaped word
+    in any literal that can reach an answer is a tool of this server, an
+    argument, or a named exception."""
+    tools, arguments = all_tool_names(), argument_names()
+    found = {}
+    for module, line, text in _sendable_literals():
+        for match in WORD.finditer(text):
+            word = match.group(1)
+            if word in tools or word in arguments or word in NOT_TOOLS:
+                continue
+            if TOOL_SHAPED.match(word):
+                found.setdefault(word, []).append(f"{module}:{line}")
+    assert found == {}
+
+
+# ---------------------------------------------------------------------------
+# The class test on calls: every tool called once through the host's path
+# with the arguments its description names (the claims audit's second class
+# test, and its "true today" item 7)
+# ---------------------------------------------------------------------------
+
+TEXT_1 = ("Maria Lopez runs the garden. I trusted Maria completely. We met "
+          "on Tuesdays to plant beans.")
+TEXT_2 = "Field notes: the garden gate was locked on Tuesday."
+QUOTE = "I trusted Maria completely."
+# Files and folders a call may touch that are bookkeeping, not the
+# project, a session or an output: the last-used project record and the
+# preview secret.
+BOOKKEEPING = ("mru_state", "token_state")
+
+
+def work_tree(root):
+    return {path: entry for path, entry in tree(root).items()
+            if not path.startswith(BOOKKEEPING)}
+
+
+def body_of(text):
+    try:
+        return json.loads(text)
+    except ValueError:
+        return text
+
+
+class HostRun:
+    """Calls through one client session, checking each answer."""
+
+    def __init__(self, client, root, registered):
+        self.client, self.root = client, root
+        self.registered = registered
+        self.tools, self.arguments = all_tool_names(), argument_names()
+        self.answers, self.problems = {}, []
+
+    async def __call__(self, name, arguments, ok=True):
+        hints = EXPECTED_HINTS[name]
+        before = work_tree(self.root)
+        result = await self.client.call_tool(name, arguments)
+        text = text_of(result)
+        self.answers.setdefault(name, (arguments, text))
+        body = body_of(text)
+        if result.isError:
+            self.problems.append((name, "isError", text[:300]))
+        for sign in ("unexpected error", "validation error",
+                     "Error executing tool", "unknown_arguments"):
+            if sign in text:
+                self.problems.append((name, sign, text[:300]))
+        if ok and isinstance(body, dict) and body.get("error"):
+            self.problems.append((name, "refused", text[:300]))
+        nowhere = names_sent_nowhere(text, self.registered, self.tools,
+                                     self.arguments)
+        if nowhere:
+            self.problems.append((name, "names", nowhere))
+        after = work_tree(self.root)
+        if hints[0] and after != before:
+            changed = sorted(set(after.items()) ^ set(before.items()))
+            self.problems.append((name, "read-only tool wrote", changed[:4]))
+        if hints[2] and not hints[0]:
+            again = await self.client.call_tool(name, arguments)
+            if work_tree(self.root) != after:
+                self.problems.append((name, "repeat changed something",
+                                      text_of(again)[:200]))
+        return body
+
+
+async def call_every_tool(client, root):
+    """The first session and every tool after it, on a project made by
+    create_project, each with arguments its description names."""
+    run = HostRun(client, root,
+                  {t.name for t in (await client.list_tools()).tools})
+    projects, exports = root / "projects", root / "exports"
+    projects.mkdir()
+    exports.mkdir()
+    await run("list_available_projects",
+              {"search_directories": [str(projects)]})
+    made = await run("create_project", {
+        "name": "Study", "directory": str(projects),
+        "coder_name": "Researcher"})
+    folder = made["project_path"]
+    await run("get_current_project", {})
+    await run("set_project_ai_coder_name", {"name": "AI-Test"})
+    await run("import_text_file", {"filename": "int1.txt",
+                                   "content": TEXT_1,
+                                   "memo": "First interview"})
+    await run("import_text_file", {"filename": "int2.txt",
+                                   "content": TEXT_2})
+    await run("create_category", {"name": "Feelings"})
+    await run("create_category", {"name": "Other"})
+    await run("create_code", {"name": "Trust", "category": "Feelings",
+                              "memo": "Reliance on others"})
+    await run("create_code", {"name": "Doubt"})
+    await run("create_case", {"name": "P1", "memo": "First participant"})
+    await run("link_file_to_case", {"file_id": 1, "case_name": "P1"})
+    await run("create_attribute_type", {"name": "Age", "applies_to": "case",
+                                        "value_type": "numeric"})
+    await run("set_attribute", {"target_type": "case", "target_id": 1,
+                                "attribute_name": "Age", "value": "30"})
+    # the suggestion loop
+    session = (await run("analyze_for_coding",
+                         {"file_ids": [1]}))["coding_session_id"]
+    recorded = await run("record_suggestions", {
+        "coding_session_id": session, "suggestions": [{
+            "file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
+            "reasoning": "trust is stated"}]})
+    guid = recorded["recorded"][0]["guid"]
+    await run("review_suggestions", {"coding_session_id": session})
+    await run("edit_suggestion", {"coding_session_id": session,
+                                  "suggestion_guid": guid,
+                                  "code_name": "Doubt"})
+    await run("update_suggestion_status", {"coding_session_id": session,
+                                           "approve": [guid]})
+    await run("apply_codings", {"coding_session_id": session})
+    await run("get_coding_session_info", {"coding_session_id": session})
+    await run("list_coding_sessions", {})
+    # the reads
+    segments = await run("get_coded_segments", {"code_id": 2})
+    coding_id = segments["segments"][0]["id"]
+    await run("search_coded_text", {"query": "trusted"})
+    await run("search_files", {"pattern": "garden",
+                               "search_content": True})
+    await run("get_coding_frequencies", {})
+    await run("search_memos", {"query": "interview"})
+    await run("export_code_report", {"code_name": "Doubt"})
+    await run("get_project_summary", {})
+    await run("analyze_file_with_coding", {"file_id": 1})
+    await run("list_attribute_types", {})
+    await run("get_file_attributes", {"file_id": 1})
+    await run("get_case_attributes", {"case_id": 1})
+    await run("query_by_attribute", {"attr_name": "Age",
+                                     "attr_value": "30"})
+    # The researcher has no codings in a new project: the answer says
+    # so, which is the described call's answer here
+    await run("compare_coders", {"coder_a": "AI-Test",
+                                 "coder_b": "Researcher"}, ok=False)
+    await run("find_cooccurring_codes", {"code_id": 2})
+    await run("get_case_code_matrix", {})
+    await run("get_codes_by_case", {"case_id": 1})
+    await run("get_cases_by_code", {"code_id": 2})
+    await run("explain_ai_coding_tools", {"tool_name": "apply_codings"})
+    await run("read_pseudonym_list", {})
+    # exports
+    await run("export_refi_qda", {"output_path": str(exports / "s.qdpx")})
+    await run("export_codebook", {"output_path": str(exports / "c.csv")})
+    await run("export_coded_segments_report",
+              {"output_path": str(exports / "r.csv")})
+    await run("export_frequencies_csv",
+              {"output_path": str(exports / "f.csv")})
+    await run("export_case_code_matrix_csv",
+              {"output_path": str(exports / "m.csv")})
+    # proposing codes
+    session_2 = (await run("analyze_for_coding",
+                           {"file_ids": [1]}))["coding_session_id"]
+    proposed = await run("propose_codes", {
+        "coding_session_id": session_2, "proposals": [
+            {"name": "Reliance", "memo": "Leaning on others",
+             "rationale": "trust is stated",
+             "example_segments": [{"file_id": 1, "segment_text": QUOTE}]},
+            {"name": "Dependence", "memo": "Needing others",
+             "rationale": "the same passage",
+             "example_segments": [{"file_id": 1, "segment_text": QUOTE}]}]})
+    keep, fold = (p["guid"] for p in proposed["recorded"])
+    await run("review_proposals", {"coding_session_id": session_2})
+    await run("update_proposal", {"coding_session_id": session_2,
+                                  "proposal_guid": keep,
+                                  "memo": "Leaning on others for help"})
+    await run("merge_proposals", {"coding_session_id": session_2,
+                                  "from_proposal_guid": fold,
+                                  "into_proposal_guid": keep})
+    await run("update_proposal_status", {"coding_session_id": session_2,
+                                         "approve": [keep]})
+    await run("create_proposed_codes", {"coding_session_id": session_2})
+    # notes
+    note = await run("add_annotation", {"file_id": 1, "start_pos": 0,
+                                        "end_pos": 5,
+                                        "memo": "Opening words"})
+    annotation_id = note["annotation"]["annotation_id"]
+    await run("update_annotation", {"annotation_id": annotation_id,
+                                    "memo": "Opening"})
+    await run("delete_annotation", {"annotation_id": annotation_id})
+    await run("add_journal_entry", {"name": "Week one",
+                                    "entry": "First reading done."})
+    await run("set_memo", {"target_type": "code", "target_id": 1,
+                           "memo": "Reliance on others, stated"})
+    # the codebook, cases and files
+    await run("rename_code", {"code_id": 1, "new_name": "Trusting"})
+    await run("recolor_code", {"code_id": 1, "color": "#EB7333"})
+    await run("move_code_to_category", {"code_id": 2,
+                                        "category": "Feelings"})
+    await run("rename_category", {"category_id": 2, "new_name": "Misc"})
+    await run("move_category", {"category_id": 2,
+                                "parent_category": "Feelings"})
+    await run("rename_case", {"case_id": 1, "new_name": "P01"})
+    await run("rename_file", {"file_id": 2, "new_name": "int2b.txt"})
+    await run("delete_coding", {"coding_id": coding_id})
+    # the two-step tools: the first call is the preview
+    await run("merge_codes", {"from_code_id": 3, "into_code_id": 1})
+    await run("delete_code", {"code_id": 3})
+    await run("delete_category", {"category_id": 2})
+    await run("merge_category", {"from_category_id": 2,
+                                 "into_category": "Feelings"})
+    await run("pseudonymise_source", {
+        "mapping": [{"original": "Maria", "pseudonym": "Joan"}],
+        "file_id": 1, "researcher_keeps_mapping": True})
+    backups = await run("list_backups", {})
+    await run("restore_backup", {"backup_path":
+                                 backups["backups"][-1]["path"]})
+    await run("prune_backups", {"keep_last": 1})
+    # the project and the sessions
+    await run("copy_project_to_workspace", {"source_path": folder,
+                                            "new_name": "Study copy"})
+    await run("select_project", {"project_path": folder})
+    await run("delete_coding_session", {"coding_session_id": session_2})
+    await run("cleanup_old_sessions", {"days_old": 30})
+    return run
+
+
+class TestEveryToolThroughTheHost:
+    """Each tool answers the call its description describes, over the
+    host's path, and does what its hints say."""
+
+    def test_every_tool_answers_its_described_call(self, tmp_path):
+        server._apply_toolset("lifecycle")
+        run = host_session(lambda client: call_every_tool(client,
+                                                          tmp_path))
+        assert run.problems == [], "\n".join(map(repr, run.problems))
+        assert set(run.answers) == set(EXPECTED_HINTS)
+
+    def test_in_core_every_answer_names_only_what_core_has(self, tmp_path):
+        """The same calls again in `core`, on the project the full run
+        left: refusals are fine here (the state has moved on), but no
+        answer may send the model to a tool `core` does not register,
+        unmarked."""
+        server._apply_toolset("lifecycle")
+
+        async def drive(client):
+            full = await call_every_tool(client, tmp_path)
+            server._apply_toolset("core")
+            core = HostRun(client, tmp_path,
+                           {t.name for t in (await client.list_tools()).tools})
+            assert core.registered == set(server.CORE_TOOLSET)
+            for name in sorted(core.registered):
+                await core(name, full.answers[name][0], ok=False)
+            return core
+
+        core = host_session(drive)
+        assert core.problems == [], "\n".join(map(repr, core.problems))
+        assert set(core.answers) == set(server.CORE_TOOLSET)
+
+
+def args_section(description):
+    """The argument names a description's Args section lists: the
+    entries at the section's first indentation, `name:` or
+    `name (type):`, until a line indented less."""
+    names, inside, indent = [], False, None
+    for line in description.split("\n"):
+        if re.match(r"^\s*Args:\s*$", line):
+            inside, indent = True, None
+            continue
+        if not inside or not line.strip():
+            continue
+        depth = len(line) - len(line.lstrip())
+        entry = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(\([^)]*\))?:",
+                         line)
+        if indent is None and entry:
+            indent = depth
+        if indent is not None and depth < indent:
+            inside = False
+            continue
+        if entry and depth == indent:
+            names.append(entry.group(1))
+    return names
+
+
+def test_every_description_names_exactly_the_tools_arguments():
+    """The audit's "true today" item 4: every argument a description's
+    Args section names exists, and every argument is named there."""
+    server._apply_toolset("lifecycle")
+    listed = host_session(lambda client: client.list_tools()).tools
+    differ = {}
+    for tool in listed:
+        named = args_section(tool.description or "")
+        schema = list(tool.inputSchema.get("properties", {}))
+        if sorted(named) != sorted(schema):
+            differ[tool.name] = (sorted(set(named) - set(schema)),
+                                 sorted(set(schema) - set(named)))
+    assert differ == {}
+
+
+class TestTextsThatSentTheAssistantNowhere:
+    """The rest of the claims audit's item 17."""
+
+    def test_search_directories_expands_home_and_says_what_it_searched(
+            self, tmp_path):
+        home = Path.home()
+        (home / "Research" / "Pilot.qda").mkdir(parents=True)
+        answer = json.loads(server.list_available_projects(
+            ["~/Research", "~/Nowhere"]))
+        assert [p["name"] for p in answer["projects"]] == ["Pilot"]
+        searched = answer["searched"]
+        assert searched["folders"] == [str(home / "Research"),
+                                       str(home / "Nowhere")]
+        assert searched["not_found"] == [str(home / "Nowhere")]
+        assert searched["instead_of_the_usual_places"] is True
+
+    def test_a_relative_folder_is_refused_not_skipped(self):
+        answer = json.loads(server.list_available_projects(
+            ["relative/dir"]))
+        assert "relative path ('relative/dir')" in answer["error"]
+        assert "Nothing was searched" in answer["error"]
+
+    def test_the_usual_places_are_reported_too(self):
+        answer = json.loads(server.list_available_projects())
+        assert answer["searched"]["instead_of_the_usual_places"] is False
+        assert str(Path.home() / "Documents") in \
+            answer["searched"]["folders"]
+        doc = server.mcp._tool_manager._tools[
+            "list_available_projects"].description
+        assert "INSTEAD of" in doc
+
+    def test_search_files_says_match_count_is_what_it_lists(
+            self, setup_server, qualcoder_db_path):
+        db = str(Path(qualcoder_db_path) / "data.qda")
+        with sqlite3.connect(db) as conn:
+            conn.execute("update source set fulltext = ? where id = 1",
+                         ("beans " * 8,))
+        answer = json.loads(server.search_files(
+            "beans", search_filename=False, search_content=True))
+        row = answer["results"][0]
+        assert row["match_count"] == 5
+        assert row["content_matches_found"] == 8
+        assert row["content_matches_shown"] == 5
+        doc = server.mcp._tool_manager._tools["search_files"].description
+        assert "The number of matches LISTED for this file" in doc
+        assert "content_matches_found" in doc
+
+    def test_the_methods_notes_say_the_memo_must_be_read(self):
+        text = " ".join(server.METHODS_GUIDANCE.split())
+        assert "once, for every future session" not in text
+        assert ("The project memo reaches a session only when you read "
+                "it") in text
+
+    def test_readme_no_longer_says_a_journal_entry_is_updated(self):
+        readme = (Path(__file__).parent.parent / "README.md").read_text(
+            encoding="utf-8")
+        assert "Add or update a research journal entry" not in readme
+        assert "a name already in use is refused" in readme

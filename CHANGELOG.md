@@ -65,6 +65,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an argument it does not have: it says to correct the file, or to
   import without the flag and replace the names with
   `pseudonymise_source`.
+- **Texts that sent the assistant to tools that are not there.** Three
+  of the four prompts named `list_all_codes`, `list_all_files`,
+  `list_all_cases` and `get_case_info`, which are not tools; they now
+  name the resources by address and a tool beside each
+  (`get_coding_frequencies` for every code with its id,
+  `get_case_code_matrix` for every case, `get_codes_by_case`). In the
+  `core` set, the instructions, the tool descriptions, the prompts, the
+  methods notes and `list_backups`' notes mark each tool `core` does not
+  register ("not available in this tool set"). An unknown code id is
+  answered with `get_coding_frequencies` and the codes resource (not
+  `get_project_summary`, which lists ten, or `export_codebook`); an
+  unknown file id with the files resource, or a name search.
+- `list_available_projects`' `search_directories` expands `~`, refuses a
+  relative path instead of skipping it, says that the folders given
+  replace the usual places, and returns the folders searched and which
+  of them do not exist.
+- `search_files` documents `match_count` as the number of matches listed,
+  and the `content_matches_found`, `_excluded` and `_shown` counts that
+  say how many there are. The methods notes no longer say the project
+  memo reaches "every future session": the assistant reads it when it
+  looks, and is told to at the start of each coding session. README no
+  longer says `add_journal_entry` updates an entry.
 - `set_project_ai_coder_name` refuses QualCoder's speaker coder name,
   which every project lists, and warns when the project's own coder name
   is not known, since its refusal of the researcher's name cannot then

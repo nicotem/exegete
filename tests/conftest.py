@@ -444,9 +444,14 @@ def _restore_tool_registry():
     """
     tools = server.mcp._tool_manager._tools
     before = dict(tools)
+    # The instructions too (v0.14, server-wide): `_apply_toolset` marks
+    # in them the tools a set does not register, as it does in the
+    # descriptions it replaces in the registry.
+    instructions = server.mcp._mcp_server.instructions
     yield
     tools.clear()
     tools.update(before)
+    server.mcp._mcp_server.instructions = instructions
 
 
 @pytest.fixture(autouse=True)

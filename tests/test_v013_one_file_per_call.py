@@ -204,8 +204,10 @@ REFUSALS = [
      "file 3 has no stored text (a media file, or an empty source), so "
      "there is nothing to rewrite."),
     (999, "unknown_file_id",
-     "file_id 999 is not a file in this project. Use search_files or the "
-     "qualcoder://files/list resource to list files."),
+     "file_id 999 is not a file in this project. The "
+     "qualcoder://files/list resource lists every file with its id; "
+     "without it, search_files with part of the file's name as the "
+     "pattern finds it (it searches names by default)."),
 ]
 
 

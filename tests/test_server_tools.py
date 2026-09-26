@@ -306,14 +306,15 @@ class TestQueryByAttribute:
     def test_matching_query(self, setup_server):
         result = server.query_by_attribute("Age", "30", "case")
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) >= 1
+        assert isinstance(data["results"], list)
+        assert len(data["results"]) >= 1
+        assert data["result_count"] == len(data["results"])
 
     def test_no_match(self, setup_server):
         result = server.query_by_attribute("Age", "99", "case")
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) == 0
+        assert data["results"] == []
+        assert data["result_count"] == 0
 
 
 # =============================================================================

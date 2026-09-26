@@ -397,8 +397,7 @@ class TestQueryByAttributeFile:
     def test_file_type_no_results(self, setup_server):
         result = server.query_by_attribute("SomeAttr", "SomeValue", "file")
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) == 0
+        assert data["results"] == []
 
     def test_invalid_attr_type(self, setup_server):
         """Invalid attr_type should raise ValueError."""

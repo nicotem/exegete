@@ -4925,21 +4925,65 @@ def query_by_attribute(
 
     Args:
         attr_name: Name of the attribute to query
-        attr_value: Value to compare against (a number for gt/gte/lt/lte)
+        attr_value: Value to compare against (a finite number for
+                    gt/gte/lt/lte, such as "50" or "4.5")
         attr_type: Either 'case' or 'file' (default: 'case')
         operator: 'equals' (exact match, default; numeric attributes
                   compare numerically so "5" finds a stored "5.0", and
                   "" finds cases/files whose attribute is unset),
                   'contains' (case-insensitive substring), or
-                  'gt'/'gte'/'lt'/'lte' (numeric comparisons; unset
-                  values never match)
+                  'gt'/'gte'/'lt'/'lte' (numeric comparisons of the
+                  values that are finite numbers, on a character
+                  attribute too; a value that is not a number, such as
+                  "unknown", "n/a" or "34 years", and an unset value
+                  never match, and are counted in values_left_out).
+                  QualCoder's attribute report reads a value that is not
+                  a number as 0 on a numeric attribute and compares a
+                  character attribute as text; this tool departs from it
+                  so that "under 18" does not find "unknown"
 
     Returns:
-        JSON array of matching cases/files, each with id, name, memo and
-        the matched attribute value
+        JSON object: attribute, attr_type, operator, value, value_type,
+        result_count and results (each case or file with its id, name,
+        memo and the matched attribute value); for a numeric comparison
+        also values_compared and values_left_out (not_numbers, unset),
+        with a note when anything was left out or the attribute is a
+        character one
     """
-    result = get_db().query_by_attribute(attr_name, attr_value, attr_type, operator)
-    return _ai_json(result, indent=2)
+    found = get_db().attribute_query(attr_name, attr_value, attr_type,
+                                     operator)
+    payload: Dict[str, Any] = {
+        "attribute": attr_name,
+        "attr_type": attr_type,
+        "operator": operator,
+        "value": attr_value,
+        "value_type": found["value_type"],
+        "result_count": len(found["results"]),
+        "results": found["results"],
+    }
+    counts = found.get("numeric")
+    if counts is not None:
+        payload["values_compared"] = counts["compared"]
+        payload["values_left_out"] = {"not_numbers": counts["not_numbers"],
+                                      "unset": counts["unset"]}
+        notes = []
+        if found["value_type"] == "character":
+            notes.append(
+                f"'{attr_name}' is a character attribute: the values that "
+                f"are numbers were compared as numbers, the others left "
+                f"out.")
+        if counts["not_numbers"]:
+            notes.append(
+                f"{counts['not_numbers']} value(s) are not numbers and "
+                f"were left out: they neither match nor fail the "
+                f"comparison, so a case or file with such a value is not "
+                f"known to be outside the range. QualCoder's attribute "
+                f"report would read them as 0 on a numeric attribute.")
+        if counts["unset"]:
+            notes.append(f"{counts['unset']} unset value(s) were left out.")
+        if notes:
+            payload["note"] = " ".join(notes)
+    return _ai_json(payload, indent=2)
 
 
 # The exact literal QualCoder writes as the owner of speaker-segmentation
@@ -14552,8 +14596,9 @@ def create_attribute_type(name: str, applies_to: str,
         applies_to: 'case', 'file' or 'journal' (QualCoder's real domain
                     set; there is no 'both')
         value_type: 'character' (default) or 'numeric'. Numeric values
-                    are stored as text but validated and compared as
-                    numbers. There is no path back from numeric data to
+                    are stored as text, checked to be finite numbers by
+                    set_attribute and compared as numbers by
+                    query_by_attribute. There is no path back from numeric data to
                     character-only in this server, so choose carefully.
         memo: Optional description of what the attribute captures
         create_backup: Create a timestamped backup before writing (default True)
@@ -14595,10 +14640,13 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     Pass value="" to unset: QualCoder represents "no value" as an empty
     cell, the row itself always remains.
 
-    Numeric attributes require a number ("30", "4.5", "1e3"): a
-    non-numeric value is refused with an error. (QualCoder's own GUI
-    silently blanks invalid numeric input; this server refuses instead,
-    so nothing is lost without the user knowing.)
+    Numeric attributes require a finite number written in the digits 0
+    to 9 ("30", "-4.5", "1e3"): anything else, "nan", "inf" and "1_000"
+    included, is refused with an error and nothing changes. QualCoder
+    blanks or reverts a value that is not a number, with a warning, and
+    accepts "nan", "inf" and underscores, which its attribute report
+    then reads as other numbers; this server refuses them, so what it
+    stores is what query_by_attribute compares.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with

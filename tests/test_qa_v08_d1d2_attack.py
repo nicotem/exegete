@@ -378,11 +378,14 @@ class TestSetAttribute:
     def test_numeric_gate_float_semantics(self, setup_server,
                                           qualcoder_db_path):
         # Age is numeric in the fixture
-        for ok_val in ("1e3", "nan", "inf", "-2.5", ""):
+        # v0.14 (claims audit item 11): "nan" and "inf" pass float() but
+        # compare as 0 in SQLite, so they are refused like "abc"
+        for ok_val in ("1e3", "-2.5", ""):
             out = json.loads(server.set_attribute("case", 1, "Age", ok_val))
             assert out.get("success") is True, (ok_val, out)
-        out = json.loads(server.set_attribute("case", 1, "Age", "abc"))
-        assert "error" in out                             # refused, not blanked
+        for bad in ("abc", "nan", "inf"):
+            out = json.loads(server.set_attribute("case", 1, "Age", bad))
+            assert "error" in out, bad                    # refused, not blanked
         # the refusal left the previous value intact ('' from the loop above)
         assert _row(qualcoder_db_path,
                     "SELECT value FROM attribute WHERE name='Age' AND id=1"
@@ -406,15 +409,15 @@ class TestExistingCodeFixes:
         _reload()
         # gt -10: the ''-unset case must NOT match (CAST('')=0.0 bug)
         out = json.loads(server.query_by_attribute("Age", "-10", operator="gt"))
-        ids = {m.get("case_id") for m in out}
+        ids = {m.get("case_id") for m in out["results"]}
         assert 2 not in ids
         assert {1, 3} <= ids
         # numeric equals: '5' finds the '5.0' row
         out = json.loads(server.query_by_attribute("Age", "5", operator="equals"))
-        assert {m.get("case_id") for m in out} == {3}
+        assert {m.get("case_id") for m in out["results"]} == {3}
         # equals '' keeps string semantics: finds the unset row
         out = json.loads(server.query_by_attribute("Age", "", operator="equals"))
-        assert 2 in {m.get("case_id") for m in out}
+        assert 2 in {m.get("case_id") for m in out["results"]}
 
     def test_case_link_dedupe_across_both_conventions(self, setup_server,
                                                       qualcoder_db_path):

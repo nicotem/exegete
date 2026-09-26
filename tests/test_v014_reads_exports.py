@@ -269,3 +269,91 @@ class TestCodebookPreviewsSayWhatChanges:
             "delete_code", code_id=2)["preview"]
         assert "saved_graph_rows_removed" not in host(
             "merge_codes", from_code_id=2, into_code_id=1)["preview"]
+
+
+# ===========================================================================
+# Audit item 11: attribute queries compare only finite numbers, and say
+# how many values were left out; set_attribute refuses nan, inf and
+# underscores in numeric values
+# ===========================================================================
+
+@pytest.fixture
+def mixed_ages(setup_server, qualcoder_db_path):
+    """A character attribute 'Stated age' with the values a spreadsheet
+    import produces, on cases 2 to 5, and case 6 unset."""
+    folder = qualcoder_db_path
+    sql(folder, "INSERT INTO attribute_type VALUES ('Stated age', "
+                "'2024-01-15', 'TestCoder', '', 'case', 'character')")
+    for caseid, name, value in ((2, "P2", "55"), (3, "P3", "unknown"),
+                                (4, "P4", "34 years"), (5, "P5", "n/a"),
+                                (6, "P6", "")):
+        sql(folder, "INSERT INTO cases VALUES (?, ?, '', 'TestCoder', "
+                    "'2024-01-15')", (caseid, name))
+        sql(folder, "INSERT INTO attribute (name, attr_type, value, id, "
+                    "date, owner) VALUES ('Stated age', 'case', ?, ?, "
+                    "'2024-01-15', 'TestCoder')", (value, caseid))
+    return folder
+
+
+class TestAttributeQueriesCompareNumbersOnly:
+
+    def test_gt_finds_only_the_number_and_counts_the_rest(self, mixed_ages):
+        out = host("query_by_attribute", attr_name="Stated age",
+                   attr_value="30", operator="gt")
+        assert [r["attribute_value"] for r in out["results"]] == ["55"]
+        assert out["result_count"] == 1
+        assert out["values_compared"] == 1
+        assert out["values_left_out"] == {"not_numbers": 3, "unset": 1}
+        assert "character attribute" in out["note"]
+
+    def test_lt_finds_nothing_rather_than_unknown(self, mixed_ages):
+        out = host("query_by_attribute", attr_name="Stated age",
+                   attr_value="18", operator="lt")
+        assert out["results"] == []
+        assert out["values_left_out"]["not_numbers"] == 3
+
+    def test_values_python_reads_differently_from_sqlite_never_match(
+            self, setup_server, qualcoder_db_path):
+        """'nan' and '1_000' in a numeric attribute (QualCoder's float()
+        check lets both in) matched 'lt 10' as 0 and 1."""
+        for caseid, value in ((2, "nan"), (3, "1_000"), (4, "５")):
+            sql(qualcoder_db_path, "INSERT INTO cases VALUES (?, ?, '', "
+                "'TestCoder', '2024-01-15')", (caseid, f"C{caseid}"))
+            sql(qualcoder_db_path, "INSERT INTO attribute (name, attr_type, "
+                "value, id, date, owner) VALUES ('Age', 'case', ?, ?, "
+                "'2024-01-15', 'TestCoder')", (value, caseid))
+        out = host("query_by_attribute", attr_name="Age", attr_value="10",
+                   operator="lt")
+        assert out["results"] == []
+        assert out["values_left_out"]["not_numbers"] == 3
+        gte = host("query_by_attribute", attr_name="Age", attr_value="30",
+                   operator="gte")
+        assert [r["case_id"] for r in gte["results"]] == [1]
+
+    def test_a_probe_that_is_not_a_finite_number_is_refused(
+            self, setup_server):
+        for probe in ("nan", "inf", "1_000"):
+            out = host("query_by_attribute", attr_name="Age",
+                       attr_value=probe, operator="gt")
+            assert "finite number" in out["error"], (probe, out)
+
+    @pytest.mark.parametrize("value", ["nan", "NaN", "inf", "-Infinity",
+                                       "1_000", "５"])
+    def test_set_attribute_refuses_what_it_could_not_compare(
+            self, setup_server, qualcoder_db_path, value):
+        out = host("set_attribute", target_type="case", target_id=1,
+                   attribute_name="Age", value=value, create_backup=False)
+        assert "is not a number" in out["error"], out
+        assert sql(qualcoder_db_path, "SELECT value FROM attribute WHERE "
+                   "name = 'Age' AND id = 1") == [("30",)]
+
+    @pytest.mark.parametrize("value,stored", [("1e3", "1e3"),
+                                              ("-4.5", "-4.5"),
+                                              (" 30 ", "30")])
+    def test_set_attribute_still_takes_ordinary_numbers(
+            self, setup_server, qualcoder_db_path, value, stored):
+        out = host("set_attribute", target_type="case", target_id=1,
+                   attribute_name="Age", value=value, create_backup=False)
+        assert out["success"] is True, out
+        assert sql(qualcoder_db_path, "SELECT value FROM attribute WHERE "
+                   "name = 'Age' AND id = 1") == [(stored,)]

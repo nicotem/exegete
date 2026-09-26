@@ -946,7 +946,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)
 - `get_file_attributes(file_id)` - Get attributes for a specific file
 - `get_case_attributes(case_id)` - Get attributes for a specific case
-- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values
+- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte` compare only values that are finite numbers, on a character attribute too, and count the rest in `values_left_out` (so "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would)
 
 **Co-occurrence Analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together
@@ -985,7 +985,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 - `rename_case(case_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a case, as QualCoder's Manage Cases does: the name only, the date untouched. A name another case has, ignoring letter case, spacing and Unicode form, is refused; the result says where the old name stays (saved graph labels, table displays and filters, files named after the case, backups)
 - `rename_file(file_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text)
 - `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **WRITES TO DATABASE** - Define a new attribute for cases, files or journals
-- `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **WRITES TO DATABASE** - Set or clear an attribute value
+- `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **WRITES TO DATABASE** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them)
 
 **Recovery & Safety:**
 - `copy_project_to_workspace(source_path, new_name)` - Copy a project to the safe workspace for AI coding (the database copied consistently and the same exclusions as backups; reports skipped symlinks)

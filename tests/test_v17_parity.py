@@ -164,7 +164,7 @@ class TestT16JournalAndOwnerTolerance:
     def test_query_by_attribute_unaffected_by_journal_rows(
             self, master_touched_project):
         out = json.loads(server.query_by_attribute("Age", "30"))
-        assert len(out) == 1                   # fixture case still found
+        assert len(out["results"]) == 1        # fixture case still found
 
     def test_import_placeholders_exclude_journal_domain(
             self, master_touched_project):

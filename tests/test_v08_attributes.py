@@ -52,14 +52,14 @@ class TestS64NumericComparisonFix:
         the dossier-exposed bug. Unset rows are now excluded."""
         out = json.loads(server.query_by_attribute("Age", "100",
                                                    operator="lt"))
-        names = {m["name"] for m in out}
+        names = {m["name"] for m in out["results"]}
         assert "Case A" in names            # 30 < 100
         assert "Unset participant" not in names
 
     def test_unset_placeholder_never_matches_gt(self, with_placeholder_case):
         out = json.loads(server.query_by_attribute("Age", "-5",
                                                    operator="gt"))
-        names = {m["name"] for m in out}
+        names = {m["name"] for m in out["results"]}
         assert names == {"Case A"}          # '' would cast to 0.0 > -5
 
     def test_numeric_equals_normalized(self, with_placeholder_case):
@@ -67,18 +67,18 @@ class TestS64NumericComparisonFix:
         finds the stored '30' (plain string equality missed it)."""
         for probe in ("30", "30.0", "3e1"):
             out = json.loads(server.query_by_attribute("Age", probe))
-            assert {m["name"] for m in out} == {"Case A"}, probe
+            assert {m["name"] for m in out["results"]} == {"Case A"}, probe
 
     def test_equals_empty_still_finds_unset(self, with_placeholder_case):
         """'' keeps string semantics — the legitimate way to find unset
         attributes (do NOT fix that away, §6.4)."""
         out = json.loads(server.query_by_attribute("Age", ""))
-        assert {m["name"] for m in out} == {"Unset participant"}
+        assert {m["name"] for m in out["results"]} == {"Unset participant"}
 
     def test_non_numeric_probe_on_numeric_attr(self, with_placeholder_case):
         """A non-castable probe can only string-match — no crash, no hit."""
         out = json.loads(server.query_by_attribute("Age", "thirty"))
-        assert out == []
+        assert out["results"] == []
 
     def test_character_equals_stays_string(self, setup_server,
                                            qualcoder_db_path):
@@ -87,7 +87,7 @@ class TestS64NumericComparisonFix:
         json.loads(server.set_attribute("case", 1, "Region", "North",
                                         create_backup=False))
         out = json.loads(server.query_by_attribute("Region", "North"))
-        assert len(out) == 1
+        assert len(out["results"]) == 1
 
 
 # ============================================================================

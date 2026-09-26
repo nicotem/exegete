@@ -5,6 +5,7 @@ import ast
 import bisect
 import errno
 import locale
+import math
 import os
 import sqlite3
 import stat
@@ -250,6 +251,31 @@ def normalize_name(name: Any) -> str:
     if not isinstance(name, str):
         return ""
     return " ".join(name.split())
+
+
+def finite_number(text: Any) -> Optional[float]:
+    """The number an attribute value is, or None when it is not one.
+
+    Python's `float()` after stripping, as QualCoder's own numeric check
+    (cases.py:733-736, manage_files.py:1253-1258 at 9bddf17), with three
+    exceptions, each a value `float()` accepts that SQLite's CAST, and so
+    QualCoder's attribute report, reads as another number: underscores
+    ("1_000" is 1000 to Python and 1 to SQLite), non-finite values ("nan",
+    "inf", "Infinity", all 0 to SQLite) and digits outside ASCII (a
+    full-width "５" is 5 to Python and 0 to SQLite). Used by set_attribute's
+    check and by query_by_attribute's comparisons, so what one accepts the
+    other compares (v0.14, claims audit item 11).
+    """
+    if not isinstance(text, str):
+        return None
+    t = text.strip()
+    if not t or "_" in t or not t.isascii():
+        return None
+    try:
+        value = float(t)
+    except ValueError:
+        return None
+    return value if math.isfinite(value) else None
 
 
 def name_key(name: Any) -> str:
@@ -5603,50 +5629,63 @@ class QualcoderDatabase:
         except sqlite3.Error as e:
             _raise_query_error(e, "get_case_attributes", "Failed to retrieve case attributes")
 
-    # Operator -> SQL condition over the attribute value. The SQL text is
-    # selected from this FIXED mapping (never user input); values are bound
-    # as parameters. Attribute values are stored as TEXT even for numeric
-    # attributes, and SQLite CAST('' AS REAL) = 0.0 — so a bare CAST would
-    # make every UNSET placeholder ('' value) match gt/lt comparisons as
-    # zero (the old comment claiming non-numeric values never match was
-    # FALSE). Numeric operators therefore exclude ''-value rows explicitly
-    # (cases-attributes.md §3.4/§6.4; NULL values are excluded by CAST(NULL)
-    # comparing as NULL). QualCoder's own attribute report shares the
-    # empty-matches-as-zero flaw; this is a deliberate, documented fix.
+    # Operator -> SQL condition over the attribute value, for the two
+    # operators still filtered in SQL. The SQL text is selected from this
+    # FIXED mapping (never user input); values are bound as parameters.
+    # The numeric operators are compared in Python (v0.14, claims audit
+    # item 11): a bare CAST(value AS REAL) read every text that does not
+    # start with a number as 0.0 and "34 years" as 34.0, so "under 18"
+    # found "unknown" and "n/a" on a character attribute.
     _ATTRIBUTE_OPERATORS = {
         "equals": "a.value = ?",
         "contains": "a.value LIKE ? ESCAPE '\\'",
-        "gt": "(a.value != '' AND CAST(a.value AS REAL) > ?)",
-        "gte": "(a.value != '' AND CAST(a.value AS REAL) >= ?)",
-        "lt": "(a.value != '' AND CAST(a.value AS REAL) < ?)",
-        "lte": "(a.value != '' AND CAST(a.value AS REAL) <= ?)",
+        "gt": None,
+        "gte": None,
+        "lt": None,
+        "lte": None,
     }
-
-    # 'equals' on a NUMERIC attribute compares numerically (so '5' matches
-    # a stored '5.0'), because plain string equality on numerics is a trap.
-    # 'equals' with '' stays string comparison — it is the legitimate way
-    # to find UNSET attributes (cases-attributes.md §6.4: don't fix that
-    # away).
-    _NUMERIC_EQUALS_CONDITION = "(a.value != '' AND CAST(a.value AS REAL) = ?)"
+    _NUMERIC_TESTS = {
+        "gt": lambda v, probe: v > probe,
+        "gte": lambda v, probe: v >= probe,
+        "lt": lambda v, probe: v < probe,
+        "lte": lambda v, probe: v <= probe,
+        "equals": lambda v, probe: v == probe,
+    }
 
     def query_by_attribute(self, attr_name: str, attr_value: str,
                            attr_type: str = "case",
                            operator: str = "equals") -> List[Dict[str, Any]]:
-        """Query cases or files by attribute value.
+        """The matching cases or files (see `attribute_query`)."""
+        return self.attribute_query(attr_name, attr_value, attr_type,
+                                    operator)["results"]
+
+    def attribute_query(self, attr_name: str, attr_value: str,
+                        attr_type: str = "case",
+                        operator: str = "equals") -> Dict[str, Any]:
+        """Query cases or files by attribute value, and say what was left out.
 
         Args:
             attr_name: The attribute name to filter by
-            attr_value: The attribute value to match (a number for the
-                        gt/gte/lt/lte operators)
+            attr_value: The attribute value to match (a finite number for
+                        the gt/gte/lt/lte operators)
             attr_type: 'case' or 'file'
             operator: 'equals' (exact match, default; compares numerically
                       for numeric attributes so '5' finds '5.0'; '' finds
                       unset attributes), 'contains' (case-insensitive
                       substring), or 'gt'/'gte'/'lt'/'lte' (numeric
-                      comparison; unset ''-value rows never match)
+                      comparison of the values that are finite numbers)
 
         Returns:
-            List of cases or files matching the attribute criteria
+            {"results": [...], "value_type": ..., and for a numeric
+            comparison "numeric": {"compared", "not_numbers", "unset"}}.
+            A numeric comparison compares only values that are finite
+            numbers (`finite_number`), on a character attribute too, and
+            counts the others: "not_numbers" (such as "unknown", "n/a",
+            "34 years") and "unset" (''). QualCoder's attribute report
+            casts a numeric attribute in SQL, where such a value reads as
+            0, and compares a character attribute as text
+            (report_attributes.py:357-358, :401-402 at 9bddf17); this is
+            a named departure in the researcher's favour.
         """
         if not isinstance(attr_name, str) or not isinstance(attr_value, str):
             raise TypeError("attr_name and attr_value must be strings")
@@ -5659,92 +5698,97 @@ class QualcoderDatabase:
                 f"operator must be one of: "
                 f"{', '.join(sorted(self._ATTRIBUTE_OPERATORS))}"
             )
-        condition = self._ATTRIBUTE_OPERATORS[operator]
-
-        if operator == "contains":
-            bound_value: Any = f"%{escape_like_pattern(attr_value)}%"
-        elif operator in ("gt", "gte", "lt", "lte"):
-            try:
-                bound_value = float(attr_value)
-            except ValueError:
-                raise ValueError(
-                    f"attr_value must be a number for operator '{operator}', "
-                    f"got '{attr_value}'"
-                ) from None
-        elif operator == "equals":
-            # Numeric attributes: compare numerically so '5' finds '5.0'
-            # (values are stored as TEXT; plain string equality would miss
-            # every formatting variant). '' keeps string semantics — it is
-            # how unset attributes are found.
-            bound_value = attr_value
-            if attr_value != "":
-                try:
-                    vt_row = self.conn.execute(
-                        "SELECT valuetype FROM attribute_type WHERE name = ?",
-                        (attr_name,)
-                    ).fetchone()
-                except sqlite3.Error as e:
-                    _raise_query_error(e, "query_by_attribute",
-                                       "Failed to query by attribute")
-                if vt_row and vt_row["valuetype"] == "numeric":
-                    try:
-                        bound_value = float(attr_value)
-                        condition = self._NUMERIC_EQUALS_CONDITION
-                    except ValueError:
-                        # Non-numeric probe against a numeric attribute can
-                        # only string-match (and never will match a numeric
-                        # value) — keep string equality
-                        pass
-        else:
-            bound_value = attr_value
 
         try:
-            if attr_type == 'case':
-                cursor = self.conn.execute(f"""
-                    SELECT
-                        c.caseid,
-                        c.name,
-                        c.memo,
-                        a.value as attr_value
-                    FROM cases c
-                    JOIN attribute a ON c.caseid = a.id AND a.attr_type = 'case'
-                    WHERE a.name = ? AND {condition}
-                    ORDER BY c.name
-                """, (attr_name, bound_value))
-
-                results = []
-                for row in cursor.fetchall():
-                    results.append({
-                        "case_id": row["caseid"],
-                        "name": row["name"],
-                        "memo": row["memo"] or "",
-                        "attribute_value": row["attr_value"]
-                    })
-            else:  # file
-                cursor = self.conn.execute(f"""
-                    SELECT
-                        s.id,
-                        s.name,
-                        s.memo,
-                        a.value as attr_value
-                    FROM source s
-                    JOIN attribute a ON s.id = a.id AND a.attr_type = 'file'
-                    WHERE a.name = ? AND {condition}
-                    ORDER BY s.name
-                """, (attr_name, bound_value))
-
-                results = []
-                for row in cursor.fetchall():
-                    results.append({
-                        "file_id": row["id"],
-                        "name": row["name"],
-                        "memo": row["memo"] or "",
-                        "attribute_value": row["attr_value"]
-                    })
-
-            return results
+            vt_row = self.conn.execute(
+                "SELECT valuetype FROM attribute_type WHERE name = ?",
+                (attr_name,)
+            ).fetchone()
         except sqlite3.Error as e:
-            _raise_query_error(e, "query_by_attribute", "Failed to query by attribute")
+            _raise_query_error(e, "query_by_attribute",
+                               "Failed to query by attribute")
+        value_type = vt_row["valuetype"] if vt_row else None
+
+        probe: Optional[float] = None
+        condition = self._ATTRIBUTE_OPERATORS[operator]
+        bound: List[Any] = [attr_name]
+        if operator in ("gt", "gte", "lt", "lte"):
+            probe = finite_number(attr_value)
+            if probe is None:
+                raise ValueError(
+                    f"attr_value must be a finite number for operator "
+                    f"'{operator}' (such as \"30\" or \"4.5\"; not "
+                    f"\"nan\", \"inf\" or underscores), got "
+                    f"'{attr_value}'"
+                )
+        elif operator == "contains":
+            bound.append(f"%{escape_like_pattern(attr_value)}%")
+        elif (operator == "equals" and attr_value != ""
+              and value_type == "numeric"
+              and finite_number(attr_value) is not None):
+            # Numeric attributes: compare numerically so '5' finds '5.0'
+            # (values are stored as TEXT; plain string equality would miss
+            # every formatting variant). '' keeps string semantics: it is
+            # how unset attributes are found. A probe that is not a number
+            # can only string-match, so it keeps string equality.
+            probe = finite_number(attr_value)
+        else:
+            bound.append(attr_value)
+        numeric = probe is not None
+        where = "1" if numeric else condition
+
+        if attr_type == 'case':
+            sql = f"""
+                SELECT c.caseid AS eid, c.name, c.memo,
+                       a.value AS attr_value
+                FROM cases c
+                JOIN attribute a ON c.caseid = a.id AND a.attr_type = 'case'
+                WHERE a.name = ? AND {where}
+                ORDER BY c.name
+            """
+            id_key = "case_id"
+        else:
+            sql = f"""
+                SELECT s.id AS eid, s.name, s.memo, a.value AS attr_value
+                FROM source s
+                JOIN attribute a ON s.id = a.id AND a.attr_type = 'file'
+                WHERE a.name = ? AND {where}
+                ORDER BY s.name
+            """
+            id_key = "file_id"
+        try:
+            rows = self.conn.execute(sql, bound).fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "query_by_attribute",
+                               "Failed to query by attribute")
+
+        out: Dict[str, Any] = {"value_type": value_type}
+        counts = {"compared": 0, "not_numbers": 0, "unset": 0}
+        test = self._NUMERIC_TESTS.get(operator)
+        results = []
+        for row in rows:
+            if numeric:
+                raw = row["attr_value"]
+                if raw is None or str(raw).strip() == "":
+                    counts["unset"] += 1
+                    continue
+                number = finite_number(str(raw))
+                if number is None:
+                    counts["not_numbers"] += 1
+                    continue
+                counts["compared"] += 1
+                if not test(number, probe):
+                    continue
+            results.append({
+                id_key: row["eid"],
+                "name": row["name"],
+                "memo": row["memo"] or "",
+                "attribute_value": row["attr_value"],
+            })
+        out["results"] = results
+        if numeric:
+            out["numeric"] = counts
+        return out
 
     # ========================================================================
     # REPORT-EXPORT READS (v0.8 phase B) — QualCoder-parity row sources
@@ -9651,16 +9695,18 @@ class QualcoderDatabase:
                     f"'{attr_name}' is a {att['caseOrFile']} attribute; it "
                     f"cannot be set on a {target_type}"
                 )
-            if att["valuetype"] == "numeric" and value != "":
-                try:
-                    float(value)
-                except ValueError:
-                    raise ValueError(
-                        f"'{attr_name}' is a numeric attribute and "
-                        f"'{value}' is not a number (QualCoder would "
-                        f"silently blank it; refusing instead). Pass '' to "
-                        f"unset."
-                    ) from None
+            if att["valuetype"] == "numeric" and value != "" \
+                    and finite_number(value) is None:
+                raise ValueError(
+                    f"'{attr_name}' is a numeric attribute and '{value}' "
+                    f"is not a number this server can compare: give "
+                    f"digits, optionally with a sign, a decimal point or "
+                    f"an exponent (\"30\", \"4.5\", \"1e3\"); not "
+                    f"\"nan\" or \"inf\", not underscores, not digits "
+                    f"outside 0 to 9. QualCoder blanks or reverts a value "
+                    f"that is not a number, with a warning; this server "
+                    f"refuses it, so nothing changes. Pass '' to unset."
+                )
 
             date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             existing = self.conn.execute(

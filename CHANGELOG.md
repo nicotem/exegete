@@ -315,6 +315,24 @@ search or a silent limit.
   token now covers the source's sub-codes, so one added after the
   preview needs a fresh preview. `delete_code`'s preview counts the
   saved-graph rows it removes too.
+- **Attribute queries compare numbers only, and say what they left
+  out.** `query_by_attribute`'s `gt`, `gte`, `lt` and `lte` cast every
+  value to a number in SQLite, which reads text as 0: on a character
+  attribute holding "55", "unknown", "34 years" and "n/a", "under 18"
+  found "unknown" and "n/a", and "over 30" found "34 years". They now
+  compare only values that are finite numbers, on a character attribute
+  too, and the answer counts the rest (`values_left_out`: `not_numbers`,
+  `unset`) with a note. This departs from QualCoder's attribute report,
+  which casts a numeric attribute (a value that is not a number reads as
+  0) and compares a character attribute as text. The answer is now an
+  object (`attribute`, `operator`, `value`, `value_type`,
+  `result_count`, `results`, and for a numeric comparison
+  `values_compared` and `values_left_out`), not a bare list: read the
+  matches from `results`. `set_attribute` refuses "nan", "inf",
+  "Infinity", underscores ("1_000") and digits outside 0 to 9 in a
+  numeric attribute, which QualCoder accepts and its report reads as
+  other numbers; its refusal no longer says QualCoder blanks such input
+  silently (it warns).
 
 ## [0.13.0-alpha] - 2026-09-25
 

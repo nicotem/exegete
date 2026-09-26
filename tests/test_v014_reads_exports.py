@@ -646,6 +646,26 @@ class TestSearchMemosSearchesEveryKind:
         found = host("search_memos", query="public reason")["results"]
         assert [r["memo"] for r in found] == ["public reason"]
 
+    def test_a_secret_in_every_kind_is_never_matched_or_returned(
+            self, setup_server, qualcoder_db_path):
+        """The audit's second unprotected promise, for this read: no text
+        after '#####' comes back, in any of the twelve kinds."""
+        for _, statement in ZEBRA_NOTES:
+            sql(qualcoder_db_path, statement)
+        for table, column in (("project", "memo"), ("code_name", "memo"),
+                              ("code_cat", "memo"), ("source", "memo"),
+                              ("cases", "memo"), ("attribute_type", "memo"),
+                              ("code_text", "memo"), ("code_image", "memo"),
+                              ("code_av", "memo"), ("case_text", "memo"),
+                              ("annotation", "memo"), ("journal", "jentry")):
+            sql(qualcoder_db_path,
+                f"UPDATE {table} SET {column} = {column} || "
+                f"'#####Quokkasecret' WHERE {column} LIKE '%Zebra%'")
+        assert host("search_memos", query="quokkasecret")["results"] == []
+        found = host("search_memos", query="zebra")
+        assert len(found["results"]) == 12
+        assert "Quokka" not in json.dumps(found)
+
     def test_a_hidden_coders_coding_note_is_not_returned(
             self, setup_server, qualcoder_db_path):
         from test_qc40_visibility import (_apply_visibility_schema, _reopen,

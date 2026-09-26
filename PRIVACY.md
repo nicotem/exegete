@@ -256,7 +256,9 @@ the four views (schema v14).
 ## Attribution: the AI coder name is yours to choose
 
 Every row this server writes carries one coder name, so AI work stays
-distinguishable from yours in QualCoder. AI rows are never written under
+distinguishable from yours in QualCoder (an attribute value it sets on
+a file or a journal entry included, where QualCoder's own edit keeps
+the row's earlier owner). AI rows are never written under
 a name the model chose by itself: the name is set per project by you,
 and the model can only ask. The first write that needs a name stops and
 asks; your answer is stored with the project and reported back by the

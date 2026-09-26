@@ -8053,12 +8053,19 @@ class QualcoderDatabase:
         code_id = validate_id(code_id, "code_id")
         if category_id is not None:
             category_id = validate_id(category_id, "category_id")
+        old_parent = None
         try:
             old = self._get_code_row(code_id)
             if category_id is not None:
                 self._get_category_row(category_id)  # existence check
             caps = getattr(self, "capabilities", None)
             if caps is not None and caps.has_supercid:
+                # The parent code this move detaches it from, named in
+                # the result (v0.14, claims audit item 19)
+                old_parent = self.conn.execute(
+                    "SELECT p.cid, p.name FROM code_name c "
+                    "JOIN code_name p ON c.supercid = p.cid "
+                    "WHERE c.cid = ?", (code_id,)).fetchone()
                 # S2: parent pointers are mutually exclusive; every move
                 # writes BOTH in one statement (upstream code_tree.py:
                 # 1235/1245; open-time repair would otherwise DISCARD our
@@ -8084,7 +8091,9 @@ class QualcoderDatabase:
             _raise_query_error(e, "move_code_to_category",
                                "Failed to move code")
         return {"code_id": code_id, "name": old["name"],
-                "old_category_id": old["catid"], "new_category_id": category_id}
+                "old_category_id": old["catid"], "new_category_id": category_id,
+                "old_parent_code_id": old_parent[0] if old_parent else None,
+                "old_parent_code": old_parent[1] if old_parent else None}
 
     def add_category(self, name: str, owner: str,
                      supercatid: Optional[int] = None,
@@ -8542,9 +8551,11 @@ class QualcoderDatabase:
             preview["subcodes"] = sorted(r[0] for r in names)
             preview["note"] = (
                 f"{len(branch) - 1} sub-code(s) hang under this code. "
-                f"Deleting requires cascade=true (the whole branch and all "
-                f"its codings die, exactly as QualCoder's own delete), or "
-                f"move the sub-codes first if they are needed.")
+                f"Deleting deletes the whole branch and all its codings, "
+                f"exactly as QualCoder's own delete, which asks once; "
+                f"execute_with carries cascade=true, so approving this "
+                f"preview approves the branch. Move the sub-codes first if "
+                f"they are needed.")
         return preview
 
     def delete_code(self, code_id: int, cascade: bool = False,
@@ -9733,9 +9744,16 @@ class QualcoderDatabase:
         the write is insert-if-missing then update, keyed
         (id, name, attr_type); never assume the placeholder row exists
         (QualCoder's case-side placeholder heal is a no-op in 3.8.2).
-        Byte-fidelity per domain: the case path refreshes owner+date on
-        update, the file/journal paths write value only, exactly like the
-        three GUI paths.
+        Every path writes the value with this server's owner and the
+        date (v0.14, claims audit item 18), as QualCoder's case path does
+        (cases.py:670-679). A named departure: QualCoder's file and
+        journal edits write the value alone (manage_files.py:1259,
+        :2257, journals.py:827 at 9bddf17), so a placeholder QualCoder
+        made kept "Researcher" and its old date under the AI's value,
+        and get_file_attributes named the researcher as its owner, while
+        README promises every row this server writes carries the AI
+        coder name. QualCoder reads a value's owner only to list coders
+        in its charts window (view_charts.py:84).
 
         Deliberate deviation (documented): a non-castable value for a
         numeric attribute is REJECTED with an error; QualCoder silently
@@ -9812,20 +9830,14 @@ class QualcoderDatabase:
                      owner)
                 )
                 previous = None
-            elif target_type == "case":
-                # Case path refreshes owner and date (cases.py:670-679)
+            else:
+                # Every domain refreshes owner and date, as QualCoder's
+                # case path does (cases.py:670-679); its file and journal
+                # paths write the value alone, a departure named above
                 self.conn.execute(
                     "UPDATE attribute SET value = ?, date = ?, owner = ? "
                     "WHERE attrid = ?",
                     (value, date_str, owner, existing["attrid"])
-                )
-                previous = existing["value"]
-            else:
-                # File/journal paths write value only
-                # (manage_files.py:1470-1471, journals.py:747-748)
-                self.conn.execute(
-                    "UPDATE attribute SET value = ? WHERE attrid = ?",
-                    (value, existing["attrid"])
                 )
                 previous = existing["value"]
 
@@ -9850,6 +9862,7 @@ class QualcoderDatabase:
             "attribute": attr_name,
             "value_type": att["valuetype"],
             "value": value,
+            "owner": owner,
             "previous_value": (previous if previous is not None
                                else "" if existing else None),
             "row_created": existing is None,

@@ -403,6 +403,29 @@ search or a silent limit.
   category's own codes directly under its heading before its
   sub-categories, and each sub-code indented under its parent. The csv
   and txt forms, which were right, are unchanged.
+- **A value the AI sets on a file or a journal entry carries the AI
+  coder name.** `set_attribute` wrote the owner and the date only on a
+  case; on a file or a journal entry it changed the value alone, as
+  QualCoder's own edits do, so a placeholder QualCoder made kept
+  "Researcher" and its old date under the AI's value, and
+  `get_file_attributes` named the researcher as its owner, against
+  README's promise that every row this server writes carries the AI
+  coder name. Every domain now takes the owner and the date, a named
+  departure from QualCoder's file and journal edits; the answer carries
+  the `owner`.
+- **Moving a sub-code says which parent it left, and the texts about
+  sub-codes are true.** Any move of a sub-code, into a category or to
+  none, detaches it from its parent code, as in QualCoder; the
+  description said so only for a move to none, and the answer never
+  named the parent. It now carries `old_parent_code_id` and
+  `old_parent_code` and says "out from under its parent code". README
+  no longer calls sub-codes "fully supported ... moving and merging
+  without hierarchy loss": no tool nests an existing code under another
+  (done in QualCoder), and a code moved keeps its own sub-codes.
+  `delete_code`'s texts now say what its preview does: the preview names
+  the sub-codes and its `execute_with` carries `cascade=true` when there
+  are any, so approving the preview approves the branch, as QualCoder's
+  single dialog does.
 
 ## [0.13.0-alpha] - 2026-09-25
 

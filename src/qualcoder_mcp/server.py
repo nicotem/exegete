@@ -10377,9 +10377,13 @@ def move_code_to_category(code_id: int,
     gave. When the code is already where the call
     would put it, the result is `changed: false, reason: unchanged` with
     nothing written and no backup made. On projects with sub-code support
-    (schema v16+) moving a sub-code to "no category" is a real change: it
-    detaches the code from its parent code. Successful moves carry
-    `changed: true`.
+    (schema v16+) a code sits under a category or under a parent code,
+    never both, so ANY move of a sub-code, into a category or to "no
+    category", detaches it from its parent code, as QualCoder's own move
+    does; the result names the parent it left (old_parent_code_id,
+    old_parent_code) and says so. A code moved keeps its own sub-codes
+    under it. Nesting an existing code under another code is done in
+    QualCoder. Successful moves carry `changed: true`.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -10447,8 +10451,17 @@ def move_code_to_category(code_id: int,
         # which row the code had been filed under. The unchanged answer
         # already echoes `category`, so this makes the two agree.
         new_name = _category_name(wdb, category_id)
-        where = (f"into category '{new_name}'" if new_name is not None
-                 else "out of any category")
+        parent = moved.get("old_parent_code")
+        if parent is not None and new_name is not None:
+            where = (f"into category '{new_name}', out from under its "
+                     f"parent code '{parent}'")
+        elif parent is not None:
+            where = (f"out from under its parent code '{parent}'; it is "
+                     f"now a top-level code, in no category")
+        elif new_name is not None:
+            where = f"into category '{new_name}'"
+        else:
+            where = "out of any category"
         return {"success": True, "changed": True,
                 "message": f"Moved code '{moved['name']}' {where}",
                 "new_category": new_name, **moved}
@@ -11222,11 +11235,15 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     EVERY coded segment made with it (text, audio/video, and image codings).
     Categories, annotations, case links and other codes are not affected.
 
-    SUB-CODES (projects with schema v16 or newer): a code that has
-    sub-codes is REFUSED unless cascade=true, which then deletes the
-    whole branch (the code, every transitive sub-code, and all their
-    codings) in one transaction, exactly as QualCoder's own delete. The
-    preview always reports the branch, so review it before confirming.
+    SUB-CODES (projects with schema v16 or newer): deleting a code that
+    has sub-codes deletes the whole branch (the code, every transitive
+    sub-code, and all their codings) in one transaction, exactly as
+    QualCoder's own delete, which asks once in a dialog naming the
+    sub-codes. The preview is that dialog here: it names the sub-codes,
+    and its execute_with carries cascade=true when there are any, so the
+    researcher's approval of the preview is the approval of the branch.
+    An execute without cascade=true on such a code is refused. Review
+    the preview before confirming.
     Move the sub-codes first if they are needed. On those projects the
     deleted codes' nodes and lines on QualCoder's saved graphs are
     removed too, as QualCoder 4.0's own delete removes them; the preview
@@ -11250,7 +11267,8 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
         preview_token: The token from this operation's preview; omit it to
                  get the preview
         cascade: Must be true to delete a code that has sub-codes (the
-                 whole branch dies; default false refuses instead)
+                 whole branch dies; default false refuses instead). The
+                 preview's execute_with sets it when there are sub-codes
         allow_hidden_coder: Required when the preview reports codings that
                  belong to a coder currently hidden in QualCoder
     """

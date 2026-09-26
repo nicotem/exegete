@@ -332,7 +332,9 @@ class TestAttributeType:
 class TestSetAttribute:
 
     def test_byte_fidelity_per_domain(self, setup_server, qualcoder_db_path):
-        """Case path updates value+date+owner; file path updates value ONLY."""
+        """Both paths update value+date+owner (v0.14, claims audit item
+        18: the file path used to write the value ONLY, as QualCoder's own
+        file edit does, which left the earlier owner on the AI's value)."""
         _exec(qualcoder_db_path,
               "INSERT INTO attribute_type VALUES ('FA','2024','T','','file','character')")
         _exec(qualcoder_db_path,
@@ -344,8 +346,8 @@ class TestSetAttribute:
         row = _row(qualcoder_db_path,
                    "SELECT * FROM attribute WHERE attrid=50")
         assert row["value"] == "new"                      # stripped
-        assert row["date"] == "2020-01-01 00:00:00"       # file: value ONLY
-        assert row["owner"] == "orig_owner"
+        assert row["date"] != "2020-01-01 00:00:00"       # file: refreshed
+        assert row["owner"] == "AI Coding Assistant"
 
         # case path: value + date + owner refreshed
         out = json.loads(server.set_attribute("case", 1, "Age", "31"))

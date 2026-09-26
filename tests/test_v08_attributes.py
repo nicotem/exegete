@@ -253,23 +253,27 @@ class TestS41SetAttribute:
         assert row["owner"] == "AI Coding Assistant"  # P1-2 attribution
         assert row["date"] != "2024-01-15"       # refreshed
 
-    def test_file_update_touches_value_only(self, setup_server,
-                                            qualcoder_db_path):
-        """File path: value only (manage_files.py:1470-1471) — the
-        placeholder's owner/date are untouched."""
+    def test_file_update_refreshes_owner_and_date(self, setup_server,
+                                                  qualcoder_db_path):
+        """File path: value, owner and date, as on the case path (v0.14,
+        claims audit item 18). A named departure: QualCoder's own file
+        edit writes the value alone (manage_files.py:1259), which left
+        a researcher's placeholder owning the AI's value."""
         json.loads(server.create_attribute_type("Language", "file",
                                                 create_backup=False))
-        before = _rows(qualcoder_db_path,
-                       "SELECT owner, date FROM attribute "
-                       "WHERE name='Language' AND id=1")[0]
+        conn = _conn(qualcoder_db_path)
+        conn.execute("UPDATE attribute SET owner = 'Researcher', "
+                     "date = '2020-01-01' WHERE name='Language' AND id=1")
+        conn.commit()
+        conn.close()
         json.loads(server.set_attribute("file", 1, "Language", "Italian",
                                         create_backup=False))
         after = _rows(qualcoder_db_path,
                       "SELECT value, owner, date FROM attribute "
                       "WHERE name='Language' AND id=1")[0]
         assert after["value"] == "Italian"
-        assert (after["owner"], after["date"]) == (before["owner"],
-                                                   before["date"])
+        assert after["owner"] == "AI Coding Assistant"
+        assert after["date"] != "2020-01-01"
 
     def test_journal_set(self, setup_server, qualcoder_db_path):
         json.loads(server.create_attribute_type("Phase", "journal",

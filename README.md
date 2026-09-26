@@ -136,9 +136,12 @@ host and not capability-evaluated on local models.
 > closed and reopened in QualCoder.
 
 Sub-codes (a code nested under another code, schema v16 and newer) are
-fully supported: creating them, moving and merging without hierarchy
-loss, branch-aware deletion, and nesting-aware listings, reports,
-codebook and REFI-QDA exports. Projects newer than schema v17 refuse
+supported: creating them, moving a code with its sub-codes, merging
+(the source's sub-codes move under the target), branch-aware deletion,
+and nesting-aware listings, reports, codebook and REFI-QDA exports.
+Nesting an existing code under another code is done in QualCoder, and
+moving a sub-code, into a category or to none, detaches it from its
+parent code, as in QualCoder; the result names the parent it left. Projects newer than schema v17 refuse
 writes until this server has been verified against them; setting
 `QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA=1` in the server environment lets
 writes proceed at your own risk, and every write result then carries a
@@ -339,6 +342,9 @@ client.
 Every row this server writes (codings, annotations, journal entries,
 imports, cases, codes, categories, attributes) is attributed to one
 coder name, so AI work stays distinguishable from yours in QualCoder.
+An attribute value it sets takes that name and the date on a file or a
+journal entry as on a case; QualCoder's own file and journal edits
+change the value alone and keep the row's earlier owner.
 From v0.12 that name belongs to the PROJECT and it is yours to choose.
 The first write that needs it stops and asks: the model relays the
 question, you answer, and it calls
@@ -1033,7 +1039,7 @@ still answers empty, and that answer is a finding.
 
 **Codebook, Destructive (preview, then token, then safety backup):**
 - `merge_codes(from_code_id, into_code_id, preview_token, allow_hidden_coder)` - **WRITES TO DATABASE** - Merge one code into another (lossy on overlaps, exactly matching QualCoder). The codebook changes too, as in QualCoder, and the preview names each change: on projects QualCoder 4.0 has opened (schema v16 and later) the source code's sub-codes move under the target, the source code's memo is added to the target's memo under a "[Merged from code: ...]" line, and the source code's nodes and lines on saved graphs are removed; on a 3.8.2 project the source code's memo is deleted with it (the backup keeps a copy)
-- `delete_code(code_id, preview_token, cascade, allow_hidden_coder)` - **WRITES TO DATABASE** - Delete a code and all its coded segments (`cascade=true` is required for a code that has sub-codes). On schema v16 and later the deleted codes' nodes and lines on saved graphs go too, and the preview counts them
+- `delete_code(code_id, preview_token, cascade, allow_hidden_coder)` - **WRITES TO DATABASE** - Delete a code and all its coded segments; a code with sub-codes goes with its whole branch (`cascade=true`, which the preview's `execute_with` carries when there are sub-codes, so approving the preview approves the branch, as QualCoder's single dialog does). On schema v16 and later the deleted codes' nodes and lines on saved graphs go too, and the preview counts them
 - `delete_category(category_id, preview_token)` - **WRITES TO DATABASE** - Delete a category; its codes and sub-categories move to the top level (no cascade to coded data). On projects QualCoder 4.0 has opened (schema v16 and later), the category's own node in QualCoder's saved graphs and the lines that end on it are removed with it, and the preview counts them; its codes stay on the graphs
 - `merge_category(from_category_id, into_category, preview_token)` - **WRITES TO DATABASE** - Merge a category into another (or into the top level); its codes and sub-categories move to the target. Saved graphs as for `delete_category`: only the merged category's own node and lines go, where QualCoder 4.0's own merge also erases the kept codes' nodes and lines
 

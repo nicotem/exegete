@@ -804,3 +804,72 @@ class TestExportsSayWhatTheyHold:
         assert bullets.index(heading_of["Acute stress"][1]) == \
             bullets.index(heading_of["Stress"][1]) + 1
         assert (out["codes"], out["categories"]) == (5, 2)
+
+
+# ===========================================================================
+# Audit items 18 and 19: a value the AI sets on a file records the AI
+# coder; moving a sub-code says which parent it left; the cascade text
+# ===========================================================================
+
+class TestAFileValueRecordsTheAICoder:
+
+    @pytest.mark.parametrize("domain,target", [("file", 1), ("journal", 1)])
+    def test_a_researcher_placeholder_takes_the_ai_name_and_date(
+            self, setup_server, qualcoder_db_path, domain, target):
+        sql(qualcoder_db_path, "INSERT INTO attribute_type VALUES "
+            "('Setting', '2024-01-15', 'Researcher', '', ?, 'character')",
+            (domain,))
+        sql(qualcoder_db_path, "INSERT INTO attribute (name, attr_type, "
+            "value, id, date, owner) VALUES ('Setting', ?, '', ?, "
+            "'2020-01-01 00:00:00', 'Researcher')", (domain, target))
+        out = host("set_attribute", target_type=domain, target_id=target,
+                   attribute_name="Setting", value="clinic",
+                   create_backup=False)
+        assert out["success"] is True, out
+        owner, date = sql(qualcoder_db_path, "SELECT owner, date FROM "
+                          "attribute WHERE name = 'Setting'")[0]
+        assert owner == out["attribute"]["owner"] == H.DEFAULT_AI_CODER_NAME
+        assert date != "2020-01-01 00:00:00"
+        if domain == "file":
+            read = host("get_file_attributes", file_id=target)
+            row = next(a for a in read["attributes"]
+                       if a["name"] == "Setting")
+            assert row["owner"] == H.DEFAULT_AI_CODER_NAME
+
+
+class TestSubCodeMovesAndTheCascadeSayWhatHappens:
+
+    def test_moving_a_sub_code_into_a_category_names_its_former_parent(
+            self, ladder):
+        def setup(folder):
+            add_subcode(folder, 10, "Kid", supercid=1)
+        folder = ladder("v17", setup)
+        out = host("move_code_to_category", code_id=10,
+                   category="Category A", create_backup=False)
+        assert out["success"] is True, out
+        assert (out["old_parent_code_id"], out["old_parent_code"]) == (
+            1, "Stress")
+        assert "out from under its parent code 'Stress'" in out["message"]
+        assert sql(folder, "SELECT catid, supercid FROM code_name "
+                           "WHERE cid = 10") == [(1, None)]
+
+    def test_moving_a_sub_code_to_no_category_says_it_left_its_parent(
+            self, ladder):
+        ladder("v17", lambda f: add_subcode(f, 10, "Kid", supercid=1))
+        out = host("move_code_to_category", code_id=10, create_backup=False)
+        assert out["old_parent_code"] == "Stress"
+        assert "top-level code" in out["message"]
+
+    def test_a_top_level_move_names_no_parent(self, ladder):
+        ladder("v17")
+        out = host("move_code_to_category", code_id=2, create_backup=False)
+        assert out["old_parent_code_id"] is None
+        assert "parent" not in out["message"]
+
+    def test_the_delete_preview_says_its_approval_is_the_branchs(
+            self, ladder):
+        ladder("v17", lambda f: add_subcode(f, 10, "Kid", supercid=1))
+        preview = host("delete_code", code_id=1)
+        assert preview["execute_with"]["arguments"]["cascade"] is True
+        assert "approving this preview approves the branch" in \
+            preview["preview"]["note"]

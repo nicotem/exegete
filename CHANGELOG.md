@@ -270,10 +270,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects and the
-  reads, queries and exports: full = 182,550 characters (about 45.6k
+  reads, queries and exports: full = 182,973 characters (about 45.7k
   tokens at chars/4) over 73 tools, core = 59,378 (about 14.8k) over
-  21, and the new opt-in lifecycle set = 185,032 (about 46.3k) over 74.
-  The reads, queries and exports moved it by 8,938 in `full` and 1,245
+  21, and the new opt-in lifecycle set = 185,455 (about 46.4k) over 74.
+  The reads, queries and exports moved it by 9,361 in `full` and 1,245
   in `core` (`search_coded_text`, `get_coded_segments`,
   `get_coding_frequencies` and `search_files` are in `core`), through
   the descriptions of the tools whose answers changed above. Moved by `pseudonymise_source`'s
@@ -286,8 +286,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pseudonymise_source`'s own share now rounds to 19,000, from 18,000.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 192,010, 62,506 and
-  194,628.
+  on Python 3.11.13, in the repository's `.venv/`, 192,461, 62,506 and
+  195,079.
 
 ### Changed: reads, queries and exports say what they found
 

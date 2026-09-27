@@ -376,14 +376,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   proposal (`update_proposal`), or merging evidence into it as a target
   (`merge_proposals`), returns it to pending, and the answer says
   "approval withdrawn: ... show it to the researcher again". A proposal
-  merged away gets a final status, `merged` (with the GUID it went
-  into): `update_proposal_status` skips and counts it
+  merged away by this release gets a final status, `merged` (with the
+  GUID it went into): `update_proposal_status` skips and counts it
   (`skipped_merged`), `update_proposal` and `merge_proposals` refuse it,
   `review_proposals` says what it went into, and it is never created.
   Before, an approved "Isolation" renamed and redefined stayed approved,
   and a merged-away proposal could be approved again and created,
-  writing the same passages under two codes. A rejected proposal can
-  still be approved again, and the texts now say so.
+  writing the same passages under two codes; that is closed for merges
+  made from this release on. A proposal merged by an earlier release
+  was stored as an ordinary rejection and stays one (see Upgrading). A
+  rejected proposal can still be approved again, and the texts now say
+  so.
 - **Comparing coders says what its numbers cannot show.** A character a
   coder did not code is not a decision: in a file that coder never
   coded, it counts as "not coded" all the same. The unit-of-analysis
@@ -440,7 +443,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session to have the scope enforced.
 - **`update_suggestion_status` refuses a GUID sent in two lists**, and
   `update_proposal_status` one sent in both, where they used to count it
-  twice; nothing changes on such a call.
+  twice; nothing changes on such a call. Their counts changed too: each
+  GUID is counted once, and approved, rejected and reopened count only a
+  status that moved (one already in that status is counted in
+  `unchanged`), so approving an approved suggestion now answers
+  "Nothing changed" and 0 where it said 1. Both answers gain
+  `not_found`, and `update_suggestion_status` takes `reopen`.
+- **`record_suggestions` no longer takes `context_before` or
+  `context_after`.** A caller that sends them has them set aside, and
+  the answer counts them (`context_ignored`, with a note); the context
+  shown at review, and by `get_coding_session_info`, is the file's own.
+  For a suggestion recorded by an earlier release, whose stored context
+  the assistant may have written, no context is shown while its project
+  is not the one open.
+- **Changing an approved proposal withdraws the approval.** Approve,
+  then rename, redefine, recolour, recategorise or re-evidence it with
+  `update_proposal`, or merge evidence into it: it is pending again
+  (`status`, `approval_withdrawn` in the answer), and
+  `create_proposed_codes` creates nothing for it until it is approved
+  again. A call whose values are already the proposal's own answers
+  `changed: false` and leaves the approval standing.
+- **A merged proposal is final.** `merge_proposals` answers
+  `source_status: "merged"` where it said `"rejected"`, and gives the
+  target's `status`; the source can no longer be approved
+  (`update_proposal_status` counts it in `skipped_merged`) and is
+  refused by `update_proposal` and `merge_proposals`;
+  `proposal_statistics` gains `merged`.
+- **A proposal merged by an earlier release is not final.** Before this
+  release a merged-away proposal was stored as an ordinary "rejected",
+  with nothing to say it was merged, so in a session made by 0.13 or
+  earlier it can still be approved again and created, writing its
+  passages under a second code. `review_proposals` shows it as
+  REJECTED; do not approve such a proposal again, or start a new
+  session.
+- **`delete_coding` writes session files.** When the deleted coding
+  came from an AI coding session of the open project, that suggestion
+  is marked with a new status, `removed`, in its session file, and the
+  answer gains `sessions_updated` and `sessions_note`. `removed` appears
+  in every count the loop reports; a removed suggestion can be approved
+  and applied again, or reopened. Suggestions now keep the coding id
+  they became (`applied_ctid`), and only a deleted row under one of the
+  project's AI coder names ever marks one.
+- **The loop's code-name rule.** `analyze_for_coding`,
+  `record_suggestions` and `edit_suggestion` match code names exactly,
+  else ignoring letter case, spacing and Unicode form, where
+  `analyze_for_coding` matched exact case only ("coping" is now found).
+  A name that matches two codes that way (possible in a project made
+  before QualCoder 4.0) is refused and listed in `ambiguous_code_names`,
+  where `record_suggestions` used to take one of the two. A session's
+  `file_ids` hold only the files found; the others are in `not_found`.
+- **A label stays with its code.** `edit_suggestion` takes `support`;
+  moving a suggestion to another code without it clears the label
+  (`support_cleared` in the answer; the memo then carries the reason
+  only).
+- **New keys in the answers.** `record_suggestions`: each entry's
+  `support`, and `confidence_ignored` and `context_ignored` when those
+  were sent; `analyze_for_coding`: `not_found` and
+  `ambiguous_code_names`; `edit_suggestion`: `support`,
+  `support_cleared`; `get_coding_session_info`: `context_note`, and
+  sessions and suggestions carry `scope`, `applied_ctid`,
+  `support_cleared` and `context_from_file`; `compare_coders`:
+  `files_coded_by_one_coder_only` (and its count beyond 50) and
+  `files_coded_by_neither`. A caller that compares a whole answer's
+  shape sees them.
+- **The memo form of a newly applied coding.** "Support: explicit (the
+  passage states it)" or "Support: interpretive (the assistant is
+  reading into it)", a blank line, then the reason; the "[AI Confidence:
+  0.85]" line is no longer written. A session's REFI-QDA export
+  describes each selection the same way; a project export carries every
+  memo exactly as stored.
+- **Two developer scripts are gone**, `scripts/test_workflow.py` and
+  `scripts/generate_test_export.py`.
 
 ## [0.13.0-alpha] - 2026-09-25
 

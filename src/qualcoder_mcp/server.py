@@ -6893,8 +6893,10 @@ def update_suggestion_status(
         reopen: List of suggestion GUIDs to return to pending
 
     Returns:
-        What changed (approved, rejected, reopened, already applied, not
-        found, or "Nothing changed"), and the session's counts
+        What changed (approved, rejected, reopened: each suggestion counted
+        once, and only if its status moved; those that already had that
+        status, already applied, not found; or "Nothing changed"), and the
+        session's counts
 
     Example:
         User says "the first two look right, drop the third" ->
@@ -6930,6 +6932,10 @@ def update_suggestion_status(
     stats = session.get_statistics()
 
     lines = []
+    if result.get("unchanged"):
+        lines.append(
+            f"- Already had that status (unchanged, not counted above): "
+            f"{result['unchanged']}")
     if result.get("skipped_applied"):
         lines.append(
             f"- Already applied (left unchanged): {result['skipped_applied']}; "
@@ -6942,12 +6948,13 @@ def update_suggestion_status(
     notes = "\n".join(lines) + ("\n" if lines else "")
     headline = ("✅ **Updated Suggestion Statuses**" if result["changed"]
                 else "ℹ️ **Nothing changed**: every suggestion named "
-                     "already had that status, or was not found")
+                     "already had that status, was already applied, or "
+                     "was not found")
 
     output = f"""
 {headline}
 
-Changed:
+Changed (each suggestion counted once, only if its status moved):
 - Approved: {result['approved']} suggestions
 - Rejected: {result['rejected']} suggestions
 - Reopened (back to pending): {result['reopened']} suggestions
@@ -9830,7 +9837,9 @@ def update_proposal_status(coding_session_id: str,
     merged into another is final and skipped (skipped_merged). A
     rejected proposal is created only if it is approved again. GUIDs
     that name no proposal come back in not_found; a GUID given in both
-    lists is refused, and nothing changes.
+    lists is refused, and nothing changes. approved and rejected count
+    each proposal once, and only if its status moved (unchanged counts
+    those that already had it).
 
     Args:
         coding_session_id: The session ID

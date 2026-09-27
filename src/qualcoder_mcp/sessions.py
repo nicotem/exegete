@@ -56,15 +56,29 @@ def guids_in_more_than_one(*lists: Optional[List[Any]]) -> List[Any]:
     return [key for key, where in seen.items() if len(where) > 1]
 
 
+def unique_in_order(values: Optional[List[Any]]) -> List[Any]:
+    """Each value once, first mention first: a GUID named twice in one
+    list is one decision, and is counted once."""
+    out: List[Any] = []
+    for value in (values or []):
+        if value not in out:
+            out.append(value)
+    return out
+
+
 def memo_with_support(reasoning: str, support: Optional[str]) -> str:
     """The text an applied suggestion carries in its coding memo, and in a
     REFI-QDA export's selection description: the support label in words
     FIRST, then the reason. First, because a reason holding QualCoder's
     '#####' private marker keeps only what comes before it, and the label
-    must survive that. No label (a pre-v0.14 suggestion): the reason only.
-    Never a number (owner ruling 21)."""
+    must survive that. No label (a pre-v0.14 suggestion, or a coding read
+    back from the project for an export): the text exactly as given, not
+    trimmed, since a project export carries every memo as QualCoder
+    stores it. Never a number (owner ruling 21)."""
     label = support_in_words(support)
-    parts = [f"Support: {label}" if label else "", (reasoning or "").strip()]
+    if label is None:
+        return reasoning or ""
+    parts = [f"Support: {label}", (reasoning or "").strip()]
     return "\n\n".join(part for part in parts if part)
 
 
@@ -387,14 +401,17 @@ class AICodingSession:
         (they are already in the codebook) and MERGED ones are final
         (v0.14): both are skipped and counted, mirroring the
         applied-immutable rule for suggestions (QA2-2). GUIDs that name
-        no proposal in this session come back in `not_found`; `changed`
-        counts the proposals whose status actually moved. The caller
-        refuses a GUID given in both lists before calling."""
-        counts = {"approved": 0, "rejected": 0, "skipped_created": 0,
-                  "skipped_merged": 0, "changed": 0}
+        no proposal in this session come back in `not_found`. Each GUID is
+        counted once, and `approved` and `rejected` count only proposals
+        whose status moved; one that already had that status is counted
+        in `unchanged` (fix round 1: the counts are what the researcher
+        checks against what they said). The caller refuses a GUID given
+        in both lists before calling."""
+        counts = {"approved": 0, "rejected": 0, "unchanged": 0,
+                  "skipped_created": 0, "skipped_merged": 0, "changed": 0}
         not_found: List[Any] = []
         for guids, status in ((approve, "approved"), (reject, "rejected")):
-            for guid in (guids or []):
+            for guid in unique_in_order(guids):
                 p = self.get_proposal_by_guid(guid)
                 if p is None:
                     not_found.append(guid)
@@ -402,10 +419,12 @@ class AICodingSession:
                 if p.status in ("created", "merged"):
                     counts[f"skipped_{p.status}"] += 1
                     continue
-                if p.status != status:
-                    counts["changed"] += 1
+                if p.status == status:
+                    counts["unchanged"] += 1
+                    continue
                 p.status = status
                 counts[status] += 1
+                counts["changed"] += 1
         if counts["changed"]:
             self.last_modified = datetime.now().isoformat()
         return {**counts, "not_found": not_found}
@@ -547,21 +566,24 @@ class AICodingSession:
         approved, rejected or removed suggestion to pending, so it can be
         edited and decided again (v0.14; before it, nothing could, and
         edit_suggestion's own advice went in a circle). GUIDs that name no
-        suggestion in this session come back in `not_found`; `changed`
-        counts the suggestions whose status actually moved. The caller
+        suggestion in this session come back in `not_found`. Each GUID is
+        counted once, and approved, rejected and reopened count only the
+        suggestions whose status moved; one that already had that status
+        is counted in `unchanged` (fix round 1: the researcher checks the
+        approved number against what they said yes to). The caller
         refuses a GUID given in more than one list before calling.
 
         Returns:
-            Counts of approved, rejected, reopened, skipped_applied and
-            changed, and the not_found list
+            Counts of approved, rejected, reopened, unchanged,
+            skipped_applied and changed, and the not_found list
         """
         counts = {"approved": 0, "rejected": 0, "reopened": 0,
-                  "skipped_applied": 0, "changed": 0}
+                  "unchanged": 0, "skipped_applied": 0, "changed": 0}
         not_found: List[Any] = []
         for guids, status, key in ((approve, "approved", "approved"),
                                    (reject, "rejected", "rejected"),
                                    (reopen, "pending", "reopened")):
-            for guid in (guids or []):
+            for guid in unique_in_order(guids):
                 sugg = self.get_suggestion_by_guid(guid)
                 if sugg is None:
                     not_found.append(guid)
@@ -569,10 +591,12 @@ class AICodingSession:
                 if sugg.status == "applied":
                     counts["skipped_applied"] += 1
                     continue
-                if sugg.status != status:
-                    counts["changed"] += 1
+                if sugg.status == status:
+                    counts["unchanged"] += 1
+                    continue
                 sugg.status = status
                 counts[key] += 1
+                counts["changed"] += 1
         if counts["changed"]:
             self.last_modified = datetime.now().isoformat()
         return {**counts, "not_found": not_found}
@@ -582,11 +606,13 @@ class AICodingSession:
         """The applied suggestions a deleted coding undid: marked removed.
 
         A suggestion matches when its file, code and span are the deleted
-        row's and, where apply_codings recorded the ctid it wrote (v0.14
-        on), that ctid is the deleted one; a suggestion applied before
-        v0.14 carries no ctid and matches only when the deleted row was
-        written under one of the project's AI coder names, so deleting a
-        person's identical coding never touches it.
+        row's, the deleted row was written under one of the project's AI
+        coder names, and, where apply_codings recorded the ctid it wrote
+        (v0.14 on), that ctid is the deleted one. The owner is checked in
+        every case: SQLite hands the highest coding id out again once its
+        row is gone, so a person's coding of the same span can carry the
+        id an AI coding had (fix round 1). Deleting a person's coding
+        never touches a suggestion.
 
         Returns:
             The GUIDs marked
@@ -598,10 +624,9 @@ class AICodingSession:
                     or sugg.start_pos != start_pos
                     or sugg.end_pos != end_pos):
                 continue
-            if sugg.applied_ctid is not None:
-                if sugg.applied_ctid != ctid:
-                    continue
-            elif not owner_is_ai:
+            if not owner_is_ai:
+                continue
+            if sugg.applied_ctid is not None and sugg.applied_ctid != ctid:
                 continue
             sugg.status = "removed"
             marked.append(sugg.guid)

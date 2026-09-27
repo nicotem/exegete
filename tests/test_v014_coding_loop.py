@@ -913,3 +913,101 @@ class TestOnlyApprovedItemsAreWritten:
         written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
                        "WHERE owner = 'AI Coding Assistant'")
         assert written == [{"seltext": STRESSED}]
+
+
+# =============================================================================
+# FIX ROUND 1 (the QA and Security gates on this piece)
+# =============================================================================
+
+def _sql(db_path, statement, params=()):
+    conn = sqlite3.connect(str(Path(db_path) / "data.qda"))
+    try:
+        cur = conn.execute(statement, params)
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+class TestFixRoundAReusedCodingId:
+    """SQLite hands the highest coding id out again once its row is gone:
+    a person's coding can carry the id an AI coding had."""
+
+    def test_a_persons_coding_under_a_reused_id_is_not_credited_to_the_ai(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]
+        approve_and_apply(sid, [guid])
+        ctid = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).applied_ctid
+        # outside this server: the AI's coding deleted, the researcher
+        # codes the same passage with the same code, and gets the same id
+        _sql(qualcoder_db_path, "DELETE FROM code_text WHERE ctid = ?",
+             (ctid,))
+        new_id = _sql(qualcoder_db_path,
+                      "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                      "owner, date, memo) VALUES (1, 1, ?, 24, 56, "
+                      "'TestCoder', '2026-09-27 10:00:00', '')", (STRESSED,))
+        assert new_id == ctid
+        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        assert out["success"] is True
+        assert out["deleted_coding"]["owner"] == "TestCoder"
+        assert "sessions_updated" not in out
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).status == "applied"
+
+
+class TestFixRoundProjectExportKeepsMemos:
+
+    def test_a_memo_is_exported_as_stored(self, setup_server,
+                                          qualcoder_db_path, tmp_path):
+        import xml.etree.ElementTree as ET
+        import zipfile
+        _sql(qualcoder_db_path, "UPDATE code_text SET memo = ? WHERE ctid = 1",
+             ("  key passage\n\n",))
+        target = tmp_path / "project.qdpx"
+        res = jcall("export_refi_qda", output_path=str(target))
+        assert res.get("success") is True, res
+        with zipfile.ZipFile(target) as z:
+            root = ET.fromstring(z.read("project.qde"))
+        ns = "{urn:QDA-XML:project:1.0}"
+        descriptions = [d.text for d in root.iter(f"{ns}Description")]
+        assert "  key passage\n\n" in descriptions
+
+
+class TestFixRoundDecisionCountsAreChanges:
+    """Each GUID counted once, and only a status that moved counted as
+    changed: the researcher checks the approved number against what they
+    said yes to."""
+
+    def test_a_guid_named_twice_is_one_approval(self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   approve=[g, g])
+        assert "- Approved: 1 suggestions" in out
+        assert "Total: 1 suggestions" in out
+
+    def test_approving_an_approved_one_changes_nothing_and_counts_nothing(
+            self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        call("update_suggestion_status", coding_session_id=sid, approve=[g])
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   approve=[g])
+        assert "Nothing changed" in out
+        assert "- Approved: 0 suggestions" in out
+        assert "Already had that status (unchanged, not counted above): 1" \
+            in out
+
+    def test_the_proposal_counts_are_changes_too(self, setup_server):
+        sid = new_session()
+        a = jcall("propose_codes", coding_session_id=sid,
+                  proposals=[{"name": "Exercise"}])["recorded"][0]["guid"]
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[a, a, a])
+        assert out["approved"] == 1 and out["changed"] == 1
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[a])
+        assert out["approved"] == 0 and out["unchanged"] == 1
+        assert "Nothing changed" in out["message"]

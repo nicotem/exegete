@@ -76,9 +76,11 @@ class TestS64NumericComparisonFix:
         assert {m["name"] for m in out["results"]} == {"Unset participant"}
 
     def test_non_numeric_probe_on_numeric_attr(self, with_placeholder_case):
-        """A non-castable probe can only string-match — no crash, no hit."""
+        """A probe that is not a number, on a numeric attribute, is refused
+        (v0.14 fix round 2): string equality used to answer it with
+        nothing, silently."""
         out = json.loads(server.query_by_attribute("Age", "thirty"))
-        assert out["results"] == []
+        assert "finite number for operator 'equals'" in out["error"]
 
     def test_character_equals_stays_string(self, setup_server,
                                            qualcoder_db_path):

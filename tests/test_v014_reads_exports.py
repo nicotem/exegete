@@ -993,31 +993,83 @@ class TestTheMarkdownCodebookKeepsItsNesting:
 
 
 # ===========================================================================
-# Fix round 1, item 4: a numeric value with non-ASCII space around it
+# Fix rounds 1 and 2: one numeric rule for stored values and probes.
+# Space of any kind around the number is stripped (Python's str.strip(),
+# as QualCoder's windows strip a typed value), then a finite number in
+# the digits 0 to 9 is required
 # ===========================================================================
 
-class TestNonAsciiSpaceAroundANumber:
+def _ages(folder, *values):
+    """Cases 2, 3, ... with the numeric Age values given (case 1 is 30)."""
+    for caseid, value in enumerate(values, start=2):
+        sql(folder, "INSERT INTO cases VALUES (?, ?, '', 'TestCoder', "
+                    "'2024-01-15')", (caseid, f"C{caseid}"))
+        sql(folder, "INSERT INTO attribute (name, attr_type, value, id, "
+                    "date, owner) VALUES ('Age', 'case', ?, ?, "
+                    "'2024-01-15', 'TestCoder')", (value, caseid))
 
-    def test_a_stored_value_with_a_no_break_space_is_not_compared(
+
+class TestOneNumericRule:
+
+    def test_a_trailing_no_break_space_is_the_number(
             self, setup_server, qualcoder_db_path):
-        """SQLite's CAST, so QualCoder's attribute report, reads it as 0."""
-        sql(qualcoder_db_path, "INSERT INTO cases VALUES (2, 'NB', '', "
-            "'TestCoder', '2024-01-15')")
-        sql(qualcoder_db_path, "INSERT INTO attribute (name, attr_type, "
-            "value, id, date, owner) VALUES ('Age', 'case', ?, 2, "
-            "'2024-01-15', 'TestCoder')", ("\xa012",))
+        """QualCoder's survey import can store "40" and a no-break space
+        as it stands; its report reads it as 40, and so does this tool."""
+        _ages(qualcoder_db_path, "40\xa0")
         assert sql(qualcoder_db_path, "SELECT CAST(value AS REAL) FROM "
-                   "attribute WHERE id = 2") == [(0.0,)]
+                   "attribute WHERE id = 2") == [(40.0,)]
+        out = host("query_by_attribute", attr_name="Age", attr_value="35",
+                   operator="gt")
+        assert [r["case_id"] for r in out["results"]] == [2]
+        assert out["values_left_out"] == {"not_numbers": 0, "unset": 0}
+
+    def test_a_leading_no_break_space_is_the_number_too(
+            self, setup_server, qualcoder_db_path):
+        _ages(qualcoder_db_path, "\xa012")
         out = host("query_by_attribute", attr_name="Age", attr_value="10",
+                   operator="gt")
+        assert sorted(r["case_id"] for r in out["results"]) == [1, 2]
+
+    @pytest.mark.parametrize("probe", ["\xa012", "12\u2003"])
+    def test_a_probe_with_space_around_it_is_the_number(
+            self, setup_server, qualcoder_db_path, probe):
+        _ages(qualcoder_db_path, "12")
+        out = host("query_by_attribute", attr_name="Age", attr_value=probe,
+                   operator="equals")
+        assert [r["case_id"] for r in out["results"]] == [2]
+
+    @pytest.mark.parametrize("probe", ["\uff11\uff12", "nan", "inf",
+                                       "1_2", "twelve"])
+    def test_equals_on_a_numeric_attribute_refuses_a_probe_that_is_not_one(
+            self, setup_server, qualcoder_db_path, probe):
+        """It used to fall back to string equality and find nothing
+        beside a stored "12", silently."""
+        _ages(qualcoder_db_path, "12")
+        out = host("query_by_attribute", attr_name="Age", attr_value=probe,
+                   operator="equals")
+        assert "finite number for operator 'equals'" in out["error"], out
+        assert "contains" in out["error"]
+
+    def test_equals_left_out_values_are_counted_and_the_note_is_true(
+            self, setup_server, qualcoder_db_path):
+        _ages(qualcoder_db_path, "34 years", "unknown", "34")
+        out = host("query_by_attribute", attr_name="Age", attr_value="34",
+                   operator="equals")
+        assert [r["case_id"] for r in out["results"]] == [4]
+        assert out["values_left_out"] == {"not_numbers": 2, "unset": 0}
+        assert "the number it begins with" in out["note"]
+        assert '"34 years" as 34' in out["note"]
+        assert "not known to hold that number" in out["note"]
+
+    def test_gt_left_out_values_and_the_note(self, setup_server,
+                                             qualcoder_db_path):
+        _ages(qualcoder_db_path, "34 years")
+        out = host("query_by_attribute", attr_name="Age", attr_value="18",
                    operator="gt")
         assert [r["case_id"] for r in out["results"]] == [1]
         assert out["values_left_out"]["not_numbers"] == 1
-
-    @pytest.mark.parametrize("probe", ["\xa012", "12\u2003"])
-    def test_such_a_probe_is_refused(self, setup_server, probe):
-        out = host("query_by_attribute", attr_name="Age", attr_value=probe,
-                   operator="gt")
-        assert "finite number" in out["error"]
+        assert '"34 years" as 34' in out["note"]
+        assert "would read them as 0" not in out["note"]
 
     def test_set_attribute_stores_the_stripped_number(
             self, setup_server, qualcoder_db_path):
@@ -1284,4 +1336,4 @@ class TestTheTextsSayWhatHappens:
             "'2024-01-15', 'TestCoder')")
         out = host("query_by_attribute", attr_name="Age", attr_value="10",
                    operator="gt")
-        assert "would read them as 0" in out["note"]
+        assert "or as 0 when it begins with none" in out["note"]

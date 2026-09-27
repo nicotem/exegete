@@ -5129,24 +5129,31 @@ def query_by_attribute(
                    attribute that differs only by letter case, or says
                    when the name is the other kind's (a file attribute
                    queried as a case one)
-        attr_value: Value to compare against (a finite number for
-                    gt/gte/lt/lte, such as "50" or "4.5")
+        attr_value: Value to compare against: a finite number in the
+                    digits 0 to 9 for gt/gte/lt/lte, and for equals on a
+                    numeric attribute (such as "50" or "4.5"; space
+                    around it is ignored); "nan", "inf", "1_000" or
+                    full-width digits are refused
         attr_type: Either 'case' or 'file' (default: 'case')
-        operator: 'equals' (exact match, default; numeric attributes
-                  compare numerically so "5" finds a stored "5.0", and
-                  "" finds cases/files whose attribute is unset),
+        operator: 'equals' (exact match, default; on a numeric
+                  attribute a numeric comparison, so "5" finds a stored
+                  "5.0", with the same rule for stored values as
+                  gt/gte/lt/lte below; "" finds cases/files whose
+                  attribute is unset),
                   'contains' (substring; letter case ignored by
                   Unicode's default case folding, "ß" matching "ss",
                   Turkish dotted and dotless i the exception), or
                   'gt'/'gte'/'lt'/'lte' (numeric comparisons of the
-                  values that are finite numbers, on a character
-                  attribute too; a value that is not a number, such as
-                  "unknown", "n/a" or "34 years", and an unset value
-                  never match, and are counted in values_left_out).
-                  QualCoder's attribute report reads a value that is not
-                  a number as 0 on a numeric attribute and compares a
-                  character attribute as text; this tool departs from it
-                  so that "under 18" does not find "unknown"
+                  values that are finite numbers once space around them
+                  is stripped, on a character attribute too; a value
+                  that is not one, such as "unknown", "n/a" or "34
+                  years", and an unset value never match, and are
+                  counted in values_left_out). QualCoder's attribute
+                  report reads a numeric attribute's value as the number
+                  it begins with ("34 years" as 34) or as 0 when it
+                  begins with none ("unknown"), and compares a character
+                  attribute as text; this tool departs from it so that
+                  "under 18" does not find "unknown"
 
     Returns:
         JSON object: attribute, attr_type, operator, value, value_type,
@@ -5186,13 +5193,18 @@ def query_by_attribute(
                 f"out. QualCoder's attribute report compares a character "
                 f"attribute as text.")
         if counts["not_numbers"]:
+            unknown = ("is not known to hold that number or not"
+                       if operator == "equals"
+                       else "is not known to be inside or outside the range")
             notes.append(
                 f"{counts['not_numbers']} value(s) are not numbers and "
                 f"were left out: they neither match nor fail the "
-                f"comparison, so a case or file with such a value is not "
-                f"known to be outside the range." + (
+                f"comparison, so a case or file with such a value "
+                f"{unknown}." + (
                     "" if character else
-                    " QualCoder's attribute report would read them as 0."))
+                    " QualCoder's attribute report would read each as the "
+                    "number it begins with (\"34 years\" as 34), or as 0 "
+                    "when it begins with none (\"unknown\")."))
         if counts["unset"]:
             notes.append(f"{counts['unset']} unset value(s) were left out.")
         if notes:

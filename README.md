@@ -963,7 +963,7 @@ still answers empty, and that answer is a finding.
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)
 - `get_file_attributes(file_id)` - Get attributes for a specific file
 - `get_case_attributes(case_id)` - Get attributes for a specific case
-- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte` compare only values that are finite numbers, on a character attribute too, and count the rest in `values_left_out` (so "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would)
+- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte`, and `equals` on a numeric attribute, compare only values that are finite numbers once space around them is stripped, on a character attribute too, and count the rest in `values_left_out` (so "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would; it reads "34 years" as 34); a probe that is not such a number is refused
 
 **Co-occurrence Analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. Window 0 is QualCoder's co-occurrence report's overlap, and at N the gap is the distance its Code relations report gives; the counts are not the co-occurrence report's

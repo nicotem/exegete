@@ -412,19 +412,20 @@ def finite_number(text: Any) -> Optional[float]:
     "inf", "Infinity", all 0 to SQLite) and digits outside ASCII (a
     full-width "５" is 5 to Python and 0 to SQLite). Used by set_attribute's
     check and by query_by_attribute's comparisons, so what one accepts the
-    other compares (v0.14, claims audit item 11). Space around the number
-    other than the ASCII space SQLite skips makes it not a number too.
+    other compares (v0.14, claims audit item 11).
+
+    One rule for a stored value and a probe (fix round 2): space of any
+    kind around the number is stripped first, with Python's `str.strip()`,
+    which is what QualCoder's windows do to a value typed in (cases.py:706,
+    manage_files.py:1233 at 9bddf17) and what set_attribute stores. So
+    "40" followed by a no-break space, which QualCoder's survey import can
+    store as it stands, is 40 here, as it is to QualCoder's report; a
+    leading no-break space, which the report reads as 0, is 40 here too,
+    a departure in the direction of what was typed.
     """
     if not isinstance(text, str):
         return None
-    # Only the space SQLite skips (sqlite3Isspace: space, tab, and line
-    # feed to carriage return) is stripped: a value with a no-break or
-    # other Unicode space around it is 12 to Python and 0 to SQLite's
-    # CAST, so to QualCoder's attribute report (fix round 1). It is left
-    # out as not a number, and refused as a probe; set_attribute stores
-    # the stripped value, as QualCoder's own windows do, so it never
-    # writes one.
-    t = text.strip(" \t\n\r\f\v")
+    t = text.strip()
     if not t or "_" in t or not t.isascii():
         return None
     try:
@@ -5908,10 +5909,12 @@ class QualcoderDatabase:
             numbers (`finite_number`), on a character attribute too, and
             counts the others: "not_numbers" (such as "unknown", "n/a",
             "34 years") and "unset" (''). QualCoder's attribute report
-            casts a numeric attribute in SQL, where such a value reads as
-            0, and compares a character attribute as text
-            (report_attributes.py:357-358, :401-402 at 9bddf17); this is
-            a named departure in the researcher's favour.
+            casts a numeric attribute in SQL, where a value reads as the
+            number it begins with ("34 years" as 34) or as 0 when it
+            begins with none ("unknown"), and compares a character
+            attribute as text (report_attributes.py:357-358, :401-402 at
+            9bddf17); this is a named departure in the researcher's
+            favour.
         """
         if not isinstance(attr_name, str) or not isinstance(attr_value, str):
             raise TypeError("attr_name and attr_value must be strings")
@@ -5944,20 +5947,31 @@ class QualcoderDatabase:
                 raise ValueError(
                     f"attr_value must be a finite number for operator "
                     f"'{operator}' (such as \"30\" or \"4.5\"; not "
-                    f"\"nan\", \"inf\" or underscores), got "
-                    f"'{attr_value}'"
+                    f"\"nan\", \"inf\", underscores or digits outside 0 "
+                    f"to 9), got '{attr_value}'"
                 )
         elif operator == "contains":
             bound.append(fold_text(attr_value))
         elif (operator == "equals" and attr_value != ""
-              and value_type == "numeric"
-              and finite_number(attr_value) is not None):
+              and value_type == "numeric"):
             # Numeric attributes: compare numerically so '5' finds '5.0'
             # (values are stored as TEXT; plain string equality would miss
             # every formatting variant). '' keeps string semantics: it is
-            # how unset attributes are found. A probe that is not a number
-            # can only string-match, so it keeps string equality.
+            # how unset attributes are found. A probe that is not a finite
+            # number is refused, as for the other four operators (fix round
+            # 2): string equality used to answer it, so a full-width "１２"
+            # found nothing beside a stored "12" and said nothing.
             probe = finite_number(attr_value)
+            if probe is None:
+                raise ValueError(
+                    f"attr_value must be a finite number for operator "
+                    f"'equals' on the numeric attribute '{attr_name}' (such "
+                    f"as \"30\" or \"4.5\"; not \"nan\", \"inf\", "
+                    f"underscores or digits outside 0 to 9), or \"\" for "
+                    f"unset values, got '{attr_value}'. Stored values that "
+                    f"are not numbers are counted in values_left_out; "
+                    f"operator 'contains' finds them by their text."
+                )
         else:
             bound.append(attr_value)
         numeric = probe is not None

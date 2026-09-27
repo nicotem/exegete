@@ -325,21 +325,24 @@ search or a silent limit.
   value to a number in SQLite, which reads text as 0: on a character
   attribute holding "55", "unknown", "34 years" and "n/a", "under 18"
   found "unknown" and "n/a", and "over 30" found "34 years". They now
-  compare only values that are finite numbers, on a character attribute
-  too, and the answer counts the rest (`values_left_out`: `not_numbers`,
-  `unset`) with a note. This departs from QualCoder's attribute report,
-  which casts a numeric attribute (a value that is not a number reads as
-  0) and compares a character attribute as text. The answer is now an
-  object (`attribute`, `operator`, `value`, `value_type`,
-  `result_count`, `results`, and for a numeric comparison
-  `values_compared` and `values_left_out`), not a bare list: read the
-  matches from `results`. `set_attribute` refuses "nan", "inf",
-  "Infinity", underscores ("1_000") and digits outside 0 to 9 in a
-  numeric attribute, which QualCoder accepts and its report reads as
-  other numbers; its refusal no longer says QualCoder blanks such input
-  silently (it warns). A stored value with a no-break or other
-  non-ASCII space around the number, which SQLite reads as 0, is left
-  out as not a number, and refused as a probe.
+  compare only values that are finite numbers in the digits 0 to 9, once
+  space of any kind around them is stripped (as QualCoder's windows
+  strip a typed value), on a character attribute too, and the answer
+  counts the rest (`values_left_out`: `not_numbers`, `unset`) with a
+  note; `equals` on a numeric attribute follows the same rule. A probe
+  that is not such a number ("nan", "inf", "1_000", full-width digits)
+  is refused by all five, where `equals` used to answer it by text and
+  find nothing. This departs from QualCoder's attribute report, which
+  reads a numeric attribute's value as the number it begins with ("34
+  years" as 34) or as 0 when it begins with none ("unknown"), and
+  compares a character attribute as text. The answer is now an object
+  (`attribute`, `operator`, `value`, `value_type`, `result_count`,
+  `results`, and for a numeric comparison `values_compared` and
+  `values_left_out`), not a bare list: read the matches from `results`.
+  `set_attribute` refuses "nan", "inf", "Infinity", underscores
+  ("1_000") and digits outside 0 to 9 in a numeric attribute, which
+  QualCoder accepts and its report reads as other numbers; its refusal
+  no longer says QualCoder blanks such input silently (it warns).
 - **A wrong id, name or coder is refused, not answered as nothing.**
   These reads answered a value that is not in the project exactly as a
   value with nothing in scope, and the assistant, told that a null

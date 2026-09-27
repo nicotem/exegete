@@ -2257,7 +2257,16 @@ class TestTheMarkerChecksHoldForEveryShape:
                 "example_segments": [{"file_id": 1,
                                       "segment_text": QUOTE}]}]})
         assert proposed["rejected"][0]["reason"] == "memo must be text"
-        assert "#####" not in json.dumps([suggested, proposed])
+        # fix round 2: the rationale too (QA's m3)
+        rationale = self._call("propose_codes", {
+            "coding_session_id": ids["session"], "proposals": [{
+                "name": "Another", "memo": "d",
+                "rationale": ["##### private"],
+                "example_segments": [{"file_id": 1,
+                                      "segment_text": QUOTE}]}]})
+        assert rationale["rejected"][0]["reason"] == \
+            "rationale must be text"
+        assert "#####" not in json.dumps([suggested, proposed, rationale])
         assert path.read_bytes() == before
 
     @pytest.mark.parametrize("tool", ["record_suggestions",

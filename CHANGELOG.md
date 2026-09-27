@@ -363,41 +363,45 @@ search or a silent limit.
   QualCoder; `export_coded_segments_report` refuses an unknown file id
   too, and writes no file. A known id, name or coder with nothing in
   scope still answers empty or zero.
-- **"Ignores case" holds in every alphabet.** `search_coded_text`,
+- **"Ignores case" holds beyond A to Z.** `search_coded_text`,
   `query_by_attribute`'s `contains` and `search_memos` compared with
   SQLite's `LIKE`, which folds only the letters A to Z: "über" did not
   find "Über", "école" did not find "École", "ärzt" did not find
-  "Ärztin". They now compare by Python's Unicode case folding after
-  normalisation, for the match and for the count, the same on every
-  platform's SQLite, so "strasse" also finds "Straße". QualCoder's own
-  searches use `LIKE`; this is a departure in the researcher's favour.
-  The query is folded once per search, a long run of combining marks is
-  put in canonical order first so a crafted text costs linear time, and
-  a note that is not valid in the database's encoding is read with its
-  damaged bytes replaced rather than failing the search.
-- **`search_memos` searches every kind of note.** It read code memos,
-  file memos and annotations, three of the twelve places a note lives,
-  while its description said "all memos": a word in a coding memo
-  (where the AI's reason for each applied coding is stored) or in the
-  project memo (where the methods notes put the study's method) was not
-  found. It now also searches the project memo, category, case and
-  attribute type memos, the memos of text, region and audio/video
-  codings, case link memos and journal entries, each result named by
-  its `type`, in the public part only; coding memos, like annotations,
-  leave out a coder hidden in QualCoder, and a note of another kind whose
-  owner is a hidden coder reports its owner as "(hidden coder)". The pseudonymisation preview's
-  scope note, which said `search_memos` reaches three of its twelve note
-  fields, now says it reaches all twelve.
+  "Ärztin". They now compare by Unicode's default case folding
+  (Python's) after normalisation, for the match and for the count, the
+  same on every platform's SQLite, so "strasse" also finds "Straße" (and
+  "ß" finds every "ss"); Turkish dotted and dotless i are the exception,
+  not matched to i and I, since the folding is not locale-aware.
+  QualCoder's own searches use `LIKE`; this is a departure in the
+  researcher's favour. The query is folded once per search, a long run
+  of combining marks is put in canonical order first so a crafted text
+  costs linear time, and a note that is not valid in the database's
+  encoding is read with its damaged bytes replaced rather than failing
+  the search.
+- **`search_memos` searches every memo and note outside QualCoder's
+  saved graphs.** It read code memos, file memos and annotations, three
+  of the twelve places a note lives, while its description said "all
+  memos": a word in a coding memo (where the AI's reason for each
+  applied coding is stored) or in the project memo (where the methods
+  notes put the study's method) was not found. It now also searches the
+  project memo, category, case and attribute type memos, the memos of
+  text, region and audio/video codings, case link memos and journal
+  entries, each result named by its `type`, in the public part only;
+  coding memos, like annotations, leave out a coder hidden in QualCoder,
+  and a note of another kind whose owner is a hidden coder reports its
+  owner as "(hidden coder)". The pseudonymisation preview's scope note,
+  which said `search_memos` reaches three of its twelve note fields, now
+  says it reaches all twelve.
 - **The co-occurrence window is a distance, as QualCoder measures it.**
   `find_cooccurring_codes` counted, at `window_size` 0, two codings that
   only touch (one ending where the other begins, no character shared)
   as overlapping, and at N compared where the two codings START, so a
   long coding ending five characters before another began was not
-  found at N=10. It now follows QualCoder's own relation rule
-  (`report_cooccurrence.py`, the overlap and proximity test): at 0, at
-  least one shared character; at N, the gap from the end of the earlier
-  coding to the start of the later is at most N, overlapping codings
-  counting with a gap of 0. How the pairs are counted still differs
+  found at N=10. It now follows QualCoder's own rule: at 0, at least one
+  shared character, which is its co-occurrence report's overlap
+  (touching codings are not); at N, the gap from the end of the earlier
+  coding to the start of the later is at most N, the distance its Code
+  relations report gives, overlapping codings counting with a gap of 0. How the pairs are counted still differs
   from QualCoder's co-occurrence report, as the description says.
 - **Three exports say what they hold.** `export_code_report` said it
   held "all coded segments" and stopped at 1,000 without a word, while

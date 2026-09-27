@@ -1227,3 +1227,61 @@ class TestTheMergeTokenCoversWhatIsCarried:
         folder = ladder("v17", _v17_with_memo_subcode_and_graph)
         out = self._stale(folder, lambda f: None)
         assert out["success"] is True, out
+
+
+# ===========================================================================
+# Fix round 1, item 6: the texts say what the code does
+# ===========================================================================
+
+def _described(tool):
+    tools = asyncio.run(server.mcp.list_tools())
+    return " ".join(next(t for t in tools if t.name == tool)
+                    .description.split())
+
+
+class TestTheTextsSayWhatHappens:
+
+    @pytest.mark.parametrize("tool", ["search_coded_text",
+                                      "query_by_attribute", "search_memos"])
+    def test_the_fold_is_named_with_its_exception(self, tool):
+        text = _described(tool)
+        assert "Unicode's default case folding" in text
+        assert "Turkish dotted and dotless i" in text
+        assert "every alphabet" not in text
+
+    def test_the_turkish_exception_is_real(self, accented):
+        """What the texts now say, run: dotted capital I is not matched."""
+        sql(accented, "UPDATE source SET memo = 'Istanbul' WHERE id = 20")
+        sql(accented, "UPDATE source SET memo = ? WHERE id = 21",
+            ("İstanbul",))
+        found = host("search_memos", query="istanbul")["results"]
+        assert [r["id"] for r in found] == [20]
+
+    def test_co_occurrence_names_the_two_reports(self):
+        text = _described("find_cooccurring_codes")
+        assert "co-occurrence report's overlap" in text
+        assert "Code relations report" in text
+        assert "overlap and proximity" not in text
+
+    def test_search_memos_says_saved_graphs_are_not_searched(self):
+        text = _described("search_memos")
+        assert "outside QualCoder's saved graphs" in text
+        assert "every kind of note" not in text
+
+    def test_a_character_attribute_note_does_not_speak_of_zero(
+            self, mixed_ages):
+        out = host("query_by_attribute", attr_name="Stated age",
+                   attr_value="30", operator="gt")
+        assert "compares a character attribute as text" in out["note"]
+        assert "as 0" not in out["note"]
+
+    def test_a_numeric_attribute_note_does(self, setup_server,
+                                           qualcoder_db_path):
+        sql(qualcoder_db_path, "INSERT INTO cases VALUES (2, 'U', '', "
+            "'TestCoder', '2024-01-15')")
+        sql(qualcoder_db_path, "INSERT INTO attribute (name, attr_type, "
+            "value, id, date, owner) VALUES ('Age', 'case', 'unknown', 2, "
+            "'2024-01-15', 'TestCoder')")
+        out = host("query_by_attribute", attr_name="Age", attr_value="10",
+                   operator="gt")
+        assert "would read them as 0" in out["note"]

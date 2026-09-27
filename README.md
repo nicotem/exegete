@@ -16,7 +16,7 @@ This MCP server lets an AI assistant directly access and analyse your Qualcoder 
 - 📋 Compare codes and cases
 - 👥 **Query by demographics/attributes** (age, gender, etc.)
 - 🎯 **Create case-code matrices for comparative analysis**
-- 🗒️ Search every kind of note: memos, coding memos, annotations, journal entries and the project memo
+- 🗒️ Search every memo and note outside QualCoder's saved graphs: memos, coding memos, annotations, journal entries and the project memo
 - 🤖 **AI-assisted coding**: suggest → review → approve → apply, so nothing is written until you say so
 - 🏷️ **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - 💾 **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
@@ -935,7 +935,7 @@ carries the complete list.
 - `search_coded_text(query, code_name, limit, coder, exclude_code_ids, cursor)` - Search coded segments, with the same novelty filter and paging
 - `get_coded_segments(code_id, limit, coder, strategy, max_chars, file_ids, cursor)` - Segments for a code, sampled by strategy (`by_document`, `diverse_by_document`, `recent_first`, `sequential`) under an optional character budget; `codings_not_shown` counts the code's region codings (areas on PDF pages or images) and audio/video codings in the same scope, which a text read does not show
 - `get_coding_frequencies(coder)` - Coding statistics: text codings per code, with `codings_not_counted` giving the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
-- `search_memos(query, limit)` - Search every kind of note (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type
+- `search_memos(query, limit)` - Search every memo and note outside QualCoder's saved graphs (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type
 - `export_code_report(code_name)` - Detailed code report returned into the conversation (public memo text only), with up to 1,000 of the code's text segments; `segments_total` and `truncated` say when there are more, which `get_coded_segments` pages through
 - `get_project_summary()` - Comprehensive project overview, naming any PDF with no usable text and counting the region and audio/video codings the text statistics leave out
 
@@ -966,7 +966,7 @@ still answers empty, and that answer is a finding.
 - `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte` compare only values that are finite numbers, on a character attribute too, and count the rest in `values_left_out` (so "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would)
 
 **Co-occurrence Analysis:**
-- `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. This is QualCoder's own rule for overlap and proximity; the counts are not its co-occurrence report's
+- `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. Window 0 is QualCoder's co-occurrence report's overlap, and at N the gap is the distance its Code relations report gives; the counts are not the co-occurrence report's
 - `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only
 
 **Case-Code Matrix & Comparative Analysis:**

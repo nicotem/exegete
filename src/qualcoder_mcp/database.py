@@ -4809,8 +4809,9 @@ class QualcoderDatabase:
         """Search for coded text segments.
 
         Args:
-            query: Text to search for (letter case ignored in every
-                   alphabet, `text_contains`; % and _ are literal)
+            query: Text to search for (letter case ignored by Unicode's
+                   default case folding, `fold_text`; % and _ are
+                   literal)
             code_name: Optional code name to filter by
             limit: Maximum results to return (max 5000)
             coder: Explicit coder filter; reads the BASE table filtered
@@ -5280,11 +5281,13 @@ class QualcoderDatabase:
     )
 
     def search_memos(self, query: str, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
-        """Search every kind of note in the project.
+        """Search every memo and note in the project (the twelve memo
+        columns; the text on QualCoder's saved graphs is not read).
 
         Args:
-            query: Text to search for (letter case ignored in every
-                   alphabet, `text_contains`; % and _ are literal)
+            query: Text to search for (letter case ignored by Unicode's
+                   default case folding, `fold_text`; % and _ are
+                   literal)
             limit: Maximum results (max 5000)
 
         Returns:
@@ -6182,14 +6185,15 @@ class QualcoderDatabase:
         # built in Python instead: one pass to group rows by fid, then a
         # sorted-array bisect per candidate row — O(n log n) per file.
         # The relation rule is QualCoder's own (v0.14, claims audit item
-        # 15; report_cooccurrence.py:1392-1406 at 9bddf17): spans are
-        # half-open, so window_size == 0 counts a pair that shares at
-        # least one character (two codings that only touch are not an
-        # overlap there either: "<= so touching segments (0 shared chars)
-        # are not counted as Overlap"), and window_size N counts a pair
-        # whose gap, from the end of the earlier coding to the start of
-        # the later, is at most N characters (0 when they overlap), the
-        # distance QualCoder measures for proximity. It used to count
+        # 15): spans are half-open, so window_size == 0 counts a pair
+        # that shares at least one character, the co-occurrence report's
+        # overlap (report_cooccurrence.py:1392-1406 at 9bddf17: "<= so
+        # touching segments (0 shared chars) are not counted as
+        # Overlap"; that report counts exact, inclusion and overlap
+        # only, :1175-1190), and window_size N counts a pair whose gap,
+        # from the end of the earlier coding to the start of the later,
+        # is at most N characters (0 when they overlap), the distance
+        # the Code relations report gives (report_relations.py:422-432). It used to count
         # closed intervals at 0 (touching codings counted) and, at N, a
         # pair whose START positions were at most N apart, so a long
         # coding ending just before another began was not found. NULL

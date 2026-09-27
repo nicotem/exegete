@@ -3837,10 +3837,12 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
 
     Args:
         query: The text to search for (a substring; letter case is
-               ignored in every alphabet, by Unicode case folding, so
-               "über" finds "Über" and "strasse" finds "Straße". A
-               departure in your favour from QualCoder's own searches,
-               which ignore case for the letters A to Z only)
+               ignored by Unicode's default case folding, so "über"
+               finds "Über" and "strasse" finds "Straße", and "ß" finds
+               every "ss"; Turkish dotted and dotless i are the
+               exception, not matched to i and I. A departure in your
+               favour from QualCoder's own searches, which ignore case
+               for the letters A to Z only)
         code_name: Optional - filter results to only segments coded with
                    this code. The same name after spacing and Unicode form
                    are normalised is used first, otherwise one that
@@ -4489,7 +4491,7 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
 @mcp.tool()
 @_tool_guard
 def search_memos(query: str, limit: int = 50) -> str:
-    """Search every kind of note in the project.
+    """Search every memo and note in the project, outside QualCoder's saved graphs.
 
     Searches the twelve places a note lives: the project memo, code,
     category, file, case and attribute type memos, the memos of text,
@@ -4498,7 +4500,9 @@ def search_memos(query: str, limit: int = 50) -> str:
     memos, annotations, and journal entries. Each result says its type
     and, for a coding, a case link or an annotation, the file and the
     positions. Results come in that order, up to limit; fewer than limit
-    means nothing was left out. To WRITE a memo, use
+    means nothing was left out. The text typed on QualCoder's saved
+    graphs (free text boxes, a graph's description) is not searched. To
+    WRITE a memo, use
     set_memo(target_type, target_id, memo); to add a research journal
     entry, use add_journal_entry(name, entry).
 
@@ -4517,8 +4521,9 @@ def search_memos(query: str, limit: int = 50) -> str:
 
     Args:
         query: The text to search for in memos (a substring; letter case
-               is ignored in every alphabet, by Unicode case folding, so
-               "école" finds "École")
+               is ignored by Unicode's default case folding, so "école"
+               finds "École" and "ß" finds "ss"; Turkish dotted and
+               dotless i are not matched to i and I)
         limit: Maximum number of results to return (default 50)
 
     Returns:
@@ -5130,8 +5135,9 @@ def query_by_attribute(
         operator: 'equals' (exact match, default; numeric attributes
                   compare numerically so "5" finds a stored "5.0", and
                   "" finds cases/files whose attribute is unset),
-                  'contains' (substring; letter case ignored in every
-                  alphabet, by Unicode case folding), or
+                  'contains' (substring; letter case ignored by
+                  Unicode's default case folding, "ß" matching "ss",
+                  Turkish dotted and dotless i the exception), or
                   'gt'/'gte'/'lt'/'lte' (numeric comparisons of the
                   values that are finite numbers, on a character
                   attribute too; a value that is not a number, such as
@@ -5172,18 +5178,21 @@ def query_by_attribute(
         payload["values_left_out"] = {"not_numbers": counts["not_numbers"],
                                       "unset": counts["unset"]}
         notes = []
-        if found["value_type"] == "character":
+        character = found["value_type"] == "character"
+        if character:
             notes.append(
                 f"'{attr_name}' is a character attribute: the values that "
                 f"are numbers were compared as numbers, the others left "
-                f"out.")
+                f"out. QualCoder's attribute report compares a character "
+                f"attribute as text.")
         if counts["not_numbers"]:
             notes.append(
                 f"{counts['not_numbers']} value(s) are not numbers and "
                 f"were left out: they neither match nor fail the "
                 f"comparison, so a case or file with such a value is not "
-                f"known to be outside the range. QualCoder's attribute "
-                f"report would read them as 0 on a numeric attribute.")
+                f"known to be outside the range." + (
+                    "" if character else
+                    " QualCoder's attribute report would read them as 0."))
         if counts["unset"]:
             notes.append(f"{counts['unset']} unset value(s) were left out.")
         if notes:
@@ -5787,9 +5796,12 @@ def find_cooccurring_codes(code_id: int, window_size: int = 0,
                       from the end of the earlier to the start of the
                       later, is at most N characters (overlapping
                       codings count, with a gap of 0)
-                    Which pairs are together is QualCoder's own rule
-                    (its co-occurrence report's overlap and proximity);
-                    how they are counted is not (see above)
+                    Window 0 is QualCoder's co-occurrence report's
+                    overlap (exact, inclusion or overlap, touching
+                    codings not); at N the gap is the distance
+                    QualCoder's Code relations report gives two codings.
+                    How the pairs are counted is not QualCoder's (see
+                    above)
         coder: Optional coder name (exact); analyses that coder's rows
                from the base tables, bypassing the visibility filter. A
                name with no codings anywhere in the project is refused,

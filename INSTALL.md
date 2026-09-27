@@ -564,35 +564,68 @@ nothing more (`idempotentHint`); and whether it reaches anything beyond
 this computer (`openWorldHint`, never, for this server). The tools
 that only read are marked so, and so are the writing tools that can
 replace or remove work (renames, memos, deletions, merges, restores,
-exports with `overwrite`). One tool that changes nothing is not
-marked read-only, on purpose: `read_pseudonym_list` sends every real
-name in the project's pseudonyms file to the AI provider, so the host
-should ask before it runs. The marks are hints to the host: the
-server's own safeguards (the approval of each suggestion, the preview
-before a deletion, the backups) do not depend on them.
+exports with `overwrite`). The marks are hints: MCP tells hosts to
+treat them as untrusted, and the server's own safeguards (the approval
+of each suggestion, the preview before a deletion, the backups) do not
+depend on them.
 
-What the hosts on this machine did with them, read from their programs
-on 26 September 2026 (Claude Desktop 2.9939.2, Claude Code 2.1.167);
-a later version may differ:
+One tool that changes nothing is not marked read-only, on purpose:
+`read_pseudonym_list` sends every real name in the project's pseudonyms
+file to the AI provider, so the host should ask before it runs. It also
+carries `anthropic/requiresUserInteraction`, a mark Anthropic documents
+for Claude Code: from version 2.1.199, Claude Code asks before every
+call of such a tool in every permission mode, auto and
+`bypassPermissions` included, offers no "don't ask again", lets no
+allow rule skip it, and in `dontAsk` refuses it. Earlier versions ignore
+the mark.
 
-- **Claude Desktop and Cowork**: the read-only mark is passed on with
-  each tool. In a Cowork session, or a Code session in the desktop app,
-  run in auto mode, a tool marked read-only runs without asking; in the
-  default asking mode every tool call is still asked about, reading
-  ones included, unless you chose "always allow" for it. No use of the other three marks for
-  asking was found.
-- **Claude Code**: every call of an MCP tool is asked about, whatever
-  its marks, unless you have allowed the tool in your settings. Tools
-  marked read-only may run side by side, and `/mcp` shows each tool's
-  marks (read-only, destructive, open-world).
-- **Connectors added on claude.ai** group their tools into read-only
-  and write or delete, each with its own "always allow", "needs
-  approval" or "blocked" setting (Anthropic's help page, "Use
-  connectors to extend Claude's capabilities"); a local server such as
-  this one is not one of those.
+What each host does, from Anthropic's pages as read on 27 September
+2026 ("Choose a permission mode" and the MCP page on code.claude.com;
+"Get started with Claude Cowork" on support.claude.com):
 
-Keeping the host in its asking mode, with "allow once" for anything that
-writes, keeps you in the loop for every change.
+- **Claude Code.** In **Manual** mode (its setting is `default`) it
+  asks before a call unless you allowed the tool. In **auto** mode,
+  read-only actions are approved, and everything else goes to a
+  classifier, a second model that approves or blocks the call instead
+  of you; auto is the starting mode for interactive sessions from
+  version 2.1.283, and before that on Pro, Max and Team plans.
+  `bypassPermissions` runs everything, and `dontAsk` refuses anything
+  that would ask. A tool marked `anthropic/requiresUserInteraction`
+  (here, `read_pseudonym_list`) is asked about in every one of these
+  modes, from 2.1.199.
+- **Cowork.** Each connector tool has its own setting (always allow,
+  needs approval, blocked). In **Manual** mode, the default, a tool that
+  needs approval is asked about. In **Auto**, a tool set to always allow
+  is approved if it is read-only and otherwise left to Claude's safety
+  review, and a tool that needs approval is left to that review too, not
+  to you. **Skip all approvals** runs every tool that is not blocked.
+  The page does not say how a local server's tools are sorted into
+  read-only and write or delete, nor whether Cowork honours
+  `anthropic/requiresUserInteraction`.
+- **Claude Desktop's chat.** Anthropic's pages do not say what it does
+  with the marks.
+- **Connectors added on claude.ai** group their tools into read-only and
+  write or delete, each with its own "always allow", "needs approval" or
+  "blocked" setting ("Use connectors to extend Claude's capabilities"
+  on support.claude.com); a local server such as this one is not one of
+  those.
+
+What the programs installed here did, read from them on 26 and 27
+September 2026 (an observation, not documentation; a later version may
+differ): Claude Code 2.1.167, the terminal version then, predates the
+`requiresUserInteraction` mark and ignores it, runs tools marked
+read-only side by side, and lists each tool's marks in `/mcp`. Claude
+Desktop 2.9939.2 passes the read-only mark on with each tool, and runs
+its Code sessions and Cowork on a Claude Code of its own (2.1.281),
+whose program reads `anthropic/requiresUserInteraction` and then asks,
+with no option to always allow.
+
+So, for work on real data, keep the host in its asking mode (Manual),
+with "allow once" for anything that writes. In an auto mode, a
+classifier, not you, decides on the writing tools, and on
+`read_pseudonym_list` in any host that does not honour its mark; in
+"Skip all approvals" or `bypassPermissions`, nothing is asked except,
+in Claude Code, `read_pseudonym_list`.
 
 ---
 

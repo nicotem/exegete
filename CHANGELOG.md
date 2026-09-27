@@ -40,15 +40,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Every tool says what kind of tool it is**, in the four marks MCP
   defines (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
-  `openWorldHint`): the reading tools are marked read-only (all but
-  `read_pseudonym_list`, which sends every real name in the project's
-  pseudonyms file to the AI provider, so that the host asks first), the tools
+  `openWorldHint`): the reading tools are marked read-only, the tools
   that can replace or remove work are marked destructive (the seven
   that ask for a preview among them), and none reaches beyond this
-  computer. Claude Desktop runs a read-only tool without asking in a
-  Cowork session in auto mode, and Claude Code runs read-only tools
-  side by side; both still ask before each call in their asking modes.
-  INSTALL.md, "What hosts do with the tools' read and write marks".
+  computer. In Claude Code's and Cowork's auto modes a read-only tool is
+  approved and a classifier decides on the rest; in their asking modes
+  a call is asked about unless allowed. `read_pseudonym_list`, which
+  sends every real name in the project's pseudonyms file to the AI
+  provider, is not marked read-only and carries
+  `anthropic/requiresUserInteraction`, so that Claude Code (2.1.199 and
+  later) asks before every call of it in every mode. INSTALL.md, "What
+  hosts do with the tools' read and write marks", says mode by mode what
+  each host does, from Anthropic's pages.
 
 ### Changed
 
@@ -442,8 +445,10 @@ server-wide changes:
 - **In the `core` set**, the texts it serves and its answers mark each
   tool it does not register: "(not available in this tool set)".
 - **Every tool carries MCP's hints** (`readOnlyHint`,
-  `destructiveHint`, `idempotentHint`, `openWorldHint`); INSTALL.md
-  says what each host does with them.
+  `destructiveHint`, `idempotentHint`, `openWorldHint`), and
+  `read_pseudonym_list` carries `anthropic/requiresUserInteraction` in
+  its `_meta`; in an auto mode a host approves read-only tools and a
+  classifier decides on the rest. INSTALL.md says what each host does.
 
 ## [0.13.0-alpha] - 2026-09-25
 

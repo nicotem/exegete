@@ -173,6 +173,33 @@ class TestToolAnnotations:
         assert hints.readOnlyHint is False
         assert hints.destructiveHint is False
 
+    def test_the_name_list_asks_in_every_mode_where_honoured(self):
+        """Fix round 1: read_pseudonym_list's tools/list entry carries
+        "anthropic/requiresUserInteraction": true (Claude Code 2.1.199
+        and later asks before every call of it in every mode), read over
+        the host's path; no other tool carries it."""
+        server._apply_toolset("lifecycle")
+        listed = host_session(lambda client: client.list_tools()).tools
+        marked = {tool.name: tool.meta for tool in listed if tool.meta}
+        assert marked == {"read_pseudonym_list": {
+            "anthropic/requiresUserInteraction": True}}
+        wire = next(t for t in listed
+                    if t.name == "read_pseudonym_list").model_dump(
+                        by_alias=True, exclude_none=True)
+        assert wire["_meta"]["anthropic/requiresUserInteraction"] is True
+
+    def test_install_says_what_the_modes_do(self):
+        install = " ".join((Path(__file__).parent.parent / "INSTALL.md")
+                           .read_text(encoding="utf-8").split())
+        section = install.split(
+            "## What hosts do with the tools' read and write marks")[1] \
+            .split("## Other MCP hosts")[0]
+        for needed in ("anthropic/requiresUserInteraction", "2.1.199",
+                       "a classifier", "`bypassPermissions`",
+                       "Skip all approvals", "2.1.283",
+                       "read on 27 September 2026"):
+            assert needed in section, needed
+
     def test_no_tool_claims_the_open_world(self):
         for name, tool in _listed("lifecycle").items():
             assert tool.annotations.openWorldHint is False, name

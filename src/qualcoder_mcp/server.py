@@ -297,9 +297,13 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
 #   selection. The class test calls every read-only tool and checks
 #   that the project folder and the session files are unchanged.
 # - destructiveHint (a write only): true when a call can replace or
-#   remove something that already exists (a name, a memo, a status, a
-#   file when overwrite is true, a coding, a backup); false when the
-#   tool only adds.
+#   remove something that already exists (a name, a memo, a suggestion's
+#   or proposal's review decision, a file when overwrite is true, a
+#   coding, a backup); false when the tool only adds. A status that
+#   records a step taken on what the call adds (a suggestion marked
+#   applied as its coding is written, a proposal marked created as its
+#   code is) does not count: apply_codings and create_proposed_codes
+#   only add to the project, in MCP's words "only additive updates".
 # - idempotentHint (a write only): true only where a second identical
 #   call changes nothing and takes no backup; the class test repeats
 #   each such call and checks it. False is no promise either way.
@@ -308,11 +312,15 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
 # One tool that changes nothing is still not marked read-only:
 # read_pseudonym_list (TOOL_DISCLOSES below says why).
 #
-# What the hosts do with the hints (INSTALL.md, "What hosts do with the
-# tools' read and write marks"): Claude Desktop passes readOnlyHint on,
-# and in a Cowork or Code session in auto mode lets a read-only tool run
-# without asking; Claude Code runs read-only tools in parallel and shows
-# the marks in /mcp, and asks before every call either way.
+# What the hosts do with the hints is INSTALL.md's "What hosts do with
+# the tools' read and write marks", from Anthropic's own pages mode by
+# mode (fix round 1). In short: in the asking modes (Claude Code's
+# Manual, Cowork's Manual) a call of a tool is asked about unless the
+# researcher allowed it; in the auto modes a read-only tool is approved
+# and a classifier, not the researcher, decides on the rest; "Skip all
+# approvals" and bypassPermissions run everything. The hints are
+# advisory: MCP tells clients to treat them as untrusted, and nothing
+# this server guarantees rests on them.
 TOOL_READS = ToolAnnotations(readOnlyHint=True, destructiveHint=False,
                              idempotentHint=True, openWorldHint=False)
 TOOL_ADDS = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
@@ -326,12 +334,28 @@ TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 # read_pseudonym_list alone (the lead's correction, 2026-09-26). It changes
 # nothing, but it sends every real name in the project's pseudonyms.json
 # to the AI provider, and the owner made it a tool of its own so that the
-# host asks before it does (v0.13). Marked read-only, it would run without
-# asking in a Cowork or Code session in auto mode, which would undo that
-# ruling; so it is marked as a tool that is not read-only, adds nothing
-# and can be repeated.
+# host asks before it does (v0.13). Marked read-only, it would be
+# approved without asking in the auto modes, so it is marked as a tool
+# that is not read-only, adds nothing and can be repeated. That alone
+# does not make an auto mode ask: there a classifier decides on a tool
+# that is not read-only. So it also carries TOOL_META's
+# "anthropic/requiresUserInteraction", with which Claude Code asks before
+# every call in every mode (fix round 1).
 TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
                                  idempotentHint=True, openWorldHint=False)
+
+# Metadata a tool's tools/list entry carries under `_meta` (fix round 1).
+# "anthropic/requiresUserInteraction": true is Anthropic's mark for a tool
+# whose permission prompt is the point: Claude Code (v2.1.199 and later)
+# asks on every call, even in acceptEdits, auto and bypassPermissions,
+# offers no "don't ask again", lets no allow rule skip it, and denies it
+# in dontAsk ("Require approval for a specific tool", code.claude.com's
+# MCP page). Earlier versions ignore it. It is sent by
+# `_QualcoderMCP.list_tools`, which the mcp floor (1.17) needs: its
+# FastMCP sends no tool metadata of its own.
+TOOL_META = {
+    "read_pseudonym_list": {"anthropic/requiresUserInteraction": True},
+}
 
 def _argument_name_for_display(name: Any) -> str:
     """An argument name as a refusal may show it: the model's own text,
@@ -422,6 +446,14 @@ class _QualcoderMCP(FastMCP):
         # a tool name in research text is rare, and the mark says only
         # that the tool is not available here.
         return _mark_answer(result) if _serves_a_reduced_set() else result
+
+    async def list_tools(self):
+        tools = await super().list_tools()
+        for tool in tools:
+            extra = TOOL_META.get(tool.name)
+            if extra:
+                tool.meta = {**(tool.meta or {}), **extra}
+        return tools
 
     async def read_resource(self, uri):
         contents = await super().read_resource(uri)

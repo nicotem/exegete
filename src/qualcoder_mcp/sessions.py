@@ -836,20 +836,56 @@ class SessionManager:
             ValueError: If session ID is not valid UUID4 format
             FileNotFoundError: If session file doesn't exist
         """
+        return self.load_session_and_bytes(session_id)[0]
+
+    def load_session_and_bytes(self, session_id: str):
+        """Load a session and return it with the file's bytes as read.
+
+        One read serves both, so a caller can later tell whether another
+        writer (a second host on the same project) saved the file in the
+        meantime (save_session_if_unchanged). A file whose inner id is not
+        its name is refused: saving it would write the session its inner
+        id names, not the file that was read (fix round 1).
+
+        Raises:
+            ValueError: If the id is not UUID4, or the file holds another id
+            FileNotFoundError: If session file doesn't exist
+        """
         self._validate_session_id(session_id)
         filepath = self.storage_dir / f"session_{session_id}.json"
         if not filepath.exists():
             raise FileNotFoundError(f"Session {session_id} not found at {filepath}")
 
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            raw = filepath.read_bytes()
+            data = json.loads(raw.decode("utf-8"))
             session = AICodingSession.from_dict(data)
+            if session.session_id != session_id:
+                raise ValueError(
+                    f"Session file for {session_id} holds another session's "
+                    f"id; it is refused rather than used or written")
             logger.info(f"Loaded session {session_id}")
-            return session
+            return session, raw
         except Exception as e:
             logger.error(f"Failed to load session {session_id}: {error_label(e)}")
             raise
+
+    def save_session_if_unchanged(self, session: 'AICodingSession',
+                                  raw: bytes) -> bool:
+        """Save only if the file still holds the bytes it was read with.
+
+        False, and nothing written, when another writer saved it since;
+        the caller reads it again and redoes its change on the new copy,
+        so a change made meanwhile (a reopen, say) is not undone. The
+        window left is the one between this comparison and the replace."""
+        filepath = self.storage_dir / f"session_{session.session_id}.json"
+        try:
+            if filepath.read_bytes() != raw:
+                return False
+        except OSError:
+            return False
+        self.save_session(session)
+        return True
 
     def session_exists(self, session_id: str) -> bool:
         """Check if a session file exists.

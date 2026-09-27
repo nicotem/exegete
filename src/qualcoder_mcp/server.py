@@ -7945,7 +7945,12 @@ def _mark_removed_in_sessions(deleted: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     Best effort after the delete has committed: a session file that
     cannot be read is passed over (as the session list does), and one
-    that cannot be saved is reported rather than failing the answer."""
+    that cannot be saved is reported rather than failing the answer.
+    Every session of the project is written here, not only the one a
+    tool names, so each is saved only if no other writer (a second host
+    on the same project) saved it since it was read; otherwise it is read
+    again and marked on the new copy, so their change survives (fix
+    round 1)."""
     try:
         current = validate_qda_path(current_project_path)
     except Exception:
@@ -7955,28 +7960,37 @@ def _mark_removed_in_sessions(deleted: Dict[str, Any]) -> List[Dict[str, Any]]:
     updates: List[Dict[str, Any]] = []
     for path in sorted(session_manager.storage_dir.glob("session_*.json")):
         sid = path.stem[len("session_"):]
-        try:
-            session = session_manager.load_session(sid)
-            if validate_qda_path(session.project_path) != current:
-                continue
-        except Exception:
-            continue
-        marked = session.mark_removed(
-            deleted.get("file_id"), deleted.get("code_id"),
-            deleted.get("position_start"), deleted.get("position_end"),
-            deleted.get("coding_id"), owner_is_ai)
-        if not marked:
-            continue
-        entry: Dict[str, Any] = {"coding_session_id": sid,
-                                 "suggestion_guids": marked,
-                                 "status": "removed"}
-        try:
-            session_manager.save_session(session)
-        except Exception as e:
-            logger.error("Could not save session after delete_coding: %s",
-                         error_label(e))
-            entry["status"] = "not saved: the session still says applied"
-        updates.append(entry)
+        entry: Optional[Dict[str, Any]] = None
+        for _attempt in range(5):
+            entry = None        # only what this attempt found and saved
+            try:
+                session, raw = session_manager.load_session_and_bytes(sid)
+                if validate_qda_path(session.project_path) != current:
+                    break
+            except Exception:
+                break
+            marked = session.mark_removed(
+                deleted.get("file_id"), deleted.get("code_id"),
+                deleted.get("position_start"), deleted.get("position_end"),
+                deleted.get("coding_id"), owner_is_ai)
+            if not marked:
+                break
+            entry = {"coding_session_id": sid, "suggestion_guids": marked,
+                     "status": "removed"}
+            try:
+                if session_manager.save_session_if_unchanged(session, raw):
+                    break
+            except Exception as e:
+                logger.error("Could not save session after delete_coding: "
+                             "%s", error_label(e))
+                entry["status"] = "not saved: the session still says applied"
+                break
+        else:
+            if entry is not None:
+                entry["status"] = ("not saved: the session kept changing; "
+                                   "it still says applied")
+        if entry is not None:
+            updates.append(entry)
     return updates
 
 

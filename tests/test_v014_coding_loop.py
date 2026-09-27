@@ -1107,3 +1107,53 @@ class TestFixRoundNoInventedContextAnywhere:
         review = call("review_suggestions", coding_session_id=sid)
         assert INVENTED not in review
         assert "recorded before v0.14" in review
+
+
+class TestFixRoundTwoHostsOnOneProject:
+    """delete_coding writes every session of the project; a change a
+    second host saved meanwhile (a reopen) must survive it."""
+
+    def test_a_reopen_saved_meanwhile_is_not_undone(
+            self, setup_server, monkeypatch):
+        sid = new_session()
+        y = record(sid, item())["recorded"][0]["guid"]
+        approve_and_apply(sid, [y])
+        x = record(sid, item(text=COPE, code="Coping"))["recorded"][0]["guid"]
+        call("update_suggestion_status", coding_session_id=sid, approve=[x])
+        ctid = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(y).applied_ctid
+
+        other_host = SessionManager(str(server.session_manager.storage_dir))
+        original = AICodingSession.mark_removed
+        fired = []
+
+        def interleaved(self, *args, **kwargs):
+            if not fired:            # host A reopens x after B's read
+                fired.append(True)
+                theirs = other_host.load_session(sid)
+                theirs.update_suggestions_by_guid(reopen=[x])
+                other_host.save_session(theirs)
+            return original(self, *args, **kwargs)
+
+        monkeypatch.setattr(AICodingSession, "mark_removed", interleaved)
+        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        assert out["sessions_updated"][0]["status"] == "removed"
+        final = server.session_manager.load_session(sid)
+        assert final.get_suggestion_by_guid(x).status == "pending"
+        assert final.get_suggestion_by_guid(y).status == "removed"
+
+
+class TestFixRoundSessionFilesHardened:
+
+    def test_a_file_holding_another_sessions_id_is_refused_not_written(
+            self, setup_server):
+        sid = new_session()
+        other = new_session()
+        folder = Path(server.session_manager.storage_dir)
+        before_other = (folder / f"session_{other}.json").read_text()
+        data = json.loads((folder / f"session_{sid}.json").read_text())
+        data["session_id"] = other                 # a copied or crafted file
+        (folder / f"session_{sid}.json").write_text(json.dumps(data))
+        out = record(sid, item())
+        assert "another session's id" in out["error"]
+        assert (folder / f"session_{other}.json").read_text() == before_other

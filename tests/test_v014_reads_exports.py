@@ -1092,7 +1092,18 @@ class TestOneNumericRule:
 import time  # noqa: E402
 
 CRAFTED = "a" + "\u0315\u0316" * 80_000      # 160,000 marks out of order
+# The same marks in canonical order (class 220 before 232): the fixed
+# fold orders them with the same work as CRAFTED, the old fold reads them
+# in linear time, so a call on ORDERED calibrates the runner without
+# hiding the quadratic cost (fix round 3: a fixed 2 s ceiling failed on a
+# slow CI runner for a call a laptop does in 0.1 s)
+ORDERED = "a" + "\u0316" * 80_000 + "\u0315" * 80_000
 FOLD_CEILING_SECONDS = 2.0
+
+
+def _ceiling(baseline):
+    """Twenty times the calibrating call, never under 2 s."""
+    return max(FOLD_CEILING_SECONDS, 20 * baseline)
 
 
 @pytest.fixture
@@ -1127,6 +1138,10 @@ def _timed(tool, **args):
 
 class TestTheFoldIsLinearAndSurvivesDamage:
 
+    ROWS = ("UPDATE code_text SET seltext = ? WHERE fid = 2 AND pos0 = 0",
+            "UPDATE journal SET jentry = ? WHERE jid = 1",
+            "UPDATE attribute SET value = ? WHERE name = 'Note'")
+
     @pytest.mark.parametrize("tool,args", [
         ("search_coded_text", {"query": "zzz"}),
         ("search_memos", {"query": "zzz"}),
@@ -1134,16 +1149,27 @@ class TestTheFoldIsLinearAndSurvivesDamage:
                                 "operator": "contains"}),
     ], ids=["coded-text", "memos", "attribute"])
     def test_a_crafted_row_costs_linear_time(self, crafted, tool, args):
+        for statement in self.ROWS:
+            sql(crafted, statement, (ORDERED,))
+        _, baseline = _timed(tool, **args)
+        for statement in self.ROWS:
+            sql(crafted, statement, (CRAFTED,))
         out, elapsed = _timed(tool, **args)
         assert out["results"] == []
-        assert elapsed < FOLD_CEILING_SECONDS, elapsed
+        assert elapsed < _ceiling(baseline), (elapsed, baseline)
 
     def test_a_crafted_query_is_folded_once(self, crafted):
+        # Only the query varies: the rows hold the ordered marks, which
+        # every version folds in linear time
+        for statement in self.ROWS:
+            sql(crafted, statement, (ORDERED,))
+        _, baseline = _timed("search_coded_text",
+                             query="\u0316" * 4_999 + "\u0315" * 4_999)
         query = "\u0315\u0316" * 4_999
         out, elapsed = _timed("search_coded_text", query=query)
-        # The crafted segment holds those marks, folded; nothing else does
+        # The ordered segment holds those marks, folded; nothing else does
         assert out["total_results"] == 1
-        assert elapsed < FOLD_CEILING_SECONDS, elapsed
+        assert elapsed < _ceiling(baseline), (elapsed, baseline)
 
     def test_the_crafted_text_is_still_found(self, crafted):
         """Only the cost changes: the marks, folded, are found."""
@@ -1464,7 +1490,7 @@ class TestADamagedRowThatMatches:
 
 class TestNameMatchingIsLinear:
 
-    PLAIN = "Z" + "a" * (len(CRAFTED))
+    PLAIN = "Z" + ORDERED
 
     @pytest.fixture
     def crafted_names(self, setup_server, qualcoder_db_path):
@@ -1490,18 +1516,20 @@ class TestNameMatchingIsLinear:
                                               qualcoder_db_path, tool,
                                               args, expect):
         """The ceiling follows the runner (fix round 3): the same call is
-        timed first on the same data with the crafted names spelled in
-        plain letters of the same length, which is the same linear work;
-        twenty times that, and never under 2 s, still fails the
-        quadratic cost by an order of magnitude (about 12 s a call on a
-        laptop, where the plain call takes 0.03 s). A slow CI runner took
-        2.04 s for a call a laptop does in 0.1 s."""
+        timed first on the same data with the crafted names' marks in
+        canonical order, which the fixed code orders with the same work
+        and the old code normalises in linear time; twenty times that,
+        and never under 2 s, still fails the quadratic cost by an order
+        of magnitude (about 12 s a call on a laptop). Slow CI runners
+        took 2.04 and 2.08 s for a call a laptop does in 0.1 s; a baseline
+        of plain letters did not calibrate them (0.004 s), since plain
+        text skips the per-character ordering."""
         folder = qualcoder_db_path
         sql(folder, "INSERT INTO code_name VALUES (9, ?, '', 1, "
             "'TestCoder', '2024-01-15', '#010101')", (self.PLAIN,))
         sql(folder, "INSERT INTO cases VALUES (9, ?, '', 'TestCoder', "
             "'2024-01-15')", (self.PLAIN,))
-        plain_args = {k: ("a" * len(CRAFTED) if v == CRAFTED else v)
+        plain_args = {k: (ORDERED if v == CRAFTED else v)
                       for k, v in args.items()}
         _, baseline = _timed(tool, **plain_args)
         if tool == "link_file_to_case":
@@ -1510,10 +1538,9 @@ class TestNameMatchingIsLinear:
             ("Z" + CRAFTED,))
         sql(folder, "UPDATE cases SET name = ? WHERE caseid = 9",
             ("Z" + CRAFTED,))
-        ceiling = max(FOLD_CEILING_SECONDS, 20 * baseline)
         out, elapsed = _timed(tool, **args)
         assert expect in out, out
-        assert elapsed < ceiling, (elapsed, baseline)
+        assert elapsed < _ceiling(baseline), (elapsed, baseline)
 
     def test_the_crafted_name_is_still_its_own_name(self, crafted_names):
         """Only the cost changes: the crafted code, named in another

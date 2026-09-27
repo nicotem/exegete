@@ -2896,6 +2896,21 @@ def get_methods_guidance() -> str:
     return _mark_unregistered(METHODS_GUIDANCE)
 
 
+def is_relative_folder(text: str, path_class: type = Path) -> bool:
+    """Whether a folder the caller gave is relative, and so relative to
+    nothing a researcher chose (the server's working directory is the
+    host's). A folder starting with ~ is the home's. On Windows a path
+    from the root with no drive letter (a leading slash or backslash)
+    means the current drive's root, as everywhere else on Windows, and is
+    not relative; a drive with no root ("C:notes") is. `path_class` lets
+    a test ask under both platforms' rules (PureWindowsPath,
+    PurePosixPath) wherever it runs (fix round 1)."""
+    if text.startswith("~"):
+        return False
+    path = path_class(text)
+    return not path.is_absolute() and not path.root
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_available_projects(search_directories: Optional[List[str]] = None) -> str:
@@ -2933,14 +2948,8 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
             return json.dumps({"error": (
                 "search_directories must be a list of folder paths, each "
                 "a full path or one starting with ~.")}, indent=2)
-        # Relative to nothing a researcher chose (the server's working
-        # directory is the host's). On Windows a path from the root with
-        # no drive letter (a leading slash or backslash) means the current
-        # drive's root, as everywhere else on Windows, and is taken as
-        # given; a drive with no root ("C:notes") is relative and refused.
         relative = [d for d in search_directories
-                    if not Path(d).expanduser().is_absolute()
-                    and not Path(d).expanduser().root]
+                    if is_relative_folder(d)]
         if relative:
             return json.dumps({"error": (
                 f"search_directories holds a relative path "

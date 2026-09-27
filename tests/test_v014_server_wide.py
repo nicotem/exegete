@@ -634,6 +634,10 @@ class HostRun:
                 and name not in NOT_PROJECT_WRITES:
             await self._refused_under_the_lock(name, arguments)
         before = work_tree(self.root)
+        # A write marked as adding only (destructiveHint false) keeps
+        # every file and every database row it found (fix round 1)
+        additive = not hints[0] and not hints[1]
+        rows_before = _database_rows(self.folder) if additive else {}
         result = await self.client.call_tool(name, arguments)
         text = text_of(result)
         self.answers.setdefault(name, (arguments, text))
@@ -651,6 +655,18 @@ class HostRun:
         if nowhere:
             self.problems.append((name, "names", nowhere))
         after = work_tree(self.root)
+        if additive:
+            gone = sorted(set(before) - set(after))
+            if gone:
+                self.problems.append((name, "an additive tool removed",
+                                      gone[:4]))
+            rows_after = _database_rows(self.folder)
+            lost = {table: len(rows - rows_after.get(table, set()))
+                    for table, rows in rows_before.items()
+                    if rows - rows_after.get(table, set())}
+            if lost:
+                self.problems.append((name, "an additive tool changed or "
+                                      "removed rows", lost))
         if hints[0] and after != before:
             changed = sorted(set(after.items()) ^ set(before.items()))
             self.problems.append((name, "read-only tool wrote", changed[:4]))
@@ -1723,6 +1739,17 @@ NOT_PROJECT_WRITES = {
 }
 
 
+def _database_rows(folder):
+    """Every row of every table of the project's database, as sets."""
+    if folder is None or not (Path(folder) / "data.qda").is_file():
+        return {}
+    with sqlite3.connect(str(Path(folder) / "data.qda")) as conn:
+        tables = [row[0] for row in conn.execute(
+            "select name from sqlite_master where type = 'table'")]
+        return {table: set(conn.execute(f'select * from "{table}"'))
+                for table in tables}
+
+
 def _database_digest(folder):
     import hashlib
     return hashlib.sha256((Path(folder) / "data.qda").read_bytes()
@@ -2146,3 +2173,22 @@ def test_an_unreadable_project_folder_ends_with_the_selection(
         "The previously selected project, test_project, is still "
         "selected.")
     assert answer["selected_project"] == "test_project"
+
+
+@pytest.mark.parametrize("text,windows,posix", [
+    ("/Research", False, False),        # rooted: the drive's root on Windows
+    ("\\Research", False, True),        # a file name on POSIX
+    ("C:notes", True, True),            # a drive with no root
+    ("C:\\Research", False, True),
+    ("\\\\server\\share\\Research", False, True),   # UNC
+    ("relative/dir", True, True),
+    ("~/Research", False, False),       # the home's
+])
+def test_which_folders_are_relative_under_both_platforms_rules(
+        text, windows, posix):
+    """Fix round 1: the rule list_available_projects applies, as a pure
+    function asked under Windows' and POSIX's rules on every platform
+    (the Windows CI jobs found the first case)."""
+    from pathlib import PurePosixPath, PureWindowsPath
+    assert server.is_relative_folder(text, PureWindowsPath) is windows
+    assert server.is_relative_folder(text, PurePosixPath) is posix

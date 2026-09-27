@@ -1438,8 +1438,16 @@ def _resolve_case_argument(cases, case_id: Optional[int],
             # The name is one of several spellings; the id picks one of
             # them, so the two arguments agree.
             return by_id, "id", None
-        err["hint"] = ("Give case_id to choose one of the candidates, or "
-                       "the exact spelling of the one you mean.")
+        # The exact spelling selects a candidate only when no two of them
+        # are the same name once spacing and Unicode form are normalised
+        # (the test _find_existing_by_name makes); for such twins it
+        # cannot, and the refusal says so (fix round 1)
+        forms = [unicodedata.normalize("NFC", normalize_name(c["name"]))
+                 for c in err.get("candidates", [])]
+        twins = len(set(forms)) < len(forms)
+        err["hint"] = ("Give case_id to choose one of the candidates." if twins
+                       else "Give case_id to choose one of the candidates, "
+                            "or the exact spelling of the one you mean.")
         return None, None, err
     if row is None:
         return None, None, {

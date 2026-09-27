@@ -1163,3 +1163,32 @@ class TestSearchMemosMasksAHiddenOwner:
                           "journal": "(hidden coder)",
                           "file": "TestCoder"}
         assert HIDDEN not in json.dumps(out)
+
+
+# ===========================================================================
+# Fix round 1, item 7: twins by Unicode form are not told to use the
+# exact spelling
+# ===========================================================================
+
+class TestTwinCaseNamesRefusal:
+
+    def test_unicode_form_twins_are_pointed_at_their_ids_only(
+            self, setup_server, qualcoder_db_path):
+        import unicodedata as _u
+        composed = _u.normalize("NFC", "José")
+        decomposed = _u.normalize("NFD", "José")
+        for caseid, name in ((2, composed), (3, decomposed)):
+            sql(qualcoder_db_path, "INSERT INTO cases VALUES (?, ?, '', "
+                "'TestCoder', '2024-01-15')", (caseid, name))
+        out = host("link_file_to_case", file_id=2, case_name=composed,
+                   create_backup=False)
+        assert sorted(c["id"] for c in out["candidates"]) == [2, 3]
+        assert "no spelling of the name can single those out" in \
+            out["error"]
+        assert out["hint"] == ("Give case_id to choose one of the "
+                               "candidates.")
+
+    def test_letter_case_twins_keep_the_spelling_advice(self, twin_cases):
+        out = host("link_file_to_case", file_id=2, case_name="DANA",
+                   create_backup=False)
+        assert "exact spelling" in out["hint"]

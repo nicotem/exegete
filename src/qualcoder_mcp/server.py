@@ -235,6 +235,8 @@ SUPPORT_REQUIRED = (
 CONFIDENCE_NOT_TAKEN = (
     "; confidence is no longer taken: this server records no score")
 SUPPORT_NOT_GIVEN = "not given (recorded before v0.14)"
+SUPPORT_CLEARED = ("not given (cleared when the code was changed; give one "
+                   "with edit_suggestion's support)")
 
 GROUNDING_PROPOSE = """GROUNDING (inductive coding): a proposed code names something the data
 shows, with a rationale that points to its example_segments; prefer the
@@ -6493,8 +6495,10 @@ def review_suggestions(
         output.append(f"📍 **Position:** {sugg.start_pos}-{sugg.end_pos}")
         output.append(f"\n**Segment Text:**")
         output.append(f"```\n{sugg.segment_text}\n```")
+        no_label = (SUPPORT_CLEARED if getattr(sugg, "support_cleared", False)
+                    else SUPPORT_NOT_GIVEN)
         output.append(f"**Support:** "
-                      f"{support_in_words(sugg.support) or SUPPORT_NOT_GIVEN}")
+                      f"{support_in_words(sugg.support) or no_label}")
         output.append(f"\n**AI Reasoning:**")
         output.append(sugg.reasoning)
 
@@ -6548,8 +6552,9 @@ def edit_suggestion(
     use_alternative: Optional[str] = None,
     code_id: Optional[int] = None,
     code_name: Optional[str] = None,
+    support: Optional[str] = None,
 ) -> str:
-    """Adjust a PENDING suggestion's span and/or code before approval.
+    """Adjust a PENDING suggestion's span, code or support before approval.
 
     The review-time refinement tool: when the researcher wants a
     suggestion's span widened to a complete quote (or narrowed, or
@@ -6583,6 +6588,13 @@ def edit_suggestion(
     which it can be reopened too. A new code must be in the session's
     scope when the session names codes.
 
+    LABEL AND CODE: the support label says how the words carry the code
+    it was given for. Moving a suggestion to another code without a new
+    support clears the label (shown as not given, and the memo then
+    carries the reason only), and the answer says so; pass support with
+    the code change to label the new pairing. support alone relabels the
+    suggestion. The reason stays as recorded.
+
     Args:
         coding_session_id: The session ID from analyze_for_coding
         suggestion_guid: The suggestion to edit
@@ -6603,6 +6615,9 @@ def edit_suggestion(
         code_id: Change the code by id (existing codes only)
         code_name: Change the code by name (matched exactly, else
                    ignoring letter case, against the live codebook)
+        support: "explicit" (the passage states the code) or
+                 "interpretive" (the reading is yours): the label for
+                 the suggestion as edited
 
     Returns:
         JSON with the changes made (old -> new span/code), the new
@@ -6684,11 +6699,18 @@ def edit_suggestion(
 
     wants_span = manual_span
     wants_code = code_id is not None or code_name is not None
-    if not wants_span and not wants_code:
+    wants_label = support is not None
+    if wants_label:
+        label = (support_label(support.strip().lower())
+                 if isinstance(support, str) else None)
+        if label is None:
+            return json.dumps({"error": SUPPORT_REQUIRED.replace(
+                "support is required", "support must be")})
+    if not wants_span and not wants_code and not wants_label:
         return json.dumps({
             "error": "Nothing to change: pass start_pos/end_pos/"
-                     "segment_text, use_alternative, and/or "
-                     "code_id/code_name"
+                     "segment_text, use_alternative, code_id/code_name, "
+                     "and/or support"
         })
 
     ro_db = get_db()
@@ -6758,10 +6780,11 @@ def edit_suggestion(
                 })
 
     final_code_id = new_code["id"] if new_code else sugg.code_id
-    if (new_start, new_end, final_code_id) == (
-            sugg.start_pos, sugg.end_pos, sugg.code_id):
-        return json.dumps({"error": "No effective change: the span and "
-                                    "code are unchanged"})
+    new_label = label if wants_label else sugg.support
+    if (new_start, new_end, final_code_id, new_label) == (
+            sugg.start_pos, sugg.end_pos, sugg.code_id, sugg.support):
+        return json.dumps({"error": "No effective change: the span, code "
+                                    "and support are unchanged"})
 
     # Refuse an edit that lands exactly on another suggestion (one whose
     # coding was deleted does not count, as at record time)
@@ -6800,10 +6823,30 @@ def edit_suggestion(
             )
     if new_code is not None and new_code["id"] != sugg.code_id:
         changes["code"] = {"from": sugg.code_name, "to": new_code["name"]}
+        old_code_name = sugg.code_name
         sugg.code_id = new_code["id"]
         sugg.code_name = new_code["name"]
+        if not wants_label and sugg.support is not None:
+            # The label was given for the old code (fix round 1): carried
+            # over, it would tell the project the passage states a code
+            # nobody weighed
+            changes["support"] = {"from": sugg.support, "to": None}
+            sugg.support = None
+            sugg.support_cleared = True
+            result["support_cleared"] = (
+                f"The label was given for '{old_code_name}', so it is "
+                f"cleared: the suggestion shows 'not given' and its memo "
+                f"would carry the reason only. Ask whether the passage "
+                f"states '{new_code['name']}' (explicit) or is read in "
+                f"(interpretive), and pass support with edit_suggestion. "
+                f"The reason, too, was written for '{old_code_name}'.")
+    if wants_label and label != sugg.support:
+        changes["support"] = {"from": sugg.support, "to": label}
+        sugg.support = label
+        sugg.support_cleared = False
 
-    sugg.adjusted = True
+    if wants_span or (new_code is not None and "code" in changes):
+        sugg.adjusted = True
 
     # Affordance bookkeeping (server-emitted hints — the pattern that
     # actually steers clients, per the track4 audit): the first MANUAL span
@@ -6854,6 +6897,7 @@ def edit_suggestion(
         "span_alternatives": [_alternative_gloss(a)
                               for a in sugg.span_alternatives],
         "status": sugg.status,
+        "support": sugg.support,
         "next_step": "Still pending; approve with update_suggestion_status "
                      "when the user is happy with it.",
     })
@@ -9152,6 +9196,10 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "edit",
                 "New spans are re-verified against the file text with the "
                 "same machinery as record_suggestions",
+                "Moving a suggestion to another code clears its explicit "
+                "or interpretive label, given for the old code, unless "
+                "support is passed with the change; support alone "
+                "relabels it",
                 "Proposal evidence spans are edited the same way via "
                 "update_proposal(example_segments=...)"
             ]

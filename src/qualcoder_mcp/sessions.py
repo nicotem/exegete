@@ -102,7 +102,8 @@ class CodingSuggestion:
         guid: Optional[str] = None,
         span_alternatives: Optional[List[Dict[str, Any]]] = None,
         adjusted: bool = False,
-        applied_ctid: Optional[int] = None
+        applied_ctid: Optional[int] = None,
+        support_cleared: bool = False
     ):
         self.file_id = file_id
         self.file_name = file_name
@@ -115,6 +116,10 @@ class CodingSuggestion:
         # 'explicit' | 'interpretive' | None (recorded before v0.14, or a
         # row read back from the project, which carries no label)
         self.support = support_label(support)
+        # True when edit_suggestion moved the suggestion to another code
+        # without a new label: the old one was given for the old code, so
+        # it is cleared rather than carried (fix round 1)
+        self.support_cleared = bool(support_cleared) and self.support is None
         # 'pending', 'approved', 'rejected', 'applied', or 'removed' (it
         # was applied, then its coding was deleted with delete_coding)
         self.status = status
@@ -155,7 +160,8 @@ class CodingSuggestion:
             "guid": self.guid,
             "span_alternatives": self.span_alternatives,
             "adjusted": self.adjusted,
-            "applied_ctid": self.applied_ctid
+            "applied_ctid": self.applied_ctid,
+            "support_cleared": self.support_cleared
         }
 
     _REQUIRED_FIELDS = {
@@ -199,7 +205,8 @@ class CodingSuggestion:
             guid=data.get("guid"),
             span_alternatives=data.get("span_alternatives"),
             adjusted=data.get("adjusted", False),
-            applied_ctid=data.get("applied_ctid")
+            applied_ctid=data.get("applied_ctid"),
+            support_cleared=data.get("support_cleared", False)
         )
 
 

@@ -326,6 +326,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every other code-name lookup follows ("stress" found nothing before),
   and a file id or code name that matches nothing is listed in
   `not_found` instead of being dropped.
+- **A label stays with the code it was given for.** `edit_suggestion`
+  takes `support`. Moving a suggestion to another code without it clears
+  the label (the review shows "not given (cleared when the code was
+  changed ...)", the memo carries the reason only, and the answer says
+  why), since the label said how the words carry the old code; with it,
+  the new pairing is labelled. `support` alone relabels a suggestion.
 - **A decided suggestion can be reopened.** `update_suggestion_status`
   takes `reopen`, which returns an approved, rejected or removed
   suggestion to pending, so that it can be edited and decided again.

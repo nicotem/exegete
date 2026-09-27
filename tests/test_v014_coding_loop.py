@@ -1011,3 +1011,51 @@ class TestFixRoundDecisionCountsAreChanges:
                     approve=[a])
         assert out["approved"] == 0 and out["unchanged"] == 1
         assert "Nothing changed" in out["message"]
+
+
+class TestFixRoundTheLabelBelongsToItsCode:
+
+    def test_a_code_change_clears_the_label_and_says_so(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]      # explicit
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, code_name="Coping")
+        assert out["support"] is None
+        assert "given for 'Stress'" in out["support_cleared"]
+        review = call("review_suggestions", coding_session_id=sid)
+        assert "not given (cleared when the code was changed" in review
+        assert "states it" not in review
+        assert "CODINGS APPLIED" in approve_and_apply(sid, [guid])
+        memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
+                    "owner = 'AI Coding Assistant'")[0]["memo"]
+        assert memo == "reason for Stress"                  # no label
+
+    def test_a_label_given_with_the_change_labels_the_new_pairing(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, code_name="Coping",
+                    support="interpretive")
+        assert out["support"] == "interpretive"
+        assert "support_cleared" not in out
+        approve_and_apply(sid, [guid])
+        memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
+                    "owner = 'AI Coding Assistant'")[0]["memo"]
+        assert memo.startswith("Support: interpretive")
+
+    def test_the_label_alone_can_be_corrected_and_is_validated(
+            self, setup_server):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]
+        bad = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, support="high")
+        assert "support must be" in bad["error"]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, support="interpretive")
+        assert out["changes"]["support"] == {"from": "explicit",
+                                             "to": "interpretive"}
+        same = jcall("edit_suggestion", coding_session_id=sid,
+                     suggestion_guid=guid, support="interpretive")
+        assert "No effective change" in same["error"]

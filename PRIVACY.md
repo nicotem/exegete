@@ -348,10 +348,14 @@ project has the coder-visibility capability:
   every later read of that memo returns. Hiding a coder in QualCoder
   hides their codings and annotations from these reads; their name
   stays on everything else they own (codes, categories, files, cases,
-  journal entries, attribute types), and every tool and resource that
-  shows an owner shows it: the file view's `file_info`, `search_memos`,
-  `export_code_report` and `list_attribute_types`, and the codes,
-  categories, files, cases and journal resources. QualCoder shows the
+  journal entries, attribute types and attribute values), and every tool
+  and resource that shows an owner shows it: the file view's
+  `file_info`, `search_memos`, `export_code_report`,
+  `list_attribute_types`, `get_case_attributes` and
+  `get_file_attributes`, the answer of `create_code`, `create_category`
+  or `create_case` when the name already exists (it returns the
+  existing row), and the codes, categories, files, cases and journal
+  resources. QualCoder shows the
   owner in its code tree and its journal list (`journals.py` 181 at
   9bddf17); its file and case managers show none (`manage_files.py`
   1974, `cases.py` 371), so on files and cases this server shows what

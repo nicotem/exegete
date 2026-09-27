@@ -1694,11 +1694,15 @@ class TestHiddenCodersOnTheCodebook:
         assert "qualcoder://codes/list" in privacy
         assert "[Merged from code: ..., Coder: ..., Merger date: ...]" in \
             privacy
-        # fix round 1: the whole list, and the file view qualified
+        # fix rounds 1 and 2: the whole list, and the file view qualified
         assert ("hides their codings and annotations from these reads; "
                 "their name stays on everything else they own (codes, "
                 "categories, files, cases, journal entries, attribute "
-                "types)") in privacy
+                "types and attribute values)") in privacy
+        for tool in ("`get_case_attributes`", "`get_file_attributes`",
+                     "the answer of `create_code`, `create_category` or "
+                     "`create_case` when the name already exists"):
+            assert tool in privacy, tool
         assert "its `file_info` still names the file's owner" in privacy
 
     def test_the_other_rows_a_hidden_coder_owns_name_them(self, tmp_path):
@@ -1733,6 +1737,46 @@ class TestHiddenCodersOnTheCodebook:
         assert view["file_info"]["owner"] == "Alice"
         for uri, rows in found.items():
             assert [row["owner"] for row in rows] == ["Alice"], uri
+
+    def test_attribute_values_and_an_existing_row_name_them(self, tmp_path):
+        """Fix round 2 (the security re-verification's 3): a case's and a
+        file's attribute values owned by the hidden coder, and create_code
+        given the name of a code she owns, name her, as PRIVACY.md now
+        says."""
+        folder = self._project(tmp_path)
+
+        async def add(client):
+            await client.call_tool("import_text_file", {
+                "filename": "int1.txt", "content": TEXT_1})
+            await client.call_tool("create_case", {"name": "P1"})
+            for applies_to in ("case", "file"):
+                await client.call_tool("create_attribute_type", {
+                    "name": f"Age {applies_to}", "applies_to": applies_to,
+                    "value_type": "numeric"})
+            await client.call_tool("set_attribute", {
+                "target_type": "case", "target_id": 1,
+                "attribute_name": "Age case", "value": "30"})
+            await client.call_tool("set_attribute", {
+                "target_type": "file", "target_id": 1,
+                "attribute_name": "Age file", "value": "30"})
+        host_session(add)
+        with closing(sqlite3.connect(str(folder / "data.qda"))) as conn, \
+                conn:
+            conn.execute("update attribute set owner = 'Alice'")
+
+        async def read(client):
+            async def call(name, args):
+                return json.loads(text_of(await client.call_tool(name,
+                                                                 args)))
+            return (await call("get_case_attributes", {"case_id": 1}),
+                    await call("get_file_attributes", {"file_id": 1}),
+                    await call("create_code", {"name": "Alices code"}))
+
+        case_values, file_values, existing = host_session(read)
+        assert "Alice" in json.dumps(case_values)
+        assert "Alice" in json.dumps(file_values)
+        assert existing.get("created") is False
+        assert "Alice" in json.dumps(existing)
 
 
 # ---------------------------------------------------------------------------

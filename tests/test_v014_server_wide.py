@@ -1126,9 +1126,10 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
             assert conn.execute("select count(*) from journal"
                                 ).fetchone()[0] == 0
 
+    # (a third case, the rationale, went with apply_coded_segments in
+    # v0.14's coding-loop fix round 2: no rationale is written any more)
     @pytest.mark.parametrize("tool", ["apply_codings",
-                                      "create_proposed_codes",
-                                      "create_proposed_codes, rationale"])
+                                      "create_proposed_codes"])
     def test_a_session_from_before_the_rule_is_refused_before_the_backup(
             self, tmp_path, tool):
         """A suggestion's reasoning or a proposal's definition recorded
@@ -1159,14 +1160,9 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
         if tool == "apply_codings":
             session.get_suggestion_by_guid(ids["suggestion"]).reasoning = \
                 "public ##### the old private reason"
-        elif tool == "create_proposed_codes":
+        else:
             session.get_proposal_by_guid(ids["proposal"]).memo = \
                 "##### an old definition"
-        else:
-            # written into each evidence coding's memo (fix round 1)
-            session.get_proposal_by_guid(ids["proposal"]).rationale = \
-                "Emerges from P3 ##### private aside"
-            arguments["apply_coded_segments"] = True
         server.session_manager.save_session(session)
         before = work_tree(tmp_path)
 
@@ -2469,8 +2465,7 @@ def test_a_replace_of_items_already_in_the_session_replaces_as_before(
 def test_a_null_note_is_stored_empty_never_as_none(tmp_path):
     """Fix round 2 (QA's m2): a reasoning, a rationale or a definition
     sent as null is empty; no memo the project holds reads "None" after
-    the suggestion is applied and the proposal created with its
-    evidence."""
+    the suggestion is applied and the proposal created."""
     server._apply_toolset("lifecycle")
 
     async def drive(client):
@@ -2496,7 +2491,7 @@ def test_a_null_note_is_stored_empty_never_as_none(tmp_path):
             "coding_session_id": session,
             "approve": [proposed["recorded"][0]["guid"]]})
         created = await call("create_proposed_codes", {
-            "coding_session_id": session, "apply_coded_segments": True})
+            "coding_session_id": session})
         return ids["folder"], created
 
     folder, created = host_session(drive)
@@ -2504,5 +2499,7 @@ def test_a_null_note_is_stored_empty_never_as_none(tmp_path):
     with closing(sqlite3.connect(str(Path(folder) / "data.qda"))) as conn, conn:
         memos = [row[0] for table in ("code_text", "code_name")
                  for row in conn.execute(f"select memo from {table}")]
-    assert len(memos) >= 4
+    # the applied coding's, and the codes' (the created code writes no
+    # passage since v0.14's coding-loop fix round 2)
+    assert len(memos) >= 3
     assert not any("None" in (memo or "") for memo in memos), memos

@@ -108,10 +108,10 @@ class TestInductiveLoop:
         # approve + create WITHOUT applying evidence
         server.update_proposal_status(sid, approve=[g1])
         before = _one(qualcoder_db_path, "SELECT COUNT(*) FROM code_text")[0]
-        cr = json.loads(server.create_proposed_codes(sid,
-                                                     apply_coded_segments=False))
+        cr = json.loads(server.create_proposed_codes(sid))
         assert cr["success"] is True, cr
-        assert cr["codings_applied"] == 0
+        # codes only since v0.14 (the apply_coded_segments option is gone)
+        assert "codings_applied" not in cr
         assert _one(qualcoder_db_path,
                     "SELECT COUNT(*) FROM code_text")[0] == before  # A-Q4 honored
         row = _one(qualcoder_db_path,
@@ -133,8 +133,10 @@ class TestInductiveLoop:
         assert "CODINGS APPLIED" in server.apply_codings(sid,
                                                          create_backup=False)
 
-    def test_create_with_apply_coded_segments_true(self, setup_server,
-                                                   qualcoder_db_path):
+    def test_evidence_comes_back_to_suggest_not_coded(self, setup_server,
+                                                      qualcoder_db_path):
+        # v0.14: creating the codes codes no passage; the evidence comes
+        # back as example_passages, suggested and decided one by one
         sid = _sid()
         pp = json.loads(server.propose_codes(sid, [
             {"name": "Evidence code", "example_segments": [
@@ -142,11 +144,21 @@ class TestInductiveLoop:
                 {"file_id": 1, "segment_text": "I cope by exercising"}]}]))
         g = pp["recorded"][0]["guid"]
         server.update_proposal_status(sid, approve=[g])
-        cr = json.loads(server.create_proposed_codes(
-            sid, apply_coded_segments=True))
-        assert cr["success"] is True and cr["codings_applied"] == 2
+        before = _one(qualcoder_db_path, "SELECT COUNT(*) FROM code_text")[0]
+        cr = json.loads(server.create_proposed_codes(sid))
+        assert cr["success"] is True
+        assert _one(qualcoder_db_path,
+                    "SELECT COUNT(*) FROM code_text")[0] == before
+        passages = cr["example_passages"]
+        assert [x["segment_text"] for x in passages] == [
+            FULLTEXT[24:55], "I cope by exercising"]
         cid = cr["created_codes"][0]["code_id"]
-        # P1 invariant on the applied evidence
+        guids = [_record_one(sid, 1, x["segment_text"],
+                             code="Evidence code")["guid"] for x in passages]
+        server.update_suggestion_status(sid, approve=guids)
+        assert "CODINGS APPLIED" in server.apply_codings(sid,
+                                                         create_backup=False)
+        # P1 invariant on the applied passages
         bad = _one(qualcoder_db_path,
                    "SELECT COUNT(*) FROM code_text ct JOIN source s ON ct.fid=s.id "
                    "WHERE ct.cid=? AND ct.seltext != "

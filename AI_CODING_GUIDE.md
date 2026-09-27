@@ -191,7 +191,9 @@ README.)
 records code proposals discovered in the data, you review and refine
 them (`review_proposals`, `update_proposal`, `merge_proposals`,
 `update_proposal_status`), and `create_proposed_codes` writes the
-approved ones to the codebook. The codebook tools (`create_code`,
+approved ones to the codebook, as codes only; Claude then suggests their
+passages one by one, the proposals' example passages first, for you to
+decide like any suggestion. The codebook tools (`create_code`,
 `rename_code`, `recolor_code`, `move_code_to_category`,
 `create_category`, `merge_codes`, `delete_code`, ...) edit it directly.
 

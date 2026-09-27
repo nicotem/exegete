@@ -302,7 +302,13 @@ class ProposedCode:
             color=data.get("color"),
             category=data.get("category"),
             status=data.get("status", "pending"),
-            example_segments=data.get("example_segments", []),
+            # Shorter and longer spans are no longer stored on proposal
+            # passages (owner ruling 25, question 8): a session file
+            # written earlier loses them when it is next saved
+            example_segments=[
+                {k: v for k, v in seg.items() if k != "span_alternatives"}
+                if isinstance(seg, dict) else seg
+                for seg in (data.get("example_segments") or [])],
             collides_with=data.get("collides_with"),
             created_code_id=data.get("created_code_id"),
             guid=data.get("guid"),

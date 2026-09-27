@@ -551,7 +551,7 @@ class TestC7FingerprintRace:
         assert "error" in out, out
         assert _one(p, "SELECT COUNT(*) FROM annotation WHERE memo='stale span'")[0] == 0
 
-    def test_create_proposed_codes_race_all_or_nothing(self, tmp_path,
+    def test_create_proposed_codes_writes_no_passage_in_a_race(self, tmp_path,
                                                        monkeypatch):
         p = self._p(tmp_path)
         sid = json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
@@ -565,14 +565,18 @@ class TestC7FingerprintRace:
             monkeypatch, p,
             "UPDATE source SET fulltext = fulltext || ? WHERE id = 1",
             (self.TAIL,))
-        out = json.loads(server.create_proposed_codes(
-            sid, apply_coded_segments=True))
+        out = json.loads(server.create_proposed_codes(sid))
         monkeypatch.undo()
-        assert "error" in out, out
-        # ALL-or-nothing: not even the code row survives
-        assert _one(p, "SELECT COUNT(*) FROM code_name WHERE name='Race code'")[0] == 0
-        info = json.loads(server.get_coding_session_info(sid))
-        assert all(pc["status"] != "created" for pc in info["proposed_codes"])
+        # v0.14: creating the codes codes no passage (the option that wrote
+        # the evidence is gone), so a text changed during the backup cannot
+        # shift a coding here; the passage is checked again when it is
+        # suggested with record_suggestions
+        assert out.get("success") is True, out
+        cid = _one(p, "SELECT cid FROM code_name WHERE name='Race code'")[0]
+        assert _one(p, "SELECT COUNT(*) FROM code_text WHERE cid=?",
+                    (cid,))[0] == 0
+        assert [x["segment_text"] for x in out["example_passages"]] == [
+            "I cope by exercising"]
 
     def test_in_place_rewrite_same_length_different_bytes_caught(
             self, tmp_path, monkeypatch):

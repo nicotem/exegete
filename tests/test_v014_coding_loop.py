@@ -762,14 +762,14 @@ class TestAProposalsApprovalBindsIt:
         assert "final" in jcall("update_proposal", coding_session_id=sid,
                                 proposal_guid=source, memo="x")["error"]
         created = jcall("create_proposed_codes", coding_session_id=sid,
-                        apply_coded_segments=True, create_backup=False)
+                        create_backup=False)
         assert [c["name"] for c in created["created_codes"]] == ["Isolation"]
-        assert created["codings_applied"] == 2
         assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
                         "WHERE name = 'Mentoring'")
-        cope = rows(qualcoder_db_path, "SELECT cid FROM code_text WHERE "
-                    "seltext = ?", (COPE,))
-        assert len([r for r in cope if r["cid"] != 2]) == 1   # written once
+        # the merged evidence is offered once, under the code it went into
+        assert [(x["code_name"], x["segment_text"])
+                for x in created["example_passages"]] == [
+            ("Isolation", STRESSED), ("Isolation", COPE)]
 
     def test_a_merged_proposal_cannot_be_merged_again(self, setup_server):
         sid = new_session()
@@ -906,14 +906,16 @@ class TestOnlyApprovedItemsAreWritten:
         call("update_proposal_status", coding_session_id=sid,
              approve=[yes], reject=[no])
         created = jcall("create_proposed_codes", coding_session_id=sid,
-                        apply_coded_segments=True, create_backup=False)
+                        create_backup=False)
         assert created.get("success"), created
         names = {r["name"] for r in rows(qualcoder_db_path,
                                          "SELECT name FROM code_name")}
         assert names == {"Stress", "Coping", "Yes code"}
-        written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
-                       "WHERE owner = 'AI Coding Assistant'")
-        assert written == [{"seltext": STRESSED}]
+        assert [(x["code_name"], x["segment_text"])
+                for x in created["example_passages"]] == [
+            ("Yes code", STRESSED)]
+        assert rows(qualcoder_db_path, "SELECT seltext FROM code_text "
+                    "WHERE owner = 'AI Coding Assistant'") == []
 
 
 # =============================================================================
@@ -1386,10 +1388,11 @@ class TestFixRound2TheReading:
 
     def test_the_note_comes_at_the_first_review_only(self, setup_server):
         sid = new_session()
-        g = record(sid, item())["recorded"][0]["guid"]
+        g = record(sid, item(), item(COPE, "Coping"))["recorded"][0]["guid"]
         first = call("review_suggestions", coding_session_id=sid)
         assert server.READING_NOTE in first
         assert "follows from the lens chosen" in first
+        # one decided, one still pending: no longer the first review
         call("update_suggestion_status", coding_session_id=sid, approve=[g])
         later = call("review_suggestions", coding_session_id=sid)
         assert server.READING_NOTE not in later
@@ -1547,3 +1550,89 @@ class TestFixRound2StartingASession:
         vocab = json.loads(server.explain_ai_coding_tools(
             "methodology_vocabulary"))
         assert not any("Code all" in e["request"] for e in vocab["examples"])
+
+
+class TestFixRound2CodesOnly:
+    """Owner ruling 25, question 6, with the reading's item 19: creating
+    proposed codes creates codes only; the passages are suggested one by
+    one in the same session, the example passages first. Question 8: the
+    proposal passages keep no stored shorter and longer spans."""
+
+    @staticmethod
+    def _approved(sid, evidence):
+        out = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": "Isolation", "memo": "def", "rationale": "why",
+             "example_segments": evidence}])
+        guid = out["recorded"][0]["guid"]
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[guid])
+        return guid
+
+    def test_the_option_that_wrote_passages_is_refused_by_name(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        self._approved(sid, [{"file_id": 1, "segment_text": STRESSED}])
+        out = jcall("create_proposed_codes", coding_session_id=sid,
+                    apply_coded_segments=True, create_backup=False)
+        assert "no argument 'apply_coded_segments'" in out["error"]
+        assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
+                        "WHERE name = 'Isolation'")
+
+    def test_codes_only_and_the_passages_to_suggest_first(
+            self, setup_server, qualcoder_db_path):
+        second = rows(qualcoder_db_path,
+                      "SELECT id, fulltext FROM source WHERE id != 1")[0]
+        words = second["fulltext"][:20]
+        sid = new_session()                          # file 1 only
+        self._approved(sid, [{"file_id": 1, "segment_text": STRESSED},
+                             {"file_id": second["id"],
+                              "segment_text": words}])
+        before = rows(qualcoder_db_path, "SELECT * FROM code_text")
+        out = jcall("create_proposed_codes", coding_session_id=sid,
+                    create_backup=False)
+        assert out["success"] is True
+        assert "no passage is coded yet" in out["message"]
+        assert rows(qualcoder_db_path, "SELECT * FROM code_text") == before
+        inside, outside = out["example_passages"]
+        assert inside["segment_text"] == STRESSED
+        assert "outside_session" not in inside
+        assert outside["file_id"] == second["id"]
+        assert outside["outside_session"] is True
+        assert "record_suggestions, the example_passages first" \
+            in out["next_step"]
+        assert "1 example passage(s) are in files this session does not " \
+            "cover" in out["next_step"]
+        # the session that covers file 1 cannot write into the other file
+        refused = record(sid, item(words, "Isolation",
+                                   file_id=second["id"]))
+        assert refused["recorded_count"] == 0
+
+    def test_the_texts_say_codes_only(self):
+        tools = server.mcp._tool_manager._tools
+        text = " ".join(tools["create_proposed_codes"].description.split())
+        assert "no passage is coded" in text
+        assert "example passages first" in text
+        assert "apply_coded_segments" not in \
+            tools["create_proposed_codes"].parameters["properties"]
+        for tool in tools.values():
+            assert "apply_coded_segments" not in tool.description
+
+    def test_proposal_passages_keep_no_shorter_or_longer_spans(
+            self, setup_server):
+        sid = new_session()
+        guid = self._approved(sid, [{"file_id": 1,
+                                     "segment_text": STRESSED}])
+        data = json.loads(session_file(sid).read_text())
+        (seg,) = data["proposed_codes"][0]["example_segments"]
+        assert "span_alternatives" not in seg
+        # a session file written earlier loses them when next saved
+        seg["span_alternatives"] = [{"kind": "longer", "start": 0,
+                                     "end": len(FULLTEXT)}]
+        session_file(sid).write_text(json.dumps(data))
+        session = server.session_manager.load_session(sid)
+        server.session_manager.save_session(session)
+        data = json.loads(session_file(sid).read_text())
+        assert "span_alternatives" not in \
+            data["proposed_codes"][0]["example_segments"][0]
+        assert session.get_proposal_by_guid(guid).example_segments[0][
+            "segment_text"] == STRESSED

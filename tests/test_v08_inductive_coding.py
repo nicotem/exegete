@@ -7,7 +7,8 @@ update_proposal / merge_proposals refine them, update_proposal_status
 records the user's decisions, and create_proposed_codes performs the one
 atomic backed-up write. Covers: session-only guarantees, collision
 flag-then-block, refuse-on-missing-category, evidence validation with
-authoritative slices, apply_coded_segments default-off, created
+authoritative slices, codes only (v0.14: the evidence comes back to
+be suggested), created
 immutability, and the lock gate.
 """
 
@@ -371,9 +372,9 @@ class TestA6CreateProposedCodes:
 
     def test_default_creates_codes_only(self, setup_server,
                                         qualcoder_db_path):
-        """apply_coded_segments defaults to False: codes land, codings
-        do NOT, palette colour fills in, category is honoured, the
-        proposal flips to created, and a backup is made."""
+        """Codes land, codings do NOT (only mode since v0.14), palette
+        colour fills in, category is honoured, the proposal flips to
+        created, and a backup is made."""
         sid = _make_session(setup_server)
         guid = _propose_one(sid, category="Category A")
         server.update_proposal_status(sid, approve=[guid])
@@ -381,7 +382,7 @@ class TestA6CreateProposedCodes:
 
         out = json.loads(server.create_proposed_codes(sid))
         assert out["success"] is True
-        assert out["codings_applied"] == 0
+        assert "codings_applied" not in out
         assert "backup_path" in out
         assert "Deadline pressure" in _code_names(qualcoder_db_path)
         assert _coding_count(qualcoder_db_path) == codings_before
@@ -400,23 +401,21 @@ class TestA6CreateProposedCodes:
         assert p.status == "created"
         assert p.created_code_id == out["created_codes"][0]["code_id"]
 
-    def test_apply_coded_segments_writes_evidence(self, setup_server,
-                                                  qualcoder_db_path):
+    def test_the_evidence_is_listed_to_suggest(self, setup_server,
+                                               qualcoder_db_path):
+        """v0.14: the evidence is not written; it comes back as the
+        passages to suggest first, one by one, in the same session."""
         sid = _make_session(setup_server)
         guid = _propose_one(sid)
         server.update_proposal_status(sid, approve=[guid])
-        out = json.loads(server.create_proposed_codes(
-            sid, apply_coded_segments=True))
-        assert out["codings_applied"] == 1
-        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
-        row = conn.execute(
-            "SELECT seltext, pos0, pos1, owner, memo FROM code_text "
-            "WHERE cid = ?", (out["created_codes"][0]["code_id"],)).fetchone()
-        conn.close()
-        assert row[0] == "I feel stressed about deadlines"
-        assert (row[1], row[2]) == (24, 55)
-        assert row[3] == "AI Coding Assistant"
-        assert "Recurs across the interview" in row[4]
+        before = _coding_count(qualcoder_db_path)
+        out = json.loads(server.create_proposed_codes(sid))
+        assert _coding_count(qualcoder_db_path) == before
+        (passage,) = out["example_passages"]
+        assert passage["segment_text"] == "I feel stressed about deadlines"
+        assert (passage["start_pos"], passage["end_pos"]) == (24, 55)
+        assert passage["code_id"] == out["created_codes"][0]["code_id"]
+        assert "record_suggestions" in out["next_step"]
 
     def test_collision_blocks_atomically(self, setup_server,
                                          qualcoder_db_path):
@@ -474,10 +473,11 @@ class TestA6CreateProposedCodes:
         assert "does not exist" in out["failures"][0]["reason"]
         assert "create_category" in out["failures"][0]["reason"]
 
-    def test_evidence_drift_refused_when_applying(self, setup_server,
-                                                  qualcoder_db_path):
-        """File text changed after approval: creation with
-        apply_coded_segments must refuse, not write shifted codings."""
+    def test_evidence_drift_does_not_stop_the_codes(self, setup_server,
+                                                    qualcoder_db_path):
+        """File text changed after approval: the codes are created all the
+        same (no passage is written here); the passage is checked again
+        when it is suggested."""
         sid = _make_session(setup_server)
         guid = _propose_one(sid)
         server.update_proposal_status(sid, approve=[guid])
@@ -486,12 +486,10 @@ class TestA6CreateProposedCodes:
                      ("EDITED. " + FULLTEXT,))
         conn.commit()
         conn.close()
-        out = json.loads(server.create_proposed_codes(
-            sid, apply_coded_segments=True))
-        assert "no longer" in out["failures"][0]["reason"]
-        # codes-only creation is unaffected by drift
+        before = _coding_count(qualcoder_db_path)
         out = json.loads(server.create_proposed_codes(sid))
         assert out["success"] is True
+        assert _coding_count(qualcoder_db_path) == before
 
     def test_lock_gate_refuses(self, setup_server, qualcoder_db_path):
         sid = _make_session(setup_server)

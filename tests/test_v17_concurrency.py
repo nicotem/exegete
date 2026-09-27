@@ -136,10 +136,12 @@ class TestT18AnnotationPrecondition:
 
 
 class TestT18CreateProposedCodesPrecondition:
+    """Since v0.14 creating the codes writes no passage (the option that
+    wrote the evidence is gone), so a text edited during the write cannot
+    shift a coding here; the passages are checked when suggested."""
 
-    def test_editor_race_rolls_back_proposal_codings(self, setup_server,
-                                                     qualcoder_db_path,
-                                                     monkeypatch):
+    def test_editor_race_writes_no_passage(self, setup_server,
+                                           qualcoder_db_path, monkeypatch):
         sid = _make_session(setup_server)
         out = json.loads(server.propose_codes(sid, [{
             "name": "Deadline pressure",
@@ -162,15 +164,15 @@ class TestT18CreateProposedCodesPrecondition:
 
         monkeypatch.setattr(QualcoderDatabase, "add_code", racing_add_code)
         out = json.loads(server.create_proposed_codes(
-            sid, apply_coded_segments=True, create_backup=False))
-        assert "changed while this write" in out["error"]
+            sid, create_backup=False))
+        assert out.get("success") is True, out
         after = _counts(qualcoder_db_path)
-        assert after == before                # code AND codings rolled back
+        assert after["code_text"] == before["code_text"]  # no coding
+        assert after["code_name"] == before["code_name"] + 1
         assert server.db.read_only is True
         assert server.db.conn.in_transaction is False
-        # proposal not burned: still approved, retryable
         session = server.session_manager.load_session(sid)
-        assert session.get_proposal_by_guid(guid).status == "approved"
+        assert session.get_proposal_by_guid(guid).status == "created"
 
 
 class TestT17DocsPosture:

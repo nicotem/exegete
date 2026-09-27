@@ -7110,8 +7110,6 @@ def _validate_proposal_evidence(ro_db, items, file_cache):
             "end_pos": end,
             "segment_text": fulltext[start:end],   # authoritative slice
             "positions_corrected": corrected,
-            "span_alternatives": _compute_span_alternatives(
-                fulltext, start, end),
         })
     return kept, rejected, unsafe_files
 
@@ -10599,9 +10597,8 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         if not isinstance(item, dict):
             rejected.append({"index": idx, "reason": "each proposal must be an object"})
             continue
-        # The definition becomes the created code's memo, and the
-        # rationale the memo of each evidence coding that
-        # create_proposed_codes(apply_coded_segments=true) writes (v0.14)
+        # The definition becomes the created code's memo; the rationale
+        # stays in the session (text either way, v0.14)
         not_text = next((key for key in ("memo", "definition", "rationale")
                          if item.get(key) is not None
                          and not isinstance(item.get(key), str)), None)
@@ -11158,28 +11155,22 @@ def update_proposal_status(coding_session_id: str,
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_proposed_codes(coding_session_id: str,
-                          apply_coded_segments: bool = False,
                           create_backup: bool = True) -> str:
     """Create the APPROVED code proposals in the project codebook.
 
-    THIS WRITES TO THE DATABASE. This is the write step of the inductive
-    loop. Each approved proposal becomes a real code (palette colour if
-    none chosen, placed in its category). With apply_coded_segments=true
-    the proposal's evidence spans are ALSO written as codings under the
-    new code; the default (false) creates the codes only, so the user can
-    review them before any codings land; the normal
-    record_suggestions -> apply_codings loop can then apply the
-    now-existing codes.
+    THIS WRITES TO THE DATABASE: each approved proposal becomes a code
+    (palette colour if none chosen, placed in its category), and no
+    passage is coded. Then suggest the passages one by one in the same
+    session (record_suggestions), each new code's example passages first
+    (the answer lists them), for the researcher to decide.
 
     Every approved proposal is validated BEFORE the backup and the write:
     the name must still be unique against the live codebook (a name that
     matches an existing code exactly, or once letter case, spacing and
     Unicode form are ignored, refuses the batch; rename the proposal
-    first), the category must exist, and (when applying) every evidence
-    span must still match the file text. Any failure -> nothing is
-    written. Only APPROVED proposals are created: a rejected one is
-    created only if it is approved again, and a merged one never (its
-    evidence was merged into the proposal that absorbed it).
+    first) and the category must exist. Any failure -> nothing is
+    written. Only APPROVED proposals are created: a rejected one only if
+    it is approved again, a merged one never.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -11187,16 +11178,14 @@ def create_proposed_codes(coding_session_id: str,
 
     Args:
         coding_session_id: The session with approved proposals
-        apply_coded_segments: Also write the evidence spans as codings
-                              (default: False, codes only)
         create_backup: Create a timestamped backup before writing (default True)
 
     Returns:
         JSON with the created codes (proposal guid -> real code id, plus
         the name and the colour as stored, and color_requested /
-        color_snapped when the proposal carried a colour), codings applied
-        (if any), and per-proposal failures. If it contains
-        `position_safety_warning`, relay it to the user.
+        color_snapped when the proposal carried a colour),
+        example_passages (to suggest first; outside_session marks one in
+        a file this session does not cover), and per-proposal failures.
     """
     # Bridge fix: some MCP middleware strips arguments named
     # 'session_id' (reserved for its own routing); the tool
@@ -11227,8 +11216,6 @@ def create_proposed_codes(coding_session_id: str,
     cats = ro_db.list_categories()
     failures = []
     batch_names: set = set()
-    file_cache: Dict[int, Optional[Dict[str, Any]]] = {}
-    unsafe_files: Dict[int, str] = {}
     category_ids: Dict[str, int] = {}
 
     for p in approved:
@@ -11241,20 +11228,9 @@ def create_proposed_codes(coding_session_id: str,
         key = name_key(p.name)
         collision = _code_name_collisions(p.name)
         marker = private_marker_refusal(p.memo, "its definition (memo)")
-        rationale_marker = (private_marker_refusal(p.rationale,
-                                                   "its rationale")
-                            if apply_coded_segments else None)
         if marker is not None:
             # a session recorded before v0.14 refused the marker
             problem = marker + " Set it again with update_proposal."
-        elif rationale_marker is not None:
-            # The rationale becomes the memo of every evidence coding
-            # written with apply_coded_segments (a session recorded before
-            # v0.14 could hold the marker in it); update_proposal cannot
-            # change a rationale
-            problem = rationale_marker + (
-                " Create the code without apply_coded_segments, or propose "
-                "it again with a rationale that holds no marker.")
         elif collision:
             problem = (f"name collides with existing code '{collision}'; "
                        f"rename the proposal (update_proposal) or apply the "
@@ -11283,22 +11259,6 @@ def create_proposed_codes(coding_session_id: str,
                            f"it first with create_category")
             else:
                 category_ids[p.category] = match["id"]
-        if problem is None and apply_coded_segments:
-            for seg in p.example_segments:
-                fid = seg["file_id"]
-                if fid not in file_cache:
-                    file_cache[fid] = ro_db.get_file_content(fid)
-                fc = file_cache[fid]
-                fulltext = (fc or {}).get("content") or ""
-                if fc is None or not fulltext:
-                    problem = f"evidence file {fid} no longer exists or has no text"
-                    break
-                if fulltext[seg["start_pos"]:seg["end_pos"]] != seg["segment_text"]:
-                    problem = (f"evidence in '{seg['file_name']}' no longer "
-                               f"matches the file text; re-propose or drop it")
-                    break
-                if fid not in unsafe_files and not db_position_safe(fulltext):
-                    unsafe_files[fid] = fc["name"]
         if problem is not None:
             failures.append({"guid": p.guid, "name": p.name, "reason": problem})
         else:
@@ -11317,7 +11277,6 @@ def create_proposed_codes(coding_session_id: str,
 
     def _op(wdb):
         created = []
-        codings_applied = 0
         for p in approved:
             stored_name = normalize_name(p.name)
             cid = wdb.add_code(
@@ -11348,35 +11307,10 @@ def create_proposed_codes(coding_session_id: str,
                      "color": stored_color}    # the colour as stored
             entry.update(_color_disclosure(p.color, stored_color))
             created.append(entry)
-            if apply_coded_segments:
-                for seg in p.example_segments:
-                    memo = (f"{p.rationale}\n\n[AI proposed code]"
-                            if p.rationale else "[AI proposed code]")
-                    wdb.add_coding(
-                        file_id=seg["file_id"],
-                        code_id=cid,
-                        start_pos=seg["start_pos"],
-                        end_pos=seg["end_pos"],
-                        selected_text=seg["segment_text"],
-                        owner=owner,
-                        memo=memo,
-                        auto_commit=False,
-                    )
-                    codings_applied += 1
-        if apply_coded_segments:
-            # C7: re-verify each evidence file's text inside the write
-            # transaction against the pre-validation snapshot
-            for fid, fc in sorted(file_cache.items()):
-                validated_text = (fc or {}).get("content") or ""
-                if validated_text:
-                    wdb.verify_fulltext_unchanged(
-                        fid, wdb.fingerprint_of_text(validated_text))
         return {"success": True,
-                "message": f"Created {len(created)} code(s)"
-                           + (f" and applied {codings_applied} coding(s)"
-                              if apply_coded_segments else ""),
-                "created_codes": created,
-                "codings_applied": codings_applied}
+                "message": f"Created {len(created)} code(s); no passage "
+                           f"is coded yet",
+                "created_codes": created}
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="no codes were created")
@@ -11391,15 +11325,36 @@ def create_proposed_codes(coding_session_id: str,
         session.last_modified = datetime.now().isoformat()
         session_manager.save_session(session)
         result["proposal_statistics"] = session.proposal_statistics()
+        # The codes only (owner ruling 25, question 6): the passages are
+        # suggested one by one in this session, the proposals' own
+        # example passages first (the Saldana reading, item 19), each
+        # checked and decided like any suggestion
+        passages, outside = [], 0
+        for p in approved:
+            for seg in p.example_segments:
+                entry = {"code_name": normalize_name(p.name),
+                         "code_id": p.created_code_id,
+                         "file_id": seg["file_id"],
+                         "file_name": seg.get("file_name"),
+                         "start_pos": seg["start_pos"],
+                         "end_pos": seg["end_pos"],
+                         "segment_text": seg["segment_text"]}
+                if session.outside_scope(seg["file_id"]) is not None:
+                    entry["outside_session"] = True
+                    outside += 1
+                passages.append(entry)
+        result["example_passages"] = passages
+        result["next_step"] = (
+            "Suggest the passages for the new codes one by one in this "
+            "session with record_suggestions, the example_passages first, "
+            "each with its reading and reason, for the researcher to "
+            "decide." + (f" {outside} example passage(s) are in files this "
+                         f"session does not cover (outside_session); a "
+                         f"session for those files can suggest them."
+                         if outside else ""))
         name_change = _ai_coder_name_change_warning(session, owner)
         if name_change:
             result["ai_coder_name_warning"] = name_change
-        if unsafe_files:
-            result["position_safety_warning"] = (
-                f"File(s) {sorted(unsafe_files.values())} are position-unsafe "
-                f"(emoji/CRLF); the applied codings may render shifted in "
-                f"QualCoder's editor. Relay this to the user."
-            )
     return json.dumps(result, indent=2)
 
 

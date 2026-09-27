@@ -726,6 +726,17 @@ search or a silent limit.
   reading rests on it, and to say what it does not cover; when the memo
   is empty it says to ask the researcher what the study asks. The
   private part of the memo is never sent.
+- **Creating proposed codes creates codes only** (owner ruling 25).
+  `create_proposed_codes` loses `apply_coded_segments`, which wrote a
+  proposal's evidence as codings, under the rationale, with no reading
+  and no decision on each passage, and into any file, even one outside
+  the session. The answer now lists the approved proposals' passages
+  (`example_passages`) and says to suggest them one by one in the same
+  session, these first; each is then checked, read, reasoned and
+  decided like any suggestion, and a passage in a file the session does
+  not cover is marked (`outside_session`). A proposal's passages no
+  longer store shorter and longer spans, which nothing showed; a session
+  file that holds them loses them when it is next saved.
 - **A reading stays with the code it was given for.** `edit_suggestion`
   takes `reading`. Moving a suggestion to another code without it
   clears the reading (the review shows "not given (cleared when the
@@ -841,12 +852,11 @@ server-wide changes:
   attribute type's or imported file's memo, a proposed code's definition
   or rationale, a suggestion's reasoning. Send the text without the
   marker.
-- **A session recorded under 0.13 whose reasoning, definition or
-  rationale holds `#####`** is refused whole by `apply_codings` or
-  `create_proposed_codes` (the rationale only with
-  `apply_coded_segments`), before any backup, until that suggestion is
-  recorded again or that code proposed again (or, for a rationale,
-  created without `apply_coded_segments`).
+- **A session recorded under 0.13 whose reasoning or definition holds
+  `#####`** is refused whole by `apply_codings` or
+  `create_proposed_codes`, before any backup, until that suggestion is
+  recorded again or that code proposed again. (A rationale is no longer
+  written to the project at all; see the AI coding loop below.)
 - **A reasoning, a definition, a memo or a rationale that is not text**
   is refused, item by item, in `record_suggestions` and `propose_codes`;
   a null is stored as empty (it used to be the word "None").
@@ -996,6 +1006,12 @@ The AI coding loop:
   with a blank one, starts no session and answers an error that names
   the three questions to ask; the default "Code all relevant segments"
   is gone.
+- **`create_proposed_codes` no longer takes `apply_coded_segments`.** A
+  call that sends it is refused by name and creates nothing; send it
+  without, then record the listed `example_passages` with
+  `record_suggestions`. The answer loses `codings_applied` and
+  `position_safety_warning` (it writes no passage) and gains
+  `example_passages` and `next_step`.
 - **Memos already in your projects are never rewritten.** A coding
   applied by an earlier release keeps its "[AI Confidence: 0.85]" line;
   remove it in QualCoder if you do not want it in the record.

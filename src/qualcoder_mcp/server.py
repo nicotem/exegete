@@ -3125,6 +3125,17 @@ def select_project(project_path: str) -> str:
         logger.error("Failed to select project: %s", error_label(e))
         answer = _select_project_refusal(project_path,
                                          isinstance(e, DatabaseOpenError))
+    except OSError as e:
+        # The system refused the folder (no permission to read it, say):
+        # answered here, with the selection sentence below, rather than
+        # by the tool guard's fixed text alone (fix round 1). The kind
+        # only in the log: the message is the path.
+        logger.error("File system error while opening project: %s",
+                     error_label(e))
+        answer = {"success": False,
+                  "error": ("The project could not be read: the system "
+                            "refused it (check the folder's permissions). "
+                            + FILE_SYSTEM_ERROR)}
     except sqlite3.Error as e:
         # e.g. "database disk image is malformed" surfacing mid-read (F3)
         logger.error("SQLite error while opening project: %s",

@@ -2089,3 +2089,29 @@ class TestTheMarkerChecksHoldForEveryShape:
         assert answer["replaced_pending"] == 0
         assert answer["pending_kept"] == 1
         assert path.read_bytes() == before
+
+
+@pytest.mark.skipif(os.name == "nt" or (hasattr(os, "geteuid")
+                                        and os.geteuid() == 0),
+                    reason="needs POSIX permissions and a user who "
+                           "cannot read past them")
+def test_an_unreadable_project_folder_ends_with_the_selection(
+        setup_server, tmp_path):
+    """Fix round 1 (QA m1): a project folder the server may not read
+    answers through select_project's own refusal, with the sentence on
+    what stays selected."""
+    blocked = tmp_path / "Blocked.qda"
+    blocked.mkdir()
+    (blocked / "data.qda").write_bytes(b"")
+    blocked.chmod(0)
+    try:
+        answer = json.loads(text_of(host_session(
+            lambda client: client.call_tool(
+                "select_project", {"project_path": str(blocked)}))))
+    finally:
+        blocked.chmod(0o755)
+    assert answer["success"] is False
+    assert answer["error"].endswith(
+        "The previously selected project, test_project, is still "
+        "selected.")
+    assert answer["selected_project"] == "test_project"

@@ -988,8 +988,9 @@ class TestTextsThatSentTheAssistantNowhere:
     def test_the_methods_notes_say_the_memo_must_be_read(self):
         text = " ".join(server.METHODS_GUIDANCE.split())
         assert "once, for every future session" not in text
-        assert ("The project memo reaches a session only when you read "
-                "it") in text
+        # fix round 2 of the coding loop: the session's answer carries it
+        assert ("analyze_for_coding's answer carries the project memo's "
+                "public part (project_memo)") in text
 
     def test_readme_no_longer_says_a_journal_entry_is_updated(self):
         readme = (Path(__file__).parent.parent / "README.md").read_text(

@@ -1317,3 +1317,41 @@ class TestFixRoundTextsTrue:
                           .read_text(encoding="utf-8").split())
         assert ("an approved target returns to pending when it gains "
                 "evidence") in readme
+
+
+# =============================================================================
+# FIX ROUND 2 (the owner's rulings 25 and 26, the Saldaña reading, and the
+# re-verification's minors)
+# =============================================================================
+
+class TestFixRound2TheStudyAtTheStart:
+    """The project memo's public part is the study in the researcher's own
+    words, handed to the session as QualCoder 4.0 hands it to its own
+    assistant; never the text after the private marker."""
+
+    @staticmethod
+    def _memo(db_path, memo):
+        _sql(db_path, "UPDATE project SET memo = ?", (memo,))
+
+    def test_the_public_part_comes_with_the_session(
+            self, setup_server, qualcoder_db_path):
+        self._memo(qualcoder_db_path, "Nurses' burnout, read through job "
+                   "demands and resources.\n#####my doubts about P3")
+        out = jcall("analyze_for_coding", file_ids=[1],
+                    instruction="topics; whole sentences; one code each")
+        assert out["project_memo"] == ("Nurses' burnout, read through job "
+                                       "demands and resources.")
+        assert "doubts" not in json.dumps(out)
+        assert "IN THE RESEARCHER'S OWN WORDS" in out["instructions"]
+        assert "name the concept in the reason" in out["instructions"]
+
+    @pytest.mark.parametrize("memo", ["", "#####all of it private", None])
+    def test_an_empty_memo_asks_the_researcher(self, setup_server,
+                                               qualcoder_db_path, memo):
+        self._memo(qualcoder_db_path, memo)
+        out = jcall("analyze_for_coding", file_ids=[1],
+                    instruction="topics; whole sentences; one code each")
+        assert out["project_memo"] == ""
+        assert "the project memo is empty. Ask the researcher" in \
+            out["instructions"]
+        assert "private" not in json.dumps(out)

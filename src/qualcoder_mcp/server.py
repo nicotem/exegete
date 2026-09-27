@@ -2982,10 +2982,10 @@ when the data base is thin and the assessment is provisional.
 Put the method's rules into the project memo's public part, where they
 last, or into analyze_for_coding's instruction, for one session; the
 session stores the instruction on disk, so it survives a host restart.
-The project memo reaches a session only when you read it: this server
-does not hand it to you, as QualCoder 4.0 hands it to its own assistant
-in every chat, so read its public part (get_project_summary or
-qualcoder://project/info) at the start of each coding session. Ask the
+analyze_for_coding's answer carries the project memo's public part
+(project_memo), as QualCoder 4.0 hands the memo to its own assistant in
+every chat; outside a coding session, read it through
+get_project_summary or qualcoder://project/info. Ask the
 researcher which framework applies before assuming one.
 """
 
@@ -6640,9 +6640,11 @@ def analyze_for_coding(
                      every suggestion you record.
 
     Returns:
-        JSON with coding_session_id; qualcoder_open (with action_required
-        when true); qualcoder_gui_signals (with qualcoder_gui_hint when
-        any); not_found (file ids and code names that matched nothing);
+        JSON with coding_session_id; project_memo (the memo's public
+        part, the study in the researcher's words; empty: ask);
+        qualcoder_open (with action_required when true);
+        qualcoder_gui_signals (with qualcoder_gui_hint when any);
+        not_found (file ids and code names that matched nothing);
         ambiguous_code_names (a name matching two codes, with both);
         files_refused (PDFs with no usable text); and instructions, the
         next steps as text. No suggestion: you record those.
@@ -6738,6 +6740,26 @@ def analyze_for_coding(
     # Save session (Claude records its suggestions with record_suggestions)
     session_manager.save_session(session)
 
+    # The study in the researcher's own words: the project memo's public
+    # part, handed to the session as QualCoder 4.0 hands it to its own
+    # assistant in every chat (fix round 2; the claims audit's preferred
+    # route). Never the text after '#####'.
+    project_memo = extract_ai_memo(
+        (db.get_project_info() or {}).get("memo")).strip()
+    if project_memo:
+        study_lines = (
+            "**THE STUDY, IN THE RESEARCHER'S OWN WORDS** (the project "
+            "memo's public part, in project_memo): use it to focus your "
+            "reading; when a reading rests on it, name the concept in the "
+            "reason; tell the researcher what it does not cover for these "
+            "files and codes.\n")
+    else:
+        study_lines = (
+            "**THE STUDY:** the project memo is empty. Ask the researcher "
+            "what the study asks and how it reads its data before coding; "
+            "they can keep the answer in the project memo (set_memo, "
+            "target_type 'project').\n")
+
     # Session-start QualCoder check: reads are safe, so the session is
     # still created — but the whole suggest -> review -> approve flow would
     # dead-end at apply time (writes are refused while QualCoder has the
@@ -6788,6 +6810,7 @@ Session ID: `{session.session_id}`
 - Codes: {len(codes_to_use)} codes ({', '.join(c['name'] for c in codes_to_use)})
 - Instruction: "{instruction}"
 {not_found_lines}
+{study_lines}
 **IMPORTANT - NEXT STEPS:**
 
 This session has been created and saved. It covers only these files
@@ -6832,6 +6855,7 @@ Once Claude records and presents suggestions, you can:
         # always-present field so structured consumers get a consistent
         # shape (QA6-1)
         "qualcoder_open": state == "active",
+        "project_memo": project_memo,
     }
     if not_found:
         envelope["not_found"] = not_found

@@ -390,6 +390,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   approved and that the assistant saw every visible coder's codings
   before suggesting, so the agreement is not between independent
   coders and is not intercoder reliability.
+- **Two developer scripts removed**: `scripts/test_workflow.py` and
+  `scripts/generate_test_export.py`, which built sessions with the
+  removed score, wrote into the researcher's own Documents folders, and
+  were not shipped or used by anything (the second no longer ran before
+  this release). `scripts/create_test_project.py` stays.
 - **Texts made true:** `analyze_file_with_coding` names its four counts
   (it promised "coverage and density metrics"); `cleanup_old_sessions`
   says it deletes every project's old sessions on this computer,

@@ -1219,9 +1219,7 @@ qualcoder_mcp/
 │       ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
 │       └── refi_export.py       # REFI-QDA XML export
 ├── scripts/
-│   ├── create_test_project.py  # Test project generator
-│   ├── generate_test_export.py
-│   └── test_workflow.py
+│   └── create_test_project.py  # Test project generator
 ├── legal/
 │   └── GPL-3.0.txt         # The GNU GPL, version 3, which the LGPL incorporates
 ├── pyproject.toml           # Package configuration

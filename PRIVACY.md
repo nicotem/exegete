@@ -823,10 +823,16 @@ will ask, and the summary above depends on them:
     and how many entries it has, never a name. The names themselves
     reach the conversation only through a tool of their own,
     `read_pseudonym_list` (in the full toolset only), whose description
-    says first that it sends the real names to the AI provider, so a
-    host asks the researcher's approval for it apart from everyday
-    reads; each call writes one line to this server's log with the
-    count and no name. QualCoder's own
+    says first that it sends the real names to the AI provider. It
+    carries `anthropic/requiresUserInteraction`, so Claude Code (2.1.199
+    and later) asks the researcher before every call of it, in every
+    permission mode but `dontAsk`, which refuses it. Earlier Claude
+    Code, and another host in an auto mode or with approvals skipped,
+    can run it without asking (whether Cowork honours the mark is not
+    documented), so for a project with a pseudonyms file keep the host
+    in its asking mode (INSTALL.md, "What hosts do with the tools' read
+    and write marks"). Each call writes one line to this server's log
+    with the count and no name. QualCoder's own
     guidance is to remove it and store it securely once the import is
     done (`manage_files.py` at the 9bddf17 pin), and that applies here
     too. `speakers.json` and `speaker_regex.json` can hold names as

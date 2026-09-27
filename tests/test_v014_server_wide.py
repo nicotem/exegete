@@ -195,6 +195,22 @@ class TestToolAnnotations:
                         by_alias=True, exclude_none=True)
         assert wire["_meta"]["anthropic/requiresUserInteraction"] is True
 
+    def test_privacy_says_when_the_host_asks_for_the_name_list(self):
+        """Fix round 2: PRIVACY.md no longer says a host asks before the
+        name list runs, whatever the host and mode."""
+        privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md")
+                           .read_text(encoding="utf-8").split())
+        assert "so a host asks the researcher's approval for it" \
+            not in privacy
+        assert ("It carries `anthropic/requiresUserInteraction`, so Claude "
+                "Code (2.1.199 and later) asks the researcher before every "
+                "call of it, in every permission mode but `dontAsk`, which "
+                "refuses it. Earlier Claude Code, and another host in an "
+                "auto mode or with approvals skipped, can run it without "
+                "asking") in privacy
+        assert ("for a project with a pseudonyms file keep the host in its "
+                "asking mode") in privacy
+
     def test_install_says_what_the_modes_do(self):
         install = " ".join((Path(__file__).parent.parent / "INSTALL.md")
                            .read_text(encoding="utf-8").split())
@@ -204,7 +220,12 @@ class TestToolAnnotations:
         for needed in ("anthropic/requiresUserInteraction", "2.1.199",
                        "a classifier", "`bypassPermissions`",
                        "Skip all approvals", "2.1.283",
-                       "read on 27 September 2026"):
+                       "read on 27 September 2026",
+                       # fix round 2: dontAsk refuses; the version
+                       "in every one of these modes but `dontAsk`, which "
+                       "refuses it",
+                       "except, in Claude Code 2.1.199 and later, "
+                       "`read_pseudonym_list`"):
             assert needed in section, needed
 
     def test_no_tool_claims_the_open_world(self):

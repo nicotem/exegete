@@ -590,9 +590,10 @@ What each host does, from Anthropic's pages as read on 27 September
   of you; auto is the starting mode for interactive sessions from
   version 2.1.283, and before that on Pro, Max and Team plans.
   `bypassPermissions` runs everything, and `dontAsk` refuses anything
-  that would ask. A tool marked `anthropic/requiresUserInteraction`
-  (here, `read_pseudonym_list`) is asked about in every one of these
-  modes, from 2.1.199.
+  that would ask. From 2.1.199, a tool marked
+  `anthropic/requiresUserInteraction` (here, `read_pseudonym_list`) is
+  asked about in every one of these modes but `dontAsk`, which refuses
+  it.
 - **Cowork.** Each connector tool has its own setting (always allow,
   needs approval, blocked). In **Manual** mode, the default, a tool that
   needs approval is asked about. In **Auto**, a tool set to always allow
@@ -625,7 +626,7 @@ with "allow once" for anything that writes. In an auto mode, a
 classifier, not you, decides on the writing tools, and on
 `read_pseudonym_list` in any host that does not honour its mark; in
 "Skip all approvals" or `bypassPermissions`, nothing is asked except,
-in Claude Code, `read_pseudonym_list`.
+in Claude Code 2.1.199 and later, `read_pseudonym_list`.
 
 ---
 

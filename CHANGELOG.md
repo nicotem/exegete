@@ -49,7 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sends every real name in the project's pseudonyms file to the AI
   provider, is not marked read-only and carries
   `anthropic/requiresUserInteraction`, so that Claude Code (2.1.199 and
-  later) asks before every call of it in every mode. INSTALL.md, "What
+  later) asks before every call of it in every mode but `dontAsk`, which
+  refuses it. INSTALL.md, "What
   hosts do with the tools' read and write marks", says mode by mode what
   each host does, from Anthropic's pages.
 

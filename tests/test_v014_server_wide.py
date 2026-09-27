@@ -1877,3 +1877,22 @@ class TestOneProjectUnderTwoSpellings:
         assert SessionManager.same_project(gone, gone / "data.qda")
         assert not SessionManager.same_project(gone,
                                                tmp_path / "gone.qda")
+
+
+def test_the_upgrading_list_names_what_a_caller_meets():
+    """Fix round 1: the changes a caller meets are in the Unreleased
+    section's Upgrading list, the three arguments 0.13's notes (or its
+    pre-release) accepted among them."""
+    changelog = (Path(__file__).parent.parent / "CHANGELOG.md").read_text(
+        encoding="utf-8")
+    unreleased = changelog.split("## [0.13.0-alpha]")[0]
+    assert "### Upgrading from 0.13.x" in unreleased
+    upgrading = " ".join(unreleased.split("### Upgrading from 0.13.x")[1]
+                         .split())
+    for needed in ("`confirm`", "`file_ids`", "`include_pseudonyms`",
+                   "`additionalProperties: false`", "`#####`", "rationale",
+                   "`target_id`", "`searched`", "`selected_project`",
+                   "\"data\"", "`stale_sessions_with_work_to_apply`",
+                   "`dated_from`", "(not available in this tool set)",
+                   "`readOnlyHint`"):
+        assert needed in upgrading, needed

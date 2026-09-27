@@ -400,6 +400,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on Python 3.11.13, in the repository's `.venv/`, 189,158, 64,144 and
   191,807.
 
+
+### Upgrading from 0.13.x
+
+What a caller, a saved prompt or a script meets, one line each. The
+server-wide changes:
+
+- **An argument a tool does not declare is refused by name**, and
+  nothing runs; every input schema says `additionalProperties: false`,
+  which a host that checks schemas enforces before sending. The 0.13
+  notes said, measured, that `confirm` passed to a preview-token tool
+  and `file_ids` passed to `pseudonymise_source` were dropped and the
+  call went on; both are now refused, and so is `include_pseudonyms`,
+  an argument of `get_current_project` in a 0.13 pre-release that was
+  removed before 0.13.0. Drop them, and check any key a host or script
+  adds of its own.
+- **Text holding `#####` is refused where it used to be cut**: a memo,
+  an annotation's note, a journal entry, a code's, category's, case's,
+  attribute type's or imported file's memo, a proposed code's definition
+  or rationale, a suggestion's reasoning. Send the text without the
+  marker.
+- **`set_memo`'s `target_id` may be left out** for the project memo.
+- **`list_available_projects`**: `search_directories` replaces the usual
+  places, `~` is expanded, a relative folder is refused, and the answer
+  carries `searched`.
+- **A failed `select_project`** ends with a sentence on what is
+  selected and carries `selected_project`; with nothing selected and a
+  project set in the host's configuration, that project is opened and
+  named.
+- **A project selected by its `data.qda` is named by its folder** in
+  `select_project`, `get_current_project`, the session list and the
+  three exports that name a project (it was "data").
+- **`pseudonymise_source`'s `stale_sessions`** now names every session
+  of the project whose file holds an excerpt of the rewritten file; the
+  old meaning (work still to apply) is `stale_sessions_with_work_to_apply`.
+  `list_coding_sessions`' `project_path` finds a project's sessions by
+  its folder or its `data.qda`, in any spelling of the path.
+- **Backups are listed and pruned by the time in their names**, each
+  with `dated_from`; `prune_backups(older_than_days=...)` judges by the
+  name.
+- **In the `core` set**, the texts it serves and its answers mark each
+  tool it does not register: "(not available in this tool set)".
+- **Every tool carries MCP's hints** (`readOnlyHint`,
+  `destructiveHint`, `idempotentHint`, `openWorldHint`); INSTALL.md
+  says what each host does with them.
+
 ## [0.13.0-alpha] - 2026-09-25
 
 v0.13, the pseudonymisation follow-ups, as ruled from 2026-09-22 to

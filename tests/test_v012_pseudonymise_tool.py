@@ -5231,13 +5231,15 @@ class TestTheMappingAcrossARestore:
         _, result = _confirmed(server.restore_backup, backup_path=str(backup))
         safety = Path(result["safety_backup"])
         # The newest of this server's backups, kept by keep_last=1,
-        # holds the same file.
-        newest = project.parent / f"{project.stem}_backup_29991231_000000.qda"
+        # holds the same file. Since v0.14 a backup is dated by the time
+        # in its name, and a name more than five minutes ahead of the
+        # clock is not trusted (it used to be 2999 here), so this one is
+        # named a minute after now.
+        from datetime import datetime, timedelta
+        stamp = (datetime.now() + timedelta(minutes=1)).strftime(
+            "%Y%m%d_%H%M%S")
+        newest = project.parent / f"{project.stem}_backup_{stamp}.qda"
         shutil.copytree(safety, newest)
-        # copytree gives the copy its source's time; the list is newest
-        # first by that time, so make this one the newest.
-        later = Path(result["safety_backup"]).stat().st_mtime + 120
-        os.utime(newest, (later, later))
         out = json.loads(server.prune_backups(keep_last=1))
         assert newest.name in out["preview"]["would_keep"]
         assert safety.name in [b["name"] for b in

@@ -103,7 +103,8 @@ class CodingSuggestion:
         span_alternatives: Optional[List[Dict[str, Any]]] = None,
         adjusted: bool = False,
         applied_ctid: Optional[int] = None,
-        support_cleared: bool = False
+        support_cleared: bool = False,
+        context_from_file: bool = False
     ):
         self.file_id = file_id
         self.file_name = file_name
@@ -120,6 +121,11 @@ class CodingSuggestion:
         # without a new label: the old one was given for the old code, so
         # it is cleared rather than carried (fix round 1)
         self.support_cleared = bool(support_cleared) and self.support is None
+        # True once this server took context_before/after from the file
+        # (v0.14 on); before, the assistant could supply them, so an older
+        # suggestion's stored context is not shown when it cannot be
+        # re-read from the file (fix round 1)
+        self.context_from_file = bool(context_from_file)
         # 'pending', 'approved', 'rejected', 'applied', or 'removed' (it
         # was applied, then its coding was deleted with delete_coding)
         self.status = status
@@ -161,7 +167,8 @@ class CodingSuggestion:
             "span_alternatives": self.span_alternatives,
             "adjusted": self.adjusted,
             "applied_ctid": self.applied_ctid,
-            "support_cleared": self.support_cleared
+            "support_cleared": self.support_cleared,
+            "context_from_file": self.context_from_file
         }
 
     _REQUIRED_FIELDS = {
@@ -206,7 +213,8 @@ class CodingSuggestion:
             span_alternatives=data.get("span_alternatives"),
             adjusted=data.get("adjusted", False),
             applied_ctid=data.get("applied_ctid"),
-            support_cleared=data.get("support_cleared", False)
+            support_cleared=data.get("support_cleared", False),
+            context_from_file=data.get("context_from_file", False) is True
         )
 
 

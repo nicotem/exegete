@@ -670,7 +670,8 @@ class TestTheContextIsTheFilesOwn:
         session.add_suggestion(CodingSuggestion(
             file_id=1, file_name="interview.txt", code_id=2,
             code_name="Coping", start_pos=57, end_pos=78,
-            segment_text=COPE, context_before="stored before"))
+            segment_text=COPE, context_before="stored before",
+            context_from_file=True))           # taken from the file by v0.14
         server.session_manager.save_session(session)
         import shutil
         twin = tmp_path / "twin.qda"
@@ -1059,3 +1060,50 @@ class TestFixRoundTheLabelBelongsToItsCode:
         same = jcall("edit_suggestion", coding_session_id=sid,
                      suggestion_guid=guid, support="interpretive")
         assert "No effective change" in same["error"]
+
+
+class TestFixRoundNoInventedContextAnywhere:
+    """An older suggestion's stored context may be the assistant's own:
+    it is never shown as the file's, in the review or in the session
+    record."""
+
+    @staticmethod
+    def _old_session(qualcoder_db_path):
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"))
+        session.add_suggestion(CodingSuggestion(      # as before v0.14
+            file_id=1, file_name="interview.txt", code_id=2,
+            code_name="Coping", start_pos=57, end_pos=78,
+            segment_text=COPE, context_before=INVENTED,
+            context_after=INVENTED))
+        server.session_manager.save_session(session)
+        return session.session_id
+
+    @staticmethod
+    def _open_a_twin(qualcoder_db_path, tmp_path):
+        import shutil
+        twin = tmp_path / "twin.qda"
+        shutil.copytree(qualcoder_db_path, twin)
+        server.current_project_path = str(twin)
+
+    def test_the_session_record_shows_the_files_context(
+            self, setup_server, qualcoder_db_path):
+        sid = self._old_session(qualcoder_db_path)
+        info = jcall("get_coding_session_info", coding_session_id=sid)
+        entry = info["suggestions"][0]
+        assert INVENTED not in json.dumps(info)
+        assert entry["context_before"].endswith("deadlines. ")
+        assert "context_note" not in entry
+
+    def test_with_another_project_open_neither_shows_it(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        sid = self._old_session(qualcoder_db_path)
+        self._open_a_twin(qualcoder_db_path, tmp_path)
+        info = jcall("get_coding_session_info", coding_session_id=sid)
+        entry = info["suggestions"][0]
+        assert INVENTED not in json.dumps(info)
+        assert entry["context_before"] == entry["context_after"] == ""
+        assert "recorded before v0.14" in entry["context_note"]
+        review = call("review_suggestions", coding_session_id=sid)
+        assert INVENTED not in review
+        assert "recorded before v0.14" in review

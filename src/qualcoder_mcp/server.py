@@ -6016,6 +6016,44 @@ def _live_contexts(session: AICodingSession,
     return live, stale, True
 
 
+CONTEXT_STALE_NOTE = ("not shown: the file's text at these positions no "
+                      "longer matches this suggestion; re-record it")
+CONTEXT_AS_RECORDED_NOTE = ("as recorded; not re-read, because the "
+                            "session's project is not the one open")
+CONTEXT_NOT_SHOWN_NOTE = (
+    "not shown: this suggestion was recorded before v0.14, when the "
+    "assistant could supply the surrounding text, and it cannot be re-read "
+    "from the file while the session's project is not the one open; open "
+    "that project to see the file's own text")
+
+
+def _contexts_for_display(session: AICodingSession,
+                          suggestions: List[CodingSuggestion]
+                          ) -> Dict[str, Tuple[str, str, Optional[str]]]:
+    """The context each suggestion is shown with, and a note saying where
+    it comes from when it is not the file read now.
+
+    The file's own text when the session's project is open and the span
+    still matches; nothing when the file no longer holds the span; the
+    text taken from the file at record time, marked, when another project
+    is open; and nothing, with the reason, for a suggestion recorded
+    before v0.14 whose stored context may be the assistant's (fix round
+    1). Used by review_suggestions and get_coding_session_info alike."""
+    live, stale, _ = _live_contexts(session, suggestions)
+    out: Dict[str, Tuple[str, str, Optional[str]]] = {}
+    for sugg in suggestions:
+        if sugg.guid in live:
+            out[sugg.guid] = (*live[sugg.guid], None)
+        elif sugg.guid in stale:
+            out[sugg.guid] = ("", "", CONTEXT_STALE_NOTE)
+        elif getattr(sugg, "context_from_file", False):
+            out[sugg.guid] = (sugg.context_before, sugg.context_after,
+                              CONTEXT_AS_RECORDED_NOTE)
+        else:
+            out[sugg.guid] = ("", "", CONTEXT_NOT_SHOWN_NOTE)
+    return out
+
+
 def _scope_refusal(session: AICodingSession, outside: str,
                    file_name: str, code_name: str) -> Dict[str, Any]:
     """Why a suggestion falls outside its session, and what the session
@@ -6348,6 +6386,7 @@ def record_suggestions(
             context_after=context_after,
             span_alternatives=_compute_span_alternatives(
                 fulltext, start_pos, end_pos),
+            context_from_file=True,
         )
         session.add_suggestion(suggestion)
         recorded.append({
@@ -6418,7 +6457,9 @@ def review_suggestions(
     judge a span by what is around it (is the quote complete? should it be
     wider?). That text is the file's own, read when the review is made
     (the session's project must be the one open; otherwise the text taken
-    from the file at record time is shown and marked as such). Use this to examine suggestions before approving/rejecting;
+    from the file at record time is shown and marked as such, and for a
+    suggestion recorded before v0.14, whose stored text the assistant may
+    have supplied, none is shown and the review says why). Use this to examine suggestions before approving/rejecting;
     if a span needs adjusting, edit_suggestion changes it in place.
 
     SPAN ALTERNATIVES: each pending, not-yet-adjusted suggestion may
@@ -6480,9 +6521,9 @@ def review_suggestions(
         output.append(missing_line)
 
     small_subset = bool(suggestion_guids) and len(suggestions) <= 5
-    live, stale = {}, set()
+    contexts: Dict[str, Tuple[str, str, Optional[str]]] = {}
     if show_context:
-        live, stale, _ = _live_contexts(session, suggestions)
+        contexts = _contexts_for_display(session, suggestions)
 
     for i, sugg in enumerate(suggestions, 1):
         output.append(f"\n{'='*70}")
@@ -6503,18 +6544,12 @@ def review_suggestions(
         output.append(sugg.reasoning)
 
         if show_context:
-            if sugg.guid in live:
-                before, after, label = *live[sugg.guid], ""
-            elif sugg.guid in stale:
-                before, after, label = "", "", ""
-                output.append(
-                    "\n**Context:** not shown: the file's text at these "
-                    "positions no longer matches this suggestion; "
-                    "re-record it")
-            else:
-                before, after = sugg.context_before, sugg.context_after
-                label = (" (as recorded; not re-read, because the "
-                         "session's project is not the one open)")
+            before, after, note = contexts[sugg.guid]
+            label = ""
+            if note == CONTEXT_AS_RECORDED_NOTE:
+                label = f" ({note})"
+            elif note is not None:
+                output.append(f"\n**Context:** {note}")
             if before:
                 output.append(f"\n**Context Before:**{label}")
                 output.append(f"```\n{before}\n```")
@@ -6813,6 +6848,7 @@ def edit_suggestion(
         sugg.segment_text = fulltext[new_start:new_end]
         sugg.context_before, sugg.context_after = _context_around(
             fulltext, new_start, new_end)
+        sugg.context_from_file = True
         sugg.span_alternatives = _compute_span_alternatives(
             fulltext, new_start, new_end)
         if not db_position_safe(fulltext):
@@ -8807,7 +8843,10 @@ def get_coding_session_info(coding_session_id: str) -> str:
     """Get detailed information about a coding session.
 
     Shows all the suggestions, statistics, and metadata for a session.
-    Useful for reviewing what was suggested before exporting.
+    Useful for reviewing what was suggested before exporting. The context
+    around each suggestion is what review_suggestions shows: the file's
+    own text, read now when the session's project is open, with a
+    context_note whenever it is anything else.
 
     Args:
         coding_session_id: The session ID to query
@@ -8840,6 +8879,17 @@ def get_coding_session_info(coding_session_id: str) -> str:
         payload = {"coding_session_id": session.session_id}
         payload.update(session.to_dict())
         payload.pop("session_id", None)
+        # The context shown is the review's: the file's own text, read
+        # now, where it can be; never a stored context the assistant may
+        # have supplied before v0.14 (fix round 1)
+        contexts = _contexts_for_display(session, session.suggestions)
+        for entry in payload.get("suggestions", []):
+            before, after, note = contexts.get(entry.get("guid"),
+                                               ("", "", None))
+            entry["context_before"] = before
+            entry["context_after"] = after
+            if note is not None:
+                entry["context_note"] = note
         return json.dumps(payload, indent=2)
 
     except Exception as e:

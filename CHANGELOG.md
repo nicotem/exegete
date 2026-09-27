@@ -357,10 +357,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Context Before" as if it were the file. `record_suggestions` now sets
   those fields aside (and says how many), and `review_suggestions` reads
   the context from the file when the review is made, so a session from
-  an earlier release shows the file's text too. When the session's
-  project is not the one open, the context taken from the file at record
-  time is shown and marked as such; when the file no longer holds the
-  span, no context is shown and the review says why.
+  an earlier release shows the file's text too; `get_coding_session_info`
+  shows the same context as the review. When the session's project is
+  not the one open, the context taken from the file at record time is
+  shown and marked as such, and for a suggestion recorded before this
+  release, whose stored context the assistant may have supplied, none is
+  shown and both tools say why; when the file no longer holds the span,
+  no context is shown and the review says why.
 - **A proposal's approval binds what was approved.** Renaming,
   redefining, recolouring, recategorising or re-evidencing an approved
   proposal (`update_proposal`), or merging evidence into it as a target

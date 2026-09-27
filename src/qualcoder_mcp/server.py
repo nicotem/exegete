@@ -3919,7 +3919,11 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         consumed = 0
         for row in rows:
             consumed += 1
-            position = [row["file_name"] or "", row["file_id"],
+            # The stored name's bytes, so a damaged name pages exactly
+            # (fix round 2); never part of the answer
+            key_name = row.pop("_file_name_key", None)
+            position = [key_name if key_name is not None
+                        else row["file_name"] or "", row["file_id"],
                         row["position_start"], row["position_end"],
                         row["id"]]
             if mask and db_.span_is_excluded(

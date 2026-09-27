@@ -4777,7 +4777,7 @@ class QualcoderDatabase:
                         "ct.pos1", "ct.ctid")
 
     @staticmethod
-    def _keyset_predicate(columns) -> str:
+    def _keyset_predicate(columns, stored_first: bool = False) -> str:
         """The expanded lexicographic "strictly after this key" predicate.
 
         `(a > ?) OR (a = ? AND b > ?) OR ...` rather than SQLite's
@@ -4785,22 +4785,61 @@ class QualcoderDatabase:
         worth requiring of whatever SQLite a researcher's Python was
         built against. Parameters are bound in the order the clauses
         appear; `_keyset_params` builds them.
+
+        With `stored_first`, the first column's parameter is the stored
+        bytes of its text, bound as `CAST(? AS TEXT)` (fix round 2): a
+        name that is not valid in the database's encoding cannot come
+        back as a Python string, so the cursor carries its bytes
+        (`_key_text`) and the comparison is on the bytes as stored,
+        which is SQLite's own order for text.
         """
         clauses = []
         for i, col in enumerate(columns):
-            equals = " AND ".join(f"{c} = ?" for c in columns[:i])
-            greater = f"{col} > ?"
+            def mark(j):
+                return "CAST(? AS TEXT)" if stored_first and j == 0 else "?"
+            equals = " AND ".join(f"{c} = {mark(j)}"
+                                  for j, c in enumerate(columns[:i]))
+            greater = f"{col} > {mark(i)}"
             clauses.append(f"({equals} AND {greater})" if equals
                            else f"({greater})")
         return "(" + " OR ".join(clauses) + ")"
 
     @staticmethod
-    def _keyset_params(columns, key) -> tuple:
+    def _keyset_params(columns, key, stored_codec: Optional[str] = None
+                       ) -> tuple:
+        key = list(key)
+        if stored_codec is not None:
+            # The key text back to the bytes it was read from
+            first = key[0] if isinstance(key[0], str) else ""
+            key[0] = first.encode(stored_codec, "surrogateescape")
         params: List[Any] = []
         for i in range(len(columns)):
             params.extend(key[:i])
             params.append(key[i])
         return tuple(params)
+
+    def _text_codec_name(self) -> str:
+        """The database's text encoding as a Python codec."""
+        return getattr(self, "_text_codec", {}).get("codec", "utf-8")
+
+    def _decoded(self, value: Any) -> Any:
+        """A value selected as `CAST(... AS BLOB)`, decoded with
+        replacement (fix round 2): the answers of the three searches read
+        their text columns this way, so a damaged row that matches reads
+        with U+FFFD where its damaged bytes are, rather than failing the
+        whole search. Read-only answers only: a write never reads a
+        value this way, so it never writes replaced bytes back."""
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return bytes(value).decode(self._text_codec_name(), "replace")
+        return value
+
+    def _key_text(self, value: Any) -> str:
+        """A text column's stored bytes as a string that encodes back to
+        exactly those bytes (surrogateescape), for a keyset cursor."""
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return bytes(value).decode(self._text_codec_name(),
+                                       "surrogateescape")
+        return "" if value is None else str(value)
 
     def search_coded_text(self, query: str, code_name: Optional[str] = None,
                           limit: int = DEFAULT_LIMIT,
@@ -4847,24 +4886,30 @@ class QualcoderDatabase:
             where.append("ct.owner = ?")
             params.append(coder)
         if after is not None:
-            where.append(self._keyset_predicate(self.CODED_TEXT_ORDER))
-            params.extend(self._keyset_params(self.CODED_TEXT_ORDER, after))
+            where.append(self._keyset_predicate(self.CODED_TEXT_ORDER,
+                                                stored_first=True))
+            params.extend(self._keyset_params(
+                self.CODED_TEXT_ORDER, after,
+                stored_codec=self._text_codec_name()))
         order = ", ".join(self.CODED_TEXT_ORDER)
 
         try:
+            # Text columns as blobs, decoded with replacement (fix round
+            # 2): a damaged row that matches no longer fails the search
             cursor = self.conn.execute(f"""
                 SELECT
                     ct.ctid,
-                    ct.seltext,
+                    CAST(ct.seltext AS BLOB) AS seltext,
                     ct.pos0,
                     ct.pos1,
-                    ct.memo,
-                    ct.owner,
-                    ct.date,
+                    CAST(ct.memo AS BLOB) AS memo,
+                    CAST(ct.owner AS BLOB) AS owner,
+                    CAST(ct.date AS BLOB) AS date,
                     ct.fid,
-                    s.name as file_name,
-                    c.name as code_name,
-                    c.color as code_color
+                    CAST(s.name AS BLOB) as file_name,
+                    CAST(COALESCE(s.name, '') AS BLOB) AS file_name_key,
+                    CAST(c.name AS BLOB) as code_name,
+                    CAST(c.color AS BLOB) as code_color
                 FROM {source} ct
                 JOIN source s ON ct.fid = s.id
                 JOIN code_name c ON ct.cid = c.cid
@@ -4874,19 +4919,23 @@ class QualcoderDatabase:
             """, tuple(params) + (limit,))
 
             results = []
+            dec = self._decoded
             for row in cursor.fetchall():
                 results.append({
                     "id": row["ctid"],
-                    "text": row["seltext"],
+                    "text": dec(row["seltext"]),
                     "position_start": row["pos0"],
                     "position_end": row["pos1"],
-                    "memo": row["memo"] or "",
-                    "owner": row["owner"],
-                    "date": row["date"],
+                    "memo": dec(row["memo"]) or "",
+                    "owner": dec(row["owner"]),
+                    "date": dec(row["date"]),
                     "file_id": row["fid"],
-                    "file_name": row["file_name"],
-                    "code_name": row["code_name"],
-                    "code_color": row["code_color"]
+                    "file_name": dec(row["file_name"]),
+                    "code_name": dec(row["code_name"]),
+                    "code_color": dec(row["code_color"]),
+                    # The file name's stored bytes, for the cursor; the
+                    # tool removes it before answering
+                    "_file_name_key": self._key_text(row["file_name_key"]),
                 })
             return results
         except sqlite3.Error as e:
@@ -5226,58 +5275,80 @@ class QualcoderDatabase:
     # pseudonymisation preview counts.
     _MEMO_SECTIONS = (
         ("project", None,
-         "SELECT NULL AS id, 'Project memo' AS name, memo, NULL AS owner, "
-         "date FROM project WHERE {match}"),
+         "SELECT NULL AS id, 'Project memo' AS name, "
+         "CAST(memo AS BLOB) AS memo, NULL AS owner, "
+         "CAST(date AS BLOB) AS date FROM project WHERE {match}"),
         ("code", None,
-         "SELECT cid AS id, name, memo, owner, date FROM code_name "
+         "SELECT cid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM code_name "
          "WHERE {match} ORDER BY cid"),
         ("category", None,
-         "SELECT catid AS id, name, memo, owner, date FROM code_cat "
+         "SELECT catid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM code_cat "
          "WHERE {match} ORDER BY catid"),
         ("file", None,
-         "SELECT id, name, memo, owner, date FROM source "
+         "SELECT id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM source "
          "WHERE {match} ORDER BY id"),
         ("case", None,
-         "SELECT caseid AS id, name, memo, owner, date FROM cases "
+         "SELECT caseid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM cases "
          "WHERE {match} ORDER BY caseid"),
         ("attribute_type", None,
-         "SELECT NULL AS id, name, memo, owner, date, "
-         "caseOrFile AS applies_to FROM attribute_type "
+         "SELECT NULL AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date, "
+         "CAST(caseOrFile AS BLOB) AS applies_to FROM attribute_type "
          "WHERE {match} ORDER BY name"),
         ("coding", ("code_text", "code_text_visible"),
-         "SELECT t.ctid AS id, c.name AS name, t.memo, t.owner, t.date, "
-         "t.fid AS file_id, s.name AS file_name, t.pos0 AS position_start, "
+         "SELECT t.ctid AS id, CAST(c.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.fid AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name, t.pos0 AS position_start, "
          "t.pos1 AS position_end FROM {source} t "
          "LEFT JOIN code_name c ON t.cid = c.cid "
          "LEFT JOIN source s ON t.fid = s.id "
          "WHERE {match} ORDER BY t.ctid"),
         ("region_coding", ("code_image", "code_image_visible"),
-         "SELECT t.imid AS id, c.name AS name, t.memo, t.owner, t.date, "
-         "t.id AS file_id, s.name AS file_name FROM {source} t "
+         "SELECT t.imid AS id, CAST(c.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.id AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name FROM {source} t "
          "LEFT JOIN code_name c ON t.cid = c.cid "
          "LEFT JOIN source s ON t.id = s.id "
          "WHERE {match} ORDER BY t.imid"),
         ("av_coding", ("code_av", "code_av_visible"),
-         "SELECT t.avid AS id, c.name AS name, t.memo, t.owner, t.date, "
-         "t.id AS file_id, s.name AS file_name FROM {source} t "
+         "SELECT t.avid AS id, CAST(c.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.id AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name FROM {source} t "
          "LEFT JOIN code_name c ON t.cid = c.cid "
          "LEFT JOIN source s ON t.id = s.id "
          "WHERE {match} ORDER BY t.avid"),
         ("case_link", None,
-         "SELECT t.id AS id, cs.name AS name, t.memo, t.owner, t.date, "
-         "t.fid AS file_id, s.name AS file_name, t.pos0 AS position_start, "
+         "SELECT t.id AS id, CAST(cs.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.fid AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name, t.pos0 AS position_start, "
          "t.pos1 AS position_end FROM case_text t "
          "LEFT JOIN cases cs ON t.caseid = cs.caseid "
          "LEFT JOIN source s ON t.fid = s.id "
          "WHERE {match} ORDER BY t.id"),
         ("annotation", ("annotation", "annotation_visible"),
-         "SELECT a.anid AS id, s.name AS name, a.memo, a.owner, a.date, "
-         "a.fid AS file_id, a.pos0 AS position_start, "
-         "a.pos1 AS position_end FROM {source} a "
-         "JOIN source s ON a.fid = s.id "
+         "SELECT a.anid AS id, CAST(s.name AS BLOB) AS name, "
+         "CAST(a.memo AS BLOB) AS memo, CAST(a.owner AS BLOB) AS owner, "
+         "CAST(a.date AS BLOB) AS date, a.fid AS file_id, "
+         "a.pos0 AS position_start, a.pos1 AS position_end "
+         "FROM {source} a JOIN source s ON a.fid = s.id "
          "WHERE {match} ORDER BY a.anid"),
         ("journal", None,
-         "SELECT jid AS id, name, jentry AS memo, owner, date FROM journal "
+         "SELECT jid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(jentry AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM journal "
          "WHERE {match} ORDER BY jid"),
     )
 
@@ -5368,11 +5439,18 @@ class QualcoderDatabase:
                 cursor = self.conn.execute(
                     sql.format(source=source, match=match), (folded,))
                 for row in cursor:
-                    public = extract_ai_memo(row["memo"] or "")
+                    # Every text column arrives as a blob and is decoded
+                    # with replacement (fix round 2), so a damaged note
+                    # that matches is returned rather than failing the
+                    # search; the private part is dropped before the
+                    # check, as before, so a word only there, damaged or
+                    # not, answers exactly as a word found nowhere
+                    public = extract_ai_memo(self._decoded(row["memo"]) or "")
                     if not folded_contains(public, folded):
                         continue
                     item = {"type": kind}
-                    item.update({k: row[k] for k in row.keys()})
+                    item.update({k: self._decoded(row[k])
+                                 for k in row.keys()})
                     item["memo"] = public
                     item["owner"] = owner_shown(item.get("owner"))
                     results.append(item)
@@ -5975,40 +6053,56 @@ class QualcoderDatabase:
         else:
             bound.append(attr_value)
         numeric = probe is not None
-        where = "1" if numeric else condition
-
         if attr_type == 'case':
-            sql = f"""
-                SELECT c.caseid AS eid, c.name, c.memo,
-                       a.value AS attr_value
-                FROM cases c
-                JOIN attribute a ON c.caseid = a.id AND a.attr_type = 'case'
-                WHERE a.name = ? AND {where}
-                ORDER BY c.name
-            """
-            id_key = "case_id"
+            table, key, id_key = "cases", "caseid", "case_id"
         else:
-            sql = f"""
-                SELECT s.id AS eid, s.name, s.memo, a.value AS attr_value
-                FROM source s
-                JOIN attribute a ON s.id = a.id AND a.attr_type = 'file'
-                WHERE a.name = ? AND {where}
-                ORDER BY s.name
-            """
-            id_key = "file_id"
-        try:
-            rows = self.conn.execute(sql, bound).fetchall()
-        except sqlite3.Error as e:
-            _raise_query_error(e, "query_by_attribute",
-                               "Failed to query by attribute")
-
+            table, key, id_key = "source", "id", "file_id"
+        dec = self._decoded
         out: Dict[str, Any] = {"value_type": value_type}
-        counts = {"compared": 0, "not_numbers": 0, "unset": 0}
-        test = self._NUMERIC_TESTS.get(operator)
         results = []
-        for row in rows:
-            if numeric:
-                raw = row["attr_value"]
+        try:
+            if not numeric:
+                # One query, filtered in SQL; every text column as a blob
+                # decoded with replacement (fix round 2), so a damaged
+                # row that matches is returned rather than failing
+                rows = self.conn.execute(f"""
+                    SELECT x.{key} AS eid, CAST(x.name AS BLOB) AS name,
+                           CAST(x.memo AS BLOB) AS memo,
+                           CAST(a.value AS BLOB) AS attr_value
+                    FROM {table} x
+                    JOIN attribute a ON x.{key} = a.id
+                        AND a.attr_type = '{attr_type}'
+                    WHERE a.name = ? AND {condition}
+                    ORDER BY x.name
+                """, bound).fetchall()
+                for row in rows:
+                    results.append({
+                        id_key: row["eid"],
+                        "name": dec(row["name"]),
+                        "memo": dec(row["memo"]) or "",
+                        "attribute_value": dec(row["attr_value"]),
+                    })
+                out["results"] = results
+                return out
+
+            # A numeric comparison reads every value of the attribute, as
+            # a blob decoded with replacement, in the entities' name order
+            # (a damaged value is then not a number, left out and
+            # counted, rather than failing the query), and reads names
+            # and memos only for the rows that match (fix round 2)
+            rows = self.conn.execute(f"""
+                SELECT x.{key} AS eid, CAST(a.value AS BLOB) AS attr_value
+                FROM {table} x
+                JOIN attribute a ON x.{key} = a.id
+                    AND a.attr_type = '{attr_type}'
+                WHERE a.name = ?
+                ORDER BY x.name
+            """, bound).fetchall()
+            counts = {"compared": 0, "not_numbers": 0, "unset": 0}
+            test = self._NUMERIC_TESTS[operator]
+            matched = []
+            for row in rows:
+                raw = dec(row["attr_value"])
                 if raw is None or str(raw).strip() == "":
                     counts["unset"] += 1
                     continue
@@ -6017,17 +6111,28 @@ class QualcoderDatabase:
                     counts["not_numbers"] += 1
                     continue
                 counts["compared"] += 1
-                if not test(number, probe):
-                    continue
-            results.append({
-                id_key: row["eid"],
-                "name": row["name"],
-                "memo": row["memo"] or "",
-                "attribute_value": row["attr_value"],
-            })
+                if test(number, probe):
+                    matched.append((row["eid"], raw))
+            details: Dict[Any, Any] = {}
+            ids = sorted({eid for eid, _ in matched})
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                marks = ",".join("?" for _ in chunk)
+                for row in self.conn.execute(
+                        f"SELECT {key} AS eid, CAST(name AS BLOB) AS name, "
+                        f"CAST(memo AS BLOB) AS memo FROM {table} "
+                        f"WHERE {key} IN ({marks})", chunk):
+                    details[row["eid"]] = (dec(row["name"]),
+                                           dec(row["memo"]) or "")
+            for eid, raw in matched:
+                name, memo = details.get(eid, (None, ""))
+                results.append({id_key: eid, "name": name, "memo": memo,
+                                "attribute_value": raw})
+        except sqlite3.Error as e:
+            _raise_query_error(e, "query_by_attribute",
+                               "Failed to query by attribute")
         out["results"] = results
-        if numeric:
-            out["numeric"] = counts
+        out["numeric"] = counts
         return out
 
     # ========================================================================

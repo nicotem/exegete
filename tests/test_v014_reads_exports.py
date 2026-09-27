@@ -1337,3 +1337,122 @@ class TestTheTextsSayWhatHappens:
         out = host("query_by_attribute", attr_name="Age", attr_value="10",
                    operator="gt")
         assert "or as 0 when it begins with none" in out["note"]
+
+
+# ===========================================================================
+# Fix round 2, item 3: damaged text is read with its bytes replaced, when
+# it matches too, and in a numeric comparison
+# ===========================================================================
+
+def _damage(folder, script):
+    conn = sqlite3.connect(str(Path(folder) / "data.qda"))
+    conn.executescript(script)
+    conn.commit()
+    conn.close()
+
+
+class TestADamagedRowThatMatches:
+
+    def test_search_coded_text(self, setup_server, qualcoder_db_path):
+        # "stress" + byte FF + "d": not valid UTF-8
+        _damage(qualcoder_db_path,
+                "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                "owner, date, memo) VALUES (2, 2, "
+                "CAST(X'737472657373FF64' AS TEXT), 0, 8, 'TestCoder', "
+                "'2024-01-15', CAST(X'6DFF' AS TEXT))")
+        out = host("search_coded_text", query="stress")
+        assert "error" not in out, out
+        texts = sorted(r["text"] for r in out["results"])
+        assert texts == ["I feel stressed about deadlines",
+                         "stress\ufffdd"]
+        assert out["total_results"] == 2
+        assert all("_file_name_key" not in r for r in out["results"])
+
+    def test_search_memos(self, setup_server, qualcoder_db_path):
+        _damage(qualcoder_db_path,
+                "UPDATE code_name SET memo = "
+                "CAST(X'7A65627261FF' AS TEXT) WHERE cid = 2")
+        out = host("search_memos", query="zebra")
+        assert [r["memo"] for r in out["results"]] == ["zebra\ufffd"]
+
+    def test_query_by_attribute_contains(self, setup_server,
+                                         qualcoder_db_path):
+        _damage(qualcoder_db_path,
+                "INSERT INTO attribute_type VALUES ('Job', '2024-01-15', "
+                "'TestCoder', '', 'case', 'character'); "
+                "INSERT INTO attribute (name, attr_type, value, id, date, "
+                "owner) VALUES ('Job', 'case', CAST(X'6E757273FF' AS TEXT), "
+                "1, '2024-01-15', 'TestCoder')")
+        out = host("query_by_attribute", attr_name="Job", attr_value="nurs",
+                   operator="contains")
+        assert [r["attribute_value"] for r in out["results"]] == [
+            "nurs\ufffd"]
+
+    def test_a_damaged_value_in_a_numeric_comparison(
+            self, setup_server, qualcoder_db_path):
+        _damage(qualcoder_db_path,
+                "INSERT INTO cases VALUES (2, 'B', '', 'TestCoder', "
+                "'2024-01-15'); "
+                "INSERT INTO attribute (name, attr_type, value, id, date, "
+                "owner) VALUES ('Age', 'case', CAST(X'33FF' AS TEXT), 2, "
+                "'2024-01-15', 'TestCoder')")
+        for operator, value in (("gt", "10"), ("equals", "30")):
+            out = host("query_by_attribute", attr_name="Age",
+                       attr_value=value, operator=operator)
+            assert [r["case_id"] for r in out["results"]] == [1], out
+            assert out["values_left_out"]["not_numbers"] == 1
+
+    def test_a_damaged_memo_in_a_numeric_comparison(
+            self, setup_server, qualcoder_db_path):
+        _damage(qualcoder_db_path,
+                "UPDATE cases SET memo = CAST(X'6E6F7465FF' AS TEXT) "
+                "WHERE caseid = 1")
+        out = host("query_by_attribute", attr_name="Age", attr_value="10",
+                   operator="gt")
+        assert [r["memo"] for r in out["results"]] == ["note\ufffd"]
+
+    def test_a_word_only_in_a_damaged_private_part_answers_as_absent(
+            self, setup_server, qualcoder_db_path):
+        """No oracle on the private part: a word there, beside a damaged
+        byte, answers exactly as a word found nowhere."""
+        _damage(qualcoder_db_path,
+                "UPDATE code_name SET memo = CAST(X'7075626C6963232323232373"
+                "656372657477FF' AS TEXT) WHERE cid = 2")
+        present = host("search_memos", query="secretw")
+        absent = host("search_memos", query="absentword")
+        assert present == {**absent, "query": "secretw"}
+        assert present["results"] == []
+
+    def test_a_damaged_file_name_pages_exactly(self, setup_server,
+                                               qualcoder_db_path):
+        """The cursor carries the stored name's bytes, so a name that is
+        not valid UTF-8 (byte 80 sorts before the replacement character's
+        bytes) neither skips nor repeats its file's rows."""
+        _damage(qualcoder_db_path,
+                "INSERT INTO source (id, name, fulltext, owner, date) "
+                "VALUES (3, CAST(X'6E80' AS TEXT), 'xx xx xx', 'TestCoder', "
+                "'2024-01-15'); "
+                "INSERT INTO source (id, name, fulltext, owner, date) "
+                "VALUES (4, 'zzz.txt', 'xx', 'TestCoder', '2024-01-15'); "
+                "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                "owner, date, memo) VALUES "
+                "(1, 3, 'xx', 0, 2, 'TestCoder', '2024-01-15', ''), "
+                "(1, 3, 'xx', 3, 5, 'TestCoder', '2024-01-15', ''), "
+                "(1, 3, 'xx', 6, 8, 'TestCoder', '2024-01-15', ''), "
+                "(1, 4, 'xx', 0, 2, 'TestCoder', '2024-01-15', '')")
+        seen, cursor = [], None
+        for _ in range(10):
+            args = {"query": "xx", "limit": 1}
+            if cursor:
+                args["cursor"] = cursor
+            page = host("search_coded_text", **args)
+            assert "error" not in page, page
+            seen += [r["id"] for r in page["results"]]
+            cursor = page["page"].get("next_cursor")
+            if not cursor:
+                break
+        expected = [r[0] for r in sql(
+            qualcoder_db_path,
+            "SELECT ctid FROM code_text WHERE seltext = 'xx'")]
+        assert sorted(seen) == sorted(expected)
+        assert len(seen) == len(set(seen)) == 4

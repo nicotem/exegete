@@ -7,7 +7,6 @@ import re
 import sys
 import json
 import argparse
-import dataclasses
 import shutil
 import logging
 import sqlite3
@@ -438,16 +437,12 @@ class _QualcoderMCP(FastMCP):
                 # The tool's own answer shape, so the host sees an
                 # ordinary refusal and nothing ran
                 return tool.fn_metadata.convert_result(refusal)
-        result = await super().call_tool(name, arguments)
-        # Every answer passes here, so a reduced set's answers are marked
-        # here: a refusal or a note written for the full set ("use
-        # move_code_to_category", "restore_backup refuses it") names a
-        # tool core does not register (fix round 1). Marking reads the
-        # whole answer, the project's own text included, so a note or a
-        # passage that names one of this server's tools is marked too;
-        # a tool name in research text is rare, and the mark says only
-        # that the tool is not available here.
-        return _mark_answer(result) if _serves_a_reduced_set() else result
+        # A reduced set's answers are not marked here, where the
+        # project's own text would be marked with them (fix round 2): each
+        # text of this server's that names a tool is marked where it is
+        # written, before any project text is joined to it, and a test
+        # walks every text a core tool can reach to keep it so.
+        return await super().call_tool(name, arguments)
 
     async def list_tools(self):
         tools = await super().list_tools()
@@ -456,40 +451,6 @@ class _QualcoderMCP(FastMCP):
             if extra:
                 tool.meta = {**(tool.meta or {}), **extra}
         return tools
-
-    async def read_resource(self, uri):
-        contents = await super().read_resource(uri)
-        if not _serves_a_reduced_set():
-            return contents
-        return [dataclasses.replace(item,
-                                    content=_mark_unregistered(item.content))
-                if isinstance(item.content, str) else item
-                for item in contents]
-
-
-def _serves_a_reduced_set() -> bool:
-    """Whether the registered set lacks a tool of the standard set (core
-    does; full and lifecycle do not)."""
-    registered = mcp._tool_manager._tools
-    return any(name not in registered for name in STANDARD_TOOL_NAMES)
-
-
-def _mark_answer(result: Any) -> Any:
-    """A tool's answer, as FastMCP returns it (content blocks, or content
-    blocks and structured content), with the tools the current set does
-    not register marked in its text."""
-    if isinstance(result, tuple):
-        return tuple(_mark_answer(part) for part in result)
-    if isinstance(result, dict):
-        return {key: _mark_answer(value) for key, value in result.items()}
-    if isinstance(result, list):
-        return [_mark_answer(item) for item in result]
-    if isinstance(result, str):
-        return _mark_unregistered(result)
-    text = getattr(result, "text", None)
-    if isinstance(text, str):
-        return result.model_copy(update={"text": _mark_unregistered(text)})
-    return result
 
 
 # Initialize MCP server
@@ -1105,8 +1066,9 @@ def _not_shown_block(counts: Dict[str, int], shown: str,
         "note": (f"This read {shown} text codings only. {region} region "
                  f"coding(s) (areas on PDF pages or images) and {av} "
                  f"audio/video coding(s) {what} are not included; "
-                 f"QualCoder counts them with the text codings, and the "
-                 f"previews of delete_code and merge_codes count them."),
+                 f"QualCoder counts them with the text codings, and "
+                 + _mark_unregistered("the previews of delete_code and "
+                                      "merge_codes count them.")),
     }
 
 
@@ -1503,7 +1465,8 @@ def _find_existing_by_name(rows, name: str, kind: str, plural: str):
                       "exact spelling of the one you mean selects it (their "
                       "ids are listed)")
         else:
-            hint = _AMBIGUITY_ID_TOOLS.get(kind, "their ids are listed")
+            hint = _mark_unregistered(
+                _AMBIGUITY_ID_TOOLS.get(kind, "their ids are listed"))
             remedy = (f"differ only by letter case, spacing or Unicode "
                       f"form, and {twins} of them are one and the same "
                       f"name once spacing and Unicode form are normalised, "
@@ -1592,8 +1555,9 @@ def _existing_code_result(rows, name: str, *, has_supercid: bool,
         requested["category"] = category
         stored = row.get("category")
         where = f"in category '{stored}'" if stored else "not in any category"
-        message += (f" It is {where}, not in '{category}'; use "
-                    f"move_code_to_category if that was the intent.")
+        message += (f" It is {where}, not in '{category}'; "
+                    + _mark_unregistered("use move_code_to_category if "
+                                         "that was the intent."))
     if parent_code_id is not None and not has_supercid:
         # A fresh create with this parameter is refused outright on a
         # pre-v16 project; a duplicate must not silently drop it, or the
@@ -2077,7 +2041,7 @@ def _attach_skipped_symlinks(result: Any, report: Optional[Dict[str, Any]],
     if as_file:
         result[f"{prefix}database_copied_as_file"] = as_file
         result[f"{prefix}database_copied_as_file_note"] = \
-            _DATABASE_AS_FILE_NOTE
+            _mark_unregistered(_DATABASE_AS_FILE_NOTE)
 
 
 def _skipped_symlinks_line(report: Optional[Dict[str, Any]]) -> str:
@@ -2093,7 +2057,8 @@ def _skipped_symlinks_line(report: Optional[Dict[str, Any]]) -> str:
                  f"Relay this to the user.\n")
     if as_file:
         line += (f"backup_database_copied_as_file: {as_file}. "
-                 f"{_DATABASE_AS_FILE_NOTE} Relay this to the user.\n")
+                 f"{_mark_unregistered(_DATABASE_AS_FILE_NOTE)} Relay this "
+                 f"to the user.\n")
     return line
 
 
@@ -8113,8 +8078,9 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                 linked = backup_database_is_link(entry)
                 if side or linked:
                     # Named, never silently used (v0.14)
-                    item["unclean"] = {"side_files": side,
-                                       "note": UNCLEAN_BACKUP_NOTE}
+                    item["unclean"] = {
+                        "side_files": side,
+                        "note": _mark_unregistered(UNCLEAN_BACKUP_NOTE)}
                     if linked:
                         # Its data.qda is a link (fix round 1): what it
                         # holds is wherever the link points now
@@ -8622,7 +8588,8 @@ def restore_backup(backup_path: str,
     linked = backup_database_is_link(backup_folder)
     if side or linked:
         refusal = {
-            "error": "This backup cannot be restored: " + UNCLEAN_BACKUP_NOTE,
+            "error": ("This backup cannot be restored: "
+                      + _mark_unregistered(UNCLEAN_BACKUP_NOTE)),
             "reason": "unclean_backup",
             "side_files": side,
             "nothing_changed": True,

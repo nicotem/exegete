@@ -77,8 +77,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`get_coding_frequencies` for every code with its id,
   `get_case_code_matrix` for every case, `get_codes_by_case`). In the
   `core` set, the instructions, the tool descriptions, the prompts, the
-  methods notes and `list_backups`' notes mark each tool `core` does not
-  register ("not available in this tool set"). An unknown code id is
+  methods notes and every note, hint or refusal of this server's own
+  that names a tool (`create_code`'s, `list_backups`', a read's note on
+  region codings) mark each tool `core` does not register ("not
+  available in this tool set"); the project's own text (a file's words,
+  a quote, a memo, a name) is never marked, so a passage copied from an
+  answer is still the file's. An unknown code id is
   answered with `get_coding_frequencies` and the codes resource (not
   `get_project_summary`, which lists ten, or `export_codebook`); an
   unknown file id with the files resource, or a name search.
@@ -450,8 +454,10 @@ server-wide changes:
   the name, keeps the newest by its name, and removes only folders whose
   names carry this server's stamp: one with the prefix and no time is
   listed under `never_removed`.
-- **In the `core` set**, the texts it serves and its answers mark each
-  tool it does not register: "(not available in this tool set)".
+- **In the `core` set**, the texts it serves and this server's own
+  words in its answers mark each tool it does not register: "(not
+  available in this tool set)"; the project's text is returned as it
+  is.
 - **Every tool carries MCP's hints** (`readOnlyHint`,
   `destructiveHint`, `idempotentHint`, `openWorldHint`), and
   `read_pseudonym_list` carries `anthropic/requiresUserInteraction` in

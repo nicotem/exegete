@@ -1870,40 +1870,151 @@ class TestCoreAnswersAreMarked:
         assert "rename_code" + server.NOT_IN_THIS_TOOL_SET in core
         assert "merge_codes" + server.NOT_IN_THIS_TOOL_SET in core
 
-    def test_the_choke_point_marks_any_tools_answer(self):
-        """A tool of the set, answering a text that names a tool the set
-        lacks, whatever the text: marked in core, left alone in full."""
-        def zz_probe() -> str:
-            """A probe."""
-            return json.dumps({"hint": "use restore_backup(path) next"})
+    def test_research_text_comes_back_verbatim_in_core(self, tmp_path):
+        """Fix round 2: the mark is never written into the project's own
+        text. A file whose words name tools core lacks is shown as it
+        is, a passage copied from the answer is recorded, a code memo
+        naming one comes back as written, and a search echoes its query
+        as given."""
+        folder = self._project(tmp_path)
+        text = ("The analyst said: first merge_codes, then delete_code. "
+                "Nobody objected.")
+        passage = "first merge_codes, then delete_code."
 
-        server.mcp.add_tool(zz_probe)
-        answers = {}
-        for mode in ("full", "core"):
-            server._apply_toolset(mode)
-            if "zz_probe" not in server.mcp._tool_manager._tools:
-                server.mcp.add_tool(zz_probe)
-            result = host_session(lambda client: client.call_tool(
-                "zz_probe", {}))
-            answers[mode] = (text_of(result), result.structuredContent)
-        assert "restore_backup(path) next" in answers["full"][0]
-        marked = ("restore_backup(path)" + server.NOT_IN_THIS_TOOL_SET
-                  + " next")
-        assert marked in answers["core"][0]
-        assert marked in json.dumps(answers["core"][1])
+        async def add(client):
+            await client.call_tool("import_text_file", {
+                "filename": "tools.txt", "content": text})
+            await client.call_tool("set_memo", {
+                "target_type": "code", "target_id": 1,
+                "memo": "Use restore_backup only with care."})
+        host_session(add)
+        server._apply_toolset("core")
 
-    def test_the_choke_point_marks_a_resource_read(self):
-        from mcp.server.fastmcp.resources import FunctionResource
-        uri = "qualcoder://zz/probe"
-        server.mcp._resource_manager.add_resource(FunctionResource(
-            uri=uri, name="zz", fn=lambda: "see merge_codes"))
-        try:
-            server._apply_toolset("core")
-            got = host_session(lambda client: client.read_resource(uri))
-            assert got.contents[0].text == (
-                "see merge_codes" + server.NOT_IN_THIS_TOOL_SET)
-        finally:
-            server.mcp._resource_manager._resources.pop(uri, None)
+        async def read(client):
+            async def call(name, args):
+                return body_of(text_of(await client.call_tool(name, args)))
+            view = await call("analyze_file_with_coding", {"file_id": 1})
+            session = (await call("analyze_for_coding",
+                                  {"file_ids": [1]}))["coding_session_id"]
+            recorded = await call("record_suggestions", {
+                "coding_session_id": session, "suggestions": [{
+                    "file_id": 1, "code_name": "Trust",
+                    "segment_text": passage, "reasoning": "r"}]})
+            search = await call("search_coded_text",
+                                {"query": "merge_codes"})
+            codes = await client.read_resource("qualcoder://codes/list")
+            return view, recorded, search, codes.contents[0].text
+
+        view, recorded, search, codes = host_session(read)
+        mark = server.NOT_IN_THIS_TOOL_SET
+        assert text in json.dumps(view, ensure_ascii=False)
+        assert mark not in json.dumps(view)
+        assert recorded["recorded_count"] == 1, recorded
+        assert mark not in json.dumps(search)
+        assert "Use restore_backup only with care." in codes
+        assert mark not in codes
+
+
+def _core_reachable_texts():
+    """(module, line, tool) for every string literal that a core tool, a
+    resource or a prompt can reach (the definitions they name, followed
+    through the package), that names a tool core lacks, and that is not
+    marked where it is written: passed to `_mark_unregistered`, or a
+    constant every use of which is."""
+    import qualcoder_mcp
+    package = Path(qualcoder_mcp.__file__).parent
+    missing = set(server.ALL_TOOL_NAMES) - set(server.CORE_TOOLSET)
+    word = re.compile(r"(?<![A-Za-z0-9_])(" + "|".join(
+        sorted(missing, key=len, reverse=True)) + r")(?![A-Za-z0-9_])")
+    defs, trees, roots = {}, {}, set(server.CORE_TOOLSET)
+    for path in package.glob("*.py"):
+        tree_ = ast.parse(path.read_text(encoding="utf-8"))
+        trees[path.name] = tree_
+        for node in tree_.body:
+            bodies = node.body if isinstance(node, ast.ClassDef) else [node]
+            for item in bodies:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    defs.setdefault(item.name, []).append((path.name, item))
+                    for deco in item.decorator_list:
+                        func = getattr(deco, "func", None)
+                        if getattr(func, "attr", "") in ("resource",
+                                                         "prompt"):
+                            roots.add(item.name)
+                elif isinstance(item, ast.Assign):
+                    for target in item.targets:
+                        if isinstance(target, ast.Name):
+                            defs.setdefault(target.id, []).append(
+                                (path.name, item))
+
+    def marked_nodes(tree_):
+        """Every node inside a `_mark_unregistered(...)` call, and inside
+        a comprehension whose element is one."""
+        out = set()
+        for node in ast.walk(tree_):
+            if isinstance(node, ast.Call) and \
+                    getattr(node.func, "id", "") == "_mark_unregistered":
+                for arg in node.args:
+                    out |= {id(x) for x in ast.walk(arg)}
+            if isinstance(node, (ast.ListComp, ast.GeneratorExp)) and \
+                    isinstance(node.elt, ast.Call) and \
+                    getattr(node.elt.func, "id", "") == "_mark_unregistered":
+                for gen in node.generators:
+                    out |= {id(x) for x in ast.walk(gen.iter)}
+        return out
+
+    marked = set()
+    for tree_ in trees.values():
+        marked |= marked_nodes(tree_)
+    # A constant is marked where it is used when every use is marked
+    uses = {}
+    for tree_ in trees.values():
+        for node in ast.walk(tree_):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                uses.setdefault(node.id, []).append(id(node) in marked)
+    # SERVER_INSTRUCTIONS is marked by _refresh_served_texts whenever a
+    # set is applied; LIFECYCLE_TOOLS is a list of names, never sent
+    settled = {"SERVER_INSTRUCTIONS", "LIFECYCLE_TOOLS"}
+
+    def refs(node):
+        out = set()
+        for x in ast.walk(node):
+            if isinstance(x, ast.Name) and x.id in defs:
+                out.add(x.id)
+            if isinstance(x, ast.Attribute) and x.attr in defs:
+                out.add(x.attr)
+        return out
+
+    seen, frontier = set(roots), set(roots)
+    while frontier:
+        nxt = set()
+        for name in frontier:
+            for _, node in defs.get(name, []):
+                nxt |= refs(node) - seen
+        seen |= nxt
+        frontier = nxt
+    found = []
+    for name in sorted(seen):
+        if name in settled or (name in uses and uses[name]
+                               and all(uses[name])):
+            continue
+        for module, node in defs.get(name, []):
+            body = getattr(node, "body", None)
+            doc = (body[0].value if isinstance(body, list) and body
+                   and isinstance(body[0], ast.Expr) else None)
+            for x in ast.walk(node):
+                if isinstance(x, ast.Constant) and isinstance(x.value, str) \
+                        and x is not doc and id(x) not in marked:
+                    found += [(module, x.lineno, m.group(1))
+                              for m in word.finditer(x.value)]
+    return sorted(set(found))
+
+
+def test_every_text_core_can_reach_marks_what_core_lacks():
+    """Fix round 2's pin: the texts are marked where they are written,
+    so no answer is marked as a whole and the project's own text never
+    is; this walks every definition a core tool, a resource or a prompt
+    names, through the package, and fails on an unmarked name."""
+    assert _core_reachable_texts() == []
 
 
 class TestAFailedSwitchWithAConfiguredProject:

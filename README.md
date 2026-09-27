@@ -916,7 +916,7 @@ carries the complete list.
 > plus `create_project`, 74 tools. Creating projects stays out of the
 > default set so that researchers opt in to a tool that makes folders on
 > their disk; it is not in `core` either. Measured as below, the
-> `lifecycle` definitions run to about 181,000 characters, roughly 45k
+> `lifecycle` definitions run to about 183,000 characters, roughly 46k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
@@ -934,9 +934,9 @@ carries the complete list.
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0, in
 > the repository's own `venv/`), the
-> definitions run to about 179,000 characters for `full`, roughly 45k
-> tokens at four characters per token, and about 61,000 characters for
-> `core`, roughly 15k tokens. On Python 3.10 to 3.12 the same
+> definitions run to about 181,000 characters for `full`, roughly 45k
+> tokens at four characters per token, and about 63,000 characters for
+> `core`, roughly 16k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
 > LM Studio recipe in INSTALL.md for what that means for context

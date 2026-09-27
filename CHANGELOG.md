@@ -270,10 +270,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects and the AI
-  coding loop: full = 178,849 characters (about 44.7k tokens at
-  chars/4) over 73 tools, core = 61,264 (about 15.3k) over 21, and the
-  new opt-in lifecycle set = 181,331 (about 45.3k) over 74. The coding
-  loop moved it by 5,237 characters in `full` and 3,131 in `core`:
+  coding loop: full = 180,763 characters (about 45.2k tokens at
+  chars/4) over 73 tools, core = 62,536 (about 15.6k) over 21, and the
+  new opt-in lifecycle set = 183,245 (about 45.8k) over 74. The coding
+  loop moved it by 7,151 characters in `full` and 4,403 in `core`:
   `analyze_for_coding`'s description now says what it does and what a
   session's scope refuses, `record_suggestions`' asks for `support`,
   `review_suggestions`', `edit_suggestion`'s, `update_suggestion_status`'s
@@ -290,8 +290,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pseudonymise_source`'s own share now rounds to 19,000, from 18,000.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 188,077, 64,488 and
-  190,695.
+  on Python 3.11.13, in the repository's `.venv/`, 190,099, 65,832 and
+  192,717.
 
 ### Changed: the AI coding loop says what it does
 

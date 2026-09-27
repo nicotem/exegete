@@ -58,9 +58,11 @@ class TestTheListingWithAWorkspace:
 
     def test_a_workspace_that_is_a_usual_place_is_walked_as_before(
             self, tmp_path, monkeypatch):
-        documents = Path.home() / "Documents"
-        _project_folder(documents / "deep", "Walked")
-        monkeypatch.setenv("QUALCODER_MCP_WORKSPACE", "~/Documents")
+        # the last usual place, in the sandbox's home (the suite never
+        # names the real Documents folder)
+        place = server._USUAL_SEARCH_PLACES[-1]
+        _project_folder(Path(place).expanduser() / "deep", "Walked")
+        monkeypatch.setenv("QUALCODER_MCP_WORKSPACE", place)
         answer = host_json("list_available_projects")
         assert "Walked" in {p["name"] for p in answer["projects"]}
         assert "top_level_only" not in answer["searched"]

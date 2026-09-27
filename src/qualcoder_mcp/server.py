@@ -1403,7 +1403,8 @@ def _existing_case_result(rows, name: str, *, memo: Optional[str]):
 
 
 def _resolve_case_argument(cases, case_id: Optional[int],
-                           case_name: Optional[str]):
+                           case_name: Optional[str],
+                           takes_case_id: bool = True):
     """The case a `case_id` and/or `case_name` argument names (v0.14).
 
     A name is resolved by the rule create_case uses to find an existing
@@ -1419,6 +1420,11 @@ def _resolve_case_argument(cases, case_id: Optional[int],
 
     No parity question: QualCoder's own windows pick a case from a list,
     and QualCoder 4.0's AI server names an existing case by its id.
+
+    `takes_case_id` is false for a tool with no `case_id` argument
+    (import_text_file): its refusal then names that tool's own route,
+    import without `case_name` and link with link_file_to_case, rather
+    than an argument it would drop without a word (fix round 2).
 
     Returns:
         (case_row, match, None) or (None, None, error_dict). `match` is
@@ -1446,9 +1452,17 @@ def _resolve_case_argument(cases, case_id: Optional[int],
         forms = [nfc_ordered(normalize_name(c["name"]))
                  for c in err.get("candidates", [])]
         twins = len(set(forms)) < len(forms)
-        err["hint"] = ("Give case_id to choose one of the candidates." if twins
-                       else "Give case_id to choose one of the candidates, "
-                            "or the exact spelling of the one you mean.")
+        spelling = ("" if twins else
+                    ", or give the exact spelling of the one you mean as "
+                    "case_name")
+        if takes_case_id:
+            err["hint"] = (f"Give case_id to choose one of the "
+                           f"candidates{spelling}.")
+        else:
+            err["hint"] = (f"Import without case_name, then link the file "
+                           f"with link_file_to_case, giving the case_id of "
+                           f"the one you mean (the candidates' ids are "
+                           f"listed){spelling}.")
         return None, None, err
     if row is None:
         return None, None, {
@@ -7601,7 +7615,7 @@ def import_text_file(
     case_match = None
     if case_name is not None:
         case, case_match, case_error = _resolve_case_argument(
-            get_db().list_cases(), None, case_name)
+            get_db().list_cases(), None, case_name, takes_case_id=False)
         if case_error is not None:
             return json.dumps(case_error, indent=2)
 

@@ -1496,3 +1496,79 @@ class TestNameMatchingIsLinear:
         out = host("search_coded_text", query="I", code_name="z" + CRAFTED)
         assert out["code_filter"] == "Z" + CRAFTED
         assert out["code_match"] == "case_insensitive"
+
+
+# ===========================================================================
+# Fix round 2, item 5: a refusal's hint names only arguments the refusing
+# tool takes (or those of a tool it names)
+# ===========================================================================
+
+import re  # noqa: E402
+
+
+def _schemas():
+    tools = asyncio.run(server.mcp.list_tools())
+    return {t.name: set(t.inputSchema.get("properties", {})) for t in tools}
+
+
+def _names_only_what_can_be_given(tool, refusal):
+    """Every snake_case identifier in the refusal is a registered tool, an
+    argument of the refusing tool, or an argument of a tool it names."""
+    schemas = _schemas()
+    text = " ".join(str(refusal.get(k, "")) for k in ("error", "hint"))
+    words = set(re.findall(r"\b[a-z]+(?:_[a-z]+)+\b", text))
+    named = {w for w in words if w in schemas}
+    allowed = schemas[tool].union(*(schemas[t] for t in named))
+    return sorted(w for w in words - named if w not in allowed)
+
+
+@pytest.fixture
+def ambiguous_cases(setup_server, qualcoder_db_path):
+    """Letter-case twins Dana and dana, and Unicode-form twins of José."""
+    import unicodedata as _u
+    for caseid, name in ((2, "Dana"), (3, "dana"),
+                         (4, _u.normalize("NFC", "Jos\u00e9")),
+                         (5, _u.normalize("NFD", "Jos\u00e9"))):
+        sql(qualcoder_db_path, "INSERT INTO cases VALUES (?, ?, '', "
+            "'TestCoder', '2024-01-15')", (caseid, name))
+    return qualcoder_db_path
+
+
+class TestARefusalNamesWhatTheToolTakes:
+
+    @pytest.mark.parametrize("name", ["DANA", "Jos\u00e9"],
+                             ids=["letter-case", "unicode-form"])
+    def test_import_text_file_names_its_own_route(self, ambiguous_cases,
+                                                   name):
+        out = host("import_text_file", filename="n.txt", content="Hello.",
+                   case_name=name, create_backup=False)
+        assert "candidates" in out, out
+        assert "link_file_to_case" in out["hint"]
+        assert _names_only_what_can_be_given("import_text_file", out) == []
+        assert sql(ambiguous_cases, "SELECT COUNT(*) FROM source WHERE "
+                   "name = 'n.txt'") == [(0,)]
+
+    @pytest.mark.parametrize("name", ["DANA", "Jos\u00e9"],
+                             ids=["letter-case", "unicode-form"])
+    def test_link_file_to_case_names_its_own_argument(self, ambiguous_cases,
+                                                      name):
+        out = host("link_file_to_case", file_id=2, case_name=name,
+                   create_backup=False)
+        assert out["hint"].startswith("Give case_id")
+        assert _names_only_what_can_be_given("link_file_to_case", out) == []
+
+    def test_the_spelling_clause_only_where_a_spelling_works(
+            self, ambiguous_cases):
+        letter = host("import_text_file", filename="n.txt", content="Hi.",
+                      case_name="DANA", create_backup=False)
+        twins = host("import_text_file", filename="n.txt", content="Hi.",
+                     case_name="Jos\u00e9", create_backup=False)
+        assert "exact spelling" in letter["hint"]
+        assert "exact spelling" not in twins["hint"]
+
+    def test_the_check_sees_an_argument_the_tool_does_not_take(self):
+        """The checker itself, on the hint import_text_file used to give."""
+        assert _names_only_what_can_be_given(
+            "import_text_file",
+            {"hint": "Give case_id to choose one of the candidates."}
+        ) == ["case_id"]

@@ -392,9 +392,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects and the
-  server-wide changes: full = 181,165 characters (about 45.3k tokens at
+  server-wide changes: full = 181,222 characters (about 45.3k tokens at
   chars/4) over 73 tools, core = 61,545 (about 15.4k) over 21, and the
-  new opt-in lifecycle set = 183,678 (about 45.9k) over 74. Moved by
+  new opt-in lifecycle set = 183,735 (about 45.9k) over 74. Moved by
   every input schema's `additionalProperties: false`, the sentence on
   the private-note marker in the fourteen tools that take a note, the
   tools core lacks marked in core's descriptions, and the corrected
@@ -412,8 +412,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The tools' hints (annotations) are not part of this measurement.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 190,209, 64,701 and
-  192,858.
+  on Python 3.11.13, in the repository's `.venv/`, 190,270, 64,701 and
+  192,919.
 
 
 ### Upgrading from 0.13.x

@@ -1655,7 +1655,7 @@ class TestFixRound2TheTextAroundAPassage:
     speaker turn, then the code, the reading and the reason."""
 
     TRANSCRIPT = (
-        "Interviewer: Thank you for joining.\n"
+        "Interviewer: Shall we begin?\n"
         "P1: Happy to help?\n"
         "Interviewer: How do the deadlines feel to you?\n"
         "Interviewer: Take your time.\n"
@@ -1709,7 +1709,7 @@ class TestFixRound2TheTextAroundAPassage:
         # not the same speaker's, not a statement, not an earlier question
         assert "Take your time." not in out
         assert "Is that fine?" not in out
-        assert "Thank you for joining." not in out
+        assert "Shall we begin?" not in out
         assert "Happy to help?" not in out
         assert "And at home?" not in out
 

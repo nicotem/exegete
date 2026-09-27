@@ -1649,3 +1649,182 @@ class TestTheUpgradingListNamesWhatChanged:
             "- Upgrade the package and restart the MCP host fully so it "
             "reloads the tool descriptions. There is no migration step for "
             "projects.")
+
+
+# ===========================================================================
+# Fix round 3, item 1: search_coded_text pages by the file name's stored
+# bytes, in a UTF-8 and a UTF-16 project alike
+# ===========================================================================
+
+import os  # noqa: E402
+import subprocess  # noqa: E402
+from qualcoder_mcp.database import QualcoderDatabase  # noqa: E402
+
+PAGED_FILES = {3: ("P1 interview.txt", "stressed", 64),
+               4: ("Z", "worried", 3),
+               5: ("Émilie interview.txt", "anxious", 5),
+               6: ("Ølstykke notes.txt", "worried", 3)}
+
+
+def _reencode(folder, encoding):
+    """The project's database rewritten with this text encoding (QualCoder
+    never sets one; another tool could), tables and rows as they were."""
+    path = Path(folder) / "data.qda"
+    old_path = Path(folder) / "data_old.qda"
+    path.rename(old_path)
+    new = sqlite3.connect(str(path))
+    old = sqlite3.connect(str(old_path))
+    try:
+        new.execute(f"PRAGMA encoding = '{encoding}'")
+        for name, ddl in old.execute(
+                "SELECT name, sql FROM sqlite_master WHERE type = 'table' "
+                "AND sql IS NOT NULL AND name NOT LIKE 'sqlite_%'"):
+            new.execute(ddl)
+            rows = old.execute(f"SELECT * FROM {name}").fetchall()
+            if rows:
+                marks = ",".join("?" * len(rows[0]))
+                new.executemany(f"INSERT INTO {name} VALUES ({marks})", rows)
+        new.commit()
+        assert new.execute("PRAGMA encoding").fetchone()[0] == encoding
+    finally:
+        new.close()
+        old.close()
+    old_path.unlink()
+
+
+@pytest.fixture(params=["UTF-8", "UTF-16le"])
+def paged(request, setup_server, qualcoder_db_path):
+    """Files whose names begin with an ASCII word, a single letter and
+    letters outside ASCII; in P1, 64 "stressed" codings, the first 60
+    under Coping (2), the rest under Stress (1); then the database in the
+    encoding asked for, and one more file whose stored name is damaged in
+    that encoding, with three "fretful" codings."""
+    folder = qualcoder_db_path
+    rows = []
+    for fid, (name, word, n) in PAGED_FILES.items():
+        sql(folder, "INSERT INTO source (id, name, fulltext, owner, date) "
+                    "VALUES (?, ?, ?, 'TestCoder', '2024-01-15')",
+            (fid, name, (word + " ") * n))
+        for i in range(n):
+            cid = 2 if (fid == 3 and i < 60) else 1
+            start = i * (len(word) + 1)
+            rows.append((cid, fid, word, start, start + len(word)))
+    conn = sqlite3.connect(str(Path(folder) / "data.qda"))
+    conn.executemany(
+        "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, date, "
+        "memo) VALUES (?, ?, ?, ?, ?, 'TestCoder', '2024-01-15', '')", rows)
+    conn.commit()
+    conn.close()
+    server.db.close()
+    _reencode(folder, request.param)
+    # "B" then a byte sequence not valid in the encoding: in UTF-16le a
+    # lone surrogate, in UTF-8 a stray continuation byte
+    damaged = "X'420000D8'" if request.param == "UTF-16le" else "X'4280'"
+    conn = sqlite3.connect(str(Path(folder) / "data.qda"))
+    conn.execute(f"INSERT INTO source (id, name, fulltext, owner, date) "
+                 f"VALUES (7, CAST({damaged} AS TEXT), 'fretful fretful "
+                 f"fretful', 'TestCoder', '2024-01-15')")
+    conn.executemany(
+        "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, date, "
+        "memo) VALUES (1, 7, 'fretful', ?, ?, 'TestCoder', '2024-01-15', "
+        "'')", [(0, 7), (8, 15), (16, 23)])
+    conn.commit()
+    conn.close()
+    server.db = QualcoderDatabase(folder)
+    return folder
+
+
+def _walk(query, limit, **args):
+    """Every page of one search, following next_cursor."""
+    seen, pages, cursor = [], [], None
+    for _ in range(200):
+        call = {"query": query, "limit": limit, **args}
+        if cursor:
+            call["cursor"] = cursor
+        page = host("search_coded_text", **call)
+        assert "error" not in page, page
+        pages.append(page)
+        seen += [r["id"] for r in page["results"]]
+        cursor = page["page"].get("next_cursor")
+        if not cursor:
+            return seen, pages
+    raise AssertionError(f"no last page after 200 pages: {seen[:20]}")
+
+
+def _matching(folder, word):
+    return sorted(r[0] for r in sql(
+        folder, "SELECT ctid FROM code_text WHERE seltext LIKE ?",
+        (f"%{word}%",)))
+
+
+class TestPagingByStoredBytes:
+
+    @pytest.mark.parametrize("word", ["stressed", "worried", "anxious",
+                                      "fretful"])
+    def test_every_row_once_with_a_small_limit(self, paged, word):
+        seen, _ = _walk(word, 2)
+        assert sorted(seen) == _matching(paged, word)
+        assert len(seen) == len(set(seen))
+
+    def test_a_first_page_ending_in_an_accented_name_has_more(self, paged):
+        """The first call, no cursor: five matches in the file whose name
+        begins with an accented capital; the page of two must say there
+        is more (round 2 ended it here, marked exhaustive)."""
+        page = host("search_coded_text", query="anxious", limit=2)
+        assert len(page["results"]) == 2
+        assert page["page"]["has_more"] is True
+        assert page["total_results"] == 5
+
+    def test_a_novelty_search_over_many_excluded_matches_answers(
+            self, paged, tmp_path):
+        """60 matches coded Coping, excluded, before 4 novel ones: the
+        batch loop must move past them. Run in a child process under a
+        time limit, so a loop that spins fails the test rather than
+        hanging the suite."""
+        script = tmp_path / "novel.py"
+        script.write_text(
+            "import asyncio, json, sys\n"
+            f"sys.path.insert(0, {str(Path(server.__file__).parent.parent)!r})\n"
+            "import qualcoder_mcp.server as server\n"
+            "from qualcoder_mcp.database import QualcoderDatabase\n"
+            f"server.db = QualcoderDatabase({paged!r})\n"
+            f"server.current_project_path = {paged!r}\n"
+            "out = asyncio.run(server.mcp.call_tool('search_coded_text', "
+            "{'query': 'stressed', 'exclude_code_ids': [2]}))\n"
+            "out = out[0] if isinstance(out, tuple) else out\n"
+            "print(''.join(getattr(b, 'text', '') for b in out))\n",
+            encoding="utf-8")
+        home = tmp_path / "childhome"
+        home.mkdir()
+        env = dict(os.environ, HOME=str(home), USERPROFILE=str(home),
+                   QUALCODER_MCP_STATE_HOME=str(home / "state"))
+        started = time.perf_counter()
+        try:
+            done = subprocess.run([sys.executable, "-B", str(script)],
+                                  env=env, capture_output=True, text=True,
+                                  timeout=60)
+        except subprocess.TimeoutExpired:
+            pytest.fail("the novelty search did not answer in 60 s")
+        assert done.returncode == 0, done.stderr[-2000:]
+        out = json.loads(done.stdout)
+        novel = sorted(r["id"] for r in out["results"])
+        stress_in_p1 = sorted(r[0] for r in sql(
+            paged, "SELECT ctid FROM code_text WHERE fid = 3 AND cid = 1"))
+        assert novel == sorted([1] + stress_in_p1)
+        assert time.perf_counter() - started < 60
+
+    def test_a_forged_key_gets_the_one_cursor_refusal(self, paged):
+        from qualcoder_mcp import cursors
+        page = host("search_coded_text", query="stressed", limit=2)
+        token = page["page"]["next_cursor"]
+        body = token[len(cursors.CURSOR_PREFIX):]
+        import base64
+        payload = json.loads(base64.urlsafe_b64decode(
+            body + "=" * (-len(body) % 4)))
+        forged = cursors.encode_cursor(
+            payload["t"], payload["f"], ["not hex"] + payload["k"][1:],
+            payload["n"], payload["d"] or None)
+        out = host("search_coded_text", query="stressed", limit=2,
+                   cursor=forged)
+        assert out["error"] == server.cursor_invalid_message(
+            "search_coded_text")

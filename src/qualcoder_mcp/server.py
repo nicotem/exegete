@@ -3688,6 +3688,16 @@ def _refuse_unknown_coder(db_, coder: Any) -> Optional[Dict[str, Any]]:
     return out
 
 
+def _is_hex(text: str) -> bool:
+    """Whether `text` is an even run of hexadecimal digits (a stored-bytes
+    cursor key, fix round 3)."""
+    try:
+        bytes.fromhex(text)
+    except ValueError:
+        return False
+    return all(c in "0123456789abcdef" for c in text)
+
+
 def _resolve_code_name_filter(db_, code_name: Optional[str]):
     """A read's `code_name` filter resolved to the stored name (v0.14).
 
@@ -3912,7 +3922,12 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
             text = (CURSOR_TOO_LONG if str(e) == CURSOR_TOO_LONG
                     else cursor_invalid_message("search_coded_text"))
             return json.dumps({"error": text})
-        after = [key[0] or "", key[1], key[2], key[3], key[4]]
+        # The file name's stored bytes, as hex (fix round 3): anything
+        # else is not a cursor this tool minted
+        if not isinstance(key[0], str) or not _is_hex(key[0]):
+            return json.dumps(
+                {"error": cursor_invalid_message("search_coded_text")})
+        after = [key[0], key[1], key[2], key[3], key[4]]
         changed = _database_changed(stamp)
 
     mask = (db_.excluded_span_mask(exclude_ids, coder=normalised_coder)
@@ -3934,11 +3949,10 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         consumed = 0
         for row in rows:
             consumed += 1
-            # The stored name's bytes, so a damaged name pages exactly
-            # (fix round 2); never part of the answer
-            key_name = row.pop("_file_name_key", None)
-            position = [key_name if key_name is not None
-                        else row["file_name"] or "", row["file_id"],
+            # The stored name's bytes as hex, so every name pages
+            # exactly, damaged or not, in either text encoding (fix rounds
+            # 2 and 3); never part of the answer
+            position = [row.pop("_file_name_key"), row["file_id"],
                         row["position_start"], row["position_end"],
                         row["id"]]
             if mask and db_.span_is_excluded(

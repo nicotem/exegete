@@ -4784,11 +4784,20 @@ class QualcoderDatabase:
     # placement, and the trailing ids make the order total, which is what
     # a keyset cursor needs: with ties, a page boundary could otherwise
     # skip or repeat a row.
-    CODED_TEXT_ORDER = ("COALESCE(s.name,'')", "s.id", "ct.pos0",
-                        "ct.pos1", "ct.ctid")
+    # The file name is ordered, and its keyset compared, as its stored
+    # bytes (fix round 3): SQLite's BINARY order for text is memcmp of
+    # those bytes in the database's own encoding, and a blob compares by
+    # memcmp too, so the order is the same as before in UTF-8 and UTF-16
+    # alike; and the cursor carries the bytes (hex), so a name that is
+    # not valid in the encoding pages exactly. Round 2 bound the bytes as
+    # CAST(? AS TEXT), which SQLite reads as UTF-8 whatever the database's
+    # encoding: in a UTF-16 project pages repeated, rows were skipped and
+    # a novelty search spun for ever.
+    CODED_TEXT_ORDER = ("CAST(COALESCE(s.name,'') AS BLOB)", "s.id",
+                        "ct.pos0", "ct.pos1", "ct.ctid")
 
     @staticmethod
-    def _keyset_predicate(columns, stored_first: bool = False) -> str:
+    def _keyset_predicate(columns) -> str:
         """The expanded lexicographic "strictly after this key" predicate.
 
         `(a > ?) OR (a = ? AND b > ?) OR ...` rather than SQLite's
@@ -4796,33 +4805,17 @@ class QualcoderDatabase:
         worth requiring of whatever SQLite a researcher's Python was
         built against. Parameters are bound in the order the clauses
         appear; `_keyset_params` builds them.
-
-        With `stored_first`, the first column's parameter is the stored
-        bytes of its text, bound as `CAST(? AS TEXT)` (fix round 2): a
-        name that is not valid in the database's encoding cannot come
-        back as a Python string, so the cursor carries its bytes
-        (`_key_text`) and the comparison is on the bytes as stored,
-        which is SQLite's own order for text.
         """
         clauses = []
         for i, col in enumerate(columns):
-            def mark(j):
-                return "CAST(? AS TEXT)" if stored_first and j == 0 else "?"
-            equals = " AND ".join(f"{c} = {mark(j)}"
-                                  for j, c in enumerate(columns[:i]))
-            greater = f"{col} > {mark(i)}"
+            equals = " AND ".join(f"{c} = ?" for c in columns[:i])
+            greater = f"{col} > ?"
             clauses.append(f"({equals} AND {greater})" if equals
                            else f"({greater})")
         return "(" + " OR ".join(clauses) + ")"
 
     @staticmethod
-    def _keyset_params(columns, key, stored_codec: Optional[str] = None
-                       ) -> tuple:
-        key = list(key)
-        if stored_codec is not None:
-            # The key text back to the bytes it was read from
-            first = key[0] if isinstance(key[0], str) else ""
-            key[0] = first.encode(stored_codec, "surrogateescape")
+    def _keyset_params(columns, key) -> tuple:
         params: List[Any] = []
         for i in range(len(columns)):
             params.extend(key[:i])
@@ -4844,13 +4837,14 @@ class QualcoderDatabase:
             return bytes(value).decode(self._text_codec_name(), "replace")
         return value
 
-    def _key_text(self, value: Any) -> str:
-        """A text column's stored bytes as a string that encodes back to
-        exactly those bytes (surrogateescape), for a keyset cursor."""
+    @staticmethod
+    def _key_hex(value: Any) -> str:
+        """A text column's stored bytes as hex, for a keyset cursor (fix
+        round 3): bytes carried as bytes, in any encoding, damaged or
+        not."""
         if isinstance(value, (bytes, bytearray, memoryview)):
-            return bytes(value).decode(self._text_codec_name(),
-                                       "surrogateescape")
-        return "" if value is None else str(value)
+            return bytes(value).hex()
+        return ""
 
     def search_coded_text(self, query: str, code_name: Optional[str] = None,
                           limit: int = DEFAULT_LIMIT,
@@ -4871,7 +4865,8 @@ class QualcoderDatabase:
                    coder-visibility capability
             after: Keyset position from a cursor: return only rows that
                    sort strictly after this (file name, file id, pos0,
-                   pos1, ctid) tuple, in the same total order (D4 3.2.6)
+                   pos1, ctid) tuple, in the same total order (D4 3.2.6);
+                   the file name is its stored bytes as hex (fix round 3)
 
         Returns:
             List of matching coded segments
@@ -4897,11 +4892,13 @@ class QualcoderDatabase:
             where.append("ct.owner = ?")
             params.append(coder)
         if after is not None:
-            where.append(self._keyset_predicate(self.CODED_TEXT_ORDER,
-                                                stored_first=True))
-            params.extend(self._keyset_params(
-                self.CODED_TEXT_ORDER, after,
-                stored_codec=self._text_codec_name()))
+            # after[0] is the file name's stored bytes as hex (the cursor
+            # key); the name column is compared as a blob
+            key = list(after)
+            key[0] = bytes.fromhex(key[0]) if isinstance(key[0], str) \
+                else bytes(key[0] or b"")
+            where.append(self._keyset_predicate(self.CODED_TEXT_ORDER))
+            params.extend(self._keyset_params(self.CODED_TEXT_ORDER, key))
         order = ", ".join(self.CODED_TEXT_ORDER)
 
         try:
@@ -4946,7 +4943,7 @@ class QualcoderDatabase:
                     "code_color": dec(row["code_color"]),
                     # The file name's stored bytes, for the cursor; the
                     # tool removes it before answering
-                    "_file_name_key": self._key_text(row["file_name_key"]),
+                    "_file_name_key": self._key_hex(row["file_name_key"]),
                 })
             return results
         except sqlite3.Error as e:

@@ -950,7 +950,10 @@ class TestVisibilityOfTheMask:
         assert page["total_results"] == 2, "the walk must have a next page"
         payload = _cursor_payload(page["page"]["next_cursor"])
         real_key = payload["k"]
-        assert real_key == ["interview.txt", 1, 24, 55, 1]
+        # v0.14 (reads and exports, fix round 3): the file name is carried
+        # as its stored bytes, in hex
+        assert real_key == ["interview.txt".encode("utf-8").hex(),
+                            1, 24, 55, 1]
         # ctid 3 is the hidden coder's row on the same span as ctid 1;
         # ctid 2 at that span is no row at all and sits strictly between.
         hidden_key = real_key[:-1] + [3]

@@ -7,6 +7,7 @@ import re
 import sys
 import json
 import argparse
+import dataclasses
 import shutil
 import logging
 import sqlite3
@@ -411,7 +412,50 @@ class _QualcoderMCP(FastMCP):
                 # The tool's own answer shape, so the host sees an
                 # ordinary refusal and nothing ran
                 return tool.fn_metadata.convert_result(refusal)
-        return await super().call_tool(name, arguments)
+        result = await super().call_tool(name, arguments)
+        # Every answer passes here, so a reduced set's answers are marked
+        # here: a refusal or a note written for the full set ("use
+        # move_code_to_category", "restore_backup refuses it") names a
+        # tool core does not register (fix round 1). Marking reads the
+        # whole answer, the project's own text included, so a note or a
+        # passage that names one of this server's tools is marked too;
+        # a tool name in research text is rare, and the mark says only
+        # that the tool is not available here.
+        return _mark_answer(result) if _serves_a_reduced_set() else result
+
+    async def read_resource(self, uri):
+        contents = await super().read_resource(uri)
+        if not _serves_a_reduced_set():
+            return contents
+        return [dataclasses.replace(item,
+                                    content=_mark_unregistered(item.content))
+                if isinstance(item.content, str) else item
+                for item in contents]
+
+
+def _serves_a_reduced_set() -> bool:
+    """Whether the registered set lacks a tool of the standard set (core
+    does; full and lifecycle do not)."""
+    registered = mcp._tool_manager._tools
+    return any(name not in registered for name in STANDARD_TOOL_NAMES)
+
+
+def _mark_answer(result: Any) -> Any:
+    """A tool's answer, as FastMCP returns it (content blocks, or content
+    blocks and structured content), with the tools the current set does
+    not register marked in its text."""
+    if isinstance(result, tuple):
+        return tuple(_mark_answer(part) for part in result)
+    if isinstance(result, dict):
+        return {key: _mark_answer(value) for key, value in result.items()}
+    if isinstance(result, list):
+        return [_mark_answer(item) for item in result]
+    if isinstance(result, str):
+        return _mark_unregistered(result)
+    text = getattr(result, "text", None)
+    if isinstance(text, str):
+        return result.model_copy(update={"text": _mark_unregistered(text)})
+    return result
 
 
 # Initialize MCP server
@@ -16398,8 +16442,8 @@ def _resolve_toolset_mode() -> str:
 
 # Every tool this server defines, whichever set is registered now: the
 # standard set, registered at import, and the lifecycle tools.
-ALL_TOOL_NAMES = frozenset(mcp._tool_manager._tools) | frozenset(
-    LIFECYCLE_TOOLS)
+STANDARD_TOOL_NAMES = frozenset(mcp._tool_manager._tools)
+ALL_TOOL_NAMES = STANDARD_TOOL_NAMES | frozenset(LIFECYCLE_TOOLS)
 
 
 def _refresh_served_texts() -> Dict[str, Any]:

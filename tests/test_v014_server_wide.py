@@ -1631,3 +1631,91 @@ class TestPromisesKeptOverEveryTool:
         assert len(texts) > 30
         leaked = [text[:200] for text in texts if secret in text]
         assert leaked == []
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1: answers in core name only what core has, or mark it
+# ---------------------------------------------------------------------------
+
+class TestCoreAnswersAreMarked:
+    """Every answer and every resource read passes the one place that
+    marks, in a reduced set, the tools the set does not register."""
+
+    def _project(self, tmp_path):
+        server._apply_toolset("lifecycle")
+        projects = tmp_path / "projects"
+        projects.mkdir()
+
+        async def make(client):
+            made = json.loads(text_of(await client.call_tool(
+                "create_project", {"name": "Core", "directory": str(projects),
+                                   "coder_name": "Researcher"})))
+            await client.call_tool("set_project_ai_coder_name",
+                                   {"name": "AI-Test"})
+            await client.call_tool("create_code", {"name": "Trust"})
+            await client.call_tool("create_category", {"name": "Feelings"})
+            return Path(made["project_path"])
+        return host_session(make)
+
+    def _create_code(self, arguments):
+        return text_of(host_session(lambda client: client.call_tool(
+            "create_code", arguments)))
+
+    def test_an_existing_codes_answer_marks_a_tool_core_lacks(self,
+                                                              tmp_path):
+        self._project(tmp_path)
+        arguments = {"name": "Trust", "category": "Feelings"}
+        full = self._create_code(arguments)
+        assert "move_code_to_category if that was the intent" in full
+        assert server.NOT_IN_THIS_TOOL_SET not in full
+        server._apply_toolset("core")
+        core = self._create_code(arguments)
+        assert ("move_code_to_category" + server.NOT_IN_THIS_TOOL_SET
+                in core)
+
+    def test_an_ambiguous_names_refusal_marks_both_tools(self, tmp_path):
+        folder = self._project(tmp_path)
+        with sqlite3.connect(str(folder / "data.qda")) as conn:
+            for name in ("Café", "Café"):
+                conn.execute("insert into code_name (name, memo, owner, "
+                             "date, color) values (?, '', 'Researcher', "
+                             "'2026-01-01', '#FF0000')", (name,))
+        server._apply_toolset("core")
+        core = self._create_code({"name": "Café"})
+        assert "rename_code" + server.NOT_IN_THIS_TOOL_SET in core
+        assert "merge_codes" + server.NOT_IN_THIS_TOOL_SET in core
+
+    def test_the_choke_point_marks_any_tools_answer(self):
+        """A tool of the set, answering a text that names a tool the set
+        lacks, whatever the text: marked in core, left alone in full."""
+        def zz_probe() -> str:
+            """A probe."""
+            return json.dumps({"hint": "use restore_backup(path) next"})
+
+        server.mcp.add_tool(zz_probe)
+        answers = {}
+        for mode in ("full", "core"):
+            server._apply_toolset(mode)
+            if "zz_probe" not in server.mcp._tool_manager._tools:
+                server.mcp.add_tool(zz_probe)
+            result = host_session(lambda client: client.call_tool(
+                "zz_probe", {}))
+            answers[mode] = (text_of(result), result.structuredContent)
+        assert "restore_backup(path) next" in answers["full"][0]
+        marked = ("restore_backup(path)" + server.NOT_IN_THIS_TOOL_SET
+                  + " next")
+        assert marked in answers["core"][0]
+        assert marked in json.dumps(answers["core"][1])
+
+    def test_the_choke_point_marks_a_resource_read(self):
+        from mcp.server.fastmcp.resources import FunctionResource
+        uri = "qualcoder://zz/probe"
+        server.mcp._resource_manager.add_resource(FunctionResource(
+            uri=uri, name="zz", fn=lambda: "see merge_codes"))
+        try:
+            server._apply_toolset("core")
+            got = host_session(lambda client: client.read_resource(uri))
+            assert got.contents[0].text == (
+                "see merge_codes" + server.NOT_IN_THIS_TOOL_SET)
+        finally:
+            server.mcp._resource_manager._resources.pop(uri, None)

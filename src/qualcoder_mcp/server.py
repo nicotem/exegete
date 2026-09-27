@@ -901,6 +901,25 @@ def _selection_after_failure(previous: Optional[str]) -> Tuple[str, Any]:
     """What a failed select_project says about the selection it leaves:
     the sentence that ends its answer, and the name for its
     `selected_project` (null when none)."""
+    if current_project_path is None and \
+            os.environ.get("QUALCODER_PROJECT_PATH"):
+        # With nothing selected, the next tool opens the project set in
+        # the host's configuration, so "No project is selected" would
+        # send the next write somewhere unsaid (fix round 1). It is
+        # opened here, as that tool would open it, and named.
+        try:
+            _adopt_configured_project()
+        except Exception as e:
+            logger.error("The configured project would not open after a "
+                         "failed selection: %s", error_label(e))
+            return ("No project is selected, and the project set in the "
+                    "host's configuration (QUALCODER_PROJECT_PATH) could "
+                    "not be opened either."), None
+        if current_project_path is not None:
+            name = project_display_name(current_project_path)
+            return (f"No project had been selected, so the project set in "
+                    f"the host's configuration, {name}, is selected now, "
+                    f"and the next tool works on it."), name
     if current_project_path is None:
         return "No project is selected.", None
     name = project_display_name(current_project_path)
@@ -3035,7 +3054,10 @@ def select_project(project_path: str) -> str:
     selected project stays selected, and every failed answer ends by
     naming it ("The previously selected project, <name>, is still
     selected.") or saying that no project is selected, with the name
-    under `selected_project`; a write you make next lands there.
+    under `selected_project`; a write you make next lands there. When
+    nothing was selected and the host's configuration names a project
+    (QUALCODER_PROJECT_PATH), that project is opened and named instead,
+    since the next tool would use it.
 
     A successful selection is recorded as this machine's most recently used
     project (~/.qualcoder_mcp/mru_project.json) so that a later "no project

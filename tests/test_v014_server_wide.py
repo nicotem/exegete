@@ -1719,3 +1719,62 @@ class TestCoreAnswersAreMarked:
                 "see merge_codes" + server.NOT_IN_THIS_TOOL_SET)
         finally:
             server.mcp._resource_manager._resources.pop(uri, None)
+
+
+class TestAFailedSwitchWithAConfiguredProject:
+    """Fix round 1: with nothing selected and a project set in the host's
+    configuration, a failed switch names that project, because the next
+    tool uses it."""
+
+    def test_the_configured_project_is_named_and_takes_the_next_write(
+            self, qualcoder_db_path, tmp_path, monkeypatch):
+        from track5_helpers import write_fixture_sidecar
+        write_fixture_sidecar(qualcoder_db_path)
+        monkeypatch.setattr(server, "db", None)
+        monkeypatch.setattr(server, "current_project_path", None)
+        monkeypatch.setenv("QUALCODER_PROJECT_PATH", qualcoder_db_path)
+
+        async def drive(client):
+            async def call(name, args):
+                return json.loads(text_of(await client.call_tool(name,
+                                                                 args)))
+            failed = await call("select_project",
+                                {"project_path": str(tmp_path / "No.qda")})
+            current = await call("get_current_project", {})
+            made = await call("create_code", {"name": "Landed"})
+            return failed, current, made
+
+        try:
+            failed, current, made = host_session(drive)
+        finally:
+            if server.db is not None:
+                server.db.close()
+            server.db = None
+        assert failed["success"] is False
+        assert failed["error"].endswith(
+            "No project had been selected, so the project set in the "
+            "host's configuration, test_project, is selected now, and the "
+            "next tool works on it.")
+        assert failed["selected_project"] == "test_project"
+        assert current["project_name"] == "test_project"
+        assert made.get("success") is True, made
+        db = str(Path(qualcoder_db_path) / "data.qda")
+        with sqlite3.connect(db) as conn:
+            assert conn.execute("select count(*) from code_name where "
+                                "name = 'Landed'").fetchone()[0] == 1
+
+    def test_a_configured_project_that_will_not_open_is_said(
+            self, tmp_path, monkeypatch):
+        monkeypatch.setattr(server, "db", None)
+        monkeypatch.setattr(server, "current_project_path", None)
+        monkeypatch.setenv("QUALCODER_PROJECT_PATH",
+                           str(tmp_path / "Gone.qda"))
+        failed = json.loads(text_of(host_session(
+            lambda client: client.call_tool(
+                "select_project",
+                {"project_path": str(tmp_path / "No.qda")}))))
+        assert failed["error"].endswith(
+            "No project is selected, and the project set in the host's "
+            "configuration (QUALCODER_PROJECT_PATH) could not be opened "
+            "either.")
+        assert failed["selected_project"] is None

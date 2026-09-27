@@ -1572,3 +1572,36 @@ class TestARefusalNamesWhatTheToolTakes:
             "import_text_file",
             {"hint": "Give case_id to choose one of the candidates."}
         ) == ["case_id"]
+
+
+# ===========================================================================
+# Fix round 2, item 6: search_memos masks every owner when who is hidden
+# cannot be read (fail closed)
+# ===========================================================================
+
+class TestSearchMemosFailsClosedOnOwners:
+
+    def test_an_unreadable_visibility_table_masks_every_owner(
+            self, setup_server, qualcoder_db_path):
+        from test_qc40_visibility import (_apply_visibility_schema, _reopen,
+                                          HIDDEN)
+        _apply_visibility_schema(qualcoder_db_path)
+        sql(qualcoder_db_path, "UPDATE code_cat SET memo = 'Numbat c' "
+            "WHERE catid = 1")
+        sql(qualcoder_db_path, "UPDATE journal SET jentry = 'Numbat j', "
+            "owner = ? WHERE jid = 1", (HIDDEN,))
+        # A visibility value that is not the integer its schema declares:
+        # the table answers, but who is hidden cannot be decided
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("PRAGMA ignore_check_constraints = 1")
+        conn.execute("UPDATE coder_names SET visibility = 'abc' "
+                     "WHERE name = 'TestCoder'")
+        conn.commit()
+        conn.close()
+        _reopen(qualcoder_db_path)
+        out = host("search_memos", query="numbat")
+        owners = {r["type"]: r["owner"] for r in out["results"]}
+        assert owners == {"category": "(hidden coder)",
+                          "journal": "(hidden coder)"}, out
+        assert HIDDEN not in json.dumps(out)
+        assert "TestCoder" not in json.dumps(out)

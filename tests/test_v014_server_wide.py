@@ -35,6 +35,13 @@ def text_of(result) -> str:
     return "\n".join(getattr(block, "text", "") for block in result.content)
 
 
+def host_json(name, arguments=None):
+    """One tool's answer over the host's path, parsed (fix round 1: the
+    new tests call tools as a host does, not as Python functions)."""
+    return json.loads(text_of(host_session(
+        lambda client: client.call_tool(name, arguments or {}))))
+
+
 def tree(root) -> dict:
     """Every file and folder under `root`, with size and modification
     time: a write anywhere under it shows as a difference."""
@@ -887,8 +894,8 @@ class TestTextsThatSentTheAssistantNowhere:
             self, tmp_path):
         home = Path.home()
         (home / "Research" / "Pilot.qda").mkdir(parents=True)
-        answer = json.loads(server.list_available_projects(
-            ["~/Research", "~/Nowhere"]))
+        answer = host_json("list_available_projects", {
+            "search_directories": ["~/Research", "~/Nowhere"]})
         assert [p["name"] for p in answer["projects"]] == ["Pilot"]
         searched = answer["searched"]
         assert searched["folders"] == [str(home / "Research"),
@@ -897,8 +904,8 @@ class TestTextsThatSentTheAssistantNowhere:
         assert searched["instead_of_the_usual_places"] is True
 
     def test_a_relative_folder_is_refused_not_skipped(self):
-        answer = json.loads(server.list_available_projects(
-            ["relative/dir"]))
+        answer = host_json("list_available_projects", {
+            "search_directories": ["relative/dir"]})
         assert "relative path ('relative/dir')" in answer["error"]
         assert "Nothing was searched" in answer["error"]
 
@@ -906,13 +913,13 @@ class TestTextsThatSentTheAssistantNowhere:
         """On Windows "/nowhere" has no drive letter, so it is not
         absolute there, but it names the current drive's root and is
         searched, not refused (found by the Windows CI jobs)."""
-        answer = json.loads(server.list_available_projects(
-            ["/qc_nowhere_at_all"]))
+        answer = host_json("list_available_projects", {
+            "search_directories": ["/qc_nowhere_at_all"]})
         assert answer["projects"] == []
         assert len(answer["searched"]["not_found"]) == 1
 
     def test_the_usual_places_are_reported_too(self):
-        answer = json.loads(server.list_available_projects())
+        answer = host_json("list_available_projects")
         assert answer["searched"]["instead_of_the_usual_places"] is False
         # the usual places, expanded in the sandbox's home (the suite
         # never names the real Documents folder)
@@ -929,8 +936,9 @@ class TestTextsThatSentTheAssistantNowhere:
         with sqlite3.connect(db) as conn:
             conn.execute("update source set fulltext = ? where id = 1",
                          ("beans " * 8,))
-        answer = json.loads(server.search_files(
-            "beans", search_filename=False, search_content=True))
+        answer = host_json("search_files", {
+            "pattern": "beans", "search_filename": False,
+            "search_content": True})
         row = answer["results"][0]
         assert row["match_count"] == 5
         assert row["content_matches_found"] == 8
@@ -1254,7 +1262,7 @@ class TestBackupsDatedByTheirNames:
         # used them would come out reversed
         for index, name in enumerate(names):
             _backup_folder(folder.parent, name, time.time() - index * 60)
-        listed = json.loads(server.list_backups())["backups"]
+        listed = host_json("list_backups")["backups"]
         assert [b["name"] for b in listed] == list(reversed(names))
         assert {b["created"] for b in listed} == {"2026-01-01 12:00:00"}
 
@@ -1267,7 +1275,7 @@ class TestBackupsDatedByTheirNames:
         _backup_folder(folder.parent, "test_project_backup_manual.qda",
                        week_ago)
         listed = {b["name"]: b for b in
-                  json.loads(server.list_backups())["backups"]}
+                  host_json("list_backups")["backups"]}
         qualcoder = listed["test_project_BKUP_20260102_09.qda"]
         assert qualcoder["created"] == "2026-01-02 09:00:00"
         assert qualcoder["dated_from"] == "name"
@@ -1368,14 +1376,14 @@ class TestAFailedSwitchSaysWhatIsSelected:
         # the connection was never closed, and every tool agrees
         assert server.db is before_db and server.db.conn is not None
         assert server.current_project_path == qualcoder_db_path
-        current = json.loads(server.get_current_project())
+        current = host_json("get_current_project")
         assert current["project_name"] == "test_project"
 
     def test_with_nothing_selected_it_says_so(self, tmp_path, monkeypatch):
         monkeypatch.setattr(server, "db", None)
         monkeypatch.setattr(server, "current_project_path", None)
-        answer = json.loads(server.select_project(
-            str(tmp_path / "Missing.qda")))
+        answer = host_json("select_project", {
+            "project_path": str(tmp_path / "Missing.qda")})
         assert answer["error"].endswith("No project is selected.")
         assert answer["selected_project"] is None
 
@@ -1399,7 +1407,7 @@ class TestAFailedSwitchSaysWhatIsSelected:
             return new
 
         monkeypatch.setattr(server, "QualcoderDatabase", unreadable)
-        answer = json.loads(server.select_project(empty_db_path))
+        answer = host_json("select_project", {"project_path": empty_db_path})
         assert answer["success"] is False
         assert "still selected" in answer["error"]
         assert server.db is before_db
@@ -1409,7 +1417,7 @@ class TestAFailedSwitchSaysWhatIsSelected:
     def test_a_switch_that_succeeds_closes_the_old_connection(
             self, setup_server, empty_db_path):
         old = server.db
-        answer = json.loads(server.select_project(empty_db_path))
+        answer = host_json("select_project", {"project_path": empty_db_path})
         assert answer["success"] is True
         assert old.conn is None
         assert server.db is not old
@@ -1418,8 +1426,8 @@ class TestAFailedSwitchSaysWhatIsSelected:
             self, setup_server, empty_db_path):
         """Not "data" (the claims audit, item 2): the name is the
         folder's, whichever path selected it."""
-        answer = json.loads(server.select_project(
-            str(Path(empty_db_path) / "data.qda")))
+        answer = host_json("select_project", {
+            "project_path": str(Path(empty_db_path) / "data.qda")})
         assert answer["project_name"] == Path(empty_db_path).stem
         assert answer["message"].endswith(Path(empty_db_path).stem)
 
@@ -1470,6 +1478,27 @@ class TestSessionFilesAfterPseudonymising:
                     "name": "Reliance", "memo": "d", "rationale": "r",
                     "example_segments": [{"file_id": 1,
                                           "segment_text": QUOTE}]}]})
+            # fix round 1: a rejected and a created proposal hold the
+            # passage too, and have no work left to apply
+            finished = {}
+            for outcome, name in (("reject", "Distrust"),
+                                  ("create", "Loyalty")):
+                sid = (await call("analyze_for_coding",
+                                  {"file_ids": [1]}))["coding_session_id"]
+                proposed = await call("propose_codes", {
+                    "coding_session_id": sid, "proposals": [{
+                        "name": name, "memo": "d", "rationale": "r",
+                        "example_segments": [{"file_id": 1,
+                                              "segment_text": QUOTE}]}]})
+                guid = proposed["recorded"][0]["guid"]
+                decision = "reject" if outcome == "reject" else "approve"
+                await call("update_proposal_status", {
+                    "coding_session_id": sid, decision: [guid]})
+                if outcome == "create":
+                    created = await call("create_proposed_codes",
+                                         {"coding_session_id": sid})
+                    assert "error" not in created, created
+                finished[outcome] = sid
             elsewhere = (await call("analyze_for_coding",
                                     {"file_ids": [2]}))["coding_session_id"]
             await call("record_suggestions", {
@@ -1493,12 +1522,13 @@ class TestSessionFilesAfterPseudonymising:
                                  {"project_path": str(Path(folder)
                                                       / "data.qda")})
             return (suggesting, proposing, elsewhere, done, by_folder,
-                    by_file)
+                    by_file, finished)
 
         (suggesting, proposing, elsewhere, done, by_folder,
-         by_file) = host_session(drive)
+         by_file, finished) = host_session(drive)
         assert done["success"] is True, done
-        assert done["stale_sessions"] == sorted([suggesting, proposing])
+        assert done["stale_sessions"] == sorted(
+            [suggesting, proposing, finished["reject"], finished["create"]])
         assert done["stale_sessions_with_work_to_apply"] == [proposing]
         note = [n for n in done["notes"] if "coding session file" in n]
         assert len(note) == 1 and "~/.qualcoder_mcp/sessions/" in note[0]
@@ -1509,7 +1539,8 @@ class TestSessionFilesAfterPseudonymising:
             assert "Maria" in stored
         for listing in (by_folder, by_file):
             ids = {s["coding_session_id"] for s in listing["sessions"]}
-            assert ids == {suggesting, proposing, elsewhere}
+            assert ids == {suggesting, proposing, elsewhere,
+                           finished["reject"], finished["create"]}
             assert {s["project_name"] for s in listing["sessions"]} == \
                 {"Study"}
 
@@ -1541,7 +1572,7 @@ class TestSessionFilesAfterPseudonymising:
                                                   monkeypatch):
         monkeypatch.setattr(server, "current_project_path",
                             str(Path(qualcoder_db_path) / "data.qda"))
-        current = json.loads(server.get_current_project())
+        current = host_json("get_current_project")
         assert current["project_name"] == "test_project"
 
 

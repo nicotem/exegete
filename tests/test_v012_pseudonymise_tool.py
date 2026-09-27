@@ -6438,7 +6438,7 @@ class TestStaleSessions:
         session.add_suggestion(CodingSuggestion(
             file_id=file_id, file_name="f", code_id=1, code_name="Stress",
             start_pos=0, end_pos=6, segment_text=TEXT[0:6],
-            reasoning="r", support="explicit", status=status))
+            reasoning="r", reading="explicit", status=status))
         server.session_manager.save_session(session)
         return session
 

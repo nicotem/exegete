@@ -58,7 +58,7 @@ def _make_approved_session(sid_file_id=1, start=24, end=55):
         "file_id": sid_file_id, "code_name": "Stress",
         "start_pos": start, "end_pos": end,
         "segment_text": FULLTEXT[start:end],
-        "reasoning": "regression fixture", "support": "explicit",
+        "reasoning": "regression fixture", "reading": "explicit",
     }]))
     assert rec["recorded_count"] == 1, rec
     guid = rec["recorded"][0]["guid"]

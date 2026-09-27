@@ -106,7 +106,7 @@ def sample_suggestions():
             end_pos=50,
             segment_text="I feel very stressed at work.",
             reasoning="Clear stress indicator",
-            support="explicit",
+            reading="explicit",
             status="approved",
             guid="11111111-1111-4111-8111-111111111111"
         ),
@@ -119,7 +119,7 @@ def sample_suggestions():
             end_pos=150,
             segment_text="I try to meditate daily.",
             reasoning="Positive coping strategy",
-            support="explicit",
+            reading="explicit",
             status="approved",
             guid="22222222-2222-4222-8222-222222222222"
         ),
@@ -132,7 +132,7 @@ def sample_suggestions():
             end_pos=250,
             segment_text="The deadlines are overwhelming.",
             reasoning="Stress from deadlines",
-            support="explicit",
+            reading="explicit",
             status="approved",
             guid="33333333-3333-4333-8333-333333333333"
         )
@@ -300,8 +300,8 @@ class TestRefiQdaExporter:
         assert desc is not None
         assert desc.text is not None
         assert "Clear stress indicator" in desc.text
-        # The support label in words, first; never a number (ruling 21)
-        assert desc.text.startswith("Support: explicit (the passage states it)")
+        # The reading in words, first; never a number (ruling 21)
+        assert desc.text.startswith("Reading: explicit (the passage states what the code names)")
         assert "0.9" not in desc.text
 
     def test_prettify_xml(self, exporter):
@@ -503,7 +503,7 @@ class TestRefiQdaExporter:
                 start_pos=-5,  # Invalid
                 end_pos=3,  # Invalid (before start when start is corrected)
                 segment_text="text",
-                support="explicit"
+                reading="explicit"
             )
         ]
 
@@ -568,7 +568,7 @@ class TestRefiQdaExporter:
             end_pos=10,
             segment_text="text",
             reasoning="",  # Empty reasoning
-            support="explicit"
+            reading="explicit"
         )
 
         output_file = tmp_path / "test_export.qdpx"

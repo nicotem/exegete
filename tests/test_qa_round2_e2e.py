@@ -127,11 +127,11 @@ class TestEndToEndLoop:
             {"file_id": 1, "code_name": "Stress",
              "start_pos": 24, "end_pos": 55,
              "segment_text": FULLTEXT[24:55],
-             "reasoning": "explicit stress statement", "support": "explicit"},
+             "reasoning": "explicit stress statement", "reading": "explicit"},
             {"file_id": 1, "code_name": "coping",   # case-insensitive name
              "start_pos": 3, "end_pos": 9,           # wrong on purpose
              "segment_text": "I cope by exercising",
-             "reasoning": "coping behavior", "support": "explicit"},
+             "reasoning": "coping behavior", "reading": "explicit"},
         ]))
         assert rec["recorded_count"] == 2, rec
         assert rec["rejected_count"] == 0
@@ -167,8 +167,8 @@ class TestEndToEndLoop:
             assert row["seltext"] == row["fulltext"][row["pos0"]:row["pos1"]]
             assert row["avid"] is None
             assert row["important"] is None       # never 0
-            assert row["memo"]                    # support label + reasoning
-            assert row["memo"].startswith("Support: explicit")
+            assert row["memo"]                    # reading + reasoning
+            assert row["memo"].startswith("Reading: explicit")
             assert "Confidence" not in row["memo"]
             assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}",
                                 row["date"])
@@ -199,7 +199,7 @@ class TestUnhappyPaths:
         """Session created in A, project B selected: every session-consuming
         write refuses and B is untouched."""
         sid = _session_id(server.analyze_for_coding([1]))
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
         }]))
@@ -212,7 +212,7 @@ class TestUnhappyPaths:
         assert json.loads(server.select_project(str(project_b)))["success"]
 
         # record refuses
-        rec2 = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec2 = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 0, "end_pos": 4, "segment_text": FULLTEXT[0:4],
         }]))
@@ -237,7 +237,7 @@ class TestUnhappyPaths:
         """A stale foreign lock lets the write proceed unheld; QualCoder
         'opening' between validation and commit must abort with rollback."""
         sid = _session_id(server.analyze_for_coding([1]))
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
         }]))
@@ -276,7 +276,7 @@ class TestUnhappyPaths:
     def test_fresh_lock_blocks_the_whole_flow_but_not_reads(
             self, setup_server, qualcoder_db_path):
         sid = _session_id(server.analyze_for_coding([1]))
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
         }]))
@@ -305,7 +305,7 @@ class TestUnhappyPaths:
         sid = _session_id(server.analyze_for_coding([1]))
         # "I " occurs twice in the fixture text; wrong positions + ambiguous
         # text must be rejected, not guessed
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 0, "end_pos": 2, "segment_text": "I ",
         }]))
@@ -313,7 +313,7 @@ class TestUnhappyPaths:
         assert "times in the file" in rec["rejected"][0]["reason"]
 
         # text not in the file at all -> rejected with both snippets
-        rec2 = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec2 = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 0, "end_pos": 9, "segment_text": "NOT PRESENT",
         }]))
@@ -326,7 +326,7 @@ class TestUnhappyPaths:
         """Simulates QualCoder (or anything) editing the text after the
         suggestion was recorded: apply must re-validate and refuse."""
         sid = _session_id(server.analyze_for_coding([1]))
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
         }]))
@@ -368,7 +368,7 @@ class TestUnhappyPaths:
                 "file_id": fid,
                 "code_name": "Stress" if i % 2 else "Coping",
                 "start_pos": start, "end_pos": start + len(snippet),
-                "segment_text": snippet, "support": "explicit",
+                "segment_text": snippet, "reading": "explicit",
             })
         t0 = time.perf_counter()
         rec = json.loads(server.record_suggestions(sid, suggestions))

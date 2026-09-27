@@ -6,9 +6,10 @@
 > REFI-QDA files produced by `export_refi_qda` are for OTHER QDA
 > software, not for re-importing into the same project.
 > Since v0.14 a suggestion carries no confidence score: the memo, and
-> the export's description, say "Support: explicit" (the passage states
-> the code) or "Support: interpretive" (the assistant is reading it in)
-> before the reasoning. The memo lines below show that form.
+> the export's description, say "Reading: explicit" (the passage states
+> what the code names) or "Reading: interpretive" (the code rests on
+> what the passage implies rather than on what it says) before the
+> reasoning. The memo lines below show that form.
 
 Step-by-step guide for importing AI coding suggestions into Qualcoder.
 
@@ -215,7 +216,7 @@ For each coded segment:
 
 **Memo format**:
 ```
-Support: explicit (the passage states it)
+Reading: explicit (the passage states what the code names)
 
 Clear expression of workplace stress related to deadlines.
 ```

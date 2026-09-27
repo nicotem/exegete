@@ -16,31 +16,37 @@ from .database import error_label
 logger = logging.getLogger(__name__)
 
 
-# How the words of a passage carry a suggested code (owner ruling 21,
-# v0.14): a category, never a number. `explicit`: the passage states it;
-# `interpretive`: the assistant is reading into it. A suggestion recorded
-# before v0.14 carried a 0-1 "confidence" instead; it loads with no label
-# (None), and the number is not kept.
-SUPPORT_LABELS = {
-    "explicit": "the passage states it",
-    "interpretive": "the assistant is reading into it",
+# How a suggested code reads the passage (owner rulings 21 and 25, v0.14):
+# a category, never a number, and the researcher's to change at review.
+# Nothing sorts, filters or totals by it. `explicit`: the passage states
+# what the code names; `interpretive`: the code rests on what the passage
+# implies rather than on what it says (the reason then names the words it
+# rests on). A suggestion recorded before v0.14 carried a 0-1
+# "confidence" instead; it loads with no label (None), and the number is
+# not kept. A session written while the label was called `support` loads
+# its value as the reading.
+READING_LABELS = {
+    "explicit": "the passage states what the code names",
+    "interpretive": ("the code rests on what the passage implies rather "
+                     "than on what it says"),
 }
 
 
-def support_label(value: Any) -> Optional[str]:
+def reading_label(value: Any) -> Optional[str]:
     """The label a value names ('explicit' or 'interpretive'), or None.
 
     Only a string can name one: a list, a number or a boolean is no label
     (and a list cannot even be looked up in a dict)."""
-    return value if isinstance(value, str) and value in SUPPORT_LABELS else None
+    return value if isinstance(value, str) and value in READING_LABELS else None
 
 
-def support_in_words(support: Optional[str]) -> Optional[str]:
-    """'explicit (the passage states it)', or None for no label."""
-    label = support_label(support)
+def reading_in_words(reading: Optional[str]) -> Optional[str]:
+    """'explicit (the passage states what the code names)', or None for
+    no label."""
+    label = reading_label(reading)
     if label is None:
         return None
-    return f"{label} ({SUPPORT_LABELS[label]})"
+    return f"{label} ({READING_LABELS[label]})"
 
 
 def guids_in_more_than_one(*lists: Optional[List[Any]]) -> List[Any]:
@@ -71,19 +77,19 @@ def unique_in_order(values: Optional[List[Any]]) -> List[Any]:
     return out
 
 
-def memo_with_support(reasoning: str, support: Optional[str]) -> str:
+def memo_with_reading(reasoning: str, reading: Optional[str]) -> str:
     """The text an applied suggestion carries in its coding memo, and in a
-    REFI-QDA export's selection description: the support label in words
+    REFI-QDA export's selection description: the reading in words
     FIRST, then the reason. First, because a reason holding QualCoder's
     '#####' private marker keeps only what comes before it, and the label
     must survive that. No label (a pre-v0.14 suggestion, or a coding read
     back from the project for an export): the text exactly as given, not
     trimmed, since a project export carries every memo as QualCoder
     stores it. Never a number (owner ruling 21)."""
-    label = support_in_words(support)
+    label = reading_in_words(reading)
     if label is None:
         return reasoning or ""
-    parts = [f"Support: {label}", (reasoning or "").strip()]
+    parts = [f"Reading: {label}", (reasoning or "").strip()]
     return "\n\n".join(part for part in parts if part)
 
 
@@ -100,7 +106,7 @@ class CodingSuggestion:
         end_pos: int,
         segment_text: str,
         reasoning: str = "",
-        support: Optional[str] = None,
+        reading: Optional[str] = None,
         status: str = "pending",
         context_before: str = "",
         context_after: str = "",
@@ -108,7 +114,7 @@ class CodingSuggestion:
         span_alternatives: Optional[List[Dict[str, Any]]] = None,
         adjusted: bool = False,
         applied_ctid: Optional[int] = None,
-        support_cleared: bool = False,
+        reading_cleared: bool = False,
         context_from_file: bool = False
     ):
         self.file_id = file_id
@@ -121,11 +127,11 @@ class CodingSuggestion:
         self.reasoning = reasoning  # Why this segment was coded
         # 'explicit' | 'interpretive' | None (recorded before v0.14, or a
         # row read back from the project, which carries no label)
-        self.support = support_label(support)
+        self.reading = reading_label(reading)
         # True when edit_suggestion moved the suggestion to another code
         # without a new label: the old one was given for the old code, so
         # it is cleared rather than carried (fix round 1)
-        self.support_cleared = bool(support_cleared) and self.support is None
+        self.reading_cleared = bool(reading_cleared) and self.reading is None
         # True once this server took context_before/after from the file
         # (v0.14 on); before, the assistant could supply them, so an older
         # suggestion's stored context is not shown when it cannot be
@@ -164,7 +170,7 @@ class CodingSuggestion:
             "end_pos": self.end_pos,
             "segment_text": self.segment_text,
             "reasoning": self.reasoning,
-            "support": self.support,
+            "reading": self.reading,
             "status": self.status,
             "context_before": self.context_before,
             "context_after": self.context_after,
@@ -172,7 +178,7 @@ class CodingSuggestion:
             "span_alternatives": self.span_alternatives,
             "adjusted": self.adjusted,
             "applied_ctid": self.applied_ctid,
-            "support_cleared": self.support_cleared,
+            "reading_cleared": self.reading_cleared,
             "context_from_file": self.context_from_file
         }
 
@@ -209,8 +215,11 @@ class CodingSuggestion:
             segment_text=data["segment_text"],
             reasoning=reasoning,
             # A pre-v0.14 file carries "confidence" (a number) and no
-            # "support": it loads with no label, and the number is dropped
-            support=data.get("support"),
+            # label: it loads with none, and the number is dropped. A file
+            # written while the label was called "support" loads it as
+            # the reading
+            reading=(data.get("reading") if "reading" in data
+                     else data.get("support")),
             status=data.get("status", "pending"),
             context_before=data.get("context_before", ""),
             context_after=data.get("context_after", ""),
@@ -218,7 +227,8 @@ class CodingSuggestion:
             span_alternatives=data.get("span_alternatives"),
             adjusted=data.get("adjusted", False),
             applied_ctid=data.get("applied_ctid"),
-            support_cleared=data.get("support_cleared", False),
+            reading_cleared=(data.get("reading_cleared")
+                             or data.get("support_cleared", False)),
             context_from_file=data.get("context_from_file", False) is True
         )
 

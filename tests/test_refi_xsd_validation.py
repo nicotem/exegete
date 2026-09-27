@@ -148,13 +148,13 @@ class TestExportValidatesAgainstXsd:
 
     def test_session_export(self, setup_server, qualcoder_db_path,
                             refi_schema, tmp_path):
-        """Session mode (AI suggestions with their support label in words)."""
+        """Session mode (AI suggestions with their reading in words)."""
         out = server.analyze_for_coding([1])
         sid = out.split("Session ID: `")[1].split("`")[0]
         rec = json.loads(server.record_suggestions(sid, [{
             "file_id": 1, "code_name": "Stress",
             "segment_text": "I feel stressed about deadlines",
-            "reasoning": "explicit stress statement", "support": "explicit",
+            "reasoning": "explicit stress statement", "reading": "explicit",
         }]))
         assert rec["recorded_count"] == 1
         _export_and_validate(refi_schema, tmp_path, "session",

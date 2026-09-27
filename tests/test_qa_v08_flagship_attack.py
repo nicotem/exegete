@@ -56,7 +56,7 @@ def _add_file(p, fid, name, text):
 
 
 def _record_one(sid, fid, segment, code="Stress", **kw):
-    body = {"support": "explicit", "file_id": fid, "code_name": code, "segment_text": segment}
+    body = {"reading": "explicit", "file_id": fid, "code_name": code, "segment_text": segment}
     body.update(kw)
     rec = json.loads(server.record_suggestions(sid, [body]))
     assert rec["recorded_count"] == 1, rec
@@ -271,7 +271,7 @@ class TestInductiveLoop:
                 "code_id": 1, "code_name": "Stress",
                 "start_pos": 24, "end_pos": 55,
                 "segment_text": FULLTEXT[24:55],
-                "reasoning": "old", "support": "explicit", "status": "pending",
+                "reasoning": "old", "reading": "explicit", "status": "pending",
                 "context_before": "", "context_after": "",
                 "guid": str(uuid.uuid4()),
             }],
@@ -538,7 +538,7 @@ class TestSpanAlternativeDeltas:
         batch = []
         for i in range(30):
             seg = f"Statement {i:02d} about workload appears in this batch here."
-            batch.append({"support": "explicit", "file_id": 80, "code_name": "Stress",
+            batch.append({"reading": "explicit", "file_id": 80, "code_name": "Stress",
                           "segment_text": seg})
         raw = server.record_suggestions(sid, batch)
         rec = json.loads(raw)

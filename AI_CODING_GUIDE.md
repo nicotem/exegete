@@ -137,8 +137,9 @@ approval of each suggestion.
 
 ### Reviewing Suggestions
 
-1. **Read the interpretive ones closely**: the label says Claude is
-   reading into the passage; check that the reading is one you share
+1. **Read the interpretive ones closely**: the code rests on what the
+   passage implies rather than on what it says; the reason names the
+   words it rests on; check that the reading is one you share
 2. **Spot check the explicit ones**: the passage should state the code
    in so many words; verify that it does
 3. **Read the reasoning**: it should point to the words that carry the

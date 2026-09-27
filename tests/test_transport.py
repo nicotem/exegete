@@ -544,7 +544,7 @@ def test_write_path_approval_flow(write_project):
                     "code_name": "Coping",
                     "segment_text": "I cope by exercising",
                     "reasoning": "explicit coping behaviour",
-                    "support": "explicit",
+                    "reading": "explicit",
                 }],
             })))
             assert rec["recorded_count"] == 1, rec

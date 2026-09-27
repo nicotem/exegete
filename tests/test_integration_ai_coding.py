@@ -88,14 +88,14 @@ class TestCompleteAICodingWorkflow:
             end_pos=30,
             segment_text="Sample coded segment",
             reasoning="AI identified this segment",
-            support="explicit",
+            reading="explicit",
             status="approved"
         )
 
         # Verify suggestion is valid
         assert suggestion.file_id == file["id"]
         assert suggestion.code_id == code["id"]
-        assert suggestion.support == "explicit"
+        assert suggestion.reading == "explicit"
 
     def test_session_creation_and_persistence(self, test_db, session_manager, qualcoder_db_path):
         """Test creating a session, adding suggestions, and persisting to disk."""
@@ -123,7 +123,7 @@ class TestCompleteAICodingWorkflow:
                 end_pos=(i * 5) + 10,
                 segment_text=f"Test segment {i}",
                 reasoning=f"Test memo {i}",
-                support="explicit"
+                reading="explicit"
             )
             session.add_suggestion(suggestion)
 
@@ -157,7 +157,7 @@ class TestCompleteAICodingWorkflow:
                 end_pos=(i * 5) + 10,
                 segment_text=f"Test segment {i}",
                 reasoning=f"Test memo {i}",
-                support="explicit",
+                reading="explicit",
                 status="approved"
             ))
 
@@ -218,7 +218,7 @@ class TestCompleteAICodingWorkflow:
                 end_pos=(i * 5) + 10,
                 segment_text=f"Sample text segment {i}",
                 reasoning=f"AI analysis memo {i}",
-                support="explicit",
+                reading="explicit",
                 status="approved"
             )
             session.add_suggestion(suggestion)
@@ -277,7 +277,7 @@ class TestCompleteAICodingWorkflow:
             start_pos=0,
             end_pos=30,
             segment_text="test",
-            support="explicit"
+            reading="explicit"
         )
 
         # Validate
@@ -318,7 +318,7 @@ class TestCompleteAICodingWorkflow:
                 start_pos=0,
                 end_pos=end_pos,
                 segment_text="Test",
-                support="explicit"
+                reading="explicit"
             )
 
         exporter = RefiQdaExporter(test_db)
@@ -347,7 +347,7 @@ class TestCompleteAICodingWorkflow:
             start_pos=0,
             end_pos=30,
             segment_text="Test",
-            support="explicit",
+            reading="explicit",
             guid="test-guid-123"  # Fixed GUID
         )
 
@@ -403,7 +403,7 @@ class TestCompleteAICodingWorkflow:
                     start_pos=j * 5,
                     end_pos=(j * 5) + 10,
                     segment_text=f"Text {i}-{j}",
-                    support="explicit"
+                    reading="explicit"
                 ))
 
         # Export
@@ -461,7 +461,7 @@ class TestCompleteAICodingWorkflow:
         assert session_manager.session_exists(sessions[1].session_id)
         assert session_manager.session_exists(sessions[2].session_id)
 
-    def test_support_labels_survive_the_session_round_trip(
+    def test_reading_labels_survive_the_session_round_trip(
             self, test_db, qualcoder_db_path, tmp_path):
         """Owner ruling 21: a label, never a number, kept through a save
         and a load; the two labels stay apart, and an entry with no label
@@ -475,16 +475,16 @@ class TestCompleteAICodingWorkflow:
                 file_id=files[0]["id"], file_name=files[0]["name"],
                 code_id=codes[0]["id"], code_name=codes[0]["name"],
                 start_pos=start, end_pos=30, segment_text="x",
-                support=label))
+                reading=label))
         manager = SessionManager(str(tmp_path / "s"))
         manager.save_session(session)
         loaded = manager.load_session(session.session_id)
-        assert [s.support for s in loaded.suggestions] == [
+        assert [s.reading for s in loaded.suggestions] == [
             "explicit", "interpretive", None]
 
     def test_the_reasoning_is_preserved_in_the_export(
             self, test_db, temp_dir, qualcoder_db_path):
-        """The reasoning, and the support label in words, reach the export."""
+        """The reasoning, and the reading in words, reach the export."""
         codes = test_db.list_codes()
         files = test_db.list_files()
 
@@ -497,7 +497,7 @@ class TestCompleteAICodingWorkflow:
             end_pos=30,
             segment_text="Test",
             reasoning="Important AI insight here",
-            support="explicit"
+            reading="explicit"
         )
 
         # Export
@@ -511,7 +511,7 @@ class TestCompleteAICodingWorkflow:
 
         # The label in words, before the reasoning; never a number
         assert "Important AI insight here" in xml_content
-        assert "Support: explicit (the passage states it)" in xml_content
-        assert xml_content.index("Support: explicit") < xml_content.index(
+        assert "Reading: explicit (the passage states what the code names)" in xml_content
+        assert xml_content.index("Reading: explicit") < xml_content.index(
             "Important AI insight here")
         assert "confidence" not in xml_content.lower()

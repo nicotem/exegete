@@ -22,7 +22,7 @@ from typing import List, Dict, Optional, Set
 from datetime import datetime, timezone
 
 from .database import QualcoderDatabase, error_label, error_text
-from .sessions import CodingSuggestion, memo_with_support
+from .sessions import CodingSuggestion, memo_with_reading
 
 logger = logging.getLogger(__name__)
 
@@ -403,12 +403,12 @@ class RefiQdaExporter:
             }
         )
 
-        # Description: the support label in words, then the reasoning, as
+        # Description: the reading in words, then the reasoning, as
         # apply_codings writes the memo (owner ruling 21: never a number).
-        # A project export's rows carry no label of their own (support is
+        # A project export's rows carry no label of their own (reading is
         # None): an applied AI coding's memo already says it in words.
-        memo_text = memo_with_support(suggestion.reasoning or "",
-                                      suggestion.support)
+        memo_text = memo_with_reading(suggestion.reasoning or "",
+                                      suggestion.reading)
         if memo_text:
             desc_elem = ET.SubElement(selection_elem, f"{{{NAMESPACE}}}Description")
             desc_elem.text = _xml_safe(memo_text)

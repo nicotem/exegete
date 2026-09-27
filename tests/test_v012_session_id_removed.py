@@ -48,7 +48,7 @@ class TestSessionIdDuplicateRemoved:
         rec = json.loads(server.record_suggestions(sid, [{
             "file_id": 1, "code_name": "Stress",
             "segment_text": "stressed about deadlines",   # 31-55, widened below
-            "reasoning": "explicit", "support": "explicit"}]))
+            "reasoning": "explicit", "reading": "explicit"}]))
         assert rec["coding_session_id"] == sid and "session_id" not in rec
         guid = rec["recorded"][0]["guid"]
 
@@ -429,7 +429,7 @@ class TestNoResponseCarriesSessionId:
             "record_suggestions": server.record_suggestions(
                 UNKNOWN_SESSION_ID, [{"file_id": 1, "code_name": "Stress",
                                       "segment_text": "stressed",
-                                      "reasoning": "x", "support": "explicit"}]),
+                                      "reasoning": "x", "reading": "explicit"}]),
             "edit_suggestion": server.edit_suggestion(
                 UNKNOWN_SESSION_ID, "no-such-guid"),
             "get_coding_session_info": server.get_coding_session_info(

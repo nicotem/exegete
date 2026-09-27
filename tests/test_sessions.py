@@ -37,7 +37,7 @@ class TestCodingSuggestion:
         assert suggestion.end_pos == sample_suggestion_data["end_pos"]
         assert suggestion.segment_text == sample_suggestion_data["segment_text"]
         assert suggestion.ai_memo == ""
-        assert suggestion.support is None
+        assert suggestion.reading is None
         assert suggestion.status == "pending"
         assert suggestion.guid is not None
         assert isinstance(suggestion.guid, str)
@@ -54,14 +54,14 @@ class TestCodingSuggestion:
             end_pos=sample_suggestion_data["end_pos"],
             segment_text=sample_suggestion_data["segment_text"],
             reasoning=sample_suggestion_data["reasoning"],
-            support=sample_suggestion_data["support"],
+            reading=sample_suggestion_data["reading"],
             status=sample_suggestion_data["status"],
             guid=guid
         )
 
         assert suggestion.reasoning == sample_suggestion_data["reasoning"]
         assert suggestion.ai_memo == sample_suggestion_data["reasoning"]  # Test backwards compatibility
-        assert suggestion.support == sample_suggestion_data["support"]
+        assert suggestion.reading == sample_suggestion_data["reading"]
         assert suggestion.status == sample_suggestion_data["status"]
         assert suggestion.guid == guid
 
@@ -78,7 +78,7 @@ class TestCodingSuggestion:
         assert data["end_pos"] == sample_suggestion_data["end_pos"]
         assert data["segment_text"] == sample_suggestion_data["segment_text"]
         assert data["reasoning"] == sample_suggestion_data["reasoning"]
-        assert data["support"] == sample_suggestion_data["support"]
+        assert data["reading"] == sample_suggestion_data["reading"]
         assert "confidence" not in data
         assert data["status"] == sample_suggestion_data["status"]
         assert "guid" in data
@@ -91,7 +91,7 @@ class TestCodingSuggestion:
 
         assert suggestion.file_id == sample_suggestion_data["file_id"]
         assert suggestion.code_name == sample_suggestion_data["code_name"]
-        assert suggestion.support == sample_suggestion_data["support"]
+        assert suggestion.reading == sample_suggestion_data["reading"]
         assert suggestion.guid == guid
 
     def test_round_trip_serialization(self, sample_suggestion_data):
@@ -108,7 +108,7 @@ class TestCodingSuggestion:
         assert restored.end_pos == original.end_pos
         assert restored.segment_text == original.segment_text
         assert restored.ai_memo == original.ai_memo
-        assert restored.support == original.support
+        assert restored.reading == original.reading
         assert restored.status == original.status
         assert restored.guid == original.guid
 
@@ -126,7 +126,7 @@ class TestCodingSuggestion:
         suggestion = CodingSuggestion.from_dict(minimal_data)
 
         assert suggestion.ai_memo == ""
-        assert suggestion.support is None
+        assert suggestion.reading is None
         assert suggestion.status == "pending"
         assert suggestion.guid is not None
 

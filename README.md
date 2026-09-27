@@ -821,8 +821,9 @@ Claude will:
 - Examine the files
 - Record its suggestions into the session (`record_suggestions`; every
   suggestion is verified against the file text before it is stored)
-- Present suggestions with their reasoning, each marked explicit (the
-  passage states the code) or interpretive (Claude is reading it in)
+- Present suggestions with their reasoning, each with its reading:
+  explicit (the passage states what the code names) or interpretive (the
+  code rests on what the passage implies rather than on what it says)
 
 **Step 3: Review in Chat**
 ```
@@ -880,11 +881,14 @@ approved again, reopened and edited, or the passage recorded again);
 ### Key Features
 
 - **Conversational Review**: Discuss suggestions with Claude before applying
-- **Explicit or interpretive**: Each suggestion says whether the passage
-  states the code or the assistant is reading it in, beside the quote and
-  before the reason. There is no numeric score: a model's rating of its
-  own confidence is not a measurement, and the two kinds of reading are
-  what a researcher weighs. An applied coding's memo says which, in words
+- **Explicit or interpretive**: Each suggestion carries a reading:
+  explicit (the passage states what the code names) or interpretive (the
+  code rests on what the passage implies rather than on what it says, and
+  the reason names the words it rests on), shown with the passage and
+  before the reason, and yours to change at review. There is no numeric
+  score: a model's rating of its own confidence is not a measurement.
+  Nothing sorts or totals by the reading. An applied coding's memo says
+  which, in words
 - **Session Persistence**: Resume work anytime, all sessions saved to disk
 - **Automatic Backups**: Every write creates a timestamped backup first, unless you pass `create_backup=false`
 - **Workspace Isolation**: Work on copies in dedicated workspace folder
@@ -1033,7 +1037,7 @@ still answers empty, and that answer is a finding.
 - `analyze_for_coding(file_ids, code_names, instruction)` - Start a coding session for the files, and the codes if named (matched ignoring letter case), that suggestions may then be recorded for; it reads no file and makes no suggestion, returns the `coding_session_id` the other session tools take, and lists in `not_found` any id or name that matched nothing; a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside this server, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
 - `record_suggestions(coding_session_id, suggestions, replace)` - Record Claude's suggestions into the session (each verified against the file text; positions auto-corrected when the excerpt is unique; a PDF with no usable text is refused, as it is by `edit_suggestion`, `apply_codings`, proposal evidence and `add_annotation`)
 - `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show detailed information about specific suggestions
-- `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, support)` - Adjust a pending suggestion's span, code or label before approval (session-only; server-computed shorter/longer alternatives); moving it to another code without a new `support` clears the label, which was given for the old code
+- `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` - Adjust a pending suggestion's span, code or reading before approval (session-only; server-computed shorter/longer alternatives); moving it to another code without a new `reading` clears it, which was given for the old code
 - `update_suggestion_status(coding_session_id, approve, reject, reopen)` - Approve, reject or reopen (back to pending) suggestions by GUID; GUIDs not in the session are listed, and a GUID in two lists is refused
 - `apply_codings(coding_session_id, create_backup, owner)` - **WRITES TO DATABASE** - Apply approved suggestions (bound to the session's project, validated before backup, all-or-nothing; a suggestion whose identical coding is already in the project is reported as already existing and skipped, not written twice)
 - `get_coding_session_info(coding_session_id)` - View all details of a coding session

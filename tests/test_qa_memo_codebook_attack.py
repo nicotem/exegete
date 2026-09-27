@@ -368,7 +368,7 @@ class TestSessionInteraction:
 
     def _pending_approved_suggestion(self):
         sid = server.analyze_for_coding([1]).split("Session ID: `")[1].split("`")[0]
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
         }]))
@@ -405,7 +405,7 @@ class TestSessionInteraction:
             self, setup_server):
         assert json.loads(H.execute_destructive(server.delete_code, 1))["success"]
         sid = server.analyze_for_coding([1]).split("Session ID: `")[1].split("`")[0]
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": FULLTEXT[24:55],
         }]))

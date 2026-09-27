@@ -859,10 +859,10 @@ class TestRoundTrip:
         recorded = json.loads(server.record_suggestions(sid, [
             {"file_id": file_id, "code_name": "Coping",
              "segment_text": "talk to colleagues who understand",
-             "reasoning": "social support", "support": "explicit"},
+             "reasoning": "social support", "reading": "explicit"},
             {"file_id": file_id, "code_name": "Exercise",
              "segment_text": "I go for a run after work",
-             "reasoning": "exercise", "support": "explicit"}]))
+             "reasoning": "exercise", "reading": "explicit"}]))
         guids = [r["guid"] for r in recorded["recorded"]]
         assert "error" not in server.update_suggestion_status(
             sid, approve=guids).lower()

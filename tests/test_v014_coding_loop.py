@@ -32,6 +32,9 @@ from qualcoder_mcp.sessions import (AICodingSession, CodingSuggestion,
 FULLTEXT = ("This is interview text. I feel stressed about deadlines. "
             "I cope by exercising.")
 STRESSED = "I feel stressed about deadlines."
+EXPLICIT = "Reading: explicit (the passage states what the code names)"
+INTERPRETIVE = ("Reading: interpretive (the code rests on what the passage "
+                "implies rather than on what it says)")
 COPE = "I cope by exercising."
 
 
@@ -69,11 +72,11 @@ def record(sid, *items, **kw):
                  suggestions=list(items), **kw)
 
 
-def item(text=STRESSED, code="Stress", support="explicit", **extra):
+def item(text=STRESSED, code="Stress", reading="explicit", **extra):
     entry = {"file_id": 1, "code_name": code, "segment_text": text,
              "reasoning": f"reason for {code}"}
-    if support is not None:
-        entry["support"] = support
+    if reading is not None:
+        entry["reading"] = reading
     entry.update(extra)
     return entry
 
@@ -89,9 +92,9 @@ def approve_and_apply(sid, guids):
 
 class TestSupportIsRequired:
 
-    def test_a_suggestion_without_support_is_refused_with_the_reason(
+    def test_a_suggestion_without_a_reading_is_refused_with_the_reason(
             self, setup_server):
-        rec = record(new_session(), item(support=None))
+        rec = record(new_session(), item(reading=None))
         assert rec["recorded_count"] == 0
         reason = rec["rejected"][0]["reason"]
         assert "explicit" in reason and "interpretive" in reason
@@ -99,20 +102,20 @@ class TestSupportIsRequired:
 
     def test_a_number_in_place_of_the_label_is_refused_and_says_why(
             self, setup_server):
-        rec = record(new_session(), item(support=None, confidence=0.9))
+        rec = record(new_session(), item(reading=None, confidence=0.9))
         assert rec["recorded_count"] == 0
         assert "confidence is no longer taken" in rec["rejected"][0]["reason"]
 
     @pytest.mark.parametrize("bad", ["high", "", 0.9, 1, True, ["explicit"]])
     def test_anything_but_the_two_labels_is_refused(self, setup_server, bad):
-        rec = record(new_session(), item(support=bad))
+        rec = record(new_session(), item(reading=bad))
         assert rec["recorded_count"] == 0, bad
 
     def test_both_labels_are_recorded_and_reported(self, setup_server):
         rec = record(new_session(), item(),
-                     item(text=COPE, code="Coping", support="Interpretive "))
+                     item(text=COPE, code="Coping", reading="Interpretive "))
         assert rec["recorded_count"] == 2
-        assert [r["support"] for r in rec["recorded"]] == [
+        assert [r["reading"] for r in rec["recorded"]] == [
             "explicit", "interpretive"]
 
     def test_a_number_sent_beside_the_label_is_not_kept(self, setup_server):
@@ -123,7 +126,7 @@ class TestSupportIsRequired:
         stored = session_file(sid).read_text()
         assert "confidence" not in stored
         assert "0.95" not in stored
-        assert '"support": "explicit"' in stored
+        assert '"reading": "explicit"' in stored
 
 
 class TestTheLabelOnTheWayToTheProject:
@@ -131,11 +134,10 @@ class TestTheLabelOnTheWayToTheProject:
     def test_review_shows_the_label_beside_the_quote_before_the_reason(
             self, setup_server):
         sid = new_session()
-        record(sid, item(support="interpretive"))
+        record(sid, item(reading="interpretive"))
         out = call("review_suggestions", coding_session_id=sid)
         quote = out.index(STRESSED)
-        label = out.index("**Support:** interpretive (the assistant is "
-                          "reading into it)")
+        label = out.index("**" + INTERPRETIVE.replace(": ", ":** ", 1))
         reason = out.index("**AI Reasoning:**")
         assert quote < label < reason
         assert "Confidence" not in out
@@ -143,31 +145,28 @@ class TestTheLabelOnTheWayToTheProject:
     def test_the_applied_memo_says_it_in_words_label_first(
             self, setup_server, qualcoder_db_path):
         sid = new_session()
-        rec = record(sid, item(support="interpretive"),
+        rec = record(sid, item(reading="interpretive"),
                      item(text=COPE, code="Coping"))
         out = approve_and_apply(sid, [r["guid"] for r in rec["recorded"]])
         assert "CODINGS APPLIED" in out
         memos = [r["memo"] for r in rows(
             qualcoder_db_path, "SELECT memo FROM code_text WHERE owner = "
             "'AI Coding Assistant' ORDER BY pos0")]
-        assert memos == [
-            "Support: interpretive (the assistant is reading into it)"
-            "\n\nreason for Stress",
-            "Support: explicit (the passage states it)\n\nreason for Coping"]
+        assert memos == [INTERPRETIVE + "\n\nreason for Stress",
+                         EXPLICIT + "\n\nreason for Coping"]
         assert "confidence" not in out.lower()
 
     def test_a_session_export_says_it_in_words(self, setup_server, tmp_path):
         import zipfile
         sid = new_session()
-        record(sid, item(support="interpretive"))
+        record(sid, item(reading="interpretive"))
         target = tmp_path / "out.qdpx"
         res = jcall("export_refi_qda", output_path=str(target),
                     coding_session_id=sid)
         assert res.get("success") is True, res
         with zipfile.ZipFile(target) as z:
             xml = z.read("project.qde").decode("utf-8")
-        assert ("Support: interpretive (the assistant is reading into it)"
-                in xml)
+        assert INTERPRETIVE in xml
         assert "confidence" not in xml.lower()
 
 
@@ -201,7 +200,7 @@ class TestSessionsFromEarlierReleases:
                                          qualcoder_db_path):
         sid, _ = self._old_session(qualcoder_db_path, "pending")
         out = call("review_suggestions", coding_session_id=sid)
-        assert "**Support:** not given (recorded before v0.14)" in out
+        assert "**Reading:** not given (recorded before v0.14)" in out
         assert "0.85" not in out
 
     def test_it_applies_the_reason_alone_and_forgets_the_number(
@@ -260,7 +259,7 @@ class TestNoScoreInAnyText:
 
     def test_the_session_banner_asks_for_the_label(self, setup_server):
         text = jcall("analyze_for_coding", file_ids=[1])["instructions"]
-        assert '"support": "explicit" or "interpretive"' in text
+        assert '"reading": "explicit" or "interpretive"' in text
         assert "confidence" not in text.lower()
 
 
@@ -1026,8 +1025,8 @@ class TestFixRoundTheLabelBelongsToItsCode:
         guid = record(sid, item())["recorded"][0]["guid"]      # explicit
         out = jcall("edit_suggestion", coding_session_id=sid,
                     suggestion_guid=guid, code_name="Coping")
-        assert out["support"] is None
-        assert "given for 'Stress'" in out["support_cleared"]
+        assert out["reading"] is None
+        assert "given for 'Stress'" in out["reading_cleared"]
         review = call("review_suggestions", coding_session_id=sid)
         assert "not given (cleared when the code was changed" in review
         assert "states it" not in review
@@ -1042,27 +1041,27 @@ class TestFixRoundTheLabelBelongsToItsCode:
         guid = record(sid, item())["recorded"][0]["guid"]
         out = jcall("edit_suggestion", coding_session_id=sid,
                     suggestion_guid=guid, code_name="Coping",
-                    support="interpretive")
-        assert out["support"] == "interpretive"
-        assert "support_cleared" not in out
+                    reading="interpretive")
+        assert out["reading"] == "interpretive"
+        assert "reading_cleared" not in out
         approve_and_apply(sid, [guid])
         memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "owner = 'AI Coding Assistant'")[0]["memo"]
-        assert memo.startswith("Support: interpretive")
+        assert memo.startswith("Reading: interpretive")
 
     def test_the_label_alone_can_be_corrected_and_is_validated(
             self, setup_server):
         sid = new_session()
         guid = record(sid, item())["recorded"][0]["guid"]
         bad = jcall("edit_suggestion", coding_session_id=sid,
-                    suggestion_guid=guid, support="high")
-        assert "support must be" in bad["error"]
+                    suggestion_guid=guid, reading="high")
+        assert "reading must be" in bad["error"]
         out = jcall("edit_suggestion", coding_session_id=sid,
-                    suggestion_guid=guid, support="interpretive")
-        assert out["changes"]["support"] == {"from": "explicit",
+                    suggestion_guid=guid, reading="interpretive")
+        assert out["changes"]["reading"] == {"from": "explicit",
                                              "to": "interpretive"}
         same = jcall("edit_suggestion", coding_session_id=sid,
-                     suggestion_guid=guid, support="interpretive")
+                     suggestion_guid=guid, reading="interpretive")
         assert "No effective change" in same["error"]
 
 
@@ -1355,3 +1354,50 @@ class TestFixRound2TheStudyAtTheStart:
         assert "the project memo is empty. Ask the researcher" in \
             out["instructions"]
         assert "private" not in json.dumps(out)
+
+
+class TestFixRound2TheReading:
+    """Owner ruling 25, question 1, with the reading's item 13: the label
+    is `reading`, its two values glossed, the researcher's to change, and
+    explained once at the first review."""
+
+    def test_the_two_glosses(self):
+        from qualcoder_mcp.sessions import READING_LABELS
+        assert READING_LABELS == {
+            "explicit": "the passage states what the code names",
+            "interpretive": ("the code rests on what the passage implies "
+                             "rather than on what it says")}
+
+    def test_a_session_written_with_support_loads_it_as_the_reading(
+            self, setup_server):
+        sid = new_session()
+        record(sid, item(reading="interpretive"))
+        path = session_file(sid)
+        data = json.loads(path.read_text())
+        entry = data["suggestions"][0]
+        entry["support"] = entry.pop("reading")      # as this branch wrote
+        path.write_text(json.dumps(data))
+        loaded = server.session_manager.load_session(sid).suggestions[0]
+        assert loaded.reading == "interpretive"
+        assert INTERPRETIVE.split(": ", 1)[1] in call(
+            "review_suggestions", coding_session_id=sid)
+
+    def test_the_note_comes_at_the_first_review_only(self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        first = call("review_suggestions", coding_session_id=sid)
+        assert server.READING_NOTE in first
+        assert "follows from the lens chosen" in first
+        call("update_suggestion_status", coding_session_id=sid, approve=[g])
+        later = call("review_suggestions", coding_session_id=sid)
+        assert server.READING_NOTE not in later
+
+    def test_no_text_says_reading_into_or_read_in(self):
+        texts = [t.description for t in
+                 server.mcp._tool_manager._tools.values()]
+        texts += [server.GROUNDING_RECORD, server.READING_REQUIRED,
+                  server.explain_ai_coding_tools(), server.METHODS_GUIDANCE]
+        for text in texts:
+            flat = " ".join(text.split())
+            assert "reading into" not in flat and "read it in" not in flat
+            assert "reading it in" not in flat

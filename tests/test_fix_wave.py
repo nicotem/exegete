@@ -236,7 +236,7 @@ class TestRecordSuggestions:
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55,
             "segment_text": FULLTEXT[24:55],
-            "reasoning": "clear stress", "support": "explicit",
+            "reasoning": "clear stress", "reading": "explicit",
         }]))
         assert result["recorded_count"] == 1
         assert result["rejected_count"] == 0
@@ -245,7 +245,7 @@ class TestRecordSuggestions:
 
     def test_locates_unique_text_without_positions(self, setup_server, qualcoder_db_path):
         sid = _make_session(setup_server, qualcoder_db_path)
-        result = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        result = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "stress",  # case-insensitive
             "segment_text": "I cope by exercising",
         }]))
@@ -255,7 +255,7 @@ class TestRecordSuggestions:
 
     def test_corrects_wrong_positions(self, setup_server, qualcoder_db_path):
         sid = _make_session(setup_server, qualcoder_db_path)
-        result = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        result = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_id": 1,
             "start_pos": 3, "end_pos": 22,  # wrong on purpose
             "segment_text": "I cope by exercising",
@@ -266,7 +266,7 @@ class TestRecordSuggestions:
 
     def test_rejects_text_not_in_file(self, setup_server, qualcoder_db_path):
         sid = _make_session(setup_server, qualcoder_db_path)
-        result = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        result = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_id": 1, "start_pos": 0, "end_pos": 10,
             "segment_text": "NOT IN THE FILE AT ALL",
         }]))
@@ -276,8 +276,8 @@ class TestRecordSuggestions:
     def test_rejects_unknown_code_and_file(self, setup_server, qualcoder_db_path):
         sid = _make_session(setup_server, qualcoder_db_path)
         result = json.loads(server.record_suggestions(sid, [
-            {"support": "explicit", "file_id": 99, "code_id": 1, "segment_text": "x"},
-            {"support": "explicit", "file_id": 1, "code_name": "Nope", "segment_text": "stressed"},
+            {"reading": "explicit", "file_id": 99, "code_id": 1, "segment_text": "x"},
+            {"reading": "explicit", "file_id": 1, "code_name": "Nope", "segment_text": "stressed"},
         ]))
         assert result["recorded_count"] == 0
         reasons = " | ".join(r["reason"] for r in result["rejected"])
@@ -286,7 +286,7 @@ class TestRecordSuggestions:
 
     def test_duplicates_skipped(self, setup_server, qualcoder_db_path):
         sid = _make_session(setup_server, qualcoder_db_path)
-        item = {"support": "explicit", "file_id": 1, "code_id": 1, "segment_text": "I cope by exercising"}
+        item = {"reading": "explicit", "file_id": 1, "code_id": 1, "segment_text": "I cope by exercising"}
         json.loads(server.record_suggestions(sid, [item]))
         result = json.loads(server.record_suggestions(sid, [item]))
         assert result["skipped_duplicates"] == 1
@@ -296,7 +296,7 @@ class TestRecordSuggestions:
         other = AICodingSession(project_path="/nonexistent/other.qda")
         setup_server.session_manager.save_session(other)
         result = json.loads(server.record_suggestions(other.session_id, [
-            {"support": "explicit", "file_id": 1, "code_id": 1, "segment_text": "stressed"}]))
+            {"reading": "explicit", "file_id": 1, "code_id": 1, "segment_text": "stressed"}]))
         assert "error" in result
 
 
@@ -311,7 +311,7 @@ class TestApplyCodingsSafety:
         defaults = dict(
             file_id=1, file_name="interview.txt", code_id=1, code_name="Stress",
             start_pos=24, end_pos=55, segment_text=FULLTEXT[24:55],
-            reasoning="r", support="explicit", status="approved",
+            reasoning="r", reading="explicit", status="approved",
         )
         defaults.update(sugg_kwargs)
         session.add_suggestion(CodingSuggestion(**defaults))

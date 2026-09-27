@@ -408,7 +408,7 @@ def make_approved_session(env: Env) -> AICodingSession:
             file_id=1, file_name="interview.txt",
             code_id=cid, code_name=cname,
             start_pos=p0, end_pos=p1, segment_text=seg,
-            reasoning="fault injection", support="explicit",
+            reasoning="fault injection", reading="explicit",
             status="approved",
         ))
     server.session_manager.save_session(sess)

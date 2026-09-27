@@ -574,7 +574,7 @@ def _approved_session(setup_server, qualcoder_db_path, span=(0, 10),
     session.add_suggestion(CodingSuggestion(
         file_id=1, file_name="interview.txt", code_id=1, code_name="Stress",
         start_pos=span[0], end_pos=span[1], segment_text=text,
-        reasoning="R3", support="explicit", status="approved"))
+        reasoning="R3", reading="explicit", status="approved"))
     setup_server.session_manager.save_session(session)
     return session
 

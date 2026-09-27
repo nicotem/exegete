@@ -45,7 +45,7 @@ def _record(sid, *items, **extra):
 
 def _item(text=STRESSED, code="Stress", **extra):
     entry = {"file_id": 1, "code_name": code, "segment_text": text,
-             "support": "explicit", "reasoning": "stated"}
+             "reading": "explicit", "reasoning": "stated"}
     entry.update(extra)
     return entry
 
@@ -72,9 +72,9 @@ class TestRecordingUnderBothRules:
         sid = _session()
         before = _session_file(sid).read_bytes()
         rec = _record(sid, _item(reasoning="plain ##### private",
-                                 support=None))
+                                 reading=None))
         reason = rec["rejected"][0]["reason"]
-        assert "marker" in reason and "support" not in reason
+        assert "marker" in reason and "reading" not in reason
         assert "#####" not in json.dumps(rec)
         assert _session_file(sid).read_bytes() == before
 
@@ -83,11 +83,11 @@ class TestRecordingUnderBothRules:
         sid = _session()
         _record(sid, _item())
         before = _session_file(sid).read_bytes()
-        rec = _record(sid, _item(text=COPE, code="Coping", support=None),
+        rec = _record(sid, _item(text=COPE, code="Coping", reading=None),
                       replace=True)
         assert rec["recorded_count"] == 0
         assert rec["pending_kept"] == 1
-        assert "support is required" in rec["rejected"][0]["reason"]
+        assert "reading is required" in rec["rejected"][0]["reason"]
         assert _session_file(sid).read_bytes() == before
 
     def test_a_null_reason_under_a_label_leaves_the_label_alone(
@@ -101,7 +101,7 @@ class TestRecordingUnderBothRules:
                               "create_backup": False})))
         assert "CODINGS APPLIED" in text
         assert _memos(qualcoder_db_path) == [
-            "Support: explicit (the passage states it)"]
+            "Reading: explicit (the passage states what the code names)"]
 
     def test_a_reason_that_is_not_text_is_refused_whatever_its_label(
             self, setup_server):
@@ -133,8 +133,8 @@ class TestArgumentsRemovedAndAdded:
         assert "Reopened (back to pending): 1" in reopened
         relabelled = host_json("edit_suggestion", {
             "coding_session_id": sid, "suggestion_guid": guid,
-            "support": "interpretive"})
-        assert relabelled["support"] == "interpretive"
+            "reading": "interpretive"})
+        assert relabelled["reading"] == "interpretive"
 
 
 class TestSessionFilesBothWays:
@@ -234,7 +234,7 @@ class TestTheExportsAndTheMemoInWords:
     def test_the_applied_memo_reaches_a_project_export_as_stored(
             self, setup_server, qualcoder_db_path, tmp_path):
         sid = _session()
-        guid = _record(sid, _item(support="interpretive",
+        guid = _record(sid, _item(reading="interpretive",
                                   reasoning="  read in  "))[
             "recorded"][0]["guid"]
         _call_text("update_suggestion_status",
@@ -242,8 +242,8 @@ class TestTheExportsAndTheMemoInWords:
         _call_text("apply_codings", {"coding_session_id": sid,
                                      "create_backup": False})
         memo = _memos(qualcoder_db_path)[0]
-        assert memo == ("Support: interpretive (the assistant is reading "
-                        "into it)\n\nread in")
+        assert memo == ("Reading: interpretive (the code rests on what the passage "
+                        "implies rather than on what it says)\n\nread in")
         # a researcher's edit in QualCoder leaves a trailing line; the
         # project export carries the memo exactly as stored
         with closing(sqlite3.connect(

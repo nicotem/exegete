@@ -179,7 +179,7 @@ def _approved_session(server_mod, project_path):
     session.add_suggestion(CodingSuggestion(
         file_id=1, file_name="interview.txt", code_id=1, code_name="Stress",
         start_pos=0, end_pos=10, segment_text="This is in",
-        reasoning="r", support="explicit", status="approved"))
+        reasoning="r", reading="explicit", status="approved"))
     server_mod.session_manager.save_session(session)
     return session
 
@@ -1265,7 +1265,7 @@ class TestRestartResilience:
         session.add_suggestion(CodingSuggestion(
             file_id=1, file_name="interview.txt", code_id=1,
             code_name="Stress", start_pos=0, end_pos=10,
-            segment_text="This is in", reasoning="r", support="explicit",
+            segment_text="This is in", reasoning="r", reading="explicit",
             status="approved"))
         server.session_manager.save_session(session)
         out = server.apply_codings(session.session_id, create_backup=False)

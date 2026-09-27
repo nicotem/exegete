@@ -155,8 +155,8 @@ from .project_settings import (
     write_ai_coder_name,
 )
 from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
-                       ProposedCode, support_label, support_in_words,
-                       memo_with_support, guids_in_more_than_one)
+                       ProposedCode, reading_label, reading_in_words,
+                       memo_with_reading, guids_in_more_than_one)
 
 # Set up logging. The handler is installed at import, before FastMCP is
 # constructed, so the server's own plain stderr format wins over the rich
@@ -228,25 +228,38 @@ reason to withhold project data the researcher asks to see."""
 
 # Per-tool reminders (D6 section 3.5), attached where the rule applies
 GROUNDING_RECORD = """GROUNDING: reasoning states, in a sentence or two, what in segment_text
-supports the code; support says how the words carry it: "explicit" where
-the passage states it, "interpretive" where you are reading into it. An
-interpretive suggestion is legitimate; mark it as such rather than
-presenting a reading as a statement. There is no score: never give a
-number. Recording nothing for a file or for a code is a valid outcome:
+supports the code. reading is "explicit" where the passage states what
+the code names, "interpretive" where the code rests on what the passage
+implies rather than on what it says; then the reason names the words it
+rests on. An interpretive reading is legitimate; label it so rather than
+present it as a statement. There is no score: never give a number.
+Recording nothing for a file or for a code is a valid outcome:
 tell the researcher rather than lowering the bar. Never widen, trim or
 reword an excerpt to make it fit a code; the excerpt is checked against
 the file and a non-literal one is rejected."""
 
 # record_suggestions' refusal and review_suggestions' line for a
-# suggestion with no label (owner ruling 21)
-SUPPORT_REQUIRED = (
-    "support is required: \"explicit\" (the passage states the code) or "
-    "\"interpretive\" (you are reading it in)")
+# suggestion with no label (owner rulings 21 and 25)
+READING_REQUIRED = (
+    "reading is required: \"explicit\" (the passage states what the code "
+    "names) or \"interpretive\" (the code rests on what the passage "
+    "implies rather than on what it says)")
 CONFIDENCE_NOT_TAKEN = (
     "; confidence is no longer taken: this server records no score")
-SUPPORT_NOT_GIVEN = "not given (recorded before v0.14)"
-SUPPORT_CLEARED = ("not given (cleared when the code was changed; give one "
-                   "with edit_suggestion's support)")
+READING_NOT_GIVEN = "not given (recorded before v0.14)"
+READING_CLEARED = ("not given (cleared when the code was changed; give one "
+                   "with edit_suggestion's reading)")
+# Said once, at the review of a session none of whose suggestions has been
+# decided yet (the Saldaña reading, item 13): what the label means, and
+# that its share follows from the lens
+READING_NOTE = (
+    "About the reading: explicit means the passage states what the code "
+    "names; interpretive means the code rests on what the passage implies "
+    "rather than on what it says, and its reason names the words it rests "
+    "on. How many readings are interpretive follows from the lens chosen "
+    "(a feelings or values lens makes most good readings interpretive); it "
+    "is not a measure of quality. The researcher can change a reading with "
+    "edit_suggestion.")
 
 GROUNDING_PROPOSE = """GROUNDING (inductive coding): a proposed code names something the data
 shows, with a rationale that points to its example_segments; prefer the
@@ -5446,18 +5459,10 @@ def get_project_summary() -> str:
 @_tool_guard
 @_with_guidance(GROUNDING_READ, before="Args:")
 def analyze_file_with_coding(file_id: int) -> str:
-    """Return a text file with all its coded segments, for reading it in context.
+    """Return a text file's whole text with its coded segments.
 
-    This tool retrieves the complete text of a file along with all coding information,
-    enabling deep analysis that considers both coded segments and the full context.
-    Perfect for analysing interview transcripts, documents, or any text where you need
-    to see both the structured coding and the complete narrative.
-
-    Use this when you want to:
-    - Answer questions that require understanding the full context
-    - Find passages that may not be directly coded but are relevant
-    - Analyse how a participant discusses multiple themes
-    - Understand the relationship between coded and uncoded text
+    Read a file this way before suggesting codings for it, or to answer a
+    question that needs the whole account rather than coded extracts.
 
     Args:
         file_id: The numeric ID of the file to analyse
@@ -6827,10 +6832,11 @@ YOU (Claude) need to:
 3. **Record your suggestions** with the `record_suggestions` tool, passing this
    session ID and a list of suggestion objects:
    `{{"file_id": ..., "code_name": "...", "start_pos": ..., "end_pos": ...,
-   "segment_text": "<exact excerpt>", "support": "explicit" or "interpretive",
+   "segment_text": "<exact excerpt>", "reading": "explicit" or "interpretive",
    "reasoning": "..."}}`
-   support is "explicit" where the passage states the code and
-   "interpretive" where you are reading it in; there is no score.
+   reading is "explicit" where the passage states what the code names and
+   "interpretive" where the code rests on what it implies (the reason then
+   names the words); there is no score.
    Each suggestion is verified against the file text before it is stored.
 4. **Present the recorded suggestions to the user** in a clear, reviewable format
 
@@ -7152,9 +7158,9 @@ def record_suggestions(
             file_id (int, required), code_id (int) or code_name (str),
             start_pos/end_pos (int, optional if the excerpt is unique),
             segment_text (str, required; exact excerpt),
-            support (str, required): "explicit" (the passage states
-            the code) or "interpretive" (you are reading it in); there
-            is no numeric score,
+            reading (str, required): "explicit" (the passage states
+            what the code names) or "interpretive" (the code rests on
+            what it implies); no score,
             reasoning (str).
             The text shown around each suggestion at review is always
             taken from the file; context_before and context_after are not
@@ -7182,7 +7188,7 @@ def record_suggestions(
         record_suggestions(coding_session_id="...", suggestions=[
             {"file_id": 4, "code_name": "Burnout", "start_pos": 96,
              "end_pos": 129, "segment_text": "by Thursday I am running on fumes",
-             "support": "interpretive",
+             "reading": "interpretive",
              "reasoning": "An exhaustion metaphor; burnout is my reading"}])
     """
     # Bridge fix: some MCP middleware strips arguments named
@@ -7308,14 +7314,15 @@ def record_suggestions(
             rejected.append({"index": idx, "reason": "segment_text (non-empty string) is required"})
             continue
 
-        # --- support (owner ruling 21: a category, never a number) ---
-        support = item.get("support")
-        if isinstance(support, str):
-            support = support_label(support.strip().lower())
+        # --- reading (owner rulings 21 and 25: a category, never a
+        # number) ---
+        reading = item.get("reading")
+        if isinstance(reading, str):
+            reading = reading_label(reading.strip().lower())
         else:
-            support = None
-        if support is None:
-            reason = SUPPORT_REQUIRED
+            reading = None
+        if reading is None:
+            reason = READING_REQUIRED
             if "confidence" in item:
                 reason += CONFIDENCE_NOT_TAKEN
             rejected.append({"index": idx, "reason": reason})
@@ -7359,7 +7366,7 @@ def record_suggestions(
             # text or absent (checked above); a null is empty, never the
             # word "None" in the coding's memo (fix round 2)
             reasoning=item.get("reasoning") or "",
-            support=support,
+            reading=reading,
             status="pending",
             context_before=context_before,
             context_after=context_after,
@@ -7375,7 +7382,7 @@ def record_suggestions(
             "code_name": code["name"],
             "start_pos": start_pos,
             "end_pos": end_pos,
-            "support": support,
+            "reading": reading,
             "positions_corrected": corrected,
             # labels only — the full alternatives (with previews) live on
             # the suggestion; review_suggestions shows them compactly
@@ -7515,6 +7522,12 @@ def review_suggestions(
     output = [f"**Review of {len(suggestions)} Suggestion(s)**\n"]
     if missing_line:
         output.append(missing_line)
+    # What the reading means, once: at a review of a session none of whose
+    # suggestions has been decided yet (stateless, so a read-only tool
+    # writes nothing to say it only once)
+    if session.suggestions and all(s.status == "pending"
+                                   for s in session.suggestions):
+        output.append(READING_NOTE)
 
     small_subset = bool(suggestion_guids) and len(suggestions) <= 5
     contexts: Dict[str, Tuple[str, str, Optional[str]]] = {}
@@ -7532,10 +7545,10 @@ def review_suggestions(
         output.append(f"📍 **Position:** {sugg.start_pos}-{sugg.end_pos}")
         output.append(f"\n**Segment Text:**")
         output.append(f"```\n{sugg.segment_text}\n```")
-        no_label = (SUPPORT_CLEARED if getattr(sugg, "support_cleared", False)
-                    else SUPPORT_NOT_GIVEN)
-        output.append(f"**Support:** "
-                      f"{support_in_words(sugg.support) or no_label}")
+        no_label = (READING_CLEARED if getattr(sugg, "reading_cleared", False)
+                    else READING_NOT_GIVEN)
+        output.append(f"**Reading:** "
+                      f"{reading_in_words(sugg.reading) or no_label}")
         output.append(f"\n**AI Reasoning:**")
         output.append(sugg.reasoning)
 
@@ -7583,9 +7596,9 @@ def edit_suggestion(
     use_alternative: Optional[str] = None,
     code_id: Optional[int] = None,
     code_name: Optional[str] = None,
-    support: Optional[str] = None,
+    reading: Optional[str] = None,
 ) -> str:
-    """Adjust a PENDING suggestion's span, code or support before approval.
+    """Adjust a PENDING suggestion's span, code or reading before approval.
 
     The review-time refinement tool: when the researcher wants a
     suggestion's span widened to a complete quote (or narrowed, or
@@ -7619,12 +7632,11 @@ def edit_suggestion(
     which it can be reopened too. A new code must be in the session's
     scope when the session names codes.
 
-    LABEL AND CODE: the support label says how the words carry the code
-    it was given for. Moving a suggestion to another code without a new
-    support clears the label (shown as not given, and the memo then
-    carries the reason only), and the answer says so; pass support with
-    the code change to label the new pairing. support alone relabels the
-    suggestion. The reason stays as recorded.
+    READING AND CODE: the reading (explicit or interpretive) belongs to
+    the code it was given for. A new code without a new reading clears it
+    (not given; the memo then has the reason only), and the answer says
+    so; pass reading with the code change to label the new pairing, or
+    alone to relabel. The reason stays as recorded.
 
     Args:
         coding_session_id: The session ID from analyze_for_coding
@@ -7646,9 +7658,8 @@ def edit_suggestion(
         code_id: Change the code by id (existing codes only)
         code_name: Change the code by name (matched exactly, else
                    ignoring letter case, against the live codebook)
-        support: "explicit" (the passage states the code) or
-                 "interpretive" (the reading is yours): the label for
-                 the suggestion as edited
+        reading: "explicit" or "interpretive", for the suggestion as
+                 edited
 
     Returns:
         JSON with the changes made (old -> new span/code), the new
@@ -7730,18 +7741,18 @@ def edit_suggestion(
 
     wants_span = manual_span
     wants_code = code_id is not None or code_name is not None
-    wants_label = support is not None
+    wants_label = reading is not None
     if wants_label:
-        label = (support_label(support.strip().lower())
-                 if isinstance(support, str) else None)
+        label = (reading_label(reading.strip().lower())
+                 if isinstance(reading, str) else None)
         if label is None:
-            return json.dumps({"error": SUPPORT_REQUIRED.replace(
-                "support is required", "support must be")})
+            return json.dumps({"error": READING_REQUIRED.replace(
+                "reading is required", "reading must be")})
     if not wants_span and not wants_code and not wants_label:
         return json.dumps({
             "error": "Nothing to change: pass start_pos/end_pos/"
                      "segment_text, use_alternative, code_id/code_name, "
-                     "and/or support"
+                     "and/or reading"
         })
 
     ro_db = get_db()
@@ -7817,11 +7828,11 @@ def edit_suggestion(
                 })
 
     final_code_id = new_code["id"] if new_code else sugg.code_id
-    new_label = label if wants_label else sugg.support
+    new_label = label if wants_label else sugg.reading
     if (new_start, new_end, final_code_id, new_label) == (
-            sugg.start_pos, sugg.end_pos, sugg.code_id, sugg.support):
+            sugg.start_pos, sugg.end_pos, sugg.code_id, sugg.reading):
         return json.dumps({"error": "No effective change: the span, code "
-                                    "and support are unchanged"})
+                                    "and reading are unchanged"})
 
     # Refuse an edit that lands exactly on another suggestion (one whose
     # coding was deleted does not count, as at record time)
@@ -7864,24 +7875,31 @@ def edit_suggestion(
         old_code_name = sugg.code_name
         sugg.code_id = new_code["id"]
         sugg.code_name = new_code["name"]
-        if not wants_label and sugg.support is not None:
+        if not wants_label and sugg.reading is not None:
             # The label was given for the old code (fix round 1): carried
             # over, it would tell the project the passage states a code
             # nobody weighed
-            changes["support"] = {"from": sugg.support, "to": None}
-            sugg.support = None
-            sugg.support_cleared = True
-            result["support_cleared"] = (
-                f"The label was given for '{old_code_name}', so it is "
+            changes["reading"] = {"from": sugg.reading, "to": None}
+            sugg.reading = None
+            sugg.reading_cleared = True
+            result["reading_cleared"] = (
+                f"The reading was given for '{old_code_name}', so it is "
                 f"cleared: the suggestion shows 'not given' and its memo "
                 f"would carry the reason only. Ask whether the passage "
-                f"states '{new_code['name']}' (explicit) or is read in "
-                f"(interpretive), and pass support with edit_suggestion. "
-                f"The reason, too, was written for '{old_code_name}'.")
-    if wants_label and label != sugg.support:
-        changes["support"] = {"from": sugg.support, "to": label}
-        sugg.support = label
-        sugg.support_cleared = False
+                f"states what '{new_code['name']}' names (explicit) or "
+                f"implies it (interpretive), and pass reading with "
+                f"edit_suggestion. The reason, too, was written for "
+                f"'{old_code_name}'.")
+        elif wants_label:
+            # The reason stays as written for the old code, whatever the
+            # new reading (the re-verification's note 3)
+            result["reason_note"] = (
+                f"The reason was written for '{old_code_name}' and is kept "
+                f"as recorded; the researcher sees it at review.")
+    if wants_label and label != sugg.reading:
+        changes["reading"] = {"from": sugg.reading, "to": label}
+        sugg.reading = label
+        sugg.reading_cleared = False
 
     if wants_span or (new_code is not None and "code" in changes):
         sugg.adjusted = True
@@ -7935,7 +7953,7 @@ def edit_suggestion(
         "span_alternatives": [_alternative_gloss(a)
                               for a in sugg.span_alternatives],
         "status": sugg.status,
-        "support": sugg.support,
+        "reading": sugg.reading,
         "next_step": "Still pending; approve with update_suggestion_status "
                      "when the user is happy with it.",
     })
@@ -8299,9 +8317,9 @@ def apply_codings(
 
             try:
                 for sugg in to_write:
-                    # The support label in words, then the reasoning;
-                    # never a number (owner ruling 21)
-                    memo = memo_with_support(sugg.reasoning, sugg.support)
+                    # The reading in words, then the reasoning; never a
+                    # number (owner rulings 21 and 25)
+                    memo = memo_with_reading(sugg.reasoning, sugg.reading)
 
                     # Write the authoritative fulltext slice (validated above)
                     # so seltext always equals fulltext[pos0:pos1] on disk
@@ -8439,10 +8457,13 @@ def apply_codings(
     output.extend(_already_existing_lines())
 
     output.append(f"\n\n**You can now open the project in Qualcoder to see the AI-coded segments.**")
+    unlabelled = sum(1 for s in to_write if s.reading is None)
     output.append(f"All codings are attributed to '{owner}'. Each memo "
-                  f"says first whether the passage states the code "
-                  f"(explicit) or the assistant read it in (interpretive), "
-                  f"then the reason.")
+                  f"gives the reading first (explicit or interpretive), "
+                  f"then the reason"
+                  + (f"; {unlabelled} had no reading (recorded before "
+                     f"v0.14, or cleared by a change of code), so their "
+                     f"memo is the reason only." if unlabelled else "."))
     output.append(f"If one of these turns out to be wrong, `delete_coding(ctid)` "
                   f"removes it and marks its suggestion removed in this "
                   f"session.")
@@ -10348,7 +10369,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "same machinery as record_suggestions",
                 "Moving a suggestion to another code clears its explicit "
                 "or interpretive label, given for the old code, unless "
-                "support is passed with the change; support alone "
+                "reading is passed with the change; reading alone "
                 "relabels it",
                 "Proposal evidence spans are edited the same way via "
                 "update_proposal(example_segments=...)"

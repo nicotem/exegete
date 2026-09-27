@@ -130,8 +130,9 @@ Only suggest a code where the participant says it in so many words
 2. Reads the specified files
 3. Examines content for relevant segments
 4. Identifies text that matches the codes
-5. Marks each suggestion explicit (the passage states the code) or
-   interpretive (Claude is reading it in); there is no numeric score
+5. Gives each suggestion a reading: explicit (the passage states what
+   the code names) or interpretive (the code rests on what the passage
+   implies rather than on what it says); there is no numeric score
 6. Generates reasoning for each suggestion
 7. Records the suggestions into the session with `record_suggestions`;
    every suggestion is verified against the file text before it is
@@ -150,7 +151,7 @@ Found 8 suggestions:
    Code: Workplace Stress
    Position: 450-620
    Text: "I often feel overwhelmed with the workload..."
-   Support: explicit (the passage states it)
+   Reading: explicit (the passage states what the code names)
    Reasoning: Direct expression of feeling overwhelmed by work demands
    GUID: guid-001
 
@@ -158,7 +159,7 @@ Found 8 suggestions:
    Code: Coping Strategies
    Position: 1200-1350
    Text: "I try to take breaks and go for walks..."
-   Support: explicit (the passage states it)
+   Reading: explicit (the passage states what the code names)
    Reasoning: Describes specific coping mechanism (taking breaks)
    GUID: guid-002
 
@@ -200,7 +201,7 @@ Selected Text:
 anything. I can barely get through my daily tasks without
 feeling exhausted by the end of the day."
 
-Support: interpretive (the assistant is reading into it)
+Reading: interpretive (the code rests on what the passage implies rather than on what it says)
 
 Reasoning:
 The participant does not name stress; interruptions, inability to
@@ -268,8 +269,8 @@ Apply the approved codings to the project
 1. Creates a backup first (by default)
 2. Loops through all approved suggestions
 3. Writes each as a coding to the database
-4. Writes in each coding's memo whether the passage states the code
-   (explicit) or Claude read it in (interpretive), then the reasoning
+4. Writes each coding's reading (explicit or interpretive) first in its
+   memo, then the reasoning
 5. Records the PROJECT's AI coder name as owner, which the researcher
    chooses the first time a write needs it (`set_project_ai_coder_name`;
    see "Choosing the AI coder name" in README.md). Before that choice is
@@ -314,7 +315,7 @@ Applying 6 approved codings...
 4. Select the files you analysed
 5. You should see the AI-generated codings with:
    - Owner: the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
-   - Memo beginning "Support: explicit" or "Support: interpretive",
+   - Memo beginning "Reading: explicit" or "Reading: interpretive",
      then the reasoning
 
 ## Example Conversations
@@ -368,7 +369,7 @@ Position: 450-590
 Text: "The main issue is lack of time. Between work and family
 responsibilities, there's just no time left for participation..."
 
-Support: explicit (the passage states it)
+Reading: explicit (the passage states what the code names)
 
 Reasoning: Explicit mention of time constraints as a barrier to
 participation, citing specific competing demands (work, family).
@@ -559,8 +560,9 @@ Claude remembers:
 
 **5. Explicit or interpretive, not a score**
 
-Each suggestion is marked explicit (the passage states the code) or
-interpretive (Claude is reading it in). There is no confidence number
+Each suggestion is marked explicit (the passage states what the code
+names) or interpretive (the code rests on what the passage implies
+rather than on what it says). There is no confidence number
 and no threshold: a model's rating of its own confidence is not a
 measurement, and an interpretive reading can be exactly the one your
 analysis needs. If you want only what participants state outright, say

@@ -46,7 +46,7 @@ def _sid(out: str) -> str:
 
 def _approved_session(project_path):
     sid = _sid(server.analyze_for_coding([1]))
-    rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+    rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
         "file_id": 1, "code_name": "Stress",
         "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
     }]))
@@ -192,7 +192,7 @@ class TestNoBypassNoCaching:
         cur = json.loads(server.get_current_project())
         assert cur["qualcoder_open"] is False        # re-check endpoint agrees
 
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
         }]))
@@ -207,7 +207,7 @@ class TestNoBypassNoCaching:
         sid = _sid(server.analyze_for_coding([1]))
         _stale(qualcoder_db_path)                    # heartbeat aged out
         try:
-            rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+            rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
                 "file_id": 1, "code_name": "Coping",
                 "segment_text": "I cope by exercising",
             }]))
@@ -268,7 +268,7 @@ class TestConcurrencyLadder:
 
             # session-side tools (no DB writes) still function under the lock
             rec = json.loads(server.record_suggestions(_sid(
-                server.analyze_for_coding([1])), [{"support": "explicit",
+                server.analyze_for_coding([1])), [{"reading": "explicit",
                     "file_id": 1, "code_name": "Coping",
                     "segment_text": "I cope by exercising"}]))
             assert rec["recorded_count"] == 1

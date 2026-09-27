@@ -61,7 +61,7 @@ class TestT13ImportNormalization:
         # the session covers the file coded (v0.14: its scope holds)
         analyze = server.analyze_for_coding([1, fid])
         sid = analyze.split("Session ID: `")[1].split("`")[0]
-        out = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        out = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": fid, "code_name": "Stress",
             "segment_text": "beta gamma",
         }]))

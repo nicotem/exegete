@@ -61,7 +61,7 @@ def _apply_one(file_id=1, code_name="Stress", start=24, end=55,
                segment=None):
     out = server.analyze_for_coding([file_id])
     sid = out.split("Session ID: `")[1].split("`")[0]
-    rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+    rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
         "file_id": file_id, "code_name": code_name,
         "start_pos": start, "end_pos": end,
         "segment_text": segment if segment is not None else FULLTEXT[start:end],
@@ -250,7 +250,7 @@ class TestTextPositions:
 
         # forward direction: provided U+2029, file has \n -> accepted, \n stored
         sid = server.analyze_for_coding([75]).split("Session ID: `")[1].split("`")[0]
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 75, "code_name": "Stress",
             "start_pos": 5, "end_pos": 13,
             "segment_text": "one para",
@@ -264,7 +264,7 @@ class TestTextPositions:
 
         # reverse direction: provided \n, file has U+2029 -> NOT silently matched
         sid2 = server.analyze_for_coding([76]).split("Session ID: `")[1].split("`")[0]
-        rec2 = json.loads(server.record_suggestions(sid2, [{"support": "explicit",
+        rec2 = json.loads(server.record_suggestions(sid2, [{"reading": "explicit",
             "file_id": 76, "code_name": "Stress",
             "start_pos": 5, "end_pos": 13,
             "segment_text": "one\npara",
@@ -277,7 +277,7 @@ class TestTextPositions:
         folder = Path(qualcoder_db_path)
         n_backups = len(list(folder.parent.glob(f"{folder.stem}_backup_*.qda")))
         sid = server.analyze_for_coding([1]).split("Session ID: `")[1].split("`")[0]
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 70, "end_pos": len(FULLTEXT) + 5,
             "segment_text": "NOT THE FILE TAIL AT ALL",
@@ -371,7 +371,7 @@ class TestTextPositions:
         # a coding recorded against the NORMALIZED text round-trips
         sid = server.analyze_for_coding([out["file_id"]]).split(
             "Session ID: `")[1].split("`")[0]
-        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
+        rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": out["file_id"], "code_name": "Stress",
             "segment_text": "line two",
         }]))

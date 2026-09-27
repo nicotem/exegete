@@ -458,8 +458,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   over 21, and the new opt-in lifecycle set = 200,472 (about 50.1k)
   over 74. Moved by the coding loop's descriptions: `analyze_for_coding`
   says what it does, what a session's scope refuses and how names
-  match; `record_suggestions` asks for `support`; `edit_suggestion`
-  takes `support`; `update_suggestion_status` takes `reopen` and says
+  match; `record_suggestions` asks for `reading`; `edit_suggestion`
+  takes `reading`; `update_suggestion_status` takes `reopen` and says
   how it counts; `review_suggestions`, `analyze_file_with_coding`,
   `delete_coding` and `apply_codings` say what they do (all in `core`;
   there `analyze_for_coding` names `create_proposed_codes`, which core
@@ -666,16 +666,21 @@ search or a silent limit.
   carried, and `analyze_for_coding`'s `min_confidence`, are removed
   everywhere: the suggestions, the sessions, the review screen, the
   grounding text, the help, the two workflow guides and the REFI-QDA
-  export. In their place each suggestion carries `support`, required:
-  `explicit` (the passage states the code) or `interpretive` (the
-  assistant is reading it in). `record_suggestions` refuses a
-  suggestion without it, and records no number when one is sent (it
-  says how many it set aside). `review_suggestions` shows the label
-  beside the quote and before the reason; an applied coding's memo
-  begins "Support: explicit (the passage states it)" or "Support:
-  interpretive (the assistant is reading into it)", then the reason,
-  and a session's REFI-QDA export says the same in each selection's
-  description. The number was a model's rating of itself, not a
+  export. In their place each suggestion carries a `reading`,
+  required (owner ruling 25): `explicit` (the passage states what the
+  code names) or `interpretive` (the code rests on what the passage
+  implies rather than on what it says; its reason names the words it
+  rests on). Nothing sorts, filters or totals by it, and the researcher
+  can change it at review. `record_suggestions` refuses a suggestion
+  without it, and records no number when one is sent (it says how many
+  it set aside). `review_suggestions` shows the reading before the
+  reason, and at the review of a session with nothing decided yet says
+  once what the two values mean and that their share follows from the
+  lens chosen; an applied coding's memo begins "Reading: explicit (the
+  passage states what the code names)" or "Reading: interpretive (the
+  code rests on what the passage implies rather than on what it says)",
+  then the reason, and a session's REFI-QDA export says the same in
+  each selection's description. The number was a model's rating of itself, not a
   measurement, and it went into the research record as if it were
   one; `min_confidence` never filtered anything. QualCoder 4.0's own
   assistant has no confidence score.
@@ -696,12 +701,13 @@ search or a silent limit.
   4.0 can hold "Stress" and "stress") names neither: it is listed in
   `ambiguous_code_names` with both, and `record_suggestions` and
   `edit_suggestion` refuse it saying which two.
-- **A label stays with the code it was given for.** `edit_suggestion`
-  takes `support`. Moving a suggestion to another code without it clears
-  the label (the review shows "not given (cleared when the code was
-  changed ...)", the memo carries the reason only, and the answer says
-  why), since the label said how the words carry the old code; with it,
-  the new pairing is labelled. `support` alone relabels a suggestion.
+- **A reading stays with the code it was given for.** `edit_suggestion`
+  takes `reading`. Moving a suggestion to another code without it
+  clears the reading (the review shows "not given (cleared when the
+  code was changed ...)", the memo carries the reason only, and the
+  answer says why); with it, the new pairing is labelled, and the
+  answer says the reason was written for the old code. `reading` alone
+  relabels a suggestion.
 - **A decided suggestion can be reopened.** `update_suggestion_status`
   takes `reopen`, which returns an approved, rejected or removed
   suggestion to pending, so that it can be edited and decided again.
@@ -951,10 +957,10 @@ The AI coding loop:
   ("analyze_for_coding has no argument 'min_confidence'; nothing was
   done", with `unknown_arguments`), as every undeclared argument is
   (above), and no session is started. Each suggestion passed to
-  `record_suggestions` needs `support`, `"explicit"` or
+  `record_suggestions` needs `reading`, `"explicit"` or
   `"interpretive"`; a suggestion without it is refused with the reason,
   and one that sends `confidence` in its place is told "confidence is
-  no longer taken"; a `confidence` sent beside a valid `support` is set
+  no longer taken"; a `confidence` sent beside a valid `reading` is set
   aside, not stored, and counted (`confidence_ignored`, with
   `confidence_note`).
   A session file written by an earlier release still loads: its
@@ -1019,23 +1025,25 @@ The AI coding loop:
   before QualCoder 4.0) is refused and listed in `ambiguous_code_names`,
   where `record_suggestions` used to take one of the two. A session's
   `file_ids` hold only the files found; the others are in `not_found`.
-- **A label stays with its code.** `edit_suggestion` takes `support`;
-  moving a suggestion to another code without it clears the label
-  (`support_cleared` in the answer; the memo then carries the reason
-  only).
+- **A reading stays with its code.** `edit_suggestion` takes `reading`;
+  moving a suggestion to another code without it clears the reading
+  (`reading_cleared` in the answer; the memo then carries the reason
+  only), and with it the answer says the reason was written for the old
+  code (`reason_note`).
 - **New keys in the answers.** `record_suggestions`: each entry's
-  `support`, and `confidence_ignored` and `context_ignored` when those
+  `reading`, and `confidence_ignored` and `context_ignored` when those
   were sent; `analyze_for_coding`: `not_found` and
-  `ambiguous_code_names`; `edit_suggestion`: `support`,
-  `support_cleared`; `get_coding_session_info`: `context_note`, and
+  `ambiguous_code_names`; `edit_suggestion`: `reading`,
+  `reading_cleared`, `reason_note`; `get_coding_session_info`: `context_note`, and
   sessions and suggestions carry `scope`, `applied_ctid`,
-  `support_cleared` and `context_from_file`; `compare_coders`:
+  `reading_cleared`; `compare_coders`:
   `files_coded_by_one_coder_only` (and its count beyond 50) and
   `files_coded_by_neither`. A caller that compares a whole answer's
   shape sees them.
-- **The memo form of a newly applied coding.** "Support: explicit (the
-  passage states it)" or "Support: interpretive (the assistant is
-  reading into it)", a blank line, then the reason; the "[AI Confidence:
+- **The memo form of a newly applied coding.** "Reading: explicit (the
+  passage states what the code names)" or "Reading: interpretive (the
+  code rests on what the passage implies rather than on what it says)",
+  a blank line, then the reason; the "[AI Confidence:
   0.85]" line is no longer written. A session's REFI-QDA export
   describes each selection the same way; a project export carries every
   memo exactly as stored.

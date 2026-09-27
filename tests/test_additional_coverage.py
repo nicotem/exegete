@@ -5,7 +5,7 @@ Additional test coverage identified by QA and security reviews.
 HIGH priority: no-project tests, SQL injection gaps, session validation,
                deserialization tests.
 MEDIUM priority: search modes, path traversal, attr_type="file",
-                 integer overflow, support labels, partial failure.
+                 integer overflow, reading labels, partial failure.
 """
 
 import pytest
@@ -463,7 +463,7 @@ class TestExpandedIntegerOverflow:
 
 # =============================================================================
 # MEDIUM-9, as ruled in v0.14 (owner ruling 21): the 0-1 confidence and its
-# clamping are gone; a suggestion's support is one of two labels or none
+# clamping are gone; a suggestion's reading is one of two labels or none
 # =============================================================================
 
 class TestSupportLabel:
@@ -478,16 +478,16 @@ class TestSupportLabel:
 
     @pytest.mark.parametrize("label", ["explicit", "interpretive"])
     def test_the_two_labels_are_kept(self, label):
-        assert self._make(support=label).support == label
+        assert self._make(reading=label).reading == label
 
     @pytest.mark.parametrize("value", [None, "", "EXPLICIT ", 0.9, 1,
                                        "high", float("nan")])
     def test_anything_else_is_no_label(self, value):
-        assert self._make(support=value).support is None
+        assert self._make(reading=value).reading is None
 
     def test_no_argument_is_no_label(self):
         s = self._make()
-        assert s.support is None
+        assert s.reading is None
         assert not hasattr(s, "confidence")
 
     def test_an_old_session_entry_with_a_number_loads_without_a_label(self):
@@ -495,9 +495,9 @@ class TestSupportLabel:
             "file_id": 1, "file_name": "t.txt", "code_id": 1,
             "code_name": "T", "start_pos": 0, "end_pos": 5,
             "segment_text": "hello", "confidence": 0.85})
-        assert s.support is None
+        assert s.reading is None
         assert "confidence" not in s.to_dict()
-        assert s.to_dict()["support"] is None
+        assert s.to_dict()["reading"] is None
 
 
 # =============================================================================
@@ -644,7 +644,7 @@ class TestApplyCodingsRollback:
             code_id=1, code_name="Stress",
             start_pos=0, end_pos=10,
             segment_text="This is in",
-            reasoning="Valid suggestion", support="explicit",
+            reasoning="Valid suggestion", reading="explicit",
             status="approved"
         )
         invalid_suggestion = CodingSuggestion(
@@ -652,7 +652,7 @@ class TestApplyCodingsRollback:
             code_id=99999, code_name="NonexistentCode",
             start_pos=20, end_pos=30,
             segment_text="interview ",
-            reasoning="Invalid code_id", support="explicit",
+            reasoning="Invalid code_id", reading="explicit",
             status="approved"
         )
 
@@ -726,7 +726,7 @@ class TestRWConnectionDowngrade:
             code_id=1, code_name="Stress",
             start_pos=8, end_pos=18,
             segment_text="interview ",
-            reasoning="Test", support="explicit",
+            reasoning="Test", reading="explicit",
             status="approved"
         )
         session.add_suggestion(suggestion)
@@ -759,7 +759,7 @@ class TestRWConnectionDowngrade:
             code_id=99999, code_name="Nonexistent",
             start_pos=0, end_pos=10,
             segment_text="This is in",
-            reasoning="Bad code", support="explicit",
+            reasoning="Bad code", reading="explicit",
             status="approved"
         )
         session.add_suggestion(bad_suggestion)
@@ -793,7 +793,7 @@ class TestRWConnectionDowngrade:
             code_id=1, code_name="Stress",
             start_pos=8, end_pos=18,
             segment_text="interview ",
-            reasoning="Test", support="explicit",
+            reasoning="Test", reading="explicit",
             status="approved"
         )
         session.add_suggestion(suggestion)

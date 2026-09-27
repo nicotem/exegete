@@ -1659,6 +1659,7 @@ class TestFixRound2TheTextAroundAPassage:
         "P1: Happy to help?\n"
         "Interviewer: How do the deadlines feel to you?\n"
         "Interviewer: Take your time.\n"
+        "P1: Is that fine?\n"
         "P1: They pile up. I feel stressed about deadlines every week. "
         "Then I go running.\n"
         "Interviewer: And at home?\n")
@@ -1707,9 +1708,26 @@ class TestFixRound2TheTextAroundAPassage:
         # the nearest earlier turn by another speaker that asks something:
         # not the same speaker's, not a statement, not an earlier question
         assert "Take your time." not in out
+        assert "Is that fine?" not in out
         assert "Thank you for joining." not in out
         assert "Happy to help?" not in out
         assert "And at home?" not in out
+
+    def test_a_turn_cut_by_the_search_window_is_not_read(
+            self, setup_server, qualcoder_db_path):
+        # the search looks back 2000 characters; the turn the window cuts
+        # into is not a whole turn, so words inside it that look like a
+        # speaker label are not taken for one
+        tail = "Q: is it so? "
+        tail += "b" * (1999 - len(tail))
+        text = (f"Interviewer: {'a' * 50}{tail}\n"
+                f"P1: They pile up. {self.PASSAGE} Then I go running.\n")
+        assert len(text.split("\n")[0]) - text.index("Q: is it") == 1999
+        sid, _ = self._transcript_session(qualcoder_db_path, text)
+        entry = jcall("get_coding_session_info",
+                      coding_session_id=sid)["suggestions"][0]
+        assert "question" not in entry
+        assert entry["context_unit"] == "speaker turn"
 
     def test_blank_line_transcripts_too(self, setup_server,
                                         qualcoder_db_path):

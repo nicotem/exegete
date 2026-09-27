@@ -544,7 +544,7 @@ Experimental.
 
 **Step 3. Use the core toolset.** This server exposes 73 tools by
 default, and the serialised tool definitions alone measure about
-191,000 characters, roughly 48k tokens (measured for 0.14 under
+198,000 characters, roughly 49k tokens (measured for 0.14 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
@@ -560,14 +560,15 @@ That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `QUALCODER_MCP_TOOLSET=core`
 (in the config of Step 5) to register only the 21-tool supervised
-coding set, measured at about 63,000 characters, roughly 16k tokens.
+coding set, measured at about 67,000 characters, roughly 17k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-16k tokens of schema exceed the 8k default context. When loading the
+17k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
-(that leaves about 16k tokens for your transcript excerpts and
-conversation; 16k would leave under 1k and is not workable), or 64k if
-you must run the full surface (its schema alone is about 48k tokens).
+(that leaves about 15k tokens for your transcript excerpts and
+conversation; 16k would not even hold the schema and is not workable),
+or 64k if you must run the full surface (its schema alone is about 49k
+tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
 
@@ -910,6 +911,19 @@ Check out the main README.md for:
 - Example queries and prompts
 - Full list of available tools
 - Advanced features (co-occurrence analysis, demographics, etc.)
+
+### Approving the AI's suggestions: your host's settings are the safeguard
+
+When the assistant suggests codings or new codes, nothing is written to
+your project until each item is marked approved and then applied. The
+server records the approval the assistant reports: it cannot tell
+whether you gave it. Two things keep that honest. Your host asks before
+each tool call: keep it asking, and when it asks about
+`update_suggestion_status`, `update_proposal_status`, `apply_codings` or
+`create_proposed_codes`, choose "allow once" rather than allowing the
+tool always. And read what the approval step reports (how many
+suggestions are approved, rejected and pending) before anything is
+applied; if the approved number is not the number you said yes to, stop.
 
 ### Try some richer queries
 

@@ -273,7 +273,7 @@ class TestWriteLoop:
             p0 = 200 + i * 60
             p1 = p0 + 25
             suggs.append({"file_id": fid, "code_id": 1, "start_pos": p0, "end_pos": p1,
-                          "segment_text": text[p0:p1], "reasoning": f"s{i}", "confidence": 0.9})
+                          "segment_text": text[p0:p1], "reasoning": f"s{i}", "support": "explicit"})
 
         rec = json.loads(server.record_suggestions(sid, suggs))
         assert rec["recorded_count"] == 5, rec
@@ -660,7 +660,7 @@ def _bench_write_loop(scratch):
     text = file_fulltext(proj, fid)
     suggs = [{"file_id": fid, "code_id": 1, "start_pos": 200 + i * 60,
               "end_pos": 200 + i * 60 + 25, "segment_text": text[200 + i * 60:200 + i * 60 + 25],
-              "reasoning": f"s{i}", "confidence": 0.9} for i in range(20)]
+              "reasoning": f"s{i}", "support": "explicit"} for i in range(20)]
     _, out["record_suggestions(20)"], _ = time_call(lambda: server.record_suggestions(sid, suggs))
     rec = json.loads(server.record_suggestions(sid, suggs, replace=True))
     guids = [r["guid"] for r in rec["recorded"]]

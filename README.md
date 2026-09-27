@@ -17,7 +17,7 @@ This MCP server lets an AI assistant directly access and analyse your Qualcoder 
 - 👥 **Query by demographics/attributes** (age, gender, etc.)
 - 🎯 **Create case-code matrices for comparative analysis**
 - 🗒️ Search every memo and note outside QualCoder's saved graphs: memos, coding memos, annotations, journal entries and the project memo
-- 🤖 **AI-assisted coding**: suggest → review → approve → apply, so nothing is written until you say so
+- 🤖 **AI-assisted coding**: suggest → review → approve → apply: nothing is written until an item is marked approved. The server records the approval the assistant reports and cannot tell whether you gave it; your host asking before each decision or write ("allow once") and your own reading of the counts are the safeguard (see "Who approves" below)
 - 🏷️ **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - 💾 **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
 - ↩️ **Undo & restore**: delete a coding, list backups, and restore a whole project to an earlier state
@@ -821,7 +821,8 @@ Claude will:
 - Examine the files
 - Record its suggestions into the session (`record_suggestions`; every
   suggestion is verified against the file text before it is stored)
-- Present suggestions with reasoning and confidence scores
+- Present suggestions with their reasoning, each marked explicit (the
+  passage states the code) or interpretive (Claude is reading it in)
 
 **Step 3: Review in Chat**
 ```
@@ -831,14 +832,32 @@ Show me details about suggestion 1
 Claude shows you:
 - The text segment
 - Which code and file
+- Whether the passage states the code (explicit) or Claude is reading
+  it in (interpretive)
 - Why it was selected (reasoning)
-- Confidence score
 - Surrounding context
 
 **Step 4: Approve/Reject**
 ```
 Approve suggestions 1, 2, and 5. Reject 3 and 4.
 ```
+
+**Who approves.** The server writes only suggestions marked approved, and
+the mark is set by a tool call the assistant makes
+(`update_suggestion_status`, and `update_proposal_status` for new
+codes) when it relays your decision. The server cannot tell whether you
+gave it: it records the approval the assistant reports. Two things stand
+behind it: your host asking you before each call that decides or writes
+(keep it in its asking mode, and choose "allow once" for
+`update_suggestion_status`, `update_proposal_status`, `apply_codings`
+and `create_proposed_codes` rather than allowing them always), and your
+own reading of what the approval step reports: how many suggestions are
+now approved, rejected and pending. If the approved number is not the
+number you said yes to, stop before anything is applied.
+
+To change your mind about a decided suggestion, ask for it to be
+reopened (`update_suggestion_status` with `reopen`): it goes back to
+pending, can be edited, and waits for your decision again.
 
 **Step 5: Apply to Database**
 ```
@@ -848,24 +867,31 @@ Apply the approved codings to the project
 Claude will:
 - Verify every approved suggestion against the project (right project,
   files/codes exist, text matches positions)
-- Create automatic backup
+- Create a backup first (by default)
 - Write approved codings to database (all-or-nothing)
 - Report success with coding IDs
 - Then open the project in QualCoder to see the results (a QualCoder 4.0 window that was already open will not show them until the project is reopened)
 
-**If something went wrong**: `delete_coding(coding_id)` removes a single coding;
+**If something went wrong**: `delete_coding(coding_id)` removes a single coding
+and marks its suggestion removed in the session (which then allows it to be
+approved again, reopened and edited, or the passage recorded again);
 `list_backups` + `restore_backup` roll the whole project back to a snapshot.
 
 ### Key Features
 
 - **Conversational Review**: Discuss suggestions with Claude before applying
-- **Confidence Scoring**: Each suggestion includes a 0.0-1.0 confidence score with reasoning
+- **Explicit or interpretive**: Each suggestion says whether the passage
+  states the code or the assistant is reading it in, beside the quote and
+  before the reason. There is no numeric score: a model's rating of its
+  own confidence is not a measurement, and the two kinds of reading are
+  what a researcher weighs. An applied coding's memo says which, in words
 - **Session Persistence**: Resume work anytime, all sessions saved to disk
-- **Automatic Backups**: Every write creates a timestamped backup first
+- **Automatic Backups**: Every write creates a timestamped backup first, unless you pass `create_backup=false`
 - **Workspace Isolation**: Work on copies in dedicated workspace folder
 - **Direct Database Writes**: No import/export step; codings are in the project the next time it is opened in QualCoder (an open QualCoder 4.0 window does not show external changes until the project is reopened)
-- **Granular Control**: Approve/reject individual suggestions by GUID
-- **Full Context**: See surrounding text for each suggestion
+- **Granular Control**: Approve, reject or reopen individual suggestions by GUID; a GUID the session does not hold is named, not passed over
+- **A session's scope holds**: the files, and the codes if you name them, that a session is started with are the only ones it accepts suggestions for; a name or id that matches nothing is listed
+- **Full Context**: See the file's own text around each suggestion, read from the file (the assistant cannot supply it)
 - **Verified Writes**: Suggestions are checked against the file text when
   recorded AND before writing; sessions only apply to the project they
   were created in
@@ -925,7 +951,7 @@ carries the complete list.
 > plus `create_project`, 74 tools. Creating projects stays out of the
 > default set so that researchers opt in to a tool that makes folders on
 > their disk; it is not in `core` either. Measured as below, the
-> `lifecycle` definitions run to about 193,000 characters, roughly 48k
+> `lifecycle` definitions run to about 200,000 characters, roughly 50k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
@@ -943,9 +969,9 @@ carries the complete list.
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0, in
 > the repository's own `venv/`), the
-> definitions run to about 191,000 characters for `full`, roughly 48k
-> tokens at four characters per token, and about 63,000 characters for
-> `core`, roughly 16k tokens. On Python 3.10 to 3.12 the same
+> definitions run to about 198,000 characters for `full`, roughly 49k
+> tokens at four characters per token, and about 67,000 characters for
+> `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
 > LM Studio recipe in INSTALL.md for what that means for context
@@ -996,7 +1022,7 @@ still answers empty, and that answer is a finding.
 
 **Co-occurrence Analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. Window 0 is QualCoder's co-occurrence report's overlap, and at N the gap is the distance its Code relations report gives; the counts are not the co-occurrence report's
-- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only
+- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with this server's AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant is told to read each file with `analyze_file_with_coding` before suggesting, which gives it every visible coder's codings; do not report it as intercoder reliability
 
 **Case-Code Matrix & Comparative Analysis:**
 - `get_case_code_matrix(coder)` - Create cross-tabulation of cases vs codes
@@ -1004,24 +1030,24 @@ still answers empty, and that answer is a finding.
 - `get_cases_by_code(code_id, coder)` - Get all cases containing a specific code
 
 **AI-Assisted Coding (Conversational Workflow):**
-- `analyze_for_coding(file_ids, code_names, instruction, min_confidence)` - Create an analysis session for Claude to perform coding suggestions (returns the `coding_session_id` the other session tools take); a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside this server, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
+- `analyze_for_coding(file_ids, code_names, instruction)` - Start a coding session for the files, and the codes if named (matched ignoring letter case), that suggestions may then be recorded for; it reads no file and makes no suggestion, returns the `coding_session_id` the other session tools take, and lists in `not_found` any id or name that matched nothing; a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside this server, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
 - `record_suggestions(coding_session_id, suggestions, replace)` - Record Claude's suggestions into the session (each verified against the file text; positions auto-corrected when the excerpt is unique; a PDF with no usable text is refused, as it is by `edit_suggestion`, `apply_codings`, proposal evidence and `add_annotation`)
 - `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show detailed information about specific suggestions
-- `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name)` - Adjust a pending suggestion's span or code before approval (session-only; server-computed shorter/longer alternatives)
-- `update_suggestion_status(coding_session_id, approve, reject)` - Approve or reject suggestions by GUID
+- `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, support)` - Adjust a pending suggestion's span, code or label before approval (session-only; server-computed shorter/longer alternatives); moving it to another code without a new `support` clears the label, which was given for the old code
+- `update_suggestion_status(coding_session_id, approve, reject, reopen)` - Approve, reject or reopen (back to pending) suggestions by GUID; GUIDs not in the session are listed, and a GUID in two lists is refused
 - `apply_codings(coding_session_id, create_backup, owner)` - **WRITES TO DATABASE** - Apply approved suggestions (bound to the session's project, validated before backup, all-or-nothing; a suggestion whose identical coding is already in the project is reported as already existing and skipped, not written twice)
 - `get_coding_session_info(coding_session_id)` - View all details of a coding session
 - `list_coding_sessions(project_path, days_old)` - List all saved coding sessions
 - `delete_coding_session(coding_session_id)` - Delete a saved session file (not the codings)
-- `cleanup_old_sessions(days_old)` - Delete session files older than N days (N >= 1)
+- `cleanup_old_sessions(days_old)` - Delete every session file on this computer whose last change is older than N days (N >= 1), for every project, including sessions holding approved suggestions not yet applied; there is no preview
 - `explain_ai_coding_tools(tool_name)` - Built-in help for this workflow, including `grounding_rules`, `methodology_vocabulary` and `methods_notes`
 
 **Inductive Coding (proposing new codes):**
 - `propose_codes(coding_session_id, proposals, replace)` - Record brand-new code proposals discovered in the data
 - `review_proposals(coding_session_id, proposal_guids, show_examples)` - Review proposed codes in detail before deciding
-- `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created
-- `merge_proposals(coding_session_id, from_proposal_guid, into_proposal_guid)` - Combine two proposals
-- `update_proposal_status(coding_session_id, approve, reject)` - Approve or reject proposals
+- `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created; changing an approved proposal returns it to pending, so what is created is what was approved
+- `merge_proposals(coding_session_id, from_proposal_guid, into_proposal_guid)` - Combine two proposals; the source is marked merged, a final status (it can never be approved or created), and an approved target returns to pending when it gains evidence (a merge whose spans were all already there changes nothing)
+- `update_proposal_status(coding_session_id, approve, reject)` - Approve or reject proposals; GUIDs not in the session are listed, and a GUID in both lists is refused
 - `create_proposed_codes(coding_session_id, apply_coded_segments, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, optionally writing their evidence spans as codings
 
 **Data Import, Cases & Attributes (Write Operations):**
@@ -1035,7 +1061,7 @@ still answers empty, and that answer is a finding.
 
 **Recovery & Safety:**
 - `copy_project_to_workspace(source_path, new_name)` - Copy a project to the safe workspace for AI coding (the database copied consistently and the same exclusions as backups; reports skipped symlinks)
-- `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` - **WRITES TO DATABASE** - Remove one coded segment (refuses a hidden coder's row or a row carrying a private note unless the override is passed)
+- `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` - **WRITES TO DATABASE** - Remove one coded segment (refuses a hidden coder's row or a row carrying a private note unless the override is passed); a coding an AI coding session applied is marked removed in that session, which the answer names
 - `list_backups()` - List this project's backup snapshots (both this server's `_backup_` and QualCoder's `_BKUP_` families); a backup holding its database's journal or WAL file, copied while a program was writing, is marked `unclean`
 - `prune_backups(keep_last, older_than_days, preview_token)` - Delete this server's own backups by a retention policy (preview first, then the token the preview returns; QualCoder's `_BKUP_` backups are never removed)
 - `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused)
@@ -1241,9 +1267,7 @@ qualcoder_mcp/
 │       ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
 │       └── refi_export.py       # REFI-QDA XML export
 ├── scripts/
-│   ├── create_test_project.py  # Test project generator
-│   ├── generate_test_export.py
-│   └── test_workflow.py
+│   └── create_test_project.py  # Test project generator
 ├── legal/
 │   └── GPL-3.0.txt         # The GNU GPL, version 3, which the LGPL incorporates
 ├── pyproject.toml           # Package configuration
@@ -1273,7 +1297,8 @@ Contributions are welcome! Some ideas for enhancements:
 - ✅ AI-assisted coding with REFI-QDA export (deprecated in v0.4.0)
 - ✅ Code discovery and suggestion
 - ✅ Session persistence and management
-- ✅ Confidence scoring for suggestions
+- ✅ Confidence scoring for suggestions (replaced in v0.14: each suggestion
+  is now marked explicit or interpretive, with no score)
 - ✅ Comprehensive help system
 
 **Completed in v0.4.0:**

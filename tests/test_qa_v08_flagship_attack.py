@@ -43,7 +43,10 @@ def _reload():
 
 
 def _sid():
-    return json.loads(server.analyze_for_coding([1]))["coding_session_id"]
+    # Every file in the project: a v0.14 session refuses suggestions on
+    # files outside it, and these tests add the file they code first
+    return json.loads(server.analyze_for_coding(
+        [f["id"] for f in server.get_db().list_files()]))["coding_session_id"]
 
 
 def _add_file(p, fid, name, text):
@@ -53,7 +56,7 @@ def _add_file(p, fid, name, text):
 
 
 def _record_one(sid, fid, segment, code="Stress", **kw):
-    body = {"file_id": fid, "code_name": code, "segment_text": segment}
+    body = {"support": "explicit", "file_id": fid, "code_name": code, "segment_text": segment}
     body.update(kw)
     rec = json.loads(server.record_suggestions(sid, [body]))
     assert rec["recorded_count"] == 1, rec
@@ -88,12 +91,13 @@ class TestInductiveLoop:
             memo="refined def"))
         assert up.get("success") is True, up
 
-        # merge proposals: g2's evidence unions into g1; g2 rejected
+        # merge proposals: g2's evidence unions into g1; g2 merged (final,
+        # v0.14; it used to be an ordinary, reversible rejection)
         mg = json.loads(server.merge_proposals(sid, g2, g1))
         assert mg.get("success") is True, mg
         info = json.loads(server.get_coding_session_info(sid))
         props = {p["guid"]: p for p in info["proposed_codes"]}
-        assert props[g2]["status"] == "rejected"
+        assert props[g2]["status"] == "merged"
         assert len(props[g1]["example_segments"]) == 2  # unioned evidence
 
         # review shows the refined name
@@ -267,7 +271,7 @@ class TestInductiveLoop:
                 "code_id": 1, "code_name": "Stress",
                 "start_pos": 24, "end_pos": 55,
                 "segment_text": FULLTEXT[24:55],
-                "reasoning": "old", "confidence": 0.8, "status": "pending",
+                "reasoning": "old", "support": "explicit", "status": "pending",
                 "context_before": "", "context_after": "",
                 "guid": str(uuid.uuid4()),
             }],
@@ -534,7 +538,7 @@ class TestSpanAlternativeDeltas:
         batch = []
         for i in range(30):
             seg = f"Statement {i:02d} about workload appears in this batch here."
-            batch.append({"file_id": 80, "code_name": "Stress",
+            batch.append({"support": "explicit", "file_id": 80, "code_name": "Stress",
                           "segment_text": seg})
         raw = server.record_suggestions(sid, batch)
         rec = json.loads(raw)

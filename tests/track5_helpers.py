@@ -543,7 +543,6 @@ def make_session(project_path: str, suggestions: List[CodingSuggestion]) -> AICo
         file_ids=sorted({s.file_id for s in suggestions}),
         code_names=sorted({s.code_name for s in suggestions}),
         instruction="prop",
-        min_confidence=0.0,
     )
     for s in suggestions:
         sess.add_suggestion(s)

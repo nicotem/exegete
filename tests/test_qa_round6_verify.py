@@ -363,7 +363,7 @@ class TestGuidanceEnvelope:
         assert payload.get("qualcoder_open", False) is False
         assert isinstance(payload["coding_session_id"], str) and payload["coding_session_id"]
         assert "session_id" not in payload  # deprecated duplicate removed in 0.12
-        assert "ANALYSIS SESSION CREATED" in payload["instructions"]
+        assert "CODING SESSION STARTED" in payload["instructions"]
         # prose still parseable the old way (back-compat pin)
         assert payload["coding_session_id"] == raw.split(
             "Session ID: `")[1].split("`")[0]
@@ -409,7 +409,7 @@ class TestGuidanceEnvelope:
               (emoji,))
         _reload()
         sid = json.loads(server.analyze_for_coding([70]))["coding_session_id"]
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 70, "code_name": "Stress",
             "segment_text": "I feel very stressed"}]))
         assert rec["recorded_count"] == 1

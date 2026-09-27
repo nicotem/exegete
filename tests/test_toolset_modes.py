@@ -284,7 +284,7 @@ class TestCoreModeEndToEnd:
                                 "segment_text":
                                     "I feel stressed about deadlines",
                                 "reasoning": "explicit stress statement",
-                                "confidence": 0.9,
+                                "support": "explicit",
                             }],
                         }))
                     rec = json.loads(out)
@@ -428,13 +428,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 190_736          # 73 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 62_914           # 21 tools, same environment
-    FULL_MEASURED_310 = 200_364      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 66_154
+    FULL_MEASURED = 197_887          # 73 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 67_350           # 21 tools, same environment
+    FULL_MEASURED_310 = 207_931      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 70_834
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 193_321     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 203_089
+    LIFECYCLE_MEASURED = 200_472     # 74 tools, same environment
+    LIFECYCLE_MEASURED_310 = 210_656
 
     # Why two per cent, away from the reference environment.
     #
@@ -461,12 +461,12 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "190,736"
-    CORE_CHARS = "62,914"
-    FULL_ROUNDED = "191,000"
-    CORE_ROUNDED = "63,000"
-    FULL_TOKENS = "48k"
-    CORE_TOKENS = "16k"
+    FULL_CHARS = "197,887"
+    CORE_CHARS = "67,350"
+    FULL_ROUNDED = "198,000"
+    CORE_ROUNDED = "67,000"
+    FULL_TOKENS = "49k"
+    CORE_TOKENS = "17k"
 
     @staticmethod
     def _read(name):
@@ -638,8 +638,8 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "193,000"
-    LIFECYCLE_TOKENS = "48k"
+    LIFECYCLE_ROUNDED = "200,000"
+    LIFECYCLE_TOKENS = "50k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
         readme = self._read("README.md")
@@ -689,12 +689,14 @@ class TestThePublishedSchemaBudget:
     def test_install_advises_a_context_the_core_schema_fits_in(self):
         """Step 4's advice is arithmetic, not a number to swap: the old
         16k floor leaves less than 1k for the transcript once the core
-        schema passes 15k tokens (v0.14 took it from 14.5k to 15.7k,
-        through the server-wide changes and the reads and exports), and
-        32k leaves about 16k."""
+        schema passes 15k tokens, and none once it passes 16k (v0.14 took
+        it from 14.5k to 16.8k, through the server-wide changes, the
+        reads and exports and the AI coding loop); 32k leaves about
+        15k."""
         install = self._read("INSTALL.md")
         assert "at least 32k for the core toolset" in install
-        assert "16k would leave under 1k and is not workable" in install
+        assert "16k would not even hold the schema and is not workable" \
+            in " ".join(install.split())
 
     def test_the_growth_is_arithmetically_possible(self):
         """The defect that gave this away: a full delta smaller than the

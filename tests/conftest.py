@@ -495,7 +495,7 @@ def sample_suggestion_data():
         "end_pos": 250,
         "segment_text": "I often feel overwhelmed with the workload and tight deadlines.",
         "reasoning": "Clear expression of stress related to workload",
-        "confidence": 0.85,
+        "support": "explicit",
         "status": "pending"
     }
 
@@ -508,8 +508,7 @@ def sample_session_data():
         "description": "Test coding session",
         "file_ids": [1, 2, 3],
         "code_names": ["Workplace Stress", "Coping Strategies"],
-        "instruction": "Code all relevant segments",
-        "min_confidence": 0.6
+        "instruction": "Code all relevant segments"
     }
 
 
@@ -807,8 +806,7 @@ def session_with_suggestions(setup_server, qualcoder_db_path):
         description="Test session",
         file_ids=[1],
         code_names=["Stress"],
-        instruction="Test",
-        min_confidence=0.6
+        instruction="Test"
     )
 
     s1 = CodingSuggestion(
@@ -816,7 +814,7 @@ def session_with_suggestions(setup_server, qualcoder_db_path):
         code_id=1, code_name="Stress",
         start_pos=0, end_pos=10,
         segment_text="This is in",
-        reasoning="Test reasoning", confidence=0.85,
+        reasoning="Test reasoning", support="explicit",
         status="pending"
     )
     s2 = CodingSuggestion(
@@ -824,7 +822,7 @@ def session_with_suggestions(setup_server, qualcoder_db_path):
         code_id=2, code_name="Coping",
         start_pos=57, end_pos=77,
         segment_text="I cope by exercising",
-        reasoning="Coping behavior", confidence=0.9,
+        reasoning="Coping behavior", support="explicit",
         status="pending"
     )
     session.add_suggestion(s1)

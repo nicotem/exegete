@@ -54,7 +54,7 @@ class TestT18ApplyCodingsPrecondition:
         """The exact master-editor shape: fulltext rewritten between
         validation and the write transaction. Everything rolls back."""
         sid = _make_session(setup_server)
-        out = json.loads(server.record_suggestions(sid, [{
+        out = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": "I feel stressed about deadlines",
         }]))
@@ -93,7 +93,7 @@ class TestT18ApplyCodingsPrecondition:
     def test_no_race_applies_normally(self, setup_server,
                                       qualcoder_db_path):
         sid = _make_session(setup_server)
-        out = json.loads(server.record_suggestions(sid, [{
+        out = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": "I feel stressed about deadlines",
         }]))

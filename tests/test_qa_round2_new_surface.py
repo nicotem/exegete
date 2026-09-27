@@ -95,21 +95,21 @@ class TestRecordSuggestionsHostileInput:
         sid = _sid()
         rec = json.loads(server.record_suggestions(sid, [
             "not an object",
-            {"code_name": "Stress", "segment_text": "x"},          # no file_id
-            {"file_id": True, "code_name": "Stress",
+            {"support": "explicit", "code_name": "Stress", "segment_text": "x"},          # no file_id
+            {"support": "explicit", "file_id": True, "code_name": "Stress",
              "segment_text": "x"},                                  # bool id
-            {"file_id": 424242, "code_name": "Stress",
+            {"support": "explicit", "file_id": 424242, "code_name": "Stress",
              "segment_text": "x"},                                  # ghost file
             {"file_id": 1, "segment_text": "x"},                    # no code
-            {"file_id": 1, "code_name": "NoSuchCode",
+            {"support": "explicit", "file_id": 1, "code_name": "NoSuchCode",
              "segment_text": "x"},                                  # ghost code
-            {"file_id": 1, "code_id": 424242, "segment_text": "x"},
-            {"file_id": 1, "code_name": "Stress",
+            {"support": "explicit", "file_id": 1, "code_id": 424242, "segment_text": "x"},
+            {"support": "explicit", "file_id": 1, "code_name": "Stress",
              "segment_text": "   "},                                # blank text
             {"file_id": 1, "code_name": "Stress",
-             "segment_text": "I feel stressed", "confidence": "hi"},
+             "segment_text": "I feel stressed", "support": "hi"},
             # the one good item
-            {"file_id": 1, "code_name": "Stress",
+            {"support": "explicit", "file_id": 1, "code_name": "Stress",
              "segment_text": FULLTEXT[24:55]},
         ]))
         assert rec["recorded_count"] == 1
@@ -122,7 +122,7 @@ class TestRecordSuggestionsHostileInput:
 
     def test_bool_positions_fall_back_to_search(self, setup_server):
         sid = _sid()
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": True, "end_pos": True,
             "segment_text": FULLTEXT[24:55],
@@ -133,15 +133,15 @@ class TestRecordSuggestionsHostileInput:
     def test_replace_keeps_non_pending(self, setup_server):
         sid = _sid()
         rec = json.loads(server.record_suggestions(sid, [
-            {"file_id": 1, "code_name": "Stress",
+            {"support": "explicit", "file_id": 1, "code_name": "Stress",
              "segment_text": FULLTEXT[24:55]},
-            {"file_id": 1, "code_name": "Coping",
+            {"support": "explicit", "file_id": 1, "code_name": "Coping",
              "segment_text": "I cope by exercising"},
         ]))
         keep, drop = rec["recorded"][0]["guid"], rec["recorded"][1]["guid"]
         server.update_suggestion_status(sid, approve=[keep])
 
-        rec2 = json.loads(server.record_suggestions(sid, [{
+        rec2 = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": "This is interview text."}], replace=True))
         assert rec2["replaced_pending"] == 1
@@ -159,7 +159,7 @@ class TestRecordSuggestionsHostileInput:
 
         seg = "I feel very stressed"
         sid = _sid(70)
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 70, "code_name": "Stress", "segment_text": seg,
         }]))
         assert rec["recorded_count"] == 1
@@ -176,7 +176,7 @@ class TestRecordSuggestionsHostileInput:
               ("repeat me. " * 12,))
         server.switch_project(qualcoder_db_path)
         sid = _sid(71)
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 71, "code_name": "Stress", "segment_text": "repeat me.",
         }]))
         assert rec["recorded_count"] == 0
@@ -527,7 +527,7 @@ class TestExportRefiQda:
     def test_stale_reference_fails_loudly_no_partial_file(
             self, setup_server, qualcoder_db_path, tmp_path):
         sid = _sid()
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": FULLTEXT[24:55]}]))
         assert rec["recorded_count"] == 1
@@ -602,7 +602,7 @@ class TestHeartbeatProtocol:
         is created for a refused write."""
         # prepare an approved session and a real backup for restore_backup
         sid = _sid()
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": FULLTEXT[24:55]}]))
         server.update_suggestion_status(
@@ -671,7 +671,7 @@ class TestHeartbeatProtocol:
         monkeypatch.setattr(QualcoderDatabase, "add_coding", spy)
 
         sid = _sid()
-        rec = json.loads(server.record_suggestions(sid, [{
+        rec = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": 1, "code_name": "Stress",
             "segment_text": FULLTEXT[24:55]}]))
         server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])

@@ -452,10 +452,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects, the
-  server-wide changes, the folder for projects, and the reads, queries
-  and exports: full = 190,736 characters (about 47.7k tokens at
-  chars/4) over 73 tools, core = 62,914 (about 15.7k) over 21, and the
-  new opt-in lifecycle set = 193,321 (about 48.3k) over 74. Moved by
+  server-wide changes, the folder for projects, the reads, queries and
+  exports, and the AI coding loop: full = 197,887 characters (about
+  49.5k tokens at chars/4) over 73 tools, core = 67,350 (about 16.8k)
+  over 21, and the new opt-in lifecycle set = 200,472 (about 50.1k)
+  over 74. Moved by the coding loop's descriptions: `analyze_for_coding`
+  says what it does, what a session's scope refuses and how names
+  match; `record_suggestions` asks for `support`; `edit_suggestion`
+  takes `support`; `update_suggestion_status` takes `reopen` and says
+  how it counts; `review_suggestions`, `analyze_file_with_coding`,
+  `delete_coding` and `apply_codings` say what they do (all in `core`;
+  there `analyze_for_coding` names `create_proposed_codes`, which core
+  marks); and `compare_coders`, `cleanup_old_sessions`,
+  `get_coding_session_info` and the proposal tools (not in `core`). By
   every input schema's `additionalProperties: false`, the sentence on
   the private-note marker in the fourteen tools that take a note, the
   tools core lacks marked in core's descriptions, and the corrected
@@ -478,8 +487,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The tools' hints (annotations) are not part of this measurement.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 200,364, 66,154 and
-  203,089.
+  on Python 3.11.13, in the repository's `.venv/`, 207,931, 70,834 and
+  210,656.
 
 ### Changed: reads, queries and exports say what they found
 
@@ -650,6 +659,135 @@ search or a silent limit.
   are any, so approving the preview approves the branch, as QualCoder's
   single dialog does.
 
+### Changed: the AI coding loop says what it does
+
+- **The confidence score is gone; each suggestion is explicit or
+  interpretive** (owner ruling 21). The 0-1 `confidence` a suggestion
+  carried, and `analyze_for_coding`'s `min_confidence`, are removed
+  everywhere: the suggestions, the sessions, the review screen, the
+  grounding text, the help, the two workflow guides and the REFI-QDA
+  export. In their place each suggestion carries `support`, required:
+  `explicit` (the passage states the code) or `interpretive` (the
+  assistant is reading it in). `record_suggestions` refuses a
+  suggestion without it, and records no number when one is sent (it
+  says how many it set aside). `review_suggestions` shows the label
+  beside the quote and before the reason; an applied coding's memo
+  begins "Support: explicit (the passage states it)" or "Support:
+  interpretive (the assistant is reading into it)", then the reason,
+  and a session's REFI-QDA export says the same in each selection's
+  description. The number was a model's rating of itself, not a
+  measurement, and it went into the research record as if it were
+  one; `min_confidence` never filtered anything. QualCoder 4.0's own
+  assistant has no confidence score.
+- **`analyze_for_coding` says what it does, and its session's scope
+  holds.** It starts a session and returns the next steps; it reads no
+  file and makes no suggestion, and its description, Returns section and
+  help now say so (no "automatically"). The files, and the codes when
+  named, that a session is started with are now the only ones
+  `record_suggestions` accepts suggestions for (and the only codes
+  `edit_suggestion` can move one to); before, a session for one file and
+  one code accepted, and would write, a suggestion on any file under any
+  code. Codes created from the session's own approved proposals join it.
+  Code names are matched exactly, else ignoring letter case, spacing
+  and Unicode form, the rule every other code-name lookup follows
+  ("stress" found nothing before), and a file id or code name that
+  matches nothing is listed in `not_found` instead of being dropped. A
+  name that matches two codes that way (a project made before QualCoder
+  4.0 can hold "Stress" and "stress") names neither: it is listed in
+  `ambiguous_code_names` with both, and `record_suggestions` and
+  `edit_suggestion` refuse it saying which two.
+- **A label stays with the code it was given for.** `edit_suggestion`
+  takes `support`. Moving a suggestion to another code without it clears
+  the label (the review shows "not given (cleared when the code was
+  changed ...)", the memo carries the reason only, and the answer says
+  why), since the label said how the words carry the old code; with it,
+  the new pairing is labelled. `support` alone relabels a suggestion.
+- **A decided suggestion can be reopened.** `update_suggestion_status`
+  takes `reopen`, which returns an approved, rejected or removed
+  suggestion to pending, so that it can be edited and decided again.
+  `edit_suggestion`'s description and refusals said to reject and then
+  approve after editing, which left the suggestion rejected and the edit
+  refused; they now say reopen, edit, decide again.
+- **The two decision tools say what they did not do.**
+  `update_suggestion_status` and `update_proposal_status` list GUIDs that
+  name nothing in the session (`not_found`), refuse a GUID sent in more
+  than one list (it used to be counted both ways and end rejected), and
+  say "Nothing changed" when nothing did. `review_suggestions` and
+  `review_proposals` name the GUIDs they did not find.
+- **`delete_coding` tells the session.** A coding that an AI coding
+  session applied is marked "removed" in that session (this project's
+  sessions only, and not for a hidden coder's row), and the answer names
+  the session: the suggestion can then be approved and applied again,
+  reopened and edited, or its passage recorded again (a removed
+  suggestion no longer counts as a duplicate). `apply_codings` now keeps
+  the coding id each suggestion became, so the match is exact.
+- **A refinement that changes nothing says so.** `update_proposal` with
+  values that are already the proposal's own answers `changed: false`,
+  writes nothing, and leaves an approval standing.
+- **The text around a suggestion is the file's own.** The context a
+  researcher judges a span by was taken from the assistant when it sent
+  `context_before` or `context_after`, stored unchecked, and shown under
+  "Context Before" as if it were the file. `record_suggestions` now sets
+  those fields aside (and says how many), and `review_suggestions` reads
+  the context from the file when the review is made, so a session from
+  an earlier release shows the file's text too; `get_coding_session_info`
+  shows the same context as the review. When the session's project is
+  not the one open, the context taken from the file at record time is
+  shown and marked as such, and for a suggestion recorded before this
+  release, whose stored context the assistant may have supplied, none is
+  shown and both tools say why; when the file no longer holds the span,
+  no context is shown and the review says why.
+- **A proposal's approval binds what was approved.** Renaming,
+  redefining, recolouring, recategorising or re-evidencing an approved
+  proposal (`update_proposal`), or merging evidence into it as a target
+  (`merge_proposals`), returns it to pending, and the answer says
+  "approval withdrawn: ... show it to the researcher again". A proposal
+  merged away by this release gets a final status, `merged` (with the
+  GUID it went into): `update_proposal_status` skips and counts it
+  (`skipped_merged`), `update_proposal` and `merge_proposals` refuse it,
+  `review_proposals` says what it went into, and it is never created.
+  Before, an approved "Isolation" renamed and redefined stayed approved,
+  and a merged-away proposal could be approved again and created,
+  writing the same passages under two codes; that is closed for merges
+  made from this release on. A proposal merged by an earlier release
+  was stored as an ordinary rejection and stays one (see Upgrading). A
+  rejected proposal can still be approved again, and the texts now say
+  so.
+- **Comparing coders says what its numbers cannot show.** A character a
+  coder did not code is not a decision: in a file that coder never
+  coded, it counts as "not coded" all the same. The unit-of-analysis
+  text says so (it called each character a "decision"), and the result
+  names the files in scope where only one of the two coders has any
+  text coding (`files_coded_by_one_coder_only`, up to 50, with a count
+  beyond) and counts those neither coded (`files_coded_by_neither`),
+  with a note to narrow `file_ids`. `compare_coders`' description, the
+  help, README and, when one coder is this server's AI, a note in the
+  result say that the AI's codings are the suggestions the person
+  approved and that the assistant is told to read each file with
+  `analyze_file_with_coding` before suggesting, which gives it every
+  visible coder's codings, so the agreement is not between independent
+  coders and is not intercoder reliability. `files_coded_by_neither` is
+  described too: those characters count as agreed "not coded" and raise
+  `agreement_pct` and `kappa_cohen`.
+- **Two developer scripts removed**: `scripts/test_workflow.py` and
+  `scripts/generate_test_export.py`, which built sessions with the
+  removed score, wrote into the researcher's own Documents folders, and
+  were not shipped or used by anything (the second no longer ran before
+  this release). `scripts/create_test_project.py` stays.
+- **Texts made true:** `analyze_file_with_coding` names its four counts
+  (it promised "coverage and density metrics"); `cleanup_old_sessions`
+  says it deletes every project's old sessions on this computer,
+  approved work not yet applied included, with no preview.
+- **Approval, described honestly.** The server writes what is marked
+  approved, and the mark is set by a tool call the assistant makes; it
+  cannot tell whether the researcher gave it. The instructions the
+  server sends and the methods notes keep the rule for the assistant
+  (mark an item approved only on the researcher's word) without claiming
+  the server enforces it; README, PRIVACY.md and INSTALL.md say what
+  stands behind the mark: the host asking before each call that decides
+  or writes ("allow once"), and the researcher's own reading of the
+  counts.
+
 ### Upgrading from 0.13.x
 
 - Upgrade the package and restart the MCP host fully so it reloads the
@@ -804,6 +942,105 @@ The reads, queries and exports:
 - **The Markdown codebook is laid out differently**: codes without a
   category first, sub-codes nested, memos quoted line by line. Anything
   that reads the file by its old layout needs a look.
+
+The AI coding loop:
+
+- **`analyze_for_coding` no longer takes `min_confidence`, and a
+  suggestion no longer takes `confidence`.** Measured over the host's
+  path: a call that still sends `min_confidence` is refused by name
+  ("analyze_for_coding has no argument 'min_confidence'; nothing was
+  done", with `unknown_arguments`), as every undeclared argument is
+  (above), and no session is started. Each suggestion passed to
+  `record_suggestions` needs `support`, `"explicit"` or
+  `"interpretive"`; a suggestion without it is refused with the reason,
+  and one that sends `confidence` in its place is told "confidence is
+  no longer taken"; a `confidence` sent beside a valid `support` is set
+  aside, not stored, and counted (`confidence_ignored`, with
+  `confidence_note`).
+  A session file written by an earlier release still loads: its
+  suggestions show "not given (recorded before v0.14)" and, once
+  applied, their memos carry the reason only. The old number is not
+  kept when the session is next saved.
+- **Memos already in your projects are never rewritten.** A coding
+  applied by an earlier release keeps its "[AI Confidence: 0.85]" line;
+  remove it in QualCoder if you do not want it in the record.
+- **A session started from now on refuses suggestions outside its
+  files and named codes.** Sessions from earlier releases carry no scope
+  and keep accepting any file and code, as they always did; start a new
+  session to have the scope enforced.
+- **`update_suggestion_status` refuses a GUID sent in two lists**, and
+  `update_proposal_status` one sent in both, where they used to count it
+  twice; nothing changes on such a call. Their counts changed too: each
+  GUID is counted once, and approved, rejected and reopened count only a
+  status that moved (one already in that status is counted in
+  `unchanged`), so approving an approved suggestion now answers
+  "Nothing changed" and 0 where it said 1. Both answers gain
+  `not_found`, and `update_suggestion_status` takes `reopen`.
+- **`record_suggestions` no longer takes `context_before` or
+  `context_after`.** A caller that sends them has them set aside, and
+  the answer counts them (`context_ignored`, with a note); the context
+  shown at review, and by `get_coding_session_info`, is the file's own.
+  For a suggestion recorded by an earlier release, whose stored context
+  the assistant may have written, no context is shown while its project
+  is not the one open.
+- **Changing an approved proposal withdraws the approval.** Approve,
+  then rename, redefine, recolour, recategorise or re-evidence it with
+  `update_proposal`, or merge evidence into it: it is pending again
+  (`status`, `approval_withdrawn` in the answer), and
+  `create_proposed_codes` creates nothing for it until it is approved
+  again. A call whose values are already the proposal's own answers
+  `changed: false` and leaves the approval standing.
+- **A merged proposal is final.** `merge_proposals` answers
+  `source_status: "merged"` where it said `"rejected"`, and gives the
+  target's `status`; the source can no longer be approved
+  (`update_proposal_status` counts it in `skipped_merged`) and is
+  refused by `update_proposal` and `merge_proposals`;
+  `proposal_statistics` gains `merged`.
+- **A proposal merged by an earlier release is not final.** Before this
+  release a merged-away proposal was stored as an ordinary "rejected",
+  with nothing to say it was merged, so in a session made by 0.13 or
+  earlier it can still be approved again and created, writing its
+  passages under a second code. `review_proposals` shows it as
+  REJECTED; do not approve such a proposal again, or start a new
+  session.
+- **`delete_coding` writes session files.** When the deleted coding
+  came from an AI coding session of the open project, that suggestion
+  is marked with a new status, `removed`, in its session file, and the
+  answer gains `sessions_updated` and `sessions_note`. `removed` appears
+  in every count the loop reports; a removed suggestion can be approved
+  and applied again, or reopened. Suggestions now keep the coding id
+  they became (`applied_ctid`), and only a deleted row under one of the
+  project's AI coder names ever marks one.
+- **The loop's code-name rule.** `analyze_for_coding`,
+  `record_suggestions` and `edit_suggestion` match code names exactly,
+  else ignoring letter case, spacing and Unicode form, where
+  `analyze_for_coding` matched exact case only ("coping" is now found).
+  A name that matches two codes that way (possible in a project made
+  before QualCoder 4.0) is refused and listed in `ambiguous_code_names`,
+  where `record_suggestions` used to take one of the two. A session's
+  `file_ids` hold only the files found; the others are in `not_found`.
+- **A label stays with its code.** `edit_suggestion` takes `support`;
+  moving a suggestion to another code without it clears the label
+  (`support_cleared` in the answer; the memo then carries the reason
+  only).
+- **New keys in the answers.** `record_suggestions`: each entry's
+  `support`, and `confidence_ignored` and `context_ignored` when those
+  were sent; `analyze_for_coding`: `not_found` and
+  `ambiguous_code_names`; `edit_suggestion`: `support`,
+  `support_cleared`; `get_coding_session_info`: `context_note`, and
+  sessions and suggestions carry `scope`, `applied_ctid`,
+  `support_cleared` and `context_from_file`; `compare_coders`:
+  `files_coded_by_one_coder_only` (and its count beyond 50) and
+  `files_coded_by_neither`. A caller that compares a whole answer's
+  shape sees them.
+- **The memo form of a newly applied coding.** "Support: explicit (the
+  passage states it)" or "Support: interpretive (the assistant is
+  reading into it)", a blank line, then the reason; the "[AI Confidence:
+  0.85]" line is no longer written. A session's REFI-QDA export
+  describes each selection the same way; a project export carries every
+  memo exactly as stored.
+- **Two developer scripts are gone**, `scripts/test_workflow.py` and
+  `scripts/generate_test_export.py`.
 
 ## [0.13.0-alpha] - 2026-09-25
 

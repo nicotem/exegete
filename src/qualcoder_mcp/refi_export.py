@@ -22,7 +22,7 @@ from typing import List, Dict, Optional, Set
 from datetime import datetime, timezone
 
 from .database import QualcoderDatabase, error_label, error_text
-from .sessions import CodingSuggestion
+from .sessions import CodingSuggestion, memo_with_support
 
 logger = logging.getLogger(__name__)
 
@@ -403,12 +403,12 @@ class RefiQdaExporter:
             }
         )
 
-        # Description: reasoning/memo, plus the AI confidence when one was
-        # assigned (project exports of human codings carry confidence 0.0)
-        memo_text = suggestion.reasoning or ""
-        if suggestion.confidence > 0:
-            tag = f"[AI confidence: {suggestion.confidence:.2f}]"
-            memo_text = f"{memo_text} {tag}".strip()
+        # Description: the support label in words, then the reasoning, as
+        # apply_codings writes the memo (owner ruling 21: never a number).
+        # A project export's rows carry no label of their own (support is
+        # None): an applied AI coding's memo already says it in words.
+        memo_text = memo_with_support(suggestion.reasoning or "",
+                                      suggestion.support)
         if memo_text:
             desc_elem = ET.SubElement(selection_elem, f"{{{NAMESPACE}}}Description")
             desc_elem.text = _xml_safe(memo_text)
@@ -639,12 +639,6 @@ class RefiQdaExporter:
             if suggestion.end_pos <= suggestion.start_pos:
                 warnings.append(
                     f"Suggestion {i}: End position {suggestion.end_pos} must be greater than start position {suggestion.start_pos}"
-                )
-
-            # Check confidence is in valid range
-            if not (0.0 <= suggestion.confidence <= 1.0):
-                warnings.append(
-                    f"Suggestion {i}: Confidence {suggestion.confidence} outside valid range [0.0, 1.0]"
                 )
 
         return warnings

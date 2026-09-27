@@ -88,14 +88,14 @@ class TestCompleteAICodingWorkflow:
             end_pos=30,
             segment_text="Sample coded segment",
             reasoning="AI identified this segment",
-            confidence=0.85,
+            support="explicit",
             status="approved"
         )
 
         # Verify suggestion is valid
         assert suggestion.file_id == file["id"]
         assert suggestion.code_id == code["id"]
-        assert suggestion.confidence == 0.85
+        assert suggestion.support == "explicit"
 
     def test_session_creation_and_persistence(self, test_db, session_manager, qualcoder_db_path):
         """Test creating a session, adding suggestions, and persisting to disk."""
@@ -109,8 +109,7 @@ class TestCompleteAICodingWorkflow:
             description="Integration test session",
             file_ids=[f["id"] for f in files[:2]],
             code_names=[c["name"] for c in codes[:2]],
-            instruction="Test coding instruction",
-            min_confidence=0.6
+            instruction="Test coding instruction"
         )
 
         # Add suggestions
@@ -124,7 +123,7 @@ class TestCompleteAICodingWorkflow:
                 end_pos=(i * 5) + 10,
                 segment_text=f"Test segment {i}",
                 reasoning=f"Test memo {i}",
-                confidence=0.8 + (i * 0.05)
+                support="explicit"
             )
             session.add_suggestion(suggestion)
 
@@ -158,7 +157,7 @@ class TestCompleteAICodingWorkflow:
                 end_pos=(i * 5) + 10,
                 segment_text=f"Test segment {i}",
                 reasoning=f"Test memo {i}",
-                confidence=0.85,
+                support="explicit",
                 status="approved"
             ))
 
@@ -202,8 +201,7 @@ class TestCompleteAICodingWorkflow:
             description="Full workflow test",
             file_ids=[f["id"] for f in files],
             code_names=[c["name"] for c in codes],
-            instruction="Code all relevant segments",
-            min_confidence=0.7
+            instruction="Code all relevant segments"
         )
 
         # Step 3: Add multiple suggestions
@@ -220,7 +218,7 @@ class TestCompleteAICodingWorkflow:
                 end_pos=(i * 5) + 10,
                 segment_text=f"Sample text segment {i}",
                 reasoning=f"AI analysis memo {i}",
-                confidence=0.75 + (i * 0.05),
+                support="explicit",
                 status="approved"
             )
             session.add_suggestion(suggestion)
@@ -279,7 +277,7 @@ class TestCompleteAICodingWorkflow:
             start_pos=0,
             end_pos=30,
             segment_text="test",
-            confidence=0.8
+            support="explicit"
         )
 
         # Validate
@@ -320,7 +318,7 @@ class TestCompleteAICodingWorkflow:
                 start_pos=0,
                 end_pos=end_pos,
                 segment_text="Test",
-                confidence=0.8
+                support="explicit"
             )
 
         exporter = RefiQdaExporter(test_db)
@@ -349,7 +347,7 @@ class TestCompleteAICodingWorkflow:
             start_pos=0,
             end_pos=30,
             segment_text="Test",
-            confidence=0.8,
+            support="explicit",
             guid="test-guid-123"  # Fixed GUID
         )
 
@@ -405,7 +403,7 @@ class TestCompleteAICodingWorkflow:
                     start_pos=j * 5,
                     end_pos=(j * 5) + 10,
                     segment_text=f"Text {i}-{j}",
-                    confidence=0.8
+                    support="explicit"
                 ))
 
         # Export
@@ -463,57 +461,30 @@ class TestCompleteAICodingWorkflow:
         assert session_manager.session_exists(sessions[1].session_id)
         assert session_manager.session_exists(sessions[2].session_id)
 
-    def test_confidence_filtering(self, test_db, qualcoder_db_path):
-        """Test that confidence scores work correctly throughout workflow."""
+    def test_support_labels_survive_the_session_round_trip(
+            self, test_db, qualcoder_db_path, tmp_path):
+        """Owner ruling 21: a label, never a number, kept through a save
+        and a load; the two labels stay apart, and an entry with no label
+        stays without one."""
         codes = test_db.list_codes()
         files = test_db.list_files()
-
-        # Create suggestions with different confidence scores
-        suggestions = [
-            CodingSuggestion(
-                file_id=files[0]["id"],
-                file_name=files[0]["name"],
-                code_id=codes[0]["id"],
-                code_name=codes[0]["name"],
-                start_pos=0,
-                end_pos=30,
-                segment_text="High confidence",
-                confidence=0.95,
-                status="approved"
-            ),
-            CodingSuggestion(
-                file_id=files[0]["id"],
-                file_name=files[0]["name"],
-                code_id=codes[0]["id"],
-                code_name=codes[0]["name"],
-                start_pos=15,
-                end_pos=30,
-                segment_text="Low confidence",
-                confidence=0.55,
-                status="pending"
-            )
-        ]
-
-        # Session with min_confidence = 0.6 should show only high confidence
-        session = AICodingSession(
-            project_path=qualcoder_db_path,
-            min_confidence=0.6
-        )
-
-        for sugg in suggestions:
-            session.add_suggestion(sugg)
-
-        # Check that low confidence suggestion is still there but identifiable
-        assert len(session.suggestions) == 2
-        high_conf = [s for s in session.suggestions if s.confidence >= 0.6]
-        low_conf = [s for s in session.suggestions if s.confidence < 0.6]
-
-        assert len(high_conf) == 1
-        assert len(low_conf) == 1
+        session = AICodingSession(project_path=qualcoder_db_path)
+        for label, start in (("explicit", 0), ("interpretive", 15),
+                             (None, 5)):
+            session.add_suggestion(CodingSuggestion(
+                file_id=files[0]["id"], file_name=files[0]["name"],
+                code_id=codes[0]["id"], code_name=codes[0]["name"],
+                start_pos=start, end_pos=30, segment_text="x",
+                support=label))
+        manager = SessionManager(str(tmp_path / "s"))
+        manager.save_session(session)
+        loaded = manager.load_session(session.session_id)
+        assert [s.support for s in loaded.suggestions] == [
+            "explicit", "interpretive", None]
 
     def test_the_reasoning_is_preserved_in_the_export(
             self, test_db, temp_dir, qualcoder_db_path):
-        """Test that AI memos and confidence scores are preserved in export."""
+        """The reasoning, and the support label in words, reach the export."""
         codes = test_db.list_codes()
         files = test_db.list_files()
 
@@ -526,7 +497,7 @@ class TestCompleteAICodingWorkflow:
             end_pos=30,
             segment_text="Test",
             reasoning="Important AI insight here",
-            confidence=0.92
+            support="explicit"
         )
 
         # Export
@@ -538,7 +509,9 @@ class TestCompleteAICodingWorkflow:
         with zipfile.ZipFile(output_file, 'r') as zipf:
             xml_content = zipf.read("project.qde").decode('utf-8')
 
-        # Should contain memo text and confidence
+        # The label in words, before the reasoning; never a number
         assert "Important AI insight here" in xml_content
-        assert "0.92" in xml_content
-        assert "AI confidence" in xml_content
+        assert "Support: explicit (the passage states it)" in xml_content
+        assert xml_content.index("Support: explicit") < xml_content.index(
+            "Important AI insight here")
+        assert "confidence" not in xml_content.lower()

@@ -58,7 +58,7 @@ def _make_approved_session(sid_file_id=1, start=24, end=55):
         "file_id": sid_file_id, "code_name": "Stress",
         "start_pos": start, "end_pos": end,
         "segment_text": FULLTEXT[start:end],
-        "reasoning": "regression fixture", "confidence": 0.9,
+        "reasoning": "regression fixture", "support": "explicit",
     }]))
     assert rec["recorded_count"] == 1, rec
     guid = rec["recorded"][0]["guid"]
@@ -459,16 +459,20 @@ class TestF13ValidationErrorShape:
 
 
 # =============================================================================
-# F14 — min_confidence clamped to [0, 1]
+# F14, as ruled in v0.14 (owner ruling 21): the threshold it clamped is gone
 # =============================================================================
 
 class TestF14ConfidenceClamp:
 
-    def test_f14_out_of_range_confidence_clamped(self, setup_server):
-        out = server.analyze_for_coding([1], min_confidence=7.0)
-        sid = out.split("Session ID: `")[1].split("`")[0]
+    def test_f14_a_new_session_carries_no_threshold(self, setup_server):
+        out = server.analyze_for_coding([1])
+        sid = json.loads(out)["coding_session_id"]
         session = server.session_manager.load_session(sid)
-        assert session.min_confidence == 1.0
+        assert not hasattr(session, "min_confidence")
+        stored = json.loads((Path(server.session_manager.storage_dir)
+                             / f"session_{sid}.json").read_text())
+        assert "min_confidence" not in stored
+        assert "confidence" not in json.loads(out)["instructions"].lower()
 
 
 # =============================================================================

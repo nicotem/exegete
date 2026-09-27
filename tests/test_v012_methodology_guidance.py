@@ -260,7 +260,7 @@ class TestHandshakeInstructions:
         assert "evidence discipline" in server.SERVER_INSTRUCTIONS
         assert "qualcoder://guidance/methods" in server.SERVER_INSTRUCTIONS
         assert "Coding suggestions and code proposals are written to the " \
-            "project only after the researcher approves each item." \
+            "project only when each item has been marked approved" \
             in server.SERVER_INSTRUCTIONS
 
     def test_the_final_sentence_is_scoped_like_the_resource_body(self):
@@ -276,23 +276,30 @@ class TestHandshakeInstructions:
         what the resource body has always said. Both shapes stay pinned
         here, and the direct write tools are asserted to exist, so a
         return to the unscoped sentence is a decision, not a slip.
+
+        v0.14 (the claims audit's item 10): the sentence kept its scope and
+        stopped claiming what the server cannot see. The approved mark is
+        a tool call the assistant makes; the rule for the assistant stays,
+        and says who stands behind it.
         """
         assert server.SERVER_INSTRUCTIONS.endswith(
             "Coding suggestions and code proposals are written to the "
-            "project only after the researcher approves each item.")
+            "project only when each item has been marked approved, which "
+            "you do only on the researcher's word: the server cannot tell "
+            "who approved.")
         assert "Nothing is written to the project" not in \
             server.SERVER_INSTRUCTIONS
 
         body = server.METHODS_GUIDANCE
         assert "record_suggestions" in body and "apply_codings" in body
-        scoped = ("nothing is written to the project until the researcher "
-                  "approves each item and calls apply_codings or "
-                  "create_proposed_codes")
+        scoped = ("nothing is written to the project until each item is "
+                  "marked approved and apply_codings or "
+                  "create_proposed_codes runs")
         assert scoped in " ".join(body.split())
         # The second statement of it in the resource is scoped too.
-        assert ("for coding suggestions and code proposals the researcher's "
-                "per-item approval is the safety mechanism") in \
-            " ".join(body.split())
+        assert ("for coding suggestions and code proposals the safety "
+                "mechanism is the researcher's approval of each item, which "
+                "you relay") in " ".join(body.split())
 
         # The tools the handshake sentence does not cover really do write
         # on the call, so the scope is the accurate one.

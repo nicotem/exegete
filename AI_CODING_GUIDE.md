@@ -33,9 +33,13 @@ server (the conversational workflow, v0.6.0 and later).
    open)
 5. **You** open the project in QualCoder and see the codings
 
-Nothing is written without your approval, every write is backed up
-first, and mistakes can be undone (`delete_coding` for one coding,
-`restore_backup` for a whole snapshot).
+Nothing is written until each item is marked approved, every write is
+backed up first by default, and mistakes can be undone (`delete_coding`
+for one coding, `restore_backup` for a whole snapshot). The server
+records the approval Claude reports and cannot tell whether you gave
+it: keep your host asking before each tool call ("allow once" for the
+tools that decide and write), and check the counts the approval step
+reports against what you said.
 
 ## Prerequisites
 
@@ -66,7 +70,8 @@ You:    Copy "Interview Study" to the workspace and open the copy.
 You:    Analyse files 1-3 for the codes "Workplace Stress" and
         "Coping Strategies".
 Claude: (creates a session, reads the files, records suggestions,
-         presents them with reasoning and confidence scores)
+         presents them with reasoning, each marked explicit or
+         interpretive)
 You:    Show me suggestion 3 with context.
 You:    Approve 1, 2 and 5; reject the rest.
 You:    Apply the approved codings.
@@ -93,10 +98,10 @@ approval of each suggestion.
 
 | Tool | Purpose |
 |---|---|
-| `analyze_for_coding(file_ids, code_names, instruction, min_confidence)` | Create an analysis session |
+| `analyze_for_coding(file_ids, code_names, instruction)` | Create an analysis session |
 | `record_suggestions(coding_session_id, suggestions, replace)` | Persist Claude's suggestions (text-verified) |
 | `review_suggestions(coding_session_id, suggestion_guids, show_context)` | Inspect suggestions in detail |
-| `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name)` | Adjust a pending suggestion's span or code before approval (session-only) |
+| `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, support)` | Adjust a pending suggestion's span, code or label before approval (session-only); a new code without a new label clears the label |
 | `update_suggestion_status(coding_session_id, approve, reject)` | Approve/reject by GUID |
 | `apply_codings(coding_session_id, create_backup, owner: restricted, see attribution)` | **Write** approved suggestions (project-bound, validated, all-or-nothing). An approved suggestion whose identical coding already exists is left alone and reported by id; that check reads the base table, so on a project that hides the AI coder it discloses that one such row exists (PRIVACY.md) |
 | `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coded segment (on projects with the coder-visibility capability, QualCoder 3.8.2 and 4.0, schema v14 and later, a hidden coder's row, or a row whose memo carries a `#####` private note, is refused without the override) |
@@ -122,17 +127,22 @@ approval of each suggestion.
 
 1. **Use Descriptive Instructions**: Tell Claude what patterns to look for,
    with examples of what each code covers
-2. **Set Appropriate Confidence**: Lower (0.5 to 0.6) for exploratory passes,
-   higher (0.8+) for selective coding
+2. **Say what counts as explicit**: each suggestion is marked explicit
+   (the passage states the code) or interpretive (Claude is reading it
+   in). There is no numeric score and no threshold: an interpretive
+   reading can be exactly the one you want, and it is yours to judge
 3. **Review Statistics First**: Check counts before diving into details
 4. **Iterate if Needed**: `record_suggestions(replace=true)` discards the
    pending suggestions from a previous pass
 
 ### Reviewing Suggestions
 
-1. **Check Confidence Distribution**: Are most suggestions high or low?
-2. **Review Low Confidence First**: These need the most scrutiny
-3. **Spot Check High Confidence**: Verify the AI reasoning is sound
+1. **Read the interpretive ones closely**: the label says Claude is
+   reading into the passage; check that the reading is one you share
+2. **Spot check the explicit ones**: the passage should state the code
+   in so many words; verify that it does
+3. **Read the reasoning**: it should point to the words that carry the
+   code
 4. **Use Context**: `show_context=true` shows the surrounding text
 5. **Check Boundary Precision**: The recorded positions always match the
    file text exactly, but check the *span* is what you want coded
@@ -166,7 +176,8 @@ approval of each suggestion.
 
 **Do I need an API key?** No: with Claude Desktop or a Claude login,
 Claude itself does the analysis through the conversation, and the
-server only stores and applies what you approve. (An API-key route and
+server only stores and applies what is marked approved (it cannot see
+who approved it; see above). (An API-key route and
 a fully local route exist too; see "Choosing your AI host" in the
 README.)
 

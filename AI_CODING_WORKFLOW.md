@@ -122,7 +122,7 @@ Analyse interview file 5 and code any segments related to:
 - Barriers to participation
 - Positive outcomes
 
-Use a minimum confidence threshold of 0.7
+Only suggest a code where the participant says it in so many words
 ```
 
 **What Claude does:**
@@ -130,7 +130,8 @@ Use a minimum confidence threshold of 0.7
 2. Reads the specified files
 3. Examines content for relevant segments
 4. Identifies text that matches the codes
-5. Assigns confidence scores (0.0-1.0)
+5. Marks each suggestion explicit (the passage states the code) or
+   interpretive (Claude is reading it in); there is no numeric score
 6. Generates reasoning for each suggestion
 7. Records the suggestions into the session with `record_suggestions`;
    every suggestion is verified against the file text before it is
@@ -149,16 +150,16 @@ Found 8 suggestions:
    Code: Workplace Stress
    Position: 450-620
    Text: "I often feel overwhelmed with the workload..."
+   Support: explicit (the passage states it)
    Reasoning: Direct expression of feeling overwhelmed by work demands
-   Confidence: 0.92
    GUID: guid-001
 
 2. File: interview_001.txt
    Code: Coping Strategies
    Position: 1200-1350
    Text: "I try to take breaks and go for walks..."
+   Support: explicit (the passage states it)
    Reasoning: Describes specific coping mechanism (taking breaks)
-   Confidence: 0.85
    GUID: guid-002
 
 [... more suggestions ...]
@@ -199,12 +200,11 @@ Selected Text:
 anything. I can barely get through my daily tasks without
 feeling exhausted by the end of the day."
 
-Reasoning:
-Clear indicators of workplace stress including interruptions,
-inability to focus, and exhaustion - matches multiple stress
-criteria.
+Support: interpretive (the assistant is reading into it)
 
-Confidence: 0.88
+Reasoning:
+The participant does not name stress; interruptions, inability to
+focus and exhaustion are read as workplace stress.
 
 Context Before:
 "... my manager expects immediate responses to everything.
@@ -248,6 +248,14 @@ Reject guid-003, guid-005
 Session saved. Ready to apply approved codings when you're ready.
 ```
 
+**Who approves.** Claude records your decisions with
+`update_suggestion_status`. The server writes what is marked approved
+and cannot tell whether you gave the approval: check that the approved
+count is the number you said yes to, and keep your host asking before
+each tool call ("allow once" for the tools that decide and write). To
+change a decision, ask Claude to reopen the suggestion: it goes back to
+pending, can be edited, and waits for your decision again.
+
 ### Step 5: Apply Approved Codings
 
 When you're satisfied with the approvals:
@@ -257,10 +265,11 @@ Apply the approved codings to the project
 ```
 
 **What Claude does:**
-1. Creates automatic backup first
+1. Creates a backup first (by default)
 2. Loops through all approved suggestions
 3. Writes each as a coding to the database
-4. Includes reasoning and confidence in memo
+4. Writes in each coding's memo whether the passage states the code
+   (explicit) or Claude read it in (interpretive), then the reasoning
 5. Records the PROJECT's AI coder name as owner, which the researcher
    chooses the first time a write needs it (`set_project_ai_coder_name`;
    see "Choosing the AI coder name" in README.md). Before that choice is
@@ -305,7 +314,8 @@ Applying 6 approved codings...
 4. Select the files you analysed
 5. You should see the AI-generated codings with:
    - Owner: the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
-   - Memo containing reasoning and confidence score
+   - Memo beginning "Support: explicit" or "Support: interpretive",
+     then the reasoning
 
 ## Example Conversations
 
@@ -335,11 +345,11 @@ I've analysed file 3 (focus_group_transcript.txt).
 Session ID: 7a8b9c...
 
 Found 5 suggestions:
-1. Participant Motivation at 120-280 (confidence: 0.89) - guid-01
-2. Barriers at 450-590 (confidence: 0.92) - guid-02
-3. Participant Motivation at 780-920 (confidence: 0.76) - guid-03
-4. Barriers at 1100-1250 (confidence: 0.88) - guid-04
-5. Participant Motivation at 1500-1680 (confidence: 0.71) - guid-05
+1. Participant Motivation at 120-280 (explicit) - guid-01
+2. Barriers at 450-590 (explicit) - guid-02
+3. Participant Motivation at 780-920 (interpretive) - guid-03
+4. Barriers at 1100-1250 (explicit) - guid-04
+5. Participant Motivation at 1500-1680 (interpretive) - guid-05
 ```
 
 **You:**
@@ -358,16 +368,17 @@ Position: 450-590
 Text: "The main issue is lack of time. Between work and family
 responsibilities, there's just no time left for participation..."
 
+Support: explicit (the passage states it)
+
 Reasoning: Explicit mention of time constraints as a barrier to
 participation, citing specific competing demands (work, family).
 
-Confidence: 0.92
 GUID: guid-02
 ```
 
 **You:**
 ```
-Approve all except 5 (confidence too low)
+Approve all except 5 (I don't read motivation into that one)
 ```
 
 **Claude:**
@@ -398,7 +409,7 @@ Copy "Interview Series.qda" to workspace and analyse file 7 with these codes:
 - Career Satisfaction
 - Professional Development
 
-Minimum confidence 0.75
+Tell me which suggestions are interpretive
 ```
 
 **Claude:**
@@ -422,7 +433,8 @@ Show me all the Work-Life Balance suggestions with context
 **Claude:**
 ```
 [Shows detailed view of all 5 Work-Life Balance suggestions
-with full text, reasoning, confidence, and surrounding context]
+with full text, explicit or interpretive, reasoning, and
+surrounding context]
 ```
 
 **You:**
@@ -501,7 +513,7 @@ Analyse file 5 for segments related to:
 - Coping Strategies (identify any mention of how participants
   deal with or manage stress)
 
-Use confidence threshold 0.75
+Mark as interpretive anything the participant does not say outright
 ```
 
 **2. Start with Small Batches**
@@ -524,7 +536,8 @@ Check:
 - Is the text relevant?
 - Is the code appropriate?
 - Does the reasoning make sense?
-- Is the confidence score justified?
+- Is an "explicit" passage really stated, and an "interpretive"
+  reading one you share?
 
 **4. Use the Session System**
 
@@ -544,12 +557,15 @@ Claude remembers:
 - Session details
 - Ready to apply when you are
 
-**5. Adjust Confidence Thresholds**
+**5. Explicit or interpretive, not a score**
 
-- **0.6-0.7**: More suggestions, may include borderline cases
-- **0.7-0.8**: Balanced (recommended starting point)
-- **0.8-0.9**: High confidence only, fewer but more accurate
-- **0.9+**: Very strict, only obvious matches
+Each suggestion is marked explicit (the passage states the code) or
+interpretive (Claude is reading it in). There is no confidence number
+and no threshold: a model's rating of its own confidence is not a
+measurement, and an interpretive reading can be exactly the one your
+analysis needs. If you want only what participants state outright, say
+so in the instruction; if you want interpretive readings, read each
+one against your own.
 
 **6. Work Iteratively**
 
@@ -577,8 +593,9 @@ Delete sessions older than 30 days
 
 ### Backup Management
 
-Backups are created automatically before each write; there is no tool
-that takes one on request. To keep a separate copy of a project, copy
+Backups are created before each write by default (a call can pass
+`create_backup=false` to skip it); there is no tool that takes one on
+request. To keep a separate copy of a project, copy
 it to the workspace:
 
 **Copy a project to the workspace:**
@@ -651,9 +668,9 @@ made.
    feeling stressed, not just mentioning the word "stress"
    ```
 
-2. **Adjust confidence threshold:**
+2. **Ask for explicit passages only:**
    ```
-   Use minimum confidence 0.8 (stricter)
+   Only suggest a code where the participant states it outright
    ```
 
 3. **Give examples:**
@@ -773,14 +790,14 @@ Analyse files 1-3 for:
 Iterate to improve:
 
 ```
-# First pass with low threshold
-Analyse file 5 with min confidence 0.6
+# First pass, readings included
+Analyse file 5, and mark which suggestions are interpretive
 
-# Review to see what's borderline
+# Review the interpretive ones to see where the codes blur
 
 # Second pass with tuned instructions
 Analyse file 5 again but only code segments that explicitly
-mention [specific criteria], confidence 0.75
+mention [specific criteria]
 ```
 
 ### Quality Control
@@ -806,7 +823,8 @@ Before starting AI coding:
 
 During coding:
 - [ ] Review at least some suggestions before approving
-- [ ] Check confidence scores make sense
+- [ ] Check what is marked explicit is stated, and what is
+      interpretive is a reading you share
 - [ ] Reasoning aligns with your coding scheme
 - [ ] Approve/reject thoughtfully
 
@@ -815,7 +833,7 @@ After applying:
 - [ ] Open project in Qualcoder
 - [ ] Verify codings look correct
 - [ ] Owner shows the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
-- [ ] Memos contain reasoning and confidence
+- [ ] Memos say explicit or interpretive, then the reasoning
 
 ---
 

@@ -738,7 +738,7 @@ async def call_every_tool(client, root, lock_check=False):
     session = (await run("analyze_for_coding",
                          {"file_ids": [1]}))["coding_session_id"]
     recorded = await run("record_suggestions", {
-        "coding_session_id": session, "suggestions": [{
+        "coding_session_id": session, "suggestions": [{"support": "explicit",
             "file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
             "reasoning": "trust is stated"}]})
     guid = recorded["recorded"][0]["guid"]
@@ -1068,7 +1068,7 @@ def _marker_calls(ids, text):
         "update_proposal": {"coding_session_id": session,
                             "proposal_guid": ids["proposal"], "memo": text},
         "record_suggestions": {"coding_session_id": session,
-                               "suggestions": [{
+                               "suggestions": [{"support": "explicit",
                                    "file_id": 1, "code_name": "Trust",
                                    "segment_text": QUOTE,
                                    "reasoning": text}]},
@@ -1139,7 +1139,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
             ids = await _marker_project(client, tmp_path)
             recorded = json.loads(text_of(await client.call_tool(
                 "record_suggestions", {
-                    "coding_session_id": ids["session"], "suggestions": [{
+                    "coding_session_id": ids["session"], "suggestions": [{"support": "explicit",
                         "file_id": 1, "code_name": "Trust",
                         "segment_text": QUOTE,
                         "reasoning": "trust is stated"}]})))
@@ -1541,7 +1541,7 @@ class TestSessionFilesAfterPseudonymising:
             suggesting = (await call("analyze_for_coding",
                                      {"file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
-                "coding_session_id": suggesting, "suggestions": [{
+                "coding_session_id": suggesting, "suggestions": [{"support": "explicit",
                     "file_id": 1, "code_name": "Trust",
                     "segment_text": QUOTE, "reasoning": "stated"}]})
             # rejected: the excerpt is still in the file
@@ -1579,7 +1579,7 @@ class TestSessionFilesAfterPseudonymising:
             elsewhere = (await call("analyze_for_coding",
                                     {"file_ids": [2]}))["coding_session_id"]
             await call("record_suggestions", {
-                "coding_session_id": elsewhere, "suggestions": [{
+                "coding_session_id": elsewhere, "suggestions": [{"support": "explicit",
                     "file_id": 2, "code_name": "Trust",
                     "segment_text": "the garden gate was locked",
                     "reasoning": "r"}]})
@@ -2002,7 +2002,7 @@ class TestCoreAnswersAreMarked:
             session = (await call("analyze_for_coding",
                                   {"file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
-                "coding_session_id": session, "suggestions": [{
+                "coding_session_id": session, "suggestions": [{"support": "explicit",
                     "file_id": 1, "code_name": "Trust",
                     "segment_text": passage, "reasoning": "r"}]})
             search = await call("search_coded_text",
@@ -2226,7 +2226,7 @@ class TestOneProjectUnderTwoSpellings:
             session = (await call("analyze_for_coding",
                                   {"file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
-                "coding_session_id": session, "suggestions": [{
+                "coding_session_id": session, "suggestions": [{"support": "explicit",
                     "file_id": 1, "code_name": "Trust",
                     "segment_text": QUOTE, "reasoning": "stated"}]})
             other = str(folder.parent / run_as(folder.name))
@@ -2315,7 +2315,7 @@ class TestTheMarkerChecksHoldForEveryShape:
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
             await client.call_tool("record_suggestions", {
-                "coding_session_id": ids["session"], "suggestions": [{
+                "coding_session_id": ids["session"], "suggestions": [{"support": "explicit",
                     "file_id": 1, "code_name": "Trust",
                     "segment_text": QUOTE, "reasoning": "stated"}]})
             return ids
@@ -2332,7 +2332,7 @@ class TestTheMarkerChecksHoldForEveryShape:
         ids, path = self._session(tmp_path)
         before = path.read_bytes()
         suggested = self._call("record_suggestions", {
-            "coding_session_id": ids["session"], "suggestions": [{
+            "coding_session_id": ids["session"], "suggestions": [{"support": "explicit",
                 "file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
                 "reasoning": ["##### private"]}]})
         assert suggested["rejected"][0]["reason"] == \
@@ -2362,7 +2362,8 @@ class TestTheMarkerChecksHoldForEveryShape:
             self, tmp_path, tool):
         ids, path = self._session(tmp_path)
         before = path.read_bytes()
-        item = ({"file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
+        item = ({"support": "explicit", "file_id": 1, "code_name": "Trust",
+                 "segment_text": QUOTE,
                  "reasoning": "##### private"}
                 if tool == "record_suggestions" else
                 {"name": "Other", "memo": "d", "rationale": "##### private",
@@ -2437,7 +2438,8 @@ def test_a_replace_of_items_already_in_the_session_replaces_as_before(
             return body_of(text_of(await client.call_tool(name, args)))
         ids = await _marker_project(client, tmp_path)
         session = ids["session"]
-        first = {"file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
+        first = {"support": "explicit", "file_id": 1, "code_name": "Trust",
+                 "segment_text": QUOTE,
                  "reasoning": "stated"}
         approved = await call("record_suggestions", {
             "coding_session_id": session, "suggestions": [first]})
@@ -2445,7 +2447,7 @@ def test_a_replace_of_items_already_in_the_session_replaces_as_before(
             "coding_session_id": session,
             "approve": [approved["recorded"][0]["guid"]]})
         await call("record_suggestions", {
-            "coding_session_id": session, "suggestions": [{
+            "coding_session_id": session, "suggestions": [{"support": "explicit",
                 "file_id": 1, "code_name": "Trust",
                 "segment_text": "Maria Lopez runs the garden.",
                 "reasoning": "r"}]})
@@ -2476,7 +2478,7 @@ def test_a_null_note_is_stored_empty_never_as_none(tmp_path):
         ids = await _marker_project(client, tmp_path)
         session = ids["session"]
         recorded = await call("record_suggestions", {
-            "coding_session_id": session, "suggestions": [{
+            "coding_session_id": session, "suggestions": [{"support": "explicit",
                 "file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
                 "reasoning": None}]})
         await call("update_suggestion_status", {

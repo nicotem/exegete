@@ -570,11 +570,11 @@ def _approved_session(setup_server, qualcoder_db_path, span=(0, 10),
                       text="This is in"):
     session = AICodingSession(
         project_path=qualcoder_db_path, description="R3", file_ids=[1],
-        code_names=["Stress"], instruction="R3", min_confidence=0.5)
+        code_names=["Stress"], instruction="R3")
     session.add_suggestion(CodingSuggestion(
         file_id=1, file_name="interview.txt", code_id=1, code_name="Stress",
         start_pos=span[0], end_pos=span[1], segment_text=text,
-        reasoning="R3", confidence=0.9, status="approved"))
+        reasoning="R3", support="explicit", status="approved"))
     setup_server.session_manager.save_session(session)
     return session
 

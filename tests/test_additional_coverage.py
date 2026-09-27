@@ -5,7 +5,7 @@ Additional test coverage identified by QA and security reviews.
 HIGH priority: no-project tests, SQL injection gaps, session validation,
                deserialization tests.
 MEDIUM priority: search modes, path traversal, attr_type="file",
-                 integer overflow, confidence bounds, partial failure.
+                 integer overflow, support labels, partial failure.
 """
 
 import pytest
@@ -462,82 +462,42 @@ class TestExpandedIntegerOverflow:
 
 
 # =============================================================================
-# MEDIUM-9: Confidence bounds tests
+# MEDIUM-9, as ruled in v0.14 (owner ruling 21): the 0-1 confidence and its
+# clamping are gone; a suggestion's support is one of two labels or none
 # =============================================================================
 
-class TestConfidenceBounds:
-    """Test that confidence values are properly clamped."""
+class TestSupportLabel:
+    """A suggestion keeps 'explicit' or 'interpretive'; anything else,
+    including an old number, is no label at all (None)."""
 
-    def test_negative_confidence_clamped(self):
-        s = CodingSuggestion(
-            file_id=1, file_name="test.txt",
-            code_id=1, code_name="Test",
-            start_pos=0, end_pos=5,
-            segment_text="hello",
-            confidence=-0.5
-        )
-        assert s.confidence == 0.0
+    @staticmethod
+    def _make(**kw):
+        return CodingSuggestion(
+            file_id=1, file_name="test.txt", code_id=1, code_name="Test",
+            start_pos=0, end_pos=5, segment_text="hello", **kw)
 
-    def test_over_one_confidence_clamped(self):
-        s = CodingSuggestion(
-            file_id=1, file_name="test.txt",
-            code_id=1, code_name="Test",
-            start_pos=0, end_pos=5,
-            segment_text="hello",
-            confidence=1.5
-        )
-        assert s.confidence == 1.0
+    @pytest.mark.parametrize("label", ["explicit", "interpretive"])
+    def test_the_two_labels_are_kept(self, label):
+        assert self._make(support=label).support == label
 
-    def test_extreme_negative_confidence(self):
-        s = CodingSuggestion(
-            file_id=1, file_name="test.txt",
-            code_id=1, code_name="Test",
-            start_pos=0, end_pos=5,
-            segment_text="hello",
-            confidence=-1000.0
-        )
-        assert s.confidence == 0.0
+    @pytest.mark.parametrize("value", [None, "", "EXPLICIT ", 0.9, 1,
+                                       "high", float("nan")])
+    def test_anything_else_is_no_label(self, value):
+        assert self._make(support=value).support is None
 
-    def test_extreme_positive_confidence(self):
-        s = CodingSuggestion(
-            file_id=1, file_name="test.txt",
-            code_id=1, code_name="Test",
-            start_pos=0, end_pos=5,
-            segment_text="hello",
-            confidence=float('inf')
-        )
-        # inf > 1.0, so min(1.0, inf) = 1.0
-        assert s.confidence == 1.0
+    def test_no_argument_is_no_label(self):
+        s = self._make()
+        assert s.support is None
+        assert not hasattr(s, "confidence")
 
-    def test_normal_confidence_unchanged(self):
-        s = CodingSuggestion(
-            file_id=1, file_name="test.txt",
-            code_id=1, code_name="Test",
-            start_pos=0, end_pos=5,
-            segment_text="hello",
-            confidence=0.75
-        )
-        assert s.confidence == 0.75
-
-    def test_boundary_confidence_zero(self):
-        s = CodingSuggestion(
-            file_id=1, file_name="test.txt",
-            code_id=1, code_name="Test",
-            start_pos=0, end_pos=5,
-            segment_text="hello",
-            confidence=0.0
-        )
-        assert s.confidence == 0.0
-
-    def test_boundary_confidence_one(self):
-        s = CodingSuggestion(
-            file_id=1, file_name="test.txt",
-            code_id=1, code_name="Test",
-            start_pos=0, end_pos=5,
-            segment_text="hello",
-            confidence=1.0
-        )
-        assert s.confidence == 1.0
+    def test_an_old_session_entry_with_a_number_loads_without_a_label(self):
+        s = CodingSuggestion.from_dict({
+            "file_id": 1, "file_name": "t.txt", "code_id": 1,
+            "code_name": "T", "start_pos": 0, "end_pos": 5,
+            "segment_text": "hello", "confidence": 0.85})
+        assert s.support is None
+        assert "confidence" not in s.to_dict()
+        assert s.to_dict()["support"] is None
 
 
 # =============================================================================
@@ -676,8 +636,7 @@ class TestApplyCodingsRollback:
             description="Rollback test session",
             file_ids=[1],
             code_names=["Stress"],
-            instruction="Test rollback",
-            min_confidence=0.5
+            instruction="Test rollback"
         )
 
         valid_suggestion = CodingSuggestion(
@@ -685,7 +644,7 @@ class TestApplyCodingsRollback:
             code_id=1, code_name="Stress",
             start_pos=0, end_pos=10,
             segment_text="This is in",
-            reasoning="Valid suggestion", confidence=0.9,
+            reasoning="Valid suggestion", support="explicit",
             status="approved"
         )
         invalid_suggestion = CodingSuggestion(
@@ -693,7 +652,7 @@ class TestApplyCodingsRollback:
             code_id=99999, code_name="NonexistentCode",
             start_pos=20, end_pos=30,
             segment_text="interview ",
-            reasoning="Invalid code_id", confidence=0.8,
+            reasoning="Invalid code_id", support="explicit",
             status="approved"
         )
 
@@ -760,15 +719,14 @@ class TestRWConnectionDowngrade:
             description="Downgrade test session",
             file_ids=[1],
             code_names=["Stress"],
-            instruction="Test downgrade",
-            min_confidence=0.5
+            instruction="Test downgrade"
         )
         suggestion = CodingSuggestion(
             file_id=1, file_name="interview.txt",
             code_id=1, code_name="Stress",
             start_pos=8, end_pos=18,
             segment_text="interview ",
-            reasoning="Test", confidence=0.9,
+            reasoning="Test", support="explicit",
             status="approved"
         )
         session.add_suggestion(suggestion)
@@ -794,15 +752,14 @@ class TestRWConnectionDowngrade:
             description="Downgrade failure test",
             file_ids=[1],
             code_names=["Stress"],
-            instruction="Test downgrade on failure",
-            min_confidence=0.5
+            instruction="Test downgrade on failure"
         )
         bad_suggestion = CodingSuggestion(
             file_id=1, file_name="interview.txt",
             code_id=99999, code_name="Nonexistent",
             start_pos=0, end_pos=10,
             segment_text="This is in",
-            reasoning="Bad code", confidence=0.9,
+            reasoning="Bad code", support="explicit",
             status="approved"
         )
         session.add_suggestion(bad_suggestion)
@@ -829,15 +786,14 @@ class TestRWConnectionDowngrade:
             description="Write rejection test",
             file_ids=[1],
             code_names=["Stress"],
-            instruction="Test write rejection",
-            min_confidence=0.5
+            instruction="Test write rejection"
         )
         suggestion = CodingSuggestion(
             file_id=1, file_name="interview.txt",
             code_id=1, code_name="Stress",
             start_pos=8, end_pos=18,
             segment_text="interview ",
-            reasoning="Test", confidence=0.9,
+            reasoning="Test", support="explicit",
             status="approved"
         )
         session.add_suggestion(suggestion)

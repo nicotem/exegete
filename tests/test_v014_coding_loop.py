@@ -1,0 +1,1319 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+"""v0.14, the AI coding loop: what its texts say, made true.
+
+1. The confidence score replaced (owner ruling 21): each suggestion is
+   `explicit` or `interpretive`, never a number.
+2. The loop's own gaps (the claims audit's item 10): the session's
+   scope, reopening a decision, GUIDs not found, the undo, the texts.
+3. The context a researcher approves from is the file's own.
+4. A proposal's approval binds what was approved; a merged proposal is
+   final.
+5. Comparing coders: what a character nobody coded means.
+
+Most calls go through FastMCP's own `call_tool`, the path a host takes
+(argument validation included), on the conftest's fixture project.
+"""
+
+import asyncio
+import json
+import sqlite3
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+import qualcoder_mcp.server as server
+from qualcoder_mcp.sessions import (AICodingSession, CodingSuggestion,
+                                    SessionManager)
+
+# The fixture project's file 1 (conftest.qualcoder_db_path)
+FULLTEXT = ("This is interview text. I feel stressed about deadlines. "
+            "I cope by exercising.")
+STRESSED = "I feel stressed about deadlines."
+COPE = "I cope by exercising."
+
+
+def call(tool, **args):
+    """A tool call through FastMCP's own call path, as a host makes it."""
+    out = asyncio.run(server.mcp.call_tool(tool, args))
+    blocks = out[0] if isinstance(out, tuple) else out
+    return "".join(getattr(b, "text", "") for b in blocks)
+
+
+def jcall(tool, **args):
+    return json.loads(call(tool, **args))
+
+
+def rows(db_path, sql, params=()):
+    conn = sqlite3.connect(str(Path(db_path) / "data.qda"))
+    conn.row_factory = sqlite3.Row
+    try:
+        return [dict(r) for r in conn.execute(sql, params).fetchall()]
+    finally:
+        conn.close()
+
+
+def new_session(**args):
+    args.setdefault("file_ids", [1])
+    return jcall("analyze_for_coding", **args)["coding_session_id"]
+
+
+def session_file(sid):
+    return Path(server.session_manager.storage_dir) / f"session_{sid}.json"
+
+
+def record(sid, *items, **kw):
+    return jcall("record_suggestions", coding_session_id=sid,
+                 suggestions=list(items), **kw)
+
+
+def item(text=STRESSED, code="Stress", support="explicit", **extra):
+    entry = {"file_id": 1, "code_name": code, "segment_text": text,
+             "reasoning": f"reason for {code}"}
+    if support is not None:
+        entry["support"] = support
+    entry.update(extra)
+    return entry
+
+
+def approve_and_apply(sid, guids):
+    call("update_suggestion_status", coding_session_id=sid, approve=guids)
+    return call("apply_codings", coding_session_id=sid, create_backup=False)
+
+
+# =============================================================================
+# 1. THE CONFIDENCE SCORE REPLACED (owner ruling 21)
+# =============================================================================
+
+class TestSupportIsRequired:
+
+    def test_a_suggestion_without_support_is_refused_with_the_reason(
+            self, setup_server):
+        rec = record(new_session(), item(support=None))
+        assert rec["recorded_count"] == 0
+        reason = rec["rejected"][0]["reason"]
+        assert "explicit" in reason and "interpretive" in reason
+        assert "confidence" not in reason
+
+    def test_a_number_in_place_of_the_label_is_refused_and_says_why(
+            self, setup_server):
+        rec = record(new_session(), item(support=None, confidence=0.9))
+        assert rec["recorded_count"] == 0
+        assert "confidence is no longer taken" in rec["rejected"][0]["reason"]
+
+    @pytest.mark.parametrize("bad", ["high", "", 0.9, 1, True, ["explicit"]])
+    def test_anything_but_the_two_labels_is_refused(self, setup_server, bad):
+        rec = record(new_session(), item(support=bad))
+        assert rec["recorded_count"] == 0, bad
+
+    def test_both_labels_are_recorded_and_reported(self, setup_server):
+        rec = record(new_session(), item(),
+                     item(text=COPE, code="Coping", support="Interpretive "))
+        assert rec["recorded_count"] == 2
+        assert [r["support"] for r in rec["recorded"]] == [
+            "explicit", "interpretive"]
+
+    def test_a_number_sent_beside_the_label_is_not_kept(self, setup_server):
+        sid = new_session()
+        rec = record(sid, item(confidence=0.95))
+        assert rec["recorded_count"] == 1
+        assert rec["confidence_ignored"] == 1
+        stored = session_file(sid).read_text()
+        assert "confidence" not in stored
+        assert "0.95" not in stored
+        assert '"support": "explicit"' in stored
+
+
+class TestTheLabelOnTheWayToTheProject:
+
+    def test_review_shows_the_label_beside_the_quote_before_the_reason(
+            self, setup_server):
+        sid = new_session()
+        record(sid, item(support="interpretive"))
+        out = call("review_suggestions", coding_session_id=sid)
+        quote = out.index(STRESSED)
+        label = out.index("**Support:** interpretive (the assistant is "
+                          "reading into it)")
+        reason = out.index("**AI Reasoning:**")
+        assert quote < label < reason
+        assert "Confidence" not in out
+
+    def test_the_applied_memo_says_it_in_words_label_first(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        rec = record(sid, item(support="interpretive"),
+                     item(text=COPE, code="Coping"))
+        out = approve_and_apply(sid, [r["guid"] for r in rec["recorded"]])
+        assert "CODINGS APPLIED" in out
+        memos = [r["memo"] for r in rows(
+            qualcoder_db_path, "SELECT memo FROM code_text WHERE owner = "
+            "'AI Coding Assistant' ORDER BY pos0")]
+        assert memos == [
+            "Support: interpretive (the assistant is reading into it)"
+            "\n\nreason for Stress",
+            "Support: explicit (the passage states it)\n\nreason for Coping"]
+        assert "confidence" not in out.lower()
+
+    def test_a_session_export_says_it_in_words(self, setup_server, tmp_path):
+        import zipfile
+        sid = new_session()
+        record(sid, item(support="interpretive"))
+        target = tmp_path / "out.qdpx"
+        res = jcall("export_refi_qda", output_path=str(target),
+                    coding_session_id=sid)
+        assert res.get("success") is True, res
+        with zipfile.ZipFile(target) as z:
+            xml = z.read("project.qde").decode("utf-8")
+        assert ("Support: interpretive (the assistant is reading into it)"
+                in xml)
+        assert "confidence" not in xml.lower()
+
+
+class TestSessionsFromEarlierReleases:
+    """A pre-v0.14 session file carries a number and a threshold; it
+    loads, shows no label, and applies the reason alone."""
+
+    @staticmethod
+    def _old_session(qualcoder_db_path, status="approved"):
+        data = {
+            "session_id": "0f0f0f0f-0000-4000-8000-000000000001",
+            "created_at": "2026-09-01T10:00:00",
+            "last_modified": "2026-09-01T10:00:00",
+            "project_path": str(Path(qualcoder_db_path) / "data.qda"),
+            "file_ids": [1], "code_names": ["Stress"],
+            "instruction": "", "min_confidence": 0.7,
+            "suggestions": [{
+                "file_id": 1, "file_name": "interview.txt", "code_id": 1,
+                "code_name": "Stress", "start_pos": 24, "end_pos": 56,
+                "segment_text": STRESSED, "reasoning": "old reason",
+                "confidence": 0.85, "status": status,
+                "guid": "0f0f0f0f-0000-4000-8000-0000000000aa"}],
+        }
+        folder = Path(server.session_manager.storage_dir)
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"session_{data['session_id']}.json"
+        path.write_text(json.dumps(data))
+        return data["session_id"], path
+
+    def test_it_loads_and_shows_no_label(self, setup_server,
+                                         qualcoder_db_path):
+        sid, _ = self._old_session(qualcoder_db_path, "pending")
+        out = call("review_suggestions", coding_session_id=sid)
+        assert "**Support:** not given (recorded before v0.14)" in out
+        assert "0.85" not in out
+
+    def test_it_applies_the_reason_alone_and_forgets_the_number(
+            self, setup_server, qualcoder_db_path):
+        sid, path = self._old_session(qualcoder_db_path)
+        out = call("apply_codings", coding_session_id=sid,
+                   create_backup=False)
+        assert "CODINGS APPLIED" in out, out
+        memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
+                    "owner = 'AI Coding Assistant'")[0]["memo"]
+        assert memo == "old reason"
+        saved = path.read_text()
+        assert "confidence" not in saved       # min_confidence included
+        assert "0.85" not in saved
+
+    def test_memos_already_in_the_project_are_never_rewritten(
+            self, setup_server, qualcoder_db_path):
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("UPDATE code_text SET memo = 'r\n\n[AI Confidence: "
+                     "0.85]' WHERE ctid = 2")
+        conn.commit()
+        conn.close()
+        sid = new_session()
+        rec = record(sid, item())
+        assert "CODINGS APPLIED" in approve_and_apply(
+            sid, [rec["recorded"][0]["guid"]])
+        assert rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
+                    "ctid = 2")[0]["memo"] == "r\n\n[AI Confidence: 0.85]"
+
+
+class TestNoScoreInAnyText:
+    """Every text the server sends about suggestions says explicit or
+    interpretive, and none offers a score or a threshold."""
+
+    @staticmethod
+    def _tool(name):
+        return server.mcp._tool_manager._tools[name]
+
+    def test_no_tool_takes_or_describes_a_confidence(self):
+        for name, tool in server.mcp._tool_manager._tools.items():
+            assert "confidence" not in json.dumps(tool.parameters), name
+            assert "confidence" not in (tool.description or "").lower(), name
+
+    def test_record_suggestions_names_both_labels(self):
+        text = self._tool("record_suggestions").description
+        assert '"explicit"' in text and '"interpretive"' in text
+        assert server.GROUNDING_RECORD in text
+
+    def test_the_help_and_the_guidance_carry_no_score(self):
+        for topic in (None, "analyze_for_coding", "apply_codings",
+                      "grounding_rules", "coding_style_guidance"):
+            text = server.explain_ai_coding_tools(topic).lower()
+            assert "confidence" not in text, topic
+        assert "confidence" not in server.METHODS_GUIDANCE.lower()
+        assert "confidence" not in server.SERVER_INSTRUCTIONS.lower()
+
+    def test_the_session_banner_asks_for_the_label(self, setup_server):
+        text = jcall("analyze_for_coding", file_ids=[1])["instructions"]
+        assert '"support": "explicit" or "interpretive"' in text
+        assert "confidence" not in text.lower()
+
+
+# =============================================================================
+# 2. THE LOOP'S OWN GAPS (the claims audit's item 10)
+# =============================================================================
+
+class TestTheSessionScopeLimitsWhatIsRecorded:
+
+    def test_a_file_outside_the_session_is_refused(self, setup_server):
+        sid = new_session(file_ids=[2])
+        rec = record(sid, item())                       # file 1
+        assert rec["recorded_count"] == 0
+        refusal = rec["rejected"][0]
+        assert "outside this session's files" in refusal["reason"]
+        assert refusal["session_file_ids"] == [2]
+
+    def test_a_code_outside_the_named_codes_is_refused(self, setup_server):
+        sid = new_session(code_names=["Stress"])
+        rec = record(sid, item(text=COPE, code="Coping"), item())
+        assert rec["recorded_count"] == 1
+        assert rec["recorded"][0]["code_name"] == "Stress"
+        refusal = rec["rejected"][0]
+        assert "code 'Coping' is outside this session's codes" in \
+            refusal["reason"]
+        assert refusal["session_codes"] == ["Stress"]
+
+    def test_without_code_names_every_code_is_in_scope(self, setup_server):
+        rec = record(new_session(), item(), item(text=COPE, code="Coping"))
+        assert rec["recorded_count"] == 2
+
+    def test_an_edit_to_a_code_outside_the_scope_is_refused(
+            self, setup_server):
+        sid = new_session(code_names=["Stress"])
+        guid = record(sid, item())["recorded"][0]["guid"]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, code_name="coping")
+        assert "outside this session's codes" in out["error"]
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).code_name == "Stress"
+
+    def test_code_names_match_ignoring_letter_case(self, setup_server):
+        out = jcall("analyze_for_coding", file_ids=[1], code_names=["stress"])
+        session = server.session_manager.load_session(
+            out["coding_session_id"])
+        assert session.code_names == ["Stress"]
+        assert "not_found" not in out
+
+    def test_names_and_ids_that_match_nothing_are_listed(self, setup_server):
+        out = jcall("analyze_for_coding", file_ids=[1, 999],
+                    code_names=["Stress", "Nope"])
+        assert out["not_found"] == {"file_ids": [999], "code_names": ["Nope"]}
+        assert "NOT FOUND" in out["instructions"]
+        session = server.session_manager.load_session(
+            out["coding_session_id"])
+        assert session.file_ids == [1]
+        assert session.scope == {"file_ids": [1], "code_ids": [1]}
+
+    def test_nothing_found_is_an_error_that_names_it(self, setup_server):
+        out = jcall("analyze_for_coding", file_ids=[1], code_names=["Nope"])
+        assert "error" in out
+        assert out["not_found"] == {"code_names": ["Nope"]}
+
+    def test_a_session_from_before_v014_limits_nothing(
+            self, setup_server, qualcoder_db_path):
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"), file_ids=[2],
+            code_names=["Coping"])
+        server.session_manager.save_session(session)
+        rec = record(session.session_id, item())
+        assert rec["recorded_count"] == 1
+
+    def test_codes_created_from_the_sessions_proposals_join_it(
+            self, setup_server):
+        sid = new_session(code_names=["Stress"])
+        prop = jcall("propose_codes", coding_session_id=sid,
+                     proposals=[{"name": "Exercise", "memo": "d"}])
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[prop["recorded"][0]["guid"]])
+        created = jcall("create_proposed_codes", coding_session_id=sid,
+                        create_backup=False)
+        assert created.get("success"), created
+        rec = record(sid, item(text=COPE, code="Exercise"))
+        assert rec["recorded_count"] == 1, rec
+
+
+class TestDecisionsSayWhatTheyDid:
+
+    @staticmethod
+    def _two(sid):
+        rec = record(sid, item(), item(text=COPE, code="Coping"))
+        return [r["guid"] for r in rec["recorded"]]
+
+    def test_the_refusals_advice_now_works_reopen_edit_approve(
+            self, setup_server):
+        sid = new_session()
+        guid = self._two(sid)[0]
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[guid])
+        refused = jcall("edit_suggestion", coding_session_id=sid,
+                        suggestion_guid=guid, use_alternative="longer")
+        assert "reopen=[this guid]" in refused["error"]
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   reopen=[guid])
+        assert "Reopened (back to pending): 1" in out
+        edited = jcall("edit_suggestion", coding_session_id=sid,
+                       suggestion_guid=guid, use_alternative="longer")
+        assert edited["success"] is True, edited
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[guid])
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).status == "approved"
+
+    def test_a_rejected_one_is_reopened_too(self, setup_server):
+        sid = new_session()
+        guid = self._two(sid)[0]
+        call("update_suggestion_status", coding_session_id=sid,
+             reject=[guid])
+        call("update_suggestion_status", coding_session_id=sid,
+             reopen=[guid])
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).status == "pending"
+
+    def test_an_applied_one_stays_fixed(self, setup_server):
+        sid = new_session()
+        guid = self._two(sid)[0]
+        approve_and_apply(sid, [guid])
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   reopen=[guid])
+        assert "Already applied (left unchanged): 1" in out
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).status == "applied"
+
+    def test_unknown_guids_are_named_not_passed_over(self, setup_server):
+        sid = new_session()
+        real = self._two(sid)[0]
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   approve=[real, "no-such-guid"])
+        assert "Approved: 1" in out
+        assert "Not found in this session (nothing done): no-such-guid" in out
+
+    def test_a_guid_in_two_lists_is_refused_and_nothing_changes(
+            self, setup_server):
+        sid = new_session()
+        a, b = self._two(sid)
+        out = jcall("update_suggestion_status", coding_session_id=sid,
+                    approve=[a, b], reject=[a])
+        assert "more than one list" in out["error"]
+        assert out["in_more_than_one_list"] == [a]
+        session = server.session_manager.load_session(sid)
+        assert [s.status for s in session.suggestions] == ["pending"] * 2
+
+    def test_nothing_changed_is_said(self, setup_server):
+        sid = new_session()
+        a = self._two(sid)[0]
+        call("update_suggestion_status", coding_session_id=sid, approve=[a])
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   approve=[a])
+        assert "Nothing changed" in out
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   approve=["nope"])
+        assert "Nothing changed" in out and "nope" in out
+
+    def test_the_proposal_decisions_say_the_same(self, setup_server):
+        sid = new_session()
+        prop = jcall("propose_codes", coding_session_id=sid,
+                     proposals=[{"name": "Exercise"}, {"name": "Sleep"}])
+        a, b = [r["guid"] for r in prop["recorded"]]
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[a, "ghost"])
+        assert out["approved"] == 1 and out["not_found"] == ["ghost"]
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[b], reject=[b])
+        assert "nothing was changed" in out["error"]
+        assert out["in_more_than_one_list"] == [b]
+        session = server.session_manager.load_session(sid)
+        assert session.get_proposal_by_guid(b).status == "pending"
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[a])
+        assert out["changed"] == 0 and "Nothing changed" in out["message"]
+
+    def test_the_reviews_name_guids_they_did_not_find(self, setup_server):
+        sid = new_session()
+        a = self._two(sid)[0]
+        out = call("review_suggestions", coding_session_id=sid,
+                   suggestion_guids=[a, "ghost"])
+        assert "Not found in this session: ghost" in out
+        prop = jcall("propose_codes", coding_session_id=sid,
+                     proposals=[{"name": "Exercise"}])
+        out = call("review_proposals", coding_session_id=sid,
+                   proposal_guids=[prop["recorded"][0]["guid"], "ghost2"])
+        assert "Not found in this session: ghost2" in out
+
+
+class TestDeleteCodingIsTheLoopsUndo:
+
+    @staticmethod
+    def _applied(sid):
+        guid = record(sid, item())["recorded"][0]["guid"]
+        approve_and_apply(sid, [guid])
+        sugg = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid)
+        return guid, sugg.applied_ctid
+
+    def test_apply_records_the_coding_each_suggestion_became(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        _, ctid = self._applied(sid)
+        row = rows(qualcoder_db_path, "SELECT pos0, pos1 FROM code_text "
+                   "WHERE ctid = ?", (ctid,))
+        assert row == [{"pos0": 24, "pos1": 56}]
+
+    def test_the_session_is_told_and_named(self, setup_server):
+        sid = new_session()
+        guid, ctid = self._applied(sid)
+        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        assert out["success"] is True
+        assert out["sessions_updated"] == [{
+            "coding_session_id": sid, "suggestion_guids": [guid],
+            "status": "removed"}]
+        session = server.session_manager.load_session(sid)
+        assert session.get_suggestion_by_guid(guid).status == "removed"
+        assert session.get_statistics()["removed"] == 1
+
+    def test_the_same_passage_can_be_recorded_again(self, setup_server):
+        sid = new_session()
+        _, ctid = self._applied(sid)
+        call("delete_coding", coding_id=ctid, create_backup=False)
+        rec = record(sid, item())
+        assert rec["recorded_count"] == 1 and rec["skipped_duplicates"] == 0
+
+    def test_the_removed_one_can_be_approved_and_applied_again(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid, ctid = self._applied(sid)
+        call("delete_coding", coding_id=ctid, create_backup=False)
+        out = approve_and_apply(sid, [guid])
+        assert "Successfully Applied: 1 codings" in out, out
+        assert len(rows(qualcoder_db_path, "SELECT ctid FROM code_text "
+                        "WHERE owner = 'AI Coding Assistant'")) == 1
+
+    def test_a_persons_identical_coding_leaves_an_old_session_alone(
+            self, setup_server, qualcoder_db_path):
+        """A suggestion applied before v0.14 carries no ctid; only a
+        deleted row under an AI coder name can be its coding."""
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"))
+        # the fixture's own coding 1 is TestCoder's, 24-55 under Stress
+        session.add_suggestion(CodingSuggestion(
+            file_id=1, file_name="interview.txt", code_id=1,
+            code_name="Stress", start_pos=24, end_pos=55,
+            segment_text=FULLTEXT[24:55], status="applied"))
+        server.session_manager.save_session(session)
+        out = jcall("delete_coding", coding_id=1, create_backup=False)
+        assert out["success"] is True
+        assert "sessions_updated" not in out
+        assert server.session_manager.load_session(session.session_id) \
+            .suggestions[0].status == "applied"
+
+    def test_an_old_sessions_ai_coding_is_matched_by_its_span(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid, ctid = self._applied(sid)
+        path = session_file(sid)
+        data = json.loads(path.read_text())
+        data["suggestions"][0].pop("applied_ctid")      # as before v0.14
+        path.write_text(json.dumps(data))
+        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        assert out["sessions_updated"][0]["suggestion_guids"] == [guid]
+
+    def test_deleting_a_persons_coding_of_the_same_span_leaves_it(
+            self, setup_server):
+        """The fixture's coding 1 is TestCoder's, 24-55 under Stress; the
+        AI's coding of the same span is another row. Deleting the
+        person's leaves the suggestion applied: its ctid is not 1."""
+        sid = new_session()
+        guid = record(sid, item(text=FULLTEXT[24:55]))["recorded"][0]["guid"]
+        approve_and_apply(sid, [guid])
+        out = jcall("delete_coding", coding_id=1, create_backup=False)
+        assert out["success"] is True and "sessions_updated" not in out
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).status == "applied"
+
+    def test_another_projects_session_is_never_touched(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        import shutil
+        twin = tmp_path / "twin.qda"            # a real project elsewhere
+        shutil.copytree(qualcoder_db_path, twin)
+        other = AICodingSession(project_path=str(twin / "data.qda"))
+        other.add_suggestion(CodingSuggestion(
+            file_id=1, file_name="interview.txt", code_id=1,
+            code_name="Stress", start_pos=24, end_pos=56,
+            segment_text=STRESSED, status="applied"))
+        server.session_manager.save_session(other)
+        sid = new_session()
+        _, ctid = self._applied(sid)
+        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        assert [u["coding_session_id"] for u in out["sessions_updated"]] \
+            == [sid]
+        assert server.session_manager.load_session(other.session_id) \
+            .suggestions[0].status == "applied"
+
+
+class TestTheLoopsTextsSayWhatHappens:
+
+    @staticmethod
+    def _desc(name):
+        return server.mcp._tool_manager._tools[name].description
+
+    def test_analyze_for_coding_says_it_starts_a_session(self):
+        text = self._desc("analyze_for_coding")
+        assert "It reads no file and returns no suggestion" in text
+        assert "performs AI analysis" not in text
+        assert "not_found" in text
+        help_ = json.loads(server.explain_ai_coding_tools(
+            "analyze_for_coding"))
+        assert "reads no file" in help_["purpose"]
+        blob = json.dumps(help_).lower()
+        assert "automatically" not in blob
+        assert "filters to stress-related codes only" not in blob
+
+    def test_analyze_file_with_coding_names_its_four_counts(
+            self, setup_server):
+        text = self._desc("analyze_file_with_coding")
+        assert "coverage and density" not in text
+        stats = jcall("analyze_file_with_coding", file_id=1)["statistics"]
+        for key in stats:
+            assert key in text, key
+
+    def test_cleanup_old_sessions_says_what_it_deletes(self):
+        text = self._desc("cleanup_old_sessions")
+        assert "every project" in text
+        assert "approved suggestions not yet applied" in text
+        assert "No preview" in text
+
+    def test_edit_and_status_texts_give_the_working_advice(self):
+        text = " ".join(self._desc("edit_suggestion").split())
+        assert ("to change it, reopen it (update_suggestion_status "
+                "reopen=[guid]), edit it, and ask the user to decide "
+                "again") in text
+        assert "then approve after editing" not in text
+        assert "reopen" in self._desc("update_suggestion_status")
+        help_ = json.loads(server.explain_ai_coding_tools("edit_suggestion"))
+        assert any("reopen" in note for note in help_["notes"])
+
+
+class TestApprovalIsDescribedHonestly:
+    """The server writes what is marked approved and cannot see who
+    marked it; the texts for the model keep the rule, the texts a
+    researcher reads say what stands behind it."""
+
+    def test_the_model_facing_rule(self):
+        for text in (server.SERVER_INSTRUCTIONS, server.METHODS_GUIDANCE):
+            text = " ".join(text.split())
+            assert "only on the researcher's word" in text
+            assert "approves each item" not in text
+        assert "never bypassed" not in server.METHODS_GUIDANCE
+
+    @pytest.mark.parametrize("doc", ["README.md", "PRIVACY.md", "INSTALL.md"])
+    def test_the_researcher_facing_documents(self, doc):
+        text = " ".join((Path(__file__).parent.parent / doc)
+                        .read_text(encoding="utf-8").split())
+        assert "cannot tell whether you gave it" in text, doc
+        assert "allow once" in text.lower(), doc
+
+
+# =============================================================================
+# 3. THE CONTEXT A RESEARCHER APPROVES FROM IS THE FILE'S OWN (audit item 6)
+# =============================================================================
+
+INVENTED = "Paul said: I will quit tomorrow because of my manager."
+
+
+class TestTheContextIsTheFilesOwn:
+
+    def test_a_supplied_context_is_set_aside_and_the_file_shown(
+            self, setup_server):
+        sid = new_session()
+        rec = record(sid, item(text=COPE, code="Coping",
+                               context_before=INVENTED,
+                               context_after=INVENTED))
+        assert rec["recorded_count"] == 1
+        assert rec["context_ignored"] == 1
+        out = call("review_suggestions", coding_session_id=sid)
+        assert INVENTED not in out
+        assert "I feel stressed about deadlines. " in out   # the text before
+        assert INVENTED not in session_file(sid).read_text()
+
+    def test_an_old_sessions_invented_context_is_replaced_at_review(
+            self, setup_server, qualcoder_db_path):
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"))
+        session.add_suggestion(CodingSuggestion(
+            file_id=1, file_name="interview.txt", code_id=2,
+            code_name="Coping", start_pos=57, end_pos=78,
+            segment_text=COPE, context_before=INVENTED,
+            context_after=INVENTED))
+        server.session_manager.save_session(session)
+        out = call("review_suggestions", coding_session_id=session.session_id)
+        assert INVENTED not in out
+        assert "I feel stressed about deadlines. " in out
+
+    def test_another_project_open_shows_the_record_marked_as_such(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"))
+        session.add_suggestion(CodingSuggestion(
+            file_id=1, file_name="interview.txt", code_id=2,
+            code_name="Coping", start_pos=57, end_pos=78,
+            segment_text=COPE, context_before="stored before",
+            context_from_file=True))           # taken from the file by v0.14
+        server.session_manager.save_session(session)
+        import shutil
+        twin = tmp_path / "twin.qda"
+        shutil.copytree(qualcoder_db_path, twin)
+        server.current_project_path = str(twin)
+        out = call("review_suggestions", coding_session_id=session.session_id)
+        assert "stored before" in out
+        assert "as recorded; not re-read" in out
+
+    def test_a_span_the_file_no_longer_holds_shows_no_context(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        record(sid, item(text=COPE, code="Coping"))
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("UPDATE source SET fulltext = 'Something else "
+                     "entirely, now longer than the old text was.' "
+                     "WHERE id = 1")
+        conn.commit()
+        conn.close()
+        out = call("review_suggestions", coding_session_id=sid)
+        assert "no longer matches this suggestion" in out
+        assert "I feel stressed" not in out
+
+    def test_the_description_no_longer_offers_the_fields(self):
+        text = server.mcp._tool_manager._tools["record_suggestions"] \
+            .description
+        assert "auto-filled" not in text
+        assert "always taken from the file" in " ".join(text.split())
+
+
+# =============================================================================
+# 4. AN APPROVAL BINDS WHAT WAS APPROVED (the claims audit's item 1)
+# =============================================================================
+
+class TestAProposalsApprovalBindsIt:
+
+    @staticmethod
+    def _proposals(sid, *names):
+        evidence = {"Isolation": [{"file_id": 1, "segment_text": STRESSED}],
+                    "Mentoring": [{"file_id": 1, "segment_text": COPE}]}
+        out = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": n, "memo": f"def {n}",
+             "example_segments": evidence.get(n, [])} for n in names])
+        return [r["guid"] for r in out["recorded"]]
+
+    @staticmethod
+    def _status(sid, guid):
+        return server.session_manager.load_session(sid) \
+            .get_proposal_by_guid(guid).status
+
+    def test_a_change_after_approval_returns_it_to_pending(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        (g,) = self._proposals(sid, "Isolation")
+        call("update_proposal_status", coding_session_id=sid, approve=[g])
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, name="Loneliness", memo="changed")
+        assert out["status"] == "pending"
+        assert "approval withdrawn" in out["approval_withdrawn"]
+        created = jcall("create_proposed_codes", coding_session_id=sid,
+                        create_backup=False)
+        assert "No approved proposals" in created["error"]
+        assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
+                        "WHERE name = 'Loneliness'")
+
+    def test_a_pending_proposal_changes_without_a_word(self, setup_server):
+        sid = new_session()
+        (g,) = self._proposals(sid, "Isolation")
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, memo="refined")
+        assert out["status"] == "pending" and "approval_withdrawn" not in out
+
+    def test_a_merged_away_proposal_is_final(self, setup_server,
+                                             qualcoder_db_path):
+        sid = new_session()
+        target, source = self._proposals(sid, "Isolation", "Mentoring")
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[target, source])
+        merged = jcall("merge_proposals", coding_session_id=sid,
+                       from_proposal_guid=source, into_proposal_guid=target)
+        assert merged["source_status"] == "merged"
+        assert merged["target"]["status"] == "pending"
+        assert "approval_withdrawn" in merged
+        again = jcall("update_proposal_status", coding_session_id=sid,
+                      approve=[source, target])
+        assert again["skipped_merged"] == 1 and again["approved"] == 1
+        assert self._status(sid, source) == "merged"
+        assert "final" in jcall("update_proposal", coding_session_id=sid,
+                                proposal_guid=source, memo="x")["error"]
+        created = jcall("create_proposed_codes", coding_session_id=sid,
+                        apply_coded_segments=True, create_backup=False)
+        assert [c["name"] for c in created["created_codes"]] == ["Isolation"]
+        assert created["codings_applied"] == 2
+        assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
+                        "WHERE name = 'Mentoring'")
+        cope = rows(qualcoder_db_path, "SELECT cid FROM code_text WHERE "
+                    "seltext = ?", (COPE,))
+        assert len([r for r in cope if r["cid"] != 2]) == 1   # written once
+
+    def test_a_merged_proposal_cannot_be_merged_again(self, setup_server):
+        sid = new_session()
+        a, b, c = self._proposals(sid, "Isolation", "Mentoring", "Other")
+        call("merge_proposals", coding_session_id=sid,
+             from_proposal_guid=b, into_proposal_guid=a)
+        for src, dst in ((b, c), (c, b)):
+            out = jcall("merge_proposals", coding_session_id=sid,
+                        from_proposal_guid=src, into_proposal_guid=dst)
+            assert "merged into another proposal" in out["error"]
+
+    def test_a_merged_name_can_be_proposed_again(self, setup_server):
+        sid = new_session()
+        a, b = self._proposals(sid, "Isolation", "Mentoring")
+        call("merge_proposals", coding_session_id=sid,
+             from_proposal_guid=b, into_proposal_guid=a)
+        assert self._proposals(sid, "Mentoring")
+
+    def test_the_review_and_the_texts_say_merged(self, setup_server):
+        sid = new_session()
+        a, b = self._proposals(sid, "Isolation", "Mentoring")
+        call("merge_proposals", coding_session_id=sid,
+             from_proposal_guid=b, into_proposal_guid=a)
+        out = call("review_proposals", coding_session_id=sid)
+        assert "Status: MERGED into 'Isolation'" in out
+        tools = server.mcp._tool_manager._tools
+        assert "marked rejected" not in tools["merge_proposals"].description
+        for name in ("create_proposed_codes", "update_proposal_status"):
+            text = " ".join(tools[name].description.split())
+            assert "only if it is approved again" in text, name
+
+
+# =============================================================================
+# 5. COMPARING CODERS: WHAT A CHARACTER NOBODY CODED MEANS
+# =============================================================================
+
+class TestComparingCodersSaysWhatItCannotShow:
+
+    @staticmethod
+    def _ai_coding_in_file_2(qualcoder_db_path):
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                     "owner, date, memo) VALUES (1, 2, 'Field notes', 0, 11, "
+                     "'AI Coding Assistant', '2026-09-26 10:00:00', '')")
+        conn.commit()
+        conn.close()
+
+    def test_files_only_one_coder_coded_are_named(self, setup_server,
+                                                  qualcoder_db_path):
+        self._ai_coding_in_file_2(qualcoder_db_path)
+        out = jcall("compare_coders", coder_a="TestCoder",
+                    coder_b="AI Coding Assistant")
+        assert out["files_coded_by_one_coder_only"] == [
+            {"file_id": 1, "file_name": "interview.txt",
+             "coded_by": "TestCoder"},
+            {"file_id": 2, "file_name": "notes.txt",
+             "coded_by": "AI Coding Assistant"}]
+        assert out["files_coded_by_neither"] == 0
+        assert any("not a decision" in n for n in out["notes"])
+        ai_note = next(n for n in out["notes"] if "this server's AI" in n)
+        assert "the suggestions the person approved" in ai_note
+        assert "every visible coder's codings" in ai_note
+        assert "intercoder reliability" in ai_note
+
+    def test_narrowed_to_one_file_only_that_file_is_named(
+            self, setup_server, qualcoder_db_path):
+        self._ai_coding_in_file_2(qualcoder_db_path)
+        out = jcall("compare_coders", coder_a="TestCoder",
+                    coder_b="AI Coding Assistant", file_ids=[2])
+        assert [f["file_id"] for f in out["files_coded_by_one_coder_only"]] \
+            == [2]
+
+    def test_a_file_both_coded_is_not_named(self, setup_server,
+                                            qualcoder_db_path):
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                     "owner, date, memo) VALUES (2, 1, 'This', 0, 4, "
+                     "'Colleague', '2026-09-26 10:00:00', '')")
+        conn.commit()
+        conn.close()
+        out = jcall("compare_coders", coder_a="TestCoder",
+                    coder_b="Colleague")
+        assert out["files_coded_by_one_coder_only"] == []
+        assert out["files_coded_by_neither"] == 1          # notes.txt
+        assert not any("intercoder reliability" in n for n in out["notes"])
+
+    def test_the_texts_carry_both_caveats(self):
+        unit = server.UNIT_OF_ANALYSIS
+        assert "is not a decision" in unit
+        assert "decision per character" not in unit
+        desc = " ".join(server.mcp._tool_manager._tools["compare_coders"]
+                        .description.split())
+        help_ = json.loads(server.explain_ai_coding_tools())[
+            "comparing_coders"]
+        for text in (desc, help_):
+            assert "approved" in text
+            assert "every visible coder's codings" in text
+            assert "not a decision" in text
+            assert "intercoder reliability" in text
+
+
+# =============================================================================
+# A PROMISE THE WHOLE LOOP RESTS ON (the claims audit's "true today, but
+# nothing keeps it true", 3): only approved items are written
+# =============================================================================
+
+class TestOnlyApprovedItemsAreWritten:
+
+    def test_apply_codings_writes_the_approved_and_nothing_else(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        rec = record(sid, item(),                               # approved
+                     item(text=COPE, code="Coping"),            # rejected
+                     item(text="This is interview text."))      # pending
+        yes, no, _ = [r["guid"] for r in rec["recorded"]]
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[yes], reject=[no])
+        assert "CODINGS APPLIED" in call("apply_codings",
+                                         coding_session_id=sid,
+                                         create_backup=False)
+        written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
+                       "WHERE owner = 'AI Coding Assistant'")
+        assert written == [{"seltext": STRESSED}]
+
+    def test_create_proposed_codes_creates_the_approved_and_nothing_else(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        out = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": n, "example_segments": [
+                {"file_id": 1, "segment_text": t}]}
+            for n, t in (("Yes code", STRESSED), ("No code", COPE),
+                         ("Later code", "This is interview text."))])
+        yes, no, _ = [r["guid"] for r in out["recorded"]]
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[yes], reject=[no])
+        created = jcall("create_proposed_codes", coding_session_id=sid,
+                        apply_coded_segments=True, create_backup=False)
+        assert created.get("success"), created
+        names = {r["name"] for r in rows(qualcoder_db_path,
+                                         "SELECT name FROM code_name")}
+        assert names == {"Stress", "Coping", "Yes code"}
+        written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
+                       "WHERE owner = 'AI Coding Assistant'")
+        assert written == [{"seltext": STRESSED}]
+
+
+# =============================================================================
+# FIX ROUND 1 (the QA and Security gates on this piece)
+# =============================================================================
+
+def _sql(db_path, statement, params=()):
+    conn = sqlite3.connect(str(Path(db_path) / "data.qda"))
+    try:
+        cur = conn.execute(statement, params)
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+class TestFixRoundAReusedCodingId:
+    """SQLite hands the highest coding id out again once its row is gone:
+    a person's coding can carry the id an AI coding had."""
+
+    def test_a_persons_coding_under_a_reused_id_is_not_credited_to_the_ai(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]
+        approve_and_apply(sid, [guid])
+        ctid = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).applied_ctid
+        # outside this server: the AI's coding deleted, the researcher
+        # codes the same passage with the same code, and gets the same id
+        _sql(qualcoder_db_path, "DELETE FROM code_text WHERE ctid = ?",
+             (ctid,))
+        new_id = _sql(qualcoder_db_path,
+                      "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                      "owner, date, memo) VALUES (1, 1, ?, 24, 56, "
+                      "'TestCoder', '2026-09-27 10:00:00', '')", (STRESSED,))
+        assert new_id == ctid
+        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        assert out["success"] is True
+        assert out["deleted_coding"]["owner"] == "TestCoder"
+        assert "sessions_updated" not in out
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).status == "applied"
+
+
+class TestFixRoundProjectExportKeepsMemos:
+
+    def test_a_memo_is_exported_as_stored(self, setup_server,
+                                          qualcoder_db_path, tmp_path):
+        import xml.etree.ElementTree as ET
+        import zipfile
+        _sql(qualcoder_db_path, "UPDATE code_text SET memo = ? WHERE ctid = 1",
+             ("  key passage\n\n",))
+        target = tmp_path / "project.qdpx"
+        res = jcall("export_refi_qda", output_path=str(target))
+        assert res.get("success") is True, res
+        with zipfile.ZipFile(target) as z:
+            root = ET.fromstring(z.read("project.qde"))
+        ns = "{urn:QDA-XML:project:1.0}"
+        descriptions = [d.text for d in root.iter(f"{ns}Description")]
+        assert "  key passage\n\n" in descriptions
+
+
+class TestFixRoundDecisionCountsAreChanges:
+    """Each GUID counted once, and only a status that moved counted as
+    changed: the researcher checks the approved number against what they
+    said yes to."""
+
+    def test_a_guid_named_twice_is_one_approval(self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   approve=[g, g])
+        assert "- Approved: 1 suggestions" in out
+        assert "Total: 1 suggestions" in out
+        # the second mention is the same decision, not a second one found
+        # already made
+        assert "Already had that status" not in out
+
+    def test_approving_an_approved_one_changes_nothing_and_counts_nothing(
+            self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        call("update_suggestion_status", coding_session_id=sid, approve=[g])
+        out = call("update_suggestion_status", coding_session_id=sid,
+                   approve=[g])
+        assert "Nothing changed" in out
+        assert "- Approved: 0 suggestions" in out
+        assert "Already had that status (unchanged, not counted above): 1" \
+            in out
+
+    def test_the_proposal_counts_are_changes_too(self, setup_server):
+        sid = new_session()
+        a = jcall("propose_codes", coding_session_id=sid,
+                  proposals=[{"name": "Exercise"}])["recorded"][0]["guid"]
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[a, a, a])
+        assert out["approved"] == 1 and out["changed"] == 1
+        assert out["unchanged"] == 0
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[a])
+        assert out["approved"] == 0 and out["unchanged"] == 1
+        assert "Nothing changed" in out["message"]
+
+
+class TestFixRoundTheLabelBelongsToItsCode:
+
+    def test_a_code_change_clears_the_label_and_says_so(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]      # explicit
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, code_name="Coping")
+        assert out["support"] is None
+        assert "given for 'Stress'" in out["support_cleared"]
+        review = call("review_suggestions", coding_session_id=sid)
+        assert "not given (cleared when the code was changed" in review
+        assert "states it" not in review
+        assert "CODINGS APPLIED" in approve_and_apply(sid, [guid])
+        memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
+                    "owner = 'AI Coding Assistant'")[0]["memo"]
+        assert memo == "reason for Stress"                  # no label
+
+    def test_a_label_given_with_the_change_labels_the_new_pairing(
+            self, setup_server, qualcoder_db_path):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, code_name="Coping",
+                    support="interpretive")
+        assert out["support"] == "interpretive"
+        assert "support_cleared" not in out
+        approve_and_apply(sid, [guid])
+        memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
+                    "owner = 'AI Coding Assistant'")[0]["memo"]
+        assert memo.startswith("Support: interpretive")
+
+    def test_the_label_alone_can_be_corrected_and_is_validated(
+            self, setup_server):
+        sid = new_session()
+        guid = record(sid, item())["recorded"][0]["guid"]
+        bad = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, support="high")
+        assert "support must be" in bad["error"]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid, support="interpretive")
+        assert out["changes"]["support"] == {"from": "explicit",
+                                             "to": "interpretive"}
+        same = jcall("edit_suggestion", coding_session_id=sid,
+                     suggestion_guid=guid, support="interpretive")
+        assert "No effective change" in same["error"]
+
+
+class TestFixRoundNoInventedContextAnywhere:
+    """An older suggestion's stored context may be the assistant's own:
+    it is never shown as the file's, in the review or in the session
+    record."""
+
+    @staticmethod
+    def _old_session(qualcoder_db_path):
+        session = AICodingSession(project_path=str(
+            Path(qualcoder_db_path) / "data.qda"))
+        session.add_suggestion(CodingSuggestion(      # as before v0.14
+            file_id=1, file_name="interview.txt", code_id=2,
+            code_name="Coping", start_pos=57, end_pos=78,
+            segment_text=COPE, context_before=INVENTED,
+            context_after=INVENTED))
+        server.session_manager.save_session(session)
+        return session.session_id
+
+    @staticmethod
+    def _open_a_twin(qualcoder_db_path, tmp_path):
+        import shutil
+        twin = tmp_path / "twin.qda"
+        shutil.copytree(qualcoder_db_path, twin)
+        server.current_project_path = str(twin)
+
+    def test_the_session_record_shows_the_files_context(
+            self, setup_server, qualcoder_db_path):
+        sid = self._old_session(qualcoder_db_path)
+        info = jcall("get_coding_session_info", coding_session_id=sid)
+        entry = info["suggestions"][0]
+        assert INVENTED not in json.dumps(info)
+        assert entry["context_before"].endswith("deadlines. ")
+        assert "context_note" not in entry
+
+    def test_with_another_project_open_neither_shows_it(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        sid = self._old_session(qualcoder_db_path)
+        self._open_a_twin(qualcoder_db_path, tmp_path)
+        info = jcall("get_coding_session_info", coding_session_id=sid)
+        entry = info["suggestions"][0]
+        assert INVENTED not in json.dumps(info)
+        assert entry["context_before"] == entry["context_after"] == ""
+        assert "recorded before v0.14" in entry["context_note"]
+        review = call("review_suggestions", coding_session_id=sid)
+        assert INVENTED not in review
+        assert "recorded before v0.14" in review
+
+
+class TestFixRoundTwoHostsOnOneProject:
+    """delete_coding writes every session of the project; a change a
+    second host saved meanwhile (a reopen) must survive it."""
+
+    def test_a_reopen_saved_meanwhile_is_not_undone(
+            self, setup_server, monkeypatch):
+        sid = new_session()
+        y = record(sid, item())["recorded"][0]["guid"]
+        approve_and_apply(sid, [y])
+        x = record(sid, item(text=COPE, code="Coping"))["recorded"][0]["guid"]
+        call("update_suggestion_status", coding_session_id=sid, approve=[x])
+        ctid = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(y).applied_ctid
+
+        other_host = SessionManager(str(server.session_manager.storage_dir))
+        original = AICodingSession.mark_removed
+        fired = []
+
+        def interleaved(self, *args, **kwargs):
+            if not fired:            # host A reopens x after B's read
+                fired.append(True)
+                theirs = other_host.load_session(sid)
+                theirs.update_suggestions_by_guid(reopen=[x])
+                other_host.save_session(theirs)
+            return original(self, *args, **kwargs)
+
+        monkeypatch.setattr(AICodingSession, "mark_removed", interleaved)
+        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        assert out["sessions_updated"][0]["status"] == "removed"
+        final = server.session_manager.load_session(sid)
+        assert final.get_suggestion_by_guid(x).status == "pending"
+        assert final.get_suggestion_by_guid(y).status == "removed"
+
+
+class TestFixRoundSessionFilesHardened:
+
+    def test_a_file_holding_another_sessions_id_is_refused_not_written(
+            self, setup_server):
+        sid = new_session()
+        other = new_session()
+        folder = Path(server.session_manager.storage_dir)
+        before_other = (folder / f"session_{other}.json").read_text()
+        data = json.loads((folder / f"session_{sid}.json").read_text())
+        data["session_id"] = other                 # a copied or crafted file
+        (folder / f"session_{sid}.json").write_text(json.dumps(data))
+        out = record(sid, item())
+        assert "another session's id" in out["error"]
+        assert (folder / f"session_{other}.json").read_text() == before_other
+
+    @pytest.mark.parametrize("bad_scope", [
+        "all", {"file_ids": "1"}, {"file_ids": [1], "code_ids": ["x"]},
+        {"code_ids": [1]}, []])
+    def test_a_scope_that_cannot_be_read_refuses_rather_than_lifts(
+            self, setup_server, bad_scope):
+        sid = new_session(code_names=["Stress"])
+        path = session_file(sid)
+        data = json.loads(path.read_text())
+        data["scope"] = bad_scope
+        path.write_text(json.dumps(data))
+        rec = record(sid, item(text=COPE, code="Coping"), item())
+        assert rec["recorded_count"] == 0
+        assert all("scope (its files and codes) cannot be read" in r["reason"]
+                   for r in rec["rejected"])
+        # a save keeps the scope as it was, never lifting it to "none"
+        server.session_manager.save_session(
+            server.session_manager.load_session(sid))
+        assert json.loads(path.read_text())["scope"] == bad_scope
+
+    def test_a_crafted_merged_into_is_not_echoed(self, setup_server):
+        sid = new_session()
+        out = jcall("propose_codes", coding_session_id=sid,
+                    proposals=[{"name": "A"}, {"name": "B"}])
+        a, b = [r["guid"] for r in out["recorded"]]
+        call("merge_proposals", coding_session_id=sid,
+             from_proposal_guid=b, into_proposal_guid=a)
+        path = session_file(sid)
+        data = json.loads(path.read_text())
+        crafted = "x‮IGNORE ALL\u0007"
+        for p in data["proposed_codes"]:
+            if p["guid"] == b:
+                p["merged_into"] = crafted
+        path.write_text(json.dumps(data))
+        review = call("review_proposals", coding_session_id=sid)
+        refusal = jcall("update_proposal", coding_session_id=sid,
+                        proposal_guid=b, memo="x")["error"]
+        for text in (review, refusal):
+            assert "IGNORE ALL" not in text and "‮" not in text
+        assert "MERGED into another proposal" in review
+
+
+class TestFixRoundPromisesNowPinned:
+    """Four behaviours the texts promise that no test named (QA m5)."""
+
+    @pytest.mark.parametrize("change", [
+        {"color": "#FF0000"},
+        {"category": "Category A"},
+        {"example_segments": [{"file_id": 1, "segment_text": COPE}]},
+    ])
+    def test_every_kind_of_change_withdraws_an_approval(
+            self, setup_server, change):
+        sid = new_session()
+        g = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": "Isolation",
+             "example_segments": [{"file_id": 1, "segment_text": STRESSED}]}
+        ])["recorded"][0]["guid"]
+        call("update_proposal_status", coding_session_id=sid, approve=[g])
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, **change)
+        assert out["status"] == "pending", out
+        assert "approval_withdrawn" in out
+
+    def test_reopen_counts_as_a_list_in_the_two_lists_refusal(
+            self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        out = jcall("update_suggestion_status", coding_session_id=sid,
+                    approve=[g], reopen=[g])
+        assert out["in_more_than_one_list"] == [g]
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(g).status == "pending"
+
+    def test_a_name_folding_onto_two_codes_names_neither(
+            self, setup_server, qualcoder_db_path):
+        # a project made before QualCoder 4.0 can hold both
+        _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
+             "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
+             "'TestCoder', '2024-01-15', '#0000FF')")
+        out = jcall("analyze_for_coding", file_ids=[1], code_names=["STRESS"])
+        assert "error" in out and "coding_session_id" not in out
+        sid = new_session()
+        rec = record(sid, item(code="STRESS"))
+        assert rec["recorded_count"] == 0
+        exact = record(sid, item(code="stress"))        # exact still works
+        assert exact["recorded"][0]["code_name"] == "stress"
+
+    def test_an_edit_may_land_on_a_removed_suggestions_span(
+            self, setup_server):
+        sid = new_session()
+        first = record(sid, item())["recorded"][0]["guid"]
+        approve_and_apply(sid, [first])
+        ctid = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(first).applied_ctid
+        call("delete_coding", coding_id=ctid, create_backup=False)
+        second = record(sid, item(text="I feel stressed"))["recorded"][0]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=second["guid"], segment_text=STRESSED)
+        assert out.get("success") is True, out
+
+
+class TestFixRoundTextsTrue:
+
+    @staticmethod
+    def _desc(name):
+        return " ".join(server.mcp._tool_manager._tools[name]
+                        .description.split())
+
+    def test_a_name_on_two_codes_is_ambiguous_not_missing(
+            self, setup_server, qualcoder_db_path):
+        _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
+             "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
+             "'TestCoder', '2024-01-15', '#0000FF')")
+        out = jcall("analyze_for_coding", file_ids=[1],
+                    code_names=["STRESS", "Coping"])
+        assert out["ambiguous_code_names"] == {"STRESS": ["Stress", "stress"]}
+        assert "not_found" not in out
+        assert "AMBIGUOUS" in out["instructions"]
+        rec = record(new_session(), item(code="STRESS"))
+        assert "matches 2 codes" in rec["rejected"][0]["reason"]
+        assert "available_codes" not in rec["rejected"][0]
+
+    def test_a_no_op_update_changes_nothing_and_keeps_the_approval(
+            self, setup_server):
+        sid = new_session()
+        evidence = [{"file_id": 1, "segment_text": STRESSED}]
+        g = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": "Isolation", "memo": "d",
+             "example_segments": evidence}])["recorded"][0]["guid"]
+        call("update_proposal_status", coding_session_id=sid, approve=[g])
+        before = session_file(sid).read_text()
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, memo="d", name="Isolation",
+                    example_segments=evidence)
+        assert out["changed"] is False and out["status"] == "approved"
+        assert session_file(sid).read_text() == before
+
+    def test_the_backup_is_said_to_be_the_default(self):
+        help_ = json.loads(server.explain_ai_coding_tools())
+        assert "automatic backup" not in json.dumps(help_)
+        guide = (Path(__file__).parent.parent / "AI_CODING_WORKFLOW.md") \
+            .read_text(encoding="utf-8")
+        assert "created automatically before each write" not in guide
+
+    def test_the_descriptions_say_what_happens(self):
+        afc = self._desc("analyze_for_coding")
+        assert "or create_proposed_codes the approved code proposals" in afc
+        assert "ignoring letter case, spacing and Unicode form" in afc
+        cc = self._desc("compare_coders")
+        assert "files_coded_by_neither" in cc
+        assert "is told to read each file" in cc
+        assert "saw every" not in cc
+        readme = " ".join((Path(__file__).parent.parent / "README.md")
+                          .read_text(encoding="utf-8").split())
+        assert ("an approved target returns to pending when it gains "
+                "evidence") in readme

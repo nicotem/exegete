@@ -56,11 +56,12 @@ class TestT13ImportNormalization:
                                                         qualcoder_db_path):
         json.loads(server.import_text_file(
             "norm2.txt", "alpha\rbeta gamma\r\ndelta", create_backup=False))
-        analyze = server.analyze_for_coding([1])
-        sid = analyze.split("Session ID: `")[1].split("`")[0]
         fid = _sql(qualcoder_db_path,
                    "SELECT id FROM source WHERE name='norm2.txt'")[0]["id"]
-        out = json.loads(server.record_suggestions(sid, [{
+        # the session covers the file coded (v0.14: its scope holds)
+        analyze = server.analyze_for_coding([1, fid])
+        sid = analyze.split("Session ID: `")[1].split("`")[0]
+        out = json.loads(server.record_suggestions(sid, [{"support": "explicit",
             "file_id": fid, "code_name": "Stress",
             "segment_text": "beta gamma",
         }]))

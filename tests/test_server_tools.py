@@ -391,7 +391,7 @@ class TestAnalyzeForCoding:
             instruction="Find stress indicators"
         )
         # Returns formatted text
-        assert "SESSION CREATED" in result
+        assert "SESSION STARTED" in result
         assert "Session ID" in result
 
     def test_invalid_file_ids(self, setup_server):
@@ -409,7 +409,7 @@ class TestAnalyzeForCoding:
 
     def test_all_codes_when_none_specified(self, setup_server):
         result = server.analyze_for_coding(file_ids=[1])
-        assert "SESSION CREATED" in result
+        assert "SESSION STARTED" in result
         # Should use all available codes
         assert "2 codes" in result
 
@@ -479,7 +479,13 @@ class TestUpdateSuggestionStatus:
         result = server.update_suggestion_status(
             session.session_id, approve=["nonexistent-guid"]
         )
+        # v0.14 (the claims audit's item 10): the GUID is named, and the
+        # answer says nothing changed, where it used to read as a
+        # decision recorded
         assert "Approved: 0" in result
+        assert ("Not found in this session (nothing done): "
+                "nonexistent-guid") in result
+        assert "Nothing changed" in result
 
 
 class TestApplyCodings:

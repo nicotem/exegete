@@ -16,6 +16,77 @@ from .database import error_label
 logger = logging.getLogger(__name__)
 
 
+# How the words of a passage carry a suggested code (owner ruling 21,
+# v0.14): a category, never a number. `explicit`: the passage states it;
+# `interpretive`: the assistant is reading into it. A suggestion recorded
+# before v0.14 carried a 0-1 "confidence" instead; it loads with no label
+# (None), and the number is not kept.
+SUPPORT_LABELS = {
+    "explicit": "the passage states it",
+    "interpretive": "the assistant is reading into it",
+}
+
+
+def support_label(value: Any) -> Optional[str]:
+    """The label a value names ('explicit' or 'interpretive'), or None.
+
+    Only a string can name one: a list, a number or a boolean is no label
+    (and a list cannot even be looked up in a dict)."""
+    return value if isinstance(value, str) and value in SUPPORT_LABELS else None
+
+
+def support_in_words(support: Optional[str]) -> Optional[str]:
+    """'explicit (the passage states it)', or None for no label."""
+    label = support_label(support)
+    if label is None:
+        return None
+    return f"{label} ({SUPPORT_LABELS[label]})"
+
+
+def guids_in_more_than_one(*lists: Optional[List[Any]]) -> List[Any]:
+    """GUIDs that appear in more than one of the decision lists, in order.
+
+    A GUID sent to approve and to reject used to be counted as both and
+    end rejected; the decision tools refuse such a call instead."""
+    seen: Dict[Any, set] = {}
+    for index, values in enumerate(lists):
+        for value in (values or []):
+            key = value if isinstance(value, (str, int)) else repr(value)
+            seen.setdefault(key, set()).add(index)
+    return [key for key, where in seen.items() if len(where) > 1]
+
+
+# What the server writes as a proposal's merged_into: a GUID. Anything
+# else in a session file (crafted or damaged) is not echoed (fix round 1).
+_GUID_SHAPE = re.compile(r"^[0-9A-Za-z-]{1,64}$")
+
+
+def unique_in_order(values: Optional[List[Any]]) -> List[Any]:
+    """Each value once, first mention first: a GUID named twice in one
+    list is one decision, and is counted once."""
+    out: List[Any] = []
+    for value in (values or []):
+        if value not in out:
+            out.append(value)
+    return out
+
+
+def memo_with_support(reasoning: str, support: Optional[str]) -> str:
+    """The text an applied suggestion carries in its coding memo, and in a
+    REFI-QDA export's selection description: the support label in words
+    FIRST, then the reason. First, because a reason holding QualCoder's
+    '#####' private marker keeps only what comes before it, and the label
+    must survive that. No label (a pre-v0.14 suggestion, or a coding read
+    back from the project for an export): the text exactly as given, not
+    trimmed, since a project export carries every memo as QualCoder
+    stores it. Never a number (owner ruling 21)."""
+    label = support_in_words(support)
+    if label is None:
+        return reasoning or ""
+    parts = [f"Support: {label}", (reasoning or "").strip()]
+    return "\n\n".join(part for part in parts if part)
+
+
 class CodingSuggestion:
     """Data class for AI-suggested coding with conversational review support."""
 
@@ -29,13 +100,16 @@ class CodingSuggestion:
         end_pos: int,
         segment_text: str,
         reasoning: str = "",
-        confidence: float = 0.0,
+        support: Optional[str] = None,
         status: str = "pending",
         context_before: str = "",
         context_after: str = "",
         guid: Optional[str] = None,
         span_alternatives: Optional[List[Dict[str, Any]]] = None,
-        adjusted: bool = False
+        adjusted: bool = False,
+        applied_ctid: Optional[int] = None,
+        support_cleared: bool = False,
+        context_from_file: bool = False
     ):
         self.file_id = file_id
         self.file_name = file_name
@@ -45,9 +119,21 @@ class CodingSuggestion:
         self.end_pos = end_pos
         self.segment_text = segment_text
         self.reasoning = reasoning  # Why this segment was coded
-        # Clamp confidence to [0.0, 1.0]
-        self.confidence = max(0.0, min(1.0, float(confidence)))
-        self.status = status  # 'pending', 'approved', 'rejected'
+        # 'explicit' | 'interpretive' | None (recorded before v0.14, or a
+        # row read back from the project, which carries no label)
+        self.support = support_label(support)
+        # True when edit_suggestion moved the suggestion to another code
+        # without a new label: the old one was given for the old code, so
+        # it is cleared rather than carried (fix round 1)
+        self.support_cleared = bool(support_cleared) and self.support is None
+        # True once this server took context_before/after from the file
+        # (v0.14 on); before, the assistant could supply them, so an older
+        # suggestion's stored context is not shown when it cannot be
+        # re-read from the file (fix round 1)
+        self.context_from_file = bool(context_from_file)
+        # 'pending', 'approved', 'rejected', 'applied', or 'removed' (it
+        # was applied, then its coding was deleted with delete_coding)
+        self.status = status
         self.context_before = context_before  # Text before for context
         self.context_after = context_after  # Text after for context
         self.guid = guid or str(uuid.uuid4())
@@ -58,6 +144,11 @@ class CodingSuggestion:
         # True once the researcher edited this suggestion (span or code) —
         # review stops offering alternatives on decided-and-adjusted spans
         self.adjusted = bool(adjusted)
+        # The ctid apply_codings wrote (or found) for this suggestion, so
+        # delete_coding can tell the session which suggestion it undid.
+        # None before v0.14 and until the suggestion is applied.
+        self.applied_ctid = (applied_ctid if isinstance(applied_ctid, int)
+                             and not isinstance(applied_ctid, bool) else None)
 
         # For backwards compatibility with old ai_memo field
         self.ai_memo = reasoning
@@ -73,13 +164,16 @@ class CodingSuggestion:
             "end_pos": self.end_pos,
             "segment_text": self.segment_text,
             "reasoning": self.reasoning,
-            "confidence": self.confidence,
+            "support": self.support,
             "status": self.status,
             "context_before": self.context_before,
             "context_after": self.context_after,
             "guid": self.guid,
             "span_alternatives": self.span_alternatives,
-            "adjusted": self.adjusted
+            "adjusted": self.adjusted,
+            "applied_ctid": self.applied_ctid,
+            "support_cleared": self.support_cleared,
+            "context_from_file": self.context_from_file
         }
 
     _REQUIRED_FIELDS = {
@@ -114,13 +208,18 @@ class CodingSuggestion:
             end_pos=data["end_pos"],
             segment_text=data["segment_text"],
             reasoning=reasoning,
-            confidence=data.get("confidence", 0.0),
+            # A pre-v0.14 file carries "confidence" (a number) and no
+            # "support": it loads with no label, and the number is dropped
+            support=data.get("support"),
             status=data.get("status", "pending"),
             context_before=data.get("context_before", ""),
             context_after=data.get("context_after", ""),
             guid=data.get("guid"),
             span_alternatives=data.get("span_alternatives"),
-            adjusted=data.get("adjusted", False)
+            adjusted=data.get("adjusted", False),
+            applied_ctid=data.get("applied_ctid"),
+            support_cleared=data.get("support_cleared", False),
+            context_from_file=data.get("context_from_file", False) is True
         )
 
 
@@ -130,7 +229,10 @@ class ProposedCode:
     Distinct from a CodingSuggestion: a proposal carries a code definition
     (name/colour/category/memo) plus evidence spans, and only becomes a
     real code when the user approves it and create_proposed_codes runs.
-    Status lifecycle: pending -> approved/rejected -> created.
+    Status lifecycle: pending -> approved/rejected -> created; a proposal
+    merged into another is "merged", which is final (v0.14): it can never
+    be approved or created, so its evidence is never written twice. Any
+    change to an approved proposal returns it to pending.
     """
 
     def __init__(
@@ -145,17 +247,22 @@ class ProposedCode:
         collides_with: Optional[str] = None,
         created_code_id: Optional[int] = None,
         guid: Optional[str] = None,
+        merged_into: Optional[str] = None,
     ):
         self.name = name
         self.memo = memo                    # the code definition
         self.rationale = rationale          # why this code emerges
         self.color = color                  # None -> palette pick at creation
         self.category = category            # existing category NAME or None
-        self.status = status                # pending/approved/rejected/created
+        self.status = status        # pending/approved/rejected/created/merged
         self.example_segments = example_segments or []
         self.collides_with = collides_with  # existing code name, if any
         self.created_code_id = created_code_id
         self.guid = guid or str(uuid.uuid4())
+        # the target's GUID, once merged; only that shape is kept, since it
+        # is echoed into the conversation
+        self.merged_into = (merged_into if isinstance(merged_into, str)
+                            and _GUID_SHAPE.match(merged_into) else None)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -169,6 +276,7 @@ class ProposedCode:
             "example_segments": self.example_segments,
             "collides_with": self.collides_with,
             "created_code_id": self.created_code_id,
+            "merged_into": self.merged_into,
         }
 
     @classmethod
@@ -188,6 +296,7 @@ class ProposedCode:
             collides_with=data.get("collides_with"),
             created_code_id=data.get("created_code_id"),
             guid=data.get("guid"),
+            merged_into=data.get("merged_into"),
         )
 
 
@@ -202,10 +311,22 @@ class AICodingSession:
         file_ids: Optional[List[int]] = None,
         code_names: Optional[List[str]] = None,
         instruction: str = "",
-        min_confidence: float = 0.6,
-        ai_coder_name_at_record: Optional[str] = None
+        ai_coder_name_at_record: Optional[str] = None,
+        scope: Optional[Dict[str, Any]] = None
     ):
         self.session_id = session_id or str(uuid.uuid4())
+        # What record_suggestions may record in this session (v0.14, the
+        # claims audit's item 10): {"file_ids": [...], "code_ids": [...] or
+        # None for every code}. None for a session made before v0.14 (or
+        # built directly), whose file_ids and code_names were only ever a
+        # note: those sessions keep that behaviour.
+        self.scope = self._clean_scope(scope)
+        # A scope that is there but cannot be read (a damaged or hand-made
+        # file) fails closed: nothing is recorded into the session, rather
+        # than every limit being lifted as for a session with none (fix
+        # round 1). The raw value is written back unchanged.
+        self.scope_unreadable = scope is not None and self.scope is None
+        self._raw_scope = scope if self.scope_unreadable else None
         # The project's AI coder name AT THE MOMENT the session was
         # created (v0.12, D7 section 7). Suggestions recorded under one
         # name and applied after the researcher changed it are still
@@ -220,7 +341,6 @@ class AICodingSession:
         self.file_ids = file_ids or []
         self.code_names = code_names or []
         self.instruction = instruction
-        self.min_confidence = min_confidence
         self.suggestions: List[CodingSuggestion] = []
         self.proposed_codes: List[ProposedCode] = []
         # Span-affordance bookkeeping (tester-feedback amendment): counts
@@ -230,6 +350,54 @@ class AICodingSession:
             "manual_edits": 0, "shorter_picks": 0, "longer_picks": 0}
         self.created_at = datetime.now().isoformat()
         self.last_modified = self.created_at
+
+    @staticmethod
+    def _clean_scope(scope: Any) -> Optional[Dict[str, Any]]:
+        """A scope read from disk, or None if it is not a well-formed one."""
+        def ids(value):
+            if not isinstance(value, list):
+                return None
+            if not all(isinstance(v, int) and not isinstance(v, bool)
+                       for v in value):
+                return None
+            return list(value)
+        if not isinstance(scope, dict):
+            return None
+        file_ids = ids(scope.get("file_ids"))
+        if file_ids is None:
+            return None
+        code_ids = scope.get("code_ids")
+        if code_ids is not None:
+            code_ids = ids(code_ids)
+            if code_ids is None:
+                return None
+        return {"file_ids": file_ids, "code_ids": code_ids}
+
+    def outside_scope(self, file_id: int,
+                      code_id: Optional[int] = None) -> Optional[str]:
+        """Which part of the scope a file or code falls outside, or None.
+
+        'file' or 'code'; 'unreadable' when the session's scope is there but
+        cannot be read; None when the session has no scope (made before
+        v0.14) or both are inside it. code_id None checks the file only."""
+        if self.scope_unreadable:
+            return "unreadable"
+        if self.scope is None:
+            return None
+        if file_id not in self.scope["file_ids"]:
+            return "file"
+        codes = self.scope["code_ids"]
+        if code_id is not None and codes is not None and code_id not in codes:
+            return "code"
+        return None
+
+    def add_codes_to_scope(self, code_ids: List[int]) -> None:
+        """Codes created from this session's approved proposals join a
+        session limited to named codes, so the loop can apply them."""
+        if self.scope is not None and self.scope["code_ids"] is not None:
+            for cid in code_ids:
+                if cid not in self.scope["code_ids"]:
+                    self.scope["code_ids"].append(cid)
 
     def add_suggestion(self, suggestion: CodingSuggestion):
         """Add a coding suggestion to the session."""
@@ -249,7 +417,8 @@ class AICodingSession:
 
     def proposal_statistics(self) -> Dict[str, int]:
         counts = {"total_proposals": len(self.proposed_codes),
-                  "pending": 0, "approved": 0, "rejected": 0, "created": 0}
+                  "pending": 0, "approved": 0, "rejected": 0, "created": 0,
+                  "merged": 0}
         for p in self.proposed_codes:
             if p.status in counts:
                 counts[p.status] += 1
@@ -259,33 +428,38 @@ class AICodingSession:
         self,
         approve: Optional[List[str]] = None,
         reject: Optional[List[str]] = None
-    ) -> Dict[str, int]:
+    ) -> Dict[str, Any]:
         """Approve/reject proposals. CREATED proposals are immutable
-        (they are already in the codebook) and are skipped, mirroring the
-        applied-immutable rule for suggestions (QA2-2)."""
-        approved_count = rejected_count = skipped_created = 0
-        if approve:
-            for guid in approve:
+        (they are already in the codebook) and MERGED ones are final
+        (v0.14): both are skipped and counted, mirroring the
+        applied-immutable rule for suggestions (QA2-2). GUIDs that name
+        no proposal in this session come back in `not_found`. Each GUID is
+        counted once, and `approved` and `rejected` count only proposals
+        whose status moved; one that already had that status is counted
+        in `unchanged` (fix round 1: the counts are what the researcher
+        checks against what they said). The caller refuses a GUID given
+        in both lists before calling."""
+        counts = {"approved": 0, "rejected": 0, "unchanged": 0,
+                  "skipped_created": 0, "skipped_merged": 0, "changed": 0}
+        not_found: List[Any] = []
+        for guids, status in ((approve, "approved"), (reject, "rejected")):
+            for guid in unique_in_order(guids):
                 p = self.get_proposal_by_guid(guid)
-                if p:
-                    if p.status == "created":
-                        skipped_created += 1
-                        continue
-                    p.status = "approved"
-                    approved_count += 1
-        if reject:
-            for guid in reject:
-                p = self.get_proposal_by_guid(guid)
-                if p:
-                    if p.status == "created":
-                        skipped_created += 1
-                        continue
-                    p.status = "rejected"
-                    rejected_count += 1
-        if approved_count or rejected_count:
+                if p is None:
+                    not_found.append(guid)
+                    continue
+                if p.status in ("created", "merged"):
+                    counts[f"skipped_{p.status}"] += 1
+                    continue
+                if p.status == status:
+                    counts["unchanged"] += 1
+                    continue
+                p.status = status
+                counts[status] += 1
+                counts["changed"] += 1
+        if counts["changed"]:
             self.last_modified = datetime.now().isoformat()
-        return {"approved": approved_count, "rejected": rejected_count,
-                "skipped_created": skipped_created}
+        return {**counts, "not_found": not_found}
 
     def get_suggestions_by_file(self, file_id: int) -> List[CodingSuggestion]:
         """Get all suggestions for a specific file."""
@@ -306,6 +480,7 @@ class AICodingSession:
         rejected = len([s for s in self.suggestions if s.status == "rejected"])
         pending = len([s for s in self.suggestions if s.status == "pending"])
         applied = len([s for s in self.suggestions if s.status == "applied"])
+        removed = len([s for s in self.suggestions if s.status == "removed"])
 
         # By file
         by_file = {}
@@ -327,14 +502,20 @@ class AICodingSession:
             "rejected": rejected,
             "pending": pending,
             "applied": applied,
+            "removed": removed,
             "by_file": by_file,
             "by_code": by_code
         }
 
     def has_duplicate(self, file_id: int, code_id: int,
                       start_pos: int, end_pos: int) -> bool:
-        """Check whether an equivalent suggestion is already in the session."""
+        """Check whether an equivalent suggestion is already in the session.
+
+        A suggestion whose coding was deleted (status "removed") does not
+        count: the same passage can be recorded again after the undo."""
         for s in self.suggestions:
+            if s.status == "removed":
+                continue
             if (s.file_id == file_id and s.code_id == code_id
                     and s.start_pos == start_pos and s.end_pos == end_pos):
                 return True
@@ -355,11 +536,14 @@ class AICodingSession:
             self.last_modified = datetime.now().isoformat()
         return removed
 
-    def mark_applied(self, guids: List[str]) -> int:
+    def mark_applied(self, guids: List[str],
+                     ctids: Optional[Dict[str, int]] = None) -> int:
         """Mark suggestions as applied (written to the database).
 
         Args:
             guids: GUIDs of the suggestions that were written
+            ctids: the coding each one became, by GUID, kept so that
+                   delete_coding can find the suggestion it undoes
 
         Returns:
             Number of suggestions marked
@@ -369,6 +553,8 @@ class AICodingSession:
             sugg = self.get_suggestion_by_guid(guid)
             if sugg is not None:
                 sugg.status = "applied"
+                if ctids and guid in ctids:
+                    sugg.applied_ctid = ctids[guid]
                 count += 1
         if count:
             self.last_modified = datetime.now().isoformat()
@@ -400,55 +586,85 @@ class AICodingSession:
     def update_suggestions_by_guid(
         self,
         approve: Optional[List[str]] = None,
-        reject: Optional[List[str]] = None
-    ) -> Dict[str, int]:
-        """Update multiple suggestions by GUID.
+        reject: Optional[List[str]] = None,
+        reopen: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Approve, reject or reopen suggestions by GUID.
 
-        Suggestions that were already APPLIED to the database are immutable
-        here: re-approving one would undo the double-apply bookkeeping and
-        make the next apply_codings fail wholesale on the duplicate
-        constraint (QA2-2). They are skipped and counted.
-
-        Args:
-            approve: List of GUIDs to approve
-            reject: List of GUIDs to reject
+        Suggestions already APPLIED to the database are immutable here:
+        re-approving one would undo the double-apply bookkeeping and make
+        the next apply_codings fail wholesale on the duplicate constraint
+        (QA2-2). They are skipped and counted. `reopen` returns an
+        approved, rejected or removed suggestion to pending, so it can be
+        edited and decided again (v0.14; before it, nothing could, and
+        edit_suggestion's own advice went in a circle). GUIDs that name no
+        suggestion in this session come back in `not_found`. Each GUID is
+        counted once, and approved, rejected and reopened count only the
+        suggestions whose status moved; one that already had that status
+        is counted in `unchanged` (fix round 1: the researcher checks the
+        approved number against what they said yes to). The caller
+        refuses a GUID given in more than one list before calling.
 
         Returns:
-            Dictionary with counts of approved, rejected, and
-            skipped_applied
+            Counts of approved, rejected, reopened, unchanged,
+            skipped_applied and changed, and the not_found list
         """
-        approved_count = 0
-        rejected_count = 0
-        skipped_applied = 0
-
-        if approve:
-            for guid in approve:
+        counts = {"approved": 0, "rejected": 0, "reopened": 0,
+                  "unchanged": 0, "skipped_applied": 0, "changed": 0}
+        not_found: List[Any] = []
+        for guids, status, key in ((approve, "approved", "approved"),
+                                   (reject, "rejected", "rejected"),
+                                   (reopen, "pending", "reopened")):
+            for guid in unique_in_order(guids):
                 sugg = self.get_suggestion_by_guid(guid)
-                if sugg:
-                    if sugg.status == "applied":
-                        skipped_applied += 1
-                        continue
-                    sugg.status = "approved"
-                    approved_count += 1
-
-        if reject:
-            for guid in reject:
-                sugg = self.get_suggestion_by_guid(guid)
-                if sugg:
-                    if sugg.status == "applied":
-                        skipped_applied += 1
-                        continue
-                    sugg.status = "rejected"
-                    rejected_count += 1
-
-        if approved_count > 0 or rejected_count > 0:
+                if sugg is None:
+                    not_found.append(guid)
+                    continue
+                if sugg.status == "applied":
+                    counts["skipped_applied"] += 1
+                    continue
+                if sugg.status == status:
+                    counts["unchanged"] += 1
+                    continue
+                sugg.status = status
+                counts[key] += 1
+                counts["changed"] += 1
+        if counts["changed"]:
             self.last_modified = datetime.now().isoformat()
+        return {**counts, "not_found": not_found}
 
-        return {
-            "approved": approved_count,
-            "rejected": rejected_count,
-            "skipped_applied": skipped_applied
-        }
+    def mark_removed(self, file_id: int, code_id: int, start_pos: int,
+                     end_pos: int, ctid: int, owner_is_ai: bool) -> List[str]:
+        """The applied suggestions a deleted coding undid: marked removed.
+
+        A suggestion matches when its file, code and span are the deleted
+        row's, the deleted row was written under one of the project's AI
+        coder names, and, where apply_codings recorded the ctid it wrote
+        (v0.14 on), that ctid is the deleted one. The owner is checked in
+        every case: SQLite hands the highest coding id out again once its
+        row is gone, so a person's coding of the same span can carry the
+        id an AI coding had (fix round 1). Deleting a person's coding
+        never touches a suggestion.
+
+        Returns:
+            The GUIDs marked
+        """
+        marked = []
+        for sugg in self.suggestions:
+            if (sugg.status != "applied" or sugg.file_id != file_id
+                    or sugg.code_id != code_id
+                    or sugg.start_pos != start_pos
+                    or sugg.end_pos != end_pos):
+                continue
+            if not owner_is_ai:
+                continue
+            if sugg.applied_ctid is not None and sugg.applied_ctid != ctid:
+                continue
+            sugg.status = "removed"
+            marked.append(sugg.guid)
+        if marked:
+            self.last_modified = datetime.now().isoformat()
+        return marked
 
     def to_dict(self) -> Dict[str, Any]:
         """Export session as dictionary for JSON export."""
@@ -461,7 +677,7 @@ class AICodingSession:
             "file_ids": self.file_ids,
             "code_names": self.code_names,
             "instruction": self.instruction,
-            "min_confidence": self.min_confidence,
+            "scope": self._raw_scope if self.scope_unreadable else self.scope,
             "ai_coder_name_at_record": self.ai_coder_name_at_record,
             "suggestions": [s.to_dict() for s in self.suggestions],
             "proposed_codes": [p.to_dict() for p in self.proposed_codes],
@@ -496,9 +712,12 @@ class AICodingSession:
             file_ids=data.get("file_ids", []),
             code_names=data.get("code_names", []),
             instruction=data.get("instruction", ""),
-            min_confidence=data.get("min_confidence", 0.6),
+            # A pre-v0.14 file's "min_confidence" is read past: it never
+            # filtered anything, and the score it referred to is gone
             # Absent in 0.11 files: no snapshot, so no warning to give
-            ai_coder_name_at_record=data.get("ai_coder_name_at_record")
+            ai_coder_name_at_record=data.get("ai_coder_name_at_record"),
+            # Absent before v0.14: no scope, so nothing is refused
+            scope=data.get("scope")
         )
         session.created_at = data["created_at"]
         session.last_modified = data["last_modified"]
@@ -634,20 +853,56 @@ class SessionManager:
             ValueError: If session ID is not valid UUID4 format
             FileNotFoundError: If session file doesn't exist
         """
+        return self.load_session_and_bytes(session_id)[0]
+
+    def load_session_and_bytes(self, session_id: str):
+        """Load a session and return it with the file's bytes as read.
+
+        One read serves both, so a caller can later tell whether another
+        writer (a second host on the same project) saved the file in the
+        meantime (save_session_if_unchanged). A file whose inner id is not
+        its name is refused: saving it would write the session its inner
+        id names, not the file that was read (fix round 1).
+
+        Raises:
+            ValueError: If the id is not UUID4, or the file holds another id
+            FileNotFoundError: If session file doesn't exist
+        """
         self._validate_session_id(session_id)
         filepath = self.storage_dir / f"session_{session_id}.json"
         if not filepath.exists():
             raise FileNotFoundError(f"Session {session_id} not found at {filepath}")
 
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            raw = filepath.read_bytes()
+            data = json.loads(raw.decode("utf-8"))
             session = AICodingSession.from_dict(data)
+            if session.session_id != session_id:
+                raise ValueError(
+                    f"Session file for {session_id} holds another session's "
+                    f"id; it is refused rather than used or written")
             logger.info(f"Loaded session {session_id}")
-            return session
+            return session, raw
         except Exception as e:
             logger.error(f"Failed to load session {session_id}: {error_label(e)}")
             raise
+
+    def save_session_if_unchanged(self, session: 'AICodingSession',
+                                  raw: bytes) -> bool:
+        """Save only if the file still holds the bytes it was read with.
+
+        False, and nothing written, when another writer saved it since;
+        the caller reads it again and redoes its change on the new copy,
+        so a change made meanwhile (a reopen, say) is not undone. The
+        window left is the one between this comparison and the replace."""
+        filepath = self.storage_dir / f"session_{session.session_id}.json"
+        try:
+            if filepath.read_bytes() != raw:
+                return False
+        except OSError:
+            return False
+        self.save_session(session)
+        return True
 
     def session_exists(self, session_id: str) -> bool:
         """Check if a session file exists.

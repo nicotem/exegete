@@ -190,34 +190,29 @@ suggestion; nothing touches the database until you apply.
 
 **What you'll see:**
 ```
-Suggestion 3:
+Suggestion 3 (GUID: guid-003)
+Status: PENDING
 
-File: interview_002.txt (ID: 2)
+File: interview_002.txt (ID: 2), position 892-1045
+
+Question before it:
+Interviewer: How does a normal working day go for you?
+
+Passage, in its speaker turn (the coded words between ⟦ and ⟧):
+P2: My manager expects immediate responses to everything. ⟦The
+constant interruptions make it impossible to focus on anything. I can
+barely get through my daily tasks without feeling exhausted by the end
+of the day.⟧ Sometimes I wonder if this job is worth the toll.
+
 Code: Workplace Stress (ID: 15)
-Position: 892-1045
-
-Selected Text:
-"The constant interruptions make it impossible to focus on
-anything. I can barely get through my daily tasks without
-feeling exhausted by the end of the day."
-
 Reading: interpretive (the code rests on what the passage implies rather than on what it says)
-
-Reasoning:
-The participant does not name stress; interruptions, inability to
-focus and exhaustion are read as workplace stress.
-
-Context Before:
-"... my manager expects immediate responses to everything.
-There's no time to think deeply about any problem."
-
-Context After:
-"Sometimes I wonder if this job is worth the toll it takes
-on my mental health..."
-
-GUID: guid-003
-Status: pending
+Reason: The participant does not name stress; interruptions, inability
+to focus and exhaustion are read as workplace stress.
 ```
+
+The question and the text around the passage are read from the file
+each time you review; the session file keeps none of it. While another
+project is open, the review shows the passage alone and says why.
 
 ### Step 4: Approve or Reject Suggestions
 

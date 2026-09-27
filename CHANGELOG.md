@@ -766,19 +766,23 @@ search or a silent limit.
 - **A refinement that changes nothing says so.** `update_proposal` with
   values that are already the proposal's own answers `changed: false`,
   writes nothing, and leaves an approval standing.
-- **The text around a suggestion is the file's own.** The context a
-  researcher judges a span by was taken from the assistant when it sent
-  `context_before` or `context_after`, stored unchecked, and shown under
-  "Context Before" as if it were the file. `record_suggestions` now sets
-  those fields aside (and says how many), and `review_suggestions` reads
-  the context from the file when the review is made, so a session from
-  an earlier release shows the file's text too; `get_coding_session_info`
-  shows the same context as the review. When the session's project is
-  not the one open, the context taken from the file at record time is
-  shown and marked as such, and for a suggestion recorded before this
-  release, whose stored context the assistant may have supplied, none is
-  shown and both tools say why; when the file no longer holds the span,
-  no context is shown and the review says why.
+- **The text around a suggestion is the file's own, and is not
+  stored.** The context a researcher judges a span by was taken from the
+  assistant when it sent `context_before` or `context_after`, stored
+  unchecked, and shown under "Context Before" as if it were the file.
+  `record_suggestions` now sets those fields aside (and says how many),
+  and session files keep no surrounding text at all (owner ruling 25):
+  `review_suggestions` reads it from the file each time, and shows each
+  suggestion in the order a researcher reads it: in a transcript the
+  question before the passage (the nearest earlier turn by another
+  speaker that asks something), then the paragraph or speaker turn that
+  holds it, the coded words marked, then the code, the reading and the
+  reason. `get_coding_session_info` gives the same (`question`,
+  `context_before`, `context_after`, `context_unit`). While the
+  session's project is not the one open, or when the file no longer
+  holds the span, no surrounding text is shown and both tools say why;
+  text a session file stored earlier is never shown, and is cut when the
+  session is next saved.
 - **A proposal's approval binds what was approved.** Renaming,
   redefining, recolouring, recategorising or re-evidencing an approved
   proposal (`update_proposal`), or merging evidence into it as a target
@@ -1028,12 +1032,17 @@ The AI coding loop:
   "Nothing changed" and 0 where it said 1. Both answers gain
   `not_found`, and `update_suggestion_status` takes `reopen`.
 - **`record_suggestions` no longer takes `context_before` or
-  `context_after`.** A caller that sends them has them set aside, and
-  the answer counts them (`context_ignored`, with a note); the context
-  shown at review, and by `get_coding_session_info`, is the file's own.
-  For a suggestion recorded by an earlier release, whose stored context
-  the assistant may have written, no context is shown while its project
-  is not the one open.
+  `context_after`, and session files keep no surrounding text.** A
+  caller that sends them has them set aside, and the answer counts them
+  (`context_ignored`, with a note); the text shown at review, and by
+  `get_coding_session_info`, is read from the file each time, and none
+  is shown while the session's project is not the one open. A session
+  file from an earlier release loses its stored `context_before` and
+  `context_after` when it is next saved. The review's layout changed
+  (question, passage in its paragraph or turn, code, reading, reason:
+  "Context Before", "Segment Text" and "AI Reasoning" are gone); a
+  script that parses it needs a look. `get_coding_session_info`'s
+  suggestions gain `question` (when there is one) and `context_unit`.
 - **Changing an approved proposal withdraws the approval.** Approve,
   then rename, redefine, recolour, recategorise or re-evidence it with
   `update_proposal`, or merge evidence into it: it is pending again
@@ -1079,7 +1088,8 @@ The AI coding loop:
   `reading`, and `confidence_ignored` and `context_ignored` when those
   were sent; `analyze_for_coding`: `not_found`,
   `ambiguous_code_names` and `project_memo`; `edit_suggestion`: `reading`,
-  `reading_cleared`, `reason_note`; `get_coding_session_info`: `context_note`, and
+  `reading_cleared`, `reason_note`; `get_coding_session_info`:
+  `context_note`, `question`, `context_unit`, and
   sessions and suggestions carry `scope`, `applied_ctid`,
   `reading_cleared`; `compare_coders`:
   `files_coded_by_one_coder_only` (and its count beyond 50) and

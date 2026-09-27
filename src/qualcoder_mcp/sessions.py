@@ -108,14 +108,11 @@ class CodingSuggestion:
         reasoning: str = "",
         reading: Optional[str] = None,
         status: str = "pending",
-        context_before: str = "",
-        context_after: str = "",
         guid: Optional[str] = None,
         span_alternatives: Optional[List[Dict[str, Any]]] = None,
         adjusted: bool = False,
         applied_ctid: Optional[int] = None,
         reading_cleared: bool = False,
-        context_from_file: bool = False
     ):
         self.file_id = file_id
         self.file_name = file_name
@@ -132,16 +129,13 @@ class CodingSuggestion:
         # without a new label: the old one was given for the old code, so
         # it is cleared rather than carried (fix round 1)
         self.reading_cleared = bool(reading_cleared) and self.reading is None
-        # True once this server took context_before/after from the file
-        # (v0.14 on); before, the assistant could supply them, so an older
-        # suggestion's stored context is not shown when it cannot be
-        # re-read from the file (fix round 1)
-        self.context_from_file = bool(context_from_file)
         # 'pending', 'approved', 'rejected', 'applied', or 'removed' (it
         # was applied, then its coding was deleted with delete_coding)
         self.status = status
-        self.context_before = context_before  # Text before for context
-        self.context_after = context_after  # Text after for context
+        # No surrounding text is kept (owner ruling 25, question 9): the
+        # review reads it from the file when it is shown, and a stored
+        # context_before/context_after from an earlier file is neither
+        # shown nor written back
         self.guid = guid or str(uuid.uuid4())
         # Server-computed ready-made span adjustments (shorter/longer).
         # Presentational only: use_alternative recomputes from the current
@@ -172,14 +166,11 @@ class CodingSuggestion:
             "reasoning": self.reasoning,
             "reading": self.reading,
             "status": self.status,
-            "context_before": self.context_before,
-            "context_after": self.context_after,
             "guid": self.guid,
             "span_alternatives": self.span_alternatives,
             "adjusted": self.adjusted,
             "applied_ctid": self.applied_ctid,
             "reading_cleared": self.reading_cleared,
-            "context_from_file": self.context_from_file
         }
 
     _REQUIRED_FIELDS = {
@@ -221,15 +212,12 @@ class CodingSuggestion:
             reading=(data.get("reading") if "reading" in data
                      else data.get("support")),
             status=data.get("status", "pending"),
-            context_before=data.get("context_before", ""),
-            context_after=data.get("context_after", ""),
             guid=data.get("guid"),
             span_alternatives=data.get("span_alternatives"),
             adjusted=data.get("adjusted", False),
             applied_ctid=data.get("applied_ctid"),
             reading_cleared=(data.get("reading_cleared")
                              or data.get("support_cleared", False)),
-            context_from_file=data.get("context_from_file", False) is True
         )
 
 

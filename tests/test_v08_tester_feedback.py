@@ -81,14 +81,14 @@ class TestF1aEditSpan:
         assert out["changes"]["span"]["to"] == "57-77"
         assert out["segment_text"] == "I cope by exercising"
 
-    def test_context_refreshed(self, setup_server):
+    def test_context_follows_the_new_span(self, setup_server):
+        # v0.14: the text around a passage is read from the file when it
+        # is shown, never stored, so the review follows the edit
         sid = _make_session(setup_server)
         guid = _record_one(sid)
         server.edit_suggestion(sid, guid, segment_text="I cope by exercising")
-        session = server.session_manager.load_session(sid)
-        s = session.get_suggestion_by_guid(guid)
-        assert s.context_before.endswith("deadlines. ")
-        assert s.context_after == FULLTEXT[77:]
+        out = server.review_suggestions(sid, [guid])
+        assert "deadlines. ⟦I cope by exercising⟧." in out
 
     def test_bad_positions_refused(self, setup_server):
         sid = _make_session(setup_server)
@@ -256,7 +256,7 @@ class TestF1bF2Guidance:
         sid = _make_session(setup_server)
         _record_one(sid)
         out = server.review_suggestions(sid)
-        assert "Context Before" in out or "Context After" in out
+        assert "**Passage, in its paragraph**" in out
 
     def test_docstrings_carry_guidance(self):
         analyze_doc = " ".join((server.analyze_for_coding.__doc__ or "").split())
@@ -398,7 +398,9 @@ class TestAmendmentSpanAlternatives:
         entry = out["recorded"][0]
         assert entry["alternatives"] == []
 
-    def test_proposal_evidence_carries_alternatives(self, setup_server):
+    def test_proposal_evidence_carries_no_alternatives(self, setup_server):
+        # v0.14 (owner ruling 25, question 8): no longer stored on
+        # proposal passages, which are suggested one by one after creation
         sid = _make_session(setup_server)
         out = json.loads(server.propose_codes(sid, [{
             "name": "Deadline pressure",
@@ -408,7 +410,7 @@ class TestAmendmentSpanAlternatives:
         guid = out["recorded"][0]["guid"]
         session = server.session_manager.load_session(sid)
         seg = session.get_proposal_by_guid(guid).example_segments[0]
-        assert [a["label"] for a in seg["span_alternatives"]] == ["longer"]
+        assert "span_alternatives" not in seg
 
     def test_preview_truncated_and_flattened(self, setup_server,
                                              qualcoder_db_path):

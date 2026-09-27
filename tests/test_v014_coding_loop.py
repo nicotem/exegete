@@ -138,9 +138,10 @@ class TestTheLabelOnTheWayToTheProject:
         record(sid, item(reading="interpretive"))
         out = call("review_suggestions", coding_session_id=sid)
         quote = out.index(STRESSED)
+        code = out.index("**Code:** Stress")
         label = out.index("**" + INTERPRETIVE.replace(": ", ":** ", 1))
-        reason = out.index("**AI Reasoning:**")
-        assert quote < label < reason
+        reason = out.index("**Reason:** reason for Stress")
+        assert quote < code < label < reason
         assert "Confidence" not in out
 
     def test_the_applied_memo_says_it_in_words_label_first(
@@ -634,6 +635,25 @@ class TestApprovalIsDescribedHonestly:
 INVENTED = "Paul said: I will quit tomorrow because of my manager."
 
 
+def old_session_with_context(qualcoder_db_path, before=INVENTED,
+                             after=INVENTED, **extra):
+    """A session file as an earlier release wrote it: the suggestion
+    carries a stored context_before and context_after (v0.14's fix round
+    2 stores none)."""
+    session = AICodingSession(project_path=str(
+        Path(qualcoder_db_path) / "data.qda"))
+    session.add_suggestion(CodingSuggestion(
+        file_id=1, file_name="interview.txt", code_id=2,
+        code_name="Coping", start_pos=57, end_pos=78, segment_text=COPE))
+    server.session_manager.save_session(session)
+    path = session_file(session.session_id)
+    data = json.loads(path.read_text())
+    data["suggestions"][0].update(context_before=before,
+                                  context_after=after, **extra)
+    path.write_text(json.dumps(data))
+    return session.session_id
+
+
 class TestTheContextIsTheFilesOwn:
 
     def test_a_supplied_context_is_set_aside_and_the_file_shown(
@@ -651,35 +671,24 @@ class TestTheContextIsTheFilesOwn:
 
     def test_an_old_sessions_invented_context_is_replaced_at_review(
             self, setup_server, qualcoder_db_path):
-        session = AICodingSession(project_path=str(
-            Path(qualcoder_db_path) / "data.qda"))
-        session.add_suggestion(CodingSuggestion(
-            file_id=1, file_name="interview.txt", code_id=2,
-            code_name="Coping", start_pos=57, end_pos=78,
-            segment_text=COPE, context_before=INVENTED,
-            context_after=INVENTED))
-        server.session_manager.save_session(session)
-        out = call("review_suggestions", coding_session_id=session.session_id)
+        sid = old_session_with_context(qualcoder_db_path)
+        out = call("review_suggestions", coding_session_id=sid)
         assert INVENTED not in out
         assert "I feel stressed about deadlines. " in out
 
-    def test_another_project_open_shows_the_record_marked_as_such(
+    def test_another_project_open_shows_no_stored_text(
             self, setup_server, qualcoder_db_path, tmp_path):
-        session = AICodingSession(project_path=str(
-            Path(qualcoder_db_path) / "data.qda"))
-        session.add_suggestion(CodingSuggestion(
-            file_id=1, file_name="interview.txt", code_id=2,
-            code_name="Coping", start_pos=57, end_pos=78,
-            segment_text=COPE, context_before="stored before",
-            context_from_file=True))           # taken from the file by v0.14
-        server.session_manager.save_session(session)
+        # fix round 2 (owner ruling 25, question 9): nothing stored is
+        # shown, not even text an earlier v0.14 build took from the file
+        sid = old_session_with_context(qualcoder_db_path, "stored before",
+                                       "", context_from_file=True)
         import shutil
         twin = tmp_path / "twin.qda"
         shutil.copytree(qualcoder_db_path, twin)
         server.current_project_path = str(twin)
-        out = call("review_suggestions", coding_session_id=session.session_id)
-        assert "stored before" in out
-        assert "as recorded; not re-read" in out
+        out = call("review_suggestions", coding_session_id=sid)
+        assert "stored before" not in out
+        assert server.CONTEXT_NOT_SHOWN_NOTE in out
 
     def test_a_span_the_file_no_longer_holds_shows_no_context(
             self, setup_server, qualcoder_db_path):
@@ -699,7 +708,7 @@ class TestTheContextIsTheFilesOwn:
         text = server.mcp._tool_manager._tools["record_suggestions"] \
             .description
         assert "auto-filled" not in text
-        assert "always taken from the file" in " ".join(text.split())
+        assert "at review is read from the file" in " ".join(text.split())
 
 
 # =============================================================================
@@ -1075,15 +1084,7 @@ class TestFixRoundNoInventedContextAnywhere:
 
     @staticmethod
     def _old_session(qualcoder_db_path):
-        session = AICodingSession(project_path=str(
-            Path(qualcoder_db_path) / "data.qda"))
-        session.add_suggestion(CodingSuggestion(      # as before v0.14
-            file_id=1, file_name="interview.txt", code_id=2,
-            code_name="Coping", start_pos=57, end_pos=78,
-            segment_text=COPE, context_before=INVENTED,
-            context_after=INVENTED))
-        server.session_manager.save_session(session)
-        return session.session_id
+        return old_session_with_context(qualcoder_db_path)
 
     @staticmethod
     def _open_a_twin(qualcoder_db_path, tmp_path):
@@ -1109,10 +1110,10 @@ class TestFixRoundNoInventedContextAnywhere:
         entry = info["suggestions"][0]
         assert INVENTED not in json.dumps(info)
         assert entry["context_before"] == entry["context_after"] == ""
-        assert "recorded before v0.14" in entry["context_note"]
+        assert entry["context_note"] == server.CONTEXT_NOT_SHOWN_NOTE
         review = call("review_suggestions", coding_session_id=sid)
         assert INVENTED not in review
-        assert "recorded before v0.14" in review
+        assert server.CONTEXT_NOT_SHOWN_NOTE in review
 
 
 class TestFixRoundTwoHostsOnOneProject:
@@ -1620,10 +1621,19 @@ class TestFixRound2CodesOnly:
     def test_proposal_passages_keep_no_shorter_or_longer_spans(
             self, setup_server):
         sid = new_session()
-        guid = self._approved(sid, [{"file_id": 1,
-                                     "segment_text": STRESSED}])
+        # read straight after each call that stores passages, before any
+        # other call loads and saves the session again
+        guid = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": "Isolation", "example_segments": [
+                {"file_id": 1, "segment_text": COPE}]}])["recorded"][0]["guid"]
         data = json.loads(session_file(sid).read_text())
         (seg,) = data["proposed_codes"][0]["example_segments"]
+        assert "span_alternatives" not in seg
+        jcall("update_proposal", coding_session_id=sid, proposal_guid=guid,
+              example_segments=[{"file_id": 1, "segment_text": STRESSED}])
+        data = json.loads(session_file(sid).read_text())
+        (seg,) = data["proposed_codes"][0]["example_segments"]
+        assert seg["segment_text"] == STRESSED
         assert "span_alternatives" not in seg
         # a session file written earlier loses them when next saved
         seg["span_alternatives"] = [{"kind": "longer", "start": 0,
@@ -1636,3 +1646,115 @@ class TestFixRound2CodesOnly:
             data["proposed_codes"][0]["example_segments"][0]
         assert session.get_proposal_by_guid(guid).example_segments[0][
             "segment_text"] == STRESSED
+
+
+class TestFixRound2TheTextAroundAPassage:
+    """Owner ruling 25, question 9, with the reading's item 20: session
+    files keep no surrounding text; the review reads it from the file and
+    shows the question first, then the passage in its paragraph or
+    speaker turn, then the code, the reading and the reason."""
+
+    TRANSCRIPT = (
+        "Interviewer: Thank you for joining.\n"
+        "P1: Happy to help?\n"
+        "Interviewer: How do the deadlines feel to you?\n"
+        "Interviewer: Take your time.\n"
+        "P1: They pile up. I feel stressed about deadlines every week. "
+        "Then I go running.\n"
+        "Interviewer: And at home?\n")
+    PASSAGE = "I feel stressed about deadlines every week."
+
+    def _transcript_session(self, qualcoder_db_path, text=None):
+        _sql(qualcoder_db_path,
+             "INSERT INTO source (id, name, fulltext, owner, date) VALUES "
+             "(20, 'p1.txt', ?, 'T', '2024-01-01')",
+             (text or self.TRANSCRIPT,))
+        sid = new_session(file_ids=[20])
+        guid = record(sid, item(self.PASSAGE, file_id=20))[
+            "recorded"][0]["guid"]
+        return sid, guid
+
+    def test_session_files_keep_no_surrounding_text(self, setup_server):
+        sid = new_session()
+        record(sid, item())
+        entry = json.loads(session_file(sid).read_text())["suggestions"][0]
+        for key in ("context_before", "context_after", "context_from_file"):
+            assert key not in entry, key
+
+    def test_an_earlier_files_stored_text_is_cut_when_next_saved(
+            self, setup_server, qualcoder_db_path):
+        sid = old_session_with_context(qualcoder_db_path,
+                                       context_from_file=True)
+        guid = server.session_manager.load_session(sid).suggestions[0].guid
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[guid])
+        text = session_file(sid).read_text()
+        assert INVENTED not in text
+        assert "context_from_file" not in text
+
+    def test_the_review_reads_in_the_researchers_order(
+            self, setup_server, qualcoder_db_path):
+        sid, _ = self._transcript_session(qualcoder_db_path)
+        out = call("review_suggestions", coding_session_id=sid)
+        order = [out.index("How do the deadlines feel to you?"),
+                 out.index(f"P1: They pile up. ⟦{self.PASSAGE}⟧ Then I go "
+                           f"running."),
+                 out.index("**Code:** Stress"),
+                 out.index("**Reading:** explicit"),
+                 out.index("**Reason:** reason for Stress")]
+        assert order == sorted(order)
+        assert "**Passage, in its speaker turn**" in out
+        # the nearest earlier turn by another speaker that asks something:
+        # not the same speaker's, not a statement, not an earlier question
+        assert "Take your time." not in out
+        assert "Thank you for joining." not in out
+        assert "Happy to help?" not in out
+        assert "And at home?" not in out
+
+    def test_blank_line_transcripts_too(self, setup_server,
+                                        qualcoder_db_path):
+        sid, _ = self._transcript_session(
+            qualcoder_db_path, self.TRANSCRIPT.replace("\n", "\n\n"))
+        out = call("review_suggestions", coding_session_id=sid)
+        assert "How do the deadlines feel to you?" in out
+        assert "**Passage, in its speaker turn**" in out
+
+    def test_no_question_outside_a_transcript(self, setup_server):
+        sid = new_session()
+        record(sid, item(COPE, "Coping"))
+        out = call("review_suggestions", coding_session_id=sid)
+        assert "Question before it" not in out
+        assert "**Passage, in its paragraph**" in out
+        assert f"deadlines. ⟦{COPE}⟧" in out
+
+    def test_the_session_record_carries_the_same(
+            self, setup_server, qualcoder_db_path):
+        sid, _ = self._transcript_session(qualcoder_db_path)
+        entry = jcall("get_coding_session_info",
+                      coding_session_id=sid)["suggestions"][0]
+        assert entry["question"] == ("Interviewer: How do the deadlines "
+                                     "feel to you?")
+        assert entry["context_before"] == "P1: They pile up. "
+        assert entry["context_after"] == " Then I go running."
+        assert entry["context_unit"] == "speaker turn"
+
+    def test_a_long_paragraph_gives_way_to_a_sentence_either_side(
+            self, setup_server, qualcoder_db_path):
+        filler = "Another sentence of the same long paragraph. " * 40
+        text = f"{filler}They pile up. {self.PASSAGE} Then I go running. " \
+            f"{filler}"
+        sid, _ = self._transcript_session(qualcoder_db_path, text)
+        entry = jcall("get_coding_session_info",
+                      coding_session_id=sid)["suggestions"][0]
+        assert entry["context_unit"] == "one sentence either side"
+        assert entry["context_before"] == "They pile up. "
+        assert entry["context_after"] == " Then I go running."
+
+    def test_the_texts_say_it_is_read_not_stored(self):
+        tools = server.mcp._tool_manager._tools
+        review = " ".join(tools["review_suggestions"].description.split())
+        assert "the question before it (in a transcript), then the " \
+            "paragraph or speaker turn holding the passage" in review
+        assert "read from the file now and never stored" in review
+        edit = " ".join(tools["edit_suggestion"].description.split())
+        assert "context shown by review_suggestions is refreshed" not in edit

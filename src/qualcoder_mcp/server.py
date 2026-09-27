@@ -6514,11 +6514,13 @@ def record_suggestions(
         })
 
     # A call that recorded nothing leaves the session file as it was
-    # (v0.14: a refused suggestion writes nothing). With replace, the
-    # pending suggestions are removed only when something replaces them:
-    # a call whose every item was refused keeps them (fix round 1).
+    # (v0.14: a refused suggestion writes nothing). With replace, a call
+    # whose every item was refused keeps the pending suggestions (fix
+    # round 1); one whose items are in the session already (skipped as
+    # duplicates, not refused) replaces them as before (fix round 2).
     kept_pending = 0
-    if recorded:
+    every_item_refused = len(rejected) == len(suggestions)
+    if recorded or (removed_pending and not every_item_refused):
         session_manager.save_session(session)
     elif removed_pending:
         session = session_manager.load_session(session_id)
@@ -9498,11 +9500,13 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         recorded.append(entry)
 
     # A call that recorded nothing leaves the session file as it was
-    # (v0.14: a refused proposal writes nothing). With replace, the
-    # pending proposals are removed only when something replaces them
-    # (fix round 1).
+    # (v0.14: a refused proposal writes nothing). With replace, a call
+    # whose every item was refused keeps the pending proposals (fix
+    # rounds 1 and 2: the same rule as record_suggestions'; a proposal
+    # already in the session is a refusal here).
     kept_pending = 0
-    if recorded:
+    every_item_refused = len(rejected) == len(proposals)
+    if recorded or (removed_pending and not every_item_refused):
         session_manager.save_session(session)
     elif removed_pending:
         session = session_manager.load_session(session_id)

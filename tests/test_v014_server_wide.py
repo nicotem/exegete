@@ -2324,3 +2324,43 @@ def test_which_folders_are_relative_under_both_platforms_rules(
     from pathlib import PurePosixPath, PureWindowsPath
     assert server.is_relative_folder(text, PureWindowsPath) is windows
     assert server.is_relative_folder(text, PurePosixPath) is posix
+
+
+def test_a_replace_of_items_already_in_the_session_replaces_as_before(
+        tmp_path):
+    """Fix round 2 (the security re-verification's 2): an item already in
+    the session is skipped as a duplicate, not refused, so a replace
+    whose items are all such keeps nothing back: the pending suggestion
+    goes, as it did before fix round 1, and no answer says an item was
+    refused."""
+    server._apply_toolset("lifecycle")
+
+    async def drive(client):
+        async def call(name, args):
+            return body_of(text_of(await client.call_tool(name, args)))
+        ids = await _marker_project(client, tmp_path)
+        session = ids["session"]
+        first = {"file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
+                 "reasoning": "stated"}
+        approved = await call("record_suggestions", {
+            "coding_session_id": session, "suggestions": [first]})
+        await call("update_suggestion_status", {
+            "coding_session_id": session,
+            "approve": [approved["recorded"][0]["guid"]]})
+        await call("record_suggestions", {
+            "coding_session_id": session, "suggestions": [{
+                "file_id": 1, "code_name": "Trust",
+                "segment_text": "Maria Lopez runs the garden.",
+                "reasoning": "r"}]})
+        again = await call("record_suggestions", {
+            "coding_session_id": session, "suggestions": [first],
+            "replace": True})
+        return session, again
+
+    session, again = host_session(drive)
+    assert again["skipped_duplicates"] == 1
+    assert again["rejected"] == []
+    assert again["replaced_pending"] == 1
+    assert "pending_kept" not in again
+    stored = server.session_manager.load_session(session)
+    assert [s.status for s in stored.suggestions] == ["approved"]

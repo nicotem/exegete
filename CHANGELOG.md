@@ -114,7 +114,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   drops it silently; this departs from it because the silent drop
   destroyed notes. A call to `record_suggestions` or `propose_codes`
   that records nothing no longer rewrites the session file; with
-  `replace`, the pending items are kept when every new one is refused;
+  `replace`, the pending items are kept when every new one is refused
+  (items already in the session are skipped, not refused, and replace as
+  before);
   a reasoning, definition or rationale that is not text is refused.
 - `set_memo`'s `target_id` may be left out for the project memo, as its
   text says (it was required by the schema).

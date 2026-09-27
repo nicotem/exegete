@@ -238,6 +238,14 @@ class TestTheExportsAndTheMemoInWords:
         memo = _memos(qualcoder_db_path)[0]
         assert memo == ("Support: interpretive (the assistant is reading "
                         "into it)\n\nread in")
+        # a researcher's edit in QualCoder leaves a trailing line; the
+        # project export carries the memo exactly as stored
+        with closing(sqlite3.connect(
+                str(Path(qualcoder_db_path) / "data.qda"))) as conn:
+            conn.execute("UPDATE code_text SET memo = memo || '\n' WHERE "
+                         "owner = 'AI Coding Assistant'")
+            conn.commit()
+        memo += "\n"
         out = host_json("export_refi_qda",
                         {"output_path": str(tmp_path / "p.qdpx")})
         assert "categories above the exported codes are included" in \

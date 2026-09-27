@@ -370,6 +370,10 @@ search or a silent limit.
   normalisation, for the match and for the count, the same on every
   platform's SQLite, so "strasse" also finds "Straße". QualCoder's own
   searches use `LIKE`; this is a departure in the researcher's favour.
+  The query is folded once per search, a long run of combining marks is
+  put in canonical order first so a crafted text costs linear time, and
+  a note that is not valid in the database's encoding is read with its
+  damaged bytes replaced rather than failing the search.
 - **`search_memos` searches every kind of note.** It read code memos,
   file memos and annotations, three of the twelve places a note lives,
   while its description said "all memos": a word in a coding memo

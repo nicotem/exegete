@@ -1013,7 +1013,7 @@ class TestNonAsciiSpaceAroundANumber:
         assert [r["case_id"] for r in out["results"]] == [1]
         assert out["values_left_out"]["not_numbers"] == 1
 
-    @pytest.mark.parametrize("probe", ["\xa012", "12 "])
+    @pytest.mark.parametrize("probe", ["\xa012", "12\u2003"])
     def test_such_a_probe_is_refused(self, setup_server, probe):
         out = host("query_by_attribute", attr_name="Age", attr_value=probe,
                    operator="gt")
@@ -1030,3 +1030,101 @@ class TestNonAsciiSpaceAroundANumber:
         assert sql(qualcoder_db_path, "SELECT value, CAST(value AS REAL) "
                    "FROM attribute WHERE name = 'Age' AND id = 1"
                    ) == [("12", 12.0)]
+
+
+# ===========================================================================
+# Fix round 1, item 3: the fold is linear on crafted text, folds the query
+# once, and a damaged note does not break a search
+# ===========================================================================
+
+import time  # noqa: E402
+
+CRAFTED = "a" + "\u0315\u0316" * 80_000      # 160,000 marks out of order
+FOLD_CEILING_SECONDS = 2.0
+
+
+@pytest.fixture
+def crafted(setup_server, qualcoder_db_path):
+    """A crafted coded segment, journal entry and attribute value, and
+    200 ordinary coded segments."""
+    folder = qualcoder_db_path
+    sql(folder, "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                "owner, date, memo) VALUES (1, 2, ?, 0, 5, 'TestCoder', "
+                "'2024-01-15', '')", (CRAFTED,))
+    sql(folder, "UPDATE journal SET jentry = ? WHERE jid = 1", (CRAFTED,))
+    sql(folder, "INSERT INTO attribute_type VALUES ('Note', '2024-01-15', "
+                "'TestCoder', '', 'case', 'character')")
+    sql(folder, "INSERT INTO attribute (name, attr_type, value, id, date, "
+                "owner) VALUES ('Note', 'case', ?, 1, '2024-01-15', "
+                "'TestCoder')", (CRAFTED,))
+    conn = sqlite3.connect(str(Path(folder) / "data.qda"))
+    conn.executemany(
+        "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, date, "
+        "memo) VALUES (2, 2, ?, ?, ?, 'TestCoder', '2024-01-15', '')",
+        [(f"ordinary text {i}", 10 + i, 11 + i) for i in range(200)])
+    conn.commit()
+    conn.close()
+    return folder
+
+
+def _timed(tool, **args):
+    started = time.perf_counter()
+    out = host(tool, **args)
+    return out, time.perf_counter() - started
+
+
+class TestTheFoldIsLinearAndSurvivesDamage:
+
+    @pytest.mark.parametrize("tool,args", [
+        ("search_coded_text", {"query": "zzz"}),
+        ("search_memos", {"query": "zzz"}),
+        ("query_by_attribute", {"attr_name": "Note", "attr_value": "zzz",
+                                "operator": "contains"}),
+    ], ids=["coded-text", "memos", "attribute"])
+    def test_a_crafted_row_costs_linear_time(self, crafted, tool, args):
+        out, elapsed = _timed(tool, **args)
+        assert out["results"] == []
+        assert elapsed < FOLD_CEILING_SECONDS, elapsed
+
+    def test_a_crafted_query_is_folded_once(self, crafted):
+        query = "\u0315\u0316" * 4_999
+        out, elapsed = _timed("search_coded_text", query=query)
+        # The crafted segment holds those marks, folded; nothing else does
+        assert out["total_results"] == 1
+        assert elapsed < FOLD_CEILING_SECONDS, elapsed
+
+    def test_the_crafted_text_is_still_found(self, crafted):
+        """Only the cost changes: the marks, folded, are found."""
+        out = host("search_memos", query="A\u0316\u0316")
+        assert [r["type"] for r in out["results"]] == ["journal"]
+
+    DAMAGED = [
+        ("search_coded_text",
+         "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, date, "
+         "memo) VALUES (2, 2, CAST(X'FF42' AS TEXT), 0, 2, 'TestCoder', "
+         "'2024-01-15', '')",
+         {"query": "stressed"}, "text", "I feel stressed about deadlines"),
+        ("search_memos",
+         "UPDATE code_name SET memo = CAST(X'42C328' AS TEXT) WHERE cid = 2",
+         {"query": "test memo"}, "memo", "Test memo"),
+        ("query_by_attribute",
+         "INSERT INTO cases VALUES (2, 'B', '', 'TestCoder', '2024-01-15'); "
+         "INSERT INTO attribute (name, attr_type, value, id, date, owner) "
+         "VALUES ('Age', 'case', CAST(X'FF42' AS TEXT), 2, '2024-01-15', "
+         "'TestCoder')",
+         {"attr_name": "Age", "attr_value": "3", "operator": "contains"},
+         "attribute_value", "30"),
+    ]
+
+    @pytest.mark.parametrize("tool,statements,args,key,expected", DAMAGED,
+                             ids=[d[0] for d in DAMAGED])
+    def test_a_damaged_row_beside_a_matching_one(
+            self, setup_server, qualcoder_db_path, tool, statements, args,
+            key, expected):
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.executescript(statements)
+        conn.commit()
+        conn.close()
+        out = host(tool, **args)
+        assert "error" not in out, out
+        assert [r[key] for r in out["results"]] == [expected]

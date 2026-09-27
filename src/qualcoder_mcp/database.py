@@ -253,38 +253,152 @@ def normalize_name(name: Any) -> str:
     return " ".join(name.split())
 
 
+# A run of more than this many non-starters is put in canonical order
+# before the fold's normalisation (fix round 1, the security gate's
+# E3-S1): UAX #15's stream-safe bound, the pseudonymiser's LONG_RUN.
+LONG_MARK_RUN = 30
+_NFD_RUN_PATTERN: Optional["re.Pattern[str]"] = None
+
+
+def _nfd_run_pattern() -> "re.Pattern[str]":
+    """Runs of more than 30 characters whose canonical decomposition is
+    all non-starters (combining class above 0), as one compiled pattern,
+    built once per process on the first text that is not ASCII.
+
+    The NFD counterpart of the pseudonymiser's `_ordered_runs` pattern,
+    which reads NFKD and so counts compatibility characters (a halfwidth
+    voiced mark) that are starters to NFC. Here a character is in a run
+    only when NFD itself would sort it, so ordering the run in advance
+    is exactly what NFC's own reordering does.
+    """
+    global _NFD_RUN_PATTERN
+    pattern = _NFD_RUN_PATTERN
+    if pattern is None:
+        combining = unicodedata.combining
+        decomposition = unicodedata.decomposition
+        ranges: List[List[int]] = []
+        for code_point in range(0x110000):
+            char = chr(code_point)
+            if combining(char):
+                parts = unicodedata.normalize("NFD", char)
+            else:
+                mapping = decomposition(char)
+                if not mapping or mapping.startswith("<"):
+                    continue
+                parts = unicodedata.normalize("NFD", char)
+            if not all(combining(part) for part in parts):
+                continue
+            if ranges and ranges[-1][1] == code_point - 1:
+                ranges[-1][1] = code_point
+            else:
+                ranges.append([code_point, code_point])
+        cls = "".join(
+            re.escape(chr(low)) if low == high
+            else re.escape(chr(low)) + "-" + re.escape(chr(high))
+            for low, high in ranges)
+        pattern = _NFD_RUN_PATTERN = re.compile(
+            f"[{cls}]{{{LONG_MARK_RUN + 1},}}")
+    return pattern
+
+
+def _order_run(match: "re.Match[str]") -> str:
+    """One long run, decomposed and sorted by combining class, stably:
+    what NFD's canonical reordering does to it."""
+    parts = [part for char in match.group(0)
+             for part in unicodedata.normalize("NFD", char)]
+    parts.sort(key=unicodedata.combining)
+    return "".join(parts)
+
+
+def _ordered_mark_runs(text: str) -> str:
+    """`text` with every run of more than 30 non-starters put in canonical
+    order in advance, so NFC reads it in one pass (fix round 1, E3-S1).
+
+    CPython's canonical reordering inside `unicodedata.normalize` is an
+    insertion sort, quadratic in the length of a run of combining marks
+    out of order: a crafted 64,000-character segment cost a search 3.5
+    seconds, and the server answers nothing else while a search runs.
+    Sorting such a run stably by combining class leaves NFD of the text,
+    and so NFC, exactly as it was (a stable sort of a sequence whose
+    contiguous block is already stably sorted gives the same result);
+    only the cost changes. Ordinary text never has a run of more than a
+    few marks and is returned as it stands.
+    """
+    if text.isascii():
+        return text
+    return _nfd_run_pattern().sub(_order_run, text)
+
+
 def fold_text(text: str) -> str:
     """Text as the case-insensitive searches compare it (v0.14).
 
-    Unicode NFC, then Python's case folding, then NFC again, the fold
-    `documents_name_key` applies to file names: every alphabet's
-    capitals meet their small letters, and "Straße" meets "strasse".
+    Unicode NFC, then Python's case folding (Unicode's default case
+    folding, which is not locale-aware: Turkish dotted and dotless i do
+    not meet i and I, and "ß" meets "ss"), then NFC again, the fold
+    `documents_name_key` applies to file names. Long runs of combining
+    marks are put in canonical order first, so the cost is linear
+    (`_ordered_mark_runs`); ASCII text is lowered directly, which is the
+    same fold.
     """
+    if text.isascii():
+        return text.lower()
     return unicodedata.normalize(
-        "NFC", unicodedata.normalize("NFC", text).casefold())
+        "NFC", unicodedata.normalize(
+            "NFC", _ordered_mark_runs(text)).casefold())
 
 
 def text_contains(haystack: Any, needle: Any) -> bool:
-    """Whether `needle` occurs in `haystack`, letter case ignored in every
-    alphabet (claims audit item 13).
+    """Whether `needle` occurs in `haystack`, letter case ignored by
+    Unicode's default case folding (claims audit item 13).
 
     SQLite's LIKE, which search_coded_text, query_by_attribute's
     'contains' and search_memos used, folds only the 26 ASCII letters:
     "über" did not find "Über", "école" did not find "École". QualCoder's
     own searches use LIKE and share that limit (report_codes.py:1723,
     :1852 at 9bddf17); this is a named departure in the researcher's
-    favour. `%` and `_` are ordinary characters here.
+    favour. `%` and `_` are ordinary characters here. A caller that
+    tests many texts folds the needle once and uses `folded_contains`.
     """
     if not isinstance(haystack, str) or not isinstance(needle, str):
         return False
     return fold_text(needle) in fold_text(haystack)
 
 
-def _sql_text_contains(haystack: Any, needle: Any) -> int:
-    """`text_contains` as a function SQL can call, registered on every
-    connection this module opens as `qc_text_contains`. It runs in this
-    process and changes nothing in the project file."""
-    return 1 if text_contains(haystack, needle) else 0
+def folded_contains(haystack: Any, folded_needle: str) -> bool:
+    """Whether an already folded needle occurs in `haystack`, folded.
+
+    Fix round 1 (E3-S1): the needle used to be folded again for every
+    row, so a crafted 10,000-character query cost seconds per hundred
+    rows; it is folded once by the caller now.
+    """
+    if not isinstance(haystack, str):
+        return False
+    return folded_needle in fold_text(haystack)
+
+
+def _stored_text(value: Any, codec: str) -> Optional[str]:
+    """A stored value as text: bytes decoded with replacement, so a note
+    that is not valid in the database's encoding reads with U+FFFD in
+    place of its damaged bytes rather than failing the whole query (fix
+    round 1, E3-S2)."""
+    if value is None:
+        return None
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value).decode(codec, "replace")
+    return value if isinstance(value, str) else str(value)
+
+
+def _text_contains_function(holder: Dict[str, str]):
+    """The `qc_text_contains(CAST(column AS BLOB), folded_needle)` SQL
+    function for one connection. `holder["codec"]` is the database's text
+    encoding, set once the connection is open. It runs in this process
+    and changes nothing in the project file."""
+    def qc_text_contains(stored: Any, folded_needle: Any) -> int:
+        text = _stored_text(stored, holder.get("codec", "utf-8"))
+        if text is None or not isinstance(folded_needle, str):
+            return 0
+        return 1 if folded_needle in fold_text(text) else 0
+    return qc_text_contains
 
 
 def finite_number(text: Any) -> Optional[float]:
@@ -2672,14 +2786,18 @@ class QualcoderDatabase:
                 self.conn = sqlite3.connect(str(self.db_path), uri=False)
             self.conn.row_factory = sqlite3.Row  # Access columns by name
             # The case-insensitive searches' comparison (v0.14, claims
-            # audit item 13), in Python on every platform's SQLite
+            # audit item 13), in Python on every platform's SQLite. The
+            # column is passed as CAST(... AS BLOB) and decoded here, in
+            # the database's own encoding (read once the schema checks
+            # pass), with replacement (fix round 1, E3-S2)
+            self._text_codec = {"codec": "utf-8"}
+            contains = _text_contains_function(self._text_codec)
             try:
                 self.conn.create_function("qc_text_contains", 2,
-                                          _sql_text_contains,
-                                          deterministic=True)
+                                          contains, deterministic=True)
             except (TypeError, sqlite3.NotSupportedError):
                 self.conn.create_function("qc_text_contains", 2,
-                                          _sql_text_contains)
+                                          contains)
             # Enable foreign key constraints
             self.conn.execute("PRAGMA foreign_keys = ON")
             # Set busy timeout for concurrent access (5 seconds)
@@ -2706,6 +2824,13 @@ class QualcoderDatabase:
 
             # Gate on required columns (older QualCoder schemas lack them)
             self._check_required_columns()
+
+            # The text encoding the search function decodes a blob in
+            try:
+                self._text_codec["codec"] = sqlite_text_codec(
+                    self.conn.execute("PRAGMA encoding").fetchone()[0])
+            except sqlite3.Error:
+                pass
         except BaseException:
             # A refused database is closed at once rather than left to
             # the collector: on Windows an open handle keeps its folder
@@ -4710,8 +4835,8 @@ class QualcoderDatabase:
         coder = self._validate_coder(coder)
         source = self.code_text_source(coder is None)
 
-        where = ["qc_text_contains(ct.seltext, ?)"]
-        params: List[Any] = [query]
+        where = ["qc_text_contains(CAST(ct.seltext AS BLOB), ?)"]
+        params: List[Any] = [fold_text(query)]
         if code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
@@ -4772,8 +4897,8 @@ class QualcoderDatabase:
         query = validate_string(query, "query")
         coder = self._validate_coder(coder)
         source = self.code_text_source(coder is None)
-        where = ["qc_text_contains(ct.seltext, ?)"]
-        params: List[Any] = [query]
+        where = ["qc_text_contains(CAST(ct.seltext AS BLOB), ?)"]
+        params: List[Any] = [fold_text(query)]
         if code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
@@ -5175,6 +5300,7 @@ class QualcoderDatabase:
         """
         query = validate_string(query, "query")
         limit = validate_limit(limit)
+        folded = fold_text(query)   # once, not per row (fix round 1)
 
         results: List[Dict[str, Any]] = []
 
@@ -5211,12 +5337,13 @@ class QualcoderDatabase:
                 prefix = {"coding": "t.", "region_coding": "t.",
                           "av_coding": "t.", "case_link": "t.",
                           "annotation": "a."}.get(kind, "")
-                match = f"qc_text_contains({prefix}{column}, ?)"
+                match = (f"qc_text_contains(CAST({prefix}{column} AS "
+                         f"BLOB), ?)")
                 cursor = self.conn.execute(
-                    sql.format(source=source, match=match), (query,))
+                    sql.format(source=source, match=match), (folded,))
                 for row in cursor:
                     public = extract_ai_memo(row["memo"] or "")
-                    if not text_contains(public, query):
+                    if not folded_contains(public, folded):
                         continue
                     item = {"type": kind}
                     item.update({k: row[k] for k in row.keys()})
@@ -5711,7 +5838,7 @@ class QualcoderDatabase:
     # found "unknown" and "n/a" on a character attribute.
     _ATTRIBUTE_OPERATORS = {
         "equals": "a.value = ?",
-        "contains": "qc_text_contains(a.value, ?)",
+        "contains": "qc_text_contains(CAST(a.value AS BLOB), ?)",
         "gt": None,
         "gte": None,
         "lt": None,
@@ -5795,7 +5922,7 @@ class QualcoderDatabase:
                     f"'{attr_value}'"
                 )
         elif operator == "contains":
-            bound.append(attr_value)
+            bound.append(fold_text(attr_value))
         elif (operator == "equals" and attr_value != ""
               and value_type == "numeric"
               and finite_number(attr_value) is not None):

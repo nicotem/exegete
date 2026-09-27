@@ -21,7 +21,13 @@ from contextlib import closing
 from pathlib import Path
 
 import qualcoder_mcp.server as server
-from test_v014_server_wide import body_of, host_json, host_session, text_of
+import unicodedata
+
+import pytest
+
+from qualcoder_mcp.sessions import AICodingSession, SessionManager
+from test_v014_server_wide import (_folds, body_of, host_json, host_session,
+                                   text_of)
 
 STRESSED = "I feel stressed about deadlines."
 COPE = "I cope by exercising."
@@ -257,3 +263,121 @@ class TestTheExportsAndTheMemoInWords:
         assert memo in described
         assert "confidence" not in z.filename.lower() and not any(
             "confidence" in (d or "").lower() for d in described)
+
+
+class TestDeleteUnderTheOtherSpelling:
+    """One project under two spellings of its path (letter case, Unicode
+    form) is one project for the session's own check and the session
+    list (E2); `delete_coding` takes it the same way when it marks the
+    suggestion a deleted coding came from (merge fix)."""
+
+    TEXT = "Maria said: I feel stressed about deadlines. I cope by walking."
+
+    def _run(self, tmp_path, name, recorded_as, applied_as, deleted_as):
+        server._apply_toolset("lifecycle")
+        projects = tmp_path / "projects"
+        projects.mkdir(parents=True)
+
+        async def drive(client):
+            async def call(tool, args):
+                return body_of(text_of(await client.call_tool(tool, args)))
+            made = await call("create_project", {
+                "name": name, "directory": str(projects),
+                "coder_name": "Researcher"})
+            folder = Path(made["project_path"])
+            spelt = lambda how: str(folder.parent / how(folder.name))
+            await call("set_project_ai_coder_name", {"name": "AI-Test"})
+            await call("import_text_file", {"filename": "int1.txt",
+                                            "content": self.TEXT})
+            await call("create_code", {"name": "Stress"})
+            await call("select_project", {"project_path": spelt(recorded_as)})
+            sid = (await call("analyze_for_coding",
+                              {"file_ids": [1]}))["coding_session_id"]
+            guid = (await call("record_suggestions", {
+                "coding_session_id": sid, "suggestions": [
+                    _item(text="I feel stressed about deadlines.")]})
+                    )["recorded"][0]["guid"]
+            await call("update_suggestion_status",
+                       {"coding_session_id": sid, "approve": [guid]})
+            await call("select_project", {"project_path": spelt(applied_as)})
+            applied = await call("apply_codings", {"coding_session_id": sid,
+                                                   "create_backup": False})
+            ctid = server.session_manager.load_session(sid) \
+                .get_suggestion_by_guid(guid).applied_ctid
+            await call("select_project", {"project_path": spelt(deleted_as)})
+            deleted = await call("delete_coding", {"coding_id": ctid,
+                                                   "create_backup": False})
+            return sid, guid, applied, deleted
+
+        sid, guid, applied, deleted = host_session(drive)
+        assert "CODINGS APPLIED" in str(applied), applied
+        assert deleted["success"] is True, deleted
+        assert deleted["sessions_updated"] == [{
+            "coding_session_id": sid, "suggestion_guids": [guid],
+            "status": "removed"}]
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).status == "removed"
+
+    @staticmethod
+    def _need_folding(tmp_path, first, second, what):
+        if not _folds(tmp_path, first, second):
+            pytest.skip(f"this file system tells {what} apart")
+
+    def test_letter_case_applied_and_deleted_under_the_other(self, tmp_path):
+        self._need_folding(tmp_path, "CaseProbe", "caseprobe", "letter case")
+        same = lambda n: n
+        self._run(tmp_path, "Study", same, str.lower, str.lower)
+
+    def test_letter_case_applied_under_one_deleted_under_the_other(
+            self, tmp_path):
+        self._need_folding(tmp_path, "CaseProbe", "caseprobe", "letter case")
+        same = lambda n: n
+        self._run(tmp_path, "Study", same, same, str.lower)
+
+    def test_unicode_form_applied_and_deleted_under_the_other(self, tmp_path):
+        composed = unicodedata.normalize("NFC", "Zoë")
+        decomposed = unicodedata.normalize("NFD", composed)
+        self._need_folding(tmp_path, composed, decomposed, "Unicode forms")
+        nfc = lambda n: unicodedata.normalize("NFC", n)
+        nfd = lambda n: unicodedata.normalize("NFD", n)
+        self._run(tmp_path, composed, nfc, nfd, nfd)
+        # and recorded decomposed, applied composed, deleted decomposed
+        self._run(tmp_path / "again", composed, nfd, nfc, nfd)
+
+    def test_the_pass_asks_same_project_on_every_platform(
+            self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
+        """Where the disk tells spellings apart the tests above skip, so
+        this one shows on every platform that the pass takes a session's
+        project through SessionManager.same_project: with the comparison
+        answering "the same" for a real second project, that project's
+        session is marked too; answering as it would, it is not."""
+        import shutil
+        sid = _session()
+        guid = _record(sid, _item())["recorded"][0]["guid"]
+        _call_text("update_suggestion_status",
+                   {"coding_session_id": sid, "approve": [guid]})
+        _call_text("apply_codings", {"coding_session_id": sid,
+                                     "create_backup": False})
+        ctid = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(guid).applied_ctid
+        twin = tmp_path / "twin.qda"
+        shutil.copytree(qualcoder_db_path, twin)
+        other = AICodingSession.from_dict(
+            server.session_manager.load_session(sid).to_dict())
+        other.session_id = "0f0f0f0f-0000-4000-8000-00000000abcd"
+        other.project_path = str(twin / "data.qda")
+        server.session_manager.save_session(other)
+        asked = []
+
+        def same(first, second):
+            asked.append((str(first), str(second)))
+            return True
+
+        monkeypatch.setattr(SessionManager, "same_project",
+                            staticmethod(same))
+        out = host_json("delete_coding", {"coding_id": ctid,
+                                          "create_backup": False})
+        marked = {u["coding_session_id"] for u in out["sessions_updated"]}
+        assert marked == {sid, other.session_id}
+        assert any(first.startswith(str(twin.resolve()))
+                   or first.startswith(str(twin)) for first, _ in asked)

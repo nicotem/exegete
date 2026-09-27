@@ -8954,7 +8954,11 @@ def _mark_removed_in_sessions(deleted: Dict[str, Any]) -> List[Dict[str, Any]]:
             entry = None        # only what this attempt found and saved
             try:
                 session, raw = session_manager.load_session_and_bytes(sid)
-                if validate_qda_path(session.project_path) != current:
+                # One project under two spellings (letter case, Unicode
+                # form) is one project, as the session's own check and the
+                # session list take it (merge fix)
+                if not SessionManager.same_project(
+                        validate_qda_path(session.project_path), current):
                     break
             except Exception:
                 break

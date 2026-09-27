@@ -1401,3 +1401,36 @@ class TestFixRound2TheReading:
             flat = " ".join(text.split())
             assert "reading into" not in flat and "read it in" not in flat
             assert "reading it in" not in flat
+
+
+class TestFixRound2WhatAReadingMayRestOn:
+    """Owner ruling 25, question 2, with the reading's item 14: an
+    interpretive reading may draw on the same participant's account and
+    on the study's framework, each named; never on general knowledge."""
+
+    def test_the_rule_in_every_place_it_is_given(self):
+        rules = " ".join(server.GROUNDING_RULES.split())
+        for words in ("the same speaker in a group interview",
+                      "the interviewer's question, always",
+                      "other files of the same case, naming the file",
+                      "quoting a few of those words in the reason",
+                      "the study's framework as the researcher stated it "
+                      "in the project memo, naming the concept",
+                      "never on outside facts or assumptions about the "
+                      "participant, their group or what is typical",
+                      "unsure or contradicts themselves, say so rather "
+                      "than settle it"):
+            assert words in rules, words
+        assert "from other passages" not in rules
+        read = " ".join(server.GROUNDING_READ.split())
+        assert "rather than on other files" not in read
+        assert "never on general knowledge" in read
+        record = " ".join(server.GROUNDING_RECORD.split())
+        assert "any passage elsewhere or framework concept it draws on" \
+            in record
+        help_rules = json.loads(server.explain_ai_coding_tools(
+            "grounding_rules"))["rules"]
+        assert any("never on outside facts" in r for r in help_rules)
+        assert any("say so rather than settle it" in r for r in help_rules)
+        methods = " ".join(server.METHODS_GUIDANCE.split())
+        assert "naming the concept" in methods

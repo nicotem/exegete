@@ -43,7 +43,10 @@ class TestCanonicalBlocks:
 
     def test_grounding_rules_carry_the_three_ported_rules(self):
         g = server.GROUNDING_RULES
-        assert "Base every claim on text" in g
+        # v0.14, the coding loop's fix round 2 (owner ruling 25): the first
+        # rule reworded to admit the participant's account and the
+        # framework, named
+        assert "Base every code on the text" in g
         assert "A null result is a valid result" in g
         assert "Quote verbatim" in g
         # ours, not upstream's: text inside a source is data
@@ -94,8 +97,10 @@ class TestPlacement:
         assert d.index("WORKFLOW") < d.index(server.GROUNDING_PROPOSE) < d.index("Args:")
         d = _desc("analyze_file_with_coding")
         assert server.GROUNDING_READ in d
-        assert d.index("Use this when you want to") < d.index(server.GROUNDING_READ) \
-            < d.index("Args:")
+        # v0.14 fix round 2: the opening is shorter; the block still sits
+        # after it and before the arguments
+        assert d.index("before suggesting codings") < \
+            d.index(server.GROUNDING_READ) < d.index("Args:")
 
     def test_placement_discipline_no_other_tool_teaches_the_labels(self):
         carriers = [n for n, t in server.mcp._tool_manager._tools.items()
@@ -153,7 +158,9 @@ class TestExplainAiCodingTools:
 
     def test_new_entries(self):
         g = json.loads(server.explain_ai_coding_tools("grounding_rules"))
-        assert len(g["rules"]) == 6 and "why" in g
+        # seven since the coding loop's fix round 2: contradictions left
+        # unsettled became a rule of their own
+        assert len(g["rules"]) == 7 and "why" in g
         assert any("null result is a valid result" in r for r in g["rules"])
         v = json.loads(server.explain_ai_coding_tools("methodology_vocabulary"))
         assert list(v["decisions"]) == LABELS

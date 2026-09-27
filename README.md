@@ -837,7 +837,7 @@ Apply the approved codings to the project
 Claude will:
 - Verify every approved suggestion against the project (right project,
   files/codes exist, text matches positions)
-- Create automatic backup
+- Create a backup first (by default)
 - Write approved codings to database (all-or-nothing)
 - Report success with coding IDs
 - Then open the project in QualCoder to see the results (a QualCoder 4.0 window that was already open will not show them until the project is reopened)
@@ -976,7 +976,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 
 **Co-occurrence Analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together
-- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with this server's AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant saw every visible coder's codings before suggesting; do not report it as intercoder reliability
+- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with this server's AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant is told to read each file with `analyze_file_with_coding` before suggesting, which gives it every visible coder's codings; do not report it as intercoder reliability
 
 **Case-Code Matrix & Comparative Analysis:**
 - `get_case_code_matrix(coder)` - Create cross-tabulation of cases vs codes
@@ -1000,7 +1000,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 - `propose_codes(coding_session_id, proposals, replace)` - Record brand-new code proposals discovered in the data
 - `review_proposals(coding_session_id, proposal_guids, show_examples)` - Review proposed codes in detail before deciding
 - `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created; changing an approved proposal returns it to pending, so what is created is what was approved
-- `merge_proposals(coding_session_id, from_proposal_guid, into_proposal_guid)` - Combine two proposals; the source is marked merged, a final status (it can never be approved or created), and an approved target returns to pending
+- `merge_proposals(coding_session_id, from_proposal_guid, into_proposal_guid)` - Combine two proposals; the source is marked merged, a final status (it can never be approved or created), and an approved target returns to pending when it gains evidence (a merge whose spans were all already there changes nothing)
 - `update_proposal_status(coding_session_id, approve, reject)` - Approve or reject proposals; GUIDs not in the session are listed, and a GUID in both lists is refused
 - `create_proposed_codes(coding_session_id, apply_coded_segments, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, optionally writing their evidence spans as codings
 

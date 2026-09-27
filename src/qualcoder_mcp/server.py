@@ -5072,15 +5072,18 @@ def compare_coders(coder_a: Optional[str] = None,
     coder did not code is not a decision: every text file is in scope
     unless you narrow it, so a file one coder never coded counts against
     whatever the other coded there. The result names those files
-    (files_coded_by_one_coder_only); narrow file_ids to the files both
+    (files_coded_by_one_coder_only) and counts the files in scope neither
+    coder coded (files_coded_by_neither: their characters count as agreed
+    "not coded", which raises agreement_pct and kappa_cohen and says
+    nothing about the codes); narrow file_ids to the files both
     worked on.
 
     COMPARING A PERSON WITH THE AI: this server's AI codings in the
     project are the suggestions the person approved (and perhaps edited),
     so their agreement partly counts the person's own judgement twice,
     and the suggestions they rejected are not in the project at all. And
-    before suggesting, the assistant read each file with
-    analyze_file_with_coding, which shows every visible coder's codings
+    the assistant is told to read each file with analyze_file_with_coding
+    before suggesting, which gives it every visible coder's codings
     (every coder QualCoder shows), the person's included unless their
     coder was hidden.
     Such a comparison is not intercoder reliability between independent
@@ -5451,10 +5454,11 @@ def compare_coders(coder_a: Optional[str] = None,
             _coder_role(coder_b, ai_names) == "ai_this_server":
         result["notes"].append(
             "One coder is this server's AI: its codings are the suggestions "
-            "the person approved (and perhaps edited), and the assistant saw "
-            "every visible coder's codings before suggesting. The agreement "
-            "is not between independent coders; do not report it as "
-            "intercoder reliability.")
+            "the person approved (and perhaps edited), and the assistant is "
+            "told to read each file with analyze_file_with_coding before "
+            "suggesting, which gives it every visible coder's codings. The "
+            "agreement is not between independent coders; do not report it "
+            "as intercoder reliability.")
     if clipped_total:
         result["notes"].append(
             f"{clipped_total} coding(s) reach beyond the end of their "
@@ -5684,14 +5688,17 @@ def analyze_for_coding(
     analyze_file_with_coding, record what you find with record_suggestions
     (every excerpt is checked against the file), and present the
     suggestions for the researcher to decide on. Nothing is written to the
-    project until apply_codings.
+    project until apply_codings writes the approved suggestions (or
+    create_proposed_codes the approved code proposals of the session).
 
     SCOPE: record_suggestions refuses a suggestion on a file outside
     file_ids, or, when code_names is given, under a code outside it (codes
     created from this session's approved proposals join it). Code names
-    match exactly, else ignoring letter case, as every other code-name
-    lookup here does. Ids and names that match nothing come back in
-    not_found; tell the researcher rather than dropping them.
+    match exactly, else ignoring letter case, spacing and Unicode form (the
+    rule for code names throughout). Ids and names that match nothing come
+    back in not_found, and a name that matches two codes that way (a
+    project made before QualCoder 4.0 can hold 'Stress' and 'stress') in
+    ambiguous_code_names; tell the researcher rather than dropping them.
 
     MANDATORY QUALCODER CHECK: if the result contains `qualcoder_open: true`,
     STOP and ask the user to close QualCoder (or close this project inside
@@ -5740,7 +5747,8 @@ def analyze_for_coding(
                   file are refused)
         code_names: The codes the session covers (optional; omitted means
                     every code, including codes created later). Matched
-                    exactly, else ignoring letter case
+                    exactly, else ignoring letter case, spacing and
+                    Unicode form
         instruction: Guidance for what to look for in the analysis.
                      Also the place to set span style once per session,
                      e.g. "code generous spans, full paragraphs" or
@@ -5751,6 +5759,7 @@ def analyze_for_coding(
         JSON with coding_session_id; qualcoder_open (with action_required
         when true); qualcoder_gui_signals (with qualcoder_gui_hint when
         any); not_found (file ids and code names that matched nothing);
+        ambiguous_code_names (a name matching two codes, with both);
         files_refused (PDFs with no usable text); and instructions, the
         next steps as text. No suggestion: you record those.
 
@@ -5794,21 +5803,31 @@ def analyze_for_coding(
                 "files_refused": files_refused}, indent=2)
 
     # Codes: matched as record_suggestions matches them (exactly, else
-    # ignoring letter case), and a name that matches nothing is listed
+    # ignoring letter case), and a name that matches nothing is listed;
+    # one that matches two codes that way is listed apart, as ambiguous
+    ambiguous: Dict[str, List[str]] = {}
     if code_names:
         codes_to_use = []
         missing_codes = []
         for name in code_names:
             code = _match_code_name(all_codes, name)
             if code is None:
-                missing_codes.append(name)
+                twins = _code_name_twins(all_codes, name)
+                if twins:
+                    ambiguous[name] = twins
+                else:
+                    missing_codes.append(name)
             elif code not in codes_to_use:
                 codes_to_use.append(code)
         if missing_codes:
             not_found["code_names"] = missing_codes
         if not codes_to_use:
-            return json.dumps({"error": f"No codes found matching: {code_names}",
-                               "not_found": not_found})
+            answer: Dict[str, Any] = {
+                "error": f"No codes found matching: {code_names}",
+                "not_found": not_found}
+            if ambiguous:
+                answer["ambiguous_code_names"] = ambiguous
+            return json.dumps(answer)
     else:
         codes_to_use = all_codes
 
@@ -5866,6 +5885,11 @@ action_required: {action_required}
         not_found_lines = (
             "- NOT FOUND (tell the researcher; the session covers only what "
             "was found): " + json.dumps(not_found) + "\n")
+    if ambiguous:
+        not_found_lines += (
+            "- AMBIGUOUS (each matches two or more codes once letter case, "
+            "spacing and Unicode form are ignored; ask the researcher which "
+            "one, and name it exactly): " + json.dumps(ambiguous) + "\n")
     code_scope = ("only these codes: a suggestion under any other code is "
                   "refused" if code_names else
                   "every code, including codes created later")
@@ -5927,6 +5951,8 @@ Once Claude records and presents suggestions, you can:
     }
     if not_found:
         envelope["not_found"] = not_found
+    if ambiguous:
+        envelope["ambiguous_code_names"] = ambiguous
     if files_refused:
         envelope["files_refused"] = files_refused
     if state == "active":
@@ -5970,6 +5996,23 @@ def _match_code_name(codes: List[Dict[str, Any]], name: Any
     key = name_key(name)
     folded = [c for c in codes if name_key(c["name"]) == key]
     return folded[0] if len(folded) == 1 else None
+
+
+def _code_name_twins(codes: List[Dict[str, Any]], name: Any) -> List[str]:
+    """The codes a name folds onto when it matches none exactly and more
+    than one that way: ambiguous, not missing (fix round 1)."""
+    if not isinstance(name, str) or any(c["name"] == name for c in codes):
+        return []
+    key = name_key(name)
+    folded = [c["name"] for c in codes if name_key(c["name"]) == key]
+    return folded if len(folded) > 1 else []
+
+
+def _ambiguous_code_reason(name: str, twins: List[str]) -> str:
+    return (f"code '{name}' matches {len(twins)} codes once letter case, "
+            f"spacing and Unicode form are ignored "
+            f"({', '.join(repr(t) for t in twins)}); give one of them "
+            f"exactly")
 
 
 def _context_around(fulltext: str, start: int, end: int,
@@ -6312,6 +6355,12 @@ def record_suggestions(
                 continue
         elif item.get("code_name"):
             code = _match_code_name(codes, item["code_name"])
+            twins = (_code_name_twins(codes, item["code_name"])
+                     if code is None else [])
+            if twins:
+                rejected.append({"index": idx, "reason": _ambiguous_code_reason(
+                    str(item["code_name"]), twins)})
+                continue
             if code is None:
                 rejected.append({
                     "index": idx,
@@ -6770,6 +6819,11 @@ def edit_suggestion(
                 return json.dumps({"error": f"code_id {code_id} does not exist"})
         else:
             new_code = _match_code_name(codes, code_name)
+            twins = _code_name_twins(codes, code_name) if new_code is None \
+                else []
+            if twins:
+                return json.dumps({"error": _ambiguous_code_reason(
+                    str(code_name), twins)})
             if new_code is None:
                 return json.dumps({
                     "error": f"code '{code_name}' not found",
@@ -9096,7 +9150,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "researcher said yes to",
                 "step_5": "Apply approved codings to database (apply_codings - "
                           "bound to the session's project, all-or-nothing, "
-                          "automatic backup)",
+                          "a backup first unless create_backup is false)",
                 "step_6": "Recover if needed: delete_coding removes a single "
                           "coding (on projects with the coder-visibility "
                           "capability it refuses a hidden coder's row without "
@@ -9142,9 +9196,11 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                                 "AI is not two independent coders: the AI's "
                                 "codings in the project are the suggestions "
                                 "the person approved (the ones they kept, "
-                                "perhaps edited), and before suggesting, the "
-                                "assistant saw every visible coder's codings "
-                                "(analyze_file_with_coding shows them), so "
+                                "perhaps edited), and the assistant is told "
+                                "to read each file with "
+                                "analyze_file_with_coding before suggesting, "
+                                "which gives it every visible coder's codings, "
+                                "so "
                                 "never report that agreement as intercoder "
                                 "reliability. A character a coder did not "
                                 "code is not a decision: in a file that coder "
@@ -9183,7 +9239,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "Review, then record the researcher's decision on each "
                 "suggestion before applying (the server writes what is "
                 "marked approved; it cannot see who approved it)",
-                "Apply codings directly to Qualcoder database (with automatic backup)",
+                "Apply codings directly to Qualcoder database (with a backup "
+                "first, unless create_backup is false)",
                 "Writes refuse to run while a released QualCoder (3.x) has the "
                 "project open (lock file); an open QualCoder 4.0 window is "
                 "detected only by best-effort heuristics (qualcoder_gui_signals), "
@@ -9737,7 +9794,8 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
     final and is refused. Changing an APPROVED proposal returns it to
     pending (the result says approval_withdrawn): what the researcher
     approved is no longer what would be created, so show it to them
-    again.
+    again. Values that are already the proposal's own change nothing and
+    say so (changed: false); an approval then stands.
 
     Args:
         coding_session_id: The session ID
@@ -9791,21 +9849,24 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
                 "error": f"Another proposal in this session is already named "
                          f"'{new_name}'"
             })
-        changes["name"] = (proposal.name, new_name)
-        proposal.name = new_name
-        proposal.collides_with = _code_name_collisions(new_name)
+        if new_name != proposal.name:
+            changes["name"] = (proposal.name, new_name)
+            proposal.name = new_name
+            proposal.collides_with = _code_name_collisions(new_name)
     color_disclosure: Dict[str, Any] = {}
     if color is not None:
         if not isinstance(color, str) or not re.fullmatch(r"#[0-9A-Fa-f]{6}", color):
             return json.dumps({"error": f"color must be #RRGGBB, got {color!r}"})
         snapped = snap_to_palette(color)
-        changes["color"] = (proposal.color, snapped)
-        proposal.color = snapped
+        if snapped != proposal.color:
+            changes["color"] = (proposal.color, snapped)
+            proposal.color = snapped
         color_disclosure = _color_disclosure(color, snapped)
     if category is not None:
         if category == "":
-            changes["category"] = (proposal.category, None)
-            proposal.category = None
+            if proposal.category is not None:
+                changes["category"] = (proposal.category, None)
+                proposal.category = None
         else:
             cats = get_db().list_categories()
             match = next((c for c in cats
@@ -9815,9 +9876,10 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
                     "error": f"Category '{category}' not found",
                     "available_categories": sorted(c["name"] for c in cats)[:50],
                 })
-            changes["category"] = (proposal.category, match["name"])
-            proposal.category = match["name"]
-    if memo is not None:
+            if match["name"] != proposal.category:
+                changes["category"] = (proposal.category, match["name"])
+                proposal.category = match["name"]
+    if memo is not None and str(memo) != proposal.memo:
         changes["memo"] = ("(previous definition)", memo)
         proposal.memo = str(memo)
     evidence_rejected = []
@@ -9834,15 +9896,30 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
                          "against the file text; evidence unchanged",
                 "evidence_rejected": evidence_rejected,
             })
-        changes["example_segments"] = (
-            f"{len(proposal.example_segments)} span(s)",
-            f"{len(kept)} span(s)")
-        proposal.example_segments = kept
+        def spans(segments):
+            return [(s.get("file_id"), s.get("start_pos"), s.get("end_pos"),
+                     s.get("segment_text")) for s in segments]
+        if spans(kept) != spans(proposal.example_segments):
+            changes["example_segments"] = (
+                f"{len(proposal.example_segments)} span(s)",
+                f"{len(kept)} span(s)")
+            proposal.example_segments = kept
 
-    if not changes:
+    if all(v is None for v in (name, color, category, memo,
+                               example_segments)):
         return json.dumps({"error": "Nothing to change: pass at least one "
                                     "of name/color/category/memo/"
                                     "example_segments"})
+    if not changes:
+        # Every value given is the proposal's own (fix round 1): nothing is
+        # written, and an approval stands, since nothing it covered moved
+        unchanged = _unchanged(
+            f"Nothing changed: every value given is already the proposal's "
+            f"own; its status stays {proposal.status}.",
+            guid=proposal.guid, status=proposal.status)
+        if evidence_rejected:
+            unchanged["evidence_rejected"] = evidence_rejected
+        return json.dumps(unchanged, indent=2)
     # An approval binds what was approved (v0.14, the claims audit's
     # item 1): a renamed, redefined or re-evidenced proposal is not the
     # one the researcher said yes to

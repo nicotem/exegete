@@ -1256,3 +1256,57 @@ class TestFixRoundPromisesNowPinned:
         out = jcall("edit_suggestion", coding_session_id=sid,
                     suggestion_guid=second["guid"], segment_text=STRESSED)
         assert out.get("success") is True, out
+
+
+class TestFixRoundTextsTrue:
+
+    @staticmethod
+    def _desc(name):
+        return " ".join(server.mcp._tool_manager._tools[name]
+                        .description.split())
+
+    def test_a_name_on_two_codes_is_ambiguous_not_missing(
+            self, setup_server, qualcoder_db_path):
+        _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
+             "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
+             "'TestCoder', '2024-01-15', '#0000FF')")
+        out = jcall("analyze_for_coding", file_ids=[1],
+                    code_names=["STRESS", "Coping"])
+        assert out["ambiguous_code_names"] == {"STRESS": ["Stress", "stress"]}
+        assert "not_found" not in out
+        assert "AMBIGUOUS" in out["instructions"]
+        rec = record(new_session(), item(code="STRESS"))
+        assert "matches 2 codes" in rec["rejected"][0]["reason"]
+        assert "available_codes" not in rec["rejected"][0]
+
+    def test_a_no_op_update_changes_nothing_and_keeps_the_approval(
+            self, setup_server):
+        sid = new_session()
+        g = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": "Isolation", "memo": "d"}])["recorded"][0]["guid"]
+        call("update_proposal_status", coding_session_id=sid, approve=[g])
+        before = session_file(sid).read_text()
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, memo="d", name="Isolation")
+        assert out["changed"] is False and out["status"] == "approved"
+        assert session_file(sid).read_text() == before
+
+    def test_the_backup_is_said_to_be_the_default(self):
+        help_ = json.loads(server.explain_ai_coding_tools())
+        assert "automatic backup" not in json.dumps(help_)
+        guide = (Path(__file__).parent.parent / "AI_CODING_WORKFLOW.md") \
+            .read_text(encoding="utf-8")
+        assert "created automatically before each write" not in guide
+
+    def test_the_descriptions_say_what_happens(self):
+        afc = self._desc("analyze_for_coding")
+        assert "or create_proposed_codes the approved code proposals" in afc
+        assert "ignoring letter case, spacing and Unicode form" in afc
+        cc = self._desc("compare_coders")
+        assert "files_coded_by_neither" in cc
+        assert "is told to read each file" in cc
+        assert "saw every" not in cc
+        readme = " ".join((Path(__file__).parent.parent / "README.md")
+                          .read_text(encoding="utf-8").split())
+        assert ("an approved target returns to pending when it gains "
+                "evidence") in readme

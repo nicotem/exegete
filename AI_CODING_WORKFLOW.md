@@ -255,7 +255,7 @@ Apply the approved codings to the project
 ```
 
 **What Claude does:**
-1. Creates automatic backup first
+1. Creates a backup first (by default)
 2. Loops through all approved suggestions
 3. Writes each as a coding to the database
 4. Writes in each coding's memo whether the passage states the code
@@ -578,8 +578,9 @@ Delete sessions older than 30 days
 
 ### Backup Management
 
-Backups are created automatically before each write; there is no tool
-that takes one on request. To keep a separate copy of a project, copy
+Backups are created before each write by default (a call can pass
+`create_backup=false` to skip it); there is no tool that takes one on
+request. To keep a separate copy of a project, copy
 it to the workspace:
 
 **Copy a project to the workspace:**

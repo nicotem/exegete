@@ -322,10 +322,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `edit_suggestion` can move one to); before, a session for one file and
   one code accepted, and would write, a suggestion on any file under any
   code. Codes created from the session's own approved proposals join it.
-  Code names are matched exactly, else ignoring letter case, the rule
-  every other code-name lookup follows ("stress" found nothing before),
-  and a file id or code name that matches nothing is listed in
-  `not_found` instead of being dropped.
+  Code names are matched exactly, else ignoring letter case, spacing
+  and Unicode form, the rule every other code-name lookup follows
+  ("stress" found nothing before), and a file id or code name that
+  matches nothing is listed in `not_found` instead of being dropped. A
+  name that matches two codes that way (a project made before QualCoder
+  4.0 can hold "Stress" and "stress") names neither: it is listed in
+  `ambiguous_code_names` with both, and `record_suggestions` and
+  `edit_suggestion` refuse it saying which two.
 - **A label stays with the code it was given for.** `edit_suggestion`
   takes `support`. Moving a suggestion to another code without it clears
   the label (the review shows "not given (cleared when the code was
@@ -351,6 +355,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reopened and edited, or its passage recorded again (a removed
   suggestion no longer counts as a duplicate). `apply_codings` now keeps
   the coding id each suggestion became, so the match is exact.
+- **A refinement that changes nothing says so.** `update_proposal` with
+  values that are already the proposal's own answers `changed: false`,
+  writes nothing, and leaves an approval standing.
 - **The text around a suggestion is the file's own.** The context a
   researcher judges a span by was taken from the assistant when it sent
   `context_before` or `context_after`, stored unchecked, and shown under
@@ -387,9 +394,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a note to narrow `file_ids`. `compare_coders`' description, the
   help, README and, when one coder is this server's AI, a note in the
   result say that the AI's codings are the suggestions the person
-  approved and that the assistant saw every visible coder's codings
-  before suggesting, so the agreement is not between independent
-  coders and is not intercoder reliability.
+  approved and that the assistant is told to read each file with
+  `analyze_file_with_coding` before suggesting, which gives it every
+  visible coder's codings, so the agreement is not between independent
+  coders and is not intercoder reliability. `files_coded_by_neither` is
+  described too: those characters count as agreed "not coded" and raise
+  `agreement_pct` and `kappa_cohen`.
 - **Two developer scripts removed**: `scripts/test_workflow.py` and
   `scripts/generate_test_export.py`, which built sessions with the
   removed score, wrote into the researcher's own Documents folders, and

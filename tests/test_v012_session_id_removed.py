@@ -41,7 +41,7 @@ class TestSessionIdDuplicateRemoved:
             assert not (props & RESERVED_ARGUMENT_NAMES), (name, props)
 
     def test_session_tool_responses_carry_only_coding_session_id(self, setup_server):
-        env = json.loads(server.analyze_for_coding([1]))
+        env = json.loads(server.analyze_for_coding([1], instruction="test"))
         sid = env["coding_session_id"]
         assert "session_id" not in env
 
@@ -71,7 +71,7 @@ class TestSessionIdDuplicateRemoved:
         assert deleted["coding_session_id"] == sid and "session_id" not in deleted
 
     def test_on_disk_session_format_is_unchanged(self, setup_server, tmp_path):
-        env = json.loads(server.analyze_for_coding([1]))
+        env = json.loads(server.analyze_for_coding([1], instruction="test"))
         sid = env["coding_session_id"]
         path = Path(server.session_manager.storage_dir) / f"session_{sid}.json"
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -376,7 +376,7 @@ class TestNoResponseCarriesSessionId:
         # A real session has to exist, or the not-found envelopes would
         # list nothing and the sweep would pass without seeing the shape
         # that carried the bug.
-        json.loads(server.analyze_for_coding([1]))["coding_session_id"]
+        json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
 
         scanned, envelopes, offenders = set(), set(), []
         excluded = {}
@@ -421,7 +421,7 @@ class TestNoResponseCarriesSessionId:
         self, setup_server, tmp_path
     ):
         """The five envelopes of F1, each one run for real."""
-        real = json.loads(server.analyze_for_coding([1]))["coding_session_id"]
+        real = json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
 
         export_dir = tmp_path / "refi_out"
         export_dir.mkdir()
@@ -456,7 +456,7 @@ class TestNoResponseCarriesSessionId:
         self, setup_server, tmp_path
     ):
         """The manager hands the API key over; the tool just serialises it."""
-        real = json.loads(server.analyze_for_coding([1]))["coding_session_id"]
+        real = json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
         entries = server.session_manager.list_sessions()
         assert [entry["coding_session_id"] for entry in entries] == [real]
         assert all("session_id" not in entry for entry in entries)

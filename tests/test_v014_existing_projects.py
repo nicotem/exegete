@@ -347,10 +347,10 @@ class TestUnusablePdfsInReads:
 class TestUnusablePdfsInCodingTools:
 
     def test_analyze_for_coding_refuses_them_by_name(self, pdf_project):
-        out = json.loads(server.analyze_for_coding([3, 4]))
+        out = json.loads(server.analyze_for_coding([3, 4], instruction="test"))
         assert "error" in out
         assert {f["file_id"] for f in out["files_refused"]} == {3, 4}
-        mixed = json.loads(server.analyze_for_coding([2, 4]))
+        mixed = json.loads(server.analyze_for_coding([2, 4], instruction="test"))
         assert "coding_session_id" in mixed
         assert [f["file_id"] for f in mixed["files_refused"]] == [4]
         assert "scan382.pdf" not in mixed["instructions"]
@@ -358,7 +358,7 @@ class TestUnusablePdfsInCodingTools:
 
     def test_record_suggestions_refuses_them_with_the_way_forward(
             self, pdf_project):
-        sid = json.loads(server.analyze_for_coding([2]))["coding_session_id"]
+        sid = json.loads(server.analyze_for_coding([2], instruction="test"))["coding_session_id"]
         out = json.loads(server.record_suggestions(sid, [
             {"file_id": 4, "code_name": "Stress", "segment_text": "SAMPLE",
              "reasoning": "r", "reading": "explicit"},
@@ -375,7 +375,7 @@ class TestUnusablePdfsInCodingTools:
         assert out["recorded_count"] == 1
 
     def test_proposal_evidence_refuses_them(self, pdf_project):
-        sid = json.loads(server.analyze_for_coding([2]))["coding_session_id"]
+        sid = json.loads(server.analyze_for_coding([2], instruction="test"))["coding_session_id"]
         out = json.loads(server.propose_codes(sid, [
             {"name": "Scanned", "memo": "m", "rationale": "r",
              "example_segments": [{"file_id": 4,
@@ -398,7 +398,7 @@ class TestUnusablePdfsInCodingTools:
         edited after the row turned into a stored PDF file (a restore of
         an older backup, say): refused with the way forward."""
         folder = pdf_project
-        sid = json.loads(server.analyze_for_coding([2]))["coding_session_id"]
+        sid = json.loads(server.analyze_for_coding([2], instruction="test"))["coding_session_id"]
         rec = json.loads(server.record_suggestions(sid, [
             {"file_id": 2, "code_name": "Stress", "segment_text": "Hume",
              "reasoning": "r", "reading": "explicit"}]))
@@ -1334,7 +1334,7 @@ class TestTheSmallerFixes:
         assert "unusable_pdf" not in files[9]
         summary = json.loads(server.get_project_summary())
         assert "error" not in summary, summary
-        session = json.loads(server.analyze_for_coding([1, 8]))
+        session = json.loads(server.analyze_for_coding([1, 8], instruction="test"))
         assert [f["file_id"] for f in session["files_refused"]] == [8]
 
 
@@ -1379,7 +1379,7 @@ class TestTheOtherAdoptions:
 
     def test_a_sessions_project_check(self, configured):
         server.select_project(str(configured))
-        sid = json.loads(server.analyze_for_coding([1]))["coding_session_id"]
+        sid = json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
         server.db.close()
         server.db = None
         server.current_project_path = None

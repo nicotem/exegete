@@ -59,7 +59,7 @@ def _exec(project_path, query, args=()):
 
 def _apply_one(file_id=1, code_name="Stress", start=24, end=55,
                segment=None):
-    out = server.analyze_for_coding([file_id])
+    out = server.analyze_for_coding([file_id], instruction="test")
     sid = out.split("Session ID: `")[1].split("`")[0]
     rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
         "file_id": file_id, "code_name": code_name,
@@ -249,7 +249,7 @@ class TestTextPositions:
         server.switch_project(qualcoder_db_path)
 
         # forward direction: provided U+2029, file has \n -> accepted, \n stored
-        sid = server.analyze_for_coding([75]).split("Session ID: `")[1].split("`")[0]
+        sid = server.analyze_for_coding([75], instruction="test").split("Session ID: `")[1].split("`")[0]
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 75, "code_name": "Stress",
             "start_pos": 5, "end_pos": 13,
@@ -263,7 +263,7 @@ class TestTextPositions:
         assert row["seltext"] == "one\npara"       # stored slice, not the U+2029 form
 
         # reverse direction: provided \n, file has U+2029 -> NOT silently matched
-        sid2 = server.analyze_for_coding([76]).split("Session ID: `")[1].split("`")[0]
+        sid2 = server.analyze_for_coding([76], instruction="test").split("Session ID: `")[1].split("`")[0]
         rec2 = json.loads(server.record_suggestions(sid2, [{"reading": "explicit",
             "file_id": 76, "code_name": "Stress",
             "start_pos": 5, "end_pos": 13,
@@ -276,7 +276,7 @@ class TestTextPositions:
         """P3: end_pos > len(fulltext) refused on the write path."""
         folder = Path(qualcoder_db_path)
         n_backups = len(list(folder.parent.glob(f"{folder.stem}_backup_*.qda")))
-        sid = server.analyze_for_coding([1]).split("Session ID: `")[1].split("`")[0]
+        sid = server.analyze_for_coding([1], instruction="test").split("Session ID: `")[1].split("`")[0]
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 70, "end_pos": len(FULLTEXT) + 5,
@@ -369,7 +369,7 @@ class TestTextPositions:
         assert position_safe(stored) is True   # position-safe from birth
 
         # a coding recorded against the NORMALIZED text round-trips
-        sid = server.analyze_for_coding([out["file_id"]]).split(
+        sid = server.analyze_for_coding([out["file_id"]], instruction="test").split(
             "Session ID: `")[1].split("`")[0]
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": out["file_id"], "code_name": "Stress",

@@ -701,6 +701,31 @@ search or a silent limit.
   4.0 can hold "Stress" and "stress") names neither: it is listed in
   `ambiguous_code_names` with both, and `record_suggestions` and
   `edit_suggestion` refuse it saying which two.
+- **A session starts from the researcher's answers.** Before starting a
+  session the assistant asks three things (owner ruling 25): what to
+  look for, as a lens (the researcher's own codes, topics, people's own
+  words, actions, feelings or values, or other), and whether to point
+  out passages no code fits; how long a coded passage should be (a
+  phrase, whole sentences by default, or a whole answer); and whether a
+  passage may carry more than one code, a second code's reason then
+  saying why both apply. The answers are the session's `instruction`,
+  which is now required: the default "Code all relevant segments" is
+  gone, and a call without one starts nothing and says what to ask.
+  When the researcher is unsure, the assistant offers a short pilot. The
+  texts no longer tell the assistant to prefer long passages
+  ("researchers overwhelmingly widen short spans") or to put several
+  codes on every passage; a pairing the researcher adds at review is
+  looked for elsewhere only after they say yes, and the hint after three
+  picks of a longer or shorter passage asks whether to change the length
+  instead of declaring the default "miscalibrated". The methods notes no
+  longer reframe "code everything", which Saldaña advises for newcomers.
+- **The study, at the start of a session.** `analyze_for_coding`'s
+  answer carries the project memo's public part (`project_memo`), as
+  QualCoder 4.0 hands the memo to its own assistant, with a line asking
+  the assistant to read through it, to name a concept from it when a
+  reading rests on it, and to say what it does not cover; when the memo
+  is empty it says to ask the researcher what the study asks. The
+  private part of the memo is never sent.
 - **A reading stays with the code it was given for.** `edit_suggestion`
   takes `reading`. Moving a suggestion to another code without it
   clears the reading (the review shows "not given (cleared when the
@@ -967,6 +992,10 @@ The AI coding loop:
   suggestions show "not given (recorded before v0.14)" and, once
   applied, their memos carry the reason only. The old number is not
   kept when the session is next saved.
+- **`analyze_for_coding` needs `instruction`.** A call without one, or
+  with a blank one, starts no session and answers an error that names
+  the three questions to ask; the default "Code all relevant segments"
+  is gone.
 - **Memos already in your projects are never rewritten.** A coding
   applied by an earlier release keeps its "[AI Confidence: 0.85]" line;
   remove it in QualCoder if you do not want it in the record.
@@ -1032,8 +1061,8 @@ The AI coding loop:
   code (`reason_note`).
 - **New keys in the answers.** `record_suggestions`: each entry's
   `reading`, and `confidence_ignored` and `context_ignored` when those
-  were sent; `analyze_for_coding`: `not_found` and
-  `ambiguous_code_names`; `edit_suggestion`: `reading`,
+  were sent; `analyze_for_coding`: `not_found`,
+  `ambiguous_code_names` and `project_memo`; `edit_suggestion`: `reading`,
   `reading_cleared`, `reason_note`; `get_coding_session_info`: `context_note`, and
   sessions and suggestions carry `scope`, `applied_ctid`,
   `reading_cleared`; `compare_coders`:

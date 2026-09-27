@@ -853,7 +853,7 @@ class TestRoundTrip:
         child = json.loads(server.create_code(
             "Exercise", parent_code_id=parent["code"]["id"]))
         assert child["created"] is True, child
-        session = server.analyze_for_coding([file_id])
+        session = server.analyze_for_coding([file_id], instruction="test")
         assert session.lstrip().startswith("{"), session[:300]
         sid = json.loads(session)["coding_session_id"]
         recorded = json.loads(server.record_suggestions(sid, [

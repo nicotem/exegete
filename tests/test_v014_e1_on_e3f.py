@@ -35,6 +35,7 @@ COPE = "I cope by exercising."
 
 def _session(**args):
     args.setdefault("file_ids", [1])
+    args.setdefault("instruction", "test")
     return host_json("analyze_for_coding", args)["coding_session_id"]
 
 
@@ -113,7 +114,7 @@ class TestArgumentsRemovedAndAdded:
 
     def test_a_leftover_min_confidence_is_refused_by_name(self, setup_server):
         out = host_json("analyze_for_coding",
-                        {"file_ids": [1], "min_confidence": 0.7})
+                        {"instruction": "test", "file_ids": [1], "min_confidence": 0.7})
         assert "no argument 'min_confidence'" in out["error"]
         assert out["unknown_arguments"] == ["min_confidence"]
         assert server.session_manager.list_sessions() == []
@@ -162,7 +163,7 @@ class TestSessionFilesBothWays:
                                             "content": text})
             await call("create_code", {"name": "Stress"})
             undone = (await call("analyze_for_coding",
-                                 {"file_ids": [1]}))["coding_session_id"]
+                                 {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             guid = (await call("record_suggestions", {
                 "coding_session_id": undone, "suggestions": [
                     _item(text="Maria said: I feel stressed")]})
@@ -176,7 +177,7 @@ class TestSessionFilesBothWays:
             deleted = await call("delete_coding", {"coding_id": ctid,
                                                    "create_backup": False})
             merged = (await call("analyze_for_coding",
-                                 {"file_ids": [1]}))["coding_session_id"]
+                                 {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             proposed = await call("propose_codes", {
                 "coding_session_id": merged, "proposals": [
                     {"name": name, "example_segments": [
@@ -292,7 +293,7 @@ class TestDeleteUnderTheOtherSpelling:
             await call("create_code", {"name": "Stress"})
             await call("select_project", {"project_path": spelt(recorded_as)})
             sid = (await call("analyze_for_coding",
-                              {"file_ids": [1]}))["coding_session_id"]
+                              {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             guid = (await call("record_suggestions", {
                 "coding_session_id": sid, "suggestions": [
                     _item(text="I feel stressed about deadlines.")]})

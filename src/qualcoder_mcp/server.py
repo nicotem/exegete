@@ -220,9 +220,9 @@ uses:
   example, one file cannot show a pattern across cases; a keyword search
   is not a reading).
 - reframe_and_ask: too broad, premature or underspecified (for example,
-  "code everything", "the main themes of the whole dataset", "write up
-  the findings" before any coding); explain the concern, propose a sounder
-  first step, and ask before proceeding.
+  "the main themes of the whole dataset", "write up the findings" before
+  any coding); explain the concern, propose a sounder first step, and ask
+  before proceeding.
 - refuse: would mislead even after reframing (for example, presenting
   coding frequencies as prevalence in a population); decline briefly and
   offer an alternative.
@@ -256,6 +256,18 @@ CONFIDENCE_NOT_TAKEN = (
 READING_NOT_GIVEN = "not given (recorded before v0.14)"
 READING_CLEARED = ("not given (cleared when the code was changed; give one "
                    "with edit_suggestion's reading)")
+# analyze_for_coding without the researcher's answers (owner ruling 25,
+# question 5, with the Saldaña reading's item 17)
+INSTRUCTION_REQUIRED = (
+    "instruction is required, and nothing was started: ask the researcher "
+    "first and pass their answers. (1) What to look for, as a lens: their "
+    "own codes, topics, people's own words, actions, feelings or values, "
+    "or other; and shall you also point out passages no code fits? (2) How "
+    "long a coded passage should be: a phrase, whole sentences (the "
+    "default) or a whole answer. (3) Whether a passage may carry more than "
+    "one code (a second code's reason then says why both apply). If they "
+    "are unsure, offer a short pilot on a few passages, then ask again.")
+
 # Said once, at the review of a session none of whose suggestions has been
 # decided yet (the Saldaña reading, item 13): what the label means, and
 # that its share follows from the lens
@@ -6576,69 +6588,55 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
 def analyze_for_coding(
     file_ids: List[int],
     code_names: Optional[List[str]] = None,
-    instruction: str = "Code all relevant segments",
+    instruction: Optional[str] = None,
 ) -> str:
     """Start an AI coding session for the files and codes the researcher named.
 
-    It reads no file and returns no suggestion. It records the session's
-    scope (the files, and the codes when named) and the instruction, and
-    returns the session id and the next steps: read each file with
-    analyze_file_with_coding, record what you find with record_suggestions
-    (every excerpt is checked against the file), and present the
-    suggestions for the researcher to decide on. Nothing is written to the
-    project until apply_codings writes the approved suggestions (or
-    create_proposed_codes the approved code proposals of the session).
+    BEFORE CALLING, ask the researcher three things and pass the answers
+    as instruction:
+    1. What to look for, as a lens: their own codes, topics, people's own
+       words, actions, feelings or values, or other. Then ask "Shall I
+       also point out passages no code fits?"
+    2. How long a coded passage should be: a phrase (exact, loses
+       context), whole sentences (the default), or a whole answer (keeps
+       context, codes more than the point).
+    3. Whether a passage may carry more than one code; if so, a second
+       code's reason says why both apply.
+    If they are unsure, offer a short pilot on a few passages, then ask
+    again.
 
-    SCOPE: record_suggestions refuses a suggestion on a file outside
-    file_ids, or, when code_names is given, under a code outside it (codes
-    created from this session's approved proposals join it). Code names
-    match exactly, else ignoring letter case, spacing and Unicode form (the
-    rule for code names throughout). Ids and names that match nothing come
-    back in not_found, and a name that matches two codes that way (a
-    project made before QualCoder 4.0 can hold 'Stress' and 'stress') in
-    ambiguous_code_names; tell the researcher rather than dropping them.
+    It reads no file and returns no suggestion. It records the scope and
+    the instruction, and returns the session id, the project memo's public
+    part and the next steps: read each file (analyze_file_with_coding),
+    record suggestions (record_suggestions), present them for the
+    researcher to decide. Nothing is written until apply_codings writes
+    approved suggestions (or create_proposed_codes approved proposals).
 
-    MANDATORY QUALCODER CHECK: if the result contains `qualcoder_open: true`,
-    STOP and ask the user to close QualCoder (or close this project inside
-    it) before proceeding with ANY part of the coding workflow: do not read
-    files for coding, do not record suggestions, do not continue until the
-    user confirms it is closed. All database writes are refused while
-    QualCoder has the project open, so continuing would waste the whole
-    suggest -> review -> approve flow only to fail at apply time. After the
-    user confirms, re-check with get_current_project (its `qualcoder_open`
-    field) and proceed only when it is false.
+    SCOPE: a suggestion on a file outside file_ids, or under a code
+    outside code_names when given, is refused (codes created from the
+    session's proposals join). Code names match exactly, else ignoring
+    letter case, spacing and Unicode form; ids and names matching nothing
+    come back in not_found, a name matching two codes in
+    ambiguous_code_names: tell the researcher.
 
-    `qualcoder_open` comes from QualCoder 3.x's lock file. QualCoder 4.0
-    writes no lock file, so the result also carries `qualcoder_gui_signals`
-    (best-effort heuristics) and, when any are present, a
-    `qualcoder_gui_hint` saying the project APPEARS to be open in
-    QualCoder. That is a heuristic, not a refusal: ASK the user whether a
-    QualCoder window has this project open and continue only when they
-    confirm it does not. An empty list is not proof either (an idle 4.0
-    window leaves no file trace), so when in doubt ask before applying.
+    QUALCODER OPEN: if the result has `qualcoder_open: true`, STOP: ask
+    the user to close the project in QualCoder, re-check with
+    get_current_project, and go on only when it is false. QualCoder 4.0
+    writes no lock file: a `qualcoder_gui_hint` (best-effort signals)
+    means ask whether a window has the project open; an empty list is no
+    proof.
 
-    WORKFLOW:
-    1. You read each file (analyze_file_with_coding) and record your
-       suggestions (record_suggestions)
-    2. You present them in the chat: each quote, whether it is explicit
-       or interpretive, and the reason
-    3. The researcher reviews; edit_suggestion adjusts a span or code
-    4. update_suggestion_status records the researcher's decisions: mark
-       approved only what they said yes to
-    5. apply_codings writes the approved ones
+    WORKFLOW: read each file and record suggestions; present each quote,
+    its reading and its reason; the researcher reviews (edit_suggestion
+    adjusts span, code or reading); update_suggestion_status records
+    their decisions, approved only where they said yes; apply_codings
+    writes the approved ones.
 
-    SPAN STYLE (learned from real researcher use): prefer
-    COMPLETE-THOUGHT spans, a quote that stands alone (a full sentence
-    or small paragraph with enough context to be quotable in a paper),
-    over minimal phrases. Researchers overwhelmingly widen short spans
-    at review time; err generous.
-
-    CO-CODING: actively consider whether each segment warrants MULTIPLE
-    codes. Coding the same span under several codes is normal, expected
-    qualitative practice (the schema supports it; record one
-    suggestion per code). If the researcher adds a second code to a
-    fragment during review, treat that as a calibration signal: look
-    for the same code pairing in subsequent segments.
+    SPAN STYLE: as the instruction says; whole sentences by default.
+    PAIRINGS: a second code on a passage only where the researcher
+    allowed more than one. When they add a second code at review, ask
+    before looking for that pairing elsewhere; a yes permits looking, not
+    applying.
 
     Args:
         file_ids: The files the session covers (suggestions on any other
@@ -6647,11 +6645,9 @@ def analyze_for_coding(
                     every code, including codes created later). Matched
                     exactly, else ignoring letter case, spacing and
                     Unicode form
-        instruction: Guidance for what to look for in the analysis.
-                     Also the place to set span style once per session,
-                     e.g. "code generous spans, full paragraphs" or
-                     "keep spans to single sentences"; honour it in
-                     every suggestion you record.
+        instruction: The researcher's answers to the three questions
+                     (required; there is no default); honour it in every
+                     suggestion you record.
 
     Returns:
         JSON with coding_session_id; project_memo (the memo's public
@@ -6666,6 +6662,11 @@ def analyze_for_coding(
     Example:
         "Suggest codings for files 1-3 with the DATA PRACTICES codes"
     """
+    # The researcher's answers come first (owner ruling 25, question 5):
+    # there is no default instruction
+    if not isinstance(instruction, str) or not instruction.strip():
+        return json.dumps({"error": INSTRUCTION_REQUIRED})
+
     db = get_db()
 
     # Get files and codes
@@ -7146,20 +7147,11 @@ def record_suggestions(
       is rejected with an explanation. start_pos/end_pos may be omitted when
       the excerpt is unique in the file.
 
-    SPAN STYLE: prefer COMPLETE-THOUGHT spans, a full sentence or small
-    paragraph that stands alone as a quotable extract, over minimal
-    phrases. Real researchers consistently widen short spans at review
-    time (edit_suggestion exists for that, but getting it right first
-    saves them the round-trip). If the session's `instruction` set a span
-    style (e.g. "code generous spans"), honour it in every suggestion.
-
-    CO-CODING: for each segment, actively ask whether it warrants MORE
-    THAN ONE code: record one suggestion per code on the same span.
-    Same-span different-code suggestions are legitimate and expected in
-    qualitative work; do not default to one code per fragment. When the
-    researcher adds a second code to a fragment during review, treat it
-    as a calibration signal for the code pairings in your subsequent
-    suggestions.
+    SPAN STYLE: as the session's instruction says; whole sentences by
+    default. PAIRINGS: a second code on the same passage (one suggestion
+    per code) only where the researcher allowed more than one, its reason
+    saying why both apply; a pairing the researcher adds at review is
+    looked for elsewhere only after they say yes.
 
     Args:
         coding_session_id: The session ID from analyze_for_coding
@@ -7474,18 +7466,13 @@ def review_suggestions(
     have supplied, none is shown and the review says why). Use this to examine suggestions before approving/rejecting;
     if a span needs adjusting, edit_suggestion changes it in place.
 
-    SPAN ALTERNATIVES: each pending, not-yet-adjusted suggestion may
-    carry ready-made shorter/longer spans (core sentence / enclosing
-    paragraph or speaker turn). Present them COMPACTLY, as a one-line
-    "want it shorter (1 sentence, 89 chars) or longer (paragraph,
-    412 chars)?" affordance, never full alternative quotes per
-    suggestion (decision fatigue). Surface them proactively only when
-    the researcher has already adjusted spans this session (the
-    calibration signal) or asks about context; otherwise mention once
-    that alternatives exist. One pick applies via
-    edit_suggestion(use_alternative="shorter"|"longer"). Suggestions
-    the researcher already adjusted show "(adjusted)" and get no offers;
-    do not offer to undo their decision.
+    SPAN ALTERNATIVES: a pending, unadjusted suggestion may carry
+    shorter/longer spans (core sentence; paragraph or speaker turn).
+    Offer them in one line ("shorter (1 sentence, 89 chars) or longer
+    (paragraph, 412 chars)?"), never as full quotes; mention them once
+    unless the researcher has been adjusting spans. One pick applies via
+    edit_suggestion(use_alternative=...). An "(adjusted)" suggestion gets
+    no offers.
 
     Args:
         coding_session_id: The session ID from analyze_for_coding
@@ -7936,19 +7923,18 @@ def edit_suggestion(
             key = f"{use_alternative}_picks"
             stats[key] = stats.get(key, 0) + 1
             if stats[key] == 3:
-                fix = ("re-record the remaining suggestions at paragraph "
-                       "level, or set the session instruction to 'code "
-                       "paragraph-level spans'"
-                       if use_alternative == "longer" else
-                       "re-record the remaining suggestions at sentence "
-                       "level, or set the session instruction to 'code "
-                       "tight single-sentence spans'")
+                # The researcher's choice, asked, not assumed (the
+                # Saldaña reading, item 17)
+                wider = use_alternative == "longer"
                 result["calibration_hint"] = (
                     f"That is the third '{use_alternative}' pick this "
-                    f"session; the default span length is miscalibrated. "
-                    f"Offer the session-level fix instead of continuing "
-                    f"per-item picks: {fix}."
-                )
+                    f"session. Ask the researcher whether to change the "
+                    f"passage length for the rest of it ("
+                    + ("whole paragraphs or a whole answer" if wider else
+                       "shorter sentences or a phrase")
+                    + "); if so, start a session with that answer in its "
+                      "instruction, or record the remaining suggestions "
+                      "at that length.")
 
     session.last_modified = datetime.now().isoformat()
     session_manager.save_session(session)
@@ -10385,31 +10371,26 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             ]
         },
         "coding_style_guidance": {
-            "purpose": "How to calibrate span length and multi-coding "
-                       "(learned from real researcher use)",
+            "purpose": "Passage length and more than one code per passage, "
+                       "as the researcher chose them at the start of the "
+                       "session",
             "span_style": [
-                "Prefer complete-thought spans: a full sentence or small "
-                "paragraph that stands alone as a quotable extract, not "
-                "a minimal phrase",
-                "Set the style once per session via analyze_for_coding's "
-                "instruction parameter, e.g. instruction='code generous "
-                "spans, full paragraphs', then honour it in every "
-                "suggestion",
-                "Researchers can widen or narrow any span at review time "
-                "with edit_suggestion; every suggestion carries "
-                "server-computed shorter/longer alternatives applied in "
-                "one call with use_alternative",
-                "Present alternatives compactly (one line, lengths only) "
-                "and proactively only after the researcher has adjusted "
-                "spans in this session, to avoid decision fatigue"
+                "Ask how long a coded passage should be: a phrase, whole "
+                "sentences (the default) or a whole answer; pass the "
+                "answer in analyze_for_coding's instruction and honour it",
+                "Researchers can widen or narrow any span at review with "
+                "edit_suggestion, where shorter and longer alternatives "
+                "exist (use_alternative)",
+                "After three same-direction picks, ask whether to change "
+                "the length for the rest of the session"
             ],
             "co_coding": [
-                "Actively consider MULTIPLE codes per segment: record one "
-                "suggestion per code on the same span; this is normal "
-                "qualitative practice and the schema supports it",
-                "When the researcher adds a second code to a fragment "
-                "during review, treat it as a calibration signal for "
-                "subsequent suggestions"
+                "Ask whether a passage may carry more than one code; only "
+                "then record a second code on it, its reason saying why "
+                "both apply",
+                "A pairing the researcher adds at review is looked for "
+                "elsewhere only after they say yes: a yes permits "
+                "looking, not applying"
             ]
         },
         "grounding_rules": {
@@ -10456,10 +10437,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "and offer an alternative"
             },
             "examples": [
-                {"request": "Code all 40 interviews with every code in the "
-                            "codebook", "decision": "reframe_and_ask",
-                 "response": "Propose coding two or three files first to "
-                             "calibrate spans and code meanings, then widen"},
                 {"request": "What are the main themes in the whole dataset?",
                  "decision": "reframe_and_ask",
                  "response": "Ask what the study's framework expects (inductive "

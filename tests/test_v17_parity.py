@@ -59,7 +59,7 @@ class TestT13ImportNormalization:
         fid = _sql(qualcoder_db_path,
                    "SELECT id FROM source WHERE name='norm2.txt'")[0]["id"]
         # the session covers the file coded (v0.14: its scope holds)
-        analyze = server.analyze_for_coding([1, fid])
+        analyze = server.analyze_for_coding([1, fid], instruction="test")
         sid = analyze.split("Session ID: `")[1].split("`")[0]
         out = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": fid, "code_name": "Stress",

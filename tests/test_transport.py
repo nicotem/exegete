@@ -532,7 +532,7 @@ def test_write_path_approval_flow(write_project):
             sel = await s.call_tool("select_project", {"project_path": write_project})
             assert json.loads(text_of(sel))["success"] is True
 
-            analyze = text_of(await s.call_tool("analyze_for_coding", {"file_ids": [1]}))
+            analyze = text_of(await s.call_tool("analyze_for_coding", {"instruction": "test", "file_ids": [1]}))
             m = re.search(r"Session ID: `([^`]+)`", analyze)
             assert m, f"no session id in analyze output:\n{analyze[:400]}"
             sid = m.group(1)

@@ -140,7 +140,7 @@ class TestNoProjectLoaded:
 
     def test_analyze_for_coding_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
-        data = json.loads(server.analyze_for_coding(file_ids=[1]))
+        data = json.loads(server.analyze_for_coding(file_ids=[1], instruction="test"))
         assert "No Qualcoder project selected" in data["error"]
 
     # Resources
@@ -562,7 +562,7 @@ class TestExpandedErrorLeakage:
         assert "File \"" not in data["error"]
 
     def test_analyze_for_coding_error_no_leakage(self, setup_server):
-        result = server.analyze_for_coding(file_ids=[999])
+        result = server.analyze_for_coding(file_ids=[999], instruction="test")
         data = json.loads(result)
         assert "error" in data
         # Error should describe the problem without leaking paths

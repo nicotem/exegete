@@ -43,7 +43,7 @@ def _counts(project_path):
 
 
 def _make_session(setup_server):
-    out = server.analyze_for_coding([1])
+    out = server.analyze_for_coding([1], instruction="test")
     return out.split("Session ID: `")[1].split("`")[0]
 
 

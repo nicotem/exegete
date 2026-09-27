@@ -395,20 +395,21 @@ class TestAnalyzeForCoding:
         assert "Session ID" in result
 
     def test_invalid_file_ids(self, setup_server):
-        result = server.analyze_for_coding(file_ids=[999])
+        result = server.analyze_for_coding(file_ids=[999], instruction="test")
         data = json.loads(result)
         assert "error" in data
 
     def test_invalid_code_names(self, setup_server):
         result = server.analyze_for_coding(
             file_ids=[1],
-            code_names=["NonexistentCode"]
+            code_names=["NonexistentCode"],
+            instruction="test",
         )
         data = json.loads(result)
         assert "error" in data
 
     def test_all_codes_when_none_specified(self, setup_server):
-        result = server.analyze_for_coding(file_ids=[1])
+        result = server.analyze_for_coding(file_ids=[1], instruction="test")
         assert "SESSION STARTED" in result
         # Should use all available codes
         assert "2 codes" in result

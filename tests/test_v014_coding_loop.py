@@ -60,6 +60,7 @@ def rows(db_path, sql, params=()):
 
 def new_session(**args):
     args.setdefault("file_ids", [1])
+    args.setdefault("instruction", "test")
     return jcall("analyze_for_coding", **args)["coding_session_id"]
 
 
@@ -258,7 +259,7 @@ class TestNoScoreInAnyText:
         assert "confidence" not in server.SERVER_INSTRUCTIONS.lower()
 
     def test_the_session_banner_asks_for_the_label(self, setup_server):
-        text = jcall("analyze_for_coding", file_ids=[1])["instructions"]
+        text = jcall("analyze_for_coding", file_ids=[1], instruction="test")["instructions"]
         assert '"reading": "explicit" or "interpretive"' in text
         assert "confidence" not in text.lower()
 
@@ -302,7 +303,7 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
             .get_suggestion_by_guid(guid).code_name == "Stress"
 
     def test_code_names_match_ignoring_letter_case(self, setup_server):
-        out = jcall("analyze_for_coding", file_ids=[1], code_names=["stress"])
+        out = jcall("analyze_for_coding", file_ids=[1], code_names=["stress"], instruction="test")
         session = server.session_manager.load_session(
             out["coding_session_id"])
         assert session.code_names == ["Stress"]
@@ -310,7 +311,7 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
 
     def test_names_and_ids_that_match_nothing_are_listed(self, setup_server):
         out = jcall("analyze_for_coding", file_ids=[1, 999],
-                    code_names=["Stress", "Nope"])
+                    code_names=["Stress", "Nope"], instruction="test")
         assert out["not_found"] == {"file_ids": [999], "code_names": ["Nope"]}
         assert "NOT FOUND" in out["instructions"]
         session = server.session_manager.load_session(
@@ -319,7 +320,7 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
         assert session.scope == {"file_ids": [1], "code_ids": [1]}
 
     def test_nothing_found_is_an_error_that_names_it(self, setup_server):
-        out = jcall("analyze_for_coding", file_ids=[1], code_names=["Nope"])
+        out = jcall("analyze_for_coding", file_ids=[1], code_names=["Nope"], instruction="test")
         assert "error" in out
         assert out["not_found"] == {"code_names": ["Nope"]}
 
@@ -1239,7 +1240,7 @@ class TestFixRoundPromisesNowPinned:
         _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
              "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
              "'TestCoder', '2024-01-15', '#0000FF')")
-        out = jcall("analyze_for_coding", file_ids=[1], code_names=["STRESS"])
+        out = jcall("analyze_for_coding", file_ids=[1], code_names=["STRESS"], instruction="test")
         assert "error" in out and "coding_session_id" not in out
         sid = new_session()
         rec = record(sid, item(code="STRESS"))
@@ -1274,7 +1275,7 @@ class TestFixRoundTextsTrue:
              "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
              "'TestCoder', '2024-01-15', '#0000FF')")
         out = jcall("analyze_for_coding", file_ids=[1],
-                    code_names=["STRESS", "Coping"])
+                    code_names=["STRESS", "Coping"], instruction="test")
         assert out["ambiguous_code_names"] == {"STRESS": ["Stress", "stress"]}
         assert "not_found" not in out
         assert "AMBIGUOUS" in out["instructions"]
@@ -1306,7 +1307,8 @@ class TestFixRoundTextsTrue:
 
     def test_the_descriptions_say_what_happens(self):
         afc = self._desc("analyze_for_coding")
-        assert "or create_proposed_codes the approved code proposals" in afc
+        # shortened in fix round 2 to pay for the three questions
+        assert "or create_proposed_codes approved proposals" in afc
         assert "ignoring letter case, spacing and Unicode form" in afc
         cc = self._desc("compare_coders")
         assert "files_coded_by_neither" in cc
@@ -1434,3 +1436,114 @@ class TestFixRound2WhatAReadingMayRestOn:
         assert any("say so rather than settle it" in r for r in help_rules)
         methods = " ".join(server.METHODS_GUIDANCE.split())
         assert "naming the concept" in methods
+
+
+class TestFixRound2StartingASession:
+    """Owner ruling 25, question 5, with the reading's items 17 and 18: the
+    researcher's three answers are the session's instruction; there is no
+    default, no preference for long passages, and a pairing is looked for
+    elsewhere only after a yes."""
+
+    @pytest.mark.parametrize("instruction", [None, "", "   \n"])
+    def test_without_the_answers_nothing_is_started(self, setup_server,
+                                                     instruction):
+        before = set(Path(server.session_manager.storage_dir).glob("*.json"))
+        args = {"file_ids": [1]}
+        if instruction is not None:
+            args["instruction"] = instruction
+        out = jcall("analyze_for_coding", **args)
+        assert out == {"error": server.INSTRUCTION_REQUIRED}
+        assert "nothing was started" in out["error"]
+        for words in ("What to look for", "How long a coded passage should "
+                      "be", "more than one code", "pilot"):
+            assert words in out["error"], words
+        after = set(Path(server.session_manager.storage_dir).glob("*.json"))
+        assert after == before
+
+    def test_the_answers_are_kept_as_given(self, setup_server):
+        sid = new_session(instruction="feelings; whole answers; one code")
+        session = server.session_manager.load_session(sid)
+        assert session.instruction == "feelings; whole answers; one code"
+
+    def test_the_description_asks_the_three_questions(self):
+        tool = server.mcp._tool_manager._tools["analyze_for_coding"]
+        text = " ".join(tool.description.split())
+        for words in ("BEFORE CALLING, ask the researcher three things",
+                      "their own codes, topics, people's own words, "
+                      "actions, feelings or values, or other",
+                      '"Shall I also point out passages no code fits?"',
+                      "a phrase (exact, loses context), whole sentences "
+                      "(the default), or a whole answer",
+                      "a second code's reason says why both apply",
+                      "offer a short pilot on a few passages, then ask "
+                      "again",
+                      "a yes permits looking, not applying"):
+            assert words in text, words
+        assert "instruction" in tool.parameters["required"] or \
+            tool.parameters["properties"]["instruction"].get("default") \
+            is None
+
+    def test_no_default_and_no_preference_for_long_passages(self):
+        texts = [t.description for t in
+                 server.mcp._tool_manager._tools.values()]
+        texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE,
+                  server.explain_ai_coding_tools("coding_style_guidance")]
+        for text in texts:
+            flat = " ".join(text.split())
+            for gone in ("Code all relevant segments", "overwhelmingly",
+                         "COMPLETE-THOUGHT", "err generous",
+                         "calibration signal", "miscalibrated"):
+                assert gone not in flat, gone
+
+    def test_pairings_wait_for_a_yes(self):
+        record_desc = " ".join(server.mcp._tool_manager._tools[
+            "record_suggestions"].description.split())
+        assert "only where the researcher allowed more than one" \
+            in record_desc
+        assert "only after they say yes" in record_desc
+        style = json.loads(server.explain_ai_coding_tools(
+            "coding_style_guidance"))
+        co = " ".join(style["co_coding"])
+        assert "only after they say yes" in co
+        assert "a yes permits looking, not applying" in co
+        assert "Actively consider MULTIPLE" not in co
+
+    # Two sentences of one paragraph, and a paragraph around them, so that
+    # both a shorter and a longer passage exist
+    SENTENCE_1 = "The reporting cycle left me no time to think."
+    SENTENCE_2 = "The deadlines spilled into my evenings at home."
+    PARAGRAPHED = (f"An opening paragraph about the project.\n\n"
+                   f"{SENTENCE_1} {SENTENCE_2}\n\nA closing paragraph.")
+
+    def test_the_length_hint_asks_in_both_directions(self, setup_server,
+                                                     qualcoder_db_path):
+        conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        conn.execute("INSERT INTO source (id, name, fulltext, owner, date) "
+                     "VALUES (10, 'para.txt', ?, 'T', '2024-01-01')",
+                     (self.PARAGRAPHED,))
+        conn.commit()
+        conn.close()
+        for direction, span, words in (
+                ("longer", self.SENTENCE_1,
+                 "whole paragraphs or a whole answer"),
+                ("shorter", f"{self.SENTENCE_1} {self.SENTENCE_2}",
+                 "shorter sentences or a phrase")):
+            sid = new_session(file_ids=[10])
+            guid = record(sid, item(span, file_id=10))["recorded"][0]["guid"]
+            session = server.session_manager.load_session(sid)
+            session.span_edit_stats[f"{direction}_picks"] = 2
+            server.session_manager.save_session(session)
+            out = jcall("edit_suggestion", coding_session_id=sid,
+                        suggestion_guid=guid, use_alternative=direction)
+            assert "calibration_hint" in out, out
+            hint = out["calibration_hint"]
+            assert f"third '{direction}' pick" in hint
+            assert "Ask the researcher whether to change the passage " \
+                "length" in hint
+            assert words in hint
+
+    def test_the_methods_notes_do_not_reframe_coding_everything(self):
+        assert "code everything" not in server.METHODOLOGY_VOCABULARY
+        vocab = json.loads(server.explain_ai_coding_tools(
+            "methodology_vocabulary"))
+        assert not any("Code all" in e["request"] for e in vocab["examples"])

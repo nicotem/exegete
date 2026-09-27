@@ -82,8 +82,9 @@ class TestPlacement:
         assert server.METHODOLOGY_VOCABULARY in d
         assert d.index("WORKFLOW") < d.index(server.GROUNDING_RULES) \
             < d.index(server.METHODOLOGY_VOCABULARY) < d.index("SPAN STYLE")
-        # the pre-existing pins survive
-        assert "complete-thought" in d.lower() and "CO-CODING" in d
+        # the span and pairing guidance survives, reworded in v0.14's
+        # second fix round (whole sentences by default; pairings asked)
+        assert "whole sentences by default" in d and "PAIRINGS" in d
 
     def test_record_suggestions_paragraph_sits_before_span_style(self):
         d = _desc("record_suggestions")
@@ -140,7 +141,7 @@ class TestWithGuidanceDecorator:
 class TestResultText:
 
     def test_analyze_for_coding_reminder_is_item_one(self, setup_server):
-        out = json.loads(server.analyze_for_coding([1]))
+        out = json.loads(server.analyze_for_coding([1], instruction="test"))
         # the banner wraps at 80 columns; compare with whitespace collapsed
         text = " ".join(out["instructions"].split())
         assert "1. **Read before you code, and stay with the text.**" in text

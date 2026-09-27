@@ -37,7 +37,7 @@ FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by e
 
 
 def _make_session(setup_server, qualcoder_db_path, **kwargs):
-    out = server.analyze_for_coding([1], **kwargs)
+    out = server.analyze_for_coding([1], **{"instruction": "test", **kwargs})
     return out.split("Session ID: `")[1].split("`")[0]
 
 
@@ -154,7 +154,7 @@ class TestSessionStartQualcoderCheck:
         lock = _lock_file(qualcoder_db_path)
         lock.write_text(f"gemma\n{time.time()}", encoding="utf-8")
         try:
-            out = server.analyze_for_coding([1])
+            out = server.analyze_for_coding([1], instruction="test")
             assert "qualcoder_open: true" in out
             assert "action_required" in out
             assert "close QualCoder" in out
@@ -167,7 +167,7 @@ class TestSessionStartQualcoderCheck:
             lock.unlink()
 
     def test_absent_lock_consistent_shape(self, setup_server, qualcoder_db_path):
-        out = server.analyze_for_coding([1])
+        out = server.analyze_for_coding([1], instruction="test")
         # QA6-1: qualcoder_open is always present, false when clear; no
         # directive noise beyond that
         env = json.loads(out)
@@ -180,7 +180,7 @@ class TestSessionStartQualcoderCheck:
         lock = _lock_file(qualcoder_db_path)
         lock.write_text(f"gemma\n{time.time() - 60}", encoding="utf-8")
         try:
-            out = server.analyze_for_coding([1])
+            out = server.analyze_for_coding([1], instruction="test")
             env = json.loads(out)
             assert env["qualcoder_open"] is False
             assert "action_required" not in env

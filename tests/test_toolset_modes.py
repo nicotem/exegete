@@ -273,7 +273,7 @@ class TestCoreModeEndToEnd:
 
                     # full suggestion loop, S2-style
                     out = _text_of(await session.call_tool(
-                        "analyze_for_coding", {"file_ids": [1]}))
+                        "analyze_for_coding", {"instruction": "test", "file_ids": [1]}))
                     sid = out.split("Session ID: `")[1].split("`")[0]
 
                     out = _text_of(await session.call_tool(

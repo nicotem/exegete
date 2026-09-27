@@ -358,7 +358,7 @@ class TestGuidanceEnvelope:
         """
         # absent lock: envelope has coding_session_id + instructions; the open-signal
         # fields are omitted (absence == not open)
-        raw = server.analyze_for_coding([1])
+        raw = server.analyze_for_coding([1], instruction="test")
         payload = json.loads(raw)
         assert payload.get("qualcoder_open", False) is False
         assert isinstance(payload["coding_session_id"], str) and payload["coding_session_id"]
@@ -372,7 +372,7 @@ class TestGuidanceEnvelope:
         lock = validate_qda_path(qualcoder_db_path).parent / "project_in_use.lock"
         lock.write_text(f"gui_user\n{time.time()}", encoding="utf-8")
         try:
-            payload = json.loads(server.analyze_for_coding([1]))
+            payload = json.loads(server.analyze_for_coding([1], instruction="test"))
             assert payload["qualcoder_open"] is True
             assert payload["action_required"] and "gui_user" in payload["action_required"]
             assert "STOP" in payload["instructions"]
@@ -408,7 +408,7 @@ class TestGuidanceEnvelope:
               "INSERT INTO source (id, name, fulltext) VALUES (70, 'emoji.txt', ?)",
               (emoji,))
         _reload()
-        sid = json.loads(server.analyze_for_coding([70]))["coding_session_id"]
+        sid = json.loads(server.analyze_for_coding([70], instruction="test"))["coding_session_id"]
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 70, "code_name": "Stress",
             "segment_text": "I feel very stressed"}]))

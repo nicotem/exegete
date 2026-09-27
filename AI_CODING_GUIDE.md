@@ -118,9 +118,14 @@ approval of each suggestion.
 
 1. **Define Your Codes**: Have a clear codebook before AI coding
 2. **Test on Small Sample**: Start with 1-2 files to understand results
-3. **Set Clear Instructions**: Be specific about what you're looking for
-   ("segments where participants describe feeling overwhelmed, not just
-   mentions of the word stress")
+3. **Answer the three questions**: before starting a session Claude asks
+   what to look for (your own codes, topics, people's own words, actions,
+   feelings or values, or other), how long a coded passage should be (a
+   phrase, whole sentences by default, or a whole answer) and whether a
+   passage may carry more than one code. Your answers become the session's
+   instruction; there is no default. Be specific ("segments where
+   participants describe feeling overwhelmed, not just mentions of the
+   word stress"), and if you are unsure, ask for a short pilot first
 4. **Know Your Data**: Familiarise yourself with the files being coded
 
 ### During AI Coding
@@ -128,8 +133,8 @@ approval of each suggestion.
 1. **Use Descriptive Instructions**: Tell Claude what patterns to look for,
    with examples of what each code covers
 2. **Say what counts as explicit**: each suggestion is marked explicit
-   (the passage states the code) or interpretive (Claude is reading it
-   in). There is no numeric score and no threshold: an interpretive
+   (the passage states what the code names) or interpretive (the code
+   rests on what the passage implies rather than on what it says). There is no numeric score and no threshold: an interpretive
    reading can be exactly the one you want, and it is yours to judge
 3. **Review Statistics First**: Check counts before diving into details
 4. **Iterate if Needed**: `record_suggestions(replace=true)` discards the

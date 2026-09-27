@@ -501,6 +501,14 @@ Apply them
 
 **1. Be Specific with Instructions**
 
+Before starting a session Claude asks you three things, and your answers
+become the session's instruction (there is no default one): what to look
+for (your own codes, topics, people's own words, actions, feelings or
+values, or other, and whether to point out passages no code fits); how
+long a coded passage should be (a phrase, whole sentences by default, or
+a whole answer); and whether a passage may carry more than one code. If
+you are unsure, ask for a short pilot on a few passages first.
+
 ❌ Bad:
 ```
 Code this file

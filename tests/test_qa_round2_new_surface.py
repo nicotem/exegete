@@ -42,7 +42,7 @@ def _data_qda(project_path) -> Path:
 
 
 def _sid(*file_ids):
-    out = server.analyze_for_coding(list(file_ids) or [1])
+    out = server.analyze_for_coding(list(file_ids) or [1], instruction="test")
     return out.split("Session ID: `")[1].split("`")[0]
 
 

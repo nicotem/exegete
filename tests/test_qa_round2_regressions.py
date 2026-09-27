@@ -52,7 +52,7 @@ def _backups(project_path):
 
 def _make_approved_session(sid_file_id=1, start=24, end=55):
     """Create a session and approve one valid suggestion via tools only."""
-    out = server.analyze_for_coding([sid_file_id])
+    out = server.analyze_for_coding([sid_file_id], instruction="test")
     sid = out.split("Session ID: `")[1].split("`")[0]
     rec = json.loads(server.record_suggestions(sid, [{
         "file_id": sid_file_id, "code_name": "Stress",
@@ -256,7 +256,7 @@ class TestF6MediaCodingRefused:
         conn.close()
         server.switch_project(qualcoder_db_path)
 
-        out = server.analyze_for_coding([1])
+        out = server.analyze_for_coding([1], instruction="test")
         sid = out.split("Session ID: `")[1].split("`")[0]
         # record_suggestions already refuses media targets
         rec = json.loads(server.record_suggestions(sid, [{
@@ -341,7 +341,7 @@ class TestF9SessionCleanupGuard:
 
     @pytest.mark.parametrize("days", [0, -5])
     def test_f9_nonpositive_days_refused(self, setup_server, days):
-        out = server.analyze_for_coding([1])
+        out = server.analyze_for_coding([1], instruction="test")
         sid = out.split("Session ID: `")[1].split("`")[0]
 
         result = json.loads(server.cleanup_old_sessions(days))
@@ -465,7 +465,7 @@ class TestF13ValidationErrorShape:
 class TestF14ConfidenceClamp:
 
     def test_f14_a_new_session_carries_no_threshold(self, setup_server):
-        out = server.analyze_for_coding([1])
+        out = server.analyze_for_coding([1], instruction="test")
         sid = json.loads(out)["coding_session_id"]
         session = server.session_manager.load_session(sid)
         assert not hasattr(session, "min_confidence")

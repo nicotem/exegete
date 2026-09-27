@@ -28,7 +28,7 @@ def _make_session(setup_server):
     # Every file in the project: a v0.14 session refuses suggestions on
     # files outside it, and these tests add the file they code first
     out = server.analyze_for_coding(
-        [f["id"] for f in server.get_db().list_files()])
+        [f["id"] for f in server.get_db().list_files()], instruction="test")
     return out.split("Session ID: `")[1].split("`")[0]
 
 
@@ -259,12 +259,14 @@ class TestF1bF2Guidance:
         assert "Context Before" in out or "Context After" in out
 
     def test_docstrings_carry_guidance(self):
-        analyze_doc = server.analyze_for_coding.__doc__ or ""
-        record_doc = server.record_suggestions.__doc__ or ""
+        analyze_doc = " ".join((server.analyze_for_coding.__doc__ or "").split())
+        record_doc = " ".join((server.record_suggestions.__doc__ or "").split())
+        # v0.14's second fix round: the span length and the pairings are
+        # the researcher's answers, asked at the start of the session
         for doc in (analyze_doc, record_doc):
-            assert "complete-thought" in doc.lower()
-        assert "CO-CODING" in record_doc and "CO-CODING" in analyze_doc
-        assert "calibration signal" in record_doc
+            assert "whole sentences by default" in doc
+            assert "PAIRINGS" in doc
+        assert "only after they say yes" in record_doc
         assert "instruction" in analyze_doc          # span-style pattern
 
     def test_explain_covers_edit_and_style(self):
@@ -273,7 +275,7 @@ class TestF1bF2Guidance:
         out = json.loads(
             server.explain_ai_coding_tools("coding_style_guidance"))
         blob = json.dumps(out)
-        assert "complete-thought" in blob
+        assert "whole sentences (the default)" in blob
         assert "instruction" in blob
 
 
@@ -457,7 +459,9 @@ class TestAmendmentHintsAndRendering:
             sid, g, use_alternative="longer")) for g in guids]
         assert "calibration_hint" not in outs[0]
         assert "calibration_hint" not in outs[1]
-        assert "paragraph-level" in outs[2]["calibration_hint"]
+        assert "Ask the researcher whether to change the passage length" \
+            in outs[2]["calibration_hint"]
+        assert "whole paragraphs or a whole answer" in outs[2]["calibration_hint"]
         # alternative picks never trigger the manual-edit hint
         assert all("span_shortcut_hint" not in o for o in outs)
 

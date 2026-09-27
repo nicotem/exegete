@@ -198,7 +198,7 @@ class TestUnhappyPaths:
                                                 qualcoder_db_path, tmp_path):
         """Session created in A, project B selected: every session-consuming
         write refuses and B is untouched."""
-        sid = _session_id(server.analyze_for_coding([1]))
+        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -236,7 +236,7 @@ class TestUnhappyPaths:
                                               qualcoder_db_path, monkeypatch):
         """A stale foreign lock lets the write proceed unheld; QualCoder
         'opening' between validation and commit must abort with rollback."""
-        sid = _session_id(server.analyze_for_coding([1]))
+        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -275,7 +275,7 @@ class TestUnhappyPaths:
 
     def test_fresh_lock_blocks_the_whole_flow_but_not_reads(
             self, setup_server, qualcoder_db_path):
-        sid = _session_id(server.analyze_for_coding([1]))
+        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -302,7 +302,7 @@ class TestUnhappyPaths:
                 lock.unlink()
 
     def test_position_mismatch_rejected_at_record_time(self, setup_server):
-        sid = _session_id(server.analyze_for_coding([1]))
+        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
         # "I " occurs twice in the fixture text; wrong positions + ambiguous
         # text must be rejected, not guessed
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
@@ -325,7 +325,7 @@ class TestUnhappyPaths:
                                                    qualcoder_db_path):
         """Simulates QualCoder (or anything) editing the text after the
         suggestion was recorded: apply must re-validate and refuse."""
-        sid = _session_id(server.analyze_for_coding([1]))
+        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -359,7 +359,7 @@ class TestUnhappyPaths:
             "big_interview.txt", content, create_backup=False))
         fid = imp["file_id"]
 
-        sid = _session_id(server.analyze_for_coding([fid]))
+        sid = _session_id(server.analyze_for_coding([fid], instruction="test"))
         suggestions = []
         for i in range(200):
             snippet = f"Paragraph {i:03d} about workload"

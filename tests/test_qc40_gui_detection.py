@@ -371,7 +371,7 @@ class TestLadderWiring:
         ai = Path(qualcoder_db_path) / "ai_data"
         ai.mkdir()
         (ai / "chat_history.sqlite").write_bytes(b"c")
-        out = json.loads(server.analyze_for_coding([1]))
+        out = json.loads(server.analyze_for_coding([1], instruction="test"))
         assert out["qualcoder_open"] is False
         assert out["qualcoder_gui_signals"]
         assert "ASK THE USER" in out["qualcoder_gui_hint"]

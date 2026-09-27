@@ -736,7 +736,7 @@ async def call_every_tool(client, root, lock_check=False):
                                 "attribute_name": "Age", "value": "30"})
     # the suggestion loop
     session = (await run("analyze_for_coding",
-                         {"file_ids": [1]}))["coding_session_id"]
+                         {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
     recorded = await run("record_suggestions", {
         "coding_session_id": session, "suggestions": [{"reading": "explicit",
             "file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
@@ -788,7 +788,7 @@ async def call_every_tool(client, root, lock_check=False):
               {"output_path": str(exports / "m.csv")})
     # proposing codes
     session_2 = (await run("analyze_for_coding",
-                           {"file_ids": [1]}))["coding_session_id"]
+                           {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
     proposed = await run("propose_codes", {
         "coding_session_id": session_2, "proposals": [
             {"name": "Reliance", "memo": "Leaning on others",
@@ -1029,7 +1029,7 @@ async def _marker_project(client, root):
         "file_id": 1, "start_pos": 0, "end_pos": 5,
         "memo": "Researcher note about P3"})))
     session = json.loads(text_of(await client.call_tool(
-        "analyze_for_coding", {"file_ids": [1]})))["coding_session_id"]
+        "analyze_for_coding", {"instruction": "test", "file_ids": [1]})))["coding_session_id"]
     proposed = json.loads(text_of(await client.call_tool("propose_codes", {
         "coding_session_id": session, "proposals": [{
             "name": "Reliance", "memo": "Leaning on others",
@@ -1540,7 +1540,7 @@ class TestSessionFilesAfterPseudonymising:
                                             "content": TEXT_2})
             await call("create_code", {"name": "Trust"})
             suggesting = (await call("analyze_for_coding",
-                                     {"file_ids": [1]}))["coding_session_id"]
+                                     {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": suggesting, "suggestions": [{"reading": "explicit",
                     "file_id": 1, "code_name": "Trust",
@@ -1550,7 +1550,7 @@ class TestSessionFilesAfterPseudonymising:
                 "coding_session_id": suggesting,
                 "reject": [recorded["recorded"][0]["guid"]]})
             proposing = (await call("analyze_for_coding",
-                                    {"file_ids": [1]}))["coding_session_id"]
+                                    {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             await call("propose_codes", {
                 "coding_session_id": proposing, "proposals": [{
                     "name": "Reliance", "memo": "d", "rationale": "r",
@@ -1562,7 +1562,7 @@ class TestSessionFilesAfterPseudonymising:
             for outcome, name in (("reject", "Distrust"),
                                   ("create", "Loyalty")):
                 sid = (await call("analyze_for_coding",
-                                  {"file_ids": [1]}))["coding_session_id"]
+                                  {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
                 proposed = await call("propose_codes", {
                     "coding_session_id": sid, "proposals": [{
                         "name": name, "memo": "d", "rationale": "r",
@@ -1578,7 +1578,7 @@ class TestSessionFilesAfterPseudonymising:
                     assert "error" not in created, created
                 finished[outcome] = sid
             elsewhere = (await call("analyze_for_coding",
-                                    {"file_ids": [2]}))["coding_session_id"]
+                                    {"instruction": "test", "file_ids": [2]}))["coding_session_id"]
             await call("record_suggestions", {
                 "coding_session_id": elsewhere, "suggestions": [{"reading": "explicit",
                     "file_id": 2, "code_name": "Trust",
@@ -2001,7 +2001,7 @@ class TestCoreAnswersAreMarked:
                 return body_of(text_of(await client.call_tool(name, args)))
             view = await call("analyze_file_with_coding", {"file_id": 1})
             session = (await call("analyze_for_coding",
-                                  {"file_ids": [1]}))["coding_session_id"]
+                                  {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": session, "suggestions": [{"reading": "explicit",
                     "file_id": 1, "code_name": "Trust",
@@ -2225,7 +2225,7 @@ class TestOneProjectUnderTwoSpellings:
             await call("select_project", {"project_path": str(
                 folder.parent / recorded_as(folder.name))})
             session = (await call("analyze_for_coding",
-                                  {"file_ids": [1]}))["coding_session_id"]
+                                  {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": session, "suggestions": [{"reading": "explicit",
                     "file_id": 1, "code_name": "Trust",

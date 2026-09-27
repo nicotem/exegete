@@ -306,7 +306,8 @@ project has the coder-visibility capability:
 
 - **Reads** go through QualCoder's own visibility views by default, so
   coded segments, coded-text searches, the annotation matches of memo
-  searches, the file view with its codings and annotations, code
+  searches, the file view with its codings and annotations (its
+  `file_info` still names the file's owner, hidden or not), code
   detail counts, frequencies, co-occurrence, matrices and the
   codes-by-case and cases-by-code listings reflect what the user sees
   in QualCoder's coding screen. Its coding REPORT is another matter:
@@ -317,7 +318,8 @@ project has the coder-visibility capability:
   server's default reads, not from its reports; this server's file
   exports keep that same parity.
   Results disclose when hidden-coder filtering shaped them as a COUNT
-  of hidden coders, never their names. An explicit `coder` argument
+  of hidden coders, never their names; the owner of a row that is read
+  itself (a code, a file, a case) is another matter, below. An explicit `coder` argument
   reads that coder's rows from the full data instead, the same
   override QualCoder's own AI uses.
 - **Writes that target an existing row by id** (delete_coding,
@@ -344,7 +346,16 @@ project has the coder-visibility capability:
   target's memo, in the provenance line QualCoder's own merge writes
   (`[Merged from code: ..., Coder: ..., Merger date: ...]`), which
   every later read of that memo returns. Hiding a coder in QualCoder
-  hides their codings, not their name on the codebook.
+  hides their codings and annotations from these reads; their name
+  stays on everything else they own (codes, categories, files, cases,
+  journal entries, attribute types), and every tool and resource that
+  shows an owner shows it: the file view's `file_info`, `search_memos`,
+  `export_code_report` and `list_attribute_types`, and the codes,
+  categories, files, cases and journal resources. QualCoder shows the
+  owner in its code tree and its journal list (`journals.py` 181 at
+  9bddf17); its file and case managers show none (`manage_files.py`
+  1974, `cases.py` 371), so on files and cases this server shows what
+  QualCoder's own screens do not.
   Executing a cascade that would remove a hidden
   coder's codings requires an explicit allow_hidden_coder=true. If the visibility state cannot be read (the view exists
   but does not answer), these tools return an error and change nothing,

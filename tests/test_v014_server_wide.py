@@ -1564,6 +1564,45 @@ class TestHiddenCodersOnTheCodebook:
         assert "qualcoder://codes/list" in privacy
         assert "[Merged from code: ..., Coder: ..., Merger date: ...]" in \
             privacy
+        # fix round 1: the whole list, and the file view qualified
+        assert ("hides their codings and annotations from these reads; "
+                "their name stays on everything else they own (codes, "
+                "categories, files, cases, journal entries, attribute "
+                "types)") in privacy
+        assert "its `file_info` still names the file's owner" in privacy
+
+    def test_the_other_rows_a_hidden_coder_owns_name_them(self, tmp_path):
+        """Fix round 1: a file, a case and a journal entry owned by the
+        hidden coder, read over the host's path through the file view
+        and the three resources: each names the owner, as PRIVACY.md
+        now says."""
+        folder = self._project(tmp_path)
+
+        async def add(client):
+            await client.call_tool("import_text_file", {
+                "filename": "int1.txt", "content": TEXT_1})
+            await client.call_tool("create_case", {"name": "P1"})
+            await client.call_tool("add_journal_entry", {
+                "name": "Week one", "entry": "Read the first interview."})
+        host_session(add)
+        with sqlite3.connect(str(folder / "data.qda")) as conn:
+            for table in ("source", "cases", "journal"):
+                conn.execute(f"update {table} set owner = 'Alice'")
+
+        async def read(client):
+            view = json.loads(text_of(await client.call_tool(
+                "analyze_file_with_coding", {"file_id": 1})))
+            found = {}
+            for uri in ("qualcoder://files/list", "qualcoder://cases/list",
+                        "qualcoder://journal"):
+                got = await client.read_resource(uri)
+                found[uri] = json.loads(got.contents[0].text)
+            return view, found
+
+        view, found = host_session(read)
+        assert view["file_info"]["owner"] == "Alice"
+        for uri, rows in found.items():
+            assert [row["owner"] for row in rows] == ["Alice"], uri
 
 
 # ---------------------------------------------------------------------------

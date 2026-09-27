@@ -2023,3 +2023,69 @@ def test_the_upgrading_list_names_what_a_caller_meets():
                    "`dated_from`", "(not available in this tool set)",
                    "`readOnlyHint`"):
         assert needed in upgrading, needed
+
+
+class TestTheMarkerChecksHoldForEveryShape:
+    """Fix round 1 (the security gate's 6 and 7): a reasoning or a
+    definition that is not text is refused, not written as its printed
+    form; a replace whose every item is refused keeps the pending ones;
+    the session file's bytes are unchanged in each case."""
+
+    def _session(self, tmp_path):
+        server._apply_toolset("lifecycle")
+
+        async def drive(client):
+            ids = await _marker_project(client, tmp_path)
+            await client.call_tool("record_suggestions", {
+                "coding_session_id": ids["session"], "suggestions": [{
+                    "file_id": 1, "code_name": "Trust",
+                    "segment_text": QUOTE, "reasoning": "stated"}]})
+            return ids
+        ids = host_session(drive)
+        path = (server.session_manager.storage_dir
+                / f"session_{ids['session']}.json")
+        return ids, path
+
+    def _call(self, name, arguments):
+        return json.loads(text_of(host_session(
+            lambda client: client.call_tool(name, arguments))))
+
+    def test_a_reasoning_or_definition_that_is_not_text(self, tmp_path):
+        ids, path = self._session(tmp_path)
+        before = path.read_bytes()
+        suggested = self._call("record_suggestions", {
+            "coding_session_id": ids["session"], "suggestions": [{
+                "file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
+                "reasoning": ["##### private"]}]})
+        assert suggested["rejected"][0]["reason"] == \
+            "reasoning must be text"
+        proposed = self._call("propose_codes", {
+            "coding_session_id": ids["session"], "proposals": [{
+                "name": "Other", "memo": ["##### private"],
+                "rationale": "r",
+                "example_segments": [{"file_id": 1,
+                                      "segment_text": QUOTE}]}]})
+        assert proposed["rejected"][0]["reason"] == "memo must be text"
+        assert "#####" not in json.dumps([suggested, proposed])
+        assert path.read_bytes() == before
+
+    @pytest.mark.parametrize("tool", ["record_suggestions",
+                                      "propose_codes"])
+    def test_a_replace_whose_every_item_is_refused_keeps_the_pending(
+            self, tmp_path, tool):
+        ids, path = self._session(tmp_path)
+        before = path.read_bytes()
+        item = ({"file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
+                 "reasoning": "##### private"}
+                if tool == "record_suggestions" else
+                {"name": "Other", "memo": "d", "rationale": "##### private",
+                 "example_segments": [{"file_id": 1,
+                                       "segment_text": QUOTE}]})
+        key = ("suggestions" if tool == "record_suggestions"
+               else "proposals")
+        answer = self._call(tool, {"coding_session_id": ids["session"],
+                                   key: [item], "replace": True})
+        assert answer["recorded_count"] == 0
+        assert answer["replaced_pending"] == 0
+        assert answer["pending_kept"] == 1
+        assert path.read_bytes() == before

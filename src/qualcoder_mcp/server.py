@@ -6333,7 +6333,9 @@ def record_suggestions(
             reasoning (str), confidence (float 0.0-1.0),
             context_before/context_after (str, optional; auto-filled)
         replace: If True, discard previously recorded PENDING suggestions
-                 first (approved/rejected/applied are always kept)
+                 first (approved/rejected/applied are always kept); if
+                 every suggestion in the call is refused, nothing is
+                 discarded
 
     Returns:
         JSON with recorded suggestions (GUIDs for approval), per-item
@@ -6395,7 +6397,14 @@ def record_suggestions(
         if not isinstance(item, dict):
             rejected.append({"index": idx, "reason": "each suggestion must be an object"})
             continue
-        # The reasoning becomes the applied coding's memo (v0.14)
+        # The reasoning becomes the applied coding's memo (v0.14); it is
+        # text, and anything else is refused rather than written as its
+        # printed form, marker and all (fix round 1)
+        if item.get("reasoning") is not None and \
+                not isinstance(item.get("reasoning"), str):
+            rejected.append({"index": idx,
+                             "reason": "reasoning must be text"})
+            continue
         marker = private_marker_refusal(item.get("reasoning"), "reasoning")
         if marker is not None:
             rejected.append({"index": idx, "reason": marker})
@@ -6519,10 +6528,16 @@ def record_suggestions(
                              for a in suggestion.span_alternatives],
         })
 
-    # A call that recorded nothing and replaced nothing leaves the
-    # session file as it was (v0.14: a refused suggestion writes nothing)
-    if recorded or removed_pending:
+    # A call that recorded nothing leaves the session file as it was
+    # (v0.14: a refused suggestion writes nothing). With replace, the
+    # pending suggestions are removed only when something replaces them:
+    # a call whose every item was refused keeps them (fix round 1).
+    kept_pending = 0
+    if recorded:
         session_manager.save_session(session)
+    elif removed_pending:
+        session = session_manager.load_session(session_id)
+        kept_pending, removed_pending = removed_pending, 0
 
     result = {
         "coding_session_id": session_id,
@@ -6537,6 +6552,12 @@ def record_suggestions(
     }
     if replace:
         result["replaced_pending"] = removed_pending
+    if kept_pending:
+        result["pending_kept"] = kept_pending
+        result["pending_kept_note"] = (
+            "Every suggestion in this call was refused, so nothing replaced "
+            "the pending ones: they are kept, and the session file is as "
+            "it was.")
     if unsafe_files:
         result["position_safety_warning"] = (
             f"File(s) {sorted(unsafe_files.values())} contain \r\n sequences "
@@ -9357,7 +9378,8 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
             against the file text like record_suggestions verifies
             positions
         replace: Discard previously recorded PENDING proposals first
-                 (approved/rejected/created are always kept)
+                 (approved/rejected/created are always kept); if every
+                 proposal in the call is refused, nothing is discarded
 
     Returns:
         JSON with recorded proposals (GUIDs for review/approval),
@@ -9411,6 +9433,15 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         # The definition becomes the created code's memo, and the
         # rationale the memo of each evidence coding that
         # create_proposed_codes(apply_coded_segments=true) writes (v0.14)
+        not_text = next((key for key in ("memo", "definition", "rationale")
+                         if item.get(key) is not None
+                         and not isinstance(item.get(key), str)), None)
+        if not_text is not None:
+            # Text, and anything else refused rather than written as its
+            # printed form (fix round 1)
+            rejected.append({"index": idx,
+                             "reason": f"{not_text} must be text"})
+            continue
         marker = next(filter(None, (
             private_marker_refusal(item.get(key), key)
             for key in ("memo", "definition", "rationale"))), None)
@@ -9479,11 +9510,16 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
             entry["evidence_rejected"] = evidence_rejected
         recorded.append(entry)
 
-    # A call that recorded nothing and replaced nothing leaves the
-    # session file as it was (v0.14: a refused proposal writes
-    # nothing)
-    if recorded or removed_pending:
+    # A call that recorded nothing leaves the session file as it was
+    # (v0.14: a refused proposal writes nothing). With replace, the
+    # pending proposals are removed only when something replaces them
+    # (fix round 1).
+    kept_pending = 0
+    if recorded:
         session_manager.save_session(session)
+    elif removed_pending:
+        session = session_manager.load_session(session_id)
+        kept_pending, removed_pending = removed_pending, 0
 
     result: Dict[str, Any] = {
         "coding_session_id": session_id,
@@ -9499,6 +9535,12 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     }
     if replace:
         result["replaced_pending"] = removed_pending
+    if kept_pending:
+        result["pending_kept"] = kept_pending
+        result["pending_kept_note"] = (
+            "Every proposal in this call was refused, so nothing replaced "
+            "the pending ones: they are kept, and the session file is as "
+            "it was.")
     if any(e.get("collides_with") for e in recorded):
         result["collision_note"] = (
             "Proposals flagged collides_with match an existing code "

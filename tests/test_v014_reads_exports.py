@@ -1605,3 +1605,47 @@ class TestSearchMemosFailsClosedOnOwners:
                           "journal": "(hidden coder)"}, out
         assert HIDDEN not in json.dumps(out)
         assert "TestCoder" not in json.dumps(out)
+
+
+# ===========================================================================
+# Fix rounds 1 and 2, the Upgrading list: every change a caller sees is
+# named there
+# ===========================================================================
+
+def _upgrading():
+    text = (Path(__file__).parent.parent / "CHANGELOG.md").read_text(
+        encoding="utf-8")
+    unreleased = text.split("## [0.13")[0]
+    section = unreleased.split("### Upgrading from 0.13.x")[1]
+    return " ".join(section.split())
+
+
+class TestTheUpgradingListNamesWhatChanged:
+
+    @pytest.mark.parametrize("words", [
+        "`query_by_attribute` answers an object, not a list",
+        "`equals` on a numeric attribute",
+        "A probe that is not such a number",
+        '"nan", "inf", "-inf", "1_000", full-width digits',
+        "where 0.13 compared it",
+        "counted in `values_left_out`",
+        "Reads answer a refusal where they answered empty",
+        "an error object",
+        "Names are found as the codebook tools find them",
+        "`set_attribute` refuses values it used to store",
+        "`find_cooccurring_codes` counts change at every window",
+        "nine new `type` values",
+        '"(hidden coder)", where 0.13 named the coder',
+        "carry the AI coder name and the date",
+        "The Markdown codebook is laid out differently",
+        "A merge preview's token goes stale more often",
+    ])
+    def test_the_list_names_it(self, words):
+        assert words in _upgrading()
+
+    def test_the_list_opens_with_the_restart_bullet_the_other_lists_share(
+            self):
+        assert _upgrading().startswith(
+            "- Upgrade the package and restart the MCP host fully so it "
+            "reloads the tool descriptions. There is no migration step for "
+            "projects.")

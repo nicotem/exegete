@@ -458,10 +458,18 @@ search or a silent limit.
 - **`query_by_attribute` answers an object, not a list.** Read the
   matches from `results` (`result_count` counts them). A script that
   took the length of the answer, or tested it for emptiness, now meets
-  an object with several keys, which is never empty. `gt`, `gte`, `lt`
-  and `lte` no longer match a value that is not a finite number
-  ("unknown", "n/a", "34 years"); such values are counted in
-  `values_left_out`.
+  an object with several keys, which is never empty.
+- **`query_by_attribute`'s numeric comparisons follow one rule.** `gt`,
+  `gte`, `lt` and `lte`, and `equals` on a numeric attribute, compare
+  only stored values that are finite numbers in the digits 0 to 9 once
+  space around them is stripped; any other stored value ("unknown",
+  "n/a", "34 years", "12 kg") no longer matches and is counted in
+  `values_left_out` (on 0.13, `equals` "12" found "12 kg" and `equals`
+  "0" found "unknown", as QualCoder's attribute report reads them). A
+  probe that is not such a number ("nan", "inf", "-inf", "1_000",
+  full-width digits) is refused by all five, where 0.13 compared it:
+  "lt inf" no longer answers every value, and `equals` with a
+  full-width "12" is refused rather than answering by text.
 - **Reads answer a refusal where they answered empty.** A code, case or
   file id that does not exist, a coder with no codings anywhere in the
   project, an attribute name that is not one of that kind (names are
@@ -488,13 +496,21 @@ search or a silent limit.
   codings replaces the distance between their starts, so a long coding
   near a code now counts. Counts kept from an earlier release will not
   match.
-- **`search_memos` finds more.** It returns nine new `type` values
-  (`project`, `category`, `case`, `attribute_type`, `coding`,
-  `region_coding`, `av_coding`, `case_link`, `journal`), some with
-  `file_id`, `file_name` and positions, so the same query can return more
-  results, and `limit` caps them all. `search_coded_text`,
-  `query_by_attribute`'s `contains` and `search_memos` ignore letter
-  case beyond A to Z, so they can find more too.
+- **`search_memos` finds more, and names fewer.** It returns nine new
+  `type` values (`project`, `category`, `case`, `attribute_type`,
+  `coding`, `region_coding`, `av_coding`, `case_link`, `journal`), some
+  with `file_id`, `file_name` and positions, so the same query can
+  return more results, and `limit` caps them all. A note whose owner is
+  a coder hidden in QualCoder now reports its `owner` as "(hidden
+  coder)", where 0.13 named the coder on a code or file memo; a caller
+  that grouped or filtered matches by owner sees that label instead.
+  `search_coded_text`, `query_by_attribute`'s `contains` and
+  `search_memos` ignore letter case beyond A to Z, so they can find
+  more too.
+- **A merge preview's token goes stale more often.** It now covers the
+  source code's whole branch of sub-codes and the words of its memo, so
+  a sub-code added at any depth, or the memo reworded, between the
+  preview and the execute refuses the execute: preview again.
 - **Values the AI sets on files and journal entries now carry the AI
   coder name and the date.** Values set by an earlier release keep the
   owner they had.

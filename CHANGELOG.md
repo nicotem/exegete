@@ -383,7 +383,8 @@ search or a silent limit.
   attribute type memos, the memos of text, region and audio/video
   codings, case link memos and journal entries, each result named by
   its `type`, in the public part only; coding memos, like annotations,
-  leave out a coder hidden in QualCoder. The pseudonymisation preview's
+  leave out a coder hidden in QualCoder, and a note of another kind whose
+  owner is a hidden coder reports its owner as "(hidden coder)". The pseudonymisation preview's
   scope note, which said `search_memos` reaches three of its twelve note
   fields, now says it reaches all twelve.
 - **The co-occurrence window is a distance, as QualCoder measures it.**

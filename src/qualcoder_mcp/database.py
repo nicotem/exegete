@@ -5302,6 +5302,28 @@ class QualcoderDatabase:
         limit = validate_limit(limit)
         folded = fold_text(query)   # once, not per row (fix round 1)
 
+        # The owner of a note whose coder is hidden in QualCoder is
+        # reported as "(hidden coder)", as the cascade previews report a
+        # code's owner (fix round 1, the security gate's E3-S3). The
+        # views leave out a hidden coder's coding notes and annotations;
+        # the other ten kinds have no view in QualCoder, and a case link
+        # note's owner reached no read before this search. One
+        # visibility read for the call; when it cannot be read every
+        # owner is masked (fail closed, as _mask_hidden_owner does).
+        try:
+            visibility = self.coder_visibility_map()
+            mask_all = False
+        except CoderVisibilityUnreadable:
+            visibility, mask_all = None, True
+
+        def owner_shown(owner):
+            if owner is None:
+                return None
+            if mask_all or (visibility is not None
+                            and coder_is_hidden(visibility, owner)):
+                return "(hidden coder)"
+            return owner
+
         results: List[Dict[str, Any]] = []
 
         # Memo privacy ('#####'): match against the PUBLIC part only and
@@ -5348,6 +5370,7 @@ class QualcoderDatabase:
                     item = {"type": kind}
                     item.update({k: row[k] for k in row.keys()})
                     item["memo"] = public
+                    item["owner"] = owner_shown(item.get("owner"))
                     results.append(item)
                     if len(results) >= limit:
                         break

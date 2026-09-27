@@ -4504,7 +4504,8 @@ def search_memos(query: str, limit: int = 50) -> str:
     notes are not returned, matching what the user sees in QualCoder),
     and the result then carries a coder_visibility block. The other
     notes have no per-coder visibility in QualCoder and are always
-    searched. This tool has no coder override.
+    searched; where such a note's owner is a hidden coder, the owner is
+    reported as "(hidden coder)". This tool has no coder override.
 
     Args:
         query: The text to search for in memos (a substring; letter case

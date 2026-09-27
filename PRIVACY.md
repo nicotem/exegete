@@ -298,8 +298,8 @@ behaviour below follows the capability wherever it is present. When a
 project has the coder-visibility capability:
 
 - **Reads** go through QualCoder's own visibility views by default, so
-  coded segments, coded-text searches, the annotation matches of memo
-  searches, the file view with its codings and annotations, code
+  coded segments, coded-text searches, the coding-note and annotation
+  matches of memo searches, the file view with its codings and annotations, code
   detail counts, frequencies, co-occurrence, matrices and the
   codes-by-case and cases-by-code listings reflect what the user sees
   in QualCoder's coding screen. Its coding REPORT is another matter:
@@ -365,9 +365,12 @@ project has the coder-visibility capability:
   end of the text is clamped first, as QualCoder clamps its own, and is
   counted under its own class rather than under one the exemption
   carries, so a damaged row is never carried through it.
-- Codes, categories, files, cases and journal entries have no
-  per-coder visibility in QualCoder; their owner columns are read as
-  before.
+- Codes, categories, files, cases, attribute types, case links and
+  journal entries have no per-coder visibility in QualCoder, so their
+  rows are not filtered. Memo searches report the owner of such a note
+  as "(hidden coder)" when that coder is hidden, as the cascade
+  previews report a code's or category's owner; they are the one read
+  that returns a case link's owner.
 - **When who is hidden cannot be determined at all**, no coder is
   named. On a project whose visibility capability is present but whose
   `coder_names` table does not answer (schema drift, damaged pages, a

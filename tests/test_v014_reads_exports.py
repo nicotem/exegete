@@ -1128,3 +1128,38 @@ class TestTheFoldIsLinearAndSurvivesDamage:
         out = host(tool, **args)
         assert "error" not in out, out
         assert [r[key] for r in out["results"]] == [expected]
+
+
+# ===========================================================================
+# Fix round 1, item 5: search_memos never names a hidden coder as a
+# note's owner
+# ===========================================================================
+
+class TestSearchMemosMasksAHiddenOwner:
+
+    def test_notes_of_kinds_without_a_view_mask_a_hidden_owner(
+            self, setup_server, qualcoder_db_path):
+        from test_qc40_visibility import (_apply_visibility_schema, _reopen,
+                                          HIDDEN)
+        _apply_visibility_schema(qualcoder_db_path)
+        for statement in (
+                "UPDATE code_name SET memo = 'Wombat c', owner = ? "
+                "WHERE cid = 1",
+                "UPDATE attribute_type SET memo = 'Wombat a', owner = ? "
+                "WHERE name = 'Age'",
+                "UPDATE case_text SET memo = 'Wombat l', owner = ? "
+                "WHERE id = 1",
+                "UPDATE journal SET jentry = 'Wombat j', owner = ? "
+                "WHERE jid = 1"):
+            sql(qualcoder_db_path, statement, (HIDDEN,))
+        sql(qualcoder_db_path, "UPDATE source SET memo = 'Wombat f' "
+            "WHERE id = 2")
+        _reopen(qualcoder_db_path)
+        out = host("search_memos", query="wombat")
+        owners = {r["type"]: r["owner"] for r in out["results"]}
+        assert owners == {"code": "(hidden coder)",
+                          "attribute_type": "(hidden coder)",
+                          "case_link": "(hidden coder)",
+                          "journal": "(hidden coder)",
+                          "file": "TestCoder"}
+        assert HIDDEN not in json.dumps(out)

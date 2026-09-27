@@ -69,6 +69,7 @@ from .database import (
     snap_to_palette,
     normalize_name,
     name_key,
+    nfc_ordered,
     position_safe as db_position_safe,
     read_project_pseudonyms,
     read_project_pseudonyms_with_raw,
@@ -1161,13 +1162,13 @@ def _find_existing_by_name(rows, name: str, kind: str, plural: str):
         (row, match, None) on a match, (None, None, error_dict) on an
         ambiguity, (None, None, None) when nothing matches.
     """
-    wanted = unicodedata.normalize("NFC", normalize_name(name))
+    wanted = nfc_ordered(normalize_name(name))
     # normalize_name on BOTH sides (D5 section 3.2): a stored name that
     # differs only by a run of whitespace is the same name, so it must
     # match in tier 1 rather than fall through to the case-insensitive
     # tier and be labelled a case difference that is not there.
     exact = [r for r in rows
-             if unicodedata.normalize("NFC", normalize_name(r["name"])) == wanted]
+             if nfc_ordered(normalize_name(r["name"])) == wanted]
     if len(exact) == 1:
         return exact[0], "exact", None
     key = name_key(name)
@@ -1182,7 +1183,7 @@ def _find_existing_by_name(rows, name: str, kind: str, plural: str):
         # separated by any spelling at all: repeating "use the exact
         # spelling" there is advice that cannot be followed, and the caller
         # is left with no way to name the row (fix round 2, R6).
-        forms = [unicodedata.normalize("NFC", normalize_name(r["name"]))
+        forms = [nfc_ordered(normalize_name(r["name"]))
                  for r in candidates]
         twins = max(forms.count(form) for form in forms)
         if twins == 1:
@@ -1442,7 +1443,7 @@ def _resolve_case_argument(cases, case_id: Optional[int],
         # are the same name once spacing and Unicode form are normalised
         # (the test _find_existing_by_name makes); for such twins it
         # cannot, and the refusal says so (fix round 1)
-        forms = [unicodedata.normalize("NFC", normalize_name(c["name"]))
+        forms = [nfc_ordered(normalize_name(c["name"]))
                  for c in err.get("candidates", [])]
         twins = len(set(forms)) < len(forms)
         err["hint"] = ("Give case_id to choose one of the candidates." if twins

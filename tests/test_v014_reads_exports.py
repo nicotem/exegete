@@ -1456,3 +1456,43 @@ class TestADamagedRowThatMatches:
             "SELECT ctid FROM code_text WHERE seltext = 'xx'")]
         assert sorted(seen) == sorted(expected)
         assert len(seen) == len(set(seen)) == 4
+
+
+# ===========================================================================
+# Fix round 2, item 4: name matching is linear on crafted names
+# ===========================================================================
+
+class TestNameMatchingIsLinear:
+
+    @pytest.fixture
+    def crafted_names(self, setup_server, qualcoder_db_path):
+        sql(qualcoder_db_path, "INSERT INTO code_name VALUES (9, ?, '', 1, "
+            "'TestCoder', '2024-01-15', '#010101')", ("Z" + CRAFTED,))
+        sql(qualcoder_db_path, "INSERT INTO cases VALUES (9, ?, '', "
+            "'TestCoder', '2024-01-15')", ("Z" + CRAFTED,))
+        return qualcoder_db_path
+
+    @pytest.mark.parametrize("tool,args,expect", [
+        ("search_coded_text", {"query": "I", "code_name": "stress"},
+         "code_match"),
+        ("export_code_report", {"code_name": "stress"}, "code_match"),
+        ("link_file_to_case", {"file_id": 2, "case_name": "nobody",
+                               "create_backup": False}, "error"),
+        ("link_file_to_case", {"file_id": 2, "case_name": "case a",
+                               "create_backup": False}, "success"),
+        ("search_coded_text", {"query": "I", "code_name": CRAFTED},
+         "error"),
+    ], ids=["code-name", "code-report", "case-not-found", "case-found",
+            "crafted-request"])
+    def test_a_crafted_name_costs_linear_time(self, crafted_names, tool,
+                                              args, expect):
+        out, elapsed = _timed(tool, **args)
+        assert expect in out, out
+        assert elapsed < FOLD_CEILING_SECONDS, elapsed
+
+    def test_the_crafted_name_is_still_its_own_name(self, crafted_names):
+        """Only the cost changes: the crafted code, named in another
+        letter case, is found."""
+        out = host("search_coded_text", query="I", code_name="z" + CRAFTED)
+        assert out["code_filter"] == "Z" + CRAFTED
+        assert out["code_match"] == "case_insensitive"

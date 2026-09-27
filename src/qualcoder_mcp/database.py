@@ -445,7 +445,18 @@ def name_key(name: Any) -> str:
     2293-2296), which folds ASCII letters only; the stricter direction
     is the safer one for a codebook (D5 section 3.2).
     """
-    return unicodedata.normalize("NFC", normalize_name(name)).casefold()
+    return nfc_ordered(normalize_name(name)).casefold()
+
+
+def nfc_ordered(text: str) -> str:
+    """NFC of `text`, with long runs of combining marks put in canonical
+    order first (`_ordered_mark_runs`), so the cost is linear (fix round
+    2, the security re-verification's name-resolution-quadratic): NFC of
+    a crafted 64,000-character name cost 1.8 s, and a name is normalised
+    for every row a lookup compares it with. The result is NFC of `text`
+    exactly. Used by `name_key` and by the name comparisons in
+    `_find_existing_by_name` and `_resolve_case_argument`."""
+    return unicodedata.normalize("NFC", _ordered_mark_runs(text))
 
 
 DB_LOCKED_MESSAGE = (

@@ -6490,7 +6490,9 @@ def record_suggestions(
             start_pos=start_pos,
             end_pos=end_pos,
             segment_text=segment_text,
-            reasoning=str(item.get("reasoning", "")),
+            # text or absent (checked above); a null is empty, never the
+            # word "None" in the coding's memo (fix round 2)
+            reasoning=item.get("reasoning") or "",
             confidence=confidence,
             status="pending",
             context_before=context_before,
@@ -9479,8 +9481,10 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
 
         proposal = ProposedCode(
             name=name,
-            memo=str(item.get("memo", "") or item.get("definition", "")),
-            rationale=str(item.get("rationale", "")),
+            # text or absent (checked above); a null is empty, never the
+            # word "None" in a code's or a coding's memo (fix round 2)
+            memo=item.get("memo") or item.get("definition") or "",
+            rationale=item.get("rationale") or "",
             color=color,
             category=category,
             example_segments=evidence,

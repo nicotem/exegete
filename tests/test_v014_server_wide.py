@@ -10,6 +10,7 @@ hints other than the table's, fails.
 import asyncio
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -268,7 +269,7 @@ class TestUnknownArgumentsRefused:
             self, setup_server, qualcoder_db_path):
         db = str(Path(qualcoder_db_path) / "data.qda")
         count = "select count(*) from cases where name = 'Dana'"
-        with sqlite3.connect(db) as conn:
+        with closing(sqlite3.connect(db)) as conn, conn:
             assert conn.execute(count).fetchone()[0] == 0
 
         result = host_session(lambda client: client.call_tool(
@@ -277,7 +278,7 @@ class TestUnknownArgumentsRefused:
         assert body["unknown_arguments"] == ["bogus_arg"]
         assert "Its arguments are: name, memo, create_backup." in \
             body["error"]
-        with sqlite3.connect(db) as conn:
+        with closing(sqlite3.connect(db)) as conn, conn:
             assert conn.execute(count).fetchone()[0] == 0
 
     def test_the_misspelt_pseudonyms_flag_is_refused_not_ignored(
@@ -289,7 +290,7 @@ class TestUnknownArgumentsRefused:
             [{"original": "Thomas", "pseudonym": "Tomas"}]),
             encoding="utf-8")
         sources = "select count(*) from source"
-        with sqlite3.connect(str(folder / "data.qda")) as conn:
+        with closing(sqlite3.connect(str(folder / "data.qda"))) as conn, conn:
             n_before = conn.execute(sources).fetchone()[0]
 
         result = host_session(lambda client: client.call_tool(
@@ -300,7 +301,7 @@ class TestUnknownArgumentsRefused:
         assert body["unknown_arguments"] == ["apply_project_pseudonym"]
         assert ("Did you mean 'apply_project_pseudonyms' for "
                 "'apply_project_pseudonym'?") in body["error"]
-        with sqlite3.connect(str(folder / "data.qda")) as conn:
+        with closing(sqlite3.connect(str(folder / "data.qda"))) as conn, conn:
             assert conn.execute(sources).fetchone()[0] == n_before
 
     def test_every_input_schema_says_no_other_argument(self):
@@ -970,7 +971,7 @@ class TestTextsThatSentTheAssistantNowhere:
     def test_search_files_says_match_count_is_what_it_lists(
             self, setup_server, qualcoder_db_path):
         db = str(Path(qualcoder_db_path) / "data.qda")
-        with sqlite3.connect(db) as conn:
+        with closing(sqlite3.connect(db)) as conn, conn:
             conn.execute("update source set fulltext = ? where id = 1",
                          ("beans " * 8,))
         answer = host_json("search_files", {
@@ -1115,7 +1116,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
 
         ids = host_session(drive)
         db = str(Path(ids["folder"]) / "data.qda")
-        with sqlite3.connect(db) as conn:
+        with closing(sqlite3.connect(db)) as conn, conn:
             assert conn.execute("select memo from annotation").fetchall() \
                 == [("Researcher note about P3",)]
             assert conn.execute(
@@ -1210,7 +1211,7 @@ class TestTheProjectMemoWithoutATargetId:
         assert not result.isError, text_of(result)
         assert json.loads(text_of(result))["success"] is True
         db = str(Path(qualcoder_db_path) / "data.qda")
-        with sqlite3.connect(db) as conn:
+        with closing(sqlite3.connect(db)) as conn, conn:
             assert conn.execute("select memo from project").fetchone()[0] \
                 == "A study of allotment gardens"
 
@@ -1640,7 +1641,7 @@ class TestHiddenCodersOnTheCodebook:
             return Path(made["project_path"])
 
         folder = host_session(make)
-        with sqlite3.connect(str(folder / "data.qda")) as conn:
+        with closing(sqlite3.connect(str(folder / "data.qda"))) as conn, conn:
             conn.execute("insert into coder_names (name, visibility) "
                          "values ('Alice', 0)")
             conn.execute("insert into code_name (name, memo, owner, date, "
@@ -1714,7 +1715,7 @@ class TestHiddenCodersOnTheCodebook:
             await client.call_tool("add_journal_entry", {
                 "name": "Week one", "entry": "Read the first interview."})
         host_session(add)
-        with sqlite3.connect(str(folder / "data.qda")) as conn:
+        with closing(sqlite3.connect(str(folder / "data.qda"))) as conn, conn:
             for table in ("source", "cases", "journal"):
                 conn.execute(f"update {table} set owner = 'Alice'")
 
@@ -1764,7 +1765,7 @@ def _database_rows(folder):
     """Every row of every table of the project's database, as sets."""
     if folder is None or not (Path(folder) / "data.qda").is_file():
         return {}
-    with sqlite3.connect(str(Path(folder) / "data.qda")) as conn:
+    with closing(sqlite3.connect(str(Path(folder) / "data.qda"))) as conn, conn:
         tables = [row[0] for row in conn.execute(
             "select name from sqlite_master where type = 'table'")]
         return {table: set(conn.execute(f'select * from "{table}"'))
@@ -1808,7 +1809,7 @@ class TestPromisesKeptOverEveryTool:
             folder = Path(current["current_project"])
             if folder.name == "data.qda":
                 folder = folder.parent
-            with sqlite3.connect(str(folder / "data.qda")) as conn:
+            with closing(sqlite3.connect(str(folder / "data.qda"))) as conn, conn:
                 for table, column in (
                         ("project", "memo"), ("code_name", "memo"),
                         ("code_cat", "memo"), ("source", "memo"),
@@ -1881,7 +1882,7 @@ class TestCoreAnswersAreMarked:
 
     def test_an_ambiguous_names_refusal_marks_both_tools(self, tmp_path):
         folder = self._project(tmp_path)
-        with sqlite3.connect(str(folder / "data.qda")) as conn:
+        with closing(sqlite3.connect(str(folder / "data.qda"))) as conn, conn:
             for name in ("Café", "Café"):
                 conn.execute("insert into code_name (name, memo, owner, "
                              "date, color) values (?, '', 'Researcher', "
@@ -2076,7 +2077,7 @@ class TestAFailedSwitchWithAConfiguredProject:
         assert current["project_name"] == "test_project"
         assert made.get("success") is True, made
         db = str(Path(qualcoder_db_path) / "data.qda")
-        with sqlite3.connect(db) as conn:
+        with closing(sqlite3.connect(db)) as conn, conn:
             assert conn.execute("select count(*) from code_name where "
                                 "name = 'Landed'").fetchone()[0] == 1
 
@@ -2364,3 +2365,45 @@ def test_a_replace_of_items_already_in_the_session_replaces_as_before(
     assert "pending_kept" not in again
     stored = server.session_manager.load_session(session)
     assert [s.status for s in stored.suggestions] == ["approved"]
+
+
+def test_a_null_note_is_stored_empty_never_as_none(tmp_path):
+    """Fix round 2 (QA's m2): a reasoning, a rationale or a definition
+    sent as null is empty; no memo the project holds reads "None" after
+    the suggestion is applied and the proposal created with its
+    evidence."""
+    server._apply_toolset("lifecycle")
+
+    async def drive(client):
+        async def call(name, args):
+            return body_of(text_of(await client.call_tool(name, args)))
+        ids = await _marker_project(client, tmp_path)
+        session = ids["session"]
+        recorded = await call("record_suggestions", {
+            "coding_session_id": session, "suggestions": [{
+                "file_id": 1, "code_name": "Trust", "segment_text": QUOTE,
+                "reasoning": None}]})
+        await call("update_suggestion_status", {
+            "coding_session_id": session,
+            "approve": [recorded["recorded"][0]["guid"]]})
+        await call("apply_codings", {"coding_session_id": session})
+        proposed = await call("propose_codes", {
+            "coding_session_id": session, "proposals": [{
+                "name": "Nulls", "memo": None, "definition": None,
+                "rationale": None,
+                "example_segments": [{"file_id": 1,
+                                      "segment_text": QUOTE}]}]})
+        await call("update_proposal_status", {
+            "coding_session_id": session,
+            "approve": [proposed["recorded"][0]["guid"]]})
+        created = await call("create_proposed_codes", {
+            "coding_session_id": session, "apply_coded_segments": True})
+        return ids["folder"], created
+
+    folder, created = host_session(drive)
+    assert "error" not in str(created)[:200], created
+    with closing(sqlite3.connect(str(Path(folder) / "data.qda"))) as conn, conn:
+        memos = [row[0] for table in ("code_text", "code_name")
+                 for row in conn.execute(f"select memo from {table}")]
+    assert len(memos) >= 4
+    assert not any("None" in (memo or "") for memo in memos), memos

@@ -316,8 +316,9 @@ search or a silent limit.
   `source_memo_carried_to_target`, `source_code_has_memo` and
   `source_memo_note`, `subcodes_moved_to_target` by name, and
   `saved_graph_rows_removed`; it never quotes the memo. The preview
-  token now covers the source's sub-codes, so one added after the
-  preview needs a fresh preview. `delete_code`'s preview counts the
+  token now covers the source's whole branch of sub-codes and the words
+  of its memo (a digest, never the text), so a sub-code added at any
+  depth, or the memo reworded, after the preview needs a fresh preview. `delete_code`'s preview counts the
   saved-graph rows it removes too.
 - **Attribute queries compare numbers only, and say what they left
   out.** `query_by_attribute`'s `gt`, `gte`, `lt` and `lte` cast every

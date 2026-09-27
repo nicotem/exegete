@@ -1192,3 +1192,38 @@ class TestTwinCaseNamesRefusal:
         out = host("link_file_to_case", file_id=2, case_name="DANA",
                    create_backup=False)
         assert "exact spelling" in out["hint"]
+
+
+# ===========================================================================
+# Fix round 1, item 8: the merge token covers the source memo's words and
+# the source's whole branch
+# ===========================================================================
+
+class TestTheMergeTokenCoversWhatIsCarried:
+
+    def _stale(self, folder, change):
+        preview = host("merge_codes", from_code_id=1, into_code_id=2)
+        change(folder)
+        out = host("merge_codes", from_code_id=1, into_code_id=2,
+                   preview_token=preview["preview_token"])
+        return out
+
+    def test_a_source_memo_reworded_after_the_preview(self, ladder):
+        folder = ladder("v17", _v17_with_memo_subcode_and_graph)
+        out = self._stale(folder, lambda f: sql(
+            f, "UPDATE code_name SET memo = ? WHERE cid = 1",
+            ("Words added after the preview\n#####\nsecret words",)))
+        assert out.get("nothing_changed") is True, out
+        assert sql(folder, "SELECT COUNT(*) FROM code_name WHERE cid = 1"
+                   ) == [(1,)]
+
+    def test_a_grandchild_added_after_the_preview(self, ladder):
+        folder = ladder("v17", _v17_with_memo_subcode_and_graph)
+        out = self._stale(folder,
+                          lambda f: add_subcode(f, 12, "Late", supercid=11))
+        assert out.get("nothing_changed") is True, out
+
+    def test_an_unchanged_project_still_merges(self, ladder):
+        folder = ladder("v17", _v17_with_memo_subcode_and_graph)
+        out = self._stale(folder, lambda f: None)
+        assert out["success"] is True, out

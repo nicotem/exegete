@@ -7990,15 +7990,30 @@ class QualcoderDatabase:
         rows = {"source_code": self._code_rows_for_cids([from_code_id]),
                 "destination_code": self._code_rows_for_cids([into_code_id])}
         rows.update(self._coding_rows_for_cids([from_code_id]))
-        # The sub-codes the merge moves under the target (v16+), so one
-        # added, renamed or moved away after the preview makes the token
-        # stale instead of travelling without a fresh preview (v0.14,
-        # claims audit item 9).
+        # The source's whole branch, which the merge carries under the
+        # target (v16+): a sub-code at any depth added, renamed or moved
+        # away after the preview makes the token stale instead of
+        # travelling without a fresh preview (v0.14, claims audit item 9;
+        # the whole branch since fix round 1, E3-S5, as delete_code's
+        # fingerprint already covers).
         caps = getattr(self, "capabilities", None)
         if caps is not None and caps.has_supercid:
-            rows["source_subcodes"] = self._row_digest_rows(
-                "SELECT cid, name, catid FROM code_name WHERE supercid = ? "
-                "ORDER BY cid", (from_code_id,))
+            below = [cid for cid in self.get_branch_cids(from_code_id)
+                     if cid != from_code_id]
+            rows["source_branch"] = (self._row_digest_rows(
+                f"SELECT cid, name, catid, supercid FROM code_name "
+                f"WHERE cid IN ({','.join('?' for _ in below)}) "
+                f"ORDER BY cid", tuple(below)) if below else [])
+        # The words of the source memo, which a v16+ merge carries into
+        # the target's memo and a v14/v15 merge deletes: a digest of its
+        # stored bytes, never the text (fingerprint_rows' principle), so
+        # a memo reworded after the preview makes the token stale (fix
+        # round 1, E3-S5)
+        memo = self.conn.execute(
+            "SELECT CAST(memo AS BLOB) FROM code_name WHERE cid = ?",
+            (from_code_id,)).fetchone()
+        rows["source_memo_words"] = hashlib.sha256(
+            bytes(memo[0] or b"") if memo is not None else b"").hexdigest()
         rows["collisions"] = self._row_digest_rows(
             "SELECT s.ctid FROM code_text s WHERE s.cid = ? AND EXISTS ("
             "  SELECT 1 FROM code_text d WHERE d.cid = ? AND d.fid = s.fid "

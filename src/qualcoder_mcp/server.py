@@ -6058,6 +6058,10 @@ def _scope_refusal(session: AICodingSession, outside: str,
                    file_name: str, code_name: str) -> Dict[str, Any]:
     """Why a suggestion falls outside its session, and what the session
     covers (ids, the names the session recorded)."""
+    if outside == "unreadable":
+        return {"reason": "this session's scope (its files and codes) "
+                          "cannot be read, so nothing is recorded into it; "
+                          "start a new session (analyze_for_coding)"}
     if outside == "file":
         reason = (f"file '{file_name}' is outside this session's files; "
                   f"start a session that includes it (analyze_for_coding)")
@@ -6075,8 +6079,9 @@ APPROVAL_WITHDRAWN = (
 
 
 def _proposal_merged_refusal(p) -> str:
-    return (f"Proposal '{p.name}' was merged into another proposal "
-            f"({p.merged_into}); a merged proposal is final and cannot be "
+    into = f" ({p.merged_into})" if p.merged_into else ""
+    return (f"Proposal '{p.name}' was merged into another proposal"
+            f"{into}; a merged proposal is final and cannot be "
             f"changed, approved or created. Work on the proposal it was "
             f"merged into.")
 
@@ -6770,8 +6775,9 @@ def edit_suggestion(
                     "error": f"code '{code_name}' not found",
                     "available_codes": sorted(c["name"] for c in codes)[:50],
                 })
-        if session.outside_scope(sugg.file_id, new_code["id"]) == "code":
-            refusal = _scope_refusal(session, "code", sugg.file_name,
+        outside = session.outside_scope(sugg.file_id, new_code["id"])
+        if outside is not None:
+            refusal = _scope_refusal(session, outside, sugg.file_name,
                                      new_code["name"])
             refusal["error"] = refusal.pop("reason")
             return json.dumps(refusal)
@@ -9640,9 +9646,12 @@ def review_proposals(coding_session_id: str,
         lines.append("=" * 70)
         lines.append(f"**Proposal {i}** (GUID: `{p.guid}`)")
         if p.status == "merged":
-            into = session.get_proposal_by_guid(p.merged_into)
-            lines.append(f"Status: MERGED into "
-                         f"'{into.name if into else p.merged_into}' "
+            into = (session.get_proposal_by_guid(p.merged_into)
+                    if p.merged_into else None)
+            target = (f"'{into.name}'" if into else
+                      f"proposal {p.merged_into}" if p.merged_into else
+                      "another proposal")
+            lines.append(f"Status: MERGED into {target} "
                          f"(final: never approved or created)")
         else:
             lines.append(f"Status: {p.status.upper()}")

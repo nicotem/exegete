@@ -56,6 +56,11 @@ def guids_in_more_than_one(*lists: Optional[List[Any]]) -> List[Any]:
     return [key for key, where in seen.items() if len(where) > 1]
 
 
+# What the server writes as a proposal's merged_into: a GUID. Anything
+# else in a session file (crafted or damaged) is not echoed (fix round 1).
+_GUID_SHAPE = re.compile(r"^[0-9A-Za-z-]{1,64}$")
+
+
 def unique_in_order(values: Optional[List[Any]]) -> List[Any]:
     """Each value once, first mention first: a GUID named twice in one
     list is one decision, and is counted once."""
@@ -254,7 +259,10 @@ class ProposedCode:
         self.collides_with = collides_with  # existing code name, if any
         self.created_code_id = created_code_id
         self.guid = guid or str(uuid.uuid4())
-        self.merged_into = merged_into      # the target's GUID, once merged
+        # the target's GUID, once merged; only that shape is kept, since it
+        # is echoed into the conversation
+        self.merged_into = (merged_into if isinstance(merged_into, str)
+                            and _GUID_SHAPE.match(merged_into) else None)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -313,6 +321,12 @@ class AICodingSession:
         # built directly), whose file_ids and code_names were only ever a
         # note: those sessions keep that behaviour.
         self.scope = self._clean_scope(scope)
+        # A scope that is there but cannot be read (a damaged or hand-made
+        # file) fails closed: nothing is recorded into the session, rather
+        # than every limit being lifted as for a session with none (fix
+        # round 1). The raw value is written back unchanged.
+        self.scope_unreadable = scope is not None and self.scope is None
+        self._raw_scope = scope if self.scope_unreadable else None
         # The project's AI coder name AT THE MOMENT the session was
         # created (v0.12, D7 section 7). Suggestions recorded under one
         # name and applied after the researcher changed it are still
@@ -363,8 +377,11 @@ class AICodingSession:
                       code_id: Optional[int] = None) -> Optional[str]:
         """Which part of the scope a file or code falls outside, or None.
 
-        'file' or 'code'; None when the session has no scope (made before
+        'file' or 'code'; 'unreadable' when the session's scope is there but
+        cannot be read; None when the session has no scope (made before
         v0.14) or both are inside it. code_id None checks the file only."""
+        if self.scope_unreadable:
+            return "unreadable"
         if self.scope is None:
             return None
         if file_id not in self.scope["file_ids"]:
@@ -660,7 +677,7 @@ class AICodingSession:
             "file_ids": self.file_ids,
             "code_names": self.code_names,
             "instruction": self.instruction,
-            "scope": self.scope,
+            "scope": self._raw_scope if self.scope_unreadable else self.scope,
             "ai_coder_name_at_record": self.ai_coder_name_at_record,
             "suggestions": [s.to_dict() for s in self.suggestions],
             "proposed_codes": [p.to_dict() for p in self.proposed_codes],

@@ -1464,6 +1464,8 @@ class TestADamagedRowThatMatches:
 
 class TestNameMatchingIsLinear:
 
+    PLAIN = "Z" + "a" * (len(CRAFTED))
+
     @pytest.fixture
     def crafted_names(self, setup_server, qualcoder_db_path):
         sql(qualcoder_db_path, "INSERT INTO code_name VALUES (9, ?, '', 1, "
@@ -1484,11 +1486,34 @@ class TestNameMatchingIsLinear:
          "error"),
     ], ids=["code-name", "code-report", "case-not-found", "case-found",
             "crafted-request"])
-    def test_a_crafted_name_costs_linear_time(self, crafted_names, tool,
+    def test_a_crafted_name_costs_linear_time(self, setup_server,
+                                              qualcoder_db_path, tool,
                                               args, expect):
+        """The ceiling follows the runner (fix round 3): the same call is
+        timed first on the same data with the crafted names spelled in
+        plain letters of the same length, which is the same linear work;
+        twenty times that, and never under 2 s, still fails the
+        quadratic cost by an order of magnitude (about 12 s a call on a
+        laptop, where the plain call takes 0.03 s). A slow CI runner took
+        2.04 s for a call a laptop does in 0.1 s."""
+        folder = qualcoder_db_path
+        sql(folder, "INSERT INTO code_name VALUES (9, ?, '', 1, "
+            "'TestCoder', '2024-01-15', '#010101')", (self.PLAIN,))
+        sql(folder, "INSERT INTO cases VALUES (9, ?, '', 'TestCoder', "
+            "'2024-01-15')", (self.PLAIN,))
+        plain_args = {k: ("a" * len(CRAFTED) if v == CRAFTED else v)
+                      for k, v in args.items()}
+        _, baseline = _timed(tool, **plain_args)
+        if tool == "link_file_to_case":
+            sql(folder, "DELETE FROM case_text WHERE fid = 2")
+        sql(folder, "UPDATE code_name SET name = ? WHERE cid = 9",
+            ("Z" + CRAFTED,))
+        sql(folder, "UPDATE cases SET name = ? WHERE caseid = 9",
+            ("Z" + CRAFTED,))
+        ceiling = max(FOLD_CEILING_SECONDS, 20 * baseline)
         out, elapsed = _timed(tool, **args)
         assert expect in out, out
-        assert elapsed < FOLD_CEILING_SECONDS, elapsed
+        assert elapsed < ceiling, (elapsed, baseline)
 
     def test_the_crafted_name_is_still_its_own_name(self, crafted_names):
         """Only the cost changes: the crafted code, named in another

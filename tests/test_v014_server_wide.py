@@ -1460,6 +1460,14 @@ class TestSessionFilesAfterPseudonymising:
             assert {s["project_name"] for s in listing["sessions"]} == \
                 {"Study"}
 
+    def test_privacy_says_the_session_reads_return_the_old_passages(self):
+        privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md")
+                           .read_text(encoding="utf-8").split())
+        assert ("Until a session is deleted, `review_suggestions`, "
+                "`review_proposals` and `get_coding_session_info` return "
+                "its passages as they were recorded, real names included")\
+            in privacy
+
     def test_the_session_list_matches_every_form_of_the_path(self, tmp_path):
         from qualcoder_mcp.sessions import SessionManager
         folder = tmp_path / "P.qda"

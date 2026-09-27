@@ -953,7 +953,11 @@ will ask, and the summary above depends on them:
     suggestions and proposals (`stale_sessions`), marks those with work
     still to apply (`stale_sessions_with_work_to_apply`), names them in
     its notes, and never deletes one; `delete_coding_session` is yours
-    to call. (Before v0.14 the list named only sessions with suggestions
+    to call. Until a session is deleted, `review_suggestions`,
+    `review_proposals` and `get_coding_session_info` return its passages
+    as they were recorded, real names included, whichever project is
+    selected, and they are marked read-only, so a host in an auto mode
+    runs them without asking. (Before v0.14 the list named only sessions with suggestions
     still to apply, never read proposals, and was empty for a project
     selected by its folder, as `create_project` leaves it.)
   - The run manifest in `~/.qualcoder_mcp/pseudonymisation/` (the

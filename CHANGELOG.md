@@ -336,7 +336,9 @@ search or a silent limit.
   "Infinity", underscores ("1_000") and digits outside 0 to 9 in a
   numeric attribute, which QualCoder accepts and its report reads as
   other numbers; its refusal no longer says QualCoder blanks such input
-  silently (it warns).
+  silently (it warns). A stored value with a no-break or other
+  non-ASCII space around the number, which SQLite reads as 0, is left
+  out as not a number, and refused as a probe.
 - **A wrong id, name or coder is refused, not answered as nothing.**
   These reads answered a value that is not in the project exactly as a
   value with nothing in scope, and the assistant, told that a null

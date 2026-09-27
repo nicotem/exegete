@@ -298,11 +298,19 @@ def finite_number(text: Any) -> Optional[float]:
     "inf", "Infinity", all 0 to SQLite) and digits outside ASCII (a
     full-width "５" is 5 to Python and 0 to SQLite). Used by set_attribute's
     check and by query_by_attribute's comparisons, so what one accepts the
-    other compares (v0.14, claims audit item 11).
+    other compares (v0.14, claims audit item 11). Space around the number
+    other than the ASCII space SQLite skips makes it not a number too.
     """
     if not isinstance(text, str):
         return None
-    t = text.strip()
+    # Only the space SQLite skips (sqlite3Isspace: space, tab, and line
+    # feed to carriage return) is stripped: a value with a no-break or
+    # other Unicode space around it is 12 to Python and 0 to SQLite's
+    # CAST, so to QualCoder's attribute report (fix round 1). It is left
+    # out as not a number, and refused as a probe; set_attribute stores
+    # the stripped value, as QualCoder's own windows do, so it never
+    # writes one.
+    t = text.strip(" \t\n\r\f\v")
     if not t or "_" in t or not t.isascii():
         return None
     try:

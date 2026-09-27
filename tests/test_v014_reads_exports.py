@@ -990,3 +990,43 @@ class TestTheMarkdownCodebookKeepsItsNesting:
                                                  f"Sub of {parent}"], found
         assert set(found) == set(MEMO_SHAPES) | {
             f"Sub of {p}" for p in MEMO_SHAPES}
+
+
+# ===========================================================================
+# Fix round 1, item 4: a numeric value with non-ASCII space around it
+# ===========================================================================
+
+class TestNonAsciiSpaceAroundANumber:
+
+    def test_a_stored_value_with_a_no_break_space_is_not_compared(
+            self, setup_server, qualcoder_db_path):
+        """SQLite's CAST, so QualCoder's attribute report, reads it as 0."""
+        sql(qualcoder_db_path, "INSERT INTO cases VALUES (2, 'NB', '', "
+            "'TestCoder', '2024-01-15')")
+        sql(qualcoder_db_path, "INSERT INTO attribute (name, attr_type, "
+            "value, id, date, owner) VALUES ('Age', 'case', ?, 2, "
+            "'2024-01-15', 'TestCoder')", ("\xa012",))
+        assert sql(qualcoder_db_path, "SELECT CAST(value AS REAL) FROM "
+                   "attribute WHERE id = 2") == [(0.0,)]
+        out = host("query_by_attribute", attr_name="Age", attr_value="10",
+                   operator="gt")
+        assert [r["case_id"] for r in out["results"]] == [1]
+        assert out["values_left_out"]["not_numbers"] == 1
+
+    @pytest.mark.parametrize("probe", ["\xa012", "12 "])
+    def test_such_a_probe_is_refused(self, setup_server, probe):
+        out = host("query_by_attribute", attr_name="Age", attr_value=probe,
+                   operator="gt")
+        assert "finite number" in out["error"]
+
+    def test_set_attribute_stores_the_stripped_number(
+            self, setup_server, qualcoder_db_path):
+        """As QualCoder's own windows do (Python's strip), so the stored
+        value is one SQLite reads as the number."""
+        out = host("set_attribute", target_type="case", target_id=1,
+                   attribute_name="Age", value="\xa012",
+                   create_backup=False)
+        assert out["success"] is True, out
+        assert sql(qualcoder_db_path, "SELECT value, CAST(value AS REAL) "
+                   "FROM attribute WHERE name = 'Age' AND id = 1"
+                   ) == [("12", 12.0)]

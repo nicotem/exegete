@@ -1778,3 +1778,102 @@ class TestAFailedSwitchWithAConfiguredProject:
             "configuration (QUALCODER_PROJECT_PATH) could not be opened "
             "either.")
         assert failed["selected_project"] is None
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1: one project under two spellings of its path
+# ---------------------------------------------------------------------------
+
+import unicodedata
+
+
+def _folds(root, first, second):
+    """Whether the file system under `root` takes `second` for a file
+    made as `first` (macOS and Windows ignore letter case, macOS the
+    Unicode form too; Linux does neither)."""
+    probe = Path(root) / first
+    probe.write_text("x", encoding="utf-8")
+    try:
+        return (Path(root) / second).exists()
+    finally:
+        probe.unlink()
+
+
+class TestOneProjectUnderTwoSpellings:
+
+    def _run(self, tmp_path, name, recorded_as, run_as):
+        """A project made by create_project; a suggestion recorded while
+        it is selected under one spelling; then the session's own check,
+        the session list and the pseudonymising run under the other."""
+        server._apply_toolset("lifecycle")
+        projects = tmp_path / "projects"
+        projects.mkdir()
+
+        async def drive(client):
+            async def call(tool, args):
+                return body_of(text_of(await client.call_tool(tool, args)))
+            made = await call("create_project", {
+                "name": name, "directory": str(projects),
+                "coder_name": "Researcher"})
+            folder = Path(made["project_path"])
+            await call("set_project_ai_coder_name", {"name": "AI-Test"})
+            await call("import_text_file", {"filename": "int1.txt",
+                                            "content": TEXT_1})
+            await call("create_code", {"name": "Trust"})
+            await call("select_project", {"project_path": str(
+                folder.parent / recorded_as(folder.name))})
+            session = (await call("analyze_for_coding",
+                                  {"file_ids": [1]}))["coding_session_id"]
+            recorded = await call("record_suggestions", {
+                "coding_session_id": session, "suggestions": [{
+                    "file_id": 1, "code_name": "Trust",
+                    "segment_text": QUOTE, "reasoning": "stated"}]})
+            other = str(folder.parent / run_as(folder.name))
+            await call("select_project", {"project_path": other})
+            review = await call("get_coding_session_info",
+                                {"coding_session_id": session})
+            listed = await call("list_coding_sessions",
+                                {"project_path": other})
+            await call("update_suggestion_status", {
+                "coding_session_id": session,
+                "approve": [recorded["recorded"][0]["guid"]]})
+            applied = await call("apply_codings",
+                                 {"coding_session_id": session})
+            mapping = [{"original": "Maria", "pseudonym": "Joan"}]
+            preview = await call("pseudonymise_source", {
+                "mapping": mapping, "file_id": 1,
+                "researcher_keeps_mapping": True})
+            done = await call("pseudonymise_source", {
+                "mapping": mapping, "file_id": 1,
+                "researcher_keeps_mapping": True,
+                "preview_token": preview["preview_token"]})
+            return session, listed, applied, done, review
+
+        session, listed, applied, done, _review = host_session(drive)
+        assert session in {s["coding_session_id"]
+                           for s in listed["sessions"]}
+        assert "different project" not in str(applied), applied
+        assert "CODINGS APPLIED" in str(applied), applied
+        assert session in done["stale_sessions"]
+
+    def test_letter_case(self, tmp_path):
+        if not _folds(tmp_path, "CaseProbe", "caseprobe"):
+            pytest.skip("this file system tells letter case apart")
+        self._run(tmp_path, "Study", str.lower, lambda name: name)
+
+    def test_unicode_form(self, tmp_path):
+        composed = unicodedata.normalize("NFC", "Zoë")
+        decomposed = unicodedata.normalize("NFD", composed)
+        if not _folds(tmp_path, composed, decomposed):
+            pytest.skip("this file system tells Unicode forms apart")
+        self._run(tmp_path, composed,
+                  lambda name: unicodedata.normalize("NFD", name),
+                  lambda name: unicodedata.normalize("NFC", name))
+
+    def test_a_project_no_longer_on_disk_is_compared_by_its_path(
+            self, tmp_path):
+        from qualcoder_mcp.sessions import SessionManager
+        gone = tmp_path / "Gone.qda"
+        assert SessionManager.same_project(gone, gone / "data.qda")
+        assert not SessionManager.same_project(gone,
+                                               tmp_path / "gone.qda")

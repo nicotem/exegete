@@ -2337,7 +2337,9 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
         return {"error": "The currently open project could not be resolved. "
                          "Re-open it with select_project."}
 
-    if session_db_path != current_db_path:
+    # One project under two spellings of its path (letter case, Unicode
+    # form) is one database: compared as files, not strings (fix round 1)
+    if not SessionManager.same_project(session_db_path, current_db_path):
         return {
             "error": "This session belongs to a different project than the one "
                      "currently open. Writes are bound to the session's project; "

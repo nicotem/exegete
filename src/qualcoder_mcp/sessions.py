@@ -692,6 +692,30 @@ class SessionManager:
             path = path / "data.qda"
         return str(path)
 
+    @classmethod
+    def same_project(cls, first: Any, second: Any) -> bool:
+        """Whether two project paths name one project's database (fix
+        round 1).
+
+        The canonical strings first, then, when they differ and both
+        databases are on disk, the files themselves (device and inode,
+        `os.path.samefile`): macOS's disk and Windows' ignore letter case
+        and macOS's Unicode form too, and `resolve()` keeps the spelling
+        it was given, so `…/study.qda` and `…/Study.qda`, or a name in
+        its composed and decomposed forms, are one project with two
+        strings. A project no longer on disk is compared by its string.
+        """
+        a, b = (cls.canonical_database_path(first),
+                cls.canonical_database_path(second))
+        if a is None or b is None:
+            return False
+        if a == b:
+            return True
+        try:
+            return os.path.samefile(a, b)
+        except (OSError, ValueError):
+            return False
+
     @staticmethod
     def project_name(project_path: Any) -> str:
         """The project's name as the researcher knows it, its folder's,
@@ -721,7 +745,8 @@ class SessionManager:
         """
         sessions = []
         cutoff_date = datetime.now() - timedelta(days=days_old)
-        # Compared as database paths, whichever form either side uses
+        # Compared as databases, whichever form or spelling either side
+        # uses (same_project)
         wanted = self.canonical_database_path(project_path)
 
         try:
@@ -731,8 +756,8 @@ class SessionManager:
                         data = json.load(f)
 
                     # Filter by project if specified
-                    if wanted and self.canonical_database_path(
-                            data['project_path']) != wanted:
+                    if wanted and not self.same_project(
+                            data['project_path'], wanted):
                         continue
 
                     # Filter by age

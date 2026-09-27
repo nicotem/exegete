@@ -57,3 +57,7 @@ local_config.json
 *.log
 .claude/
 .local/
+
+# npm ci in packaging/desktop-extension/validator (the official MCPB
+# validator, as CI runs it)
+node_modules/

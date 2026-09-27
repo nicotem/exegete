@@ -2,6 +2,76 @@
 
 This guide will walk you through installing the Qualcoder MCP server step-by-step. No prior technical knowledge required!
 
+## Claude Desktop: the one-click extension (recommended)
+
+For Claude Desktop on macOS or Windows there is nothing to type: the
+server comes as a desktop extension, one file ending in `.mcpb`, which
+Claude Desktop installs itself. Claude fetches what the server needs
+(a tool called uv, which then fetches Python and the server's own
+libraries), so you need no Python, no Terminal and no configuration
+file. The extension
+arrives with v0.14; earlier releases have none.
+
+1. **Get Claude Desktop**, the latest version, from
+   https://claude.ai/download, and sign in.
+2. **Download the extension**, `qualcoder-mcp-<version>.mcpb`, from
+   the Assets of the latest release on GitHub:
+   https://github.com/nicotem/qualcoder_mcp/releases
+3. **Install it**: double-click the file. (Or drag it onto the Claude
+   window, or in Claude go to Settings, Extensions, Advanced settings,
+   Install Extension..., and choose it.) Claude shows the extension,
+   with its usual warning to install only extensions whose developer you
+   trust; click Install, and Install again when Claude says it needs to
+   fetch a few dependencies. The first install takes a minute or two.
+4. **Look at its two settings** (Settings, Extensions, qualcoder-mcp).
+   The defaults suit a first session:
+   - **Tool set**: `lifecycle` (the default) gives every tool, creating
+     a new project included; `full` every tool except creating a
+     project; `core` a smaller set for local models. Type one of the
+     three words: any other word stops the extension from starting.
+   - **Folder for projects**: where new projects are created and
+     working copies of projects are kept. The default,
+     `~/QualCoder projects` (a folder called "QualCoder projects" in
+     your home folder), is outside Documents, which iCloud or OneDrive
+     may sync; it is made when the first project needs it. Choose
+     another with the folder button if you prefer, but not a folder a
+     sync service keeps, and not one inside a QualCoder project.
+     Leaving it empty stops the extension from starting (it never
+     falls back to Documents).
+5. **Check it works**: in a new conversation, the "+" button, then
+   Connectors, lists qualcoder-mcp with its tools switched on. Ask
+   "Using the qualcoder-mcp tools, is a project open?" and allow the
+   tool when Claude asks. The answer is that no project is open.
+
+**Approvals.** Whether Claude asks before one of these tools runs
+depends on the mode a Cowork or Code session is in (Manual or Auto)
+and on each tool's own setting under "+", Connectors; "What hosts do
+with the tools' read and write marks", further down, says what each
+does. For work on real data, keep Claude asking.
+
+**Not signed.** The extension carries no publisher signature. On a
+personal Claude plan it installs like any other extension. If your
+university or employer manages your computer or your Claude account,
+it may block unsigned extensions, or extensions altogether: Claude then
+says so ("This extension isn't signed..." or "Desktop extensions and
+developer MCP servers are disabled on this device..."), and your IT
+team decides.
+
+**Updating**: download the newer `.mcpb` and install it the same way.
+**Removing**: Settings, Extensions, qualcoder-mcp, Uninstall. Neither
+touches your projects; what else stays is under "Uninstalling" below.
+**The log** is `mcp-server-qualcoder-mcp.log` in `~/Library/Logs/Claude`
+(macOS) or `%APPDATA%\Claude\logs` (Windows); see "Reading the server
+log" below before sharing it.
+
+**If you also configured the server by hand** (the route below), remove
+the `qualcoder` entry from the configuration, or switch one of the two
+off under "+", Connectors; otherwise Claude sees every tool twice.
+
+Everything below is **the Terminal route**: for Claude Code, LM Studio
+and other MCP hosts, for Claude Desktop configured by hand, and for
+contributors who want the source.
+
 ## What You'll Need
 
 Before starting, make sure you have:
@@ -299,6 +369,23 @@ variable is optional.
   ```bash
   claude mcp add qualcoder -e QUALCODER_MCP_TOOLSET=lifecycle -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
   ```
+- `QUALCODER_MCP_WORKSPACE` (v0.14): the workspace, the folder where
+  `create_project` makes a project when no folder is named and where
+  `copy_project_to_workspace` puts its copies; `list_available_projects`
+  also searches its top level. A full path, or one starting with `~`.
+  Unset or blank, it is `~/Documents/Qualcoder MCP Projects`. The
+  desktop extension sets it from its "Folder for projects" setting,
+  whose default is `~/QualCoder projects`, because iCloud (Desktop and
+  Documents) and OneDrive may sync `~/Documents`. A relative path, or a
+  folder inside `~/.qualcoder_mcp`, QualCoder's settings folder
+  `~/.qualcoder`, a `.qda` project or the folder the server itself is
+  installed in, or a path holding `|`, stops the server at start-up
+  with "Error: QUALCODER_MCP_WORKSPACE ..." on stderr (naming no path).
+- `QUALCODER_MCP_WORKSPACE_REQUIRED` (v0.14): `1` makes a blank or
+  missing `QUALCODER_MCP_WORKSPACE` stop the server at start-up instead
+  of falling back to `~/Documents/Qualcoder MCP Projects`. The desktop
+  extension sets it, so an emptied "Folder for projects" never sends
+  projects into a synced Documents folder.
 - `QUALCODER_MCP_AI_CODER_NAME`: this HOST's DECLARATION of the AI
   coder name it would like to write under. Since v0.12 the name that
   rows actually carry is the PROJECT's setting, which the researcher
@@ -571,7 +658,9 @@ depend on them.
 
 One tool that changes nothing is not marked read-only, on purpose:
 `read_pseudonym_list` sends every real name in the project's pseudonyms
-file to the AI provider, so the host should ask before it runs. It also
+file to the AI provider, so the host should ask before it runs. It is
+in the `full` and `lifecycle` tool sets (the one-click extension's
+"Tool set" setting, `lifecycle` by default), not in `core`. It also
 carries `anthropic/requiresUserInteraction`, a mark Anthropic documents
 for Claude Code: from version 2.1.199, Claude Code asks before every
 call of such a tool in every permission mode, auto and
@@ -847,6 +936,9 @@ Create a case-code matrix
 
 Updates are manual (a new release does not install itself).
 
+**Desktop extension**: download the newer `.mcpb` and install it as
+before; Claude replaces the old one.
+
 **PyPI install**, one command:
 
 ```bash
@@ -1053,7 +1145,15 @@ around.
 If you want to remove the MCP server:
 
 1. **Remove it from your client**:
-   - Claude Desktop: Settings > Developer > Edit Config, delete the
+   - Claude Desktop with the extension: Settings > Extensions,
+     qualcoder-mcp, Uninstall (Claude removes its own copy of the
+     server; skip step 2). Two things stay: the Python and the download
+     cache uv keeps for every program that uses it (about 80 MB; on
+     macOS `~/.local/share/uv` and `~/.cache/uv`, on Windows
+     `%APPDATA%\uv` and `%LOCALAPPDATA%\uv\cache`; `uv cache clean`
+     empties the cache, if uv is on your computer), and the server's
+     own state in `~/.qualcoder_mcp` (step 3)
+   - Claude Desktop configured by hand: Settings > Developer > Edit Config, delete the
      "qualcoder" section, save, then fully quit and reopen Claude Desktop
    - Claude Code: `claude mcp remove qualcoder`
    - LM Studio: delete the "qualcoder" block from mcp.json
@@ -1090,7 +1190,9 @@ backup folders it created next to each project
 backups you no longer need with the `prune_backups` tool before
 uninstalling, or by hand afterwards. Workspace copies made with
 `copy_project_to_workspace` live in `~/Documents/Qualcoder MCP
-Projects/`.
+Projects/`, or in the folder `QUALCODER_MCP_WORKSPACE` names (with the
+desktop extension, its "Folder for projects", by default
+`~/QualCoder projects/`).
 
 ---
 

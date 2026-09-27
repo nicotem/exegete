@@ -64,6 +64,8 @@ from .database import (
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
     default_workspace,
+    workspace_setting_problem,
+    WORKSPACE_ENV,
     qualcoder_lock_state,
     qualcoder_open_message,
     qualcoder_gui_signals,
@@ -755,6 +757,31 @@ def _resource_guard(fn):
     return wrapper
 
 
+def _host_set_workspace() -> Optional[str]:
+    """The workspace QUALCODER_MCP_WORKSPACE names, as text, or None when
+    it is not set (or not usable, which stops the server at start-up)."""
+    if not os.environ.get(WORKSPACE_ENV, "").strip() \
+            or workspace_setting_problem() is not None:
+        return None
+    return str(default_workspace())
+
+
+# The usual places the listing walks, as its answer names them.
+_USUAL_SEARCH_PLACES = ["~/Documents/QualCoder_projects",
+                        "~/Documents/QualCoder", "~/QualCoder", "~/Documents"]
+
+
+def _is_one_of(folder: str, places: List[str]) -> bool:
+    """Whether `folder` is the same folder as one of `places`."""
+    def key(text):
+        try:
+            return Path(text).expanduser().resolve()
+        except (OSError, RuntimeError, ValueError):
+            return None
+    target = key(folder)
+    return target is not None and any(key(p) == target for p in places)
+
+
 def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """Discover .qda files in common locations.
 
@@ -764,6 +791,7 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
     Returns:
         List of discovered projects with path, name, and size info
     """
+    top_level_only = None
     if search_paths is None:
         home = Path.home()
         search_paths = [
@@ -772,18 +800,33 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
             str(home / "QualCoder"),
             str(home / "Documents"),
         ]
+        # A workspace the host set (QUALCODER_MCP_WORKSPACE, v0.14) is
+        # searched first, at its top level only: create_project and
+        # copy_project_to_workspace put projects there, and the folder is
+        # the researcher's own choice, which may be as wide as the home
+        # folder, where a recursive search would walk everything in it.
+        # When it is one of the usual places above, that place is walked
+        # as before and nothing is added (fix round 1: it used to lose
+        # its depth). The added entry is the first, marked by position.
+        workspace = _host_set_workspace()
+        if workspace is not None and not _is_one_of(workspace, search_paths):
+            top_level_only = workspace
+            search_paths.insert(0, workspace)
 
     projects = []
     seen_paths = set()
 
-    for search_path in search_paths:
+    for index, search_path in enumerate(search_paths):
         path = Path(search_path)
         if not path.exists():
             continue
 
         # Search recursively for .qda files (max 3 levels deep)
         try:
-            for qda_file in path.rglob("*.qda"):
+            found = (path.glob("*.qda")
+                     if top_level_only is not None and index == 0
+                     else path.rglob("*.qda"))
+            for qda_file in found:
                 # Avoid duplicates and limit depth
                 if qda_file in seen_paths:
                     continue
@@ -2883,6 +2926,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
 
     This tool searches common locations for .qda files and returns a list
     of available Qualcoder projects. By default, it searches:
+    - the workspace folder, when the host set one (its top level only)
     - ~/Documents/QualCoder_projects
     - ~/Documents/QualCoder
     - ~/QualCoder
@@ -2900,12 +2944,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
         modified, in seconds since 1970), the folders searched, and which
         of them do not exist
     """
-    usual = [
-        "~/Documents/QualCoder_projects",
-        "~/Documents/QualCoder",
-        "~/QualCoder",
-        "~/Documents",
-    ]
+    usual = list(_USUAL_SEARCH_PLACES)
     if search_directories:
         if not isinstance(search_directories, list) or not all(
                 isinstance(d, str) and d.strip()
@@ -2921,24 +2960,38 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
                 f"({', '.join(repr(d) for d in relative)}); give each "
                 f"folder as a full path or one starting with ~. Nothing "
                 f"was searched.")}, indent=2)
-        wanted = list(search_directories)
+        folders = [str(Path(d).expanduser()) for d in search_directories]
+        top_level_only: List[str] = []
     else:
-        wanted = usual
-    folders = [str(Path(d).expanduser()) for d in wanted]
+        # The usual places, and first the workspace the host set, at its
+        # top level only (the desktop extension's folder for projects),
+        # unless it is one of the usual places (walked as before)
+        workspace = _host_set_workspace()
+        top_level_only = ([workspace] if workspace is not None
+                          and not _is_one_of(workspace, usual) else [])
+        folders = top_level_only + [str(Path(d).expanduser())
+                                    for d in usual]
     searched = {
         "folders": folders,
         "not_found": [f for f in folders if not Path(f).is_dir()],
         "instead_of_the_usual_places": bool(search_directories),
     }
+    if top_level_only:
+        searched["top_level_only"] = top_level_only
     try:
-        projects = discover_projects(folders)
+        # With no folders given, discover_projects builds the same list
+        # itself (the workspace first, at its top level); given folders
+        # are searched as given
+        projects = discover_projects(folders if search_directories
+                                     else None)
 
         if not projects:
             return json.dumps({
                 "projects": [],
                 "message": "No Qualcoder projects found. Make sure you have created "
                           "at least one project in Qualcoder, or specify search_directories.",
-                "default_search_paths": usual,
+                "default_search_paths": top_level_only + usual
+                if not search_directories else usual,
                 "searched": searched,
             }, indent=2)
 
@@ -3769,7 +3822,8 @@ def copy_project_to_workspace(
     """Copy a QualCoder project to the MCP workspace for safe modification.
 
     This is the recommended first step before any AI coding: work on a copy
-    in the workspace folder (~/Documents/Qualcoder MCP Projects/) so your
+    in the workspace folder (~/Documents/Qualcoder MCP Projects/ unless the
+    host set another; the answer gives the path) so your
     original project is never touched. If a project with the same name
     already exists in the workspace, the copy gets a timestamped name.
 
@@ -4822,6 +4876,9 @@ def export_refi_qda(
     ro_db = get_db()
 
     # --- output path validation (consistent with the security posture) ---
+    relative = _relative_output_refusal(output_path)
+    if relative is not None:
+        return json.dumps({"error": relative})
     try:
         out_file = Path(output_path).expanduser().resolve()
     except (OSError, RuntimeError):
@@ -7465,7 +7522,8 @@ def import_text_file(
     with link_file_to_case.
 
     IMPORTANT: Make sure you're working on a copy of your project in the
-    MCP workspace (~/Documents/Qualcoder MCP Projects/)
+    MCP workspace (~/Documents/Qualcoder MCP Projects/ unless the host set
+    another)
 
     Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
@@ -15215,6 +15273,31 @@ def _inside_state_home(out_file) -> bool:
     return home == target or home in target.parents
 
 
+def _relative_output_refusal(output_path: Any) -> Optional[str]:
+    """The refusal for an export path that is not a full path (v0.14).
+
+    A relative path is read from the server's own working folder, which
+    the host chooses and the researcher cannot see: under the Claude
+    Desktop extension it is the extension's own folder, hidden in the
+    app's data and replaced by an update or an uninstall, so an export
+    written there would be lost. create_project refuses a relative
+    folder for the same reason, in the same words.
+    """
+    if not isinstance(output_path, str):
+        return None
+    try:
+        given = Path(output_path).expanduser()
+    except (RuntimeError, ValueError):
+        return None
+    if given.is_absolute():
+        return None
+    return (f"'{output_path}' is a relative path, which would be read from "
+            f"the server's own working folder (with the Claude Desktop "
+            f"extension, a hidden folder that an update or uninstall "
+            f"replaces). Give the full path, or one starting with ~ (the "
+            f"home folder). Nothing was written.")
+
+
 def _resolve_export_path(output_path: str, suffix: str, default_name: str,
                          overwrite: bool):
     """Resolve and validate an export path (export_refi_qda posture).
@@ -15227,6 +15310,9 @@ def _resolve_export_path(output_path: str, suffix: str, default_name: str,
 
     Returns (Path, None) on success or (None, error_dict).
     """
+    relative = _relative_output_refusal(output_path)
+    if relative is not None:
+        return None, {"error": relative}
     try:
         out_file = Path(output_path).expanduser().resolve()
     except (OSError, RuntimeError):
@@ -16393,7 +16479,8 @@ def create_project(name: str, directory: Optional[str] = None,
         directory: An existing folder to create the project in, as a
                    full path or one starting with ~; leave it out to use
                    this server's workspace, ~/Documents/Qualcoder MCP
-                   Projects
+                   Projects unless the host set another (the answer
+                   gives the path)
         coder_name: The coder name the researcher uses in QualCoder
                     (Settings, Coder name), exactly as they give it
         coder_name_not_known: True when the researcher does not know it;
@@ -16566,13 +16653,72 @@ LIFECYCLE_TOOL_ANNOTATIONS = {"create_project": TOOL_ADDS_ONCE}
 _VALID_TOOLSET_MODES = ("full", "core", "lifecycle")
 
 
+def _workspace_start_problem() -> Optional[str]:
+    """Why the server must not start with QUALCODER_MCP_WORKSPACE as it
+    is, or None: not a full path, or a folder create_project would refuse
+    as its workspace (checked by the same function it uses)."""
+    problem = workspace_setting_problem()
+    if problem is not None:
+        return problem
+    folder = _host_set_workspace()
+    if folder is None:
+        return None
+    unusable = (f"{WORKSPACE_ENV} is not a folder path this server can "
+                f"use; check the folder in the host's configuration.")
+    try:
+        resolved = Path(folder).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return unusable
+    # Fix round 1: these refusals name no path, since the host keeps the
+    # server's stderr in its log (create_project's own refusals, which
+    # answer the conversation, still name the folder).
+    if any(part.name.lower().endswith(new_project.PROJECT_SUFFIX)
+           for part in (resolved,) + tuple(resolved.parents)):
+        return (f"{WORKSPACE_ENV} names a folder inside a QualCoder project "
+                f"(a folder ending in .qda); a project inside a project is "
+                f"copied into every backup of the outer one. Choose another "
+                f"folder in the host's settings.")
+    if "|" in str(resolved):
+        return (f"{WORKSPACE_ENV} names a folder whose path holds a '|'; "
+                f"QualCoder creates a project there but can never open it. "
+                f"Choose another folder in the host's settings.")
+    install = _install_folder()
+    if install is not None and (resolved == install
+                                or install in resolved.parents):
+        return (f"{WORKSPACE_ENV} names a folder inside the folder this "
+                f"server is installed in, which an update or an uninstall "
+                f"replaces, and the projects with it. Choose another folder "
+                f"in the host's settings.")
+    try:
+        new_project.check_parent_folder(
+            resolved, Path(preview_tokens_state_home()).resolve(), True,
+            Path.home() / ".qualcoder")
+    except new_project.Refusal as error:
+        return f"{WORKSPACE_ENV}: {error}"
+    except (OSError, RuntimeError, ValueError):
+        return unusable
+    return None
+
+
+def _install_folder() -> Optional[Path]:
+    """The folder this server's package sits in, one above `src` or
+    `site-packages`: for the Claude Desktop extension, the extension's
+    own folder, which the app replaces on an update and deletes on an
+    uninstall."""
+    try:
+        return Path(__file__).resolve().parent.parent.parent
+    except (OSError, RuntimeError):
+        return None
+
+
 def _resolve_toolset_mode() -> str:
     """Read QUALCODER_MCP_TOOLSET (default full); unknown values raise."""
     raw = os.environ.get("QUALCODER_MCP_TOOLSET", "full").strip().lower()
     if raw not in _VALID_TOOLSET_MODES:
         raise ValueError(
             f"Unknown QUALCODER_MCP_TOOLSET value {raw!r}: valid values "
-            f"are 'full' (default, the standard set), 'core' (the reduced "
+            f"are 'full' (the standard set, used when the variable is not "
+            f"set), 'core' (the reduced "
             f"supervised-coding set for local models) and 'lifecycle' (the "
             f"standard set plus creating a project)."
         )
@@ -16716,6 +16862,16 @@ def main(argv: Optional[List[str]] = None):
         _ai_coder_name()
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # v0.14: a workspace set by the host (the desktop extension's folder
+    # for projects) is checked up front, as create_project checks its
+    # workspace: a relative path, or a folder inside this server's state
+    # folder, QualCoder's settings folder or a project, stops the server
+    # here rather than at the first creation or copy.
+    workspace_problem = _workspace_start_problem()
+    if workspace_problem is not None:
+        print(f"Error: {workspace_problem}", file=sys.stderr)
         sys.exit(1)
 
     db_path = os.environ.get("QUALCODER_PROJECT_PATH")

@@ -9,6 +9,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A one-click install for Claude Desktop**: the server as a desktop
+  extension, `qualcoder-mcp-<version>.mcpb` (MCPB manifest
+  specification 0.4, the `uv` type), to be attached to each release
+  from v0.14. The tester double-clicks it and clicks Install; Claude
+  fetches uv, uv fetches Python 3.13 and the dependencies as locked in
+  `uv.lock`, and a settings form offers the tool set (`lifecycle` by
+  default, so creating projects is on; `full` and `core`) and the
+  folder for projects (a folder picker; by default `~/QualCoder
+  projects`, outside Documents, which iCloud and OneDrive may sync;
+  left empty, it stops the extension rather than falling back to
+  Documents). Nothing secret is asked. Every start runs
+  `uv run --frozen`, so it installs exactly the lock and never
+  re-resolves it. The install compiles nothing on any computer Claude
+  Desktop runs on: `pyproject.toml`'s `[tool.uv]` names Apple-chip and
+  Intel Macs, Windows on x64 and on Arm (and Linux), forbids building
+  `cryptography` (which `mcp` needs through `pyjwt[crypto]`; the server
+  never imports it), and pins the build backend (setuptools 84.0.0). So
+  `uv.lock` holds cryptography 50.0.1 in general, 48.0.1 for Intel Macs
+  (the last with a wheel for them; it fixes the OpenSSL its older
+  wheels bundled) and 46.0.3 for Windows on Arm (the last with a wheel
+  for it; a dependency scanner reading the lock will flag its
+  advisories, which concern code the server does not load). Without
+  this the app's install on those two computers tried to compile
+  cryptography from source and failed. The package is not signed: on a personal
+  plan it installs like any other extension, and an organisation that
+  requires signed extensions, or keeps an allowlist, blocks it
+  (INSTALL.md says what the tester sees). INSTALL.md now starts with
+  this route; the Terminal route stays for Claude Code, LM Studio,
+  other hosts and Claude Desktop configured by hand.
+- **`scripts/build_desktop_extension.py`** builds the package from a
+  commit or tag, the same bytes every time and on every platform; the
+  manifest's version is `pyproject.toml`'s and its tool list is asked of
+  the server, so neither is typed twice. `scripts/smoke_desktop_extension.py`
+  installs and starts a package the way Claude Desktop does. CI builds
+  it on Linux, Windows and macOS on every run, compares the three,
+  validates the manifest with the official MCPB tool (`@anthropic-ai/mcpb`
+  2.1.2, locked), asks uv whether the lock has a wheel for every
+  computer, and installs and starts it with the uv Claude Desktop
+  downloads and the app's own short list of environment variables.
+- **`QUALCODER_MCP_WORKSPACE`** names the workspace, the folder where
+  `create_project` makes a project when no folder is named and where
+  `copy_project_to_workspace` copies to; `list_available_projects`
+  searches its top level (a usual place such as `~/Documents` is
+  walked in full, as before). Unset or blank, the workspace stays
+  `~/Documents/Qualcoder MCP Projects`, unless
+  `QUALCODER_MCP_WORKSPACE_REQUIRED=1`, which the extension sets: then a
+  blank folder stops the server. A relative path, or a folder inside
+  the state folder, QualCoder's settings folder, a project or the
+  folder the server is installed in, or a path holding `|`, stops the
+  server at start-up, with an error that names no path. The desktop
+  extension's "Folder for projects" sets it.
+- **The export tools refuse a relative `output_path`**
+  (`export_codebook`, `export_coded_segments_report`,
+  `export_frequencies_csv`, `export_case_code_matrix_csv`,
+  `export_refi_qda`), in `create_project`'s words: it was read from the
+  server's working folder, which under the extension is the extension's
+  own hidden folder, replaced by an update or an uninstall, so the
+  export was lost with it. Nothing is written; give a full path or one
+  starting with `~`.
+
 - **Creating a project from the conversation** (Experimental, opt-in):
   `create_project(name, directory, coder_name, coder_name_not_known)`
   makes a new, empty project in QualCoder 4.0's format, exactly as 4.0's
@@ -391,29 +451,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error with no SQLite name (Python 3.10's shape) on every interpreter.
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
-  creation of projects, the handling of existing projects and the
-  server-wide changes: full = 181,222 characters (about 45.3k tokens at
-  chars/4) over 73 tools, core = 61,545 (about 15.4k) over 21, and the
-  new opt-in lifecycle set = 183,735 (about 45.9k) over 74. Moved by
-  every input schema's `additionalProperties: false`, the sentence on
-  the private-note marker in the fourteen tools that take a note, the
-  tools core lacks marked in core's descriptions, and the corrected
-  texts of `search_files`, `list_available_projects`, `list_backups`,
+  creation of projects, the handling of existing projects, the
+  server-wide changes and the folder for projects: full = 181,375
+  characters (about 45.3k tokens at chars/4) over 73 tools, core =
+  61,669 (about 15.4k) over 21, and the new opt-in lifecycle set =
+  183,960 (about 46.0k) over 74. Moved by every input schema's
+  `additionalProperties: false`, the sentence on the private-note marker
+  in the fourteen tools that take a note, the tools core lacks marked in
+  core's descriptions, and the corrected texts of `search_files`,
+  `list_available_projects`, `list_backups`, `prune_backups`,
   `select_project`, `set_memo`, `list_coding_sessions` and
-  `pseudonymise_source` (the server-wide changes); before them by
-  `pseudonymise_source`'s
-  description (privacy, and the caveat for two people who share a
-  name; not in `core`), by `set_memo`'s, `set_project_ai_coder_name`'s,
-  `select_project`'s and `get_current_project`'s (creating a project;
-  all four in `core`), and by `list_backups`'s and
-  `copy_project_to_workspace`'s (both in `core`) and `restore_backup`'s
-  and `link_file_to_case`'s (existing projects);
-  `pseudonymise_source`'s own share now rounds to 19,500, from 18,000.
-  The tools' hints (annotations) are not part of this measurement.
-  Measured as for 0.13, on the final tree through the toolset gate,
-  under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 190,270, 64,701 and
-  192,919.
+  `pseudonymise_source` (the server-wide changes); by the workspace
+  sentences of `copy_project_to_workspace`, `import_text_file`,
+  `list_available_projects` and `create_project` (the folder for
+  projects; the first and third in `core`); before them by
+  `pseudonymise_source`'s description (privacy, and the caveat for two
+  people who share a name; not in `core`), by `set_memo`'s,
+  `set_project_ai_coder_name`'s, `select_project`'s and
+  `get_current_project`'s (creating a project; all four in `core`), and
+  by `list_backups`'s and `copy_project_to_workspace`'s (both in `core`)
+  and `restore_backup`'s and `link_file_to_case`'s (existing projects);
+  `pseudonymise_source`'s own share now rounds to 19,500, from
+  18,000. The tools' hints (annotations) are not part of this
+  measurement. Measured as for 0.13, on the final tree through the
+  toolset gate, under Python 3.13.5 with mcp 1.30.0, in the repository's
+  own `venv/`; on Python 3.11.13, in the repository's `.venv/`,
+  190,435, 64,833 and 193,160.
 
 
 ### Upgrading from 0.13.x
@@ -480,6 +543,23 @@ server-wide changes:
   `read_pseudonym_list` carries `anthropic/requiresUserInteraction` in
   its `_meta`; in an auto mode a host approves read-only tools and a
   classifier decides on the rest. INSTALL.md says what each host does.
+
+The desktop extension's changes:
+
+- **The export tools refuse a relative `output_path`**
+  (`export_codebook`, `export_coded_segments_report`,
+  `export_frequencies_csv`, `export_case_code_matrix_csv`,
+  `export_refi_qda`): give a full path or one starting with `~`. A
+  relative path was read from the server's working folder, which under
+  the extension is its own hidden folder.
+- **`QUALCODER_MCP_WORKSPACE`**, when set, is the workspace
+  `create_project` and `copy_project_to_workspace` use, and
+  `list_available_projects` searches its top level first (reported
+  under `searched.top_level_only`); a relative path, a folder inside the
+  state folder, QualCoder's settings folder, a project or the server's
+  own install folder, or a path holding `|`, stops the server at
+  start-up, and so does a blank one when
+  `QUALCODER_MCP_WORKSPACE_REQUIRED=1` (which the extension sets).
 
 ## [0.13.0-alpha] - 2026-09-25
 

@@ -1197,3 +1197,62 @@ class TestFixRoundSessionFilesHardened:
         for text in (review, refusal):
             assert "IGNORE ALL" not in text and "‮" not in text
         assert "MERGED into another proposal" in review
+
+
+class TestFixRoundPromisesNowPinned:
+    """Four behaviours the texts promise that no test named (QA m5)."""
+
+    @pytest.mark.parametrize("change", [
+        {"color": "#FF0000"},
+        {"category": "Category A"},
+        {"example_segments": [{"file_id": 1, "segment_text": COPE}]},
+    ])
+    def test_every_kind_of_change_withdraws_an_approval(
+            self, setup_server, change):
+        sid = new_session()
+        g = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": "Isolation",
+             "example_segments": [{"file_id": 1, "segment_text": STRESSED}]}
+        ])["recorded"][0]["guid"]
+        call("update_proposal_status", coding_session_id=sid, approve=[g])
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=g, **change)
+        assert out["status"] == "pending", out
+        assert "approval_withdrawn" in out
+
+    def test_reopen_counts_as_a_list_in_the_two_lists_refusal(
+            self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        out = jcall("update_suggestion_status", coding_session_id=sid,
+                    approve=[g], reopen=[g])
+        assert out["in_more_than_one_list"] == [g]
+        assert server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(g).status == "pending"
+
+    def test_a_name_folding_onto_two_codes_names_neither(
+            self, setup_server, qualcoder_db_path):
+        # a project made before QualCoder 4.0 can hold both
+        _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
+             "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
+             "'TestCoder', '2024-01-15', '#0000FF')")
+        out = jcall("analyze_for_coding", file_ids=[1], code_names=["STRESS"])
+        assert "error" in out and "coding_session_id" not in out
+        sid = new_session()
+        rec = record(sid, item(code="STRESS"))
+        assert rec["recorded_count"] == 0
+        exact = record(sid, item(code="stress"))        # exact still works
+        assert exact["recorded"][0]["code_name"] == "stress"
+
+    def test_an_edit_may_land_on_a_removed_suggestions_span(
+            self, setup_server):
+        sid = new_session()
+        first = record(sid, item())["recorded"][0]["guid"]
+        approve_and_apply(sid, [first])
+        ctid = server.session_manager.load_session(sid) \
+            .get_suggestion_by_guid(first).applied_ctid
+        call("delete_coding", coding_id=ctid, create_backup=False)
+        second = record(sid, item(text="I feel stressed"))["recorded"][0]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=second["guid"], segment_text=STRESSED)
+        assert out.get("success") is True, out

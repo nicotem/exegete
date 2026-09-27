@@ -988,6 +988,9 @@ class TestFixRoundDecisionCountsAreChanges:
                    approve=[g, g])
         assert "- Approved: 1 suggestions" in out
         assert "Total: 1 suggestions" in out
+        # the second mention is the same decision, not a second one found
+        # already made
+        assert "Already had that status" not in out
 
     def test_approving_an_approved_one_changes_nothing_and_counts_nothing(
             self, setup_server):
@@ -1008,6 +1011,7 @@ class TestFixRoundDecisionCountsAreChanges:
         out = jcall("update_proposal_status", coding_session_id=sid,
                     approve=[a, a, a])
         assert out["approved"] == 1 and out["changed"] == 1
+        assert out["unchanged"] == 0
         out = jcall("update_proposal_status", coding_session_id=sid,
                     approve=[a])
         assert out["approved"] == 0 and out["unchanged"] == 1
@@ -1282,12 +1286,15 @@ class TestFixRoundTextsTrue:
     def test_a_no_op_update_changes_nothing_and_keeps_the_approval(
             self, setup_server):
         sid = new_session()
+        evidence = [{"file_id": 1, "segment_text": STRESSED}]
         g = jcall("propose_codes", coding_session_id=sid, proposals=[
-            {"name": "Isolation", "memo": "d"}])["recorded"][0]["guid"]
+            {"name": "Isolation", "memo": "d",
+             "example_segments": evidence}])["recorded"][0]["guid"]
         call("update_proposal_status", coding_session_id=sid, approve=[g])
         before = session_file(sid).read_text()
         out = jcall("update_proposal", coding_session_id=sid,
-                    proposal_guid=g, memo="d", name="Isolation")
+                    proposal_guid=g, memo="d", name="Isolation",
+                    example_segments=evidence)
         assert out["changed"] is False and out["status"] == "approved"
         assert session_file(sid).read_text() == before
 

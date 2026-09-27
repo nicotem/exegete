@@ -58,6 +58,8 @@ from .database import (
     MAX_CODER_NAME_LENGTH,
     backup_project,
     backup_sort_key,
+    backup_time_from_name,
+    BACKUP_DATED_BY_NAME,
     unclean_backup_side_files,
     backup_database_is_link,
     BackupWithoutDatabaseError,
@@ -7927,7 +7929,11 @@ def list_backups() -> str:
     restore_backup. Each is dated by the time in its name, when it was
     taken (QualCoder names its own to the hour), and backups taken in the
     same second are listed in the order they were taken; `dated_from` is
-    'folder' only for a name that carries no time.
+    'folder' for a name that carries no time, and 'folder (name in the
+    future)' for a name dated more than five minutes ahead of this
+    computer's clock, which is not trusted. Names carry local time, as
+    QualCoder's do, so for the hour after the clocks go back two backups
+    can be listed out of order.
 
     Backups carry the whole project tree, ai_data/ included (QualCoder
     4.0's AI prompt library and chat history are non-regenerable user
@@ -8049,7 +8055,7 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                 # database.backup_time_from_name); the folder's date,
                 # which a copy inherits from the project, only for a
                 # name that carries none
-                created, counter, named = backup_sort_key(
+                created, counter, dated_from = backup_sort_key(
                     entry, prefix, to_the_hour=(kind == "qualcoder"))
                 order[entry.name] = (created, counter)
                 item = {
@@ -8057,7 +8063,7 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                     "path": str(entry),
                     "kind": kind,
                     "created": created.strftime("%Y-%m-%d %H:%M:%S"),
-                    "dated_from": "name" if named else "folder",
+                    "dated_from": dated_from,
                     "age_days": round(
                         max(0.0, (now - created).total_seconds()) / 86400, 1),
                     "size_mb": round(size_bytes / (1024 * 1024), 2),
@@ -8104,11 +8110,17 @@ def prune_backups(keep_last: Optional[int] = None,
       newest N AND older than D days), the conservative intersection
 
     Safety rules:
-    - ONLY this server's backups are touched (the {project}_backup_*
-      family, including *_prerestore safety copies). QualCoder's own
+    - ONLY this server's backups are touched: the folders named
+      {project}_backup_<date>_<time> (with a counter, or _prerestore for
+      a restore's safety copy). A folder with that prefix and no time in
+      its name is not one of them (a researcher's own copy, say): it is
+      listed under never_removed and never removed. QualCoder's own
       _BKUP_ backups are NEVER removed.
     - At least the newest MCP backup is always kept, unless you
-      explicitly pass keep_last=0.
+      explicitly pass keep_last=0; the newest is the newest by the time
+      in its name, so a folder whose name is dated ahead of the clock
+      (dated by its folder instead, list_backups says so) never takes
+      its place.
 
     A reason to prune beyond disk space: a backup taken before a
     `pseudonymise_source` run holds the text as it was, real names
@@ -8167,8 +8179,18 @@ def prune_backups(keep_last: Optional[int] = None,
 
     project_folder = validate_qda_path(current_project_path).parent
     all_backups = _collect_backups(project_folder)   # one walk, both kinds
-    mcp_backups = [b for b in all_backups
-                   if b["kind"] == "mcp"]  # newest first; _BKUP_ never touched
+    # Only folders named with this server's stamp are its backups (fix
+    # round 1): one with the prefix and no time is someone's own copy,
+    # listed and never removed. _BKUP_ is never touched.
+    prefix = f"{project_folder.stem}_backup_"
+    mcp_backups, not_ours = [], []
+    for b in all_backups:                            # newest first
+        if b["kind"] != "mcp":
+            continue
+        if backup_time_from_name(b["name"], prefix) is None:
+            not_ours.append(b["name"])
+        else:
+            mcp_backups.append(b)
 
     # Apply the policy. With both criteria, a backup is pruned only if it
     # fails BOTH (conservative intersection).
@@ -8184,11 +8206,16 @@ def prune_backups(keep_last: Optional[int] = None,
         if prune:
             to_remove.append(backup)
 
-    # Floor: always keep the newest MCP backup unless keep_last=0 explicit
-    if (mcp_backups and keep_last != 0
-            and any(b["name"] == mcp_backups[0]["name"] for b in to_remove)):
-        to_remove = [b for b in to_remove
-                     if b["name"] != mcp_backups[0]["name"]]
+    # Floor: always keep the newest MCP backup unless keep_last=0 explicit.
+    # The newest by the time in its name (fix round 1): a folder named
+    # ahead of the clock is dated by its folder and never takes the
+    # floor from the real newest.
+    floor = next((b for b in mcp_backups
+                  if b["dated_from"] == BACKUP_DATED_BY_NAME),
+                 mcp_backups[0] if mcp_backups else None)
+    if (floor is not None and keep_last != 0
+            and any(b["name"] == floor["name"] for b in to_remove)):
+        to_remove = [b for b in to_remove if b["name"] != floor["name"]]
 
     kept = [b for b in mcp_backups
             if not any(r["name"] == b["name"] for r in to_remove)]
@@ -8216,6 +8243,7 @@ def prune_backups(keep_last: Optional[int] = None,
             "message": "Nothing to prune: every MCP backup satisfies the "
                        "retention policy.",
             "kept_count": len(kept),
+            **_never_removed_block(not_ours),
         }, indent=2)
 
     fingerprint = _prune_fingerprint(to_remove, kept)
@@ -8229,6 +8257,7 @@ def prune_backups(keep_last: Optional[int] = None,
                  "size_mb": b["size_mb"]} for b in to_remove],
             "would_keep": [b["name"] for b in kept],
             "reclaimed_mb": reclaimed_mb,
+            **_never_removed_block(not_ours),
             "hint": "Call prune_backups again with the preview_token to "
                     "delete these backup folders. QualCoder's own _BKUP_ "
                     "backups are never touched.",
@@ -8299,6 +8328,7 @@ def prune_backups(keep_last: Optional[int] = None,
         "reclaimed_mb": round(sum(b["size_mb"] for b in to_remove
                                   if b["name"] in removed), 2),
         "kept_count": len(kept),
+        **_never_removed_block(not_ours),
     }
     if failed:
         result["failed_to_remove"] = failed
@@ -8315,6 +8345,19 @@ def prune_backups(keep_last: Optional[int] = None,
     if notes:
         result["notes"] = notes
     return json.dumps(result, indent=2)
+
+
+def _never_removed_block(names: List[str]) -> Dict[str, Any]:
+    """The folders prune_backups found with this server's backup prefix
+    and no time in their names, which it never removes (fix round 1)."""
+    if not names:
+        return {}
+    return {"never_removed": names,
+            "never_removed_note": (
+                "These folders carry this project's backup prefix but no "
+                "time in their names, so they are not this server's "
+                "backups (a copy someone made by hand, say); prune_backups "
+                "never removes them.")}
 
 
 def _prune_only_mapping_copies(project_folder: Path,

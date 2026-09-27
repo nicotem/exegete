@@ -1275,6 +1275,59 @@ class TestBackupsDatedByTheirNames:
         assert manual["dated_from"] == "folder"
         assert manual["age_days"] >= 6.9
 
+    def test_a_name_ahead_of_the_clock_and_a_copy_without_a_time(
+            self, tmp_path):
+        """Fix round 1 (the security gate's run): two real backups ten
+        days old by their names, a folder named for next year, and a copy
+        with the prefix and no time. The future name is dated by its
+        folder and flagged; the prune keeps the real newest, keeps the
+        future-named folder (new by its folder), and never offers the
+        copy, which it names."""
+        server._apply_toolset("lifecycle")
+        projects = tmp_path / "projects"
+        projects.mkdir()
+
+        async def make(client):
+            made = json.loads(text_of(await client.call_tool(
+                "create_project", {"name": "Study",
+                                   "directory": str(projects),
+                                   "coder_name": "Researcher"})))
+            await client.call_tool("set_project_ai_coder_name",
+                                   {"name": "AI-Test"})
+            await client.call_tool("create_code", {"name": "One"})
+            await client.call_tool("create_code", {"name": "Two"})
+            return Path(made["project_path"])
+
+        folder = host_session(make)
+        real = sorted(projects.glob("Study_backup_*.qda"))
+        assert len(real) == 2
+        ten_days = datetime.now() - timedelta(days=10)
+        names = [ten_days.strftime("Study_backup_%Y%m%d_%H%M%S.qda"),
+                 ten_days.strftime("Study_backup_%Y%m%d_%H%M%S_2.qda")]
+        for path, name in zip(real, names):
+            path.rename(projects / name)
+        future = (datetime.now() + timedelta(days=100)).strftime(
+            "Study_backup_%Y%m%d_%H%M%S.qda")
+        _backup_folder(projects, future, time.time() - 60)
+        _backup_folder(projects, "Study_backup_keep_this.qda",
+                       time.time() - 20 * 86400)
+        server.switch_project(str(folder))
+
+        async def look(client):
+            listed = json.loads(text_of(await client.call_tool(
+                "list_backups", {})))["backups"]
+            prune = json.loads(text_of(await client.call_tool(
+                "prune_backups", {"older_than_days": 5})))
+            return listed, prune
+
+        listed, prune = host_session(look)
+        by_name = {b["name"]: b for b in listed}
+        assert by_name[future]["dated_from"] == "folder (name in the future)"
+        assert by_name[names[1]]["dated_from"] == "name"
+        assert [b["name"] for b in prune["would_remove"]] == [names[0]]
+        assert set(prune["would_keep"]) == {names[1], future}
+        assert prune["never_removed"] == ["Study_backup_keep_this.qda"]
+
     @pytest.mark.parametrize("name,prefix,hour,expected", [
         ("P_backup_20260926_232751.qda", "P_backup_", False,
          (datetime(2026, 9, 26, 23, 27, 51), 1)),

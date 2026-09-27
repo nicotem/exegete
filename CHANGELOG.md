@@ -121,8 +121,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its `_2`, `_3` counter for backups of one second, which now keeps them
   in the order taken; QualCoder's `_BKUP_<date>_<hour>`, to the hour, as
   QualCoder orders its own by name). A folder's date is used only for a
-  name that carries no time, and `list_backups` says which
-  (`dated_from`).
+  name that carries no time or one dated more than five minutes ahead of
+  the clock, and `list_backups` says which (`dated_from`). Pruning keeps
+  the newest by its name and removes only folders named with this
+  server's stamp; a researcher's own copy with the prefix and no time
+  is named under `never_removed` and never removed.
 - **A failed switch of project changes nothing, and says so.**
   `select_project` opens and reads the new project before it replaces
   the selection, so a project that will not open leaves the previous one
@@ -440,8 +443,11 @@ server-wide changes:
   `list_coding_sessions`' `project_path` finds a project's sessions by
   its folder or its `data.qda`, in any spelling of the path.
 - **Backups are listed and pruned by the time in their names**, each
-  with `dated_from`; `prune_backups(older_than_days=...)` judges by the
-  name.
+  with `dated_from` (a name dated ahead of the clock is dated by its
+  folder and flagged); `prune_backups(older_than_days=...)` judges by
+  the name, keeps the newest by its name, and removes only folders whose
+  names carry this server's stamp: one with the prefix and no time is
+  listed under `never_removed`.
 - **In the `core` set**, the texts it serves and its answers mark each
   tool it does not register: "(not available in this tool set)".
 - **Every tool carries MCP's hints** (`readOnlyHint`,

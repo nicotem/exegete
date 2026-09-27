@@ -2001,14 +2001,37 @@ def backup_time_from_name(name: str, prefix: str,
     return when, counter
 
 
-def backup_sort_key(entry: Path, prefix: str, to_the_hour: bool = False
-                    ) -> Tuple[datetime, int, bool]:
-    """(when, counter, dated by its name) for a backup folder: the time in
-    its name when it has one, its modification time otherwise."""
+# How far ahead of the clock a backup's name may be and still date it
+# (fix round 1): a name later than this was not written by this clock (a
+# folder from another machine, a clock set wrong, a hand-made name), and
+# believed it would stay the newest backup until that time came, taking
+# the prune floor from the real newest.
+BACKUP_NAME_FUTURE_SLACK_SECONDS = 300
+
+BACKUP_DATED_BY_NAME = "name"
+BACKUP_DATED_BY_FOLDER = "folder"
+BACKUP_NAME_IN_THE_FUTURE = "folder (name in the future)"
+
+
+def backup_sort_key(entry: Path, prefix: str, to_the_hour: bool = False,
+                    now: Optional[datetime] = None
+                    ) -> Tuple[datetime, int, str]:
+    """(when, counter, dated from) for a backup folder: the time in its
+    name when it has one and it is not ahead of the clock, the folder's
+    modification time otherwise; "dated from" says which
+    (BACKUP_DATED_BY_NAME, BACKUP_DATED_BY_FOLDER or
+    BACKUP_NAME_IN_THE_FUTURE)."""
     stamp = backup_time_from_name(entry.name, prefix, to_the_hour)
+    folder_time = None
     if stamp is not None:
-        return stamp[0], stamp[1], True
-    return datetime.fromtimestamp(entry.stat().st_mtime), 1, False
+        now = now or datetime.now()
+        if (stamp[0] - now).total_seconds() <= \
+                BACKUP_NAME_FUTURE_SLACK_SECONDS:
+            return stamp[0], stamp[1], BACKUP_DATED_BY_NAME
+        folder_time = datetime.fromtimestamp(entry.stat().st_mtime)
+        return folder_time, 1, BACKUP_NAME_IN_THE_FUTURE
+    folder_time = datetime.fromtimestamp(entry.stat().st_mtime)
+    return folder_time, 1, BACKUP_DATED_BY_FOLDER
 
 
 def unclean_backup_side_files(folder: Union[str, Path]) -> List[str]:
@@ -9247,7 +9270,7 @@ class QualcoderDatabase:
                         if entry.is_dir() and entry != folder:
                             # Newest first by the time in the name (v0.14),
                             # not the folder's date, which a copy inherits
-                            when, counter, _named = backup_sort_key(
+                            when, counter, _dated_from = backup_sort_key(
                                 entry, prefix, to_the_hour)
                             backups.append(((when, counter), entry))
                     except OSError:

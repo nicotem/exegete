@@ -435,6 +435,19 @@ server-wide changes:
   attribute type's or imported file's memo, a proposed code's definition
   or rationale, a suggestion's reasoning. Send the text without the
   marker.
+- **A session recorded under 0.13 whose reasoning, definition or
+  rationale holds `#####`** is refused whole by `apply_codings` or
+  `create_proposed_codes` (the rationale only with
+  `apply_coded_segments`), before any backup, until that suggestion is
+  recorded again or that code proposed again (or, for a rationale,
+  created without `apply_coded_segments`).
+- **A reasoning, a definition, a memo or a rationale that is not text**
+  is refused, item by item, in `record_suggestions` and `propose_codes`;
+  a null is stored as empty (it used to be the word "None").
+- **`replace=true` keeps the pending items when every new item is
+  refused** (`pending_kept`, with a note, and the session file as it
+  was); items already in the session are skipped, not refused, and
+  replace as before.
 - **`set_memo`'s `target_id` may be left out** for the project memo.
 - **`list_available_projects`**: `search_directories` replaces the usual
   places, `~` is expanded, a relative folder is refused, and the answer
@@ -455,8 +468,9 @@ server-wide changes:
   with `dated_from` (a name dated ahead of the clock is dated by its
   folder and flagged); `prune_backups(older_than_days=...)` judges by
   the name, keeps the newest by its name, and removes only folders whose
-  names carry this server's stamp: one with the prefix and no time is
-  listed under `never_removed`.
+  whole name is one this server gives its backups: any other with the
+  prefix (no time, or a Finder duplicate's " copy") is listed under
+  `never_removed`.
 - **In the `core` set**, the texts it serves and this server's own
   words in its answers mark each tool it does not register: "(not
   available in this tool set)"; the project's text is returned as it

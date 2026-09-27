@@ -2295,7 +2295,11 @@ def test_the_upgrading_list_names_what_a_caller_meets():
                    "`target_id`", "`searched`", "`selected_project`",
                    "\"data\"", "`stale_sessions_with_work_to_apply`",
                    "`dated_from`", "(not available in this tool set)",
-                   "`readOnlyHint`"):
+                   "`readOnlyHint`",
+                   # fix round 2
+                   "`pending_kept`", "skipped, not refused",
+                   "is not text", "recorded under 0.13",
+                   "`never_removed`", "\"None\""):
         assert needed in upgrading, needed
 
 

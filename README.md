@@ -497,7 +497,8 @@ results) returns only the text before the marker, silently, and
 writes (`set_memo`, `update_annotation`, the provenance notes that
 merges add) replace only the public text and keep an existing private
 section verbatim. Since v0.14 text the assistant supplies for a memo, a
-note, a journal entry or a code's definition is refused if it contains
+note, a journal entry, a code's definition, a proposed code's rationale
+or a suggestion's reasoning is refused if it contains
 `#####`, before anything is written or backed up: QualCoder's own AI
 server drops the marker and what follows it silently, which here emptied
 notes that began with it ("make this note private"), so the private part

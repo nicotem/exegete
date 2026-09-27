@@ -986,6 +986,12 @@ def _marker_calls(ids, text):
         "propose_codes": {"coding_session_id": session, "proposals": [{
             "name": "Dependence", "memo": text, "rationale": "stated",
             "example_segments": [{"file_id": 1, "segment_text": QUOTE}]}]},
+        # the rationale becomes each evidence coding's memo (fix round 1)
+        "propose_codes, rationale": {
+            "coding_session_id": session, "proposals": [{
+                "name": "Dependence", "memo": "d", "rationale": text,
+                "example_segments": [{"file_id": 1,
+                                      "segment_text": QUOTE}]}]},
         "update_proposal": {"coding_session_id": session,
                             "proposal_guid": ids["proposal"], "memo": text},
         "record_suggestions": {"coding_session_id": session,
@@ -1010,10 +1016,11 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
             answers = {}
-            for name, args in _marker_calls(ids, text).items():
+            for label, args in _marker_calls(ids, text).items():
                 before = work_tree(tmp_path)
-                answer = text_of(await client.call_tool(name, args))
-                answers[name] = (answer, work_tree(tmp_path) == before)
+                answer = text_of(await client.call_tool(
+                    label.split(",")[0], args))
+                answers[label] = (answer, work_tree(tmp_path) == before)
             return answers
 
         answers = host_session(drive)
@@ -1046,7 +1053,8 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
                                 ).fetchone()[0] == 0
 
     @pytest.mark.parametrize("tool", ["apply_codings",
-                                      "create_proposed_codes"])
+                                      "create_proposed_codes",
+                                      "create_proposed_codes, rationale"])
     def test_a_session_from_before_the_rule_is_refused_before_the_backup(
             self, tmp_path, tool):
         """A suggestion's reasoning or a proposal's definition recorded
@@ -1073,17 +1081,23 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
 
         ids = host_session(setup)
         session = server.session_manager.load_session(ids["session"])
+        arguments = {"coding_session_id": ids["session"]}
         if tool == "apply_codings":
             session.get_suggestion_by_guid(ids["suggestion"]).reasoning = \
                 "public ##### the old private reason"
-        else:
+        elif tool == "create_proposed_codes":
             session.get_proposal_by_guid(ids["proposal"]).memo = \
                 "##### an old definition"
+        else:
+            # written into each evidence coding's memo (fix round 1)
+            session.get_proposal_by_guid(ids["proposal"]).rationale = \
+                "Emerges from P3 ##### private aside"
+            arguments["apply_coded_segments"] = True
         server.session_manager.save_session(session)
         before = work_tree(tmp_path)
 
         answer = host_session(lambda client: client.call_tool(
-            tool, {"coding_session_id": ids["session"]}))
+            tool.split(",")[0], arguments))
         body = json.loads(text_of(answer))
         assert "no backup was created" in body["error"]
         assert "private-note marker" in body["failures"][0]["reason"]

@@ -9265,10 +9265,12 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         if not isinstance(item, dict):
             rejected.append({"index": idx, "reason": "each proposal must be an object"})
             continue
-        # The definition becomes the created code's memo (v0.14)
+        # The definition becomes the created code's memo, and the
+        # rationale the memo of each evidence coding that
+        # create_proposed_codes(apply_coded_segments=true) writes (v0.14)
         marker = next(filter(None, (
             private_marker_refusal(item.get(key), key)
-            for key in ("memo", "definition"))), None)
+            for key in ("memo", "definition", "rationale"))), None)
         if marker is not None:
             rejected.append({"index": idx, "reason": marker})
             continue
@@ -9794,9 +9796,20 @@ def create_proposed_codes(coding_session_id: str,
         key = name_key(p.name)
         collision = _code_name_collisions(p.name)
         marker = private_marker_refusal(p.memo, "its definition (memo)")
+        rationale_marker = (private_marker_refusal(p.rationale,
+                                                   "its rationale")
+                            if apply_coded_segments else None)
         if marker is not None:
             # a session recorded before v0.14 refused the marker
             problem = marker + " Set it again with update_proposal."
+        elif rationale_marker is not None:
+            # The rationale becomes the memo of every evidence coding
+            # written with apply_coded_segments (a session recorded before
+            # v0.14 could hold the marker in it); update_proposal cannot
+            # change a rationale
+            problem = rationale_marker + (
+                " Create the code without apply_coded_segments, or propose "
+                "it again with a rationale that holds no marker.")
         elif collision:
             problem = (f"name collides with existing code '{collision}'; "
                        f"rename the proposal (update_proposal) or apply the "

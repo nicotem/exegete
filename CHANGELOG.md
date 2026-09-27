@@ -94,11 +94,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`set_memo`, `add_annotation`, `update_annotation`,
   `add_journal_entry`, the memos of `create_code`, `create_category`,
   `create_case`, `create_attribute_type` and `import_text_file`, a
-  proposed code's definition in `propose_codes` and `update_proposal`, a
-  suggestion's reasoning in `record_suggestions`) refuses text containing
-  QualCoder's private-note marker before anything is written or backed
-  up; `apply_codings` and `create_proposed_codes` refuse an older
-  session's item that holds one. Until now the marker and what followed
+  proposed code's definition in `propose_codes` and `update_proposal`
+  and its rationale in `propose_codes`, which becomes the memo of each
+  evidence coding `create_proposed_codes` writes, a suggestion's
+  reasoning in `record_suggestions`) refuses text containing QualCoder's
+  private-note marker before anything is written or backed up;
+  `apply_codings` and `create_proposed_codes` refuse an older session's
+  item that holds one. Until now the marker and what followed
   it were dropped without a word: "##### note" deleted an annotation,
   emptied a memo, and cut a journal entry. QualCoder's own AI server
   drops it silently; this departs from it because the silent drop

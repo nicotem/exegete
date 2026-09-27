@@ -210,8 +210,9 @@ keeps the same promise:
   details below its `#####` line. An existing private zone survives every memo write
   verbatim. Since v0.14, text the assistant supplies (a memo, an
   annotation's note, a journal entry, a code, category, case or
-  attribute memo, an imported file's memo, a proposed code's definition,
-  a suggestion's reasoning) is refused if it contains `#####`, before
+  attribute memo, an imported file's memo, a proposed code's definition
+  or rationale, a suggestion's reasoning) is refused if it contains
+  `#####`, before
   anything is written or backed up; before, the marker and everything
   after it were dropped without a word, so a note that began with it was
   emptied or, for an annotation, deleted. This departs from QualCoder's

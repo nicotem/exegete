@@ -77,6 +77,7 @@ from .database import (
     snap_to_palette,
     normalize_name,
     name_key,
+    nfc_ordered,
     position_safe as db_position_safe,
     read_project_pseudonyms,
     read_project_pseudonyms_with_raw,
@@ -1466,13 +1467,13 @@ def _find_existing_by_name(rows, name: str, kind: str, plural: str):
         (row, match, None) on a match, (None, None, error_dict) on an
         ambiguity, (None, None, None) when nothing matches.
     """
-    wanted = unicodedata.normalize("NFC", normalize_name(name))
+    wanted = nfc_ordered(normalize_name(name))
     # normalize_name on BOTH sides (D5 section 3.2): a stored name that
     # differs only by a run of whitespace is the same name, so it must
     # match in tier 1 rather than fall through to the case-insensitive
     # tier and be labelled a case difference that is not there.
     exact = [r for r in rows
-             if unicodedata.normalize("NFC", normalize_name(r["name"])) == wanted]
+             if nfc_ordered(normalize_name(r["name"])) == wanted]
     if len(exact) == 1:
         return exact[0], "exact", None
     key = name_key(name)
@@ -1487,7 +1488,7 @@ def _find_existing_by_name(rows, name: str, kind: str, plural: str):
         # separated by any spelling at all: repeating "use the exact
         # spelling" there is advice that cannot be followed, and the caller
         # is left with no way to name the row (fix round 2, R6).
-        forms = [unicodedata.normalize("NFC", normalize_name(r["name"]))
+        forms = [nfc_ordered(normalize_name(r["name"]))
                  for r in candidates]
         twins = max(forms.count(form) for form in forms)
         if twins == 1:
@@ -1706,6 +1707,84 @@ def _existing_case_result(rows, name: str, *, memo: Optional[str]):
     if normalize_name(name) != row["name"]:
         result["requested"] = {"name": normalize_name(name)}
     return result
+
+
+def _resolve_case_argument(cases, case_id: Optional[int],
+                           case_name: Optional[str],
+                           takes_case_id: bool = True):
+    """The case a `case_id` and/or `case_name` argument names (v0.14).
+
+    A name is resolved by the rule create_case uses to find an existing
+    case (`_find_existing_by_name`): the same name after spacing and
+    Unicode form are normalised first, then letter case, and two or more
+    matches refused with their ids. It used to be the first case whose
+    `lower()` matched, from a list in which capitals sort first, so
+    "dana" linked a file to "Dana" when both exist (QualCoder keeps case
+    names unique byte for byte only), "DANA" was not refused as
+    ambiguous, and "Ann  Lee" was not found beside "Ann Lee". Given both
+    arguments, they must name the same case; an id that disagrees with
+    the name is refused, never silently preferred.
+
+    No parity question: QualCoder's own windows pick a case from a list,
+    and QualCoder 4.0's AI server names an existing case by its id.
+
+    `takes_case_id` is false for a tool with no `case_id` argument
+    (import_text_file): its refusal then names that tool's own route,
+    import without `case_name` and link with link_file_to_case, rather
+    than an argument it would drop without a word (fix round 2).
+
+    Returns:
+        (case_row, match, None) or (None, None, error_dict). `match` is
+        "id", "exact" or "case_insensitive".
+    """
+    by_id = None
+    if case_id is not None:
+        by_id = next((c for c in cases if c["id"] == case_id), None)
+        if by_id is None:
+            return None, None, {"error": f"Case ID {case_id} does not exist"}
+    if case_name is None:
+        return by_id, "id", None
+    row, match, err = _find_existing_by_name(
+        cases, str(case_name), "case", "cases")
+    if err is not None:
+        if by_id is not None and any(
+                c["id"] == by_id["id"] for c in err.get("candidates", [])):
+            # The name is one of several spellings; the id picks one of
+            # them, so the two arguments agree.
+            return by_id, "id", None
+        # The exact spelling selects a candidate only when no two of them
+        # are the same name once spacing and Unicode form are normalised
+        # (the test _find_existing_by_name makes); for such twins it
+        # cannot, and the refusal says so (fix round 1)
+        forms = [nfc_ordered(normalize_name(c["name"]))
+                 for c in err.get("candidates", [])]
+        twins = len(set(forms)) < len(forms)
+        spelling = ("" if twins else
+                    ", or give the exact spelling of the one you mean as "
+                    "case_name")
+        if takes_case_id:
+            err["hint"] = (f"Give case_id to choose one of the "
+                           f"candidates{spelling}.")
+        else:
+            err["hint"] = (f"Import without case_name, then link the file "
+                           f"with link_file_to_case, giving the case_id of "
+                           f"the one you mean (the candidates' ids are "
+                           f"listed){spelling}.")
+        return None, None, err
+    if row is None:
+        return None, None, {
+            "error": f"Case '{case_name}' not found",
+            "available_cases": sorted(c["name"] for c in cases)[:50],
+        }
+    if by_id is not None and row["id"] != by_id["id"]:
+        return None, None, {
+            "error": f"case_id {case_id} is the case '{by_id['name']}', but "
+                     f"case_name '{case_name}' names the case "
+                     f"'{row['name']}' (id {row['id']}). Nothing was "
+                     f"changed: give one of the two, or both naming the "
+                     f"same case.",
+        }
+    return row, match, None
 
 
 def _color_disclosure(requested: Optional[str], stored: Optional[str]) -> Dict[str, Any]:
@@ -3957,6 +4036,131 @@ def _resolve_exclude_code_ids(db_, value: Any) -> List[int]:
     return ids
 
 
+# Where the assistant can find the ids a refusal below says do not exist.
+_ID_LISTS = {
+    "code": "get_coding_frequencies or the qualcoder://codes/list resource "
+            "lists every code with its id",
+    "file": "the qualcoder://files/list resource lists every file with its "
+            "id; search_files finds one by name",
+    "case": "the qualcoder://cases/list resource lists every case with its "
+            "id",
+}
+
+
+def _refuse_unknown_id(db_, kind: str, row_id: Any,
+                       param: str) -> Optional[Dict[str, Any]]:
+    """An unknown code, file or case id refused, or None (v0.14).
+
+    Claims audit item 12: the reads answered an id that does not exist
+    exactly as an id with nothing in scope, an empty list or a zero, and
+    the assistant, told that a null result is a valid result, reported
+    "no codes in this case". compare_coders, exclude_code_ids and
+    file_ids already refused; these are the reads written before that
+    rule. A known id with nothing in scope still answers empty.
+    """
+    validate_id(row_id, param)
+    if kind == "code":
+        missing = bool(db_.unknown_code_ids([row_id]))
+    elif kind == "file":
+        missing = bool(db_.unknown_file_ids([row_id]))
+    else:
+        # The one id, in SQL, reading no other case (fix round 3)
+        missing = not db_.case_exists(row_id)
+    if not missing:
+        return None
+    return {"error": f"{kind.capitalize()} ID {row_id} does not exist "
+                     f"({_ID_LISTS[kind]})."}
+
+
+def _refuse_unknown_coder(db_, coder: Any) -> Optional[Dict[str, Any]]:
+    """A coder filter naming no coder in the project refused, or None.
+
+    compare_coders' rule, over every kind of coding (v0.14, claims audit
+    item 12): a name that owns no text, region or audio/video coding
+    anywhere in the project is refused, naming a coder whose name differs
+    only by letter case, spacing or Unicode form; a coder who has
+    codings, but none in the scope asked, still answers zero. A hidden
+    coder named exactly is not refused (an explicit coder filter reads
+    the base tables, as QualCoder 4.0's own AI does), but a hidden coder
+    is never named here: the listing and the near miss come from the
+    coders visible in QualCoder, with a count of the others.
+    """
+    coder = normalize_coder(coder)
+    if coder is None or not isinstance(coder, str):
+        return None
+    # The exact owner first, in SQL (fix round 3); the whole list, read
+    # with replacement, only for the refusal's listing and near miss
+    if db_.coder_has_codings(coder):
+        return None
+    known = db_.coders_with_codings_including_hidden()
+    if coder in known:
+        return None
+    visibility = _visibility_map(db_)
+    if visibility is _VISIBILITY_UNREADABLE:
+        return {"error": f"Coder '{coder}' has no codings in this project, "
+                         f"so filtering by that name would find nothing. "
+                         f"Coder names are exact."}
+    shown = [n for n in known if not coder_is_hidden(visibility or {}, n)]
+    hidden = len(known) - len(shown)
+    near = [n for n in shown if name_key(n) == name_key(coder)]
+    text = (f"Coder '{coder}' has no codings in this project, so filtering "
+            f"by that name would find nothing. Coder names are exact")
+    text += (f"; did you mean '{near[0]}'?" if len(near) == 1 else ".")
+    text += f" Coders with codings: {_coder_listing(shown)}"
+    if hidden:
+        noun = "coder" if hidden == 1 else "coders"
+        text += f" (and {hidden} more {noun} hidden in QualCoder)"
+    text += "."
+    out: Dict[str, Any] = {"error": text}
+    if near:
+        out["did_you_mean"] = near
+    return out
+
+
+def _is_hex(text: str) -> bool:
+    """Whether `text` is an even run of hexadecimal digits (a stored-bytes
+    cursor key, fix round 3)."""
+    try:
+        bytes.fromhex(text)
+    except ValueError:
+        return False
+    return all(c in "0123456789abcdef" for c in text)
+
+
+def _resolve_code_name_filter(db_, code_name: Optional[str]):
+    """A read's `code_name` filter resolved to the stored name (v0.14).
+
+    It was matched exactly, letter case included, and a name matching no
+    code answered "0 results" (claims audit item 12). Now the rule the
+    codebook tools use for a code's name (`_find_existing_by_name`):
+    the same name after spacing and Unicode form, then one differing
+    only by letter case; an ambiguity or no match is refused, listing
+    the codes. None or blank means no filter, as before.
+
+    Only the codes' ids and names are read, as blobs decoded with
+    replacement (fix round 3), and the caller filters by the resolved
+    id: a damaged memo, name or category name elsewhere in the codebook
+    can neither fail the lookup nor the search after it.
+
+    Returns:
+        ({"id", "name"} or None, match or None, refusal or None)
+    """
+    if code_name is None or not str(code_name).strip():
+        return None, None, None
+    codes = db_.code_ids_and_names()
+    row, match, err = _find_existing_by_name(codes, str(code_name),
+                                             "code", "codes")
+    if err is not None:
+        return None, None, err
+    if row is None:
+        return None, None, {
+            "error": f"Code '{code_name}' not found: no code has that name "
+                     f"in any letter case.",
+            "available_codes": sorted(c["name"] for c in codes)[:50],
+        }
+    return row, match, None
+
+
 def _resolve_file_ids(db_, value: Any) -> List[int]:
     """Validate file_ids and refuse unknown ids, as for code ids."""
     ids = _validate_id_list(
@@ -4090,11 +4294,24 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
     so it survives a restart and works from a second host.
 
     Args:
-        query: The text to search for (case-insensitive substring match)
-        code_name: Optional - filter results to only segments coded with this code
+        query: The text to search for (a substring; letter case is
+               ignored by Unicode's default case folding, so "über"
+               finds "Über" and "strasse" finds "Straße", and "ß" finds
+               every "ss"; Turkish dotted and dotless i are the
+               exception, not matched to i and I. A departure in your
+               favour from QualCoder's own searches, which ignore case
+               for the letters A to Z only)
+        code_name: Optional - filter results to only segments coded with
+                   this code. The same name after spacing and Unicode form
+                   are normalised is used first, otherwise one that
+                   differs only by letter case (code_match says which); a
+                   name that matches no code, or two, is refused with the
+                   code names
         limit: Maximum number of results per page (default 50)
-        coder: Optional coder name; reads that coder's rows from the
-               base tables, bypassing the visibility filter
+        coder: Optional coder name (exact); reads that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused, naming
+               a coder that differs only by letter case
         exclude_code_ids: Codes whose coded spans are already accounted
                for; segments overlapping them are dropped (at most 200
                ids, all of which must exist)
@@ -4108,6 +4325,17 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         exclude_ids = _resolve_exclude_code_ids(db_, exclude_code_ids)
     except ValueError as e:
         return json.dumps({"error": str(e)})
+    refusal = _refuse_unknown_coder(db_, coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    code_row, code_match, refusal = _resolve_code_name_filter(db_,
+                                                              code_name)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    # Filter by the resolved code's id (fix round 3); the stored name is
+    # what the answer and the cursor's fingerprint name
+    code_name = code_row["name"] if code_row else None
+    code_id = code_row["id"] if code_row else None
 
     limit = validate_limit(limit)
     normalised_coder = normalize_coder(coder)
@@ -4131,7 +4359,12 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
             text = (CURSOR_TOO_LONG if str(e) == CURSOR_TOO_LONG
                     else cursor_invalid_message("search_coded_text"))
             return json.dumps({"error": text})
-        after = [key[0] or "", key[1], key[2], key[3], key[4]]
+        # The file name's stored bytes, as hex (fix round 3): anything
+        # else is not a cursor this tool minted
+        if not isinstance(key[0], str) or not _is_hex(key[0]):
+            return json.dumps(
+                {"error": cursor_invalid_message("search_coded_text")})
+        after = [key[0], key[1], key[2], key[3], key[4]]
         changed = _database_changed(stamp)
 
     mask = (db_.excluded_span_mask(exclude_ids, coder=normalised_coder)
@@ -4145,15 +4378,19 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
     batch_size = max(limit, 50)
     position = after
     while len(kept) < limit:
-        rows = db_.search_coded_text(query, code_name, batch_size,
-                                     coder=coder, after=position)
+        rows = db_.search_coded_text(query, None, batch_size,
+                                     coder=coder, after=position,
+                                     code_id=code_id)
         if not rows:
             exhausted = True
             break
         consumed = 0
         for row in rows:
             consumed += 1
-            position = [row["file_name"] or "", row["file_id"],
+            # The stored name's bytes as hex, so every name pages
+            # exactly, damaged or not, in either text encoding (fix rounds
+            # 2 and 3); never part of the answer
+            position = [row.pop("_file_name_key"), row["file_id"],
                         row["position_start"], row["position_end"],
                         row["id"]]
             if mask and db_.span_is_excluded(
@@ -4184,8 +4421,9 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         # search_files has no lookahead at all, for the same reason at a
         # larger scale: it would have to scan the remaining files
         # (QA round 1, F17).
-        exhausted = not db_.search_coded_text(query, code_name, 1,
-                                              coder=coder, after=position)
+        exhausted = not db_.search_coded_text(query, None, 1,
+                                              coder=coder, after=position,
+                                              code_id=code_id)
 
     has_more = not exhausted
     next_cursor = None
@@ -4193,13 +4431,16 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         next_cursor = encode_cursor(TAG_SEARCH_CODED_TEXT, fingerprint,
                                     position, returned_so_far + len(kept),
                                     _cursor_stamp())
-    total = db_.count_coded_text_matches(query, code_name, coder=coder)
+    total = db_.count_coded_text_matches(query, None, coder=coder,
+                                         code_id=code_id)
     payload: Dict[str, Any] = {
         "query": query,
         "code_filter": code_name,
         "result_count": len(kept),
         "results": kept,
     }
+    if code_match is not None:
+        payload["code_match"] = code_match
     if exclude_ids:
         payload["novelty_filter"] = _novelty_block(db_, exclude_ids,
                                                    normalised_coder)
@@ -4286,10 +4527,13 @@ def get_coded_segments(code_id: int, limit: int = 100,
     is stored between calls.
 
     Args:
-        code_id: The numeric ID of the code (cid)
+        code_id: The numeric ID of the code (cid); an id that does not
+               exist is refused
         limit: Maximum number of segments per page (default 100)
-        coder: Optional coder name; reads that coder's rows from the
-               base tables, bypassing the visibility filter
+        coder: Optional coder name (exact); reads that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
         strategy: by_document, diverse_by_document, recent_first or
                sequential (default by_document)
         max_chars: Optional character budget for this page's segment
@@ -4303,6 +4547,10 @@ def get_coded_segments(code_id: int, limit: int = 100,
     """
     db_ = get_db()
     code_id = validate_id(code_id, "code_id")
+    refusal = (_refuse_unknown_id(db_, "code", code_id, "code_id")
+               or _refuse_unknown_coder(db_, coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     limit = validate_limit(limit)
     if strategy not in SEGMENT_STRATEGIES:
         return json.dumps({"error": (
@@ -4573,8 +4821,9 @@ def search_files(
     Tips:
     - For finding a specific interview by participant name, use search_filename
     - For finding specific quotes or themes, use search_content
-    - For searching file memos, use search_memo (annotations and code
-      memos are searched by the search_memos tool)
+    - For searching file memos, use search_memo (every other kind of
+      note, from code and coding memos to annotations, journal entries
+      and the project memo, is searched by the search_memos tool)
     - You can combine multiple search locations
     - Once you have file_id, use analyze_file_with_coding() to get full content
     """
@@ -4689,8 +4938,10 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
     rows from the full data instead.
 
     Args:
-        coder: Optional coder name; counts that coder's rows from the
-               base tables, bypassing the visibility filter
+        coder: Optional coder name (exact); counts that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Returns:
         JSON object with:
@@ -4698,6 +4949,9 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
         - codes: Array of codes with their frequencies, sorted by frequency
     """
     db_ = get_db()
+    refusal = _refuse_unknown_coder(db_, coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     frequencies = db_.get_coding_frequencies(coder=coder)
     counts = db_.non_text_coding_counts(coder=coder, by_code=True)
     for entry in frequencies["codes"]:
@@ -4717,32 +4971,44 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def search_memos(query: str, limit: int = 50) -> str:
-    """Search through all memos and annotations in the project.
+    """Search every memo and note in the project, outside QualCoder's saved graphs.
 
-    This tool searches through code memos, file memos, and annotations
-    to find notes and reflections containing specific keywords. To WRITE a
-    memo, use set_memo(target_type, target_id, memo); to add a research
-    journal entry, use add_journal_entry(name, entry).
+    Searches the twelve places a note lives: the project memo, code,
+    category, file, case and attribute type memos, the memos of text,
+    region (PDF page or image) and audio/video codings (where
+    apply_codings stores the reason for each AI coding), case link
+    memos, annotations, and journal entries. Each result says its type
+    and, for a coding, a case link or an annotation, the file and the
+    positions. Results come in that order, up to limit; fewer than limit
+    means nothing was left out. The text typed on QualCoder's saved
+    graphs (free text boxes, a graph's description) is not searched. To
+    WRITE a memo, use
+    set_memo(target_type, target_id, memo); to add a research journal
+    entry, use add_journal_entry(name, entry).
 
     Memo privacy (QualCoder 4.0 convention): memo text from the first
     '#####' marker onward is private to the researcher. The search
-    matches and returns only the public part of each memo.
+    matches and returns only the public part of each memo or entry.
 
     Coder visibility (projects with the coder-visibility capability,
-    QualCoder 3.8.2 and 4.0 onwards): annotation matches
-    honour the project's per-coder visibility by default (hidden
-    coders' annotations are not returned, matching what the user sees
-    in QualCoder), and the result then carries a coder_visibility
-    block. Code and file memos have no per-coder visibility in
-    QualCoder and are always searched. This tool has no coder
-    override.
+    QualCoder 3.8.2 and 4.0 onwards): coding memos and annotations
+    honour the project's per-coder visibility by default (hidden coders'
+    notes are not returned, matching what the user sees in QualCoder),
+    and the result then carries a coder_visibility block. The other
+    notes have no per-coder visibility in QualCoder and are always
+    searched; where such a note's owner is a hidden coder, the owner is
+    reported as "(hidden coder)". This tool has no coder override.
 
     Args:
-        query: The text to search for in memos
+        query: The text to search for in memos (a substring; letter case
+               is ignored by Unicode's default case folding, so "école"
+               finds "École" and "ß" finds "ss"; Turkish dotted and
+               dotless i are not matched to i and I)
         limit: Maximum number of results to return (default 50)
 
     Returns:
-        JSON array of matching memos with their type, content, and context
+        JSON object with query, result_count and results; each result
+        has type, id, name, memo (the public part), owner and date
     """
     results = get_db().search_memos(query, limit)
     payload = {
@@ -4756,13 +5022,21 @@ def search_memos(query: str, limit: int = 50) -> str:
     return json.dumps(payload, indent=2)
 
 
+# How many segments export_code_report returns (v0.14, claims audit item
+# 16: named, and said in the answer when a code has more).
+CODE_REPORT_SEGMENT_LIMIT = 1000
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def export_code_report(code_name: str) -> str:
     """Generate a comprehensive report for a specific code.
 
-    This tool creates a detailed report including code metadata,
-    all coded segments, and frequency information.
+    This tool creates a detailed report including code metadata, up to
+    1,000 of its coded text segments, and frequency information. The
+    answer says how many text segments there are (segments_total) and
+    whether the report stopped short (truncated); get_coded_segments
+    pages through all of them with its cursor.
 
     Memo privacy (QualCoder 4.0 convention): this report is returned
     into the conversation, not written to a file, so every memo it
@@ -4777,35 +5051,51 @@ def export_code_report(code_name: str) -> str:
     get_coded_segments(coder=...) for that.
 
     Args:
-        code_name: The name of the code to generate a report for
+        code_name: The name of the code to generate a report for. The
+                   same name after spacing and Unicode form are
+                   normalised is used first, otherwise one that differs
+                   only by letter case; a name matching no code, or two,
+                   is refused with the code names
 
     Returns:
-        JSON object with complete code information and all coded segments
+        JSON object with the code's information, up to 1,000 of its coded
+        text segments, segments_returned, segments_total and truncated
     """
-    # Find the code by name
-    codes = get_db().list_codes()
-    matching_code = None
-    for code in codes:
-        if code["name"].lower() == code_name.lower():
-            matching_code = code
-            break
+    # Find the code by name, by the codebook tools' rule: the first
+    # lower() match used to pick "Trust" for "trust" when both exist
+    # (v0.14, claims audit item 12)
+    code_row, code_match, refusal = _resolve_code_name_filter(get_db(),
+                                                              code_name)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    if code_row is None:
+        return json.dumps({"error": "code_name must not be empty"})
 
-    if not matching_code:
-        return json.dumps({
-            "error": f"Code '{code_name}' not found",
-            "available_codes": [c["name"] for c in codes]
-        })
-
-    # Get detailed information
-    code_id = matching_code["id"]
+    # Get detailed information, by the resolved code's id (fix round 3)
+    code_id = code_row["id"]
     details = get_db().get_code_details(code_id)
-    segments = get_db().get_coded_text_segments(code_id, limit=1000)
+    segments = get_db().get_coded_text_segments(
+        code_id, limit=CODE_REPORT_SEGMENT_LIMIT)
+    # The report stops at 1,000 segments; it used to say nothing, while
+    # its own statistics gave the full count (v0.14, claims audit item
+    # 16). Both counts are the visible text codings on existing files.
+    total = details["statistics"]["text_segments"]
+    truncated = total > len(segments)
 
     payload = {
         "code": details,
+        "code_match": code_match,
         "segments": segments,
+        "segments_returned": len(segments),
+        "segments_total": total,
+        "truncated": truncated,
         "report_generated": True
     }
+    if truncated:
+        payload["note"] = (
+            f"This report holds the first {len(segments):,} of the code's "
+            f"{total:,} text segments. get_coded_segments(code_id="
+            f"{code_id}) reads all of them, page by page with its cursor.")
     note = _coder_visibility_note()
     if note:
         payload["coder_visibility"] = note
@@ -4845,7 +5135,8 @@ def export_refi_qda(
     as two characters (e.g. NVivo) may show shifted boundaries.
 
     Known limitations (documented): cases, annotations and journals are not
-    included (code categories ARE preserved as nested codes); all
+    included (the categories above the exported codes ARE included, as
+    non-codable parent codes, and the answer's note says so); all
     selections are attributed to a single export user rather than to the
     original coders, even when the project has used several AI coder
     names. That user is named after the project's AI coder name, or,
@@ -5029,8 +5320,12 @@ def export_refi_qda(
         # coder name, this host's declaration, or the built-in default.
         # The export never asks for one (B1.11).
         "ai_user_name_source": _ai_user_name_source(),
+        # The note used to say categories were left out, while the file
+        # nests them (v0.14, claims audit item 16)
         "note": "Export includes codes, text sources and coded selections. "
-                "Categories, cases, annotations and journals are not included."
+                "The categories above the exported codes are included, as "
+                "non-codable parent codes (QualCoder's own REFI-QDA "
+                "convention); cases, annotations and journals are not."
     }
     if skipped_non_text:
         output["skipped_codings_on_non_text_sources"] = skipped_non_text
@@ -5248,11 +5543,15 @@ def get_file_attributes(file_id: int) -> str:
     (e.g., document_type, source, date_collected).
 
     Args:
-        file_id: The numeric ID of the file
+        file_id: The numeric ID of the file; an id that does not exist is
+                 refused
 
     Returns:
         JSON array of attributes with their values for this file
     """
+    refusal = _refuse_unknown_id(get_db(), "file", file_id, "file_id")
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_file_attributes(file_id)
     return _ai_json({
         "file_id": file_id,
@@ -5270,11 +5569,15 @@ def get_case_attributes(case_id: int) -> str:
     (e.g., age, gender, education_level).
 
     Args:
-        case_id: The numeric ID of the case
+        case_id: The numeric ID of the case; an id that does not exist is
+                 refused
 
     Returns:
         JSON array of attributes with their values for this case
     """
+    refusal = _refuse_unknown_id(get_db(), "case", case_id, "case_id")
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_case_attributes(case_id)
     return _ai_json({
         "case_id": case_id,
@@ -5302,22 +5605,131 @@ def query_by_attribute(
       -> query_by_attribute("Sector", "health", operator="contains")
 
     Args:
-        attr_name: Name of the attribute to query
-        attr_value: Value to compare against (a number for gt/gte/lt/lte)
+        attr_name: Name of the attribute to query, exactly as stored,
+                   letter case included. A name that is not an attribute
+                   of attr_type's kind is refused: the refusal names an
+                   attribute that differs only by letter case, or says
+                   when the name is the other kind's (a file attribute
+                   queried as a case one)
+        attr_value: Value to compare against: a finite number in the
+                    digits 0 to 9 for gt/gte/lt/lte, and for equals on a
+                    numeric attribute (such as "50" or "4.5"; space
+                    around it is ignored); "nan", "inf", "1_000" or
+                    full-width digits are refused
         attr_type: Either 'case' or 'file' (default: 'case')
-        operator: 'equals' (exact match, default; numeric attributes
-                  compare numerically so "5" finds a stored "5.0", and
-                  "" finds cases/files whose attribute is unset),
-                  'contains' (case-insensitive substring), or
-                  'gt'/'gte'/'lt'/'lte' (numeric comparisons; unset
-                  values never match)
+        operator: 'equals' (exact match, default; on a numeric
+                  attribute a numeric comparison, so "5" finds a stored
+                  "5.0", with the same rule for stored values as
+                  gt/gte/lt/lte below; "" finds cases/files whose
+                  attribute is unset),
+                  'contains' (substring; letter case ignored by
+                  Unicode's default case folding, "ß" matching "ss",
+                  Turkish dotted and dotless i the exception), or
+                  'gt'/'gte'/'lt'/'lte' (numeric comparisons of the
+                  values that are finite numbers once space around them
+                  is stripped, on a character attribute too; a value
+                  that is not one, such as "unknown", "n/a" or "34
+                  years", and an unset value never match, and are
+                  counted in values_left_out). QualCoder's attribute
+                  report reads a numeric attribute's value as the number
+                  it begins with ("34 years" as 34) or as 0 when it
+                  begins with none ("unknown"), and compares a character
+                  attribute as text; this tool departs from it so that
+                  "under 18" does not find "unknown"
 
     Returns:
-        JSON array of matching cases/files, each with id, name, memo and
-        the matched attribute value
+        JSON object: attribute, attr_type, operator, value, value_type,
+        result_count and results (each case or file with its id, name,
+        memo and the matched attribute value); for a numeric comparison
+        also values_compared and values_left_out (not_numbers, unset),
+        with a note when anything was left out or the attribute is a
+        character one
     """
-    result = get_db().query_by_attribute(attr_name, attr_value, attr_type, operator)
-    return _ai_json(result, indent=2)
+    if attr_type in ("case", "file") and isinstance(attr_name, str):
+        refusal = _refuse_unknown_attribute(get_db(), attr_name, attr_type)
+        if refusal is not None:
+            return json.dumps(refusal, indent=2)
+    found = get_db().attribute_query(attr_name, attr_value, attr_type,
+                                     operator)
+    payload: Dict[str, Any] = {
+        "attribute": attr_name,
+        "attr_type": attr_type,
+        "operator": operator,
+        "value": attr_value,
+        "value_type": found["value_type"],
+        "result_count": len(found["results"]),
+        "results": found["results"],
+    }
+    counts = found.get("numeric")
+    if counts is not None:
+        payload["values_compared"] = counts["compared"]
+        payload["values_left_out"] = {"not_numbers": counts["not_numbers"],
+                                      "unset": counts["unset"]}
+        notes = []
+        character = found["value_type"] == "character"
+        if character:
+            notes.append(
+                f"'{attr_name}' is a character attribute: the values that "
+                f"are numbers were compared as numbers, the others left "
+                f"out. QualCoder's attribute report compares a character "
+                f"attribute as text.")
+        if counts["not_numbers"]:
+            unknown = ("is not known to hold that number or not"
+                       if operator == "equals"
+                       else "is not known to be inside or outside the range")
+            notes.append(
+                f"{counts['not_numbers']} value(s) are not numbers and "
+                f"were left out: they neither match nor fail the "
+                f"comparison, so a case or file with such a value "
+                f"{unknown}." + (
+                    "" if character else
+                    " QualCoder's attribute report would read each as the "
+                    "number it begins with (\"34 years\" as 34), or as 0 "
+                    "when it begins with none (\"unknown\")."))
+        if counts["unset"]:
+            notes.append(f"{counts['unset']} unset value(s) were left out.")
+        if notes:
+            payload["note"] = " ".join(notes)
+    return _ai_json(payload, indent=2)
+
+
+def _refuse_unknown_attribute(db_, attr_name: str,
+                              attr_type: str) -> Optional[Dict[str, Any]]:
+    """An attribute name that is not one of attr_type's refused, or None.
+
+    v0.14, claims audit item 12: "age" when the attribute is "Age", or a
+    file attribute queried with the default attr_type="case", answered
+    an empty list, which the assistant reported as "no participant is
+    over 50". Attribute names stay exact, as set_attribute's are (the
+    attribute_type table keys them byte for byte); the refusal names the
+    near miss and the domain a name belongs to.
+    """
+    # The exact name first, in SQL (fix round 3): reading the whole list
+    # strictly let one damaged note elsewhere fail every query. The list,
+    # names and domains only, decoded with replacement, is read only to
+    # write the refusal
+    domains = db_.attribute_type_domains(attr_name)
+    if attr_type in domains:
+        return None
+    if domains:
+        other = domains[0]
+        how = (f"query it with attr_type='{other}'"
+               if other in ("case", "file")
+               else "journal attributes are not queried by this tool")
+        return {"error": f"'{attr_name}' is a {other} attribute, not a "
+                         f"{attr_type} one: {how}."}
+    types = db_.attribute_type_names()
+    near = [t for t in types if name_key(t["name"]) == name_key(attr_name)]
+    in_domain = sorted(t["name"] for t in types
+                       if t["applies_to"] == attr_type)
+    text = f"Attribute '{attr_name}' does not exist. Attribute names are exact"
+    if near:
+        text += "; did you mean " + " or ".join(
+            f"'{t['name']}' (a {t['applies_to']} attribute)"
+            for t in near) + "?"
+    else:
+        text += "."
+    return {"error": text, f"{attr_type}_attributes": in_domain[:50]}
 
 
 # The exact literal QualCoder writes as the owner of speaker-segmentation
@@ -5873,20 +6285,39 @@ def find_cooccurring_codes(code_id: int, window_size: int = 0,
     Args:
         code_id: The numeric ID of the code to analyse
         window_size: How to define "co-occurrence":
-                    - 0 (default): Codes that overlap the same text segment
-                    - N > 0: Codes within N characters of each other
-        coder: Optional coder name; analyses that coder's rows from the
-               base tables, bypassing the visibility filter
+                    - 0 (default): codings that share at least one
+                      character with a coding of this code (two codings
+                      that only touch, one ending where the other
+                      begins, do not)
+                    - N > 0: codings whose gap to a coding of this code,
+                      from the end of the earlier to the start of the
+                      later, is at most N characters (overlapping
+                      codings count, with a gap of 0)
+                    Window 0 is QualCoder's co-occurrence report's
+                    overlap (exact, inclusion or overlap, touching
+                    codings not); at N the gap is the distance
+                    QualCoder's Code relations report gives two codings.
+                    How the pairs are counted is not QualCoder's (see
+                    above)
+        coder: Optional coder name (exact); analyses that coder's rows
+               from the base tables, bypassing the visibility filter. A
+               name with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Returns:
         JSON array of co-occurring codes, sorted by frequency; each entry
-        has code_id, code_name, color, category, cooccurrence_count
+        has code_id, code_name, color, category, cooccurrence_count. A
+        code_id that does not exist is refused
 
     Example uses:
     - "What themes appear together with 'workplace stress'?"
     - "Find patterns of co-occurring codes"
     - "Which codes never appear with 'job satisfaction'?"
     """
+    refusal = (_refuse_unknown_id(get_db(), "code", code_id, "code_id")
+               or _refuse_unknown_coder(get_db(), coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().find_code_cooccurrences(code_id, window_size,
                                               coder=coder)
     payload: Dict[str, Any] = {"cooccurrences": result}
@@ -5918,10 +6349,12 @@ def get_case_code_matrix(coder: Optional[str] = None) -> str:
     (QualCoder report-export parity).
 
     Args:
-        coder: Optional coder name. When given, counts only that coder's
-               codings, read from the full data regardless of QualCoder
-               visibility settings; when omitted, counts all visible
-               coders' codings.
+        coder: Optional coder name (exact). When given, counts only that
+               coder's codings, read from the full data regardless of
+               QualCoder visibility settings; when omitted, counts all
+               visible coders' codings. A name with no codings anywhere
+               in the project is refused, naming a coder that differs
+               only by letter case.
 
     Returns:
         JSON object with:
@@ -5936,6 +6369,9 @@ def get_case_code_matrix(coder: Optional[str] = None) -> str:
     - "Create a comparison table of themes by participant"
     - "Find cases that never mention certain codes"
     """
+    refusal = _refuse_unknown_coder(get_db(), coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_case_code_matrix(coder=coder)
     note = _coder_visibility_note(coder)
     if note:
@@ -5961,9 +6397,12 @@ def get_codes_by_case(case_id: int, coder: Optional[str] = None) -> str:
     specific coder's rows from the full data instead.
 
     Args:
-        case_id: The numeric ID of the case
-        coder: Optional coder name; counts that coder's rows from the
-               base tables, bypassing the visibility filter
+        case_id: The numeric ID of the case; an id that does not exist is
+                 refused
+        coder: Optional coder name (exact); counts that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Only codings fully contained in the case's text intervals are counted
     (QualCoder report semantics).
@@ -5972,6 +6411,10 @@ def get_codes_by_case(case_id: int, coder: Optional[str] = None) -> str:
         JSON array of codes used in this case; each entry has code_id,
         code_name, color, category, occurrence_count
     """
+    refusal = (_refuse_unknown_id(get_db(), "case", case_id, "case_id")
+               or _refuse_unknown_coder(get_db(), coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_codes_by_case(case_id, coder=coder)
     payload: Dict[str, Any] = {"codes": result}
     note = _coder_visibility_note(coder)
@@ -5999,9 +6442,12 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
     specific coder's rows from the full data instead.
 
     Args:
-        code_id: The numeric ID of the code
-        coder: Optional coder name; counts that coder's rows from the
-               base tables, bypassing the visibility filter
+        code_id: The numeric ID of the code; an id that does not exist is
+                 refused
+        coder: Optional coder name (exact); counts that coder's rows from
+               the base tables, bypassing the visibility filter. A name
+               with no codings anywhere in the project is refused,
+               naming a coder that differs only by letter case
 
     Only codings fully contained in a case's text intervals are counted
     (QualCoder report semantics).
@@ -6010,6 +6456,10 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
         JSON array of cases containing this code; each entry has case_id,
         case_name, memo, occurrence_count
     """
+    refusal = (_refuse_unknown_id(get_db(), "code", code_id, "code_id")
+               or _refuse_unknown_coder(get_db(), coder))
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
     result = get_db().get_cases_by_code(code_id, coder=coder)
     payload: Dict[str, Any] = {"cases": result}
     note = _coder_visibility_note(coder)
@@ -7548,8 +7998,14 @@ def import_text_file(
                (set_project_ai_coder_name). A human coder's name is
                never used.
         create_backup: Create timestamped backup before writing (default: True)
-        case_name: Optional existing case to link the new file to
-                   (matched case-insensitively)
+        case_name: Optional existing case to link the new file to.
+                   The same name after spacing and Unicode form are
+                   normalised is used first; otherwise one that differs
+                   only by letter case. When two or more cases match
+                   (QualCoder allows "Dana" beside "dana") nothing is
+                   imported and the candidates' ids are listed; link by
+                   id afterwards with link_file_to_case. The answer's
+                   case_match says which rule matched
         apply_project_pseudonyms: Apply the project's own pseudonyms.json
                    to the text before storing it, which is what QualCoder
                    does to every text file IT imports
@@ -7667,17 +8123,12 @@ def import_text_file(
     # Resolve the target case (if any) before upgrading — an unknown case
     # must not cost a backup copy
     case = None
+    case_match = None
     if case_name is not None:
-        cases = get_db().list_cases()
-        case = next(
-            (c for c in cases if c["name"].lower() == str(case_name).lower()),
-            None
-        )
-        if case is None:
-            return json.dumps({
-                "error": f"Case '{case_name}' not found",
-                "available_cases": sorted(c["name"] for c in cases)[:50]
-            })
+        case, case_match, case_error = _resolve_case_argument(
+            get_db().list_cases(), None, case_name, takes_case_id=False)
+        if case_error is not None:
+            return json.dumps(case_error, indent=2)
 
     # Refuse on pre-v14 schemas and while QualCoder has the project open
     lock_error = _write_gate_error()
@@ -7782,6 +8233,7 @@ def import_text_file(
     }
     if case_link is not None:
         output["linked_to_case"] = case_link
+        output["case_match"] = case_match
     if pseudonym_report is not None:
         output["project_pseudonyms"] = pseudonym_report
     if backup_path:
@@ -7816,7 +8268,15 @@ def link_file_to_case(
     Args:
         file_id: The source file to link
         case_id: The case to link to (or use case_name)
-        case_name: Case name, matched case-insensitively (or use case_id)
+        case_name: Case name (or use case_id). The same name after
+                   spacing and Unicode form are normalised is used first;
+                   otherwise one that differs only by letter case. When
+                   two or more cases match (QualCoder allows "Dana"
+                   beside "dana") nothing is linked and the candidates'
+                   ids are listed. Given with case_id, both must name the
+                   same case, or nothing is linked. The answer's
+                   case_match says which rule matched ("id", "exact" or
+                   "case_insensitive")
         create_backup: Create timestamped backup before writing (default: True)
 
     Returns:
@@ -7830,21 +8290,10 @@ def link_file_to_case(
     # Resolve the case
     if case_id is None and case_name is None:
         return json.dumps({"error": "Provide case_id or case_name"})
-    cases = ro_db.list_cases()
-    if case_id is not None:
-        case = next((c for c in cases if c["id"] == case_id), None)
-        if case is None:
-            return json.dumps({"error": f"Case ID {case_id} does not exist"})
-    else:
-        case = next(
-            (c for c in cases if c["name"].lower() == str(case_name).lower()),
-            None
-        )
-        if case is None:
-            return json.dumps({
-                "error": f"Case '{case_name}' not found",
-                "available_cases": sorted(c["name"] for c in cases)[:50]
-            })
+    case, case_match, case_error = _resolve_case_argument(
+        ro_db.list_cases(), case_id, case_name)
+    if case_error is not None:
+        return json.dumps(case_error, indent=2)
 
     # Validate the file on the read-only connection
     file_content = ro_db.get_file_content(file_id)
@@ -7878,6 +8327,7 @@ def link_file_to_case(
             "message": f"Linked '{link['file_name']}' to case "
                        f"'{link['case_name']}'",
             "link": link,
+            "case_match": case_match,
         }
 
     result = _perform_write(_op, create_backup=create_backup,
@@ -10635,9 +11085,13 @@ def move_code_to_category(code_id: int,
     gave. When the code is already where the call
     would put it, the result is `changed: false, reason: unchanged` with
     nothing written and no backup made. On projects with sub-code support
-    (schema v16+) moving a sub-code to "no category" is a real change: it
-    detaches the code from its parent code. Successful moves carry
-    `changed: true`.
+    (schema v16+) a code sits under a category or under a parent code,
+    never both, so ANY move of a sub-code, into a category or to "no
+    category", detaches it from its parent code, as QualCoder's own move
+    does; the result names the parent it left (old_parent_code_id,
+    old_parent_code) and says so. A code moved keeps its own sub-codes
+    under it. Nesting an existing code under another code is done in
+    QualCoder. Successful moves carry `changed: true`.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -10705,8 +11159,17 @@ def move_code_to_category(code_id: int,
         # which row the code had been filed under. The unchanged answer
         # already echoes `category`, so this makes the two agree.
         new_name = _category_name(wdb, category_id)
-        where = (f"into category '{new_name}'" if new_name is not None
-                 else "out of any category")
+        parent = moved.get("old_parent_code")
+        if parent is not None and new_name is not None:
+            where = (f"into category '{new_name}', out from under its "
+                     f"parent code '{parent}'")
+        elif parent is not None:
+            where = (f"out from under its parent code '{parent}'; it is "
+                     f"now a top-level code, in no category")
+        elif new_name is not None:
+            where = f"into category '{new_name}'"
+        else:
+            where = "out of any category"
         return {"success": True, "changed": True,
                 "message": f"Moved code '{moved['name']}' {where}",
                 "new_category": new_name, **moved}
@@ -11403,6 +11866,22 @@ def merge_codes(from_code_id: int, into_code_id: int,
     codings are reassigned without de-duplication (as QualCoder does), which
     can create visual duplicates.
 
+    The codebook changes too, as in QualCoder, and the preview names each
+    change. On projects with sub-code support (v16+ schemas, QualCoder
+    4.0) the source code's sub-codes move under the target with their own
+    sub-codes (subcodes_moved_to_target); a "[Merged from code: ...,
+    Coder: ..., Merger date: ...]" line naming the source code, its owner
+    and the date is added to the target's memo, followed by the source
+    code's whole memo, its '#####' private section included, which stays
+    private; it lands before any private section on the target, which
+    survives verbatim; and the source code's nodes and lines on
+    QualCoder's saved graphs are removed (saved_graph_rows_removed). On a
+    pre-sub-code schema (QualCoder 3.8.2 parity) the source code's memo,
+    definition included, is deleted with its row; the mandatory backup
+    keeps a copy. source_memo_carried_to_target and source_memo_note say
+    which applies; the result reports provenance_memo_added and
+    subcodes_reparented_to_target.
+
     Two-step by design. Call without preview_token: nothing is written and the
     result is a preview of exactly what would change, with a preview_token.
     Show the user the preview (including the collateral breakdown and every
@@ -11468,12 +11947,19 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     EVERY coded segment made with it (text, audio/video, and image codings).
     Categories, annotations, case links and other codes are not affected.
 
-    SUB-CODES (projects with schema v16 or newer): a code that has
-    sub-codes is REFUSED unless cascade=true, which then deletes the
-    whole branch (the code, every transitive sub-code, and all their
-    codings) in one transaction, exactly as QualCoder's own delete. The
-    preview always reports the branch, so review it before confirming.
-    Move the sub-codes first if they are needed.
+    SUB-CODES (projects with schema v16 or newer): deleting a code that
+    has sub-codes deletes the whole branch (the code, every transitive
+    sub-code, and all their codings) in one transaction, exactly as
+    QualCoder's own delete, which asks once in a dialog naming the
+    sub-codes. The preview is that dialog here: it names the sub-codes,
+    and its execute_with carries cascade=true when there are any, so the
+    researcher's approval of the preview is the approval of the branch.
+    An execute without cascade=true on such a code is refused. Review
+    the preview before confirming.
+    Move the sub-codes first if they are needed. On those projects the
+    deleted codes' nodes and lines on QualCoder's saved graphs are
+    removed too, as QualCoder 4.0's own delete removes them; the preview
+    counts them (saved_graph_rows_removed).
 
     Two-step by design. Call without preview_token: nothing is written and the
     result is a preview of exactly what would change, with a preview_token.
@@ -11493,7 +11979,8 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
         preview_token: The token from this operation's preview; omit it to
                  get the preview
         cascade: Must be true to delete a code that has sub-codes (the
-                 whole branch dies; default false refuses instead)
+                 whole branch dies; default false refuses instead). The
+                 preview's execute_with sets it when there are sub-codes
         allow_hidden_coder: Required when the preview reports codings that
                  belong to a coder currently hidden in QualCoder
     """
@@ -15170,8 +15657,9 @@ def create_attribute_type(name: str, applies_to: str,
         applies_to: 'case', 'file' or 'journal' (QualCoder's real domain
                     set; there is no 'both')
         value_type: 'character' (default) or 'numeric'. Numeric values
-                    are stored as text but validated and compared as
-                    numbers. There is no path back from numeric data to
+                    are stored as text, checked to be finite numbers by
+                    set_attribute and compared as numbers by
+                    query_by_attribute. There is no path back from numeric data to
                     character-only in this server, so choose carefully.
         memo: Optional description of what the attribute captures
         create_backup: Create a timestamped backup before writing (default True)
@@ -15216,10 +15704,13 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     Pass value="" to unset: QualCoder represents "no value" as an empty
     cell, the row itself always remains.
 
-    Numeric attributes require a number ("30", "4.5", "1e3"): a
-    non-numeric value is refused with an error. (QualCoder's own GUI
-    silently blanks invalid numeric input; this server refuses instead,
-    so nothing is lost without the user knowing.)
+    Numeric attributes require a finite number written in the digits 0
+    to 9 ("30", "-4.5", "1e3"): anything else, "nan", "inf" and "1_000"
+    included, is refused with an error and nothing changes. QualCoder
+    blanks or reverts a value that is not a number, with a warning, and
+    accepts "nan", "inf" and underscores, which its attribute report
+    then reads as other numbers; this server refuses them, so what it
+    stores is what query_by_attribute compares.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -15489,6 +15980,104 @@ def _codebook_tree(ro_db):
     yield from walk(None, 0)
 
 
+def _md_quote(memo: str, indent: str) -> List[str]:
+    """A memo as a Markdown block quote, every line of it quoted.
+
+    Fix round 1 (the QA gate's major): only the first line used to carry
+    the indent and the `> `, so a memo with a blank line, or a line
+    starting "- " or "1. ", ended the quote and the list around it, and
+    the code's sub-codes rendered beside it or under a memo line. Every
+    line now carries the bullet's content indent and its own `>`, a
+    blank one as `{indent}>`, so the quote holds the whole memo and the
+    list continues after it. Line breaks of any kind are split on, so a
+    "\r\n" memo leaves no stray "\r".
+    """
+    out = []
+    for line in memo.splitlines() or [""]:
+        out.append(f"{indent}> {line}" if line.strip() else f"{indent}>")
+    return out
+
+
+def _codebook_markdown(ro_db, freq, include_memos: bool):
+    """The Markdown codebook's lines, and its category and code counts.
+
+    v0.14, claims audit item 16: the Markdown form wrote the csv and txt
+    walk, in which a level's sub-categories and codes are sorted
+    together, as headings and bullets; a heading cannot be closed, so a
+    top-level code sorting after a category read as that category's, a
+    code sorting after a sub-category read as the sub-category's, and a
+    sub-code was a bullet beside its parent. Here the codes without a
+    category come first under their own heading, each category's own
+    codes come directly under its heading, before its sub-categories,
+    and a sub-code's bullet is indented two spaces per level under its
+    parent's. Names sort case-insensitively, as in the walk. QualCoder
+    has no Markdown codebook; its ODT codebook uses the depth prefix the
+    csv and txt forms keep.
+    """
+    cats = ro_db.list_categories()
+    codes = ro_db.list_codes()
+    child_cats: Dict[Any, list] = {}
+    for c in cats:
+        child_cats.setdefault(c["parent_id"], []).append(c)
+    code_children: Dict[Any, list] = {}
+    cat_codes: Dict[Any, list] = {}
+    for c in codes:
+        parent_code = c.get("parent_code_id")
+        if parent_code is not None:
+            code_children.setdefault(parent_code, []).append(c)
+        else:
+            cat_codes.setdefault(c["category_id"], []).append(c)
+    lines: List[str] = []
+    counts = {"cats": 0, "codes": 0}
+
+    def by_name(items):
+        return sorted(items, key=lambda i: i["name"].lower())
+
+    def code_lines(code, level, seen):
+        if code["id"] in seen:
+            return
+        seen = seen | {code["id"]}
+        counts["codes"] += 1
+        pad = "  " * level
+        color = f" `{code['color']}`" if code.get("color") else ""
+        lines.append(f"{pad}- **{code['name']}**{color}: "
+                     f"{freq.get(code['id'], 0)} coding(s)")
+        memo = code.get("memo") or ""
+        if include_memos and memo:
+            lines.extend(_md_quote(memo, f"{pad}  "))
+        for sub in by_name(code_children.get(code["id"], [])):
+            code_lines(sub, level + 1, seen)
+
+    def category_lines(cat, depth, seen):
+        if cat["id"] in seen:
+            return
+        seen = seen | {cat["id"]}
+        counts["cats"] += 1
+        lines.append(f"{'#' * min(depth + 2, 6)} {cat['name']}")
+        memo = cat.get("memo") or ""
+        if include_memos and memo:
+            lines.extend(_md_quote(memo, ""))
+        lines.append("")
+        own = by_name(cat_codes.get(cat["id"], []))
+        for code in own:
+            code_lines(code, 0, frozenset())
+        if own:
+            lines.append("")
+        for sub in by_name(child_cats.get(cat["id"], [])):
+            category_lines(sub, depth + 1, seen)
+
+    top_codes = by_name(cat_codes.get(None, []))
+    if top_codes:
+        lines.append("## Codes without a category")
+        lines.append("")
+        for code in top_codes:
+            code_lines(code, 0, frozenset())
+        lines.append("")
+    for cat in by_name(child_cats.get(None, [])):
+        category_lines(cat, 0, frozenset())
+    return lines, counts["cats"], counts["codes"]
+
+
 def _category_chain(cat_by_id, category_id):
     """Category names, immediate parent first, up to the root (the
     category leg of the coded-report chain)."""
@@ -15550,7 +16139,10 @@ def export_codebook(output_path: str, format: str = "csv",
       codebook convention), Id is `catid:N`/`cid:N`.
     - "txt": QualCoder's Codebook text shape (`...Category: X` /
       `...Code: Y, Count: N`, `MEMO:` lines when include_memos).
-    - "md": Markdown: headings per category depth, codes as bullets.
+    - "md": Markdown: codes without a category first, under their own
+      heading; then each category as a heading by its depth, its own
+      codes as bullets directly under it, before its sub-categories;
+      a sub-code's bullet indented under its parent code's.
     All files are UTF-8 with BOM (QualCoder's export encoding).
 
     Args:
@@ -15605,10 +16197,10 @@ def export_codebook(output_path: str, format: str = "csv",
         _write_csv_file(out_file, rows, quote_all=False,
                         sanitize=sanitize_formulas)
     else:
-        lines = [f"Codebook: {project}", ""]
-        for depth, kind, item in _codebook_tree(ro_db):
-            memo = item.get("memo") or ""
-            if format == "txt":
+        if format == "txt":
+            lines = [f"Codebook: {project}", ""]
+            for depth, kind, item in _codebook_tree(ro_db):
+                memo = item.get("memo") or ""
                 prefix = "..." * depth
                 if kind == "category":
                     n_cats += 1
@@ -15619,23 +16211,10 @@ def export_codebook(output_path: str, format: str = "csv",
                                  f"Count: {freq.get(item['id'], 0)}")
                 if include_memos and memo:
                     lines.append(f"{prefix}MEMO: {memo}")
-            else:  # md
-                if kind == "category":
-                    n_cats += 1
-                    lines.append(f"{'#' * min(depth + 2, 6)} {item['name']}")
-                    if include_memos and memo:
-                        lines.append(f"> {memo}")
-                    lines.append("")
-                else:
-                    n_codes += 1
-                    color = f" `{item['color']}`" if item.get("color") else ""
-                    lines.append(f"- **{item['name']}**{color}: "
-                                 f"{freq.get(item['id'], 0)} coding(s)")
-                    if include_memos and memo:
-                        lines.append(f"  > {memo}")
-        if format == "md":
-            lines.insert(0, f"# Codebook: {project}")
-            del lines[1]
+        else:  # md, its own walk (v0.14, claims audit item 16)
+            md_lines, n_cats, n_codes = _codebook_markdown(
+                ro_db, freq, include_memos)
+            lines = [f"# Codebook: {project}", ""] + md_lines
         with open(out_file, "w", encoding="utf-8-sig") as fh:
             fh.write("\n".join(lines) + "\n")
 
@@ -15705,8 +16284,11 @@ def export_coded_segments_report(
                     else unique case-insensitive match.
         case_names: Switch to CASE mode and filter to these cases
         coder: Exact coder name (default "" = all coders; exact match,
-               never a substring, like QualCoder)
-        file_ids: Restrict to these files
+               never a substring, like QualCoder). A name with no codings
+               anywhere in the project is refused, naming a coder that
+               differs only by letter case, and no file is written
+        file_ids: Restrict to these files; an id that does not exist is
+               refused and no file is written
         search_text: Only segments whose text contains this substring
         important: Only segments flagged important
         include_variables: Append `FileVar_{name}` columns (and, in case
@@ -15727,6 +16309,20 @@ def export_coded_segments_report(
     if format not in ("csv", "txt"):
         return json.dumps({"error": "format must be 'csv' or 'txt'"})
     ro_db = get_db()
+    # An unknown coder or file id wrote a report with a header and no
+    # rows, which reads as "nothing coded" (v0.14, claims audit item 12)
+    refusal = _refuse_unknown_coder(ro_db, coder)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    if file_ids:
+        for fid in file_ids:
+            validate_id(fid, "file_ids")
+        unknown = ro_db.unknown_file_ids(list(file_ids))
+        if unknown:
+            return json.dumps({"error": (
+                f"file_ids contains unknown file id(s): "
+                f"{', '.join(str(i) for i in unknown)} "
+                f"({_ID_LISTS['file']}).")}, indent=2)
 
     all_codes = ro_db.list_codes()
     code_ids = None

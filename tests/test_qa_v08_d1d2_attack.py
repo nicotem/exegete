@@ -332,7 +332,9 @@ class TestAttributeType:
 class TestSetAttribute:
 
     def test_byte_fidelity_per_domain(self, setup_server, qualcoder_db_path):
-        """Case path updates value+date+owner; file path updates value ONLY."""
+        """Both paths update value+date+owner (v0.14, claims audit item
+        18: the file path used to write the value ONLY, as QualCoder's own
+        file edit does, which left the earlier owner on the AI's value)."""
         _exec(qualcoder_db_path,
               "INSERT INTO attribute_type VALUES ('FA','2024','T','','file','character')")
         _exec(qualcoder_db_path,
@@ -344,8 +346,8 @@ class TestSetAttribute:
         row = _row(qualcoder_db_path,
                    "SELECT * FROM attribute WHERE attrid=50")
         assert row["value"] == "new"                      # stripped
-        assert row["date"] == "2020-01-01 00:00:00"       # file: value ONLY
-        assert row["owner"] == "orig_owner"
+        assert row["date"] != "2020-01-01 00:00:00"       # file: refreshed
+        assert row["owner"] == "AI Coding Assistant"
 
         # case path: value + date + owner refreshed
         out = json.loads(server.set_attribute("case", 1, "Age", "31"))
@@ -378,11 +380,14 @@ class TestSetAttribute:
     def test_numeric_gate_float_semantics(self, setup_server,
                                           qualcoder_db_path):
         # Age is numeric in the fixture
-        for ok_val in ("1e3", "nan", "inf", "-2.5", ""):
+        # v0.14 (claims audit item 11): "nan" and "inf" pass float() but
+        # compare as 0 in SQLite, so they are refused like "abc"
+        for ok_val in ("1e3", "-2.5", ""):
             out = json.loads(server.set_attribute("case", 1, "Age", ok_val))
             assert out.get("success") is True, (ok_val, out)
-        out = json.loads(server.set_attribute("case", 1, "Age", "abc"))
-        assert "error" in out                             # refused, not blanked
+        for bad in ("abc", "nan", "inf"):
+            out = json.loads(server.set_attribute("case", 1, "Age", bad))
+            assert "error" in out, bad                    # refused, not blanked
         # the refusal left the previous value intact ('' from the loop above)
         assert _row(qualcoder_db_path,
                     "SELECT value FROM attribute WHERE name='Age' AND id=1"
@@ -406,15 +411,15 @@ class TestExistingCodeFixes:
         _reload()
         # gt -10: the ''-unset case must NOT match (CAST('')=0.0 bug)
         out = json.loads(server.query_by_attribute("Age", "-10", operator="gt"))
-        ids = {m.get("case_id") for m in out}
+        ids = {m.get("case_id") for m in out["results"]}
         assert 2 not in ids
         assert {1, 3} <= ids
         # numeric equals: '5' finds the '5.0' row
         out = json.loads(server.query_by_attribute("Age", "5", operator="equals"))
-        assert {m.get("case_id") for m in out} == {3}
+        assert {m.get("case_id") for m in out["results"]} == {3}
         # equals '' keeps string semantics: finds the unset row
         out = json.loads(server.query_by_attribute("Age", "", operator="equals"))
-        assert 2 in {m.get("case_id") for m in out}
+        assert 2 in {m.get("case_id") for m in out["results"]}
 
     def test_case_link_dedupe_across_both_conventions(self, setup_server,
                                                       qualcoder_db_path):

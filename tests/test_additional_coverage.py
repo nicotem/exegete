@@ -395,10 +395,12 @@ class TestQueryByAttributeFile:
     """Test query_by_attribute with file attributes."""
 
     def test_file_type_no_results(self, setup_server):
+        # v0.14 (claims audit item 12): an attribute that does not exist
+        # is refused rather than answered as "no files"
         result = server.query_by_attribute("SomeAttr", "SomeValue", "file")
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) == 0
+        assert "does not exist" in data["error"]
+        assert data["file_attributes"] == []
 
     def test_invalid_attr_type(self, setup_server):
         """Invalid attr_type should raise ValueError."""

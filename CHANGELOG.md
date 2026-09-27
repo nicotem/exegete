@@ -452,34 +452,208 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   No behaviour changed.
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects, the
-  server-wide changes and the folder for projects: full = 181,375
-  characters (about 45.3k tokens at chars/4) over 73 tools, core =
-  61,669 (about 15.4k) over 21, and the new opt-in lifecycle set =
-  183,960 (about 46.0k) over 74. Moved by every input schema's
-  `additionalProperties: false`, the sentence on the private-note marker
-  in the fourteen tools that take a note, the tools core lacks marked in
-  core's descriptions, and the corrected texts of `search_files`,
-  `list_available_projects`, `list_backups`, `prune_backups`,
-  `select_project`, `set_memo`, `list_coding_sessions` and
-  `pseudonymise_source` (the server-wide changes); by the workspace
+  server-wide changes, the folder for projects, and the reads, queries
+  and exports: full = 190,736 characters (about 47.7k tokens at
+  chars/4) over 73 tools, core = 62,914 (about 15.7k) over 21, and the
+  new opt-in lifecycle set = 193,321 (about 48.3k) over 74. Moved by
+  every input schema's `additionalProperties: false`, the sentence on
+  the private-note marker in the fourteen tools that take a note, the
+  tools core lacks marked in core's descriptions, and the corrected
+  texts of `search_files`, `list_available_projects`, `list_backups`,
+  `prune_backups`, `select_project`, `set_memo`, `list_coding_sessions`
+  and `pseudonymise_source` (the server-wide changes); by the workspace
   sentences of `copy_project_to_workspace`, `import_text_file`,
   `list_available_projects` and `create_project` (the folder for
-  projects; the first and third in `core`); before them by
+  projects; the first and third in `core`); by the descriptions of the
+  tools whose answers the reads, queries and exports changed above
+  (`search_coded_text`, `get_coded_segments`, `get_coding_frequencies`
+  and `search_files` in `core`); before them by
   `pseudonymise_source`'s description (privacy, and the caveat for two
   people who share a name; not in `core`), by `set_memo`'s,
   `set_project_ai_coder_name`'s, `select_project`'s and
   `get_current_project`'s (creating a project; all four in `core`), and
   by `list_backups`'s and `copy_project_to_workspace`'s (both in `core`)
   and `restore_backup`'s and `link_file_to_case`'s (existing projects);
-  `pseudonymise_source`'s own share now rounds to 19,500, from
-  18,000. The tools' hints (annotations) are not part of this
-  measurement. Measured as for 0.13, on the final tree through the
-  toolset gate, under Python 3.13.5 with mcp 1.30.0, in the repository's
-  own `venv/`; on Python 3.11.13, in the repository's `.venv/`,
-  190,435, 64,833 and 193,160.
+  `pseudonymise_source`'s own share now rounds to 19,500, from 18,000.
+  The tools' hints (annotations) are not part of this measurement.
+  Measured as for 0.13, on the final tree through the toolset gate,
+  under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
+  on Python 3.11.13, in the repository's `.venv/`, 200,364, 66,154 and
+  203,089.
 
+### Changed: reads, queries and exports say what they found
+
+What the claims audit found in the reads, the queries and the exports:
+answers that looked like findings but came from a wrong name, a partial
+search or a silent limit.
+
+- **A case name finds the case it names.** `link_file_to_case` and
+  `import_text_file` resolve `case_name` by the rule `create_case` uses:
+  the same name after spacing and Unicode form are normalised first,
+  then one that differs only by letter case. With "Dana" and "dana" both
+  in the project, "dana" now links to "dana" (it used to link to
+  "Dana"), and "DANA" is refused with both ids instead of picking one;
+  "Ann  Lee" with two spaces finds "Ann Lee". Given both `case_id` and a
+  `case_name` that names another case, `link_file_to_case` refuses
+  instead of using the id without a word. The answer's `case_match`
+  says which rule matched.
+- **The merge and delete previews say what happens to the codebook.**
+  `merge_codes` did more than its preview said, as QualCoder does. On a
+  project QualCoder 4.0 has opened (schema v16 and later) it moves the
+  source code's sub-codes under the target, adds the source code's memo
+  (its private section included, which stays private) to the target's
+  memo under a "[Merged from code: ...]" line, and removes the source
+  code's saved-graph rows; on a 3.8.2 project the source code's memo,
+  definition included, is deleted with it. The preview now names each:
+  `source_memo_carried_to_target`, `source_code_has_memo` and
+  `source_memo_note`, `subcodes_moved_to_target` by name, and
+  `saved_graph_rows_removed`; it never quotes the memo. The preview
+  token now covers the source's whole branch of sub-codes and the words
+  of its memo (a digest, never the text), so a sub-code added at any
+  depth, or the memo reworded, after the preview needs a fresh preview. `delete_code`'s preview counts the
+  saved-graph rows it removes too.
+- **Attribute queries compare numbers only, and say what they left
+  out.** `query_by_attribute`'s `gt`, `gte`, `lt` and `lte` cast every
+  value to a number in SQLite, which reads text as 0: on a character
+  attribute holding "55", "unknown", "34 years" and "n/a", "under 18"
+  found "unknown" and "n/a", and "over 30" found "34 years". They now
+  compare only values that are finite numbers in the digits 0 to 9, once
+  space of any kind around them is stripped (as QualCoder's windows
+  strip a typed value), on a character attribute too, and the answer
+  counts the rest (`values_left_out`: `not_numbers`, `unset`) with a
+  note; `equals` on a numeric attribute follows the same rule. A probe
+  that is not such a number ("nan", "inf", "1_000", full-width digits)
+  is refused by all five, where `equals` used to answer it by text and
+  find nothing. This departs from QualCoder's attribute report, which
+  reads a numeric attribute's value as the number it begins with ("34
+  years" as 34) or as 0 when it begins with none ("unknown"), and
+  compares a character attribute as text. The answer is now an object
+  (`attribute`, `operator`, `value`, `value_type`, `result_count`,
+  `results`, and for a numeric comparison `values_compared` and
+  `values_left_out`), not a bare list: read the matches from `results`.
+  `set_attribute` refuses "nan", "inf", "Infinity", underscores
+  ("1_000") and digits outside 0 to 9 in a numeric attribute, which
+  QualCoder accepts and its report reads as other numbers; its refusal
+  no longer says QualCoder blanks such input silently (it warns).
+- **A wrong id, name or coder is refused, not answered as nothing.**
+  These reads answered a value that is not in the project exactly as a
+  value with nothing in scope, and the assistant, told that a null
+  result is a valid result, reported "no codes in this case" or "this
+  coder coded nothing". `get_coded_segments`, `find_cooccurring_codes`,
+  `get_cases_by_code`, `get_codes_by_case`, `get_case_attributes` and
+  `get_file_attributes` refuse an id that does not exist, saying where
+  the ids are listed. `query_by_attribute` refuses an attribute name
+  that does not exist (names stay exact: "age" is refused, naming
+  "Age") or is the other kind (a file attribute queried as a case one).
+  `search_coded_text` and `export_code_report` find `code_name` as the
+  codebook tools find a code's name (the same name, then one differing
+  only by letter case, said in `code_match`); a name matching no code,
+  or two, is refused with the code names (`export_code_report` used to
+  take the first case-insensitive match). A `coder` naming nobody with
+  codings anywhere in the project is refused by `search_coded_text`,
+  `get_coded_segments`, `get_coding_frequencies`,
+  `find_cooccurring_codes`, `get_case_code_matrix`, `get_codes_by_case`,
+  `get_cases_by_code` and `export_coded_segments_report`, naming a coder
+  that differs only by letter case and never a coder hidden in
+  QualCoder; `export_coded_segments_report` refuses an unknown file id
+  too, and writes no file. A known id, name or coder with nothing in
+  scope still answers empty or zero.
+- **"Ignores case" holds beyond A to Z.** `search_coded_text`,
+  `query_by_attribute`'s `contains` and `search_memos` compared with
+  SQLite's `LIKE`, which folds only the letters A to Z: "über" did not
+  find "Über", "école" did not find "École", "ärzt" did not find
+  "Ärztin". They now compare by Unicode's default case folding
+  (Python's) after normalisation, for the match and for the count, the
+  same on every platform's SQLite, so "strasse" also finds "Straße" (and
+  "ß" finds every "ss"); Turkish dotted and dotless i are the exception,
+  not matched to i and I, since the folding is not locale-aware.
+  QualCoder's own searches use `LIKE`; this is a departure in the
+  researcher's favour. The query is folded once per search, a long run
+  of combining marks is put in canonical order first so a crafted text
+  costs linear time, and a note, a coded passage, an attribute value or
+  a file name that is not valid in the database's encoding is read with
+  its damaged bytes replaced (shown as U+FFFD) rather than failing the
+  search, whether it matches or not: the text columns the three searches
+  return, every value a numeric comparison reads, and the file name
+  `search_coded_text` pages by, which it compares as stored bytes, so
+  paging loses and repeats nothing in a UTF-8 or a UTF-16 project. A
+  word only in the private part of such a note answers as a word found
+  nowhere. The checks the reads make before they answer (an attribute's
+  name, a code's name, a coder, a case id) test the exact value, so a
+  damaged row they do not answer with no longer fails them; a read that
+  lists every code or every case, such as `get_coding_frequencies` or
+  the codes list, still fails on a damaged name among them, as in 0.13.
+- **`search_memos` searches every memo and note outside QualCoder's
+  saved graphs.** It read code memos, file memos and annotations, three
+  of the twelve places a note lives, while its description said "all
+  memos": a word in a coding memo (where the AI's reason for each
+  applied coding is stored) or in the project memo (where the methods
+  notes put the study's method) was not found. It now also searches the
+  project memo, category, case and attribute type memos, the memos of
+  text, region and audio/video codings, case link memos and journal
+  entries, each result named by its `type`, in the public part only;
+  coding memos, like annotations, leave out a coder hidden in QualCoder,
+  and a note of another kind whose owner is a hidden coder reports its
+  owner as "(hidden coder)". The pseudonymisation preview's scope note,
+  which said `search_memos` reaches three of its twelve note fields, now
+  says it reaches all twelve.
+- **The co-occurrence window is a distance, as QualCoder measures it.**
+  `find_cooccurring_codes` counted, at `window_size` 0, two codings that
+  only touch (one ending where the other begins, no character shared)
+  as overlapping, and at N compared where the two codings START, so a
+  long coding ending five characters before another began was not
+  found at N=10. It now follows QualCoder's own rule: at 0, at least one
+  shared character, which is its co-occurrence report's overlap
+  (touching codings are not); at N, the gap from the end of the earlier
+  coding to the start of the later is at most N, the distance its Code
+  relations report gives, overlapping codings counting with a gap of 0. How the pairs are counted still differs
+  from QualCoder's co-occurrence report, as the description says.
+- **Three exports say what they hold.** `export_code_report` said it
+  held "all coded segments" and stopped at 1,000 without a word, while
+  its own statistics gave the full count; it now says "up to 1,000",
+  and the answer carries `segments_returned`, `segments_total` and
+  `truncated`, with a note pointing to `get_coded_segments` for the
+  rest. `export_refi_qda`'s answer said categories were not included,
+  while the file nests them; it now says the categories above the
+  exported codes are included as non-codable parent codes, and cases,
+  annotations and journals are not. `export_codebook(format="md")` put
+  a top-level code that sorts after a category under that category's
+  heading, a code that sorts after a sub-category under the
+  sub-category's, and a sub-code beside its parent: it now lists the
+  codes without a category first under their own heading, each
+  category's own codes directly under its heading before its
+  sub-categories, and each sub-code indented under its parent, with
+  every line of a memo quoted inside its code's bullet, so a memo with
+  paragraphs or list lines keeps the nesting. The csv and txt forms,
+  which were right, are unchanged.
+- **A value the AI sets on a file or a journal entry carries the AI
+  coder name.** `set_attribute` wrote the owner and the date only on a
+  case; on a file or a journal entry it changed the value alone, as
+  QualCoder's own edits do, so a placeholder QualCoder made kept
+  "Researcher" and its old date under the AI's value, and
+  `get_file_attributes` named the researcher as its owner, against
+  README's promise that every row this server writes carries the AI
+  coder name. Every domain now takes the owner and the date, a named
+  departure from QualCoder's file and journal edits; the answer carries
+  the `owner`.
+- **Moving a sub-code says which parent it left, and the texts about
+  sub-codes are true.** Any move of a sub-code, into a category or to
+  none, detaches it from its parent code, as in QualCoder; the
+  description said so only for a move to none, and the answer never
+  named the parent. It now carries `old_parent_code_id` and
+  `old_parent_code` and says "out from under its parent code". README
+  no longer calls sub-codes "fully supported ... moving and merging
+  without hierarchy loss": no tool nests an existing code under another
+  (done in QualCoder), and a code moved keeps its own sub-codes.
+  `delete_code`'s texts now say what its preview does: the preview names
+  the sub-codes and its `execute_with` carries `cascade=true` when there
+  are any, so approving the preview approves the branch, as QualCoder's
+  single dialog does.
 
 ### Upgrading from 0.13.x
+
+- Upgrade the package and restart the MCP host fully so it reloads the
+  tool descriptions. There is no migration step for projects.
 
 What a caller, a saved prompt or a script meets, one line each. The
 server-wide changes:
@@ -560,6 +734,76 @@ The desktop extension's changes:
   own install folder, or a path holding `|`, stops the server at
   start-up, and so does a blank one when
   `QUALCODER_MCP_WORKSPACE_REQUIRED=1` (which the extension sets).
+
+The reads, queries and exports:
+
+- **`query_by_attribute` answers an object, not a list.** Read the
+  matches from `results` (`result_count` counts them). A script that
+  took the length of the answer, or tested it for emptiness, now meets
+  an object with several keys, which is never empty.
+- **`query_by_attribute`'s numeric comparisons follow one rule.** `gt`,
+  `gte`, `lt` and `lte`, and `equals` on a numeric attribute, compare
+  only stored values that are finite numbers in the digits 0 to 9 once
+  space around them is stripped; any other stored value ("unknown",
+  "n/a", "34 years", "12 kg") no longer matches and is counted in
+  `values_left_out` (on 0.13, `equals` "12" found "12 kg" and `equals`
+  "0" found "unknown", as QualCoder's attribute report reads them). A
+  probe that is not such a number ("nan", "inf", "-inf", "1_000",
+  full-width digits) is refused by all five, where 0.13 compared it:
+  "lt inf" no longer answers every value, and `equals` with a
+  full-width "12" is refused rather than answering by text.
+- **Reads answer a refusal where they answered empty.** A code, case or
+  file id that does not exist, a coder with no codings anywhere in the
+  project, an attribute name that is not one of that kind (names are
+  exact), and a code name that matches no code are refused with an
+  error object (`{"error": ...}`) where the answer used to be an empty
+  list or zeros, so a length or emptiness test changes as well as the
+  contents. `export_coded_segments_report` writes no file for an
+  unknown coder or file id. A known value with nothing in scope still
+  answers empty.
+- **Names are found as the codebook tools find them.** `code_name` in
+  `search_coded_text` and `export_code_report`, and `case_name` in
+  `link_file_to_case` and `import_text_file`, use the exact name after
+  spacing and Unicode form first, then one that differs only by letter
+  case; a name matching two ("DANA" beside "Dana" and "dana") is now
+  refused where the first match used to be taken, and `case_id` with a
+  `case_name` naming another case is refused.
+- **`set_attribute` refuses values it used to store** in a numeric
+  attribute: "nan", "inf", "Infinity", underscores ("1_000") and digits
+  outside 0 to 9. Values already stored are left as they are;
+  `query_by_attribute` leaves them out of numeric comparisons and counts
+  them as not numbers.
+- **`find_cooccurring_codes` counts change at every window.** Two
+  codings that only touch no longer count at 0; at N the gap between two
+  codings replaces the distance between their starts, so a long coding
+  near a code now counts. Counts kept from an earlier release will not
+  match.
+- **`search_memos` finds more, and names fewer.** It returns nine new
+  `type` values (`project`, `category`, `case`, `attribute_type`,
+  `coding`, `region_coding`, `av_coding`, `case_link`, `journal`), some
+  with `file_id`, `file_name` and positions, so the same query can
+  return more results, and `limit` caps them all. A note whose owner is
+  a coder hidden in QualCoder now reports its `owner` as "(hidden
+  coder)", where 0.13 named the coder on a code or file memo; a caller
+  that grouped or filtered matches by owner sees that label instead.
+  `search_coded_text`, `query_by_attribute`'s `contains` and
+  `search_memos` ignore letter case beyond A to Z, so they can find
+  more too.
+- **A `search_coded_text` cursor from 0.13 is not valid in 0.14.** The
+  cursor now carries the file name's stored bytes, under a tag of its
+  own, so a cursor minted before the upgrade is refused with the usual
+  cursor message: start the search again. The cursors of
+  `search_files` and `get_coded_segments` are unchanged.
+- **A merge preview's token goes stale more often.** It now covers the
+  source code's whole branch of sub-codes and the words of its memo, so
+  a sub-code added at any depth, or the memo reworded, between the
+  preview and the execute refuses the execute: preview again.
+- **Values the AI sets on files and journal entries now carry the AI
+  coder name and the date.** Values set by an earlier release keep the
+  owner they had.
+- **The Markdown codebook is laid out differently**: codes without a
+  category first, sub-codes nested, memos quoted line by line. Anything
+  that reads the file by its old layout needs a look.
 
 ## [0.13.0-alpha] - 2026-09-25
 

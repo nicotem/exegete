@@ -5,6 +5,7 @@ import ast
 import bisect
 import errno
 import locale
+import math
 import os
 import sqlite3
 import stat
@@ -252,6 +253,188 @@ def normalize_name(name: Any) -> str:
     return " ".join(name.split())
 
 
+# A run of more than this many non-starters is put in canonical order
+# before the fold's normalisation (fix round 1, the security gate's
+# E3-S1): UAX #15's stream-safe bound, the pseudonymiser's LONG_RUN.
+LONG_MARK_RUN = 30
+_NFD_RUN_PATTERN: Optional["re.Pattern[str]"] = None
+
+
+def _nfd_run_pattern() -> "re.Pattern[str]":
+    """Runs of more than 30 characters whose canonical decomposition is
+    all non-starters (combining class above 0), as one compiled pattern,
+    built once per process on the first text that is not ASCII.
+
+    The NFD counterpart of the pseudonymiser's `_ordered_runs` pattern,
+    which reads NFKD and so counts compatibility characters (a halfwidth
+    voiced mark) that are starters to NFC. Here a character is in a run
+    only when NFD itself would sort it, so ordering the run in advance
+    is exactly what NFC's own reordering does.
+    """
+    global _NFD_RUN_PATTERN
+    pattern = _NFD_RUN_PATTERN
+    if pattern is None:
+        combining = unicodedata.combining
+        decomposition = unicodedata.decomposition
+        ranges: List[List[int]] = []
+        for code_point in range(0x110000):
+            char = chr(code_point)
+            if combining(char):
+                parts = unicodedata.normalize("NFD", char)
+            else:
+                mapping = decomposition(char)
+                if not mapping or mapping.startswith("<"):
+                    continue
+                parts = unicodedata.normalize("NFD", char)
+            if not all(combining(part) for part in parts):
+                continue
+            if ranges and ranges[-1][1] == code_point - 1:
+                ranges[-1][1] = code_point
+            else:
+                ranges.append([code_point, code_point])
+        cls = "".join(
+            re.escape(chr(low)) if low == high
+            else re.escape(chr(low)) + "-" + re.escape(chr(high))
+            for low, high in ranges)
+        pattern = _NFD_RUN_PATTERN = re.compile(
+            f"[{cls}]{{{LONG_MARK_RUN + 1},}}")
+    return pattern
+
+
+def _order_run(match: "re.Match[str]") -> str:
+    """One long run, decomposed and sorted by combining class, stably:
+    what NFD's canonical reordering does to it."""
+    parts = [part for char in match.group(0)
+             for part in unicodedata.normalize("NFD", char)]
+    parts.sort(key=unicodedata.combining)
+    return "".join(parts)
+
+
+def _ordered_mark_runs(text: str) -> str:
+    """`text` with every run of more than 30 non-starters put in canonical
+    order in advance, so NFC reads it in one pass (fix round 1, E3-S1).
+
+    CPython's canonical reordering inside `unicodedata.normalize` is an
+    insertion sort, quadratic in the length of a run of combining marks
+    out of order: a crafted 64,000-character segment cost a search 3.5
+    seconds, and the server answers nothing else while a search runs.
+    Sorting such a run stably by combining class leaves NFD of the text,
+    and so NFC, exactly as it was (a stable sort of a sequence whose
+    contiguous block is already stably sorted gives the same result);
+    only the cost changes. Ordinary text never has a run of more than a
+    few marks and is returned as it stands.
+    """
+    if text.isascii():
+        return text
+    return _nfd_run_pattern().sub(_order_run, text)
+
+
+def fold_text(text: str) -> str:
+    """Text as the case-insensitive searches compare it (v0.14).
+
+    Unicode NFC, then Python's case folding (Unicode's default case
+    folding, which is not locale-aware: Turkish dotted and dotless i do
+    not meet i and I, and "ß" meets "ss"), then NFC again, the fold
+    `documents_name_key` applies to file names. Long runs of combining
+    marks are put in canonical order first, so the cost is linear
+    (`_ordered_mark_runs`); ASCII text is lowered directly, which is the
+    same fold.
+    """
+    if text.isascii():
+        return text.lower()
+    return unicodedata.normalize(
+        "NFC", unicodedata.normalize(
+            "NFC", _ordered_mark_runs(text)).casefold())
+
+
+def text_contains(haystack: Any, needle: Any) -> bool:
+    """Whether `needle` occurs in `haystack`, letter case ignored by
+    Unicode's default case folding (claims audit item 13).
+
+    SQLite's LIKE, which search_coded_text, query_by_attribute's
+    'contains' and search_memos used, folds only the 26 ASCII letters:
+    "über" did not find "Über", "école" did not find "École". QualCoder's
+    own searches use LIKE and share that limit (report_codes.py:1723,
+    :1852 at 9bddf17); this is a named departure in the researcher's
+    favour. `%` and `_` are ordinary characters here. A caller that
+    tests many texts folds the needle once and uses `folded_contains`.
+    """
+    if not isinstance(haystack, str) or not isinstance(needle, str):
+        return False
+    return fold_text(needle) in fold_text(haystack)
+
+
+def folded_contains(haystack: Any, folded_needle: str) -> bool:
+    """Whether an already folded needle occurs in `haystack`, folded.
+
+    Fix round 1 (E3-S1): the needle used to be folded again for every
+    row, so a crafted 10,000-character query cost seconds per hundred
+    rows; it is folded once by the caller now.
+    """
+    if not isinstance(haystack, str):
+        return False
+    return folded_needle in fold_text(haystack)
+
+
+def _stored_text(value: Any, codec: str) -> Optional[str]:
+    """A stored value as text: bytes decoded with replacement, so a note
+    that is not valid in the database's encoding reads with U+FFFD in
+    place of its damaged bytes rather than failing the whole query (fix
+    round 1, E3-S2)."""
+    if value is None:
+        return None
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value).decode(codec, "replace")
+    return value if isinstance(value, str) else str(value)
+
+
+def _text_contains_function(holder: Dict[str, str]):
+    """The `qc_text_contains(CAST(column AS BLOB), folded_needle)` SQL
+    function for one connection. `holder["codec"]` is the database's text
+    encoding, set once the connection is open. It runs in this process
+    and changes nothing in the project file."""
+    def qc_text_contains(stored: Any, folded_needle: Any) -> int:
+        text = _stored_text(stored, holder.get("codec", "utf-8"))
+        if text is None or not isinstance(folded_needle, str):
+            return 0
+        return 1 if folded_needle in fold_text(text) else 0
+    return qc_text_contains
+
+
+def finite_number(text: Any) -> Optional[float]:
+    """The number an attribute value is, or None when it is not one.
+
+    Python's `float()` after stripping, as QualCoder's own numeric check
+    (cases.py:733-736, manage_files.py:1253-1258 at 9bddf17), with three
+    exceptions, each a value `float()` accepts that SQLite's CAST, and so
+    QualCoder's attribute report, reads as another number: underscores
+    ("1_000" is 1000 to Python and 1 to SQLite), non-finite values ("nan",
+    "inf", "Infinity", all 0 to SQLite) and digits outside ASCII (a
+    full-width "５" is 5 to Python and 0 to SQLite). Used by set_attribute's
+    check and by query_by_attribute's comparisons, so what one accepts the
+    other compares (v0.14, claims audit item 11).
+
+    One rule for a stored value and a probe (fix round 2): space of any
+    kind around the number is stripped first, with Python's `str.strip()`,
+    which is what QualCoder's windows do to a value typed in (cases.py:706,
+    manage_files.py:1233 at 9bddf17) and what set_attribute stores. So
+    "40" followed by a no-break space, which QualCoder's survey import can
+    store as it stands, is 40 here, as it is to QualCoder's report; a
+    leading no-break space, which the report reads as 0, is 40 here too,
+    a departure in the direction of what was typed.
+    """
+    if not isinstance(text, str):
+        return None
+    t = text.strip()
+    if not t or "_" in t or not t.isascii():
+        return None
+    try:
+        value = float(t)
+    except ValueError:
+        return None
+    return value if math.isfinite(value) else None
+
+
 def name_key(name: Any) -> str:
     """Comparison key for the duplicate-name rule (owner ruling X2).
 
@@ -262,7 +445,18 @@ def name_key(name: Any) -> str:
     2293-2296), which folds ASCII letters only; the stricter direction
     is the safer one for a codebook (D5 section 3.2).
     """
-    return unicodedata.normalize("NFC", normalize_name(name)).casefold()
+    return nfc_ordered(normalize_name(name)).casefold()
+
+
+def nfc_ordered(text: str) -> str:
+    """NFC of `text`, with long runs of combining marks put in canonical
+    order first (`_ordered_mark_runs`), so the cost is linear (fix round
+    2, the security re-verification's name-resolution-quadratic): NFC of
+    a crafted 64,000-character name cost 1.8 s, and a name is normalised
+    for every row a lookup compares it with. The result is NFC of `text`
+    exactly. Used by `name_key` and by the name comparisons in
+    `_find_existing_by_name` and `_resolve_case_argument`."""
+    return unicodedata.normalize("NFC", _ordered_mark_runs(text))
 
 
 DB_LOCKED_MESSAGE = (
@@ -2752,6 +2946,19 @@ class QualcoderDatabase:
             else:
                 self.conn = sqlite3.connect(str(self.db_path), uri=False)
             self.conn.row_factory = sqlite3.Row  # Access columns by name
+            # The case-insensitive searches' comparison (v0.14, claims
+            # audit item 13), in Python on every platform's SQLite. The
+            # column is passed as CAST(... AS BLOB) and decoded here, in
+            # the database's own encoding (read once the schema checks
+            # pass), with replacement (fix round 1, E3-S2)
+            self._text_codec = {"codec": "utf-8"}
+            contains = _text_contains_function(self._text_codec)
+            try:
+                self.conn.create_function("qc_text_contains", 2,
+                                          contains, deterministic=True)
+            except (TypeError, sqlite3.NotSupportedError):
+                self.conn.create_function("qc_text_contains", 2,
+                                          contains)
             # Enable foreign key constraints
             self.conn.execute("PRAGMA foreign_keys = ON")
             # Set busy timeout for concurrent access (5 seconds)
@@ -2778,6 +2985,13 @@ class QualcoderDatabase:
 
             # Gate on required columns (older QualCoder schemas lack them)
             self._check_required_columns()
+
+            # The text encoding the search function decodes a blob in
+            try:
+                self._text_codec["codec"] = sqlite_text_codec(
+                    self.conn.execute("PRAGMA encoding").fetchone()[0])
+            except sqlite3.Error:
+                pass
         except BaseException:
             # A refused database is closed at once rather than left to
             # the collector: on Windows an open handle keeps its folder
@@ -3115,26 +3329,36 @@ class QualcoderDatabase:
 
         codes: cid -> {name, catid, supercid} (supercid None when the
         column is absent, i.e. v14/v15); cats: catid -> {name, supercatid}.
+
+        The names are read as blobs and decoded with replacement (fix
+        round 3): these maps give a code its path and its category in an
+        answer, and every code and category is read to build them, so a
+        damaged name elsewhere used to fail the read of an undamaged
+        code (export_code_report). Read-only: no write takes a name from
+        here.
         """
         caps = getattr(self, "capabilities", None)
         has_supercid = caps is not None and caps.has_supercid
         if has_supercid:
             code_rows = self.conn.execute(
-                "SELECT cid, name, catid, supercid FROM code_name").fetchall()
+                "SELECT cid, CAST(name AS BLOB) AS name, catid, supercid "
+                "FROM code_name").fetchall()
         else:
             code_rows = self.conn.execute(
-                "SELECT cid, name, catid FROM code_name").fetchall()
+                "SELECT cid, CAST(name AS BLOB) AS name, catid "
+                "FROM code_name").fetchall()
         codes = {}
         for row in code_rows:
             codes[row["cid"]] = {
-                "name": row["name"],
+                "name": self._decoded(row["name"]),
                 "catid": row["catid"],
                 "supercid": row["supercid"] if has_supercid else None,
             }
         cats = {}
         for row in self.conn.execute(
-                "SELECT catid, name, supercatid FROM code_cat").fetchall():
-            cats[row["catid"]] = {"name": row["name"],
+                "SELECT catid, CAST(name AS BLOB) AS name, supercatid "
+                "FROM code_cat").fetchall():
+            cats[row["catid"]] = {"name": self._decoded(row["name"]),
                                   "supercatid": row["supercatid"]}
         return codes, cats
 
@@ -4719,8 +4943,17 @@ class QualcoderDatabase:
     # placement, and the trailing ids make the order total, which is what
     # a keyset cursor needs: with ties, a page boundary could otherwise
     # skip or repeat a row.
-    CODED_TEXT_ORDER = ("COALESCE(s.name,'')", "s.id", "ct.pos0",
-                        "ct.pos1", "ct.ctid")
+    # The file name is ordered, and its keyset compared, as its stored
+    # bytes (fix round 3): SQLite's BINARY order for text is memcmp of
+    # those bytes in the database's own encoding, and a blob compares by
+    # memcmp too, so the order is the same as before in UTF-8 and UTF-16
+    # alike; and the cursor carries the bytes (hex), so a name that is
+    # not valid in the encoding pages exactly. Round 2 bound the bytes as
+    # CAST(? AS TEXT), which SQLite reads as UTF-8 whatever the database's
+    # encoding: in a UTF-16 project pages repeated, rows were skipped and
+    # a novelty search spun for ever.
+    CODED_TEXT_ORDER = ("CAST(COALESCE(s.name,'') AS BLOB)", "s.id",
+                        "ct.pos0", "ct.pos1", "ct.ctid")
 
     @staticmethod
     def _keyset_predicate(columns) -> str:
@@ -4748,24 +4981,56 @@ class QualcoderDatabase:
             params.append(key[i])
         return tuple(params)
 
+    def _text_codec_name(self) -> str:
+        """The database's text encoding as a Python codec."""
+        return getattr(self, "_text_codec", {}).get("codec", "utf-8")
+
+    def _decoded(self, value: Any) -> Any:
+        """A value selected as `CAST(... AS BLOB)`, decoded with
+        replacement (fix round 2): the answers of the three searches read
+        their text columns this way, so a damaged row that matches reads
+        with U+FFFD where its damaged bytes are, rather than failing the
+        whole search. Read-only answers only: a write never reads a
+        value this way, so it never writes replaced bytes back."""
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return bytes(value).decode(self._text_codec_name(), "replace")
+        return value
+
+    @staticmethod
+    def _key_hex(value: Any) -> str:
+        """A text column's stored bytes as hex, for a keyset cursor (fix
+        round 3): bytes carried as bytes, in any encoding, damaged or
+        not."""
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return bytes(value).hex()
+        return ""
+
     def search_coded_text(self, query: str, code_name: Optional[str] = None,
                           limit: int = DEFAULT_LIMIT,
                           coder: Optional[str] = None,
-                          after: Optional[Sequence[Any]] = None
+                          after: Optional[Sequence[Any]] = None,
+                          code_id: Optional[int] = None
                           ) -> List[Dict[str, Any]]:
         """Search for coded text segments.
 
         Args:
-            query: Text to search for (wildcards % and _ are escaped)
+            query: Text to search for (letter case ignored by Unicode's
+                   default case folding, `fold_text`; % and _ are
+                   literal)
             code_name: Optional code name to filter by
             limit: Maximum results to return (max 5000)
+            code_id: Optional code id to filter by, instead of a name
+                   (fix round 3: the tool resolves the name once and
+                   filters by the id, so a damaged name elsewhere, or the
+                   code's own, cannot fail or miss the search)
             coder: Explicit coder filter; reads the BASE table filtered
                    to this owner (P1-3 override). Default reads through
                    code_text_visible when the project has the
                    coder-visibility capability
             after: Keyset position from a cursor: return only rows that
                    sort strictly after this (file name, file id, pos0,
-                   pos1, ctid) tuple, in the same total order (D4 3.2.6)
+                   pos1, ctid) tuple, in the same total order (D4 3.2.6);
+                   the file name is its stored bytes as hex (fix round 3)
 
         Returns:
             List of matching coded segments
@@ -4777,14 +5042,16 @@ class QualcoderDatabase:
         """
         # Validate and escape inputs
         query = validate_string(query, "query")
-        escaped_query = escape_like_pattern(query)
         limit = validate_limit(limit)
         coder = self._validate_coder(coder)
         source = self.code_text_source(coder is None)
 
-        where = ["ct.seltext LIKE ? ESCAPE '\\'"]
-        params: List[Any] = [f"%{escaped_query}%"]
-        if code_name:
+        where = ["qc_text_contains(CAST(ct.seltext AS BLOB), ?)"]
+        params: List[Any] = [fold_text(query)]
+        if code_id is not None:
+            where.append("ct.cid = ?")
+            params.append(validate_id(code_id, "code_id"))
+        elif code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
             params.append(code_name)
@@ -4792,24 +5059,32 @@ class QualcoderDatabase:
             where.append("ct.owner = ?")
             params.append(coder)
         if after is not None:
+            # after[0] is the file name's stored bytes as hex (the cursor
+            # key); the name column is compared as a blob
+            key = list(after)
+            key[0] = bytes.fromhex(key[0]) if isinstance(key[0], str) \
+                else bytes(key[0] or b"")
             where.append(self._keyset_predicate(self.CODED_TEXT_ORDER))
-            params.extend(self._keyset_params(self.CODED_TEXT_ORDER, after))
+            params.extend(self._keyset_params(self.CODED_TEXT_ORDER, key))
         order = ", ".join(self.CODED_TEXT_ORDER)
 
         try:
+            # Text columns as blobs, decoded with replacement (fix round
+            # 2): a damaged row that matches no longer fails the search
             cursor = self.conn.execute(f"""
                 SELECT
                     ct.ctid,
-                    ct.seltext,
+                    CAST(ct.seltext AS BLOB) AS seltext,
                     ct.pos0,
                     ct.pos1,
-                    ct.memo,
-                    ct.owner,
-                    ct.date,
+                    CAST(ct.memo AS BLOB) AS memo,
+                    CAST(ct.owner AS BLOB) AS owner,
+                    CAST(ct.date AS BLOB) AS date,
                     ct.fid,
-                    s.name as file_name,
-                    c.name as code_name,
-                    c.color as code_color
+                    CAST(s.name AS BLOB) as file_name,
+                    CAST(COALESCE(s.name, '') AS BLOB) AS file_name_key,
+                    CAST(c.name AS BLOB) as code_name,
+                    CAST(c.color AS BLOB) as code_color
                 FROM {source} ct
                 JOIN source s ON ct.fid = s.id
                 JOIN code_name c ON ct.cid = c.cid
@@ -4819,19 +5094,23 @@ class QualcoderDatabase:
             """, tuple(params) + (limit,))
 
             results = []
+            dec = self._decoded
             for row in cursor.fetchall():
                 results.append({
                     "id": row["ctid"],
-                    "text": row["seltext"],
+                    "text": dec(row["seltext"]),
                     "position_start": row["pos0"],
                     "position_end": row["pos1"],
-                    "memo": row["memo"] or "",
-                    "owner": row["owner"],
-                    "date": row["date"],
+                    "memo": dec(row["memo"]) or "",
+                    "owner": dec(row["owner"]),
+                    "date": dec(row["date"]),
                     "file_id": row["fid"],
-                    "file_name": row["file_name"],
-                    "code_name": row["code_name"],
-                    "code_color": row["code_color"]
+                    "file_name": dec(row["file_name"]),
+                    "code_name": dec(row["code_name"]),
+                    "code_color": dec(row["code_color"]),
+                    # The file name's stored bytes, for the cursor; the
+                    # tool removes it before answering
+                    "_file_name_key": self._key_hex(row["file_name_key"]),
                 })
             return results
         except sqlite3.Error as e:
@@ -4839,15 +5118,18 @@ class QualcoderDatabase:
 
     def count_coded_text_matches(self, query: str,
                                  code_name: Optional[str] = None,
-                                 coder: Optional[str] = None) -> int:
+                                 coder: Optional[str] = None,
+                                 code_id: Optional[int] = None) -> int:
         """How many rows the same search matches in total (one COUNT)."""
         query = validate_string(query, "query")
-        escaped_query = escape_like_pattern(query)
         coder = self._validate_coder(coder)
         source = self.code_text_source(coder is None)
-        where = ["ct.seltext LIKE ? ESCAPE '\\'"]
-        params: List[Any] = [f"%{escaped_query}%"]
-        if code_name:
+        where = ["qc_text_contains(CAST(ct.seltext AS BLOB), ?)"]
+        params: List[Any] = [fold_text(query)]
+        if code_id is not None:
+            where.append("ct.cid = ?")
+            params.append(validate_id(code_id, "code_id"))
+        elif code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
             params.append(code_name)
@@ -5067,6 +5349,106 @@ class QualcoderDatabase:
                                "Failed to read the project's coders")
         return [r["owner"] for r in rows]
 
+    # ------------------------------------------------------------------
+    # The checks a read makes before it answers (fix round 3): each tests
+    # the exact id, name or owner in SQL, reading no other row, and the
+    # whole lists below are read only to write a refusal's listing or
+    # near miss, their text as blobs decoded with replacement. So a
+    # damaged row the read never answers with cannot fail it (the QA and
+    # Security re-verifications' damaged-row-prereads).
+    # ------------------------------------------------------------------
+
+    def _coding_tables(self) -> List[str]:
+        tables = {r[0] for r in self.conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'")}
+        return [t for t in ("code_text", "code_image", "code_av")
+                if t in tables]
+
+    def coder_has_codings(self, coder: str) -> bool:
+        """Whether `coder` owns a text, region or audio/video coding,
+        tested in SQL on that owner alone, hidden coders included."""
+        try:
+            return any(self.conn.execute(
+                f"SELECT 1 FROM {table} WHERE owner = ? LIMIT 1",
+                (coder,)).fetchone() is not None
+                for table in self._coding_tables())
+        except sqlite3.Error as e:
+            _raise_query_error(e, "coder_has_codings",
+                               "Failed to read the project's coders")
+
+    def case_exists(self, case_id: int) -> bool:
+        """Whether a case with this id exists, reading no other row."""
+        try:
+            return self.conn.execute(
+                "SELECT 1 FROM cases WHERE caseid = ?",
+                (case_id,)).fetchone() is not None
+        except sqlite3.Error as e:
+            _raise_query_error(e, "case_exists", "Failed to read the cases")
+
+    def code_ids_and_names(self) -> List[Dict[str, Any]]:
+        """Every code's id and name, the name read as a blob and decoded
+        with replacement: what a code-name lookup compares, and nothing
+        else (no memo, no category, no hierarchy)."""
+        try:
+            return [{"id": r[0], "name": self._decoded(r[1]) or ""}
+                    for r in self.conn.execute(
+                        "SELECT cid, CAST(name AS BLOB) FROM code_name "
+                        "ORDER BY cid")]
+        except sqlite3.Error as e:
+            _raise_query_error(e, "code_ids_and_names",
+                               "Failed to read the codes")
+
+    def attribute_type_domains(self, name: str) -> List[str]:
+        """The domains ('case', 'file', 'journal') of the attribute type
+        with exactly this name, reading no other row."""
+        try:
+            return [self._decoded(r[0]) for r in self.conn.execute(
+                "SELECT CAST(caseOrFile AS BLOB) FROM attribute_type "
+                "WHERE name = ?", (name,))]
+        except sqlite3.Error as e:
+            _raise_query_error(e, "attribute_type_domains",
+                               "Failed to retrieve attribute types")
+
+    def attribute_type_names(self) -> List[Dict[str, Any]]:
+        """Every attribute type's name and domain, as blobs decoded with
+        replacement, for a refusal's listing and near miss."""
+        try:
+            return [{"name": self._decoded(r[0]) or "",
+                     "applies_to": self._decoded(r[1])}
+                    for r in self.conn.execute(
+                        "SELECT CAST(name AS BLOB), CAST(caseOrFile AS BLOB) "
+                        "FROM attribute_type ORDER BY name")]
+        except sqlite3.Error as e:
+            _raise_query_error(e, "attribute_type_names",
+                               "Failed to retrieve attribute types")
+
+    def coders_with_codings_including_hidden(self) -> List[str]:
+        """Every owner of a text, region or audio/video coding, sorted,
+        HIDDEN CODERS INCLUDED.
+
+        What a read's `coder` argument is checked against (v0.14, claims
+        audit item 12): a name with no coding anywhere in the project is
+        refused, where it used to answer zero as though that coder had
+        coded nothing. It reads the base tables, as an explicit coder
+        filter does, and carries the same warning as
+        `coders_with_text_codings_including_hidden`: a caller must filter
+        it with `coder_is_hidden` before any name reaches the
+        conversation.
+        """
+        names = set()
+        try:
+            # Owners as blobs decoded with replacement (fix round 3): this
+            # list is read only for a refusal's listing, and a damaged
+            # owner must not fail the read it refuses for
+            for table in self._coding_tables():
+                names.update(self._decoded(r[0]) for r in self.conn.execute(
+                    f"SELECT DISTINCT CAST(owner AS BLOB) FROM {table} "
+                    f"WHERE owner IS NOT NULL AND owner != ''"))
+        except sqlite3.Error as e:
+            _raise_query_error(e, "coders_with_codings_including_hidden",
+                               "Failed to read the project's coders")
+        return sorted(names)
+
     def get_coding_frequencies(self, coder: Optional[str] = None,
                                honor_visibility: bool = True
                                ) -> Dict[str, Any]:
@@ -5133,15 +5515,109 @@ class QualcoderDatabase:
             "codes": frequencies
         }
 
+    # The twelve places a note lives, in the order search_memos reads
+    # them (v0.14, claims audit item 14: it read code notes, file notes
+    # and annotations only, three of these twelve). Each entry is the
+    # result's `type`, the table or visibility view, and the SELECT's
+    # columns and joins; `memo` is the note column. The coding and
+    # annotation rows go through QualCoder's visibility views where the
+    # project declares them, as annotations already did, so a hidden
+    # coder's note is not returned. They are the twelve note fields the
+    # pseudonymisation preview counts.
+    _MEMO_SECTIONS = (
+        ("project", None,
+         "SELECT NULL AS id, 'Project memo' AS name, "
+         "CAST(memo AS BLOB) AS memo, NULL AS owner, "
+         "CAST(date AS BLOB) AS date FROM project WHERE {match}"),
+        ("code", None,
+         "SELECT cid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM code_name "
+         "WHERE {match} ORDER BY cid"),
+        ("category", None,
+         "SELECT catid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM code_cat "
+         "WHERE {match} ORDER BY catid"),
+        ("file", None,
+         "SELECT id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM source "
+         "WHERE {match} ORDER BY id"),
+        ("case", None,
+         "SELECT caseid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM cases "
+         "WHERE {match} ORDER BY caseid"),
+        ("attribute_type", None,
+         "SELECT NULL AS id, CAST(name AS BLOB) AS name, "
+         "CAST(memo AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date, "
+         "CAST(caseOrFile AS BLOB) AS applies_to FROM attribute_type "
+         "WHERE {match} ORDER BY name"),
+        ("coding", ("code_text", "code_text_visible"),
+         "SELECT t.ctid AS id, CAST(c.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.fid AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name, t.pos0 AS position_start, "
+         "t.pos1 AS position_end FROM {source} t "
+         "LEFT JOIN code_name c ON t.cid = c.cid "
+         "LEFT JOIN source s ON t.fid = s.id "
+         "WHERE {match} ORDER BY t.ctid"),
+        ("region_coding", ("code_image", "code_image_visible"),
+         "SELECT t.imid AS id, CAST(c.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.id AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name FROM {source} t "
+         "LEFT JOIN code_name c ON t.cid = c.cid "
+         "LEFT JOIN source s ON t.id = s.id "
+         "WHERE {match} ORDER BY t.imid"),
+        ("av_coding", ("code_av", "code_av_visible"),
+         "SELECT t.avid AS id, CAST(c.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.id AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name FROM {source} t "
+         "LEFT JOIN code_name c ON t.cid = c.cid "
+         "LEFT JOIN source s ON t.id = s.id "
+         "WHERE {match} ORDER BY t.avid"),
+        ("case_link", None,
+         "SELECT t.id AS id, CAST(cs.name AS BLOB) AS name, "
+         "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
+         "CAST(t.date AS BLOB) AS date, t.fid AS file_id, "
+         "CAST(s.name AS BLOB) AS file_name, t.pos0 AS position_start, "
+         "t.pos1 AS position_end FROM case_text t "
+         "LEFT JOIN cases cs ON t.caseid = cs.caseid "
+         "LEFT JOIN source s ON t.fid = s.id "
+         "WHERE {match} ORDER BY t.id"),
+        ("annotation", ("annotation", "annotation_visible"),
+         "SELECT a.anid AS id, CAST(s.name AS BLOB) AS name, "
+         "CAST(a.memo AS BLOB) AS memo, CAST(a.owner AS BLOB) AS owner, "
+         "CAST(a.date AS BLOB) AS date, a.fid AS file_id, "
+         "a.pos0 AS position_start, a.pos1 AS position_end "
+         "FROM {source} a JOIN source s ON a.fid = s.id "
+         "WHERE {match} ORDER BY a.anid"),
+        ("journal", None,
+         "SELECT jid AS id, CAST(name AS BLOB) AS name, "
+         "CAST(jentry AS BLOB) AS memo, CAST(owner AS BLOB) AS owner, "
+         "CAST(date AS BLOB) AS date FROM journal "
+         "WHERE {match} ORDER BY jid"),
+    )
+
     def search_memos(self, query: str, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
-        """Search for memos and annotations.
+        """Search every memo and note in the project (the twelve memo
+        columns; the text on QualCoder's saved graphs is not read).
 
         Args:
-            query: Text to search for (wildcards % and _ are escaped)
+            query: Text to search for (letter case ignored by Unicode's
+                   default case folding, `fold_text`; % and _ are
+                   literal)
             limit: Maximum results (max 5000)
 
         Returns:
-            List of matching memos
+            List of matching notes, each with its `type` (one of the
+            twelve in `_MEMO_SECTIONS`), id, name, public memo text,
+            owner and date, and where it sits when it belongs to a
+            coding, a case link or an annotation (file, positions)
 
         Raises:
             TypeError: If parameters are wrong type
@@ -5149,131 +5625,88 @@ class QualcoderDatabase:
             RuntimeError: If database operation fails
         """
         query = validate_string(query, "query")
-        escaped_query = escape_like_pattern(query)
         limit = validate_limit(limit)
+        folded = fold_text(query)   # once, not per row (fix round 1)
 
-        results = []
+        # The owner of a note whose coder is hidden in QualCoder is
+        # reported as "(hidden coder)", as the cascade previews report a
+        # code's owner (fix round 1, the security gate's E3-S3). The
+        # views leave out a hidden coder's coding notes and annotations;
+        # the other ten kinds have no view in QualCoder, and a case link
+        # note's owner reached no read before this search. One
+        # visibility read for the call; when it cannot be read every
+        # owner is masked (fail closed, as _mask_hidden_owner does).
+        try:
+            visibility = self.coder_visibility_map()
+            mask_all = False
+        except CoderVisibilityUnreadable:
+            visibility, mask_all = None, True
+
+        def owner_shown(owner):
+            if owner is None:
+                return None
+            if mask_all or (visibility is not None
+                            and coder_is_hidden(visibility, owner)):
+                return "(hidden coder)"
+            return owner
+
+        results: List[Dict[str, Any]] = []
 
         # Memo privacy ('#####'): match against the PUBLIC part only and
-        # return the public part only. The SQL LIKE over the full column
-        # is a cheap SUPERSET filter and carries NO LIMIT: the cap is
-        # enforced in Python only after the public-part check, so a row
-        # whose match lives only in the private suffix never consumes
-        # result budget. result_count therefore depends on public
+        # return the public part only. The SQL filter over the full column
+        # (the same fold, `qc_text_contains`) is a SUPERSET filter, since
+        # the public part is a prefix of the column, and carries NO LIMIT:
+        # the cap is enforced in Python only after the public-part check,
+        # so a row whose match lives only in the private suffix never
+        # consumes result budget. result_count therefore depends on public
         # content alone (and result_count < limit means the search was
         # exhaustive, as on the pre-privacy code), which is what keeps
         # the search from being a count oracle on private content
-        # (QA round 1, F1).
-        query_folded = query.lower()
-
-        def _public_hit(raw_memo):
-            """(matches, public_text) for one candidate memo."""
-            public = extract_ai_memo(raw_memo or "")
-            return query_folded in public.lower(), public
-
-        pattern = f"%{escaped_query}%"
-
+        # (QA round 1, F1). A journal entry follows the same convention.
         try:
-            # Search code memos (cursor iterated, cap applied in Python
-            # after the public-part check; see the note above)
-            cursor = self.conn.execute("""
-                SELECT
-                    'code' as type,
-                    cid as id,
-                    name,
-                    memo,
-                    owner,
-                    date
-                FROM code_name
-                WHERE memo LIKE ? ESCAPE '\\'
-                ORDER BY cid
-            """, (pattern,))
-
-            for row in cursor:
-                matches, public_memo = _public_hit(row["memo"])
-                if not matches:
-                    continue
-                results.append({
-                    "type": row["type"],
-                    "id": row["id"],
-                    "name": row["name"],
-                    "memo": public_memo,
-                    "owner": row["owner"],
-                    "date": row["date"]
-                })
+            tables = {r[0] for r in self.conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type IN ('table', 'view')")}
+            for kind, visible, sql in self._MEMO_SECTIONS:
                 if len(results) >= limit:
                     break
-
-            # Search file memos (only while budget remains)
-            if len(results) < limit:
-                cursor = self.conn.execute("""
-                    SELECT
-                        'file' as type,
-                        id,
-                        name,
-                        memo,
-                        owner,
-                        date
-                    FROM source
-                    WHERE memo LIKE ? ESCAPE '\\'
-                    ORDER BY id
-                """, (pattern,))
-
-                for row in cursor:
-                    matches, public_memo = _public_hit(row["memo"])
-                    if not matches:
+                if visible is not None:
+                    if visible[0] not in tables:
                         continue
-                    results.append({
-                        "type": row["type"],
-                        "id": row["id"],
-                        "name": row["name"],
-                        "memo": public_memo,
-                        "owner": row["owner"],
-                        "date": row["date"]
-                    })
+                    # QualCoder's visibility view where the project
+                    # declares it; raises rather than falling back
+                    source = self._visible_source(*visible)
+                else:
+                    source = None
+                    table = sql.split(" FROM ", 1)[1].split()[0]
+                    if table not in tables:
+                        continue
+                column = "memo" if kind != "journal" else "jentry"
+                prefix = {"coding": "t.", "region_coding": "t.",
+                          "av_coding": "t.", "case_link": "t.",
+                          "annotation": "a."}.get(kind, "")
+                match = (f"qc_text_contains(CAST({prefix}{column} AS "
+                         f"BLOB), ?)")
+                cursor = self.conn.execute(
+                    sql.format(source=source, match=match), (folded,))
+                for row in cursor:
+                    # Every text column arrives as a blob and is decoded
+                    # with replacement (fix round 2), so a damaged note
+                    # that matches is returned rather than failing the
+                    # search; the private part is dropped before the
+                    # check, as before, so a word only there, damaged or
+                    # not, answers exactly as a word found nowhere
+                    public = extract_ai_memo(self._decoded(row["memo"]) or "")
+                    if not folded_contains(public, folded):
+                        continue
+                    item = {"type": kind}
+                    item.update({k: self._decoded(row[k])
+                                 for k in row.keys()})
+                    item["memo"] = public
+                    item["owner"] = owner_shown(item.get("owner"))
+                    results.append(item)
                     if len(results) >= limit:
                         break
-
-            # Search annotations (only while budget remains)
-            if len(results) < limit:
-                # P1-3: annotations honor coder visibility here
-                # too (annotation_visible when present, base table
-                # otherwise; QA round 1, F13)
-                annotation_source = self._visible_source(
-                    "annotation", "annotation_visible")
-                cursor = self.conn.execute(f"""
-                    SELECT
-                        'annotation' as type,
-                        a.anid as id,
-                        s.name,
-                        a.memo,
-                        a.owner,
-                        a.date,
-                        a.pos0,
-                        a.pos1
-                    FROM {annotation_source} a
-                    JOIN source s ON a.fid = s.id
-                    WHERE a.memo LIKE ? ESCAPE '\\'
-                    ORDER BY a.anid
-                """, (pattern,))
-
-                for row in cursor:
-                    matches, public_memo = _public_hit(row["memo"])
-                    if not matches:
-                        continue
-                    results.append({
-                        "type": row["type"],
-                        "id": row["id"],
-                        "name": row["name"],
-                        "memo": public_memo,
-                        "owner": row["owner"],
-                        "date": row["date"],
-                        "position_start": row["pos0"],
-                        "position_end": row["pos1"]
-                    })
-                    if len(results) >= limit:
-                        break
-
             return results
         except sqlite3.Error as e:
             _raise_query_error(e, "search_memos", "Failed to search memos")
@@ -5752,50 +6185,65 @@ class QualcoderDatabase:
         except sqlite3.Error as e:
             _raise_query_error(e, "get_case_attributes", "Failed to retrieve case attributes")
 
-    # Operator -> SQL condition over the attribute value. The SQL text is
-    # selected from this FIXED mapping (never user input); values are bound
-    # as parameters. Attribute values are stored as TEXT even for numeric
-    # attributes, and SQLite CAST('' AS REAL) = 0.0 — so a bare CAST would
-    # make every UNSET placeholder ('' value) match gt/lt comparisons as
-    # zero (the old comment claiming non-numeric values never match was
-    # FALSE). Numeric operators therefore exclude ''-value rows explicitly
-    # (cases-attributes.md §3.4/§6.4; NULL values are excluded by CAST(NULL)
-    # comparing as NULL). QualCoder's own attribute report shares the
-    # empty-matches-as-zero flaw; this is a deliberate, documented fix.
+    # Operator -> SQL condition over the attribute value, for the two
+    # operators still filtered in SQL. The SQL text is selected from this
+    # FIXED mapping (never user input); values are bound as parameters.
+    # The numeric operators are compared in Python (v0.14, claims audit
+    # item 11): a bare CAST(value AS REAL) read every text that does not
+    # start with a number as 0.0 and "34 years" as 34.0, so "under 18"
+    # found "unknown" and "n/a" on a character attribute.
     _ATTRIBUTE_OPERATORS = {
         "equals": "a.value = ?",
-        "contains": "a.value LIKE ? ESCAPE '\\'",
-        "gt": "(a.value != '' AND CAST(a.value AS REAL) > ?)",
-        "gte": "(a.value != '' AND CAST(a.value AS REAL) >= ?)",
-        "lt": "(a.value != '' AND CAST(a.value AS REAL) < ?)",
-        "lte": "(a.value != '' AND CAST(a.value AS REAL) <= ?)",
+        "contains": "qc_text_contains(CAST(a.value AS BLOB), ?)",
+        "gt": None,
+        "gte": None,
+        "lt": None,
+        "lte": None,
     }
-
-    # 'equals' on a NUMERIC attribute compares numerically (so '5' matches
-    # a stored '5.0'), because plain string equality on numerics is a trap.
-    # 'equals' with '' stays string comparison — it is the legitimate way
-    # to find UNSET attributes (cases-attributes.md §6.4: don't fix that
-    # away).
-    _NUMERIC_EQUALS_CONDITION = "(a.value != '' AND CAST(a.value AS REAL) = ?)"
+    _NUMERIC_TESTS = {
+        "gt": lambda v, probe: v > probe,
+        "gte": lambda v, probe: v >= probe,
+        "lt": lambda v, probe: v < probe,
+        "lte": lambda v, probe: v <= probe,
+        "equals": lambda v, probe: v == probe,
+    }
 
     def query_by_attribute(self, attr_name: str, attr_value: str,
                            attr_type: str = "case",
                            operator: str = "equals") -> List[Dict[str, Any]]:
-        """Query cases or files by attribute value.
+        """The matching cases or files (see `attribute_query`)."""
+        return self.attribute_query(attr_name, attr_value, attr_type,
+                                    operator)["results"]
+
+    def attribute_query(self, attr_name: str, attr_value: str,
+                        attr_type: str = "case",
+                        operator: str = "equals") -> Dict[str, Any]:
+        """Query cases or files by attribute value, and say what was left out.
 
         Args:
             attr_name: The attribute name to filter by
-            attr_value: The attribute value to match (a number for the
-                        gt/gte/lt/lte operators)
+            attr_value: The attribute value to match (a finite number for
+                        the gt/gte/lt/lte operators)
             attr_type: 'case' or 'file'
             operator: 'equals' (exact match, default; compares numerically
                       for numeric attributes so '5' finds '5.0'; '' finds
                       unset attributes), 'contains' (case-insensitive
                       substring), or 'gt'/'gte'/'lt'/'lte' (numeric
-                      comparison; unset ''-value rows never match)
+                      comparison of the values that are finite numbers)
 
         Returns:
-            List of cases or files matching the attribute criteria
+            {"results": [...], "value_type": ..., and for a numeric
+            comparison "numeric": {"compared", "not_numbers", "unset"}}.
+            A numeric comparison compares only values that are finite
+            numbers (`finite_number`), on a character attribute too, and
+            counts the others: "not_numbers" (such as "unknown", "n/a",
+            "34 years") and "unset" (''). QualCoder's attribute report
+            casts a numeric attribute in SQL, where a value reads as the
+            number it begins with ("34 years" as 34) or as 0 when it
+            begins with none ("unknown"), and compares a character
+            attribute as text (report_attributes.py:357-358, :401-402 at
+            9bddf17); this is a named departure in the researcher's
+            favour.
         """
         if not isinstance(attr_name, str) or not isinstance(attr_value, str):
             raise TypeError("attr_name and attr_value must be strings")
@@ -5808,92 +6256,135 @@ class QualcoderDatabase:
                 f"operator must be one of: "
                 f"{', '.join(sorted(self._ATTRIBUTE_OPERATORS))}"
             )
-        condition = self._ATTRIBUTE_OPERATORS[operator]
-
-        if operator == "contains":
-            bound_value: Any = f"%{escape_like_pattern(attr_value)}%"
-        elif operator in ("gt", "gte", "lt", "lte"):
-            try:
-                bound_value = float(attr_value)
-            except ValueError:
-                raise ValueError(
-                    f"attr_value must be a number for operator '{operator}', "
-                    f"got '{attr_value}'"
-                ) from None
-        elif operator == "equals":
-            # Numeric attributes: compare numerically so '5' finds '5.0'
-            # (values are stored as TEXT; plain string equality would miss
-            # every formatting variant). '' keeps string semantics — it is
-            # how unset attributes are found.
-            bound_value = attr_value
-            if attr_value != "":
-                try:
-                    vt_row = self.conn.execute(
-                        "SELECT valuetype FROM attribute_type WHERE name = ?",
-                        (attr_name,)
-                    ).fetchone()
-                except sqlite3.Error as e:
-                    _raise_query_error(e, "query_by_attribute",
-                                       "Failed to query by attribute")
-                if vt_row and vt_row["valuetype"] == "numeric":
-                    try:
-                        bound_value = float(attr_value)
-                        condition = self._NUMERIC_EQUALS_CONDITION
-                    except ValueError:
-                        # Non-numeric probe against a numeric attribute can
-                        # only string-match (and never will match a numeric
-                        # value) — keep string equality
-                        pass
-        else:
-            bound_value = attr_value
 
         try:
-            if attr_type == 'case':
-                cursor = self.conn.execute(f"""
-                    SELECT
-                        c.caseid,
-                        c.name,
-                        c.memo,
-                        a.value as attr_value
-                    FROM cases c
-                    JOIN attribute a ON c.caseid = a.id AND a.attr_type = 'case'
-                    WHERE a.name = ? AND {condition}
-                    ORDER BY c.name
-                """, (attr_name, bound_value))
-
-                results = []
-                for row in cursor.fetchall():
-                    results.append({
-                        "case_id": row["caseid"],
-                        "name": row["name"],
-                        "memo": row["memo"] or "",
-                        "attribute_value": row["attr_value"]
-                    })
-            else:  # file
-                cursor = self.conn.execute(f"""
-                    SELECT
-                        s.id,
-                        s.name,
-                        s.memo,
-                        a.value as attr_value
-                    FROM source s
-                    JOIN attribute a ON s.id = a.id AND a.attr_type = 'file'
-                    WHERE a.name = ? AND {condition}
-                    ORDER BY s.name
-                """, (attr_name, bound_value))
-
-                results = []
-                for row in cursor.fetchall():
-                    results.append({
-                        "file_id": row["id"],
-                        "name": row["name"],
-                        "memo": row["memo"] or "",
-                        "attribute_value": row["attr_value"]
-                    })
-
-            return results
+            vt_row = self.conn.execute(
+                "SELECT valuetype FROM attribute_type WHERE name = ?",
+                (attr_name,)
+            ).fetchone()
         except sqlite3.Error as e:
-            _raise_query_error(e, "query_by_attribute", "Failed to query by attribute")
+            _raise_query_error(e, "query_by_attribute",
+                               "Failed to query by attribute")
+        value_type = vt_row["valuetype"] if vt_row else None
+
+        probe: Optional[float] = None
+        condition = self._ATTRIBUTE_OPERATORS[operator]
+        bound: List[Any] = [attr_name]
+        if operator in ("gt", "gte", "lt", "lte"):
+            probe = finite_number(attr_value)
+            if probe is None:
+                raise ValueError(
+                    f"attr_value must be a finite number for operator "
+                    f"'{operator}' (such as \"30\" or \"4.5\"; not "
+                    f"\"nan\", \"inf\", underscores or digits outside 0 "
+                    f"to 9), got '{attr_value}'"
+                )
+        elif operator == "contains":
+            bound.append(fold_text(attr_value))
+        elif (operator == "equals" and attr_value != ""
+              and value_type == "numeric"):
+            # Numeric attributes: compare numerically so '5' finds '5.0'
+            # (values are stored as TEXT; plain string equality would miss
+            # every formatting variant). '' keeps string semantics: it is
+            # how unset attributes are found. A probe that is not a finite
+            # number is refused, as for the other four operators (fix round
+            # 2): string equality used to answer it, so a full-width "１２"
+            # found nothing beside a stored "12" and said nothing.
+            probe = finite_number(attr_value)
+            if probe is None:
+                raise ValueError(
+                    f"attr_value must be a finite number for operator "
+                    f"'equals' on the numeric attribute '{attr_name}' (such "
+                    f"as \"30\" or \"4.5\"; not \"nan\", \"inf\", "
+                    f"underscores or digits outside 0 to 9), or \"\" for "
+                    f"unset values, got '{attr_value}'. Stored values that "
+                    f"are not numbers are counted in values_left_out; "
+                    f"operator 'contains' finds them by their text."
+                )
+        else:
+            bound.append(attr_value)
+        numeric = probe is not None
+        if attr_type == 'case':
+            table, key, id_key = "cases", "caseid", "case_id"
+        else:
+            table, key, id_key = "source", "id", "file_id"
+        dec = self._decoded
+        out: Dict[str, Any] = {"value_type": value_type}
+        results = []
+        try:
+            if not numeric:
+                # One query, filtered in SQL; every text column as a blob
+                # decoded with replacement (fix round 2), so a damaged
+                # row that matches is returned rather than failing
+                rows = self.conn.execute(f"""
+                    SELECT x.{key} AS eid, CAST(x.name AS BLOB) AS name,
+                           CAST(x.memo AS BLOB) AS memo,
+                           CAST(a.value AS BLOB) AS attr_value
+                    FROM {table} x
+                    JOIN attribute a ON x.{key} = a.id
+                        AND a.attr_type = '{attr_type}'
+                    WHERE a.name = ? AND {condition}
+                    ORDER BY x.name
+                """, bound).fetchall()
+                for row in rows:
+                    results.append({
+                        id_key: row["eid"],
+                        "name": dec(row["name"]),
+                        "memo": dec(row["memo"]) or "",
+                        "attribute_value": dec(row["attr_value"]),
+                    })
+                out["results"] = results
+                return out
+
+            # A numeric comparison reads every value of the attribute, as
+            # a blob decoded with replacement, in the entities' name order
+            # (a damaged value is then not a number, left out and
+            # counted, rather than failing the query), and reads names
+            # and memos only for the rows that match (fix round 2)
+            rows = self.conn.execute(f"""
+                SELECT x.{key} AS eid, CAST(a.value AS BLOB) AS attr_value
+                FROM {table} x
+                JOIN attribute a ON x.{key} = a.id
+                    AND a.attr_type = '{attr_type}'
+                WHERE a.name = ?
+                ORDER BY x.name
+            """, bound).fetchall()
+            counts = {"compared": 0, "not_numbers": 0, "unset": 0}
+            test = self._NUMERIC_TESTS[operator]
+            matched = []
+            for row in rows:
+                raw = dec(row["attr_value"])
+                if raw is None or str(raw).strip() == "":
+                    counts["unset"] += 1
+                    continue
+                number = finite_number(str(raw))
+                if number is None:
+                    counts["not_numbers"] += 1
+                    continue
+                counts["compared"] += 1
+                if test(number, probe):
+                    matched.append((row["eid"], raw))
+            details: Dict[Any, Any] = {}
+            ids = sorted({eid for eid, _ in matched})
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                marks = ",".join("?" for _ in chunk)
+                for row in self.conn.execute(
+                        f"SELECT {key} AS eid, CAST(name AS BLOB) AS name, "
+                        f"CAST(memo AS BLOB) AS memo FROM {table} "
+                        f"WHERE {key} IN ({marks})", chunk):
+                    details[row["eid"]] = (dec(row["name"]),
+                                           dec(row["memo"]) or "")
+            for eid, raw in matched:
+                name, memo = details.get(eid, (None, ""))
+                results.append({id_key: eid, "name": name, "memo": memo,
+                                "attribute_value": raw})
+        except sqlite3.Error as e:
+            _raise_query_error(e, "query_by_attribute",
+                               "Failed to query by attribute")
+        out["results"] = results
+        out["numeric"] = counts
+        return out
 
     # ========================================================================
     # REPORT-EXPORT READS (v0.8 phase B) — QualCoder-parity row sources
@@ -6063,10 +6554,20 @@ class QualcoderDatabase:
         # schema is QualCoder's and must not gain indexes, so the join is
         # built in Python instead: one pass to group rows by fid, then a
         # sorted-array bisect per candidate row — O(n log n) per file.
-        # Semantics are identical to the old SQL: window_size == 0 counts
-        # closed-interval intersections (the three OR conditions reduce to
-        # o.pos0 <= t.pos1 AND o.pos1 >= t.pos0); window_size > 0 counts
-        # |o.pos0 - t.pos0| <= window; NULL positions never match.
+        # The relation rule is QualCoder's own (v0.14, claims audit item
+        # 15): spans are half-open, so window_size == 0 counts a pair
+        # that shares at least one character, the co-occurrence report's
+        # overlap (report_cooccurrence.py:1392-1406 at 9bddf17: "<= so
+        # touching segments (0 shared chars) are not counted as
+        # Overlap"; that report counts exact, inclusion and overlap
+        # only, :1175-1190), and window_size N counts a pair whose gap,
+        # from the end of the earlier coding to the start of the later,
+        # is at most N characters (0 when they overlap), the distance
+        # the Code relations report gives (report_relations.py:422-432). It used to count
+        # closed intervals at 0 (touching codings counted) and, at N, a
+        # pair whose START positions were at most N apart, so a long
+        # coding ending just before another began was not found. NULL
+        # positions never match.
         source = self.code_text_source(coder is None)
         owner_sql = " AND ct.owner = ?" if coder is not None else ""
         owner_inner = " AND owner = ?" if coder is not None else ""
@@ -6088,6 +6589,8 @@ class QualcoderDatabase:
                 pos0, pos1 = r["pos0"], r["pos1"]
                 if not isinstance(pos0, int) or not isinstance(pos1, int):
                     continue  # damaged row; SQL NULL comparisons never matched
+                if pos1 < pos0:
+                    continue  # damaged row: it ends before it starts
                 if r["cid"] == code_id:
                     targets_by_fid.setdefault(r["fid"], []).append((pos0, pos1))
                 elif r["cid"] is not None:
@@ -6102,13 +6605,25 @@ class QualcoderDatabase:
                 starts = sorted(p0 for p0, _ in targets)
                 ends = sorted(p1 for _, p1 in targets)
                 for cid, o0, o1 in others:
-                    if window_size == 0:
-                        # targets with pos0 <= o1, minus targets with pos1 < o0
-                        n = (bisect.bisect_right(starts, o1)
-                             - bisect.bisect_left(ends, o0))
+                    if window_size == 0 and o1 == o0:
+                        # A coding with no characters (QualCoder writes
+                        # none): the rule, pair by pair
+                        n = sum(1 for t0, t1 in targets
+                                if (t0 == o0 and t1 == o1)
+                                or not (t1 <= o0 or t0 >= o1))
+                    elif window_size == 0:
+                        # Not proximity (t1 <= o0 or t0 >= o1): at least
+                        # one shared character. Targets with t0 < o1,
+                        # minus those with t1 <= o0, a subset of them
+                        # since t0 <= t1 <= o0 < o1.
+                        n = (bisect.bisect_left(starts, o1)
+                             - bisect.bisect_right(ends, o0))
                     else:
-                        n = (bisect.bisect_right(starts, o0 + window_size)
-                             - bisect.bisect_left(starts, o0 - window_size))
+                        # Gap at most N: t0 <= o1 + N and t1 >= o0 - N.
+                        # Targets with t0 <= o1 + N, minus those with
+                        # t1 < o0 - N (a subset of them, since t0 <= t1).
+                        n = (bisect.bisect_right(starts, o1 + window_size)
+                             - bisect.bisect_left(ends, o0 - window_size))
                     if n > 0:
                         counts[cid] = counts.get(cid, 0) + n
 
@@ -7850,6 +8365,30 @@ class QualcoderDatabase:
         rows = {"source_code": self._code_rows_for_cids([from_code_id]),
                 "destination_code": self._code_rows_for_cids([into_code_id])}
         rows.update(self._coding_rows_for_cids([from_code_id]))
+        # The source's whole branch, which the merge carries under the
+        # target (v16+): a sub-code at any depth added, renamed or moved
+        # away after the preview makes the token stale instead of
+        # travelling without a fresh preview (v0.14, claims audit item 9;
+        # the whole branch since fix round 1, E3-S5, as delete_code's
+        # fingerprint already covers).
+        caps = getattr(self, "capabilities", None)
+        if caps is not None and caps.has_supercid:
+            below = [cid for cid in self.get_branch_cids(from_code_id)
+                     if cid != from_code_id]
+            rows["source_branch"] = (self._row_digest_rows(
+                f"SELECT cid, name, catid, supercid FROM code_name "
+                f"WHERE cid IN ({','.join('?' for _ in below)}) "
+                f"ORDER BY cid", tuple(below)) if below else [])
+        # The words of the source memo, which a v16+ merge carries into
+        # the target's memo and a v14/v15 merge deletes: a digest of its
+        # stored bytes, never the text (fingerprint_rows' principle), so
+        # a memo reworded after the preview makes the token stale (fix
+        # round 1, E3-S5)
+        memo = self.conn.execute(
+            "SELECT CAST(memo AS BLOB) FROM code_name WHERE cid = ?",
+            (from_code_id,)).fetchone()
+        rows["source_memo_words"] = hashlib.sha256(
+            bytes(memo[0] or b"") if memo is not None else b"").hexdigest()
         rows["collisions"] = self._row_digest_rows(
             "SELECT s.ctid FROM code_text s WHERE s.cid = ? AND EXISTS ("
             "  SELECT 1 FROM code_text d WHERE d.cid = ? AND d.fid = s.fid "
@@ -7945,6 +8484,43 @@ class QualcoderDatabase:
                 "DELETE FROM gr_free_line_item WHERE fromcid = ? OR tocid = ?",
                 (cid, cid))
 
+    def _code_graph_preview(self, cids: Sequence[int]
+                            ) -> Optional[Dict[str, Any]]:
+        """What `_cleanup_graph_rows_for_cid` would remove for these codes.
+
+        The same gate (v16 and later, only the tables that exist) and the
+        same rows: each code's node, and every line from or to one of the
+        codes, each line counted once. None when nothing on a saved graph
+        is removed, as `_saved_graph_preview` answers for a category
+        (v0.14, claims audit item 9: the code previews said nothing of
+        these rows).
+        """
+        caps = getattr(self, "capabilities", None)
+        if caps is None or not caps.has_supercid or not cids:
+            return None
+        marks = ",".join("?" for _ in cids)
+        cids = list(cids)
+        nodes = lines = 0
+        if caps.table_exists("gr_cdct_text_item"):
+            nodes = self.conn.execute(
+                f"SELECT COUNT(*) FROM gr_cdct_text_item "
+                f"WHERE cid IN ({marks})", cids).fetchone()[0]
+        for table in ("gr_cdct_line_item", "gr_free_line_item"):
+            if caps.table_exists(table):
+                lines += self.conn.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE fromcid IN "
+                    f"({marks}) OR tocid IN ({marks})",
+                    cids + cids).fetchone()[0]
+        if not nodes and not lines:
+            return None
+        return {
+            "code_nodes": nodes,
+            "lines": lines,
+            "note": "QualCoder saved graphs: the node of each code that "
+                    "goes, and every line from or to one, are removed, as "
+                    "QualCoder 4.0's own delete and merge remove them.",
+        }
+
     # A category's own rows in QualCoder's saved graphs (v0.14): its node,
     # which has no cid, and the lines that end on that node, whose cid at
     # that end is NULL. A code node and a line to a code node store the
@@ -8025,12 +8601,19 @@ class QualcoderDatabase:
         code_id = validate_id(code_id, "code_id")
         if category_id is not None:
             category_id = validate_id(category_id, "category_id")
+        old_parent = None
         try:
             old = self._get_code_row(code_id)
             if category_id is not None:
                 self._get_category_row(category_id)  # existence check
             caps = getattr(self, "capabilities", None)
             if caps is not None and caps.has_supercid:
+                # The parent code this move detaches it from, named in
+                # the result (v0.14, claims audit item 19)
+                old_parent = self.conn.execute(
+                    "SELECT p.cid, p.name FROM code_name c "
+                    "JOIN code_name p ON c.supercid = p.cid "
+                    "WHERE c.cid = ?", (code_id,)).fetchone()
                 # S2: parent pointers are mutually exclusive; every move
                 # writes BOTH in one statement (upstream code_tree.py:
                 # 1235/1245; open-time repair would otherwise DISCARD our
@@ -8056,7 +8639,9 @@ class QualcoderDatabase:
             _raise_query_error(e, "move_code_to_category",
                                "Failed to move code")
         return {"code_id": code_id, "name": old["name"],
-                "old_category_id": old["catid"], "new_category_id": category_id}
+                "old_category_id": old["catid"], "new_category_id": category_id,
+                "old_parent_code_id": old_parent[0] if old_parent else None,
+                "old_parent_code": old_parent[1] if old_parent else None}
 
     def add_category(self, name: str, owner: str,
                      supercatid: Optional[int] = None,
@@ -8290,7 +8875,69 @@ class QualcoderDatabase:
         hidden = self._hidden_codings_affected("cid = ?", (from_code_id,))
         if hidden is not None:
             preview["hidden_coder_codings_affected"] = hidden
+        preview.update(self._merge_codes_codebook_preview(
+            from_code_id, src, dest, caps))
         return preview
+
+    def _merge_codes_codebook_preview(self, from_code_id: int, src, dest,
+                                      caps) -> Dict[str, Any]:
+        """What a code merge does to the codebook, besides the codings.
+
+        v0.14, claims audit item 9: the preview listed the codings and
+        their owners only, while the merge also changes the codebook. On
+        a v16+ project (QualCoder 4.0) it appends the source code's memo,
+        private section included, to the target's memo under a provenance
+        line, moves the source's sub-codes under the target and removes
+        the source's saved-graph rows; on a v14/v15 project (3.8.2) the
+        source code's memo goes with its row. Both are QualCoder's own
+        behaviour (master code_tree.py:1521-1570 at 9bddf17; qc382
+        code_text.py:2772-2820), kept and now said. Memo text is never
+        quoted: only whether there is one.
+        """
+        memo_row = self.conn.execute(
+            "SELECT memo FROM code_name WHERE cid = ?",
+            (from_code_id,)).fetchone()
+        has_memo = bool(memo_row is not None
+                        and (memo_row[0] or "").strip())
+        carried = caps is not None and bool(caps.has_supercid)
+        out: Dict[str, Any] = {
+            "source_memo_carried_to_target": carried,
+            "source_code_has_memo": has_memo,
+        }
+        if carried:
+            note = (f"The target code's memo changes: a line "
+                    f"'[Merged from code: {src['name']}, Coder: ..., "
+                    f"Merger date: ...]' naming the source code, its "
+                    f"owner and the date is added to the memo of "
+                    f"'{dest['name']}'")
+            note += (", followed by the source code's whole memo, its "
+                     "'#####' private section included (which stays "
+                     "private)" if has_memo else
+                     " (the source code has no memo to carry)")
+            note += (". It lands before any private section the target "
+                     "has, as QualCoder 4.0's own merge records it.")
+            subcodes = [
+                {"id": r[0], "name": r[1]} for r in self.conn.execute(
+                    "SELECT cid, name FROM code_name WHERE supercid = ? "
+                    "ORDER BY name, cid", (from_code_id,)).fetchall()]
+            out["subcodes_moved_to_target"] = subcodes
+            if subcodes:
+                out["subcodes_note"] = (
+                    f"{len(subcodes)} sub-code(s) of '{src['name']}' move "
+                    f"under '{dest['name']}', with their own sub-codes, "
+                    f"as in QualCoder 4.0; their codings stay theirs.")
+            graphs = self._code_graph_preview([from_code_id])
+            if graphs is not None:
+                out["saved_graph_rows_removed"] = graphs
+        elif has_memo:
+            note = ("The source code's memo is deleted with its row, as "
+                    "QualCoder 3.8.2's merge does on this project's "
+                    "schema; the backup made first keeps a copy. Copy "
+                    "anything you need from it before the merge.")
+        else:
+            note = "The source code has no memo; nothing is carried."
+        out["source_memo_note"] = note
+        return out
 
     def merge_codes(self, from_code_id: int, into_code_id: int,
                     auto_commit: bool = True) -> Dict[str, Any]:
@@ -8441,6 +9088,9 @@ class QualcoderDatabase:
         hidden = self._hidden_codings_affected(where, branch)
         if hidden is not None:
             preview["hidden_coder_codings_affected"] = hidden
+        graphs = self._code_graph_preview(branch)
+        if graphs is not None:
+            preview["saved_graph_rows_removed"] = graphs
         if len(branch) > 1:
             names = self.conn.execute(
                 f"SELECT name FROM code_name WHERE cid IN ({marks}) "
@@ -8449,9 +9099,11 @@ class QualcoderDatabase:
             preview["subcodes"] = sorted(r[0] for r in names)
             preview["note"] = (
                 f"{len(branch) - 1} sub-code(s) hang under this code. "
-                f"Deleting requires cascade=true (the whole branch and all "
-                f"its codings die, exactly as QualCoder's own delete), or "
-                f"move the sub-codes first if they are needed.")
+                f"Deleting deletes the whole branch and all its codings, "
+                f"exactly as QualCoder's own delete, which asks once; "
+                f"execute_with carries cascade=true, so approving this "
+                f"preview approves the branch. Move the sub-codes first if "
+                f"they are needed.")
         return preview
 
     def delete_code(self, code_id: int, cascade: bool = False,
@@ -9645,9 +10297,16 @@ class QualcoderDatabase:
         the write is insert-if-missing then update, keyed
         (id, name, attr_type); never assume the placeholder row exists
         (QualCoder's case-side placeholder heal is a no-op in 3.8.2).
-        Byte-fidelity per domain: the case path refreshes owner+date on
-        update, the file/journal paths write value only, exactly like the
-        three GUI paths.
+        Every path writes the value with this server's owner and the
+        date (v0.14, claims audit item 18), as QualCoder's case path does
+        (cases.py:670-679). A named departure: QualCoder's file and
+        journal edits write the value alone (manage_files.py:1259,
+        :2257, journals.py:827 at 9bddf17), so a placeholder QualCoder
+        made kept "Researcher" and its old date under the AI's value,
+        and get_file_attributes named the researcher as its owner, while
+        README promises every row this server writes carries the AI
+        coder name. QualCoder reads a value's owner only to list coders
+        in its charts window (view_charts.py:84).
 
         Deliberate deviation (documented): a non-castable value for a
         numeric attribute is REJECTED with an error; QualCoder silently
@@ -9695,16 +10354,18 @@ class QualcoderDatabase:
                     f"'{attr_name}' is a {att['caseOrFile']} attribute; it "
                     f"cannot be set on a {target_type}"
                 )
-            if att["valuetype"] == "numeric" and value != "":
-                try:
-                    float(value)
-                except ValueError:
-                    raise ValueError(
-                        f"'{attr_name}' is a numeric attribute and "
-                        f"'{value}' is not a number (QualCoder would "
-                        f"silently blank it; refusing instead). Pass '' to "
-                        f"unset."
-                    ) from None
+            if att["valuetype"] == "numeric" and value != "" \
+                    and finite_number(value) is None:
+                raise ValueError(
+                    f"'{attr_name}' is a numeric attribute and '{value}' "
+                    f"is not a number this server can compare: give "
+                    f"digits, optionally with a sign, a decimal point or "
+                    f"an exponent (\"30\", \"4.5\", \"1e3\"); not "
+                    f"\"nan\" or \"inf\", not underscores, not digits "
+                    f"outside 0 to 9. QualCoder blanks or reverts a value "
+                    f"that is not a number, with a warning; this server "
+                    f"refuses it, so nothing changes. Pass '' to unset."
+                )
 
             date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             existing = self.conn.execute(
@@ -9722,20 +10383,14 @@ class QualcoderDatabase:
                      owner)
                 )
                 previous = None
-            elif target_type == "case":
-                # Case path refreshes owner and date (cases.py:670-679)
+            else:
+                # Every domain refreshes owner and date, as QualCoder's
+                # case path does (cases.py:670-679); its file and journal
+                # paths write the value alone, a departure named above
                 self.conn.execute(
                     "UPDATE attribute SET value = ?, date = ?, owner = ? "
                     "WHERE attrid = ?",
                     (value, date_str, owner, existing["attrid"])
-                )
-                previous = existing["value"]
-            else:
-                # File/journal paths write value only
-                # (manage_files.py:1470-1471, journals.py:747-748)
-                self.conn.execute(
-                    "UPDATE attribute SET value = ? WHERE attrid = ?",
-                    (value, existing["attrid"])
                 )
                 previous = existing["value"]
 
@@ -9760,6 +10415,7 @@ class QualcoderDatabase:
             "attribute": attr_name,
             "value_type": att["valuetype"],
             "value": value,
+            "owner": owner,
             "previous_value": (previous if previous is not None
                                else "" if existing else None),
             "row_created": existing is None,
@@ -11192,10 +11848,9 @@ class QualcoderDatabase:
             "whole-word count is the sign of a short name.")
         # One file per call (decision A), and the report is still the
         # whole project: said here once, and once in the description.
-        # `search_memos` reaches three of the twelve note fields by its
-        # own three SELECTs (code notes, file notes, annotation notes),
-        # so the note names those three and promises nothing for the
-        # rest; `search_files` matches an escaped literal with no
+        # `search_memos` reads all twelve note fields since v0.14 (it
+        # read three, the code, file and annotation notes, and the note
+        # said so); `search_files` matches an escaped literal with no
         # normalisation and no separator flexibility, so a researcher
         # sent there gets a narrower answer than this block's and is
         # told so (cross-check, both corrections).
@@ -11206,10 +11861,10 @@ class QualcoderDatabase:
             "labels and the attribute values as fields, and the file text "
             "of every file with stored text as occurrences, under "
             "file_text. Each count is two readings, wide and whole-word. "
-            "To find the notes a count points at, search_memos can answer "
-            "for three of the twelve fields by name: the code notes, the "
-            "file notes and the annotation notes; the other nine have no "
-            "search tool in this server and are read in QualCoder. "
+            "To find the notes a count points at, search_memos searches "
+            "the public part of all twelve fields and names each result's "
+            "kind; it leaves out the coding notes and annotations of a "
+            "coder hidden in QualCoder, which are read there. "
             "search_files reads narrower than this block does (a plain "
             "substring, no normalisation), so a name it does not find may "
             "still be counted here. The labels include case and file "

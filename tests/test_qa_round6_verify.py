@@ -172,18 +172,24 @@ class TestRestoreNeverHalfReplaced:
 
 
 # =============================================================================
-# Co-occurrence differential — new Python impl vs the OLD SQL, hostile data
+# Co-occurrence differential — the Python impl vs a pair-by-pair SQL oracle
+# of the relation rule, hostile data
 # =============================================================================
 
-# The exact SQL QualCoder/the-old-MCP used (window==0 and window>0 branches),
-# reproduced here as the differential oracle.
+# v0.14 (claims audit item 15): the rule is QualCoder's own relation rule
+# (report_cooccurrence.py:1392-1406 at 9bddf17), no longer the old SQL
+# this oracle used to reproduce. Window 0: an exact pair, or a pair that
+# is not proximity (not t1 <= o0 and not t0 >= o1), which for spans with
+# characters is one shared character; window N: the gap from the end of
+# the earlier coding to the start of the later, 0 when they overlap, is
+# at most N. Written as a plain self-join, pair by pair, so it shares no
+# code with the bisect implementation it checks.
 _OLD_SQL_W0 = """
     SELECT c.cid, COUNT(*) as n
     FROM code_text ct1
     JOIN code_text ct2 ON ct1.fid = ct2.fid AND ct1.cid != ct2.cid
-        AND ((ct2.pos0 >= ct1.pos0 AND ct2.pos0 <= ct1.pos1)
-             OR (ct2.pos1 >= ct1.pos0 AND ct2.pos1 <= ct1.pos1)
-             OR (ct2.pos0 <= ct1.pos0 AND ct2.pos1 >= ct1.pos1))
+        AND ((ct2.pos0 = ct1.pos0 AND ct2.pos1 = ct1.pos1)
+             OR NOT (ct1.pos1 <= ct2.pos0 OR ct1.pos0 >= ct2.pos1))
     JOIN code_name c ON ct2.cid = c.cid
     WHERE ct1.cid = ?
     GROUP BY c.cid
@@ -192,7 +198,7 @@ _OLD_SQL_WN = """
     SELECT c.cid, COUNT(*) as n
     FROM code_text ct1
     JOIN code_text ct2 ON ct1.fid = ct2.fid AND ct1.cid != ct2.cid
-        AND ABS(ct2.pos0 - ct1.pos0) <= ?
+        AND max(ct2.pos0 - ct1.pos1, ct1.pos0 - ct2.pos1, 0) <= ?
     JOIN code_name c ON ct2.cid = c.cid
     WHERE ct1.cid = ?
     GROUP BY c.cid
@@ -283,15 +289,18 @@ class TestCooccurrenceDifferential:
             # a code that has no codings at all
             assert _new_cooccur(2, w) == {}
 
-    def test_window0_boundary_touch_counts(self, setup_server,
-                                           qualcoder_db_path):
-        """Closed-interval semantics: a partner touching the target's pos1
-        exactly must count at window=0 (a subtle equality the rewrite must
-        preserve)."""
+    def test_window0_boundary_touch_does_not_count(self, setup_server,
+                                                   qualcoder_db_path):
+        """Half-open spans, QualCoder's rule (v0.14, claims audit item
+        15): a partner touching the target's pos1 shares no character
+        and is proximity, not overlap, at window=0; at window=1 its gap
+        of 0 counts. It used to count at 0 (closed intervals)."""
         self._hostile_fixture(qualcoder_db_path)
-        # code 2 row (5,20,25) touches target A pos1=20 -> counted at w0
-        assert _new_cooccur(1, 0)[2] == _old_cooccur(qualcoder_db_path, 1, 0)[2]
-        assert _new_cooccur(1, 0).get(2, 0) > 0
+        # code 2 against target A (10-20): (10,20) twice (two owners)
+        # and (12,18) share characters; (20,25) only touches
+        assert _new_cooccur(1, 0)[2] == 3
+        # + (20,25) gap 0, (21,30) gap 1, (5,9) gap 1
+        assert _new_cooccur(1, 1)[2] == 6
 
 
 # =============================================================================

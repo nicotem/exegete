@@ -52,14 +52,14 @@ class TestS64NumericComparisonFix:
         the dossier-exposed bug. Unset rows are now excluded."""
         out = json.loads(server.query_by_attribute("Age", "100",
                                                    operator="lt"))
-        names = {m["name"] for m in out}
+        names = {m["name"] for m in out["results"]}
         assert "Case A" in names            # 30 < 100
         assert "Unset participant" not in names
 
     def test_unset_placeholder_never_matches_gt(self, with_placeholder_case):
         out = json.loads(server.query_by_attribute("Age", "-5",
                                                    operator="gt"))
-        names = {m["name"] for m in out}
+        names = {m["name"] for m in out["results"]}
         assert names == {"Case A"}          # '' would cast to 0.0 > -5
 
     def test_numeric_equals_normalized(self, with_placeholder_case):
@@ -67,18 +67,20 @@ class TestS64NumericComparisonFix:
         finds the stored '30' (plain string equality missed it)."""
         for probe in ("30", "30.0", "3e1"):
             out = json.loads(server.query_by_attribute("Age", probe))
-            assert {m["name"] for m in out} == {"Case A"}, probe
+            assert {m["name"] for m in out["results"]} == {"Case A"}, probe
 
     def test_equals_empty_still_finds_unset(self, with_placeholder_case):
         """'' keeps string semantics — the legitimate way to find unset
         attributes (do NOT fix that away, §6.4)."""
         out = json.loads(server.query_by_attribute("Age", ""))
-        assert {m["name"] for m in out} == {"Unset participant"}
+        assert {m["name"] for m in out["results"]} == {"Unset participant"}
 
     def test_non_numeric_probe_on_numeric_attr(self, with_placeholder_case):
-        """A non-castable probe can only string-match — no crash, no hit."""
+        """A probe that is not a number, on a numeric attribute, is refused
+        (v0.14 fix round 2): string equality used to answer it with
+        nothing, silently."""
         out = json.loads(server.query_by_attribute("Age", "thirty"))
-        assert out == []
+        assert "finite number for operator 'equals'" in out["error"]
 
     def test_character_equals_stays_string(self, setup_server,
                                            qualcoder_db_path):
@@ -87,7 +89,7 @@ class TestS64NumericComparisonFix:
         json.loads(server.set_attribute("case", 1, "Region", "North",
                                         create_backup=False))
         out = json.loads(server.query_by_attribute("Region", "North"))
-        assert len(out) == 1
+        assert len(out["results"]) == 1
 
 
 # ============================================================================
@@ -253,23 +255,27 @@ class TestS41SetAttribute:
         assert row["owner"] == "AI Coding Assistant"  # P1-2 attribution
         assert row["date"] != "2024-01-15"       # refreshed
 
-    def test_file_update_touches_value_only(self, setup_server,
-                                            qualcoder_db_path):
-        """File path: value only (manage_files.py:1470-1471) — the
-        placeholder's owner/date are untouched."""
+    def test_file_update_refreshes_owner_and_date(self, setup_server,
+                                                  qualcoder_db_path):
+        """File path: value, owner and date, as on the case path (v0.14,
+        claims audit item 18). A named departure: QualCoder's own file
+        edit writes the value alone (manage_files.py:1259), which left
+        a researcher's placeholder owning the AI's value."""
         json.loads(server.create_attribute_type("Language", "file",
                                                 create_backup=False))
-        before = _rows(qualcoder_db_path,
-                       "SELECT owner, date FROM attribute "
-                       "WHERE name='Language' AND id=1")[0]
+        conn = _conn(qualcoder_db_path)
+        conn.execute("UPDATE attribute SET owner = 'Researcher', "
+                     "date = '2020-01-01' WHERE name='Language' AND id=1")
+        conn.commit()
+        conn.close()
         json.loads(server.set_attribute("file", 1, "Language", "Italian",
                                         create_backup=False))
         after = _rows(qualcoder_db_path,
                       "SELECT value, owner, date FROM attribute "
                       "WHERE name='Language' AND id=1")[0]
         assert after["value"] == "Italian"
-        assert (after["owner"], after["date"]) == (before["owner"],
-                                                   before["date"])
+        assert after["owner"] == "AI Coding Assistant"
+        assert after["date"] != "2020-01-01"
 
     def test_journal_set(self, setup_server, qualcoder_db_path):
         json.loads(server.create_attribute_type("Phase", "journal",

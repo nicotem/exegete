@@ -154,9 +154,10 @@ class TestGetCodedSegments:
         assert len(data["segments"]) >= 1
 
     def test_invalid_code_id(self, setup_server):
+        # v0.14 (claims audit item 12): refused, not answered as empty
         result = server.get_coded_segments(999)
         data = json.loads(result)
-        assert data["segment_count"] == 0
+        assert "Code ID 999 does not exist" in data["error"]
 
     def test_with_limit(self, setup_server):
         result = server.get_coded_segments(1, limit=1)
@@ -282,7 +283,7 @@ class TestGetFileAttributes:
     def test_invalid_file_id(self, setup_server):
         result = server.get_file_attributes(999)
         data = json.loads(result)
-        assert "file_id" in data
+        assert "File ID 999 does not exist" in data["error"]
 
 
 class TestGetCaseAttributes:
@@ -297,7 +298,7 @@ class TestGetCaseAttributes:
     def test_invalid_case_id(self, setup_server):
         result = server.get_case_attributes(999)
         data = json.loads(result)
-        assert "case_id" in data
+        assert "Case ID 999 does not exist" in data["error"]
 
 
 class TestQueryByAttribute:
@@ -306,14 +307,15 @@ class TestQueryByAttribute:
     def test_matching_query(self, setup_server):
         result = server.query_by_attribute("Age", "30", "case")
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) >= 1
+        assert isinstance(data["results"], list)
+        assert len(data["results"]) >= 1
+        assert data["result_count"] == len(data["results"])
 
     def test_no_match(self, setup_server):
         result = server.query_by_attribute("Age", "99", "case")
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) == 0
+        assert data["results"] == []
+        assert data["result_count"] == 0
 
 
 # =============================================================================
@@ -357,8 +359,7 @@ class TestGetCodesByCase:
     def test_invalid_case(self, setup_server):
         result = server.get_codes_by_case(999)
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) == 0
+        assert "Case ID 999 does not exist" in data["error"]
 
 
 class TestGetCasesByCode:
@@ -373,8 +374,7 @@ class TestGetCasesByCode:
     def test_invalid_code(self, setup_server):
         result = server.get_cases_by_code(999)
         data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) == 0
+        assert "Code ID 999 does not exist" in data["error"]
 
 
 # =============================================================================

@@ -780,12 +780,11 @@ class TestTheWarnings:
 
 class TestTheScopeNoteIsTrueOfTheSearchTools:
 
-    def test_search_memos_answers_for_three_of_the_twelve_notes(
-            self, project):
-        """The scope note says `search_memos` can answer for three of the
-        twelve note fields by name. Driven rather than read: one word
-        planted in all twelve, counted in all twelve, and found by
-        `search_memos` in exactly the code, file and annotation notes."""
+    def test_search_memos_answers_for_all_twelve_notes(self, project):
+        """The scope note says `search_memos` searches all twelve note
+        fields (v0.14; it said three, and it read three). Driven rather
+        than read: one word planted in all twelve, counted in all twelve,
+        and found by `search_memos` in all twelve kinds."""
         word = "Zanzibarfield"
         con = sqlite3.connect(str(project / "data.qda"))
         for field, sql in \
@@ -803,8 +802,11 @@ class TestTheScopeNoteIsTrueOfTheSearchTools:
         assert all(count["wide"] == 1 for count in residue["memos"].values())
         assert len(residue["memos"]) == 12
         found = json.loads(server.search_memos(word, limit=100))
-        kinds = {item["type"] for item in found["results"]}
-        assert kinds == {"code", "file", "annotation"}
+        kinds = [item["type"] for item in found["results"]]
+        assert sorted(kinds) == sorted([
+            "project", "code", "category", "file", "case", "attribute_type",
+            "coding", "region_coding", "av_coding", "case_link",
+            "annotation", "journal"])
 
 
 # =============================================================================

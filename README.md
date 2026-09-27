@@ -16,7 +16,7 @@ This MCP server lets an AI assistant directly access and analyse your Qualcoder 
 - 📋 Compare codes and cases
 - 👥 **Query by demographics/attributes** (age, gender, etc.)
 - 🎯 **Create case-code matrices for comparative analysis**
-- 🗒️ Search through memos and annotations
+- 🗒️ Search every memo and note outside QualCoder's saved graphs: memos, coding memos, annotations, journal entries and the project memo
 - 🤖 **AI-assisted coding**: suggest → review → approve → apply, so nothing is written until you say so
 - 🏷️ **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - 💾 **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
@@ -136,9 +136,12 @@ host and not capability-evaluated on local models.
 > closed and reopened in QualCoder.
 
 Sub-codes (a code nested under another code, schema v16 and newer) are
-fully supported: creating them, moving and merging without hierarchy
-loss, branch-aware deletion, and nesting-aware listings, reports,
-codebook and REFI-QDA exports. Projects newer than schema v17 refuse
+supported: creating them, moving a code with its sub-codes, merging
+(the source's sub-codes move under the target), branch-aware deletion,
+and nesting-aware listings, reports, codebook and REFI-QDA exports.
+Nesting an existing code under another code is done in QualCoder, and
+moving a sub-code, into a category or to none, detaches it from its
+parent code, as in QualCoder; the result names the parent it left. Projects newer than schema v17 refuse
 writes until this server has been verified against them; setting
 `QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA=1` in the server environment lets
 writes proceed at your own risk, and every write result then carries a
@@ -353,6 +356,9 @@ client.
 Every row this server writes (codings, annotations, journal entries,
 imports, cases, codes, categories, attributes) is attributed to one
 coder name, so AI work stays distinguishable from yours in QualCoder.
+An attribute value it sets takes that name and the date on a file or a
+journal entry as on a case; QualCoder's own file and journal edits
+change the value alone and keep the row's earlier owner.
 From v0.12 that name belongs to the PROJECT and it is yours to choose.
 The first write that needs it stops and asks: the model relays the
 question, you answer, and it calls
@@ -547,7 +553,7 @@ analytics (`get_coded_segments`, `search_coded_text`,
 `get_coding_frequencies`, `find_cooccurring_codes`,
 `get_case_code_matrix`, `get_codes_by_case`, `get_cases_by_code`, the
 codings and annotations in `analyze_file_with_coding`, and the
-annotation matches of `search_memos`) read what the user sees in
+coding-memo and annotation matches of `search_memos`) read what the user sees in
 QualCoder by default and disclose how many coders are hidden, never
 their names (with one stated exception, a project that gained the
 capability after this server connected to it; PRIVACY.md's "Coder
@@ -919,7 +925,7 @@ carries the complete list.
 > plus `create_project`, 74 tools. Creating projects stays out of the
 > default set so that researchers opt in to a tool that makes folders on
 > their disk; it is not in `core` either. Measured as below, the
-> `lifecycle` definitions run to about 184,000 characters, roughly 46k
+> `lifecycle` definitions run to about 193,000 characters, roughly 48k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
@@ -937,9 +943,9 @@ carries the complete list.
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0, in
 > the repository's own `venv/`), the
-> definitions run to about 181,000 characters for `full`, roughly 45k
-> tokens at four characters per token, and about 62,000 characters for
-> `core`, roughly 15k tokens. On Python 3.10 to 3.12 the same
+> definitions run to about 191,000 characters for `full`, roughly 48k
+> tokens at four characters per token, and about 63,000 characters for
+> `core`, roughly 16k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
 > LM Studio recipe in INSTALL.md for what that means for context
@@ -958,8 +964,8 @@ carries the complete list.
 - `search_coded_text(query, code_name, limit, coder, exclude_code_ids, cursor)` - Search coded segments, with the same novelty filter and paging
 - `get_coded_segments(code_id, limit, coder, strategy, max_chars, file_ids, cursor)` - Segments for a code, sampled by strategy (`by_document`, `diverse_by_document`, `recent_first`, `sequential`) under an optional character budget; `codings_not_shown` counts the code's region codings (areas on PDF pages or images) and audio/video codings in the same scope, which a text read does not show
 - `get_coding_frequencies(coder)` - Coding statistics: text codings per code, with `codings_not_counted` giving the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
-- `search_memos(query, limit)` - Search memos and annotations (public memo text only)
-- `export_code_report(code_name)` - Detailed code report returned into the conversation (public memo text only)
+- `search_memos(query, limit)` - Search every memo and note outside QualCoder's saved graphs (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type
+- `export_code_report(code_name)` - Detailed code report returned into the conversation (public memo text only), with up to 1,000 of the code's text segments; `segments_total` and `truncated` say when there are more, which `get_coded_segments` pages through
 - `get_project_summary()` - Comprehensive project overview, naming any PDF with no usable text and counting the region and audio/video codings the text statistics leave out
 
 On projects with the coder-visibility capability (QualCoder 3.8.2 and
@@ -968,6 +974,17 @@ argument read visible coders' work by default and one coder's rows from
 the full data when `coder` is given (see "Working alongside QualCoder
 4.0").
 
+A read given an id, a name or a coder that is not in the project
+refuses it, rather than answering "nothing": a code, case or file id
+that does not exist; an attribute name that is not one of that kind
+(names are exact, and the refusal names one that differs only by letter
+case, or says it is the other kind); a code name that matches no code (a
+code name is found as the codebook tools find it: the same name, then
+one differing only by letter case); and a coder with no codings anywhere
+in the project (the refusal names one that differs only by letter case,
+never a coder hidden in QualCoder). A known value with nothing in scope
+still answers empty, and that answer is a finding.
+
 **Rich Transcript Analysis:**
 - `analyze_file_with_coding(file_id)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld)
 
@@ -975,10 +992,10 @@ the full data when `coder` is given (see "Working alongside QualCoder
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)
 - `get_file_attributes(file_id)` - Get attributes for a specific file
 - `get_case_attributes(case_id)` - Get attributes for a specific case
-- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values
+- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte`, and `equals` on a numeric attribute, compare only values that are finite numbers once space around them is stripped, on a character attribute too, and count the rest in `values_left_out` (so "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would; it reads "34 years" as 34); a probe that is not such a number is refused
 
 **Co-occurrence Analysis:**
-- `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together
+- `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. Window 0 is QualCoder's co-occurrence report's overlap, and at N the gap is the distance its Code relations report gives; the counts are not the co-occurrence report's
 - `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; full toolset only
 
 **Case-Code Matrix & Comparative Analysis:**
@@ -1014,7 +1031,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 - `rename_case(case_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a case, as QualCoder's Manage Cases does: the name only, the date untouched. A name another case has, ignoring letter case, spacing and Unicode form, is refused; the result says where the old name stays (saved graph labels, table displays and filters, files named after the case, backups)
 - `rename_file(file_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text)
 - `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **WRITES TO DATABASE** - Define a new attribute for cases, files or journals
-- `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **WRITES TO DATABASE** - Set or clear an attribute value
+- `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **WRITES TO DATABASE** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them)
 
 **Recovery & Safety:**
 - `copy_project_to_workspace(source_path, new_name)` - Copy a project to the safe workspace for AI coding (the database copied consistently and the same exclusions as backups; reports skipped symlinks)
@@ -1025,7 +1042,7 @@ the full data when `coder` is given (see "Working alongside QualCoder
 
 **Interchange & Report Exports (exported files keep full memos, private sections included):**
 - `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA
-- `export_codebook(output_path, format, include_memos, sanitize_formulas, overwrite)` - Codebook (codes and category tree) as CSV, txt or Markdown, matching QualCoder's Codebook export
+- `export_codebook(output_path, format, include_memos, sanitize_formulas, overwrite)` - Codebook (codes and category tree) as CSV, txt or Markdown, matching QualCoder's Codebook export; in Markdown the codes without a category come first under their own heading, each category's codes directly under its heading, and a sub-code indented under its parent
 - `export_coded_segments_report(output_path, code_names, case_names, coder, file_ids, search_text, important, include_variables, format, sanitize_formulas, overwrite)` - QualCoder's Coding Report as a file
 - `export_frequencies_csv(output_path, sanitize_formulas, overwrite)` - Code frequencies table as CSV
 - `export_case_code_matrix_csv(output_path, sanitize_formulas, overwrite)` - Case by code cross-tab as CSV
@@ -1050,8 +1067,8 @@ the full data when `coder` is given (see "Working alongside QualCoder
 - `pseudonymise_source(mapping, file_id, use_project_pseudonyms, case_mode, overlap_policy, rewrite_memos, save_mapping_to_project, researcher_keeps_mapping, preview_token, allow_hidden_coder, record_in_journal, include_context, context_chars, scan_residue, residue_detail, max_spans_per_entry)` - **WRITES TO DATABASE** - Replace names with pseudonyms in the stored text of one text source per call, moving every coding, annotation and case link with the text. `file_id` is required; to pseudonymise a project, run it file by file, so two people who share a name can be given two pseudonyms in the file text. Not in notes: with `rewrite_memos` on, whichever run carries it rewrites that name in notes across the whole project, the other person's notes included, whatever the order of the runs; so for a shared name keep `rewrite_memos` off on every run and change the notes that name either person by hand, and give the second person a typed mapping with `save_mapping_to_project` off and `researcher_keeps_mapping` on (`pseudonyms.json` holds one pseudonym per name). A PDF, a media file or a source with no stored text is refused with the reason (`pdf_source`, `no_fulltext`, `unknown_file_id`). The only tool here that rewrites the text positions are measured against. Deterministic and rule-based: only the names in `mapping` are replaced, as whole words, case-sensitively unless `case_mode` says otherwise; no name detection. `overlap_policy` decides what happens to a coding that cut into a name: `snap_to_pseudonym` (default) grows it to contain the whole pseudonym and never deletes anything, `qualcoder_edit_parity` reproduces the walk QualCoder's coding-view editor applies, fed this tool's exact edit list (the editor's own diff may factor a shared prefix or suffix out of a replacement and keep a coding this policy deletes), which deletes a coding sitting on a name. Notes and journal entries are scanned and counted, and are rewritten, in their public part only and across the whole project, only when `rewrite_memos` is on; case, file, code, category and attribute-type names, journal entry names and attribute values are scanned and counted, never rewritten; and the preview's `residue` block says where names remain, with a third count, `wide_after_rewrite`, on each note field when the notes are rewritten, which does not reach zero because the wide reading is wider than the rewrite. A note's private part is carried across unread, so a name in it is still there and cannot be reported. `rewrite_memos` and `save_mapping_to_project` are bound into the token, six bound arguments in all. On a mapping you type, the execute is refused unless `save_mapping_to_project` (given on the preview, because the token binds it) writes the mapping into the project's own `pseudonyms.json` in QualCoder's own format, merged by QualCoder's rules, with alternative spellings as separate entries and the new entries longest name first (QualCoder's text and transcript imports (not PDFs) apply the file one entry at a time, case-sensitively; the preview warns when an entry already in the file would pre-empt a new one, or when an insensitive case mode means QualCoder will replace only the spellings saved), or `researcher_keeps_mapping` (not bound, and allowed on the execute) attests that the researcher keeps their own record; PDFs are never rewritten, and their stored text is counted with every other file's (not a PDF that QualCoder 3.8.2 stored as the file itself, which holds no text); media files and `ai_data/` are out of scope and are neither rewritten nor scanned. Writes a run manifest to `~/.qualcoder_mcp/pseudonymisation/`, an audit record of which rows the run changed and not a way back (the backup is), and, by default, a journal entry in the project; neither ever contains an original name, and a file name, folder name or path that carries one is withheld from both in favour of the file id. Every `residue` count is two readings, `{"wide": N, "whole_word": M}`: the wide one reads wider than the rewrite does, any occurrence a person would see, including inside a longer word and in any case, and every whole word the rewrite itself matches, and is a heuristic; the whole-word one is what this run's own rule matches. Notes, labels and attribute values are counted as fields; the `file_text` block counts, as occurrences, the names left in the text of every file with stored text after the run, the one this call rewrites, the files it does not touch and the PDF sources, each split by kind (inside a longer word, case only, joined differently, an invisible character or another normalisation, put back by a pseudonym, whole words in a file this run did not rewrite). A name inside a longer word is reported and never substituted; on a typed mapping the block lists the longer words themselves, so an exact entry can be added. A longer word is listed only when it extends the name by at most eight characters and is not in a script written without spaces (Chinese, Japanese, Thai, Lao, Khmer, Myanmar), and all lists in one preview share 4,000 characters. By default the block gives full detail for the file this call names and one short row (id, name, the two counts) for up to 1,000 other files that still show a name, and their ids past that; `residue_detail="project"` gives full detail for up to 200 files and the short row for up to 1,000 more, and the totals and the warnings are the same either way. The count has fixed budgets for its work and for the number of matches, and everything it spends is charged to them; past them a file is only asked whether a name shows, and past a budget for that question it is not checked, is listed in `files_not_checked` and is never reported clean. The file this call names is read first, with the first claim on the budgets. A count that stops part-way has found a name and is listed in `files_counted_in_part` with a lower bound, a file too large to count with this many names, decided before counting, is listed in `files_too_large_for_this_mapping`, where fewer names is the remedy, one too large for any mapping in `files_too_large_for_any_mapping`, where there is none, and a PDF source, which cannot be named for a preview, is never told to be previewed on its own. With `use_project_pseudonyms` the mapping is the researcher's own `pseudonyms.json`, which the caller never supplied, so no diagnostic and no refusal quotes a name from it, `include_context` returns nothing, no longer word is listed, and a pseudonym that carries one of its names is withheld by entry number (it is withheld from the run manifest and the journal entry on both paths); file names, including every file the residue names, and the project path are still returned as they stand. The mandatory backup does contain the real names. On a project that hides coders, the preview reports what the run would do to their rows as counts (`shifted`, `substituted`, `resized`, `snapped`, `deleted`, `clamped`), never names, and `allow_hidden_coder` is required when `snapped`, `deleted` or `clamped` is non-zero: a pure shift, a substitution and a resize change no coding decision, whatever the two lengths
 
 **Codebook, Destructive (preview, then token, then safety backup):**
-- `merge_codes(from_code_id, into_code_id, preview_token, allow_hidden_coder)` - **WRITES TO DATABASE** - Merge one code into another (lossy on overlaps, exactly matching QualCoder)
-- `delete_code(code_id, preview_token, cascade, allow_hidden_coder)` - **WRITES TO DATABASE** - Delete a code and all its coded segments (`cascade=true` is required for a code that has sub-codes)
+- `merge_codes(from_code_id, into_code_id, preview_token, allow_hidden_coder)` - **WRITES TO DATABASE** - Merge one code into another (lossy on overlaps, exactly matching QualCoder). The codebook changes too, as in QualCoder, and the preview names each change: on projects QualCoder 4.0 has opened (schema v16 and later) the source code's sub-codes move under the target, the source code's memo is added to the target's memo under a "[Merged from code: ...]" line, and the source code's nodes and lines on saved graphs are removed; on a 3.8.2 project the source code's memo is deleted with it (the backup keeps a copy)
+- `delete_code(code_id, preview_token, cascade, allow_hidden_coder)` - **WRITES TO DATABASE** - Delete a code and all its coded segments; a code with sub-codes goes with its whole branch (`cascade=true`, which the preview's `execute_with` carries when there are sub-codes, so approving the preview approves the branch, as QualCoder's single dialog does). On schema v16 and later the deleted codes' nodes and lines on saved graphs go too, and the preview counts them
 - `delete_category(category_id, preview_token)` - **WRITES TO DATABASE** - Delete a category; its codes and sub-categories move to the top level (no cascade to coded data). On projects QualCoder 4.0 has opened (schema v16 and later), the category's own node in QualCoder's saved graphs and the lines that end on it are removed with it, and the preview counts them; its codes stay on the graphs
 - `merge_category(from_category_id, into_category, preview_token)` - **WRITES TO DATABASE** - Merge a category into another (or into the top level); its codes and sub-categories move to the target. Saved graphs as for `delete_category`: only the merged category's own node and lines go, where QualCoder 4.0's own merge also erases the kept codes' nodes and lines
 

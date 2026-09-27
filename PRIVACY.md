@@ -268,7 +268,9 @@ the four views (schema v14).
 ## Attribution: the AI coder name is yours to choose
 
 Every row this server writes carries one coder name, so AI work stays
-distinguishable from yours in QualCoder. AI rows are never written under
+distinguishable from yours in QualCoder (an attribute value it sets on
+a file or a journal entry included, where QualCoder's own edit keeps
+the row's earlier owner). AI rows are never written under
 a name the model chose by itself: the name is set per project by you,
 and the model can only ask. The first write that needs a name stops and
 asks; your answer is stored with the project and reported back by the
@@ -308,9 +310,10 @@ behaviour below follows the capability wherever it is present. When a
 project has the coder-visibility capability:
 
 - **Reads** go through QualCoder's own visibility views by default, so
-  coded segments, coded-text searches, the annotation matches of memo
-  searches, the file view with its codings and annotations (its
-  `file_info` still names the file's owner, hidden or not), code
+  coded segments, coded-text searches, the coding-note and annotation
+  matches of memo searches, the file view with its codings and
+  annotations (its `file_info` still names the file's owner, hidden or
+  not), code
   detail counts, frequencies, co-occurrence, matrices and the
   codes-by-case and cases-by-code listings reflect what the user sees
   in QualCoder's coding screen. Its coding REPORT is another matter:
@@ -341,8 +344,8 @@ project has the coder-visibility capability:
   stake; a hidden coder is never named there, and the owner of a code or
   category row being removed is reported as "(hidden coder)" when that
   coder is hidden. That mask is a courtesy of the preview, not a
-  guarantee: elsewhere a code's or a category's owner is shown as
-  QualCoder shows it, hidden or not. The `qualcoder://codes/list` and
+  guarantee: elsewhere, memo searches aside (below), a code's or a
+  category's owner is shown as QualCoder shows it, hidden or not. The `qualcoder://codes/list` and
   `qualcoder://categories/list` resources name each row's owner, as
   QualCoder's code tree does, and on a QualCoder 4.0 project
   merge_codes and merge_category write the merged row's owner into the
@@ -353,7 +356,7 @@ project has the coder-visibility capability:
   stays on everything else they own (codes, categories, files, cases,
   journal entries, attribute types and attribute values), and every tool
   and resource that shows an owner shows it: the file view's
-  `file_info`, `search_memos`, `export_code_report`,
+  `file_info`, `export_code_report`,
   `list_attribute_types`, `get_case_attributes` and
   `get_file_attributes`, the answer of `create_code`, `create_category`
   or `create_case` when the name already exists (it returns the
@@ -362,7 +365,9 @@ project has the coder-visibility capability:
   owner in its code tree and its journal list (`journals.py` 181 at
   9bddf17); its file and case managers show none (`manage_files.py`
   1974, `cases.py` 371), so on files and cases this server shows what
-  QualCoder's own screens do not.
+  QualCoder's own screens do not. `search_memos` is the exception: it
+  returns a note's owner as "(hidden coder)" when that coder is hidden,
+  whatever the note is attached to (below).
   Executing a cascade that would remove a hidden
   coder's codings requires an explicit allow_hidden_coder=true. If the visibility state cannot be read (the view exists
   but does not answer), these tools return an error and change nothing,
@@ -400,9 +405,12 @@ project has the coder-visibility capability:
   end of the text is clamped first, as QualCoder clamps its own, and is
   counted under its own class rather than under one the exemption
   carries, so a damaged row is never carried through it.
-- Codes, categories, files, cases and journal entries have no
-  per-coder visibility in QualCoder; their owner columns are read as
-  before.
+- Codes, categories, files, cases, attribute types, case links and
+  journal entries have no per-coder visibility in QualCoder, so their
+  rows are not filtered. Memo searches report the owner of such a note
+  as "(hidden coder)" when that coder is hidden, as the cascade
+  previews report a code's or category's owner; they are the one read
+  that returns a case link's owner.
 - **When who is hidden cannot be determined at all**, no coder is
   named. On a project whose visibility capability is present but whose
   `coder_names` table does not answer (schema drift, damaged pages, a

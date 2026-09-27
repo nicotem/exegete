@@ -457,7 +457,7 @@ Experimental.
 
 **Step 3. Use the core toolset.** This server exposes 73 tools by
 default, and the serialised tool definitions alone measure about
-182,000 characters, roughly 45k tokens (measured for 0.14 under
+183,000 characters, roughly 46k tokens (measured for 0.14 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,000 characters of that on its own, because a tool
@@ -480,7 +480,7 @@ coding set, measured at about 59,000 characters, roughly 15k tokens.
 model, set the context length to at least 32k for the core toolset
 (that leaves about 17k tokens for your transcript excerpts and
 conversation; 16k would leave barely 1k and is not workable), or 64k if
-you must run the full surface (its schema alone is about 45k tokens).
+you must run the full surface (its schema alone is about 46k tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
 

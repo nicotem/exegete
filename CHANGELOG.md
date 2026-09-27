@@ -435,6 +435,57 @@ search or a silent limit.
   are any, so approving the preview approves the branch, as QualCoder's
   single dialog does.
 
+### Upgrading from 0.13.x
+
+- Upgrade the package and restart the MCP host fully so it reloads the
+  tool descriptions. There is no migration step for projects.
+- **`query_by_attribute` answers an object, not a list.** Read the
+  matches from `results` (`result_count` counts them). A script that
+  took the length of the answer, or tested it for emptiness, now meets
+  an object with several keys, which is never empty. `gt`, `gte`, `lt`
+  and `lte` no longer match a value that is not a finite number
+  ("unknown", "n/a", "34 years"); such values are counted in
+  `values_left_out`.
+- **Reads answer a refusal where they answered empty.** A code, case or
+  file id that does not exist, a coder with no codings anywhere in the
+  project, an attribute name that is not one of that kind (names are
+  exact), and a code name that matches no code are refused with an
+  error object (`{"error": ...}`) where the answer used to be an empty
+  list or zeros, so a length or emptiness test changes as well as the
+  contents. `export_coded_segments_report` writes no file for an
+  unknown coder or file id. A known value with nothing in scope still
+  answers empty.
+- **Names are found as the codebook tools find them.** `code_name` in
+  `search_coded_text` and `export_code_report`, and `case_name` in
+  `link_file_to_case` and `import_text_file`, use the exact name after
+  spacing and Unicode form first, then one that differs only by letter
+  case; a name matching two ("DANA" beside "Dana" and "dana") is now
+  refused where the first match used to be taken, and `case_id` with a
+  `case_name` naming another case is refused.
+- **`set_attribute` refuses values it used to store** in a numeric
+  attribute: "nan", "inf", "Infinity", underscores ("1_000") and digits
+  outside 0 to 9. Values already stored are left as they are;
+  `query_by_attribute` leaves them out of numeric comparisons and counts
+  them as not numbers.
+- **`find_cooccurring_codes` counts change at every window.** Two
+  codings that only touch no longer count at 0; at N the gap between two
+  codings replaces the distance between their starts, so a long coding
+  near a code now counts. Counts kept from an earlier release will not
+  match.
+- **`search_memos` finds more.** It returns nine new `type` values
+  (`project`, `category`, `case`, `attribute_type`, `coding`,
+  `region_coding`, `av_coding`, `case_link`, `journal`), some with
+  `file_id`, `file_name` and positions, so the same query can return more
+  results, and `limit` caps them all. `search_coded_text`,
+  `query_by_attribute`'s `contains` and `search_memos` ignore letter
+  case beyond A to Z, so they can find more too.
+- **Values the AI sets on files and journal entries now carry the AI
+  coder name and the date.** Values set by an earlier release keep the
+  owner they had.
+- **The Markdown codebook is laid out differently**: codes without a
+  category first, sub-codes nested, memos quoted line by line. Anything
+  that reads the file by its old layout needs a look.
+
 ## [0.13.0-alpha] - 2026-09-25
 
 v0.13, the pseudonymisation follow-ups, as ruled from 2026-09-22 to

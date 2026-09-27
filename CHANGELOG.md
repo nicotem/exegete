@@ -514,6 +514,11 @@ search or a silent limit.
   `search_coded_text`, `query_by_attribute`'s `contains` and
   `search_memos` ignore letter case beyond A to Z, so they can find
   more too.
+- **A `search_coded_text` cursor from 0.13 is not valid in 0.14.** The
+  cursor now carries the file name's stored bytes, under a tag of its
+  own, so a cursor minted before the upgrade is refused with the usual
+  cursor message: start the search again. The cursors of
+  `search_files` and `get_coded_segments` are unchanged.
 - **A merge preview's token goes stale more often.** It now covers the
   source code's whole branch of sub-codes and the words of its memo, so
   a sub-code added at any depth, or the memo reworded, between the

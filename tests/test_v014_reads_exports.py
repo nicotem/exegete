@@ -1691,6 +1691,8 @@ class TestTheUpgradingListNamesWhatChanged:
         "carry the AI coder name and the date",
         "The Markdown codebook is laid out differently",
         "A merge preview's token goes stale more often",
+        "A `search_coded_text` cursor from 0.13 is not valid in 0.14",
+        "start the search again",
     ])
     def test_the_list_names_it(self, words):
         assert words in _upgrading()
@@ -2000,3 +2002,60 @@ class TestADamagedRowElsewhere:
         attribute = host("query_by_attribute", attr_name="Nothing",
                          attr_value="1")
         assert "does not exist" in attribute["error"]
+
+
+# ===========================================================================
+# Fix round 4: a search_coded_text cursor minted before the hex key, by
+# 0.13 or by this branch at c0bb9bb, is refused, whatever its file name
+# ===========================================================================
+
+def _old_cursor(query, limit, key, returned=1):
+    """A cursor in the shape 0.13 (and this branch before fix round 3)
+    minted: tag "sct", the fingerprint over the same five arguments, and
+    the file name as text in the key."""
+    from qualcoder_mcp import cursors
+    args = {"query": query, "code_name": None, "limit": limit,
+            "coder": None, "exclude_code_ids": []}
+    fingerprint = cursors.fingerprint_arguments("sct", args)
+    return cursors.encode_cursor("sct", fingerprint, key, returned, None)
+
+
+class TestAnEarlierCursorIsRefused:
+
+    @pytest.mark.parametrize("name", ["ff", "2024", "beef"])
+    def test_a_0_13_cursor_ending_on_a_hex_digit_name(self, setup_server,
+                                                       qualcoder_db_path,
+                                                       name):
+        sql(qualcoder_db_path, "INSERT INTO source (id, name, fulltext, "
+            "owner, date) VALUES (3, ?, 'stressed stressed', 'TestCoder', "
+            "'2024-01-15')", (name,))
+        sql(qualcoder_db_path, "INSERT INTO code_text (cid, fid, seltext, "
+            "pos0, pos1, owner, date, memo) VALUES (1, 3, 'stressed', 0, 8, "
+            "'TestCoder', '2024-01-15', '')")
+        token = _old_cursor("stressed", 1, [name, 3, 0, 8, 3])
+        out = host("search_coded_text", query="stressed", limit=1,
+                   cursor=token)
+        assert out == {"error": server.cursor_invalid_message(
+            "search_coded_text")}, out
+
+    def test_a_c0bb9bb_cursor(self, setup_server, qualcoder_db_path):
+        """At c0bb9bb the key's name was its stored bytes read back as
+        text (surrogateescape), under the same tag: the same shape."""
+        token = _old_cursor("stressed", 1, ["01", 1, 24, 55, 1])
+        out = host("search_coded_text", query="stressed", limit=1,
+                   cursor=token)
+        assert out == {"error": server.cursor_invalid_message(
+            "search_coded_text")}, out
+
+    def test_the_tips_own_cursor_still_walks_exactly(self, setup_server,
+                                                     qualcoder_db_path):
+        for fid, name in ((3, "beef"), (4, "2024")):
+            sql(qualcoder_db_path, "INSERT INTO source (id, name, fulltext, "
+                "owner, date) VALUES (?, ?, 'stressed', 'TestCoder', "
+                "'2024-01-15')", (fid, name))
+            sql(qualcoder_db_path, "INSERT INTO code_text (cid, fid, "
+                "seltext, pos0, pos1, owner, date, memo) VALUES (1, ?, "
+                "'stressed', 0, 8, 'TestCoder', '2024-01-15', '')", (fid,))
+        seen, _ = _walk("stressed", 1)
+        assert sorted(seen) == _matching(qualcoder_db_path, "stressed")
+        assert len(seen) == len(set(seen)) == 3

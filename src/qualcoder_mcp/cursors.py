@@ -36,7 +36,13 @@ CURSOR_MAX_LENGTH = 1024
 
 # Tool tags. Short because the token travels in every paged result.
 TAG_SEARCH_FILES = "sf"
-TAG_SEARCH_CODED_TEXT = "sct"
+# "sct2" since v0.14 (reads and exports, fix round 4): the key's file name
+# is its stored bytes as hex, where "sct" carried the name as text. Under
+# one tag a name made only of hex digits ("01", "2024", "beef") in a
+# cursor minted before the change was read as bytes, and the walk
+# repeated or skipped rows; with its own tag every earlier cursor gets
+# the one cursor refusal, and the search starts again.
+TAG_SEARCH_CODED_TEXT = "sct2"
 TAG_CODED_SEGMENTS = "gcs"
 
 CURSOR_TOO_LONG = "cursor is too long (limit 1024 characters)."

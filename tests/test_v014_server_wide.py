@@ -1374,6 +1374,45 @@ class TestBackupsDatedByTheirNames:
         assert set(prune["would_keep"]) == {names[1], future}
         assert prune["never_removed"] == ["Study_backup_keep_this.qda"]
 
+    def test_a_hand_made_copy_with_a_time_is_never_removed(self, tmp_path):
+        """Fix round 2 (the security re-verification's note 4): a Finder
+        duplicate of a backup ("... copy.qda") and a name someone added
+        to carry the time too; neither is a name this server gives, so
+        both are listed as never removed and neither takes the newest's
+        place."""
+        server._apply_toolset("lifecycle")
+        projects = tmp_path / "projects"
+        projects.mkdir()
+
+        async def make(client):
+            made = json.loads(text_of(await client.call_tool(
+                "create_project", {"name": "Study",
+                                   "directory": str(projects),
+                                   "coder_name": "Researcher"})))
+            await client.call_tool("set_project_ai_coder_name",
+                                   {"name": "AI-Test"})
+            await client.call_tool("create_code", {"name": "One"})
+            await client.call_tool("create_code", {"name": "Two"})
+            return Path(made["project_path"])
+
+        folder = host_session(make)
+        real = sorted(projects.glob("Study_backup_*.qda"))
+        ten_days = datetime.now() - timedelta(days=10)
+        names = [ten_days.strftime("Study_backup_%Y%m%d_%H%M%S.qda"),
+                 ten_days.strftime("Study_backup_%Y%m%d_%H%M%S_2.qda")]
+        for path, name in zip(real, names):
+            path.rename(projects / name)
+        stamp = ten_days.strftime("%Y%m%d_%H%M%S")
+        copies = [f"Study_backup_{stamp} copy.qda",
+                  f"Study_backup_{stamp}_2_keep.qda"]
+        for name in copies:
+            _backup_folder(projects, name, time.time() - 20 * 86400)
+        server.switch_project(str(folder))
+        prune = host_json("prune_backups", {"older_than_days": 5})
+        assert [b["name"] for b in prune["would_remove"]] == [names[0]]
+        assert prune["would_keep"] == [names[1]]
+        assert sorted(prune["never_removed"]) == sorted(copies)
+
     @pytest.mark.parametrize("name,prefix,hour,expected", [
         ("P_backup_20260926_232751.qda", "P_backup_", False,
          (datetime(2026, 9, 26, 23, 27, 51), 1)),

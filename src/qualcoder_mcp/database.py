@@ -2013,6 +2013,22 @@ BACKUP_DATED_BY_FOLDER = "folder"
 BACKUP_NAME_IN_THE_FUTURE = "folder (name in the future)"
 
 
+# The whole name of a backup this server made (fix round 2):
+# backup_project's <project>_backup_YYYYmmdd_HHMMSS, its _2, _3 for a
+# second in one second, and restore_backup's _prerestore on its safety
+# copy. Nothing else may follow: a Finder duplicate ("... copy.qda") or
+# a name someone added to ("..._keep.qda") is not one of this server's,
+# and prune_backups never removes it.
+_THIS_SERVERS_BACKUP_REST = re.compile(
+    r"\d{8}_\d{6}(?:_\d+)?(?:_prerestore)?\.qda")
+
+
+def is_this_servers_backup_name(name: str, prefix: str) -> bool:
+    """Whether a folder name is one this server gives its backups."""
+    return (name.startswith(prefix) and _THIS_SERVERS_BACKUP_REST
+            .fullmatch(name[len(prefix):]) is not None)
+
+
 def backup_sort_key(entry: Path, prefix: str, to_the_hour: bool = False,
                     now: Optional[datetime] = None
                     ) -> Tuple[datetime, int, str]:

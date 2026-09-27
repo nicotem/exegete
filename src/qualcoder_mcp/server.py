@@ -57,7 +57,7 @@ from .database import (
     MAX_CODER_NAME_LENGTH,
     backup_project,
     backup_sort_key,
-    backup_time_from_name,
+    is_this_servers_backup_name,
     BACKUP_DATED_BY_NAME,
     unclean_backup_side_files,
     backup_database_is_link,
@@ -8121,12 +8121,13 @@ def prune_backups(keep_last: Optional[int] = None,
       newest N AND older than D days), the conservative intersection
 
     Safety rules:
-    - ONLY this server's backups are touched: the folders named
-      {project}_backup_<date>_<time> (with a counter, or _prerestore for
-      a restore's safety copy). A folder with that prefix and no time in
-      its name is not one of them (a researcher's own copy, say): it is
-      listed under never_removed and never removed. QualCoder's own
-      _BKUP_ backups are NEVER removed.
+    - ONLY this server's backups are touched: the folders whose whole
+      name is {project}_backup_<date>_<time>, with at most a counter
+      (_2, _3) and _prerestore (a restore's safety copy) after it. A
+      folder with that prefix and anything else (no time, or a Finder
+      duplicate's " copy" after it) is not one of them: it is listed
+      under never_removed and never removed. QualCoder's own _BKUP_
+      backups are NEVER removed.
     - At least the newest MCP backup is always kept, unless you
       explicitly pass keep_last=0; the newest is the newest by the time
       in its name, so a folder whose name is dated ahead of the clock
@@ -8190,15 +8191,17 @@ def prune_backups(keep_last: Optional[int] = None,
 
     project_folder = validate_qda_path(current_project_path).parent
     all_backups = _collect_backups(project_folder)   # one walk, both kinds
-    # Only folders named with this server's stamp are its backups (fix
-    # round 1): one with the prefix and no time is someone's own copy,
-    # listed and never removed. _BKUP_ is never touched.
+    # Only folders whose whole name is one this server gives its backups
+    # are its backups (fix rounds 1 and 2): one with the prefix and no
+    # time, or with anything after the time (a Finder duplicate's
+    # " copy"), is someone's own copy, listed and never removed. _BKUP_
+    # is never touched.
     prefix = f"{project_folder.stem}_backup_"
     mcp_backups, not_ours = [], []
     for b in all_backups:                            # newest first
         if b["kind"] != "mcp":
             continue
-        if backup_time_from_name(b["name"], prefix) is None:
+        if not is_this_servers_backup_name(b["name"], prefix):
             not_ours.append(b["name"])
         else:
             mcp_backups.append(b)
@@ -8365,10 +8368,10 @@ def _never_removed_block(names: List[str]) -> Dict[str, Any]:
         return {}
     return {"never_removed": names,
             "never_removed_note": (
-                "These folders carry this project's backup prefix but no "
-                "time in their names, so they are not this server's "
-                "backups (a copy someone made by hand, say); prune_backups "
-                "never removes them.")}
+                "These folders carry this project's backup prefix, but "
+                "their names are not the ones this server gives its "
+                "backups (no time, or something after it, as a copy made "
+                "by hand has), so prune_backups never removes them.")}
 
 
 def _prune_only_mapping_copies(project_folder: Path,

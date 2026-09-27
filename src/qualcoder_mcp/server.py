@@ -3640,7 +3640,8 @@ def _refuse_unknown_id(db_, kind: str, row_id: Any,
     elif kind == "file":
         missing = bool(db_.unknown_file_ids([row_id]))
     else:
-        missing = row_id not in {c["id"] for c in db_.list_cases()}
+        # The one id, in SQL, reading no other case (fix round 3)
+        missing = not db_.case_exists(row_id)
     if not missing:
         return None
     return {"error": f"{kind.capitalize()} ID {row_id} does not exist "
@@ -3662,6 +3663,10 @@ def _refuse_unknown_coder(db_, coder: Any) -> Optional[Dict[str, Any]]:
     """
     coder = normalize_coder(coder)
     if coder is None or not isinstance(coder, str):
+        return None
+    # The exact owner first, in SQL (fix round 3); the whole list, read
+    # with replacement, only for the refusal's listing and near miss
+    if db_.coder_has_codings(coder):
         return None
     known = db_.coders_with_codings_including_hidden()
     if coder in known:
@@ -3708,12 +3713,17 @@ def _resolve_code_name_filter(db_, code_name: Optional[str]):
     only by letter case; an ambiguity or no match is refused, listing
     the codes. None or blank means no filter, as before.
 
+    Only the codes' ids and names are read, as blobs decoded with
+    replacement (fix round 3), and the caller filters by the resolved
+    id: a damaged memo, name or category name elsewhere in the codebook
+    can neither fail the lookup nor the search after it.
+
     Returns:
-        (stored_name or None, match or None, refusal or None)
+        ({"id", "name"} or None, match or None, refusal or None)
     """
     if code_name is None or not str(code_name).strip():
         return None, None, None
-    codes = db_.list_codes()
+    codes = db_.code_ids_and_names()
     row, match, err = _find_existing_by_name(codes, str(code_name),
                                              "code", "codes")
     if err is not None:
@@ -3724,7 +3734,7 @@ def _resolve_code_name_filter(db_, code_name: Optional[str]):
                      f"in any letter case.",
             "available_codes": sorted(c["name"] for c in codes)[:50],
         }
-    return row["name"], match, None
+    return row, match, None
 
 
 def _resolve_file_ids(db_, value: Any) -> List[int]:
@@ -3895,10 +3905,14 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
     refusal = _refuse_unknown_coder(db_, coder)
     if refusal is not None:
         return json.dumps(refusal, indent=2)
-    code_name, code_match, refusal = _resolve_code_name_filter(db_,
-                                                               code_name)
+    code_row, code_match, refusal = _resolve_code_name_filter(db_,
+                                                              code_name)
     if refusal is not None:
         return json.dumps(refusal, indent=2)
+    # Filter by the resolved code's id (fix round 3); the stored name is
+    # what the answer and the cursor's fingerprint name
+    code_name = code_row["name"] if code_row else None
+    code_id = code_row["id"] if code_row else None
 
     limit = validate_limit(limit)
     normalised_coder = normalize_coder(coder)
@@ -3941,8 +3955,9 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
     batch_size = max(limit, 50)
     position = after
     while len(kept) < limit:
-        rows = db_.search_coded_text(query, code_name, batch_size,
-                                     coder=coder, after=position)
+        rows = db_.search_coded_text(query, None, batch_size,
+                                     coder=coder, after=position,
+                                     code_id=code_id)
         if not rows:
             exhausted = True
             break
@@ -3983,8 +3998,9 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         # search_files has no lookahead at all, for the same reason at a
         # larger scale: it would have to scan the remaining files
         # (QA round 1, F17).
-        exhausted = not db_.search_coded_text(query, code_name, 1,
-                                              coder=coder, after=position)
+        exhausted = not db_.search_coded_text(query, None, 1,
+                                              coder=coder, after=position,
+                                              code_id=code_id)
 
     has_more = not exhausted
     next_cursor = None
@@ -3992,7 +4008,8 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         next_cursor = encode_cursor(TAG_SEARCH_CODED_TEXT, fingerprint,
                                     position, returned_so_far + len(kept),
                                     _cursor_stamp())
-    total = db_.count_coded_text_matches(query, code_name, coder=coder)
+    total = db_.count_coded_text_matches(query, None, coder=coder,
+                                         code_id=code_id)
     payload: Dict[str, Any] = {
         "query": query,
         "code_filter": code_name,
@@ -4617,17 +4634,15 @@ def export_code_report(code_name: str) -> str:
     # Find the code by name, by the codebook tools' rule: the first
     # lower() match used to pick "Trust" for "trust" when both exist
     # (v0.14, claims audit item 12)
-    stored, code_match, refusal = _resolve_code_name_filter(get_db(),
-                                                            code_name)
+    code_row, code_match, refusal = _resolve_code_name_filter(get_db(),
+                                                              code_name)
     if refusal is not None:
         return json.dumps(refusal, indent=2)
-    if stored is None:
+    if code_row is None:
         return json.dumps({"error": "code_name must not be empty"})
-    matching_code = next(c for c in get_db().list_codes()
-                         if c["name"] == stored)
 
-    # Get detailed information
-    code_id = matching_code["id"]
+    # Get detailed information, by the resolved code's id (fix round 3)
+    code_id = code_row["id"]
     details = get_db().get_code_details(code_id)
     segments = get_db().get_coded_text_segments(
         code_id, limit=CODE_REPORT_SEGMENT_LIMIT)
@@ -5197,8 +5212,7 @@ def query_by_attribute(
         character one
     """
     if attr_type in ("case", "file") and isinstance(attr_name, str):
-        refusal = _refuse_unknown_attribute(
-            get_db().list_attribute_types(), attr_name, attr_type)
+        refusal = _refuse_unknown_attribute(get_db(), attr_name, attr_type)
         if refusal is not None:
             return json.dumps(refusal, indent=2)
     found = get_db().attribute_query(attr_name, attr_value, attr_type,
@@ -5245,7 +5259,7 @@ def query_by_attribute(
     return _ai_json(payload, indent=2)
 
 
-def _refuse_unknown_attribute(types, attr_name: str,
+def _refuse_unknown_attribute(db_, attr_name: str,
                               attr_type: str) -> Optional[Dict[str, Any]]:
     """An attribute name that is not one of attr_type's refused, or None.
 
@@ -5256,17 +5270,21 @@ def _refuse_unknown_attribute(types, attr_name: str,
     attribute_type table keys them byte for byte); the refusal names the
     near miss and the domain a name belongs to.
     """
-    if any(t["name"] == attr_name and t["applies_to"] == attr_type
-           for t in types):
+    # The exact name first, in SQL (fix round 3): reading the whole list
+    # strictly let one damaged note elsewhere fail every query. The list,
+    # names and domains only, decoded with replacement, is read only to
+    # write the refusal
+    domains = db_.attribute_type_domains(attr_name)
+    if attr_type in domains:
         return None
-    elsewhere = [t for t in types if t["name"] == attr_name]
-    if elsewhere:
-        other = elsewhere[0]["applies_to"]
+    if domains:
+        other = domains[0]
         how = (f"query it with attr_type='{other}'"
                if other in ("case", "file")
                else "journal attributes are not queried by this tool")
         return {"error": f"'{attr_name}' is a {other} attribute, not a "
                          f"{attr_type} one: {how}."}
+    types = db_.attribute_type_names()
     near = [t for t in types if name_key(t["name"]) == name_key(attr_name)]
     in_domain = sorted(t["name"] for t in types
                        if t["applies_to"] == attr_type)

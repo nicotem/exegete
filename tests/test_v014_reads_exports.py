@@ -1828,3 +1828,123 @@ class TestPagingByStoredBytes:
                    cursor=forged)
         assert out["error"] == server.cursor_invalid_message(
             "search_coded_text")
+
+
+# ===========================================================================
+# Fix round 3, item 2: a damaged row a read never answers with does not
+# fail it; the checks before a read test the exact id, name or owner
+# ===========================================================================
+
+def _same_answer_after(folder, damage, tool, **args):
+    """The read's answer before and after one damaged byte in a row it
+    never answers with: the two must be equal, and not an error."""
+    before = host(tool, **args)
+    assert not isinstance(before, dict) or "error" not in before, before
+    _damage(folder, damage)
+    after = host(tool, **args)
+    assert after == before, (after, before)
+
+
+ATTRIBUTE_DAMAGE = {
+    "another-type-note":
+        "INSERT INTO attribute_type VALUES ('Region', '2024-01-15', "
+        "'TestCoder', CAST(X'6E6FFF' AS TEXT), 'file', 'character')",
+    "another-type-name":
+        "INSERT INTO attribute_type VALUES (CAST(X'52FF' AS TEXT), "
+        "'2024-01-15', 'TestCoder', '', 'file', 'character')",
+}
+
+
+class TestADamagedRowElsewhere:
+
+    @pytest.mark.parametrize("damage", list(ATTRIBUTE_DAMAGE))
+    @pytest.mark.parametrize("args", [
+        {"attr_value": "30"},
+        {"attr_value": "10", "operator": "gt"},
+        {"attr_value": "3", "operator": "contains"},
+    ], ids=["equals", "gt", "contains"])
+    def test_query_by_attribute(self, setup_server, qualcoder_db_path,
+                                damage, args):
+        _same_answer_after(qualcoder_db_path, ATTRIBUTE_DAMAGE[damage],
+                           "query_by_attribute", attr_name="Age", **args)
+
+    CODE_DAMAGE = {
+        "another-code-memo":
+            "UPDATE code_name SET memo = CAST(X'6DFF' AS TEXT) "
+            "WHERE cid = 2",
+        "another-code-name":
+            "UPDATE code_name SET name = CAST(X'43FF' AS TEXT) "
+            "WHERE cid = 2",
+        "its-own-category-name":
+            "UPDATE code_cat SET name = CAST(X'41FF' AS TEXT) "
+            "WHERE catid = 1",
+        "another-category-name":
+            "INSERT INTO code_cat VALUES (2, CAST(X'42FF' AS TEXT), '', "
+            "'V17Test', '2024-01-15', NULL)",
+    }
+
+    @pytest.mark.parametrize("damage", list(CODE_DAMAGE))
+    def test_search_coded_text_by_code_name(self, ladder, damage):
+        folder = ladder("v17")
+        _same_answer_after(folder, self.CODE_DAMAGE[damage],
+                           "search_coded_text", query="stressed",
+                           code_name="stress")
+
+    @pytest.mark.parametrize("damage", ["another-code-memo",
+                                        "another-code-name",
+                                        "another-category-name"])
+    def test_export_code_report_by_code_name(self, ladder, damage):
+        folder = ladder("v17")
+        _same_answer_after(folder, self.CODE_DAMAGE[damage],
+                           "export_code_report", code_name="stress")
+
+    OWNER_DAMAGE = {
+        "code_text":
+            "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, "
+            "date, memo) VALUES (2, 2, 'Field', 0, 5, "
+            "CAST(X'4361726FFF' AS TEXT), '2024-01-15', '')",
+        "code_image":
+            "INSERT INTO code_image (imid, id, x1, y1, width, height, cid, "
+            "memo, date, owner, important) VALUES (1, 2, 0, 0, 5, 5, 2, '', "
+            "'2024-01-15', CAST(X'4361726FFF' AS TEXT), 0)",
+        "code_av":
+            "INSERT INTO code_av (avid, cid, id, pos0, pos1, memo, owner, "
+            "date) VALUES (1, 2, 2, 0, 900, '', "
+            "CAST(X'4361726FFF' AS TEXT), '2024-01-15')",
+    }
+    CODER_READS = [
+        ("search_coded_text", {"query": "stressed"}),
+        ("get_coded_segments", {"code_id": 1}),
+        ("get_coding_frequencies", {}),
+        ("get_codes_by_case", {"case_id": 1}),
+        ("get_cases_by_code", {"code_id": 1}),
+        ("get_case_code_matrix", {}),
+    ]
+
+    @pytest.mark.parametrize("table", list(OWNER_DAMAGE))
+    @pytest.mark.parametrize("tool,args", CODER_READS,
+                             ids=[t for t, _ in CODER_READS])
+    def test_a_coder_filtered_read(self, setup_server, qualcoder_db_path,
+                                   table, tool, args):
+        _same_answer_after(qualcoder_db_path, self.OWNER_DAMAGE[table], tool,
+                           coder="TestCoder", **args)
+
+    @pytest.mark.parametrize("tool", ["get_codes_by_case",
+                                      "get_case_attributes"])
+    def test_a_case_read(self, setup_server, qualcoder_db_path, tool):
+        _same_answer_after(
+            qualcoder_db_path,
+            "INSERT INTO cases VALUES (2, 'Other', CAST(X'6DFF' AS TEXT), "
+            "'TestCoder', '2024-01-15')",
+            tool, case_id=1)
+
+    def test_a_refusal_still_lists_the_names_with_the_damage_replaced(
+            self, setup_server, qualcoder_db_path):
+        """The whole lists are read only for a refusal, with replacement."""
+        _damage(qualcoder_db_path, self.OWNER_DAMAGE["code_text"]
+                + "; " + ATTRIBUTE_DAMAGE["another-type-name"])
+        coder = host("get_coding_frequencies", coder="Nobody")
+        assert "Caro\ufffd" in coder["error"]
+        attribute = host("query_by_attribute", attr_name="Nothing",
+                         attr_value="1")
+        assert "does not exist" in attribute["error"]

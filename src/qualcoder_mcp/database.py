@@ -3180,26 +3180,36 @@ class QualcoderDatabase:
 
         codes: cid -> {name, catid, supercid} (supercid None when the
         column is absent, i.e. v14/v15); cats: catid -> {name, supercatid}.
+
+        The names are read as blobs and decoded with replacement (fix
+        round 3): these maps give a code its path and its category in an
+        answer, and every code and category is read to build them, so a
+        damaged name elsewhere used to fail the read of an undamaged
+        code (export_code_report). Read-only: no write takes a name from
+        here.
         """
         caps = getattr(self, "capabilities", None)
         has_supercid = caps is not None and caps.has_supercid
         if has_supercid:
             code_rows = self.conn.execute(
-                "SELECT cid, name, catid, supercid FROM code_name").fetchall()
+                "SELECT cid, CAST(name AS BLOB) AS name, catid, supercid "
+                "FROM code_name").fetchall()
         else:
             code_rows = self.conn.execute(
-                "SELECT cid, name, catid FROM code_name").fetchall()
+                "SELECT cid, CAST(name AS BLOB) AS name, catid "
+                "FROM code_name").fetchall()
         codes = {}
         for row in code_rows:
             codes[row["cid"]] = {
-                "name": row["name"],
+                "name": self._decoded(row["name"]),
                 "catid": row["catid"],
                 "supercid": row["supercid"] if has_supercid else None,
             }
         cats = {}
         for row in self.conn.execute(
-                "SELECT catid, name, supercatid FROM code_cat").fetchall():
-            cats[row["catid"]] = {"name": row["name"],
+                "SELECT catid, CAST(name AS BLOB) AS name, supercatid "
+                "FROM code_cat").fetchall():
+            cats[row["catid"]] = {"name": self._decoded(row["name"]),
                                   "supercatid": row["supercatid"]}
         return codes, cats
 
@@ -4849,7 +4859,8 @@ class QualcoderDatabase:
     def search_coded_text(self, query: str, code_name: Optional[str] = None,
                           limit: int = DEFAULT_LIMIT,
                           coder: Optional[str] = None,
-                          after: Optional[Sequence[Any]] = None
+                          after: Optional[Sequence[Any]] = None,
+                          code_id: Optional[int] = None
                           ) -> List[Dict[str, Any]]:
         """Search for coded text segments.
 
@@ -4859,6 +4870,10 @@ class QualcoderDatabase:
                    literal)
             code_name: Optional code name to filter by
             limit: Maximum results to return (max 5000)
+            code_id: Optional code id to filter by, instead of a name
+                   (fix round 3: the tool resolves the name once and
+                   filters by the id, so a damaged name elsewhere, or the
+                   code's own, cannot fail or miss the search)
             coder: Explicit coder filter; reads the BASE table filtered
                    to this owner (P1-3 override). Default reads through
                    code_text_visible when the project has the
@@ -4884,7 +4899,10 @@ class QualcoderDatabase:
 
         where = ["qc_text_contains(CAST(ct.seltext AS BLOB), ?)"]
         params: List[Any] = [fold_text(query)]
-        if code_name:
+        if code_id is not None:
+            where.append("ct.cid = ?")
+            params.append(validate_id(code_id, "code_id"))
+        elif code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
             params.append(code_name)
@@ -4951,14 +4969,18 @@ class QualcoderDatabase:
 
     def count_coded_text_matches(self, query: str,
                                  code_name: Optional[str] = None,
-                                 coder: Optional[str] = None) -> int:
+                                 coder: Optional[str] = None,
+                                 code_id: Optional[int] = None) -> int:
         """How many rows the same search matches in total (one COUNT)."""
         query = validate_string(query, "query")
         coder = self._validate_coder(coder)
         source = self.code_text_source(coder is None)
         where = ["qc_text_contains(CAST(ct.seltext AS BLOB), ?)"]
         params: List[Any] = [fold_text(query)]
-        if code_name:
+        if code_id is not None:
+            where.append("ct.cid = ?")
+            params.append(validate_id(code_id, "code_id"))
+        elif code_name:
             code_name = validate_string(code_name, "code_name")
             where.append("c.name = ?")
             params.append(code_name)
@@ -5178,6 +5200,79 @@ class QualcoderDatabase:
                                "Failed to read the project's coders")
         return [r["owner"] for r in rows]
 
+    # ------------------------------------------------------------------
+    # The checks a read makes before it answers (fix round 3): each tests
+    # the exact id, name or owner in SQL, reading no other row, and the
+    # whole lists below are read only to write a refusal's listing or
+    # near miss, their text as blobs decoded with replacement. So a
+    # damaged row the read never answers with cannot fail it (the QA and
+    # Security re-verifications' damaged-row-prereads).
+    # ------------------------------------------------------------------
+
+    def _coding_tables(self) -> List[str]:
+        tables = {r[0] for r in self.conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'")}
+        return [t for t in ("code_text", "code_image", "code_av")
+                if t in tables]
+
+    def coder_has_codings(self, coder: str) -> bool:
+        """Whether `coder` owns a text, region or audio/video coding,
+        tested in SQL on that owner alone, hidden coders included."""
+        try:
+            return any(self.conn.execute(
+                f"SELECT 1 FROM {table} WHERE owner = ? LIMIT 1",
+                (coder,)).fetchone() is not None
+                for table in self._coding_tables())
+        except sqlite3.Error as e:
+            _raise_query_error(e, "coder_has_codings",
+                               "Failed to read the project's coders")
+
+    def case_exists(self, case_id: int) -> bool:
+        """Whether a case with this id exists, reading no other row."""
+        try:
+            return self.conn.execute(
+                "SELECT 1 FROM cases WHERE caseid = ?",
+                (case_id,)).fetchone() is not None
+        except sqlite3.Error as e:
+            _raise_query_error(e, "case_exists", "Failed to read the cases")
+
+    def code_ids_and_names(self) -> List[Dict[str, Any]]:
+        """Every code's id and name, the name read as a blob and decoded
+        with replacement: what a code-name lookup compares, and nothing
+        else (no memo, no category, no hierarchy)."""
+        try:
+            return [{"id": r[0], "name": self._decoded(r[1]) or ""}
+                    for r in self.conn.execute(
+                        "SELECT cid, CAST(name AS BLOB) FROM code_name "
+                        "ORDER BY cid")]
+        except sqlite3.Error as e:
+            _raise_query_error(e, "code_ids_and_names",
+                               "Failed to read the codes")
+
+    def attribute_type_domains(self, name: str) -> List[str]:
+        """The domains ('case', 'file', 'journal') of the attribute type
+        with exactly this name, reading no other row."""
+        try:
+            return [self._decoded(r[0]) for r in self.conn.execute(
+                "SELECT CAST(caseOrFile AS BLOB) FROM attribute_type "
+                "WHERE name = ?", (name,))]
+        except sqlite3.Error as e:
+            _raise_query_error(e, "attribute_type_domains",
+                               "Failed to retrieve attribute types")
+
+    def attribute_type_names(self) -> List[Dict[str, Any]]:
+        """Every attribute type's name and domain, as blobs decoded with
+        replacement, for a refusal's listing and near miss."""
+        try:
+            return [{"name": self._decoded(r[0]) or "",
+                     "applies_to": self._decoded(r[1])}
+                    for r in self.conn.execute(
+                        "SELECT CAST(name AS BLOB), CAST(caseOrFile AS BLOB) "
+                        "FROM attribute_type ORDER BY name")]
+        except sqlite3.Error as e:
+            _raise_query_error(e, "attribute_type_names",
+                               "Failed to retrieve attribute types")
+
     def coders_with_codings_including_hidden(self) -> List[str]:
         """Every owner of a text, region or audio/video coding, sorted,
         HIDDEN CODERS INCLUDED.
@@ -5193,13 +5288,12 @@ class QualcoderDatabase:
         """
         names = set()
         try:
-            tables = {r[0] for r in self.conn.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'")}
-            for table in ("code_text", "code_image", "code_av"):
-                if table not in tables:
-                    continue
-                names.update(r[0] for r in self.conn.execute(
-                    f"SELECT DISTINCT owner FROM {table} "
+            # Owners as blobs decoded with replacement (fix round 3): this
+            # list is read only for a refusal's listing, and a damaged
+            # owner must not fail the read it refuses for
+            for table in self._coding_tables():
+                names.update(self._decoded(r[0]) for r in self.conn.execute(
+                    f"SELECT DISTINCT CAST(owner AS BLOB) FROM {table} "
                     f"WHERE owner IS NOT NULL AND owner != ''"))
         except sqlite3.Error as e:
             _raise_query_error(e, "coders_with_codings_including_hidden",

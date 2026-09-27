@@ -378,12 +378,19 @@ search or a silent limit.
   QualCoder's own searches use `LIKE`; this is a departure in the
   researcher's favour. The query is folded once per search, a long run
   of combining marks is put in canonical order first so a crafted text
-  costs linear time, and a note, a coded passage or an attribute value
-  that is not valid in the database's encoding is read with its damaged
-  bytes replaced (shown as U+FFFD) rather than failing the search,
-  whether it matches or not, as are the text columns the three searches
-  return and every value a numeric comparison reads; a word only in the
-  private part of such a note answers as a word found nowhere.
+  costs linear time, and a note, a coded passage, an attribute value or
+  a file name that is not valid in the database's encoding is read with
+  its damaged bytes replaced (shown as U+FFFD) rather than failing the
+  search, whether it matches or not: the text columns the three searches
+  return, every value a numeric comparison reads, and the file name
+  `search_coded_text` pages by, which it compares as stored bytes, so
+  paging loses and repeats nothing in a UTF-8 or a UTF-16 project. A
+  word only in the private part of such a note answers as a word found
+  nowhere. The checks the reads make before they answer (an attribute's
+  name, a code's name, a coder, a case id) test the exact value, so a
+  damaged row they do not answer with no longer fails them; a read that
+  lists every code or every case, such as `get_coding_frequencies` or
+  the codes list, still fails on a damaged name among them, as in 0.13.
 - **`search_memos` searches every memo and note outside QualCoder's
   saved graphs.** It read code memos, file memos and annotations, three
   of the twelve places a note lives, while its description said "all

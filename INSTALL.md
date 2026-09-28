@@ -47,7 +47,9 @@ arrives with v0.14; earlier releases have none.
 depends on the mode a Cowork or Code session is in (Manual or Auto)
 and on each tool's own setting under "+", Connectors; "What hosts do
 with the tools' read and write marks", further down, says what each
-does. For work on real data, keep Claude asking.
+does. In an ordinary chat, what Claude Desktop does is not documented
+by Anthropic and has not been checked for this release. For work on
+real data, keep Claude asking.
 
 **Not signed.** The extension carries no publisher signature. On a
 personal Claude plan it installs like any other extension. If your

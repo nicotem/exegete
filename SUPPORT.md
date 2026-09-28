@@ -62,5 +62,8 @@ Issues help everyone, permanently. Please use
   show qualcoder-mcp`, `pipx list` and `uv tool list` still work and
   spell `0.14.0-alpha` as `0.14.0a0`), your MCP host (Claude Desktop, Claude
   Code, LM Studio, other), and the toolset (`QUALCODER_MCP_TOOLSET`:
-  `core`, `lifecycle`, or `full` when the variable is not set). The bug report
-  template asks for all of these.
+  `core`, `lifecycle`, or `full` when the variable is not set). With the
+  Claude Desktop extension, the version is in the name of the `.mcpb`
+  file you installed, and the toolset is its Tool set setting
+  (`lifecycle` unless you changed it). The bug report template asks for
+  all of these.

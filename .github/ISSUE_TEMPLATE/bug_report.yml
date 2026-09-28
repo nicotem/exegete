@@ -33,7 +33,7 @@ body:
     id: mcp-version
     attributes:
       label: qualcoder-mcp version
-      description: Run `qualcoder-mcp --version` in the environment you installed into (git installs, `python -m qualcoder_mcp.server --version`). `pip show qualcoder-mcp`, `pipx list` and `uv tool list` also work; pip spells 0.14.0-alpha as 0.14.0a0, and either spelling is fine. If you ask your assistant instead, treat its answer as a convenience, not proof.
+      description: Run `qualcoder-mcp --version` in the environment you installed into (git installs, `python -m qualcoder_mcp.server --version`). `pip show qualcoder-mcp`, `pipx list` and `uv tool list` also work; pip spells 0.14.0-alpha as 0.14.0a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
       placeholder: e.g. 0.14.0a0
     validations:
       required: true
@@ -59,7 +59,8 @@ body:
       label: MCP host application
       description: The application that runs the server for you.
       options:
-        - Claude Desktop
+        - Claude Desktop, with the one-click extension (.mcpb)
+        - Claude Desktop, configured by hand
         - Claude Code
         - LM Studio
         - Other (say which under "What happened?")
@@ -69,7 +70,7 @@ body:
     id: toolset
     attributes:
       label: Toolset (QUALCODER_MCP_TOOLSET)
-      description: "`full` is the default when the variable is not set; `core` is the reduced set for local models; `lifecycle` is the full set plus creating a project."
+      description: "`full` is the default when the variable is not set; `core` is the reduced set for local models; `lifecycle` is the full set plus creating a project. With the Claude Desktop extension, it is the extension's Tool set setting (`lifecycle` unless you changed it)."
       options:
         - full (default, or variable not set)
         - core

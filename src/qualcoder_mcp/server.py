@@ -479,8 +479,9 @@ def _is(value: Any, word: str) -> bool:
 # the tools' read and write marks", from Anthropic's own pages mode by
 # mode (fix round 1). In short: in the asking modes (Claude Code's
 # Manual, Cowork's Manual) a call of a tool is asked about unless the
-# researcher allowed it; in the auto modes a read-only tool is approved
-# and a classifier, not the researcher, decides on the rest; "Skip all
+# researcher allowed it; in Claude Code's auto mode a read-only tool is
+# approved (in Cowork's Auto, only one set to always allow) and a
+# classifier, not the researcher, decides on the rest; "Skip all
 # approvals" and bypassPermissions run everything. The hints are
 # advisory: MCP tells clients to treat them as untrusted, and nothing
 # this server guarantees rests on them.
@@ -502,8 +503,9 @@ TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 # that is not read-only, adds nothing and can be repeated. That alone
 # does not make an auto mode ask: there a classifier decides on a tool
 # that is not read-only. So it also carries TOOL_META's
-# "anthropic/requiresUserInteraction", with which Claude Code asks before
-# every call in every mode (fix round 1).
+# "anthropic/requiresUserInteraction", with which Claude Code, from
+# 2.1.199, asks before every call in every mode but dontAsk, which
+# refuses it (fix round 1).
 TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
                                  idempotentHint=True, openWorldHint=False)
 

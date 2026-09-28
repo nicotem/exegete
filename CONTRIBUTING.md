@@ -61,12 +61,17 @@ is looked at first.
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
 5. **Continuous integration** runs on every pushed branch and on pull
-   requests to `main`: six jobs, Ubuntu, Windows and macOS, each on
-   Python 3.10 and 3.13. All six must be green. The workflow actions are
-   pinned by commit SHA with a version comment beside each pin; if you
-   add or bump an action, keep that shape (Dependabot maintains the
-   pins). A bump also means recording the new SHA against the tag it
-   really is, in `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`;
+   requests to `main`: ten jobs. Six run the suite, on Ubuntu, Windows
+   and macOS, each on Python 3.10 and 3.13. Three build the desktop
+   extension, one on each system, and install and start it as Claude
+   Desktop does (the Linux one also validates it with the official
+   MCPB tool and checks that the lock has a wheel for every computer);
+   the tenth checks that the three builds are the same bytes. All ten
+   must be green. The workflow actions are pinned by commit SHA with a
+   version comment beside each pin; if you add or bump an action, keep
+   that shape (Dependabot maintains the pins). A bump also means
+   recording the new SHA against the tag it really is, in
+   `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`;
    that module's docstring carries the two API calls that resolve it.
    The tests fail on an unrecorded SHA on purpose: Dependabot has left a
    version comment stale beside a bumped SHA before, and nothing else

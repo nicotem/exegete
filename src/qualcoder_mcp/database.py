@@ -5945,7 +5945,7 @@ class QualcoderDatabase:
                     if content_found and content_shown == 0 and \
                             content_excluded == content_found:
                         # Nothing novel in this file: not a result, but
-                        # counted, because saturation is a real answer
+                        # counted: "every match already coded" is an answer
                         files_all_excluded += 1
 
                 # Search memo. Memo privacy ('#####'): match against the

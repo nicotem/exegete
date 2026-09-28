@@ -256,6 +256,13 @@ CONFIDENCE_NOT_TAKEN = (
 READING_NOT_GIVEN = "not given (recorded before v0.14)"
 READING_CLEARED = ("not given (cleared when the code was changed; give one "
                    "with edit_suggestion's reading)")
+# What get_coding_frequencies' numbers are (owner ruling 26: the count
+# words fixed now)
+FREQUENCIES_COUNT_NOTE = (
+    "These count codings, not participants or importance: the codes "
+    "applied most often are not thereby the most important, and one "
+    "participant can account for many codings.")
+
 # What warns in v0.14 and goes in v0.15 (owner ruling 25, questions 3, 7
 # and 8): one sentence, the same in the tool's description and in its
 # answer, so a test can pin one source of wording
@@ -4026,9 +4033,9 @@ def copy_project_to_workspace(
 # cursor carries the sort key of the last row a page returned and the next
 # page re-queries for the first row after it, so a recycled process, a
 # second host and a compacted conversation all continue correctly.
-# Second, the filter answers the saturation question honestly: a file
-# whose every match is already coded is not a result, and the page says
-# how many such files there were, because a null result is a result.
+# Second, the filter says where coding has not reached: a file whose
+# every match is already coded is not a result, and the page says how
+# many such files there were, because a null result is a result.
 
 MAX_EXCLUDE_CODE_IDS = 200
 MAX_MATCHES_PER_FILE_CAP = 50
@@ -4570,8 +4577,7 @@ def get_coded_segments(code_id: int, limit: int = 100,
     - by_document (default): document order, file by file.
     - diverse_by_document: one segment from each file in turn before a
       second from any of them, so a first page spans the dataset rather
-      than one long interview. The ready-made choice for saturation and
-      overview work.
+      than one long interview. The ready-made choice for an overview.
     - recent_first: newest coding first. The date is compared as stored
       text, which equals chronological order for every writer QualCoder
       and this server use, and is a heuristic for a hand-edited value.
@@ -4817,10 +4823,10 @@ def search_files(
     coding of one of those codes in the same file, which is how you ask
     "where is this word in a passage I have NOT already coded this way?".
     Spans are half-open, so a match that begins exactly where an excluded
-    coding ends is kept. A file whose every match is excluded is not a
-    result and is counted in files_with_all_matches_excluded, so
-    saturation shows as a number rather than as silence. It needs
-    search_content=true.
+    coding ends is kept. A file whose every match is excluded (every
+    match already coded) is not a result and is counted in
+    files_with_all_matches_excluded; the files returned show where
+    coding has not reached. It needs search_content=true.
 
     PAGING: the result carries a page block. Pass its next_cursor back as
     cursor WITH THE SAME other arguments to continue; a cursor is bound
@@ -4959,6 +4965,13 @@ def search_files(
                 "content_matches_excluded", 0)
             block["files_with_all_matches_excluded"] = scan.get(
                 "files_with_all_matches_excluded", 0)
+            if block["files_with_all_matches_excluded"]:
+                block["note"] = (
+                    f"{block['files_with_all_matches_excluded']} file(s) "
+                    f"have every match already coded with these codes; "
+                    f"the files listed hold matches outside that coding, "
+                    f"where coding has not yet reached. It does not mean "
+                    f"a code is complete.")
             result["novelty_filter"] = block
         result["files_examined_this_page"] = scan.get("files_examined", 0)
         result["search_parameters"]["exclude_code_ids"] = exclude_ids
@@ -4990,8 +5003,9 @@ def search_files(
 def get_coding_frequencies(coder: Optional[str] = None) -> str:
     """Get frequency statistics for all codes in the project.
 
-    This tool provides an overview of how often each code has been used,
-    helping identify prominent themes and patterns in the data.
+    How often each code has been applied: it counts codings, not
+    participants or importance, so the codes applied most often are not
+    thereby the most important.
 
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
@@ -5016,6 +5030,7 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
     if refusal is not None:
         return json.dumps(refusal, indent=2)
     frequencies = db_.get_coding_frequencies(coder=coder)
+    frequencies["counts_note"] = FREQUENCIES_COUNT_NOTE
     counts = db_.non_text_coding_counts(coder=coder, by_code=True)
     for entry in frequencies["codes"]:
         extra = counts["per_code"].get(entry["code_id"])
@@ -10239,18 +10254,18 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                              "codings by different models can then be "
                              "compared later with compare_coders. Never pick "
                              "the name yourself.",
-            "saturation_and_novelty": "To ask what is NOT yet coded, search "
-                                      "with exclude_code_ids set to the codes "
-                                      "you have already applied: matches that "
-                                      "overlap them are dropped, and a file "
-                                      "whose every match is excluded is "
-                                      "reported as such rather than silently "
-                                      "omitted. Page with the page block's "
-                                      "next_cursor until exhaustive is true. "
-                                      "A page that comes back empty is a "
-                                      "result, not a failure: say so plainly "
-                                      "rather than widening the search until "
-                                      "something turns up.",
+            "not_yet_coded": "To find where coding has not reached, search "
+                             "with exclude_code_ids set to the codes you "
+                             "have already applied: matches that overlap "
+                             "them are dropped, and a file whose every "
+                             "match is already coded is counted rather "
+                             "than silently omitted. That count does not "
+                             "mean a code is complete. Page with the page "
+                             "block's next_cursor until exhaustive is true. "
+                             "A page that comes back empty is a result, not "
+                             "a failure: say so plainly rather than "
+                             "widening the search until something turns "
+                             "up.",
             "comparing_coders": "compare_coders reports how much two coders' "
                                 "text coding agrees, per code. It can "
                                 "compare a person with the AI, or two models "

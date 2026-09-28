@@ -1803,3 +1803,58 @@ class TestFixRound2WhatGoesInV015:
         # its marks stay: the host still asks before the names leave
         assert server.mcp._tool_manager._tools[
             "read_pseudonym_list"].annotations == server.TOOL_DISCLOSES
+
+
+class TestFixRound2TheCountWords:
+    """Owner ruling 26 (question 4, narrowed), with the reading's item 16:
+    "saturation" and "prominent themes" are gone from every text the
+    server serves; the counts say what they are."""
+
+    @staticmethod
+    def _served():
+        texts = [t.description for t in
+                 server.mcp._tool_manager._tools.values()]
+        texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE,
+                  server.GROUNDING_RULES, server.METHODOLOGY_VOCABULARY]
+        texts += [server.explain_ai_coding_tools(topic) for topic in
+                  ("analyze_for_coding", "apply_codings", "edit_suggestion",
+                   "coding_style_guidance", "grounding_rules",
+                   "methodology_vocabulary", "methods_notes")]
+        return texts
+
+    def test_neither_word_is_served(self):
+        for text in self._served():
+            flat = " ".join(text.split()).lower()
+            assert "saturation" not in flat
+            assert "prominent themes" not in flat
+
+    def test_the_help_topic_is_renamed_and_says_what_it_is_not(self):
+        overview = json.loads(server.explain_ai_coding_tools())
+        assert "saturation_and_novelty" not in overview
+        assert "does not mean a code is complete" in overview[
+            "not_yet_coded"]
+
+    def test_frequencies_count_codings(self, setup_server):
+        tool = server.mcp._tool_manager._tools["get_coding_frequencies"]
+        assert "it counts codings, not participants or importance" in \
+            " ".join(tool.description.split())
+        out = jcall("get_coding_frequencies")
+        assert out["counts_note"] == server.FREQUENCIES_COUNT_NOTE
+        assert "not participants or importance" in out["counts_note"]
+
+    def test_every_match_coded_is_offered_as_where_coding_has_not_reached(
+            self, setup_server):
+        stress = [c for c in server.get_db().list_codes()
+                  if c["name"] == "Stress"][0]["id"]
+        sid = new_session()
+        approve_and_apply(sid, [record(sid, item())["recorded"][0]["guid"]])
+        out = jcall("search_files", pattern="deadlines",
+                    search_filename=False, search_content=True,
+                    exclude_code_ids=[stress])
+        block = out["novelty_filter"]
+        assert block["files_with_all_matches_excluded"] == 1
+        assert "where coding has not yet reached" in block["note"]
+        assert "does not mean a code is complete" in block["note"]
+        desc = " ".join(server.mcp._tool_manager._tools[
+            "search_files"].description.split())
+        assert "the files returned show where coding has not reached" in desc

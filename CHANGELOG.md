@@ -737,6 +737,16 @@ search or a silent limit.
   not cover is marked (`outside_session`). A proposal's passages no
   longer store shorter and longer spans, which nothing showed; a session
   file that holds them loses them when it is next saved.
+- **The counts say what they count** (owner ruling 26). "Saturation"
+  and "prominent themes" are gone from every text the server sends.
+  `get_coding_frequencies` says, in its description and its answer
+  (`counts_note`), that it counts codings, not participants or
+  importance. `search_files`' filter by what is already coded calls a
+  file whose every match is coded just that, and its answer (`note`)
+  offers the files returned as where coding has not reached, adding
+  that the count does not mean a code is complete; the help topic
+  `saturation_and_novelty` is renamed `not_yet_coded` and says the same.
+  The rest of the server's wording waits for the methods review.
 - **A reading stays with the code it was given for.** `edit_suggestion`
   takes `reading`. Moving a suggestion to another code without it
   clears the reading (the review shows "not given (cleared when the
@@ -1026,6 +1036,9 @@ The AI coding loop:
   `record_suggestions`. The answer loses `codings_applied` and
   `position_safety_warning` (it writes no passage) and gains
   `example_passages` and `next_step`.
+- **The help's `saturation_and_novelty` entry is now `not_yet_coded`**;
+  `get_coding_frequencies` gains `counts_note`, and `search_files`'
+  `novelty_filter` block gains `note` when a file has every match coded.
 - **Memos already in your projects are never rewritten.** A coding
   applied by an earlier release keeps its "[AI Confidence: 0.85]" line;
   remove it in QualCoder if you do not want it in the record.

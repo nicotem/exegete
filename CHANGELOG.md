@@ -453,13 +453,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects, the
   server-wide changes, the folder for projects, the reads, queries and
-  exports, and the AI coding loop: full = 195,406 characters (about
-  48.9k tokens at chars/4) over 73 tools, core = 64,859 (about 16.2k)
-  over 21, and the new opt-in lifecycle set = 197,991 (about 49.5k)
-  over 74. The coding loop's last two rounds took 2,481 characters off
-  `full` and 2,491 off `core`: the three questions, the reading, the
+  exports, and the AI coding loop: full = 195,396 characters (about
+  48.8k tokens at chars/4) over 73 tools, core = 64,849 (about 16.2k)
+  over 21, and the new opt-in lifecycle set = 197,981 (about 49.5k)
+  over 74. The coding loop's last three rounds took 2,491 characters off
+  `full` and 2,501 off `core`: the three questions, the reading, the
   study at the start, the deprecation sentences, the count words and
-  the turn before a passage were paid for by shorter texts (`analyze_for_coding`,
+  the earlier turn before a passage were paid for by shorter texts (`analyze_for_coding`,
   `review_suggestions`, `create_proposed_codes`, `record_suggestions`,
   `analyze_file_with_coding`, `search_files`, `edit_suggestion`, and the
   `owner` argument's text). Moved by the coding loop's descriptions: `analyze_for_coding`
@@ -493,8 +493,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The tools' hints (annotations) are not part of this measurement.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 205,114, 68,151 and
-  207,839.
+  on Python 3.11.13, in the repository's `.venv/`, 205,104, 68,141 and
+  207,829.
 
 ### Changed: reads, queries and exports say what they found
 

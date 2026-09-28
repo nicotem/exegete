@@ -796,17 +796,23 @@ search or a silent limit.
   marked, then the code, the reading and the reason. The earlier turn is
   found by speaker labels: a name of at most four words (letters in any
   alphabet, apostrophes, "Speaker 2"), an optional bracketed timestamp
-  and a colon, starting a paragraph, in a file where some speaker's name
-  starts more than one paragraph; speakers are compared by name alone,
+  and a colon that no digit follows, starting a paragraph; a name counts
+  as a speaker only when it opens more than one paragraph, so a label
+  seen once ("The problem was this:", a field note's "Reflection:") is a
+  paragraph with no speaker label. Speakers are compared by name alone,
   so "Respondent [00:01:09]:" and "RESPONDENT:" are the speaker of
-  "Respondent:". A file without such labels, or prose whose paragraphs
-  open "Monday:", "Tuesday:", shows none. When the nearest turn has
+  "Respondent:". A file without such labels, prose whose paragraphs open
+  "Monday:", "Tuesday:", and a file with an unbracketed time after the
+  name (Otter's "Name  0:03", whose minutes would otherwise make one
+  person a new speaker each minute) show none. When the nearest turn has
   three words or fewer and no question mark in any script ("Mm-hmm.",
   "Describe your manager."), the one before it by another speaker is
-  shown with it, and the turns by the passage's speaker and the
-  unlabelled paragraphs left out between are counted, never skipped
-  silently. A turn over 1,200 characters is shown by its two ends, the
-  cut marked.
+  shown with it, under a heading that says so, and the turns by the same
+  label as the passage and the unlabelled paragraphs left out between are
+  counted, never skipped silently. A turn over 1,200 characters is shown
+  by its two ends, the cut marked "[… N characters not shown …]". The
+  passage's unit and the longer span offered beside it are named with
+  one word, "paragraph" or "speaker turn".
   `get_coding_session_info` gives the same (`turn_before`,
   `context_before`, `context_after`, `context_unit`). While the
   session's project is not the one open, or when the file no longer

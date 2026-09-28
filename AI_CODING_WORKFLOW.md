@@ -214,12 +214,15 @@ to focus and exhaustion are read as workplace stress.
 The earlier turn (the nearest by another speaker, found by speaker
 labels: a name of a few words and a colon at the start of a paragraph,
 compared by name so "Respondent [00:01:09]:" and "RESPONDENT:" are one
-speaker, in a file where a speaker's name recurs; nothing is shown in a
-file without them; a turn of three words or fewer that asks nothing is
-shown with the one before it, and the turns and paragraphs left out in
-between are counted), the text around the passage and the text of any shorter or longer span offered are read from
-the file each time you review; the session file keeps none of it. While another project is open, the review
-shows the passage alone and says why.
+speaker, and counted only when that name opens more than one paragraph;
+an unbracketed time after the name, as in Otter's "Name  0:03", is not
+read; nothing is shown in a file without such labels; a turn of three
+words or fewer with no question mark is shown with the one before it,
+and the turns and paragraphs left out in between are counted), the text
+around the passage and the text of any shorter or longer span offered
+are read from the file each time you review; the session file keeps
+none of it. While another project is open, the review shows the passage
+alone and says why.
 
 ### Step 4: Approve or Reject Suggestions
 

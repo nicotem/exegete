@@ -1722,7 +1722,8 @@ class TestFixRound2TheTextAroundAPassage:
         assert "**Earlier turns by other speakers**" in out
         assert ("Interviewer: How do the deadlines feel to you?\n"
                 "Interviewer: Take your time.\n"
-                "[not shown: 1 turn(s) by the passage's speaker]") in out
+                "[not shown: 1 turn(s) by the same label as the passage]") \
+            in out
         assert "Is that fine?" not in out
         assert "Shall we begin?" not in out
         assert "Happy to help?" not in out
@@ -1731,15 +1732,20 @@ class TestFixRound2TheTextAroundAPassage:
     def test_words_like_a_label_inside_a_paragraph_are_not_one(
             self, setup_server, qualcoder_db_path):
         # a label starts a paragraph; "Q:" inside one is text. A long turn
-        # is shown by its two ends, the cut marked
+        # is shown by its two ends, the cut marked in words no
+        # transcript's own "[…]" can be taken for (fix round 5)
         body = "a" * 700 + " Q: is it so? " + "b" * 700
-        text = (f"P1: I started in March.\nInterviewer: {body}\n"
+        text = (f"Interviewer: Shall we start?\nP1: I started in March.\n"
+                f"Interviewer: {body}\n"
                 f"P1: They pile up. {self.PASSAGE} Then I go running.\n")
         sid, _ = self._transcript_session(qualcoder_db_path, text)
         entry = jcall("get_coding_session_info",
                       coding_session_id=sid)["suggestions"][0]
         shown = entry["turn_before"]
-        assert shown.startswith("Interviewer: aaa") and " […] " in shown
+        cut = len(f"Interviewer: {body}") - 1000
+        assert shown.startswith("Interviewer: aaa")
+        assert f" [… {cut:,} characters not shown …] " in shown
+        assert "[…]" not in shown
         assert "Q: is it so?" not in shown and shown.endswith("bbb")
         assert entry["context_unit"] == "speaker turn"
 
@@ -1767,7 +1773,7 @@ class TestFixRound2TheTextAroundAPassage:
         assert entry["turn_before"] == (
             "Interviewer: How do the deadlines feel to you?\n"
             "Interviewer: Take your time.\n"
-            "[not shown: 1 turn(s) by the passage's speaker]")
+            "[not shown: 1 turn(s) by the same label as the passage]")
         assert entry["context_before"] == "P1: They pile up. "
         assert entry["context_after"] == " Then I go running."
         assert entry["context_unit"] == "speaker turn"
@@ -1789,7 +1795,7 @@ class TestFixRound2TheTextAroundAPassage:
         review = " ".join(tools["review_suggestions"].description.split())
         assert "the nearest earlier turn by another speaker (found by " \
             "speaker labels, so none where the file has none; a short turn " \
-            "asking nothing comes with the one before it), then the " \
+            "with no question mark comes with the one before it), then the " \
             "paragraph or turn holding the passage" in review
         assert "read from the file now, never stored" in review
         edit = " ".join(tools["edit_suggestion"].description.split())
@@ -2208,7 +2214,10 @@ class TestFixRound3NoSpanTextStored:
         # from the file, name and all
         before = call("review_suggestions", coding_session_id=sid,
                       suggestion_guids=[guid])
-        assert f"↔ longer (full speaker turn" in before
+        # "Respondent" opens one paragraph only, so it is not a speaker:
+        # the passage is in its paragraph, and the offer says the same
+        assert "**Passage, in its paragraph**" in before
+        assert "↔ longer (paragraph, " in before
         assert self.NAME in before
         assert self.NAME not in session_file(sid).read_text()
         mapping = [{"original": self.NAME, "pseudonym": "Pat"}]
@@ -2335,26 +2344,44 @@ class TestFixRound3TheUpgradingList:
                 "`get_coding_session_info` returned") in whole
 
 
-
-
 # =============================================================================
-# FIX ROUND 4 (the turn before a passage: never misleading)
+# FIX ROUNDS 4 AND 5 (the earlier turn: never claims more than its rule
+# finds)
 # =============================================================================
 
 T4 = "She never listened to any of us, not once in three years."
-OWN1 = "[not shown: 1 turn(s) by the passage's speaker]"
+OWN1 = "[not shown: 1 turn(s) by the same label as the passage]"
 B2 = "\n\n"
 
+# Otter's text export, as the round-4 re-check built it (rv4E1qa/runs/
+# otter_313, otter_hour_313): "Name  m:ss" on the line above each
+# paragraph, blank lines between; the minute turns inside one answer
+OTTER = B2.join([
+    "Nicola Tempini  1:23\nMm-hmm.",
+    "Jane Okafor  1:25\nIt was the paperwork more than anything.",
+    "Nicola Tempini  1:52\nTell me about your manager.",
+    "Jane Okafor  1:56\nShe was new that year, like me, so we were both "
+    "finding our feet.",
+    f"Jane Okafor  2:19\n{T4}",
+    "Nicola Tempini  3:01\nRight."])
+OTTER_HOUR = B2.join([
+    "Nicola Tempini  00:59:23\nMm-hmm.",
+    "Jane Okafor  00:59:25\nIt was the paperwork more than anything.",
+    "Nicola Tempini  00:59:52\nTell me about your manager.",
+    "Jane Okafor  00:59:56\nShe was new that year, like me, so we were "
+    "both finding our feet.",
+    f"Jane Okafor  01:00:19\n{T4}"])
 
-class TestFixRound4TheEarlierTurn:
-    """The re-verification of round 3, on all three lenses: the review's
-    earlier turn claims no more than its rule finds. Speakers are compared
-    by name; nothing is passed over silently (a short turn that asks
-    nothing comes with the one before it, and what lies between is said);
-    a label is a short name at a paragraph's start, in any alphabet; and a
-    file is a transcript only when a speaker name recurs. The cases are
-    the re-verification's probe transcripts (rv3E1qa/probe/turn.py and
-    turn2.py, and the methods lens's), with what the rule now shows."""
+
+class TestFixRound5TheEarlierTurn:
+    """The re-verifications of rounds 3 and 4: the review's earlier turn
+    claims no more than its rule finds. A label is a short name at a
+    paragraph's start, in any alphabet, with a colon no digit follows; a
+    name is a speaker only when it opens more than one paragraph; speakers
+    are compared by name; a short turn with no question mark comes with
+    the one before it, and what lies between is counted. The cases are the
+    re-verifications' probe transcripts, each speaker given a second turn
+    where the probe had one (the rule needs a name to recur)."""
 
     CASES = {
         # one-to-one interviews
@@ -2388,7 +2415,7 @@ class TestFixRound4TheEarlierTurn:
             "What was a normal day with her like?", f"P: {T4}"]),
             "I: I want to ask about your manager now.\n[not shown: 1 "
             "paragraph(s) with no speaker label]"),
-        # timestamps and letter case
+        # timestamps in brackets, and letter case
         "timestamped, a backchannel between": (B2.join([
             "Interviewer [00:01:02]: What was your manager like?",
             "Respondent [00:01:09]: Hard to say, honestly, it changed a "
@@ -2398,6 +2425,8 @@ class TestFixRound4TheEarlierTurn:
             f"Interviewer [00:01:02]: What was your manager like?\n{OWN1}"
             f"\nInterviewer [00:01:30]: Mm-hmm."),
         "timestamped, an answer over two segments": (B2.join([
+            "Interviewer [00:00:40]: Shall we start?",
+            "Respondent [00:00:44]: Yes, fine.",
             "Interviewer [00:01:02]: What was your manager like?",
             "Respondent [00:01:09]: Hard to say, honestly, it changed a "
             "lot over the years.",
@@ -2418,6 +2447,7 @@ class TestFixRound4TheEarlierTurn:
             f"INTERVIEWER: What was your manager like?\n{OWN1}\n"
             f"INTERVIEWER: Mm-hmm."),
         "one speaker in bold and plain labels": (B2.join([
+            "**Interviewer:** Shall we start?", "**Respondent:** Yes.",
             "**Interviewer:** What was your manager like?",
             "**Respondent:** She was new that year.",
             f"Respondent: {T4}"]),
@@ -2430,13 +2460,15 @@ class TestFixRound4TheEarlierTurn:
             "**Interviewer:** Tell me about your manager."),
         # groups
         "a group aside": ("\n".join([
+            "Facilitator: Shall we start with the ward?",
+            "Ben: Fine by me.",
             "Facilitator: Was your manager supportive?",
             "Anna: Mine was, most of the time.",
             "Ben: I disagree.", f"Anna: {T4}"]),
             f"Facilitator: Was your manager supportive?\n{OWN1}\n"
             f"Ben: I disagree."),
         "a longer group aside": (B2.join([
-            "I: How did the merger affect you?",
+            "I: How did the merger affect you?", "P2: Badly, at first.",
             "P1: It was hard to keep up with it all.",
             "P2: It changed things for all of us, honestly.",
             f"P1: {T4}"]),
@@ -2444,11 +2476,13 @@ class TestFixRound4TheEarlierTurn:
         # names in any alphabet, with apostrophes
         "Siân": ("\n".join([
             "Facilitator: Was your manager supportive?",
+            "Siân: Not at first.",
             "Tom: Mine was fine, most weeks.",
             "Siân: Mine was awful, a nightmare really.", f"Tom: {T4}"]),
             "Siân: Mine was awful, a nightmare really."),
         "O'Brien": ("\n".join([
             "Facilitator: Was your manager supportive?",
+            "O'Brien: Not at first.",
             "Tom: Mine was fine, most weeks.",
             "O'Brien: Mine was awful, a nightmare really.", f"Tom: {T4}"]),
             "O'Brien: Mine was awful, a nightmare really."),
@@ -2461,6 +2495,10 @@ class TestFixRound4TheEarlierTurn:
             "I: Did you ever think of leaving?", "P: Once.",
             "I: لماذا بقيت؟", f"P: {T4}"]),
             "I: لماذا بقيت؟"),
+        "a Greek question mark": (B2.join([
+            "I: Did you ever think of leaving?", "P: Once.",
+            "I: Γιατί;", f"P: {T4}"]),
+            "I: Γιατί;"),
         # prose, and layouts the rule does not read: nothing shown
         "prose": (B2.join([
             "The ward was calm in the morning.",
@@ -2476,20 +2514,39 @@ class TestFixRound4TheEarlierTurn:
             "The charge nurse put it plainly: nobody gets a break on this "
             "ward.", f"Staff said: {T4}"]), None),
         "a sentence with a colon inside a transcript": (B2.join([
+            "I: Shall we start?", "P: Yes.",
             "I: What was the ward like?", "P: It was calm.",
             "The charge nurse put it plainly: nobody gets a break on this "
             "ward.", f"P: {T4}"]),
             "I: What was the ward like?\n[not shown: 1 turn(s) by the "
-            "passage's speaker and 1 paragraph(s) with no speaker label]"),
+            "same label as the passage and 1 paragraph(s) with no speaker "
+            "label]"),
         "a timestamp before the name": (B2.join([
             "[00:01:02] Interviewer: Did you ever think of leaving?",
             "[00:01:09] Participant: Not really, no.",
             "[00:01:30] Interviewer: Tell me about your manager.",
             f"[00:01:35] Participant: {T4}"]), None),
+        # round 5: Otter's unbracketed time is not read (the major)
+        "Otter, an answer crossing a minute": (OTTER, None),
+        "Otter, an answer crossing an hour": (OTTER_HOUR, None),
+        # round 5: a label seen once is not a speaker
+        "a continuation opening with a phrase and a colon": (B2.join([
+            "I: What was the rota like?", "R: It changed every week.",
+            "I: Mm-hmm.", "R: And then it got worse.",
+            "The problem was this: nobody told us in advance.",
+            f"R: {T4}"]),
+            f"I: What was the rota like?\n{OWN1}\nI: Mm-hmm.\n"
+            f"[not shown: 1 turn(s) by the same label as the passage and 1 "
+            f"paragraph(s) with no speaker label]"),
+        "a field note's one reflection": (B2.join([
+            "Observation: the ward was calm at handover.",
+            "Reflection: I felt uneasy about the quiet.",
+            f"Observation: {T4}"]), None),
     }
 
     @staticmethod
     def _shown(qualcoder_db_path, text):
+        _sql(qualcoder_db_path, "DELETE FROM source WHERE id = 21")
         _sql(qualcoder_db_path,
              "INSERT INTO source (id, name, fulltext, owner, date) VALUES "
              "(21, 't.txt', ?, 'T', '2024-01-01')", (text,))
@@ -2511,21 +2568,36 @@ class TestFixRound4TheEarlierTurn:
         else:
             assert f"```\n{expected}\n```" in review
 
+    def test_otter_answers_show_nothing_and_are_paragraphs(
+            self, setup_server, qualcoder_db_path):
+        # every answer of the excerpt, not only the one crossing a minute
+        for text in (OTTER, OTTER_HOUR):
+            _sql(qualcoder_db_path, "DELETE FROM source WHERE id = 21")
+            _sql(qualcoder_db_path,
+                 "INSERT INTO source (id, name, fulltext, owner, date) "
+                 "VALUES (21, 'o.txt', ?, 'T', '2024-01-01')", (text,))
+            sid = new_session(file_ids=[21])
+            answers = [p.split("\n", 1)[1] for p in text.split(B2)
+                       if p.startswith("Jane Okafor")]
+            record(sid, *[item(a, file_id=21) for a in answers])
+            review = call("review_suggestions", coding_session_id=sid)
+            assert "Earlier turn" not in review
+            assert "speaker turn" not in review.split("↔")[0]
+
     def test_the_heading_says_the_rule(self, setup_server,
                                        qualcoder_db_path):
         one, _ = self._shown(qualcoder_db_path,
                              self.CASES["imperative prompt"][0])
         assert ("**Earlier turn by another speaker** (the nearest, by "
                 "speaker labels):") in one
-        _sql(qualcoder_db_path, "DELETE FROM source WHERE id = 21")
         two, _ = self._shown(qualcoder_db_path,
                              self.CASES["a backchannel"][0])
         assert ("**Earlier turns by other speakers** (the nearest, by "
-                "speaker labels, is short and asks nothing, so the one "
-                "before it is shown too):") in two
+                "speaker labels, is short and has no question mark, so the "
+                "one before it is shown too):") in two
         for text in (one, two):
+            assert "asks nothing" not in text
             assert "The turn before it" not in text
-            assert "Question before it" not in text
 
     def test_prose_is_a_paragraph_not_a_turn(self, setup_server,
                                              qualcoder_db_path):
@@ -2533,3 +2605,28 @@ class TestFixRound4TheEarlierTurn:
             qualcoder_db_path, self.CASES["prose with day headings"][0])
         assert "**Passage, in its paragraph**" in review
         assert "speaker turn" not in review
+
+    def test_one_word_for_the_unit_in_the_line_and_the_offer(
+            self, setup_server, qualcoder_db_path):
+        # a file with no blank line: the passage line and the longer-span
+        # offer name the unit with the same word, in both review forms
+        siân = self.CASES["Siân"][0] + " It was the same every week."
+        for text, word in ((siân, "speaker turn"),
+                           ("Monday: calm.\nTuesday: an alarm went off.\n"
+                            f"Wednesday: {T4} It was the same every week.", "paragraph")):
+            _sql(qualcoder_db_path, "DELETE FROM source WHERE id = 21")
+            _sql(qualcoder_db_path,
+                 "INSERT INTO source (id, name, fulltext, owner, date) "
+                 "VALUES (21, 't.txt', ?, 'T', '2024-01-01')", (text,))
+            sid = new_session(file_ids=[21])
+            guid = record(sid, item(T4, file_id=21))["recorded"][0]["guid"]
+            for review in (call("review_suggestions", coding_session_id=sid),
+                           call("review_suggestions", coding_session_id=sid,
+                                suggestion_guids=[guid])):
+                assert f"**Passage, in its {word}**" in review
+                assert f"longer ({word}, " in review
+                other = ({"speaker turn", "full speaker turn", "paragraph"}
+                         - {word})
+                offer = [l for l in review.splitlines() if "↔" in l]
+                assert offer and not any(f"({o}, " in l for o in other
+                                         for l in offer)

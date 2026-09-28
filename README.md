@@ -832,10 +832,12 @@ Show me details about suggestion 1
 
 Claude shows you:
 - In a transcript, the earlier turn by another speaker, found by speaker
-  labels ("Interviewer:", "Siân [00:01:09]:" starting a paragraph, in a
-  file where a speaker's name recurs); a turn of three words or fewer that
-  asks nothing ("Mm-hmm.", "Describe your manager.") is shown with the one
-  before it, and what lies between is counted, never skipped silently
+  labels ("Interviewer:", "Siân [00:01:09]:" starting a paragraph, a name
+  counted only when it opens more than one; Otter's unbracketed
+  "Name  0:03" is not read); a turn of three words or fewer with no
+  question mark ("Mm-hmm.", "Describe your manager.") is shown with the
+  one before it, and what lies between is counted, never skipped
+  silently
 - The passage, in its paragraph or speaker turn
 - Which code and file
 - Whether the passage states what the code names (explicit) or the code
@@ -1041,7 +1043,7 @@ still answers empty, and that answer is a finding.
 **AI-Assisted Coding (Conversational Workflow):**
 - `analyze_for_coding(file_ids, code_names, instruction)` - Start a coding session for the files, and the codes if named (matched exactly, else ignoring letter case, spacing and Unicode form, the rule for code names throughout; a name matching two codes that way is listed in `ambiguous_code_names` and used for neither), that suggestions may then be recorded for; `instruction` is required (there is no default): the researcher's answers to what to look for, how long a coded passage should be and whether a passage may carry more than one code; it reads no file and makes no suggestion, returns the `coding_session_id` the other session tools take, and lists in `not_found` any id or name that matched nothing; a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside this server, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
 - `record_suggestions(coding_session_id, suggestions, replace)` - Record Claude's suggestions into the session (each verified against the file text; positions auto-corrected when the excerpt is unique; a PDF with no usable text is refused, as it is by `edit_suggestion`, `apply_codings`, proposal evidence and `add_annotation`)
-- `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show each suggestion in the order a researcher reads it: the nearest earlier turn by another speaker, found by speaker labels (a name of a few words and a colon starting a paragraph, compared by name, in a file where a speaker name recurs; nothing is shown otherwise), whatever it says; a turn of three words or fewer that asks nothing is shown with the one before it, and the turns and paragraphs left out between are counted, then the passage in its paragraph or speaker turn, then the code, the reading and the reason; the surrounding text, and that of any shorter or longer span offered, is read from the file each time and never stored
+- `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show each suggestion in the order a researcher reads it: the nearest earlier turn by another speaker, found by speaker labels (a name of a few words and a colon starting a paragraph, compared by name, and counted only when that name opens more than one paragraph; an unbracketed time after the name, as in Otter's "Name  0:03", is not read; nothing is shown otherwise), whatever it says; a turn of three words or fewer with no question mark is shown with the one before it, and the turns and paragraphs left out between are counted, then the passage in its paragraph or speaker turn, then the code, the reading and the reason; the surrounding text, and that of any shorter or longer span offered, is read from the file each time and never stored
 - `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` - Adjust a pending suggestion's span, code or reading before approval (session-only; server-computed shorter/longer alternatives); moving it to another code without a new `reading` clears it, which was given for the old code
 - `update_suggestion_status(coding_session_id, approve, reject, reopen)` - Approve, reject or reopen (back to pending) suggestions by GUID; GUIDs not in the session are listed, and a GUID in two lists is refused
 - `apply_codings(coding_session_id, create_backup, owner)` - **WRITES TO DATABASE** - Apply approved suggestions (bound to the session's project, validated before backup, all-or-nothing; a suggestion whose identical coding is already in the project is reported as already existing and skipped, not written twice)

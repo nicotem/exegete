@@ -15,10 +15,11 @@ import hashlib
 import hmac
 import difflib
 import functools
+import inspect
 import unicodedata
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any, Sequence, Tuple
+from typing import Optional, List, Dict, Any, Sequence, Tuple, Callable
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp import Context
@@ -269,6 +270,47 @@ FREQUENCIES_COUNT_NOTE = (
 DEPRECATED_PSEUDONYM_LIST = (
     "Deprecated, removed in v0.15: QualCoder's Pseudonyms dialog (the "
     "button in Manage Files) shows this list without sending it anywhere.")
+DEPRECATED_REFI_EXPORT = (
+    "Deprecated, removed in v0.15: this export files every coding under "
+    "the AI coder name and leaves out cases, annotations, journals and "
+    "media, and a session's export includes rejected suggestions "
+    "unmarked; QualCoder's own export (Project, Export, REFI-QDA Project "
+    "export) keeps each coder, the cases, the notes and the media.")
+DEPRECATED_CODE_REPORT = (
+    "Deprecated, removed in v0.15: get_coded_segments(code_id=...) reads "
+    "the same passages, page by page and without the 1,000 limit.")
+DEPRECATED_CLEANUP = (
+    "Deprecated, removed in v0.15: it deletes every project's old "
+    "sessions with no preview; delete_coding_session removes one.")
+DEPRECATED_CASCADE = (
+    "Deprecated, removed in v0.15: cascade; the preview token already "
+    "approves the whole branch.")
+DEPRECATED_OWNER = (
+    "Deprecated, removed in v0.15: owner, which can only repeat the "
+    "project's AI coder name.")
+DEPRECATED_HELP_TOPICS = (
+    "Deprecated, removed in v0.15: the topics analyze_for_coding, "
+    "apply_codings, edit_suggestion and coding_style_guidance, which "
+    "repeat the tools' own descriptions.")
+DEPRECATED_HELP_TOPIC_NAMES = frozenset({
+    "analyze_for_coding", "apply_codings", "edit_suggestion",
+    "coding_style_guidance"})
+DEPRECATED_MERGE_PROPOSALS = (
+    "Deprecated, removed in v0.15: reject the proposal instead, and add "
+    "its passages to the other with update_proposal if they belong there.")
+DEPRECATED_JOURNAL_ATTRIBUTES = (
+    "Deprecated, removed in v0.15: attributes on journal entries, which "
+    "this server can set but never reads back; QualCoder's Journals "
+    "window sets them.")
+DEPRECATED_MEMO_SEARCH = (
+    "Deprecated, removed in v0.15: search_memo; search_memos searches "
+    "file memos and every other kind of note.")
+DEPRECATED_EDIT_PARITY = (
+    "Deprecated, removed in v0.15: overlap_policy qualcoder_edit_parity, "
+    "which deletes codings on names and is not exact parity.")
+DEPRECATED_RENAME_BACK = (
+    "Deprecated, removed in v0.15: a rename back recognised from the "
+    "project's backups; QualCoder's own Rename makes it.")
 
 # analyze_for_coding without the researcher's answers (owner ruling 25,
 # question 5, with the Saldaña reading's item 17)
@@ -351,6 +393,60 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
             fn.__doc__ = f"{doc}\n\n{text}\n"
         return fn
     return deco
+
+
+def _with_deprecation(answer: Any, sentence: str) -> Any:
+    """The answer with the deprecation sentence: the "deprecated" key of a
+    JSON object, else a last line of a text answer."""
+    if not isinstance(answer, str):
+        return answer
+    try:
+        payload = json.loads(answer)
+    except ValueError:
+        return f"{answer}\n\n{sentence}"
+    if isinstance(payload, dict):
+        payload["deprecated"] = sentence
+        return json.dumps(payload, indent=2)
+    return answer
+
+
+def _deprecated(sentence: Any, before: Optional[str],
+                when: Optional[Callable[[Dict[str, Any]], bool]] = None):
+    """What goes in v0.15 (owner ruling 25, questions 3, 7 and 8): the
+    sentence in the tool's description (before the line holding
+    `before`), and in every answer the tool gives, or, for an option,
+    only when `when(arguments)` holds. Sits inside _tool_guard.
+
+    A sentence that names a tool the core set lacks, on a core tool, is
+    given as a function returning it marked (`_mark_unregistered`), and
+    is written into the docstring by hand: marking it when the tool is
+    defined would mark tools not yet registered."""
+    def deco(fn):
+        if isinstance(sentence, str):
+            fn = _with_guidance(sentence, before=before)(fn)
+        signature = inspect.signature(fn)
+
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            answer = fn(*args, **kwargs)
+            if when is not None:
+                try:
+                    bound = signature.bind(*args, **kwargs)
+                    bound.apply_defaults()
+                    if not when(bound.arguments):
+                        return answer
+                except TypeError:
+                    return answer
+            return _with_deprecation(
+                answer, sentence if isinstance(sentence, str) else sentence())
+        return wrapper
+    return deco
+
+
+def _is(value: Any, word: str) -> bool:
+    """An argument naming `word`, as the tools read it (spaces and letter
+    case aside)."""
+    return isinstance(value, str) and value.strip().lower() == word
 
 
 # What each tool does, in the four hints MCP defines for a tool
@@ -3922,7 +4018,7 @@ def get_current_project() -> str:
 
 @mcp.tool(annotations=TOOL_DISCLOSES)
 @_tool_guard
-@_with_guidance(DEPRECATED_PSEUDONYM_LIST, before="Call it only")
+@_deprecated(DEPRECATED_PSEUDONYM_LIST, before="Call it only")
 def read_pseudonym_list() -> str:
     """This sends every real name in the project's pseudonyms.json, with its pseudonym, to the AI provider.
 
@@ -3944,12 +4040,10 @@ def read_pseudonym_list() -> str:
     """
     _adopt_configured_project()
     if current_project_path is None:
-        return json.dumps({"error": _no_project_message(),
-                           "deprecated": DEPRECATED_PSEUDONYM_LIST}, indent=2)
+        return json.dumps({"error": _no_project_message()}, indent=2)
     report, entries = _pseudonyms_json_read()
     if entries is None:
-        return json.dumps({"pseudonyms_json": report,
-                           "deprecated": DEPRECATED_PSEUDONYM_LIST}, indent=2)
+        return json.dumps({"pseudonyms_json": report}, indent=2)
     report["entries_list"] = [{"original": item["original"],
                                "pseudonym": item["pseudonym"]}
                               for item in entries]
@@ -3958,8 +4052,7 @@ def read_pseudonym_list() -> str:
     logger.info("read_pseudonym_list returned the project's "
                 "pseudonyms.json list (%d entries) to the conversation.",
                 len(entries))
-    return json.dumps({"pseudonyms_json": report,
-                       "deprecated": DEPRECATED_PSEUDONYM_LIST}, indent=2)
+    return json.dumps({"pseudonyms_json": report}, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS)
@@ -4775,6 +4868,8 @@ def get_coded_segments(code_id: int, limit: int = 100,
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
+@_deprecated(lambda: _mark_unregistered(DEPRECATED_MEMO_SEARCH), before=None,
+             when=lambda a: a.get("search_memo") is True)
 def search_files(
     pattern: str,
     search_filename: bool = True,
@@ -4790,15 +4885,12 @@ def search_files(
 
     This tool helps you find specific files in the project without searching
     the entire filesystem. Perfect for locating interview transcripts by
-    participant name, finding files with specific content, or searching memos.
+    participant name or finding files with specific content.
 
     PERFORMANCE GUIDE:
     - Filename search: Fast (milliseconds) - searches file names only
     - Content search: Slower (can take seconds for 100+ files) - searches full text
-    - Memo search: Fast (milliseconds) - searches file memos. Only the
-      public part of a memo is matched and previewed: text from the first
-      '#####' marker onward (QualCoder 4.0's private-note convention) is
-      never searched or returned
+    - Memo search: file memos, the public part only (before '#####')
 
     IMPORTANT - CLARIFICATION WORKFLOW:
     When a user's request is ambiguous (e.g., "search for files containing paul"):
@@ -4807,8 +4899,7 @@ def search_files(
        "I can search for 'paul' in:
         - File names only (fast)
         - File content (slower, searches full transcript text)
-        - File memos
-        - All of the above
+        - Both
 
         Which would you prefer?"
 
@@ -4831,6 +4922,8 @@ def search_files(
     PAGING: the result carries a page block. Pass its next_cursor back as
     cursor WITH THE SAME other arguments to continue; a cursor is bound
     to them. Nothing is stored between calls.
+
+    Deprecated, removed in v0.15: search_memo; search_memos searches file memos and every other kind of note.
 
     Args:
         pattern: Text to search for (case-insensitive by default)
@@ -4881,7 +4974,7 @@ def search_files(
 
         User says: "Search everywhere for 'motivation'"
         → search_files("motivation", search_filename=True,
-                      search_content=True, search_memo=True)
+                      search_content=True), and search_memos for notes
 
         User says: "Search for files containing paul" (AMBIGUOUS!)
         → Ask user to clarify: filename, content, or both?
@@ -4890,9 +4983,7 @@ def search_files(
     Tips:
     - For finding a specific interview by participant name, use search_filename
     - For finding specific quotes or themes, use search_content
-    - For searching file memos, use search_memo (every other kind of
-      note, from code and coding memos to annotations, journal entries
-      and the project memo, is searched by the search_memos tool)
+    - For notes of any kind, file memos included, use search_memos
     - You can combine multiple search locations
     - Once you have file_id, use analyze_file_with_coding() to get full content
     """
@@ -5107,6 +5198,7 @@ CODE_REPORT_SEGMENT_LIMIT = 1000
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
+@_deprecated(DEPRECATED_CODE_REPORT, before="This tool creates")
 def export_code_report(code_name: str) -> str:
     """Generate a comprehensive report for a specific code.
 
@@ -5182,6 +5274,7 @@ def export_code_report(code_name: str) -> str:
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_deprecated(DEPRECATED_REFI_EXPORT, before="REFI-QDA is the interchange")
 def export_refi_qda(
     output_path: str,
     coding_session_id: Optional[str] = None,
@@ -5212,16 +5305,10 @@ def export_refi_qda(
     newlines as single \\n), 0-based, end-exclusive. Tools that count \\r\\n
     as two characters (e.g. NVivo) may show shifted boundaries.
 
-    Known limitations (documented): cases, annotations and journals are not
-    included (the categories above the exported codes ARE included, as
-    non-codable parent codes, and the answer's note says so); all
-    selections are attributed to a single export user rather than to the
-    original coders, even when the project has used several AI coder
-    names. That user is named after the project's AI coder name, or,
-    when the project has none, after this host's declaration
-    (QUALCODER_MCP_AI_CODER_NAME) or the built-in default; the export
-    never asks for a name, and the result says which of the three it
-    used (ai_user_name_source).
+    The categories above the exported codes are included, as non-codable
+    parent codes. The one export user is named after the project's AI
+    coder name, else this host's declaration (QUALCODER_MCP_AI_CODER_NAME)
+    or the built-in default; the result says which (ai_user_name_source).
 
     Args:
         output_path: Where to write the .qdpx file (must end in .qdpx; the
@@ -8105,6 +8192,8 @@ Use `apply_codings` with session ID `{session_id}` to write approved suggestions
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_deprecated(DEPRECATED_OWNER, before="Args:",
+             when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def apply_codings(
     coding_session_id: str,
@@ -8148,14 +8237,9 @@ def apply_codings(
     Args:
         coding_session_id: The session ID with approved suggestions
         create_backup: Create timestamped backup before writing (default: True)
-        owner: Deprecated since v0.12 and kept in the signature for
-               one release cycle only; removal is planned for v1.0.
-               Every row is attributed to the project's AI coder name;
-               passing exactly that name is a no-op, any other value is
-               refused before backup or write. To attribute a write
-               differently, change the project's AI coder name first
-               (set_project_ai_coder_name). A human coder's name is
-               never used.
+        owner: Deprecated (above). Only the project's AI coder name is
+               accepted, as a no-op; any other value is refused before
+               backup or write (set_project_ai_coder_name changes it)
 
     Returns:
         Detailed confirmation of what was written to the database
@@ -8502,6 +8586,8 @@ def apply_codings(
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_deprecated(DEPRECATED_OWNER, before="Args:",
+             when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def import_text_file(
     filename: str,
@@ -8541,14 +8627,9 @@ def import_text_file(
                   take for this text's stored copy
         content: The full text content of the file
         memo: Optional memo/description for the file
-        owner: Deprecated since v0.12 and kept in the signature for
-               one release cycle only; removal is planned for v1.0.
-               Every row is attributed to the project's AI coder name;
-               passing exactly that name is a no-op, any other value is
-               refused before backup or write. To attribute a write
-               differently, change the project's AI coder name first
-               (set_project_ai_coder_name). A human coder's name is
-               never used.
+        owner: Deprecated (above). Only the project's AI coder name is
+               accepted, as a no-op; any other value is refused before
+               backup or write (set_project_ai_coder_name changes it)
         create_backup: Create timestamped backup before writing (default: True)
         case_name: Optional existing case to link the new file to.
                    The same name after spacing and Unicode form are
@@ -10139,6 +10220,7 @@ def delete_coding_session(coding_session_id: str) -> str:
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_deprecated(DEPRECATED_CLEANUP, before="Deletes every session file")
 def cleanup_old_sessions(days_old: int = 30) -> str:
     """Clean up old coding sessions, for every project on this computer.
 
@@ -10185,6 +10267,8 @@ def cleanup_old_sessions(days_old: int = 30) -> str:
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
+@_deprecated(DEPRECATED_HELP_TOPICS, before="Args:",
+             when=lambda a: a.get("tool_name") in DEPRECATED_HELP_TOPIC_NAMES)
 def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     """Get help and examples for AI coding tools.
 
@@ -11068,18 +11152,16 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_deprecated(DEPRECATED_MERGE_PROPOSALS, before="Session-only")
 def merge_proposals(coding_session_id: str, from_proposal_guid: str,
                     into_proposal_guid: str) -> str:
     """Combine two code PROPOSALS before creation.
 
-    Session-only (writes nothing to the project; entirely distinct from
-    merge_codes, which merges real codes in the codebook). The target
-    proposal keeps its name/colour/category/definition and gains the
-    source's evidence segments (deduplicated by file and span). The
-    source is marked MERGED, a final status: it can never be approved or
-    created, so its evidence is written once, under the target. If the
-    target was approved, it returns to pending (approval_withdrawn),
-    since its evidence changed: show it to the researcher again.
+    Session-only (unlike merge_codes). The target keeps its name, colour,
+    category and definition and gains the source's passages
+    (deduplicated). The source is marked MERGED, a final status: never
+    approved or created. An approved target returns to pending
+    (approval_withdrawn): show it to the researcher again.
 
     Args:
         coding_session_id: The session ID
@@ -12691,6 +12773,8 @@ def merge_codes(from_code_id: int, into_code_id: int,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_deprecated(DEPRECATED_CASCADE, before="Args:",
+             when=lambda a: a.get("cascade") is True)
 def delete_code(code_id: int, preview_token: Optional[str] = None,
                 cascade: bool = False,
                 allow_hidden_coder: bool = False) -> str:
@@ -12732,8 +12816,8 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
         preview_token: The token from this operation's preview; omit it to
                  get the preview
         cascade: Must be true to delete a code that has sub-codes (the
-                 whole branch dies; default false refuses instead). The
-                 preview's execute_with sets it when there are sub-codes
+                 whole branch dies; default false refuses instead); the
+                 preview's execute_with sets it. Deprecated (above)
         allow_hidden_coder: Required when the preview reports codings that
                  belong to a coder currently hidden in QualCoder
     """
@@ -14520,6 +14604,8 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_deprecated(DEPRECATED_EDIT_PARITY, before="Args:",
+             when=lambda a: a.get("overlap_policy") == "qualcoder_edit_parity")
 def pseudonymise_source(
     mapping: Optional[List[Dict[str, Any]]] = None,
     *,
@@ -16276,6 +16362,7 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_with_guidance(DEPRECATED_RENAME_BACK, before="The result carries")
 def rename_file(file_id: int, new_name: str,
                 create_backup: bool = True) -> str:
     """Rename a file's entry. THIS WRITES TO THE DATABASE. Only the name.
@@ -16305,13 +16392,11 @@ def rename_file(file_id: int, new_name: str,
     in '.txt' or has no dot keeps it that way. QualCoder's own Rename can
     still make those changes. Any other name changes freely
     ('Thomas.Jones' to 'P01'). A rename back is not refused: an ending
-    the file had before (its stored file's own name shows one, and so
-    does any of the project's backups that shows this same entry, the
-    same id and the same date, which this tool reads for that) may be
-    restored, except a transcript losing both endings or a media file its
-    extension; and a text with no stored file may take back its own copy
-    in the documents folder under a name such a backup shows it with and,
-    for its documents copy, the same text.
+    the file had before (its stored file's own name, or a project backup
+    showing this entry, same id and date) may be restored, except a
+    transcript losing both endings or a media file its extension; a text
+    with no stored file may take back its documents copy under a name
+    such a backup shows, with the same text.
 
     The result carries `changed: true`, `old_name`, `file_type`, and
     what kept the old name: `stored_copy` (an imported file's copy in the
@@ -16377,11 +16462,18 @@ def rename_file(file_id: int, new_name: str,
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="the file was not renamed")
+    # A rename back that only a backup licensed goes in v0.15 (owner
+    # ruling 25, question 8)
+    if result.get("changed") and any(name is not None
+                                     for name in evidence.values()):
+        result["deprecated"] = DEPRECATED_RENAME_BACK
     return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
+             when=lambda a: _is(a.get("applies_to"), "journal"))
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_attribute_type(name: str, applies_to: str,
                           value_type: str = "character",
@@ -16447,6 +16539,8 @@ def create_attribute_type(name: str, applies_to: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
+             when=lambda a: _is(a.get("target_type"), "journal"))
 def set_attribute(target_type: str, target_id: int, attribute_name: str,
                   value: str, create_backup: bool = True) -> str:
     """Set (or clear) an attribute value on a case, file or journal.

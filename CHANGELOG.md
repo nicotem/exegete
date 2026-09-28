@@ -853,6 +853,33 @@ ruling 25).
 - **`read_pseudonym_list`.** QualCoder's Pseudonyms dialog (the button
   in Manage Files) shows the same list without sending it to the AI
   provider. The tool keeps its marks: the host asks before each call.
+- **`export_refi_qda`, both the whole-project and the session export.**
+  It files every coding under the AI coder name and leaves out cases,
+  annotations, journals and media, and a session's export includes
+  rejected suggestions unmarked. QualCoder's own export (Project, Export,
+  REFI-QDA Project export) keeps each coder, the cases, the notes and
+  the media.
+- **`export_code_report`.** `get_coded_segments(code_id=...)` reads the
+  same passages, page by page and without the limit of 1,000.
+- **`cleanup_old_sessions`**, which deletes every project's old sessions
+  with no preview; `delete_coding_session` removes one.
+- **`merge_proposals`.** Now that creating a code writes no passage, a
+  merge is a rejection: reject the proposal, and add its passages to the
+  other with `update_proposal` if they belong there.
+- **The help topics `analyze_for_coding`, `apply_codings`,
+  `edit_suggestion` and `coding_style_guidance`** of
+  `explain_ai_coding_tools`, which repeat the tools' own descriptions.
+- **Options:** `delete_code`'s `cascade` (the preview token already
+  approves the whole branch); `owner` on `apply_codings` and
+  `import_text_file` (it can only repeat the project's AI coder name;
+  planned for v1.0 until now); attributes on journal entries through
+  `create_attribute_type` and `set_attribute` (set here, never read back;
+  QualCoder's Journals window sets them); `search_files`' `search_memo`
+  (`search_memos` searches file memos and every other kind of note);
+  `pseudonymise_source`'s `overlap_policy` `qualcoder_edit_parity` (it
+  deletes codings on names and is not exact parity); and a rename back
+  that `rename_file` recognises from the project's backups (QualCoder's
+  own Rename makes it). Each says so in its answer only when it is used.
 
 ### Upgrading from 0.13.x
 
@@ -1039,6 +1066,10 @@ The AI coding loop:
 - **The help's `saturation_and_novelty` entry is now `not_yet_coded`**;
   `get_coding_frequencies` gains `counts_note`, and `search_files`'
   `novelty_filter` block gains `note` when a file has every match coded.
+- **A `deprecated` key.** The answers of the tools and options listed
+  under Deprecated gain `deprecated`, one sentence; `apply_codings`,
+  whose answer is text, gains it as a last line when `owner` is passed.
+  A JSON answer that carries it is written with two-space indentation.
 - **Memos already in your projects are never rewritten.** A coding
   applied by an earlier release keeps its "[AI Confidence: 0.85]" line;
   remove it in QualCoder if you do not want it in the record.

@@ -1206,9 +1206,10 @@ class TestOwnerArgument:
     def test_the_deprecation_is_in_both_docstrings(self):
         for tool in (server.apply_codings, server.import_text_file):
             doc = " ".join((tool.__doc__ or "").split())
-            assert "Deprecated since v0.12" in doc
-            assert "removal is planned for v1.0" in doc
-            assert "A human coder's name is never used." in doc
+            # v0.14's coding-loop fix round 2 (owner ruling 25, question
+            # 8): removed in v0.15, where v1.0 was planned
+            assert server.DEPRECATED_OWNER in doc
+            assert "Only the project's AI coder name is accepted" in doc
 
 
 # =============================================================================

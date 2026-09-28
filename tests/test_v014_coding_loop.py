@@ -1804,6 +1804,140 @@ class TestFixRound2WhatGoesInV015:
         assert server.mcp._tool_manager._tools[
             "read_pseudonym_list"].annotations == server.TOOL_DISCLOSES
 
+    def test_the_refi_qda_exports(self, setup_server, tmp_path):
+        self._described("export_refi_qda", server.DEPRECATED_REFI_EXPORT)
+        for words in ("files every coding under the AI coder name",
+                      "leaves out cases, annotations, journals and media",
+                      "includes rejected suggestions unmarked",
+                      "QualCoder's own export (Project, Export, REFI-QDA "
+                      "Project export)"):
+            assert words in server.DEPRECATED_REFI_EXPORT, words
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        session_export = jcall("export_refi_qda", coding_session_id=sid,
+                               output_path=str(tmp_path / "s.qdpx"))
+        assert session_export["success"] is True
+        assert session_export["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        approve_and_apply(sid, [g])
+        project_export = jcall("export_refi_qda",
+                               output_path=str(tmp_path / "p.qdpx"))
+        assert project_export["success"] is True
+        assert project_export["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        refused = jcall("export_refi_qda", output_path="relative.qdpx")
+        assert "error" in refused
+        assert refused["deprecated"] == server.DEPRECATED_REFI_EXPORT
+
+    def test_whole_tools_that_go(self, setup_server):
+        self._described("export_code_report", server.DEPRECATED_CODE_REPORT)
+        assert jcall("export_code_report", code_name="Stress")[
+            "deprecated"] == server.DEPRECATED_CODE_REPORT
+        self._described("cleanup_old_sessions", server.DEPRECATED_CLEANUP)
+        assert jcall("cleanup_old_sessions", days_old=3650)[
+            "deprecated"] == server.DEPRECATED_CLEANUP
+        self._described("merge_proposals",
+                        server.DEPRECATED_MERGE_PROPOSALS)
+        sid = new_session()
+        a, b = [r["guid"] for r in jcall(
+            "propose_codes", coding_session_id=sid,
+            proposals=[{"name": "One"}, {"name": "Two"}])["recorded"]]
+        merged = jcall("merge_proposals", coding_session_id=sid,
+                       from_proposal_guid=b, into_proposal_guid=a)
+        assert merged["success"] is True
+        assert merged["deprecated"] == server.DEPRECATED_MERGE_PROPOSALS
+
+    @staticmethod
+    def _warned(answer, sentence, expected):
+        text = answer if isinstance(answer, str) else json.dumps(answer)
+        assert (sentence in text) is expected, (sentence, text[-300:])
+
+    def test_options_that_go_warn_only_when_used(self, setup_server,
+                                                 qualcoder_db_path):
+        for tool, sentence in (
+                ("delete_code", server.DEPRECATED_CASCADE),
+                ("apply_codings", server.DEPRECATED_OWNER),
+                ("import_text_file", server.DEPRECATED_OWNER),
+                ("explain_ai_coding_tools", server.DEPRECATED_HELP_TOPICS),
+                ("create_attribute_type",
+                 server.DEPRECATED_JOURNAL_ATTRIBUTES),
+                ("set_attribute", server.DEPRECATED_JOURNAL_ATTRIBUTES),
+                ("search_files", server.DEPRECATED_MEMO_SEARCH),
+                ("pseudonymise_source", server.DEPRECATED_EDIT_PARITY),
+                ("rename_file", server.DEPRECATED_RENAME_BACK)):
+            self._described(tool, sentence)
+        cascade = server.DEPRECATED_CASCADE
+        self._warned(jcall("delete_code", code_id=1, cascade=True),
+                     cascade, True)
+        self._warned(jcall("delete_code", code_id=1), cascade, False)
+        owner = server.DEPRECATED_OWNER
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        call("update_suggestion_status", coding_session_id=sid, approve=[g])
+        self._warned(call("apply_codings", coding_session_id=sid,
+                          create_backup=False, owner="Somebody Else"),
+                     owner, True)
+        self._warned(call("apply_codings", coding_session_id=sid,
+                          create_backup=False), owner, False)
+        self._warned(call("import_text_file", filename="a.txt",
+                          content="text", owner="Somebody Else",
+                          create_backup=False), owner, True)
+        self._warned(call("import_text_file", filename="b.txt",
+                          content="text", create_backup=False),
+                     owner, False)
+        topics = server.DEPRECATED_HELP_TOPICS
+        for topic in sorted(server.DEPRECATED_HELP_TOPIC_NAMES):
+            self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
+                         topics, True)
+        for topic in (None, "grounding_rules", "methods_notes"):
+            self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
+                         topics, False)
+        journal = server.DEPRECATED_JOURNAL_ATTRIBUTES
+        self._warned(jcall("create_attribute_type", name="Mood",
+                           applies_to=" Journal ", create_backup=False),
+                     journal, True)
+        self._warned(jcall("create_attribute_type", name="Age",
+                           applies_to="case", create_backup=False),
+                     journal, False)
+        self._warned(jcall("set_attribute", target_type="journal",
+                           target_id=1, attribute_name="Mood", value="x",
+                           create_backup=False), journal, True)
+        self._warned(jcall("set_attribute", target_type="case",
+                           target_id=1, attribute_name="Age", value="3",
+                           create_backup=False), journal, False)
+        memo = server.DEPRECATED_MEMO_SEARCH
+        self._warned(jcall("search_files", pattern="x", search_memo=True),
+                     memo, True)
+        self._warned(jcall("search_files", pattern="x"), memo, False)
+        parity = server.DEPRECATED_EDIT_PARITY
+        self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
+                           file_id=1, overlap_policy="qualcoder_edit_parity"),
+                     parity, True)
+        self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
+                           file_id=1), parity, False)
+
+    def test_in_core_the_memo_search_warning_marks_search_memos(
+            self, setup_server):
+        server._apply_toolset("core")      # the conftest restores it
+        out = jcall("search_files", pattern="x", search_memo=True)
+        assert out["deprecated"] == server.DEPRECATED_MEMO_SEARCH.replace(
+            "search_memos", "search_memos" + server.NOT_IN_THIS_TOOL_SET)
+
+    def test_a_rename_back_licensed_by_a_backup(self, setup_server,
+                                                qualcoder_db_path):
+        project = Path(qualcoder_db_path)
+        (project / "documents").mkdir(exist_ok=True)
+        (project / "documents" / "legacy.txt").write_text("original")
+        _sql(qualcoder_db_path,
+             "INSERT INTO source (id, name, fulltext, mediapath, memo, "
+             "owner, date) VALUES (5, 'legacy.txt', 'Some text.', NULL, '', "
+             "'gui_user', '2024-01-15 10:00:00')")
+        server.switch_project(server.current_project_path)
+        away = jcall("rename_file", file_id=5, new_name="legacy2.txt")
+        assert away["changed"] is True and "deprecated" not in away
+        back = jcall("rename_file", file_id=5, new_name="legacy.txt",
+                     create_backup=False)
+        assert back["changed"] is True
+        assert back["deprecated"] == server.DEPRECATED_RENAME_BACK
+
 
 class TestFixRound2TheCountWords:
     """Owner ruling 26 (question 4, narrowed), with the reading's item 16:

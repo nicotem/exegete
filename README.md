@@ -958,7 +958,7 @@ carries the complete list.
 > plus `create_project`, 74 tools. Creating projects stays out of the
 > default set so that researchers opt in to a tool that makes folders on
 > their disk; it is not in `core` either. Measured as below, the
-> `lifecycle` definitions run to about 198,000 characters, roughly 50k
+> `lifecycle` definitions run to about 198,000 characters, roughly 49k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with

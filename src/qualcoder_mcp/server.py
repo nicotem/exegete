@@ -7613,10 +7613,10 @@ def review_suggestions(
     Shows each suggestion as the researcher judges it: in a transcript
     the turn before it (the nearest earlier turn by another speaker,
     found by its speaker label; a short backchannel skipped), then the
-    paragraph or turn holding the passage, marked, then the code, the
-    reading and the reason. That text is read from the file now, never
-    stored; with another project open none is shown. edit_suggestion
-    adjusts a span in place.
+    paragraph or turn holding the passage, marked, then code, reading and
+    reason. That text is read from the file now, never stored; with
+    another project open none is shown. edit_suggestion adjusts a span in
+    place.
 
     SPAN ALTERNATIVES: a pending, unadjusted suggestion may carry
     shorter/longer spans (core sentence; paragraph or speaker turn).

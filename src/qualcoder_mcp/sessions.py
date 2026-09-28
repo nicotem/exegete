@@ -144,7 +144,13 @@ class CodingSuggestion:
         # Server-computed ready-made span adjustments (shorter/longer).
         # Presentational only: use_alternative recomputes from the current
         # fulltext at edit time. [] for pre-v0.8 sessions (zero migration).
-        self.span_alternatives = span_alternatives or []
+        # A span's text is not kept (owner ruling 25, question 9): a
+        # "preview" an earlier release stored is dropped here, so it is
+        # never shown and is gone at the next save
+        self.span_alternatives = [
+            {k: v for k, v in alt.items() if k != "preview"}
+            if isinstance(alt, dict) else alt
+            for alt in (span_alternatives or [])]
         # True once the researcher edited this suggestion (span or code) —
         # review stops offering alternatives on decided-and-adjusted spans
         self.adjusted = bool(adjusted)

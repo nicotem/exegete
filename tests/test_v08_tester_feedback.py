@@ -422,13 +422,18 @@ class TestAmendmentSpanAlternatives:
         out = json.loads(server.record_suggestions(sid, [
             {"reading": "explicit", "file_id": 11, "code_name": "Stress",
              "segment_text": "A sentence about workplace stress and reporting."}]))
+        guid = out["recorded"][0]["guid"]
         session = server.session_manager.load_session(sid)
-        alts = session.get_suggestion_by_guid(
-            out["recorded"][0]["guid"]).span_alternatives
-        lg = next(a for a in alts if a["label"] == "longer")
-        assert "[…]" in lg["preview"]
-        assert len(lg["preview"]) < 140       # token-frugal
-        assert "\n" not in lg["preview"]      # flattened
+        alts = session.get_suggestion_by_guid(guid).span_alternatives
+        # v0.14: stored with positions and length only; the preview is made
+        # from the file when the small review shows it
+        assert all("preview" not in a for a in alts)
+        review = server.review_suggestions(sid, suggestion_guids=[guid])
+        line = next(l for l in review.splitlines()
+                    if l.startswith("↔ longer"))
+        preview = line.split("“", 1)[1].rstrip("”")
+        assert "[…]" in preview
+        assert len(preview) < 140             # token-frugal
 
 
 class TestAmendmentHintsAndRendering:
@@ -493,8 +498,9 @@ class TestAmendmentHintsAndRendering:
         guid = _record_one(sid)
         out = server.review_suggestions(sid, suggestion_guids=[guid],
                                         show_context=True)
-        assert "longer (paragraph" in out
-        assert "This is interview text." in out  # preview visible here
+        line = next(l for l in out.splitlines() if l.startswith("↔ longer"))
+        assert "longer (paragraph" in line
+        assert "This is interview text." in line  # preview visible here
 
 
 class TestPanelFixtures:

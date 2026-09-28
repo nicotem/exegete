@@ -196,8 +196,8 @@ Status: PENDING
 
 File: interview_002.txt (ID: 2), position 892-1045
 
-Question before it:
-Interviewer: How does a normal working day go for you?
+The turn before it:
+Interviewer: Talk me through a normal working day.
 
 Passage, in its speaker turn (the coded words between ⟦ and ⟧):
 P2: My manager expects immediate responses to everything. ⟦The
@@ -211,9 +211,12 @@ Reason: The participant does not name stress; interruptions, inability
 to focus and exhaustion are read as workplace stress.
 ```
 
-The question and the text around the passage are read from the file
-each time you review; the session file keeps none of it. While another
-project is open, the review shows the passage alone and says why.
+The turn before (the nearest earlier turn by another speaker, found by
+its speaker label, whether or not it asks a question; a short
+backchannel such as "Mm-hmm." is passed over), the text around the
+passage and the text of any shorter or longer span offered are read from
+the file each time you review; the session file keeps none of it. While another project is open, the review
+shows the passage alone and says why.
 
 ### Step 4: Approve or Reject Suggestions
 

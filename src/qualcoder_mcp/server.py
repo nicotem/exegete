@@ -2713,7 +2713,9 @@ def _resolve_segment_positions(
 # whenever a span is verified, precompute up to two ready-made adjustments so
 # a researcher can fix span length with one pick instead of describing
 # offsets. Stored copies are PRESENTATIONAL — use_alternative recomputes from
-# the current fulltext at edit time. Deterministic, code-point-safe, no new
+# the current fulltext at edit time. They hold positions and a gloss only:
+# the text of a span is read from the file when it is shown (v0.14, owner
+# ruling 25, question 9). Deterministic, code-point-safe, no new
 # dependencies. Heuristics (documented):
 # - Sentences: ONE global segmentation of the fulltext; sentence ends are
 #   [.!?]+ runs, optionally followed by closing quotes/brackets, before
@@ -2809,7 +2811,6 @@ def _alternative_entry(label: str, unit: str, fulltext: str,
         "unit": unit,                       # render gloss, e.g. "1 sentence"
         "start_pos": start,
         "end_pos": end,
-        "preview": _span_preview(fulltext[start:end]),
         "length": end - start,              # code points
     }
 
@@ -7064,17 +7065,21 @@ def _passage_context(fulltext: str, start: int, end: int
                      ) -> Dict[str, Any]:
     """The file's own text around a passage, as the review shows it (owner
     ruling 25, question 9, with the reading's item 20): the paragraph or
-    speaker turn that holds it, and, in a transcript, the question before
-    it. Read from the file each time; nothing of it is stored.
+    speaker turn that holds it, and, in a transcript, the turn before it.
+    Read from the file each time; nothing of it is stored.
 
-    Returns {"unit", "before", "after"} and "question" when there is one:
+    Returns {"unit", "before", "after"} and "turn_before" when there is one:
     before and after are the unit's text either side of the passage (the
     speaker label kept, so it says who speaks). The unit is the
     paragraph (blank lines), else the speaker turn (single newlines in a
     file with no blank line); one longer than max(1500, 4x the passage)
-    gives way to one sentence either side. The question is the nearest
+    gives way to one sentence either side. The turn before is the nearest
     earlier unit, within 2000 characters, whose speaker label differs
-    from the passage's own and which holds a question mark."""
+    from the passage's own, whatever its punctuation: a prompt ("Tell me
+    about ...") or another participant's aside is shown as it is, never
+    passed over for an earlier question (fix round 3). Only a short
+    backchannel ("Mm-hmm.", "Right, okay.": at most three words and no
+    question mark) is passed over, to the turn before it."""
     n = len(fulltext)
     t_start, t_end = _trim_span(fulltext, max(0, start), min(end, n))
     sep_re, unit = _PARAGRAPH_SEP_RE, "paragraph"
@@ -7114,11 +7119,14 @@ def _passage_context(fulltext: str, start: int, end: int
     for u_start, u_end in reversed(units):
         u_start, u_end = _trim_span(fulltext, u_start, u_end)
         other = _SPEAKER_LABEL_RE.match(fulltext, u_start, u_end)
-        if (u_start < u_end and other is not None
-                and other.group(0).strip() != speaker
-                and "?" in fulltext[u_start:u_end]):
-            context["question"] = fulltext[u_start:u_end]
-            break
+        if (u_start >= u_end or other is None
+                or other.group(0).strip() == speaker):
+            continue
+        said = fulltext[other.end():u_end]
+        if "?" not in said and len(re.findall(r"\w+", said)) <= 3:
+            continue            # a backchannel: the turn before it
+        context["turn_before"] = fulltext[u_start:u_end]
+        break
     return context
 
 
@@ -7130,14 +7138,18 @@ CONTEXT_NOT_SHOWN_NOTE = (
 
 
 def _contexts_for_display(session: AICodingSession,
-                          suggestions: List[CodingSuggestion]
+                          suggestions: List[CodingSuggestion],
+                          with_alternatives: bool = False
                           ) -> Dict[str, Tuple[Optional[Dict[str, Any]],
                                                Optional[str]]]:
     """The text each suggestion is shown with, read from the file now, or
     None with the reason: the session's project is not the one open (file
     ids mean nothing in another project), or the file no longer holds the
     passage. Nothing stored is ever shown (owner ruling 25, question 9).
-    Used by review_suggestions and get_coding_session_info alike."""
+    Used by review_suggestions and get_coding_session_info alike. With
+    `with_alternatives`, the context also carries the shorter and longer
+    spans computed from the same text, with their previews ("alternatives"),
+    which is the only place a span's text is shown."""
     try:
         open_here = _check_session_project(session) is None
     except Exception:
@@ -7157,8 +7169,14 @@ def _contexts_for_display(session: AICodingSession,
             and 0 <= sugg.start_pos < sugg.end_pos <= len(text)) else None
         if span is not None and span in (
                 sugg.segment_text, sugg.segment_text.replace("\u2029", "\n")):
-            out[sugg.guid] = (_passage_context(text, sugg.start_pos,
-                                               sugg.end_pos), None)
+            context = _passage_context(text, sugg.start_pos, sugg.end_pos)
+            if with_alternatives:
+                context["alternatives"] = [
+                    {**alt, "preview": _span_preview(
+                        text[alt["start_pos"]:alt["end_pos"]])}
+                    for alt in _compute_span_alternatives(
+                        text, sugg.start_pos, sugg.end_pos)]
+            out[sugg.guid] = (context, None)
         else:
             out[sugg.guid] = (None, CONTEXT_STALE_NOTE)
     return out
@@ -7521,7 +7539,7 @@ def record_suggestions(
             "end_pos": end_pos,
             "reading": reading,
             "positions_corrected": corrected,
-            # labels only — the full alternatives (with previews) live on
+            # labels only — the alternatives (positions and gloss) live on
             # the suggestion; review_suggestions shows them compactly
             "alternatives": [a["label"]
                              for a in suggestion.span_alternatives],
@@ -7592,13 +7610,13 @@ def review_suggestions(
 ) -> str:
     """Review coding suggestions in detail.
 
-    Shows each suggestion as the researcher judges it: by default the
-    question before it (in a transcript), then the paragraph or speaker
-    turn holding the passage, marked, then the code, the reading and the
-    reason. That text is read from the file now and never stored; while
-    the session's project is not the one open, none is shown and the
-    review says why. If a span needs adjusting, edit_suggestion changes
-    it in place.
+    Shows each suggestion as the researcher judges it: in a transcript
+    the turn before it (the nearest earlier turn by another speaker,
+    found by its speaker label; a short backchannel skipped), then the
+    paragraph or turn holding the passage, marked, then the code, the
+    reading and the reason. That text is read from the file now, never
+    stored; with another project open none is shown. edit_suggestion
+    adjusts a span in place.
 
     SPAN ALTERNATIVES: a pending, unadjusted suggestion may carry
     shorter/longer spans (core sentence; paragraph or speaker turn).
@@ -7662,7 +7680,8 @@ def review_suggestions(
     small_subset = bool(suggestion_guids) and len(suggestions) <= 5
     contexts: Dict[str, Tuple[Optional[Dict[str, Any]], Optional[str]]] = {}
     if show_context:
-        contexts = _contexts_for_display(session, suggestions)
+        contexts = _contexts_for_display(session, suggestions,
+                                         with_alternatives=small_subset)
 
     for i, sugg in enumerate(suggestions, 1):
         output.append(f"\n{'='*70}")
@@ -7677,9 +7696,9 @@ def review_suggestions(
         # code, the reading and the reason
         context, note = (contexts[sugg.guid] if show_context
                          else (None, None))
-        if context is not None and context.get("question"):
-            output.append(f"\n**Question before it:**")
-            output.append(f"```\n{context['question']}\n```")
+        if context is not None and context.get("turn_before"):
+            output.append(f"\n**The turn before it:**")
+            output.append(f"```\n{context['turn_before']}\n```")
         if context is not None and (context["before"] or context["after"]):
             output.append(f"\n**Passage, in its {context['unit']}** "
                           f"(the coded words between ⟦ and ⟧):")
@@ -7698,15 +7717,20 @@ def review_suggestions(
         output.append(f"**Reason:** {sugg.reasoning}")
 
         # Span alternatives: one line each, unit-glossed; previews only in
-        # the show_context detail view for small guid subsets (token cost);
+        # the show_context detail view for small guid subsets (token cost),
+        # made from the file now where the passage still matches in the
+        # open project, else the gloss alone (nothing stored is shown);
         # nothing in the compact listing; no offers on adjusted spans
         alternatives = getattr(sugg, "span_alternatives", None) or []
         if (alternatives and sugg.status == "pending" and not adjusted
                 and show_context):
-            if small_subset:
-                for a in alternatives:
+            if small_subset and context is not None:
+                for a in context.get("alternatives", []):
                     output.append(f"↔ {_alternative_gloss(a)}: "
                                   f"“{a['preview']}”")
+            elif small_subset:
+                for a in alternatives:
+                    output.append(f"↔ {_alternative_gloss(a)}")
             else:
                 picks = " / ".join(_alternative_gloss(a)
                                    for a in alternatives)
@@ -10095,9 +10119,8 @@ def restore_backup(backup_path: str,
 def get_coding_session_info(coding_session_id: str) -> str:
     """Get detailed information about a coding session.
 
-    Shows all the suggestions, statistics, and metadata for a session.
-    Useful for reviewing what was suggested before exporting. The text
-    around each suggestion is what review_suggestions shows (question,
+    Shows a session's suggestions, statistics and metadata. The text
+    around each suggestion is what review_suggestions shows (turn_before,
     context_before, context_after, context_unit), read from the file now;
     context_note says why when there is none.
 
@@ -10138,8 +10161,8 @@ def get_coding_session_info(coding_session_id: str) -> str:
         for entry in payload.get("suggestions", []):
             context, note = contexts.get(entry.get("guid"), (None, None))
             if context is not None:
-                if context.get("question"):
-                    entry["question"] = context["question"]
+                if context.get("turn_before"):
+                    entry["turn_before"] = context["turn_before"]
                 entry["context_before"] = context["before"]
                 entry["context_after"] = context["after"]
                 entry["context_unit"] = context["unit"]
@@ -10421,9 +10444,12 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                                  "wrote nothing and made no backup.",
             "key_features": [
                 "Analyse complete transcripts with full context",
-                "Suggest coded segments, each marked explicit (the passage "
-                "states it) or interpretive (the assistant reads it in); "
-                "there is no score",
+                # the ruled glosses, from the one place they are kept
+                # (owner ruling 25; fix round 3)
+                f"Suggest coded segments, each marked "
+                f"{reading_in_words('explicit')} or "
+                f"{reading_in_words('interpretive')}, the researcher's to "
+                f"change; there is no score",
                 "Every suggestion verified against the file text before storage",
                 "Review, then record the researcher's decision on each "
                 "suggestion before applying (the server writes what is "
@@ -14288,8 +14314,9 @@ def _sessions_note(holding: List[str], to_apply: List[str]) -> List[str]:
         return []
     note = (f"{len(holding)} coding session file(s) of this project "
             f"(stale_sessions) still hold excerpts of this file's earlier "
-            f"text, real names included: a suggestion's passage and the "
-            f"text around it, or a proposed code's evidence. They are in "
+            f"text, real names included: a suggestion's passage (and, in a "
+            f"file written before v0.14, the text around it) or a proposed "
+            f"code's evidence. They are in "
             f"this server's sessions folder (~/.qualcoder_mcp/sessions/, "
             f"one file per session). ")
     if to_apply:

@@ -983,7 +983,9 @@ will ask, and the summary above depends on them:
     writes anything in there.
   - **This server's own session files** in `~/.qualcoder_mcp/sessions/`.
     A coding session records the excerpt each suggestion refers to and
-    the text around it, and the evidence of each proposed code, so a
+    the evidence of each proposed code (a session file written before
+    v0.14 also holds the text around each excerpt, until it is next
+    saved; from v0.14 that text is read from the file when shown), so a
     session made before a run keeps the pre-pseudonymisation text on
     disk. The run lists every session of the project whose file holds
     an excerpt of the rewritten file, whatever the state of its

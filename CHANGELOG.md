@@ -741,8 +741,9 @@ search or a silent limit.
   session, these first; each is then checked, read, reasoned and
   decided like any suggestion, and a passage in a file the session does
   not cover is marked (`outside_session`). A proposal's passages no
-  longer store shorter and longer spans, which nothing showed; a session
-  file that holds them loses them when it is next saved.
+  longer store shorter and longer spans, which only
+  `get_coding_session_info` returned; a session file that holds them
+  loses them when it is next saved.
 - **The counts say what they count** (owner ruling 26). "Saturation"
   and "prominent themes" are gone from every text the server sends.
   `get_coding_frequencies` says, in its description and its answer
@@ -790,15 +791,24 @@ search or a silent limit.
   and session files keep no surrounding text at all (owner ruling 25):
   `review_suggestions` reads it from the file each time, and shows each
   suggestion in the order a researcher reads it: in a transcript the
-  question before the passage (the nearest earlier turn by another
-  speaker that asks something), then the paragraph or speaker turn that
-  holds it, the coded words marked, then the code, the reading and the
-  reason. `get_coding_session_info` gives the same (`question`,
+  turn before the passage (the nearest earlier turn by another speaker,
+  found by its speaker label, whatever its punctuation, so a prompt such
+  as "Tell me about your manager." or another participant's aside is
+  shown as it is; only a short backchannel such as "Mm-hmm." is passed
+  over), then the paragraph or speaker turn that holds it, the coded
+  words marked, then the code, the reading and the reason.
+  `get_coding_session_info` gives the same (`turn_before`,
   `context_before`, `context_after`, `context_unit`). While the
   session's project is not the one open, or when the file no longer
   holds the span, no surrounding text is shown and both tools say why;
   text a session file stored earlier is never shown, and is cut when the
-  session is next saved.
+  session is next saved. The shorter and longer spans offered for a
+  suggestion keep their positions and length only: the preview of their
+  text that was stored with them (up to about 120 characters of the
+  paragraph or turn around the passage, which could hold a name a later
+  pseudonymisation replaced) is now made from the file when a review of
+  up to five suggestions shows it, only where the passage still matches
+  in the open project, and otherwise the review gives the length alone.
 - **A proposal's approval binds what was approved.** Renaming,
   redefining, recolouring, recategorising or re-evidencing an approved
   proposal (`update_proposal`), or merging evidence into it as a target
@@ -1098,11 +1108,14 @@ The AI coding loop:
   `get_coding_session_info`, is read from the file each time, and none
   is shown while the session's project is not the one open. A session
   file from an earlier release loses its stored `context_before` and
-  `context_after` when it is next saved. The review's layout changed
-  (question, passage in its paragraph or turn, code, reading, reason:
+  `context_after`, and each span alternative's `preview`, when it is
+  next saved; `get_coding_session_info` no longer carries a `preview` on
+  a suggestion's `span_alternatives`. The review's layout changed
+  (the turn before, passage in its paragraph or turn, code, reading,
+  reason:
   "Context Before", "Segment Text" and "AI Reasoning" are gone); a
   script that parses it needs a look. `get_coding_session_info`'s
-  suggestions gain `question` (when there is one) and `context_unit`.
+  suggestions gain `turn_before` (when there is one) and `context_unit`.
 - **Changing an approved proposal withdraws the approval.** Approve,
   then rename, redefine, recolour, recategorise or re-evidence it with
   `update_proposal`, or merge evidence into it: it is pending again
@@ -1153,10 +1166,12 @@ The AI coding loop:
   `update_proposal_status`: `unchanged` and `not_found`, and
   `update_proposal_status` `changed` and `message` too.
   `get_coding_session_info`: each suggestion's `reading`,
-  `reading_cleared`, `applied_ctid`, `question`, `context_unit` and
-  `context_note`, and the session's `scope`; it no longer carries
-  `min_confidence` or a suggestion's `confidence`, `context_from_file`
-  or stored context. `compare_coders`: `files_coded_by_one_coder_only`
+  `reading_cleared`, `applied_ctid`, `turn_before`, `context_unit` and
+  `context_note`, and the session's `scope`; each proposal's
+  `merged_into`; it no longer carries `min_confidence` or a suggestion's
+  `confidence`, `context_from_file` or stored context, a span
+  alternative's `preview`, or `span_alternatives` on a proposal's
+  `example_segments`. `compare_coders`: `files_coded_by_one_coder_only`
   (and its count beyond 50) and `files_coded_by_neither`. A caller that
   compares a whole answer's shape sees them.
 - **Two session files are refused** that no release ever wrote: one

@@ -1403,10 +1403,21 @@ class TestFixRound2TheReading:
                  server.mcp._tool_manager._tools.values()]
         texts += [server.GROUNDING_RECORD, server.READING_REQUIRED,
                   server.explain_ai_coding_tools(), server.METHODS_GUIDANCE]
+        texts += [server.explain_ai_coding_tools(topic) for topic in
+                  ("analyze_for_coding", "apply_codings", "edit_suggestion",
+                   "coding_style_guidance", "grounding_rules",
+                   "methodology_vocabulary", "methods_notes")]
         for text in texts:
             flat = " ".join(text.split())
             assert "reading into" not in flat and "read it in" not in flat
             assert "reading it in" not in flat
+            # the sixth, in the help's overview (fix round 3), and the old
+            # gloss of explicit
+            assert "reads it in" not in flat and "states it)" not in flat
+        overview = " ".join(server.explain_ai_coding_tools().split())
+        assert ("each marked explicit (the passage states what the code "
+                "names) or interpretive (the code rests on what the passage "
+                "implies rather than on what it says)") in overview
 
 
 class TestFixRound2WhatAReadingMayRestOn:
@@ -1705,8 +1716,10 @@ class TestFixRound2TheTextAroundAPassage:
                  out.index("**Reason:** reason for Stress")]
         assert order == sorted(order)
         assert "**Passage, in its speaker turn**" in out
-        # the nearest earlier turn by another speaker that asks something:
-        # not the same speaker's, not a statement, not an earlier question
+        # the nearest earlier turn by another speaker (fix round 3):
+        # not the same speaker's, not a backchannel ("Take your time.",
+        # three words and no question mark), not an earlier turn
+        assert "**The turn before it:**" in out
         assert "Take your time." not in out
         assert "Is that fine?" not in out
         assert "Shall we begin?" not in out
@@ -1726,7 +1739,7 @@ class TestFixRound2TheTextAroundAPassage:
         sid, _ = self._transcript_session(qualcoder_db_path, text)
         entry = jcall("get_coding_session_info",
                       coding_session_id=sid)["suggestions"][0]
-        assert "question" not in entry
+        assert "turn_before" not in entry
         assert entry["context_unit"] == "speaker turn"
 
     def test_blank_line_transcripts_too(self, setup_server,
@@ -1741,7 +1754,7 @@ class TestFixRound2TheTextAroundAPassage:
         sid = new_session()
         record(sid, item(COPE, "Coping"))
         out = call("review_suggestions", coding_session_id=sid)
-        assert "Question before it" not in out
+        assert "The turn before it" not in out
         assert "**Passage, in its paragraph**" in out
         assert f"deadlines. ⟦{COPE}⟧" in out
 
@@ -1750,8 +1763,8 @@ class TestFixRound2TheTextAroundAPassage:
         sid, _ = self._transcript_session(qualcoder_db_path)
         entry = jcall("get_coding_session_info",
                       coding_session_id=sid)["suggestions"][0]
-        assert entry["question"] == ("Interviewer: How do the deadlines "
-                                     "feel to you?")
+        assert entry["turn_before"] == ("Interviewer: How do the deadlines "
+                                        "feel to you?")
         assert entry["context_before"] == "P1: They pile up. "
         assert entry["context_after"] == " Then I go running."
         assert entry["context_unit"] == "speaker turn"
@@ -1771,9 +1784,11 @@ class TestFixRound2TheTextAroundAPassage:
     def test_the_texts_say_it_is_read_not_stored(self):
         tools = server.mcp._tool_manager._tools
         review = " ".join(tools["review_suggestions"].description.split())
-        assert "the question before it (in a transcript), then the " \
-            "paragraph or speaker turn holding the passage" in review
-        assert "read from the file now and never stored" in review
+        assert "in a transcript the turn before it (the nearest earlier " \
+            "turn by another speaker, found by its speaker label; a short " \
+            "backchannel skipped), then the paragraph or turn holding the " \
+            "passage" in review
+        assert "read from the file now, never stored" in review
         edit = " ".join(tools["edit_suggestion"].description.split())
         assert "context shown by review_suggestions is refreshed" not in edit
 
@@ -2156,3 +2171,211 @@ class TestFixRound2TheMinors:
         assert out["reason_note"].startswith(
             "The reason was written for 'Stress'")
         assert "reading_cleared" not in out
+
+
+# =============================================================================
+# FIX ROUND 3 (the re-verification's two majors, and two completions)
+# =============================================================================
+
+class TestFixRound3NoSpanTextStored:
+    """Owner ruling 25, question 9, completed: the shorter and longer spans
+    keep positions and length only; their text is read from the file when
+    a small review shows it, never stored, so a name a pseudonymisation
+    replaced is not shown from a session file."""
+
+    NAME = "Thomasina"
+    TEXT = (f"Interviewer: How was the term?\n\n"
+            f"Respondent: {NAME} told me on Monday that the team was cut. "
+            f"I feel stressed about deadlines. My sister {NAME} says rest."
+            f"\n\nInterviewer: And then?")
+    PASSAGE = "I feel stressed about deadlines."
+
+    def _recorded(self, qualcoder_db_path):
+        _sql(qualcoder_db_path, "UPDATE source SET fulltext = ? WHERE id = 1",
+             (self.TEXT,))
+        server.switch_project(server.current_project_path)
+        sid = new_session()
+        guid = record(sid, item(self.PASSAGE))["recorded"][0]["guid"]
+        return sid, guid
+
+    def test_no_name_after_a_real_pseudonymisation(self, setup_server,
+                                                    qualcoder_db_path):
+        sid, guid = self._recorded(qualcoder_db_path)
+        # before the run, the small review shows the longer span, read
+        # from the file, name and all
+        before = call("review_suggestions", coding_session_id=sid,
+                      suggestion_guids=[guid])
+        assert f"↔ longer (full speaker turn" in before
+        assert self.NAME in before
+        assert self.NAME not in session_file(sid).read_text()
+        mapping = [{"original": self.NAME, "pseudonym": "Pat"}]
+        preview = jcall("pseudonymise_source", mapping=mapping, file_id=1)
+        args = dict(preview["execute_with"]["arguments"])
+        args.update(mapping=mapping, researcher_keeps_mapping=True)
+        args.pop("use_project_pseudonyms", None)
+        done = jcall("pseudonymise_source", **args)
+        assert done.get("success") is True, done
+        assert self.NAME not in rows(
+            qualcoder_db_path, "SELECT fulltext FROM source WHERE id = 1"
+        )[0]["fulltext"]
+        small = call("review_suggestions", coding_session_id=sid,
+                     suggestion_guids=[guid])
+        info = call("get_coding_session_info", coding_session_id=sid)
+        for text in (small, info, session_file(sid).read_text()):
+            assert self.NAME not in text
+        # the passage moved, so no text around it: the length alone
+        assert "↔ longer (full speaker turn, " in small
+        assert "“" not in small.split("↔ longer")[1].splitlines()[0]
+
+    def test_where_the_passage_still_matches_the_preview_is_the_files(
+            self, setup_server, qualcoder_db_path):
+        # the name only after the passage: the run leaves the passage where
+        # it was, and the small review's preview is the file as it is now
+        _sql(qualcoder_db_path, "UPDATE source SET fulltext = ? WHERE id = 1",
+             (f"Respondent: {self.PASSAGE} My sister {self.NAME} says rest."
+              f"\n\nInterviewer: And then?",))
+        server.switch_project(server.current_project_path)
+        sid = new_session()
+        guid = record(sid, item(self.PASSAGE))["recorded"][0]["guid"]
+        mapping = [{"original": self.NAME, "pseudonym": "Pat"}]
+        preview = jcall("pseudonymise_source", mapping=mapping, file_id=1)
+        args = dict(preview["execute_with"]["arguments"])
+        args.update(mapping=mapping, researcher_keeps_mapping=True)
+        args.pop("use_project_pseudonyms", None)
+        assert jcall("pseudonymise_source", **args).get("success") is True
+        small = call("review_suggestions", coding_session_id=sid,
+                     suggestion_guids=[guid])
+        longer = small.split("↔ longer")[1].splitlines()[0]
+        assert "My sister Pat says rest." in longer
+        assert self.NAME not in small
+
+    def test_another_project_open_shows_the_length_alone(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        sid, guid = self._recorded(qualcoder_db_path)
+        import shutil
+        twin = tmp_path / "twin.qda"
+        shutil.copytree(qualcoder_db_path, twin)
+        server.current_project_path = str(twin)
+        small = call("review_suggestions", coding_session_id=sid,
+                     suggestion_guids=[guid])
+        assert self.NAME not in small
+        assert "↔ longer (full speaker turn, " in small
+        entry = jcall("get_coding_session_info", coding_session_id=sid)[
+            "suggestions"][0]
+        assert all("preview" not in alt
+                   for alt in entry["span_alternatives"])
+
+    def test_an_old_files_previews_are_never_shown_and_are_cut(
+            self, setup_server, qualcoder_db_path, tmp_path):
+        sid, guid = self._recorded(qualcoder_db_path)
+        path = session_file(sid)
+        data = json.loads(path.read_text())
+        stored = "an old stored preview naming Marguerite"
+        for alt in data["suggestions"][0]["span_alternatives"]:
+            alt["preview"] = stored
+        path.write_text(json.dumps(data))
+        import shutil
+        twin = tmp_path / "twin.qda"
+        shutil.copytree(qualcoder_db_path, twin)
+        for project in (server.current_project_path, str(twin)):
+            server.current_project_path = project
+            for text in (call("review_suggestions", coding_session_id=sid,
+                              suggestion_guids=[guid]),
+                         call("get_coding_session_info",
+                              coding_session_id=sid)):
+                assert "Marguerite" not in text
+        server.session_manager.save_session(
+            server.session_manager.load_session(sid))
+        saved = json.loads(path.read_text())
+        assert "Marguerite" not in path.read_text()
+        assert all("preview" not in alt for alt in
+                   saved["suggestions"][0]["span_alternatives"])
+
+
+class TestFixRound3TheUpgradingList:
+    """The re-verification's QA finding 1: get_coding_session_info's
+    proposals lost their passages' span_alternatives and gained
+    merged_into, and the list says so."""
+
+    @staticmethod
+    def _sections():
+        text = (Path(__file__).parent.parent / "CHANGELOG.md").read_text(
+            encoding="utf-8").split("## [0.13")[0]
+        upgrading = " ".join(text.split("### Upgrading from 0.13.x")[1]
+                             .split())
+        return " ".join(text.split()), upgrading
+
+    @pytest.mark.parametrize("words", [
+        "each proposal's `merged_into`",
+        "`span_alternatives` on a proposal's `example_segments`",
+        "a span alternative's `preview`",
+        "and each span alternative's `preview`, when it is next saved",
+    ])
+    def test_the_list_names_it(self, words):
+        assert words in self._sections()[1]
+
+    def test_the_changed_entry_says_who_returned_them(self):
+        whole, _ = self._sections()
+        assert "which nothing showed" not in whole
+        assert ("longer store shorter and longer spans, which only "
+                "`get_coding_session_info` returned") in whole
+
+
+class TestFixRound3TheTurnBefore:
+    """The methods re-verification's second point: the review shows the
+    nearest earlier turn by another speaker whatever its punctuation, so
+    it never presents an earlier question as the one the passage
+    answers; only a short backchannel is passed over."""
+
+    PASSAGE = "She never listened to any of us."
+
+    def _turn_before(self, qualcoder_db_path, text):
+        _sql(qualcoder_db_path,
+             "INSERT INTO source (id, name, fulltext, owner, date) VALUES "
+             "(21, 't.txt', ?, 'T', '2024-01-01')", (text,))
+        sid = new_session(file_ids=[21])
+        record(sid, item(self.PASSAGE, file_id=21))
+        review = call("review_suggestions", coding_session_id=sid)
+        entry = jcall("get_coding_session_info",
+                      coding_session_id=sid)["suggestions"][0]
+        return review, entry.get("turn_before")
+
+    @pytest.mark.parametrize("sep", ["\n", "\n\n"])
+    def test_an_imperative_prompt_is_the_turn_before(self, setup_server,
+                                                     qualcoder_db_path, sep):
+        text = sep.join(["I: Did you ever think of leaving?",
+                         "P: Not really, no.",
+                         "I: Tell me about your manager.",
+                         f"P: {self.PASSAGE}"])
+        review, before = self._turn_before(qualcoder_db_path, text)
+        assert before == "I: Tell me about your manager."
+        assert "**The turn before it:**\n```\nI: Tell me about your " \
+            "manager.\n```" in review
+        assert "Did you ever think of leaving?" not in review
+
+    def test_a_group_aside_is_shown_as_what_it_is(self, setup_server,
+                                                  qualcoder_db_path):
+        text = "\n".join(["I: How was the reorganisation for you?",
+                          "P2: Same for me, honestly, it was awful.",
+                          f"P1: {self.PASSAGE}"])
+        review, before = self._turn_before(qualcoder_db_path, text)
+        assert before == "P2: Same for me, honestly, it was awful."
+        assert "How was the reorganisation for you?" not in review
+
+    def test_a_backchannel_is_passed_over(self, setup_server,
+                                          qualcoder_db_path):
+        text = "\n".join(["I: What was the hardest part of the shift?",
+                          "P: The nights.",
+                          "I: Mm-hmm.",
+                          f"P: The nights, and my manager. {self.PASSAGE}"])
+        review, before = self._turn_before(qualcoder_db_path, text)
+        assert before == "I: What was the hardest part of the shift?"
+        assert "I: Mm-hmm." not in review
+
+    def test_the_heading_is_the_turn_not_the_question(self, setup_server,
+                                                      qualcoder_db_path):
+        text = "\n".join(["I: Tell me about your manager.",
+                          f"P: {self.PASSAGE}"])
+        review, _ = self._turn_before(qualcoder_db_path, text)
+        assert "**The turn before it:**" in review
+        assert "Question before it" not in review

@@ -43,13 +43,15 @@ arrives with v0.14; earlier releases have none.
    "Using the qualcoder-mcp tools, is a project open?" and allow the
    tool when Claude asks. The answer is that no project is open.
 
-**Approvals.** Whether Claude asks before one of these tools runs
-depends on the mode a Cowork or Code session is in (Manual or Auto)
-and on each tool's own setting under "+", Connectors; "What hosts do
-with the tools' read and write marks", further down, says what each
-does. In an ordinary chat, what Claude Desktop does is not documented
-by Anthropic and has not been checked for this release. For work on
-real data, keep Claude asking.
+**Approvals.** In a Cowork or Code session, whether Claude asks before
+one of these tools runs depends on the mode the session is in (Manual
+or Auto) and on each tool's own setting under "+", Connectors; "What
+hosts do with the tools' read and write marks", further down, says
+what each does. That is what Anthropic documents, for Cowork and
+Claude Code. What Claude Desktop's ordinary chat, where step 5 asks its
+question, does with the tools' marks is not documented, and this
+project has not yet checked it. For work on real data, keep Claude
+asking.
 
 **Not signed.** The extension carries no publisher signature. On a
 personal Claude plan it installs like any other extension. If your
@@ -78,7 +80,7 @@ contributors who want the source.
 
 Before starting, make sure you have:
 
-- ✅ **A Mac computer** (or Linux/Windows - paths will be slightly different)
+- ✅ **A Mac computer** (or Linux or Windows; paths will be slightly different)
 - ✅ **Qualcoder installed** with at least one project created
   - Download from: https://github.com/ccbogel/QualCoder
   - Make sure you know where your `.qda` project folder is located
@@ -181,7 +183,7 @@ venv\Scripts\activate
 pip install -e .
 ```
 
-This will install all necessary components. You'll see several lines of output - this is normal!
+This will install all necessary components. You'll see several lines of output; this is normal.
 
 To run the test suite as well, install the development extras and run
 pytest from the repository root:
@@ -203,7 +205,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 1. **Find your username**:
    - In Terminal, type: `whoami` and press Enter
-   - Remember this username - you'll need it in a moment
+   - Remember this username: you'll need it in a moment
 
 2. **Find the full path to your installation**:
    ```bash
@@ -240,7 +242,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 1. **Find your .qda project folder**:
    - Open Qualcoder
-   - Look at your project - note its location
+   - Look at your project and note its location
    - **Important**: Qualcoder projects are **folders** with `.qda` extension, not single files
    - Each project folder contains a `data.qda` database file inside
    - Common locations:
@@ -276,7 +278,12 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 - The path in `QUALCODER_PROJECT_PATH` with your actual `.qda` project
   folder (the path to the `data.qda` file inside it is accepted too).
   If the path does not exist the server refuses to start and prints
-  "Error: Database file not found: <path>" to the host's log
+  "Error: the project set in QUALCODER_PROJECT_PATH was not found; check
+  the path in the host's configuration." to the host's log (the path
+  itself is not printed). If the path exists but is not a QualCoder
+  project, or its database will not open, the server starts and every
+  tool answers that the project set in QUALCODER_PROJECT_PATH could not
+  be opened.
 
 4. **Save and Close** the configuration file
 
@@ -361,9 +368,11 @@ variable is optional.
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
   registers the full set plus `create_project`, 74 tools, so that a
   study can be started from the conversation (README.md, "Starting a
-  project from the conversation"). Creating projects stays out of the
-  default set so that researchers opt in to a tool that makes folders on
-  their disk. Any other value stops the server at start-up with an error
+  project from the conversation"). Configured by hand, creating
+  projects stays out of the default set, so that researchers opt in to
+  a tool that makes folders on their disk; the desktop extension sets
+  this variable from its "Tool set" setting, whose default is
+  `lifecycle`. Any other value stops the server at start-up with an error
   naming the valid values. Resources and prompts are not affected.
   In Claude Desktop, add `"QUALCODER_MCP_TOOLSET": "lifecycle"` to the
   server's `env` block; for Claude Code:
@@ -623,7 +632,7 @@ document or one code at a time, and verify codings as you go. Long
 transcripts should be worked in sections. Multi-step batch operations
 (recode across a project, cross-case reports) are not realistic
 targets for local models today. Nothing leaves your machine; the
-tradeoff is that you supervise more, and until an evaluation exists,
+trade-off is that you supervise more, and until an evaluation exists,
 treat every result as needing review.
 
 Troubleshooting: a context overflow typically appears as the model
@@ -669,7 +678,10 @@ for Claude Code: from version 2.1.199, Claude Code asks before every
 call of such a tool in every permission mode, auto and
 `bypassPermissions` included, offers no "don't ask again", lets no
 allow rule skip it, and in `dontAsk` refuses it. Earlier versions ignore
-the mark.
+the mark. The tool is deprecated: v0.14 says so in its description
+and in every answer, and v0.15 removes it (QualCoder's Pseudonyms
+dialog, the button in Manage Files, shows the list without sending it
+anywhere).
 
 What each host does, from Anthropic's pages as read on 27 September
 2026 ("Choose a permission mode" and the MCP page on code.claude.com;
@@ -696,7 +708,7 @@ What each host does, from Anthropic's pages as read on 27 September
   read-only and write or delete, nor whether Cowork honours
   `anthropic/requiresUserInteraction`.
 - **Claude Desktop's chat.** Anthropic's pages do not say what it does
-  with the marks.
+  with the marks, and this project has not yet checked it.
 - **Connectors added on claude.ai** group their tools into read-only and
   write or delete, each with its own "always allow", "needs approval" or
   "blocked" setting ("Use connectors to extend Claude's capabilities"
@@ -743,8 +755,8 @@ technically comfortable users can adapt the pattern today.
 
 It prints `qualcoder-mcp` and the installed version, then exits. If you
 start the server itself by hand (the same command without `--version`),
-it prints one paragraph saying that it expects an MCP host on its
-standard input and output and then waits; that is the expected
+it prints three start-up lines and one paragraph saying that it
+expects an MCP host on its standard input and output, and then waits; that is the expected
 behaviour, not an error. Press Ctrl+C to stop it.
 
 ### If you used Option A (Dynamic):
@@ -754,7 +766,7 @@ In Claude Desktop, try:
 List my available Qualcoder projects
 ```
 
-Claude should show you all `.qda` files it found. Then:
+Claude should show you the `.qda` project folders it found. Then:
 ```
 Select the "MyProject" project
 ```
@@ -810,12 +822,15 @@ Analyse the transcript for file 1 with all its coding
 ### "No Qualcoder projects found" (Option A)
 
 The server searches these locations by default:
+- the folder `QUALCODER_MCP_WORKSPACE` names, when it is set (with the
+  desktop extension, its "Folder for projects", by default
+  `~/QualCoder projects`), at its top level only
 - `~/Documents/QualCoder_projects`
 - `~/Documents/QualCoder`
 - `~/QualCoder`
 - `~/Documents`
 
-Make sure your `.qda` file is in one of these locations, or tell Claude to search elsewhere:
+Make sure your `.qda` project folder is in one of these locations, or tell Claude to search elsewhere:
 ```
 List available projects in ["/path/to/your/projects"]
 ```
@@ -837,7 +852,8 @@ When a project was selected before on this machine and still exists,
 the same error ends with "The last project used on this machine was
 <path>. Use select_project with that path to continue with it." That
 pointer is read from `~/.qualcoder_mcp/mru_project.json`, which
-`select_project` writes on every successful selection; the selection is
+`select_project` writes on every successful selection and
+`create_project` on every project it creates; the selection is
 never restored automatically, so one `select_project` call is still
 needed. If the error comes back in the middle of a conversation, the
 host has restarted the server process between turns and the in-memory
@@ -896,7 +912,14 @@ makes a tool log that note, private part included. They name no
 project, file, code, category, case, journal entry or attribute and no
 path: they carry ids, counts and the kinds of errors, and a project's
 schema version only when it has QualCoder's form. The MCP library's own
-lines beside them name the kind of each request. That is not all a
+lines beside them name the kind of each request, and carry the
+caller's own text in two cases: for a prompt called with an argument
+it does not declare, that argument's value; and for a request the
+library cannot read (an address that is not a URL, arguments that are
+not an object, a tool name the server does not list, a line that is
+not JSON), what was sent. That is what the host or the model sent,
+never anything read from the project, but it can hold a name the
+model wrote. That is not all a
 host may keep in the same file: Claude Desktop's server log (the file
 Show Logs opens) also records every request and every answer in full,
 so it holds everything the tools returned and the arguments they were
@@ -1109,7 +1132,7 @@ version with `~/qualcoder-mcp-venv/bin/qualcoder-mcp --version` (or
 the running version depends on the host (see "Updating the MCP
 Server" above).
 
-**5. Optional cleanup, once the new install is confirmed working:**
+**5. Optional clean-up, once the new install is confirmed working:**
 delete the old clone and its venv. Keeping them around breaks nothing.
 
 <details>
@@ -1199,8 +1222,9 @@ If you want to remove the MCP server:
    name). Nothing else is stored there.
 
 Uninstalling does not touch your QualCoder projects. Note that the
-server does write to projects when you use its coding tools (always
-after taking a backup), so the changes you approved during use, and the
+server does write to projects when you use its coding tools (after
+taking a backup, unless a call asks for none with
+`create_backup=false`), so the changes you approved during use, and the
 backup folders it created next to each project
 (`<project>_backup_<timestamp>.qda`), stay where they are. Remove
 backups you no longer need with the `prune_backups` tool before

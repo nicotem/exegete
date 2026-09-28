@@ -146,8 +146,12 @@ def test_the_documents_count_the_tools_the_server_registers():
     import asyncio
     count = len(asyncio.run(server.mcp.list_tools()))
     assert count == 73
-    assert f"(the default, `QUALCODER_MCP_TOOLSET=full`) registers " \
-           f"{count} tools" in _flat("README.md")
+    # v0.14's release preparation: the default when configured by hand;
+    # the desktop extension's own default is `lifecycle`
+    assert f"(the default when you configure the server yourself, " \
+           f"`QUALCODER_MCP_TOOLSET=full`; the Claude Desktop extension " \
+           f"defaults to `lifecycle`) registers {count} tools" \
+        in _flat("README.md")
     install = _flat("INSTALL.md")
     # v0.14: `full` is no longer every tool once `lifecycle` exists
     assert f"`full` (default) registers {count} tools" in install
@@ -261,9 +265,9 @@ def test_the_roadmap_counts_the_rename_tools_as_done():
     """The Brief 2 merge fix (N3): README's list of what v0.13 completed
     names the rename tools beside the two pseudonymisation items. The
     release preparation named the list for the release and moved the
-    plan on to v0.14."""
+    plan on to v0.14; v0.14's release preparation moved it on again."""
     readme = _flat("README.md")
-    done = readme[readme.index("**Completed in v0.13.0 (this release):**"):
-                  readme.index("**Planned for v0.14 and later:**")]
+    done = readme[readme.index("**Completed in v0.13.0:**"):
+                  readme.index("**Completed in v0.14.0 (this release):**")]
     assert "`rename_case` and `rename_file` rename a case or a file's " \
            "entry the way QualCoder does" in done

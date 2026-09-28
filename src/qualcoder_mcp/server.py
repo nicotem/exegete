@@ -791,7 +791,8 @@ def _no_project_message() -> str:
 
 # Fixed, path-free text for any database that will not open or errors
 # mid-read outside select_project (which has project-scoped wording of its
-# own). The sqlite message itself is logged, never returned (S-H4).
+# own). The error's kind is logged (since v0.14, never SQLite's message),
+# and nothing of it is returned (S-H4).
 DB_UNAVAILABLE_ERROR = (
     "Database error: the project file may be locked or corrupted. If "
     "QualCoder is open, close it and retry; otherwise consider restoring a "
@@ -10310,9 +10311,9 @@ def list_coding_sessions(
     project_path: Optional[str] = None,
     days_old: int = 30
 ) -> str:
-    """List all saved AI coding sessions.
+    """List saved AI coding sessions.
 
-    Shows all coding sessions, optionally filtered by project and age.
+    Shows coding sessions, filtered by age and optionally by project.
     Useful for finding previous coding sessions to review or export.
 
     Args:
@@ -18424,7 +18425,8 @@ TTY_NOTICE = (
     "qualcoder-mcp is an MCP server. It is normally started by an MCP host "
     "(Claude Desktop, Claude Code, LM Studio or another MCP client) and speaks "
     "JSON-RPC over standard input and output, so when it is started by hand in "
-    "a terminal it prints nothing and waits for a host that is not there. To "
+    "a terminal it prints its start-up lines and this note, then waits for a "
+    "host that is not there. To "
     "check that the installation works, run 'qualcoder-mcp --version' (or "
     "'python -m qualcoder_mcp.server --version'); to use the server, add it to "
     "your host's MCP configuration as described in INSTALL.md. Press Ctrl+C to "

@@ -767,7 +767,7 @@ class TestTheDocuments:
         text = (REPO / "README.md").read_text(encoding="utf-8")
         install = _section(text, "## Installation")
         assert install.index("### Claude Desktop: the one-click extension") \
-            < install.index("### Recommended: install from PyPI")
+            < install.index("### The Terminal route: install from PyPI")
         assert "INSTALL.md" in _section(
             install, "### Claude Desktop: the one-click extension")
 

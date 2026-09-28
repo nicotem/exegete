@@ -33,8 +33,8 @@ What stays local, always:
 - your QualCoder project itself (the `.qda` folder and database)
 - automatic backups created before writes, and the safety backup a
   confirmed restore_backup takes first: timestamped
-  `<project>_backup_<timestamp>.qda` folders placed next to the project
-  folder
+  `<project>_backup_<timestamp>.qda` folders (the safety backup's name
+  ends `_prerestore.qda`) placed next to the project folder
 - exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
 - project copies made by copy_project_to_workspace, in
   `~/Documents/Qualcoder MCP Projects/` by default, or in the folder
@@ -63,8 +63,9 @@ What stays local, always:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful
   select_project and create_project). It has one outward flow: when a tool is called, or
-  a resource read, before a project is selected, the error answer names
-  that path as a recovery hint (only while that project still exists on
+  a resource read, before a project is selected (or after the
+  connection to the selected one was lost and could not be reopened),
+  the error answer names that path as a recovery hint (only while that project still exists on
   disk; never in a line this server logs), so a
   project path chosen in one MCP host or session
   can appear in another host's conversation on the same account.
@@ -136,8 +137,10 @@ trigger's error whatever it reads from a row, and a note or a name
 stored as bytes that are not UTF-8 makes Python's sqlite3 quote the
 whole value in the error it raises. The same rule holds for the
 resources (the `qualcoder://` addresses), which answer an error as a
-tool does, as their content, so the MCP library, which logs every error
-a resource raises with its traceback, has none to log; and for an error
+tool does, as their content, so the MCP library, which logs with its
+traceback every error a fixed-address resource raises (one with an id
+in its address, such as `qualcoder://codes/{code_id}`, it answers
+without a line), has none to log; and for an error
 of a kind this server does not expect, which is reported by its kind
 alone. This server's own error texts, which it writes, are answered as
 they are; some repeat what the caller supplied, such as a code name that
@@ -160,8 +163,11 @@ and a project's schema version only when it has QualCoder's form (`v`
 and digits). The results still name what they name, as each tool says.
 All of this is about the lines this server writes, and the MCP
 library's own lines beside them, which name the kind of each request
-(and, for a prompt called with an argument it does not declare, that
-argument's value, which is the caller's own). A host may record more in
+and carry the caller's own text in two cases: for a prompt called with
+an argument it does not declare, that argument's value; and for a
+request the library cannot read (an address that is not a URL,
+arguments that are not an object, a tool name the server does not
+list, a line that is not JSON), what was sent. A host may record more in
 the same file: Claude Desktop's
 server log (the file Settings > Developer > Show Logs opens) records
 every request and every answer as well, so there the file also holds
@@ -406,7 +412,7 @@ project has the coder-visibility capability:
   preview reports what the run would do to a hidden coder's rows as
   counts (`shifted`, `substituted`, `resized`, `snapped`, `deleted`,
   `clamped`), never names. Which of them need `allow_hidden_coder=true`
-  is the owner's ruling X1 as refined on 2026-09-15 and 2026-09-16: a
+  is the project owner's rule, as refined on 2026-09-15 and 2026-09-16: a
   coding that covered a name, or contained one, and now covers or
   contains its pseudonym needs no override, whatever the two lengths,
   and neither does a pure position shift, because neither changes a
@@ -416,7 +422,9 @@ project has the coder-visibility capability:
   of the text requires the override. Under the `qualcoder_edit_parity` policy a
   coding that cut into a name is cut back at its head or tail to exclude
   the pseudonym rather than grown to contain it, which shrinks it; that
-  too is classed `snapped` and needs the override. The refusal names
+  too is classed `snapped` and needs the override (the
+  `qualcoder_edit_parity` policy is deprecated: v0.14 says so whenever
+  it is used, and v0.15 removes it). The refusal names
   neither the coder nor a count. A row whose stored end lies past the
   end of the text is clamped first, as QualCoder clamps its own, and is
   counted under its own class rather than under one the exemption
@@ -454,8 +462,9 @@ project has the coder-visibility capability:
   and counted in the hidden-coder count they disclose, without selecting
   the project again. The re-read is one query of the project's schema
   per read, and only on a project that did not declare visibility when
-  the connection opened: 5 to 6 microseconds each on the development
-  Mac, and a read tool makes a few per call. That re-read is one way: a
+  the connection opened and until a call has seen the declaration (none
+  after that): 5 to 6 microseconds each on the development Mac, and a
+  read tool makes a few per call. That re-read is one way: a
   declaration that was there when the connection opened, or that any
   call has seen since (a read or a decision that names a coder: they
   share one memory of it), is never withdrawn by it, because a column
@@ -501,7 +510,9 @@ The project database is the one file not copied as a file (since
 0.14): `data.qda` is copied with SQLite's own online backup, from a
 read-only connection, so a backup or copy made while QualCoder is
 writing holds only what was last committed, and the database's journal
-and WAL files are never copied. QualCoder's ignore set does not match
+and WAL files are not copied. Only a database SQLite cannot read that
+way (not a database, damaged, or left with a crash's journal) is
+copied as a file with its side files, and the result says so. QualCoder's ignore set does not match
 them, and a journal copied mid-write holds pages of a write that was
 never committed, which some SQLite builds then show and others refuse
 to read. A backup that holds them (copied while a program was writing,
@@ -523,7 +534,8 @@ Besides `restore_backup`, which checks that no journal or WAL file
 sits beside the database of the backup you choose, opens it to check
 it, reads its first bytes for the preview and copies it back,
 one tool reads the backups' contents: `rename_file`, to recognise a
-rename back (a name, or an ending, the file had before). Only when one of
+rename back (a name, or an ending, the file had before; deprecated:
+v0.14 says so when it happens, and v0.15 removes it). Only when one of
 its rules would refuse the new name, it opens the database of the
 project's own backups beside it, this server's `_backup_` copies and
 QualCoder's `_BKUP_` copies, newest first and at most 200, read-only and
@@ -594,7 +606,8 @@ Two further rules touch files on your disk:
   `create_project` runs no process scan for the project it has just
   made.
 - **Creating a project** (`create_project`, only with
-  `QUALCODER_MCP_TOOLSET=lifecycle`, v0.14). It writes a new folder
+  `QUALCODER_MCP_TOOLSET=lifecycle`, which the desktop extension sets
+  by default, v0.14). It writes a new folder
   with four empty subfolders and a new `data.qda`, and records the new
   project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
@@ -853,14 +866,17 @@ will ask, and the summary above depends on them:
     backup. `get_current_project` reports whether the file is present
     and how many entries it has, never a name. The names themselves
     reach the conversation only through a tool of their own,
-    `read_pseudonym_list` (in the full toolset only), whose description
-    says first that it sends the real names to the AI provider. It
+    `read_pseudonym_list` (in the full and lifecycle tool sets, so in
+    the desktop extension by default, and not in core; deprecated, and
+    removed in v0.15), whose description says first that it sends the
+    real names to the AI provider. It
     carries `anthropic/requiresUserInteraction`, so Claude Code (2.1.199
     and later) asks the researcher before every call of it, in every
     permission mode but `dontAsk`, which refuses it. Earlier Claude
     Code, and another host in an auto mode or with approvals skipped,
-    can run it without asking (whether Cowork honours the mark is not
-    documented), so for a project with a pseudonyms file keep the host
+    can run it without asking (whether Cowork or Claude Desktop's
+    ordinary chat honours the mark is not documented, and this project
+    has not yet checked either in use), so for a project with a pseudonyms file keep the host
     in its asking mode (INSTALL.md, "What hosts do with the tools' read
     and write marks"). Each call writes one line to this server's log
     with the count and no name. QualCoder's own
@@ -982,10 +998,13 @@ will ask, and the summary above depends on them:
     reopens the project and re-indexes. This server never reads or
     writes anything in there.
   - **This server's own session files** in `~/.qualcoder_mcp/sessions/`.
-    A coding session records the excerpt each suggestion refers to and
-    the evidence of each proposed code (a session file written before
-    v0.14 also holds the text around each excerpt, until it is next
-    saved; from v0.14 that text is read from the file when shown), so a
+    A coding session records the excerpt each suggestion refers to,
+    with the file's name and the reason given for it (which may quote
+    the passage), and each proposed code with its definition and
+    evidence (a session file written before v0.14 also holds the text
+    around each excerpt and of each shorter or longer span offered,
+    until it is next saved; from v0.14 that text is read from the file
+    when shown), so a
     session made before a run keeps the pre-pseudonymisation text on
     disk. The run lists every session of the project whose file holds
     an excerpt of the rewritten file, whatever the state of its

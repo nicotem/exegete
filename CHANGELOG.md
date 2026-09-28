@@ -37,10 +37,13 @@ a folder for projects, `QUALCODER_MCP_WORKSPACE`. One tool added,
 The dependency floor is unchanged, `mcp>=1.17.0,<2`. Parity claims cite
 QualCoder master at pinned commit 9bddf17 and the 3.8.2 tag; a created
 project follows the 4.0-Beta release, which writes the same project as
-the pin. Each part went through a QA gate, a Security gate and
-re-verification until clean, then CI on ten jobs. The acceptance run
-inside QualCoder, headless, in 4.0 at the pin, in the 4.0-Beta and in
-3.8.2: the projects `create_project` makes open with no exception, keep
+the pin. Each part was reviewed before it merged: a QA gate, a Security
+gate and re-verification until clean (the workbench, which changed
+nothing under `src/`, by one check), then CI on ten jobs; the suite at
+commit `32ecb60`, from a fresh clone in fresh virtual environments on
+Python 3.13.5 and 3.11.13: 5032 passed, 5 skipped, 0 failed. The
+acceptance run inside QualCoder, headless, in 4.0 at the pin, in the
+4.0-Beta and in 3.8.2: the projects `create_project` makes open with no exception, keep
 every row and behave as the tool's answer says (645 of 645 checks), and
 after v0.13's `rename_case`, `rename_file` and `pseudonymise_source`
 with notes rewritten, QualCoder's own lists, dialogs and coding view

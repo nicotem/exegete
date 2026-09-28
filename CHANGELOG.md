@@ -453,10 +453,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects, the
   server-wide changes, the folder for projects, the reads, queries and
-  exports, and the AI coding loop: full = 197,887 characters (about
-  49.5k tokens at chars/4) over 73 tools, core = 67,350 (about 16.8k)
-  over 21, and the new opt-in lifecycle set = 200,472 (about 50.1k)
-  over 74. Moved by the coding loop's descriptions: `analyze_for_coding`
+  exports, and the AI coding loop: full = 195,480 characters (about
+  48.9k tokens at chars/4) over 73 tools, core = 64,866 (about 16.2k)
+  over 21, and the new opt-in lifecycle set = 198,065 (about 49.5k)
+  over 74. The coding loop's last round took 2,407 characters off
+  `full` and 2,484 off `core`: the three questions, the reading, the
+  study at the start, the deprecation sentences and the count words
+  were paid for by shorter texts (`analyze_for_coding`,
+  `review_suggestions`, `create_proposed_codes`, `record_suggestions`,
+  `analyze_file_with_coding`, `search_files`, `edit_suggestion`, and the
+  `owner` argument's text). Moved by the coding loop's descriptions: `analyze_for_coding`
   says what it does, what a session's scope refuses and how names
   match; `record_suggestions` asks for `reading`; `edit_suggestion`
   takes `reading`; `update_suggestion_status` takes `reopen` and says
@@ -487,8 +493,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The tools' hints (annotations) are not part of this measurement.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 207,931, 70,834 and
-  210,656.
+  on Python 3.11.13, in the repository's `.venv/`, 205,192, 68,158 and
+  207,917.
 
 ### Changed: reads, queries and exports say what they found
 

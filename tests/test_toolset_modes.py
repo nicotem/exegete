@@ -428,13 +428,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 197_887          # 73 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 67_350           # 21 tools, same environment
-    FULL_MEASURED_310 = 207_931      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 70_834
+    FULL_MEASURED = 195_480          # 73 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 64_866           # 21 tools, same environment
+    FULL_MEASURED_310 = 205_192      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 68_158
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 200_472     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 210_656
+    LIFECYCLE_MEASURED = 198_065     # 74 tools, same environment
+    LIFECYCLE_MEASURED_310 = 207_917
 
     # Why two per cent, away from the reference environment.
     #
@@ -461,12 +461,12 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "197,887"
-    CORE_CHARS = "67,350"
-    FULL_ROUNDED = "198,000"
-    CORE_ROUNDED = "67,000"
+    FULL_CHARS = "195,480"
+    CORE_CHARS = "64,866"
+    FULL_ROUNDED = "195,000"
+    CORE_ROUNDED = "65,000"
     FULL_TOKENS = "49k"
-    CORE_TOKENS = "17k"
+    CORE_TOKENS = "16k"
 
     @staticmethod
     def _read(name):
@@ -638,7 +638,7 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "200,000"
+    LIFECYCLE_ROUNDED = "198,000"
     LIFECYCLE_TOKENS = "50k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
@@ -691,8 +691,8 @@ class TestThePublishedSchemaBudget:
         16k floor leaves less than 1k for the transcript once the core
         schema passes 15k tokens, and none once it passes 16k (v0.14 took
         it from 14.5k to 16.8k, through the server-wide changes, the
-        reads and exports and the AI coding loop); 32k leaves about
-        15k."""
+        reads and exports and the AI coding loop, and the loop's last
+        round back to 16.2k); 32k leaves about 16k."""
         install = self._read("INSTALL.md")
         assert "at least 32k for the core toolset" in install
         assert "16k would not even hold the schema and is not workable" \

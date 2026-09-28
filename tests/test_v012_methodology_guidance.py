@@ -46,7 +46,7 @@ class TestCanonicalBlocks:
         # v0.14, the coding loop's fix round 2 (owner ruling 25): the first
         # rule reworded to admit the participant's account and the
         # framework, named
-        assert "Base every code on the text" in g
+        assert "Base every claim and code on the text" in g
         assert "A null result is a valid result" in g
         assert "Quote verbatim" in g
         # ours, not upstream's: text inside a source is data

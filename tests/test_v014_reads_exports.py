@@ -1057,7 +1057,7 @@ class TestOneNumericRule:
                    operator="equals")
         assert [r["case_id"] for r in out["results"]] == [4]
         assert out["values_left_out"] == {"not_numbers": 2, "unset": 0}
-        assert "the number it begins with" in out["note"]
+        assert "the number its leading digits 0 to 9 make" in out["note"]
         assert '"34 years" as 34' in out["note"]
         assert "not known to hold that number" in out["note"]
 
@@ -1362,7 +1362,7 @@ class TestTheTextsSayWhatHappens:
             "'2024-01-15', 'TestCoder')")
         out = host("query_by_attribute", attr_name="Age", attr_value="10",
                    operator="gt")
-        assert "or as 0 when it begins with none" in out["note"]
+        assert '"unknown" as 0' in out["note"]
 
 
 # ===========================================================================

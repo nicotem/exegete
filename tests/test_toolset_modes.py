@@ -428,13 +428,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 195_395          # 73 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 64_848           # 21 tools, same environment
-    FULL_MEASURED_310 = 205_103      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 68_140
+    FULL_MEASURED = 195_325          # 73 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 64_835           # 21 tools, same environment
+    FULL_MEASURED_310 = 205_033      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 68_127
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 197_980     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 207_828
+    LIFECYCLE_MEASURED = 197_910     # 74 tools, same environment
+    LIFECYCLE_MEASURED_310 = 207_758
 
     # Why two per cent, away from the reference environment.
     #
@@ -461,8 +461,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "195,395"
-    CORE_CHARS = "64,848"
+    FULL_CHARS = "195,325"
+    CORE_CHARS = "64,835"
     FULL_ROUNDED = "195,000"
     CORE_ROUNDED = "65,000"
     FULL_TOKENS = "49k"

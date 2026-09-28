@@ -1356,8 +1356,10 @@ class TestFixRound2TheStudyAtTheStart:
         out = jcall("analyze_for_coding", file_ids=[1],
                     instruction="topics; whole sentences; one code each")
         assert out["project_memo"] == ""
-        assert "the project memo is empty. Ask the researcher" in \
-            out["instructions"]
+        # release preparation: a memo whose every word is private is not
+        # called empty
+        assert "the project memo's public part is empty. Ask the " \
+            "researcher" in out["instructions"]
         assert "private" not in json.dumps(out)
 
 
@@ -1441,7 +1443,9 @@ class TestFixRound2WhatAReadingMayRestOn:
         assert "from other passages" not in rules
         read = " ".join(server.GROUNDING_READ.split())
         assert "rather than on other files" not in read
-        assert "never on general knowledge" in read
+        # release preparation: one wording in every place the rule is given
+        assert "never on outside facts or assumptions about them" in read
+        assert "general knowledge" not in read
         record = " ".join(server.GROUNDING_RECORD.split())
         assert "any passage elsewhere or framework concept it draws on" \
             in record
@@ -2022,7 +2026,8 @@ class TestFixRound2TheCountWords:
         assert "does not mean a code is complete" in block["note"]
         desc = " ".join(server.mcp._tool_manager._tools[
             "search_files"].description.split())
-        assert "the files returned show where coding has not reached" in desc
+        # release preparation: the description says what its note says
+        assert "the files returned hold matches outside that coding" in desc
 
 
 class TestFixRound2TheMinors:
@@ -2421,7 +2426,7 @@ class TestFixRound5TheEarlierTurn:
             "I: I want to ask about your manager now.",
             "What was a normal day with her like?", f"P: {T4}"]),
             "I: I want to ask about your manager now.\n[not shown: 1 "
-            "paragraph(s) with no speaker label]"),
+            "paragraph(s) with no repeated speaker label]"),
         # timestamps in brackets, and letter case
         "timestamped, a backchannel between": (B2.join([
             "Interviewer [00:01:02]: What was your manager like?",
@@ -2526,8 +2531,8 @@ class TestFixRound5TheEarlierTurn:
             "The charge nurse put it plainly: nobody gets a break on this "
             "ward.", f"P: {T4}"]),
             "I: What was the ward like?\n[not shown: 1 turn(s) by the "
-            "same label as the passage and 1 paragraph(s) with no speaker "
-            "label]"),
+            "same label as the passage and 1 paragraph(s) with no repeated "
+            "speaker label]"),
         "a timestamp before the name": (B2.join([
             "[00:01:02] Interviewer: Did you ever think of leaving?",
             "[00:01:09] Participant: Not really, no.",
@@ -2544,7 +2549,7 @@ class TestFixRound5TheEarlierTurn:
             f"R: {T4}"]),
             f"I: What was the rota like?\n{OWN1}\nI: Mm-hmm.\n"
             f"[not shown: 1 turn(s) by the same label as the passage and 1 "
-            f"paragraph(s) with no speaker label]"),
+            f"paragraph(s) with no repeated speaker label]"),
         "a field note's one reflection": (B2.join([
             "Observation: the ward was calm at handover.",
             "Reflection: I felt uneasy about the quiet.",

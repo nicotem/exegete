@@ -15,7 +15,9 @@ Complete guide to using Claude for AI-assisted qualitative coding with the conve
 
 The AI coding workflow in v0.4.0+ uses a **conversational approval process** where:
 
-1. Claude analyses your files and creates suggestions
+1. Claude asks what to look for, how long a passage should be and
+   whether one passage may carry more than one code, then analyses your
+   files and creates suggestions
 2. You review suggestions in the chat conversation
 3. You explicitly approve or reject specific suggestions
 4. Claude writes only approved suggestions directly to the database
@@ -127,15 +129,23 @@ Only suggest a code where the participant says it in so many words
 ```
 
 **What Claude does:**
-1. Creates a new analysis session with unique ID (`analyze_for_coding`)
-2. Reads the specified files
-3. Examines content for relevant segments
-4. Identifies text that matches the codes
-5. Gives each suggestion a reading: explicit (the passage states what
+1. Asks you three things first: what to look for (your own codes,
+   topics, people's own words, actions, feelings or values, or other,
+   and whether to point out passages no code fits), how long a coded
+   passage should be (a phrase, whole sentences by default, or a whole
+   answer) and whether a passage may carry more than one code. Your
+   answers become the session's instruction; there is no default
+2. Creates a new analysis session with unique ID (`analyze_for_coding`),
+   which hands Claude the public part of your project memo, the study in
+   your own words
+3. Reads the specified files
+4. Examines content for relevant segments
+5. Identifies text that matches the codes
+6. Gives each suggestion a reading: explicit (the passage states what
    the code names) or interpretive (the code rests on what the passage
    implies rather than on what it says); there is no numeric score
-6. Generates reasoning for each suggestion
-7. Records the suggestions into the session with `record_suggestions`;
+7. Generates reasoning for each suggestion
+8. Records the suggestions into the session with `record_suggestions`;
    every suggestion is verified against the file text before it is
    stored (positions are corrected automatically when the excerpt is
    unique in the file; mismatches are rejected with an explanation)
@@ -285,7 +295,7 @@ Apply the approved codings to the project
 **What you'll see:**
 ```
 Creating backup first...
-✓ Backup created: Interview_Study_backup_20251029_143045.qda
+✓ Backup created: Interview Study_backup_20251029_143045.qda
 
 Applying 6 approved codings...
 
@@ -302,7 +312,7 @@ Applying 6 approved codings...
 [... more codings ...]
 
 ✓ Successfully applied 6 codings to database
-  Backup: Interview_Study_backup_20251029_143045.qda
+  Backup: Interview Study_backup_20251029_143045.qda
 
   You can now open this project in Qualcoder to see the results!
 ```
@@ -346,16 +356,29 @@ Analyse file 3 for "Participant Motivation" and "Barriers" codes
 
 **Claude:**
 ```
+Before I start: should I look only for your two codes, or also point
+out passages no code fits? How long should a coded passage be: a
+phrase, whole sentences or a whole answer? May one passage carry both
+codes?
+```
+
+**You:**
+```
+Your two codes only; whole sentences; one code each
+```
+
+**Claude:**
+```
 I've analysed file 3 (focus_group_transcript.txt).
 
 Session ID: 7a8b9c...
 
 Found 5 suggestions:
-1. Participant Motivation at 120-280 (explicit) - guid-01
-2. Barriers at 450-590 (explicit) - guid-02
-3. Participant Motivation at 780-920 (interpretive) - guid-03
-4. Barriers at 1100-1250 (explicit) - guid-04
-5. Participant Motivation at 1500-1680 (interpretive) - guid-05
+1. Participant Motivation at 120-280 (explicit), guid-01
+2. Barriers at 450-590 (explicit), guid-02
+3. Participant Motivation at 780-920 (interpretive), guid-03
+4. Barriers at 1100-1250 (explicit), guid-04
+5. Participant Motivation at 1500-1680 (interpretive), guid-05
 ```
 
 **You:**
@@ -400,7 +423,7 @@ Apply the codings
 
 **Claude:**
 ```
-✓ Backup created: Focus_Group_Study_backup_20251029_143512.qda
+✓ Backup created: Focus Group Study_backup_20251029_143512.qda
 ✓ Applied 4 codings successfully (ctid 112-115)
 
 Open the project in Qualcoder to see your AI-generated codings!
@@ -421,6 +444,18 @@ Tell me which suggestions are interpretive
 **Claude:**
 ```
 ✓ Project copied to workspace
+Before I start: should I look only for your three codes, or also point
+out passages no code fits? How long should a coded passage be? May one
+passage carry more than one code?
+```
+
+**You:**
+```
+Your three codes; whole answers; a passage may carry two codes
+```
+
+**Claude:**
+```
 Analysing file 7...
 
 Session ID: d4e5f6...
@@ -457,7 +492,6 @@ The first 4 look good. Show me Professional Development suggestions.
 ```
 Approve:
 - All 5 Work-Life Balance suggestions
-- Work-Life Balance 1-4
 - All 4 Career Satisfaction
 - Professional Development 1 and 3 only
 ```
@@ -601,10 +635,13 @@ Show me my recent coding sessions
 Load session abc123 and show me what we did
 ```
 
-**Delete old sessions:**
+**Delete a session:**
 ```
-Delete sessions older than 30 days
+Delete session abc123
 ```
+(`delete_coding_session`; `cleanup_old_sessions`, which deletes every
+project's old sessions with no preview, is deprecated and goes in
+v0.15)
 
 ### Backup Management
 
@@ -640,7 +677,7 @@ itself be undone.
 
 ## Troubleshooting
 
-### "No approved suggestions to apply: N already applied"
+### "No approved suggestions to apply: N suggestion(s) in this session were already applied"
 
 **Problem:** Re-running apply_codings on a session that was already
 written. Applied suggestions are marked and never double-applied.
@@ -758,7 +795,7 @@ Session files are stored at:
 ```
 
 - Check if file exists
-- Create new session if needed - previous work in database is safe
+- Create a new session if needed: previous work in the database is safe
 
 ## Advanced Usage
 

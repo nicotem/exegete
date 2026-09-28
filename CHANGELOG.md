@@ -13,10 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   extension, `qualcoder-mcp-<version>.mcpb` (MCPB manifest
   specification 0.4, the `uv` type), to be attached to each release
   from v0.14. The tester double-clicks it and clicks Install; Claude
-  fetches uv, uv fetches Python 3.13 and the dependencies as locked in
-  `uv.lock`, and a settings form offers the tool set (`lifecycle` by
-  default, so creating projects is on; `full` and `core`) and the
-  folder for projects (a folder picker; by default `~/QualCoder
+  Desktop fetches uv if the computer has none, uv fetches Python 3.13
+  and the dependencies as locked in `uv.lock`, and a settings form asks
+  for the tool set, one of three words (`lifecycle` by default, so
+  creating projects is on; `full` or `core`; any other word stops the
+  extension) and the folder for projects (a folder picker; by default `~/QualCoder
   projects`, outside Documents, which iCloud and OneDrive may sync;
   left empty, it stops the extension rather than falling back to
   Documents). Nothing secret is asked. Every start runs
@@ -51,14 +52,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`QUALCODER_MCP_WORKSPACE`** names the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` copies to; `list_available_projects`
-  searches its top level (a usual place such as `~/Documents` is
-  walked in full, as before). Unset or blank, the workspace stays
+  searches its top level (the usual places, such as `~/Documents`, are
+  still searched three levels deep, as before). Unset or blank, the workspace stays
   `~/Documents/Qualcoder MCP Projects`, unless
   `QUALCODER_MCP_WORKSPACE_REQUIRED=1`, which the extension sets: then a
   blank folder stops the server. A relative path, or a folder inside
   the state folder, QualCoder's settings folder, a project or the
   folder the server is installed in, or a path holding `|`, stops the
-  server at start-up, with an error that names no path. The desktop
+  server at start-up, with an error that does not name the folder. The
+  desktop
   extension's "Folder for projects" sets it.
 - **The export tools refuse a relative `output_path`**
   (`export_codebook`, `export_coded_segments_report`,
@@ -69,7 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   export was lost with it. Nothing is written; give a full path or one
   starting with `~`.
 
-- **Creating a project from the conversation** (Experimental, opt-in):
+- **Creating a project from the conversation** (Experimental; on in the
+  desktop extension by default, opt-in elsewhere):
   `create_project(name, directory, coder_name, coder_name_not_known)`
   makes a new, empty project in QualCoder 4.0's format, exactly as 4.0's
   own New Project makes it (the folder, its four subfolders, and the
@@ -90,9 +93,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and never replaces or deletes anything. Its failures are worded by the
   tool, and clean-up removes only what it made.
 - **A third toolset, `lifecycle`** (`QUALCODER_MCP_TOOLSET=lifecycle`):
-  the full set plus `create_project`, 74 tools. The default `full` (73)
-  and `core` (21) are unchanged; creating projects stays out of them so
-  that researchers opt in.
+  the full set plus `create_project`, 74 tools. The server's default
+  `full` (73) and `core` (21) are unchanged; creating projects stays out
+  of them, so a researcher who configures the server by hand opts in
+  (the desktop extension's default is `lifecycle`).
 - **The project memo**: `set_memo` takes `target_type` `project`
   (`target_id` null). Only the public part is replaced; the private part
   after `#####` survives and is never returned. QualCoder 4.0's own
@@ -134,19 +138,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Texts that sent the assistant to tools that are not there.** Three
   of the four prompts named `list_all_codes`, `list_all_files`,
   `list_all_cases` and `get_case_info`, which are not tools; they now
-  name the resources by address and a tool beside each
-  (`get_coding_frequencies` for every code with its id,
-  `get_case_code_matrix` for every case, `get_codes_by_case`). In the
+  name the resources by address, with a tool beside the codes and cases
+  ones (`get_coding_frequencies` for every code with its id,
+  `get_case_code_matrix` for every case, `get_codes_by_case`), and for
+  the files resource say to ask the researcher when resources cannot be
+  read. In the
   `core` set, the instructions, the tool descriptions, the prompts, the
   methods notes and every note, hint or refusal of this server's own
   that names a tool (`create_code`'s, `list_backups`', a read's note on
   region codings) mark each tool `core` does not register ("not
   available in this tool set"); the project's own text (a file's words,
   a quote, a memo, a name) is never marked, so a passage copied from an
-  answer is still the file's. An unknown code id is
-  answered with `get_coding_frequencies` and the codes resource (not
-  `get_project_summary`, which lists ten, or `export_codebook`); an
-  unknown file id with the files resource, or a name search.
+  answer is still the file's. A refusal of an unknown code id that says
+  where to find one now names `get_coding_frequencies` and the codes
+  resource (not `get_project_summary`, which lists ten, or
+  `export_codebook`); one of an unknown file id, the files resource or a
+  name search.
 - `list_available_projects`' `search_directories` expands `~`, refuses a
   relative path instead of skipping it, says that the folders given
   replace the usual places, and returns the folders searched and which
@@ -155,7 +162,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the `content_matches_found`, `_excluded` and `_shown` counts that
   say how many there are. The methods notes no longer say the project
   memo reaches "every future session": the assistant reads it when it
-  looks, and is told to at the start of each coding session. README no
+  looks, and `analyze_for_coding` hands it the memo's public part
+  (`project_memo`) at the start of each coding session. README no
   longer says `add_journal_entry` updates an entry.
 - **Text holding `#####` is refused, not cut.** Every tool that writes
   the assistant's text into a memo, a note or a journal entry
@@ -163,20 +171,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `add_journal_entry`, the memos of `create_code`, `create_category`,
   `create_case`, `create_attribute_type` and `import_text_file`, a
   proposed code's definition in `propose_codes` and `update_proposal`
-  and its rationale in `propose_codes`, which becomes the memo of each
-  evidence coding `create_proposed_codes` writes, a suggestion's
+  and its rationale in `propose_codes` (which stays in the session:
+  `create_proposed_codes` creates codes only), a suggestion's
   reasoning in `record_suggestions`) refuses text containing QualCoder's
   private-note marker before anything is written or backed up;
-  `apply_codings` and `create_proposed_codes` refuse an older session's
-  item that holds one. Until now the marker and what followed
+  `apply_codings` and `create_proposed_codes` refuse the whole batch,
+  before any backup, when an older session's approved reasoning or
+  definition holds one. Until now the marker and what followed
   it were dropped without a word: "##### note" deleted an annotation,
   emptied a memo, and cut a journal entry. QualCoder's own AI server
   drops it silently; this departs from it because the silent drop
   destroyed notes. A call to `record_suggestions` or `propose_codes`
   that records nothing no longer rewrites the session file; with
   `replace`, the pending items are kept when every new one is refused
-  (items already in the session are skipped, not refused, and replace as
-  before);
+  (a suggestion already in the session is skipped, not refused, and the
+  pending ones are replaced as before; a proposal already there is
+  refused);
   a reasoning, definition or rationale that is not text is refused.
 - `set_memo`'s `target_id` may be left out for the project memo, as its
   text says (it was required by the schema).
@@ -193,27 +203,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   name that carries no time or one dated more than five minutes ahead of
   the clock, and `list_backups` says which (`dated_from`). Pruning keeps
   the newest by its name and removes only folders named with this
-  server's stamp; a researcher's own copy with the prefix and no time
-  is named under `never_removed` and never removed.
+  server's stamp; a folder with the prefix whose name is not one this
+  server gives (no time, or something after it, as a Finder duplicate's
+  " copy") is named under `never_removed` and never removed.
 - **A failed switch of project changes nothing, and says so.**
   `select_project` opens and reads the new project before it replaces
   the selection, so a project that will not open leaves the previous one
   selected with its connection open (the old connection used to be
   closed first, and the next tool quietly reconnected to it), and every
-  failed answer ends by naming the project still selected, or saying
-  that none is (`selected_project`). A project selected by its
+  failed answer ends by naming the project still selected (with none
+  selected, the one the host's configuration names, which it opens), or
+  saying that none is (`selected_project`). A project selected by its
   `data.qda` is called by its folder's name, not "data".
 - **After pseudonymising, the session files that still hold the real
   names are listed.** `pseudonymise_source`'s `stale_sessions` names
   every coding session of the project whose file holds an excerpt of
-  the rewritten file: a suggestion's passage and context whatever its
-  status, and a proposed code's evidence; the ones with work still to
-  apply are under `stale_sessions_with_work_to_apply`, and the run's
-  notes name the session files. Until now the list named only sessions
-  with suggestions still to apply, never read proposals, and was always
-  empty after `create_project`, because a session records the project's
-  database file while the selection recorded its folder, and the two
-  were compared as plain strings. `list_coding_sessions`' project filter
+  the rewritten file: a suggestion's passage (and, in a session file
+  written before v0.14, the text around it) whatever its status, and a
+  proposed code's evidence; the ones with work still to apply are under
+  `stale_sessions_with_work_to_apply`, and the run's notes say where
+  those session files are. Until now the list named only sessions with
+  suggestions still to apply, never read proposals, and was always empty
+  when the project had been selected by its folder (as
+  `list_available_projects` lists it and `create_project` leaves it),
+  because a session records the project's database file while the
+  selection recorded the path as given, and the two were compared as
+  plain strings. `list_coding_sessions`' project filter
   had the same fault and now finds a project's sessions by its folder
   or its `data.qda`. The session list, `get_current_project` and the
   exports name a project by its folder, not "data".
@@ -243,8 +258,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is used.
 - The process scan reads a process's program, not its arguments: it
   counts a program whose name holds "qualcoder" once this server's own
-  names are taken out (QualCoder's installers, its app, and the portable
-  and Linux downloads its releases publish), or a Python running
+  names are taken out (the `qualcoder` command an install makes,
+  QualCoder.app and QualCoder.exe, and the portable and Linux downloads
+  its releases publish), or a Python running
   QualCoder's package, and never this server's own process. A shell,
   editor or test run whose command line merely mentioned QualCoder made
   every selection say the project "APPEARS to be open in QualCoder".
@@ -265,18 +281,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with no caveat. Only the wording changes; a switch to limit the note
   rewrite to one file is planned.
 
+- **NOTICE**, after a check of everything added since 0.13 against
+  QualCoder's source: no QualCoder routine was copied or ported in this
+  release. One entry is added, the labels of QualCoder's menus and
+  buttons that answers name ("REFI-QDA Project export", "Open Project",
+  "Restructure", "Keep" and "Switch"), and eight are corrected: the
+  speaker coder's name where it now lives, QualCoder's backup hour
+  stamp, its settings folder and the check for `_BKUP_` folders beside
+  a new project, the creation date of a new project, the test that pins
+  the oracle project, the test files that plant rows in QualCoder's
+  shapes, a line number and a cross-reference. 77 entries.
 - The GPL text moved from `COPYING` to `legal/GPL-3.0.txt`, so that
   GitHub shows the project's licence as the LGPL; the text still ships
   in the wheel and the sdist, as the LGPL requires, and nothing about
   the licence changes.
-- Every CI job stops after 90 minutes rather than GitHub's six hours;
-  the slowest green job of the last 120 runs took 59 minutes. A test
+- Every CI job now has a time limit rather than GitHub's six hours: 90
+  minutes for the test jobs, 20 and 10 for the desktop extension's; the
+  slowest test job in 120 green runs (7 to 25 September 2026) took 59
+  minutes. A test
   still running after ten minutes has every thread's stack, its own
   frame included, written to the log (pytest's `faulthandler_timeout`),
   so a hang is named before the job's limit ends it. No new dependency.
-- The two tests that start a second test run give it a temporary folder
-  inside their own, so it no longer leaves a `pytest-of-<user>` folder
-  in the system's temporary directory on every run.
+- The two rate tests that start a second test run give it a temporary
+  folder inside their own, so they no longer add a folder to
+  `pytest-of-<user>` in the system's temporary directory on every run
+  (one other test that starts a second run still does).
 - The timing guard on curly-quoted text (a one-form count of a curly
   megabyte against a plain one, under 2.8 times) reads the thread's CPU
   time, best of fifteen alternating pairs, so a busy machine no longer
@@ -323,16 +352,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and, when no coder is hidden, with QualCoder's own counts.
 - **Backups made consistently.** A backup (and a workspace copy) copies
   the project database with SQLite's own online backup, from a
-  read-only connection, and never copies its journal or WAL file, which
+  read-only connection, and leaves out its journal and WAL file, which
   QualCoder's backup ignore set does not match: a backup taken while
   QualCoder was writing used to carry its journal, and then read
   differently on different platforms (refused read-only on newer
-  SQLite, or malformed). The rest of the folder is copied as before.
-  About 1.2 seconds per gigabyte of database, measured, during which
+  SQLite, or malformed). The rest of the folder is copied as before. A
+  database SQLite cannot read (one a crash left with its journal, or a
+  damaged one) is still copied as a file with its journal or WAL file;
+  the answer says so (`database_copied_as_file`) and `list_backups`
+  marks the backup `unclean`. About 1.2 seconds per gigabyte of database, measured, during which
   QualCoder's own saves wait: on a database of about 4 GB or more a
-  save in an open QualCoder window can fail. A database kept locked for
-  more than about 15 seconds is answered as a locked database, with
-  nothing written. A `data.qda` that is a link inside the project is
+  save in an open QualCoder window can fail. A backup or workspace copy
+  of a database kept locked for more than about 15 seconds is answered
+  as a locked database, with nothing written; a write tool meets such a
+  lock sooner, at its read-write open, with the same answer. A `data.qda` that is a link inside the project is
   copied the same way from the file it points to (a byte copy of it
   could hold a write never committed); one pointing outside the
   project is refused, with nothing written, since no backup could hold
@@ -344,11 +377,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A configured project at first use.** On a project set in the host's
   configuration (`QUALCODER_PROJECT_PATH`), `list_backups`,
   `prune_backups`, `restore_backup`, `get_current_project`,
-  `set_project_ai_coder_name`, `read_pseudonym_list` and
-  `pseudonymise_source` no longer answer "No Qualcoder project
-  selected" (or "No project currently open") when no other tool has run
-  yet. A configured project that cannot be opened is answered with one
-  text in every tool, without its path.
+  `set_project_ai_coder_name`, `read_pseudonym_list`,
+  `pseudonymise_source`, `import_text_file` with
+  `apply_project_pseudonyms`, and the tools that work on a coding
+  session (`record_suggestions`, `edit_suggestion`, `apply_codings`,
+  `propose_codes`, `update_proposal`, `create_proposed_codes`, and
+  `export_refi_qda` with a session) no longer answer "No Qualcoder
+  project selected" (or "No project currently open") when no other tool
+  has run yet. A configured project that cannot be opened is answered
+  with one text in every tool, without its path (a locked database, or
+  a schema this server does not support, keeps its own answer, which
+  names no path either).
 
 ### Changed: privacy of the run record, error answers and the log
 
@@ -361,8 +400,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   second). The lengths before and after and `new_sha256` stay. The run
   record is now format 3: each file's text before and after the run is
   fingerprinted as `old_text_hmac_sha256` and `new_text_hmac_sha256`,
-  keyed with the preview-token secret over a fixed label and the text,
-  as `mapping_hmac_sha256` already was, where formats 1 and 2 carried
+  keyed with the preview-token secret, as `mapping_hmac_sha256` already
+  was, over a fixed label and the text, where formats 1 and 2 carried
   the plain pairs `old_fingerprint` and `new_fingerprint`. Records
   already written are left as they are and still hold the plain
   digests: keep them private, or delete the ones you do not need. A
@@ -371,8 +410,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pseudonymise_source`'s list of what it does not rewrite names an
   imported document's stored copy in the project's `documents/` folder,
   which keeps the original text and which QualCoder's exports ship.
-- **One rule for every error answer and log line: the kind of error and
-  SQLite's short name for it, never SQLite's message.** A project built
+- **One rule for every error answer and log line: never SQLite's
+  message; at most the kind of error and SQLite's short name for it.** A project built
   to do it (a trigger whose error quotes a row) or a damaged one (a note
   or a name stored as bytes that are not UTF-8, which Python's sqlite3
   quotes whole) could put a note, private part included, into an
@@ -380,9 +419,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `add_journal_entry`, `create_code`, `rename_code`, `create_category`,
   `rename_category` and `import_text_file` answer, for instance,
   "Failed to add code: IntegrityError SQLITE_CONSTRAINT_TRIGGER", and so
-  does the coding write behind `apply_codings` and
-  `create_proposed_codes` (and the database layer's note write for a
-  coding, which no tool calls); the shared
+  does the coding write behind `apply_codings` (and the database layer's
+  note write for a coding, which no tool calls), while
+  `create_proposed_codes`, which writes codes only, answers as
+  `create_code` does; the shared
   handler behind most reads logs the kind; the tool guard, the select,
   write, restore, session and export routes and `search_files` do the
   same; the pseudonymisation run's journal write, through either of its
@@ -397,9 +437,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `QUALCODER_PROJECT_PATH` the configured one); and an error of a kind
   the guard did not name, which the library answered with its message,
   is now answered by its kind. A test reads every handler in the source
-  that can catch a SQLite error and fails on any use of its message,
-  and four tests read every resource on a real server over standard
-  input and output, its standard error searched line by line. The rule
+  that can catch a SQLite error and fails on any use of its message
+  other than a comparison that picks a branch, and four tests run a
+  real server over standard input and output, three reading every
+  resource and one the codes list after a lost connection, its standard
+  error searched line by line. The rule
   closes one channel: Python's own messages can still quote a stored
   value, and PRIVACY.md says so. When `pseudonyms.json` cannot be
   read, the answers give the kind of error, not the system's text,
@@ -439,11 +481,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   declaration seen by any read or by a decision that names a coder is
   kept for both; a read that lands after QualCoder has added the column
   and before it has added the views is refused, and the next read after
-  it has added them answers, filtered. The cost is one schema query per read on a project that did
-  not declare visibility when the connection opened, 5 to 6
-  microseconds each on the development Mac and a few per read tool
-  call (about 11 to 25 microseconds on the reads measured), and nothing
-  on a project that did.
+  it has added them answers, filtered. The cost is at most one schema
+  query per read on a project that did not declare visibility when the
+  connection opened, and none once any call has seen the declaration:
+  5 to 6 microseconds each on the development Mac and a few per read
+  tool call (about 11 to 25 microseconds on the reads measured), and
+  nothing on a project that did.
 - Two tests v0.13's review of the note rewriting asked for: the mode a
   saved `pseudonyms.json` keeps is shown to come from the file that was
   read even when the name is swapped for a link at the reader's own
@@ -453,17 +496,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Serialised tool JSON as it stands, after the privacy change, the
   creation of projects, the handling of existing projects, the
   server-wide changes, the folder for projects, the reads, queries and
-  exports, and the AI coding loop: full = 195,395 characters (about
-  48.8k tokens at chars/4) over 73 tools, core = 64,848 (about 16.2k)
-  over 21, and the new opt-in lifecycle set = 197,980 (about 49.5k)
-  over 74. The coding loop's last four rounds took 2,492 characters off
+  exports, the AI coding loop and the release preparation: full =
+  195,325 characters (about 48.8k tokens at chars/4) over 73 tools,
+  core = 64,835 (about 16.2k) over 21, and the new opt-in lifecycle set
+  = 197,910 (about 49.5k) over 74. The coding loop's last four rounds took 2,492 characters off
   `full` and 2,502 off `core`: the three questions, the reading, the
   study at the start, the deprecation sentences, the count words and
-  the earlier turn before a passage were paid for by shorter texts (`analyze_for_coding`,
-  `review_suggestions`, `create_proposed_codes`, `record_suggestions`,
+  the earlier turn shown before a passage were paid for by shorter
+  texts (`analyze_for_coding`, `review_suggestions`,
+  `create_proposed_codes`, `record_suggestions`,
   `analyze_file_with_coding`, `search_files`, `edit_suggestion`, and the
-  `owner` argument's text). Moved by the coding loop's descriptions: `analyze_for_coding`
-  says what it does, what a session's scope refuses and how names
+  `owner` argument's text), and the release preparation's corrections
+  took 70 more off `full` and 13 off `core` (`query_by_attribute`,
+  `analyze_file_with_coding`, `export_refi_qda`, `export_codebook`,
+  `export_coded_segments_report`, `analyze_for_coding`, `search_files`,
+  `record_suggestions` and `list_coding_sessions`, none longer). Moved
+  by the coding loop's descriptions: `analyze_for_coding` says what it
+  does, what a session's scope refuses and how names
   match; `record_suggestions` asks for `reading`; `edit_suggestion`
   takes `reading`; `update_suggestion_status` takes `reopen` and says
   how it counts; `review_suggestions`, `analyze_file_with_coding`,
@@ -493,12 +542,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The tools' hints (annotations) are not part of this measurement.
   Measured as for 0.13, on the final tree through the toolset gate,
   under Python 3.13.5 with mcp 1.30.0, in the repository's own `venv/`;
-  on Python 3.11.13, in the repository's `.venv/`, 205,103, 68,140 and
-  207,828.
+  on Python 3.11.13, in the repository's `.venv/`, 205,033, 68,127 and
+  207,758.
 
 ### Changed: reads, queries and exports say what they found
 
-What the claims audit found in the reads, the queries and the exports:
+What a check of every tool's claims found in the reads, the queries and
+the exports:
 answers that looked like findings but came from a wrong name, a partial
 search or a silent limit.
 
@@ -525,11 +575,13 @@ search or a silent limit.
   `saved_graph_rows_removed`; it never quotes the memo. The preview
   token now covers the source's whole branch of sub-codes and the words
   of its memo (a digest, never the text), so a sub-code added at any
-  depth, or the memo reworded, after the preview needs a fresh preview. `delete_code`'s preview counts the
-  saved-graph rows it removes too.
+  depth, or the memo reworded, after the preview needs a fresh
+  preview. `delete_code`'s preview counts the saved-graph rows it
+  removes too.
 - **Attribute queries compare numbers only, and say what they left
   out.** `query_by_attribute`'s `gt`, `gte`, `lt` and `lte` cast every
-  value to a number in SQLite, which reads text as 0: on a character
+  value to a number in SQLite, which reads text as the number its
+  leading digits make, or as 0: on a character
   attribute holding "55", "unknown", "34 years" and "n/a", "under 18"
   found "unknown" and "n/a", and "over 30" found "34 years". They now
   compare only values that are finite numbers in the digits 0 to 9, once
@@ -538,13 +590,14 @@ search or a silent limit.
   counts the rest (`values_left_out`: `not_numbers`, `unset`) with a
   note; `equals` on a numeric attribute follows the same rule. A probe
   that is not such a number ("nan", "inf", "1_000", full-width digits)
-  is refused by all five, where `equals` used to answer it by text and
-  find nothing. This departs from QualCoder's attribute report, which
-  reads a numeric attribute's value as the number it begins with ("34
-  years" as 34) or as 0 when it begins with none ("unknown"), and
-  compares a character attribute as text. The answer is now an object
-  (`attribute`, `operator`, `value`, `value_type`, `result_count`,
-  `results`, and for a numeric comparison `values_compared` and
+  is refused by all five: equals with a full-width 12 is refused, where
+  0.13 read it as 12. This departs from QualCoder's attribute report,
+  which reads a numeric attribute's value as the number its leading
+  digits 0 to 9 make ("34 years" as 34, "unknown" as 0), and compares a
+  character attribute as text. The answer is now an object
+  (`attribute`, `attr_type`, `operator`, `value`, `value_type`,
+  `result_count`, `results`, and for a numeric comparison
+  `values_compared` and
   `values_left_out`), not a bare list: read the matches from `results`.
   `set_attribute` refuses "nan", "inf", "Infinity", underscores
   ("1_000") and digits outside 0 to 9 in a numeric attribute, which
@@ -580,8 +633,9 @@ search or a silent limit.
   "Ärztin". They now compare by Unicode's default case folding
   (Python's) after normalisation, for the match and for the count, the
   same on every platform's SQLite, so "strasse" also finds "Straße" (and
-  "ß" finds every "ss"); Turkish dotted and dotless i are the exception,
-  not matched to i and I, since the folding is not locale-aware.
+  "ß" finds every "ss"); Turkish dotted and dotless i are the exception
+  ("istanbul" does not find "İstanbul"), since the folding is not
+  locale-aware.
   QualCoder's own searches use `LIKE`; this is a departure in the
   researcher's favour. The query is folded once per search, a long run
   of combining marks is put in canonical order first so a crafted text
@@ -597,7 +651,8 @@ search or a silent limit.
   name, a code's name, a coder, a case id) test the exact value, so a
   damaged row they do not answer with no longer fails them; a read that
   lists every code or every case, such as `get_coding_frequencies` or
-  the codes list, still fails on a damaged name among them, as in 0.13.
+  the codes list, still fails on a damaged name or note among them, as
+  in 0.13.
 - **`search_memos` searches every memo and note outside QualCoder's
   saved graphs.** It read code memos, file memos and annotations, three
   of the twelve places a note lives, while its description said "all
@@ -668,12 +723,12 @@ search or a silent limit.
 ### Changed: the AI coding loop says what it does
 
 - **The confidence score is gone; each suggestion is explicit or
-  interpretive** (owner ruling 21). The 0-1 `confidence` a suggestion
+  interpretive**. The 0-1 `confidence` a suggestion
   carried, and `analyze_for_coding`'s `min_confidence`, are removed
   everywhere: the suggestions, the sessions, the review screen, the
   grounding text, the help, the two workflow guides and the REFI-QDA
   export. In their place each suggestion carries a `reading`,
-  required (owner ruling 25): `explicit` (the passage states what the
+  required: `explicit` (the passage states what the
   code names) or `interpretive` (the code rests on what the passage
   implies rather than on what it says; its reason names the words it
   rests on). Nothing sorts, filters or totals by it, and the researcher
@@ -708,14 +763,15 @@ search or a silent limit.
   `ambiguous_code_names` with both, and `record_suggestions` and
   `edit_suggestion` refuse it saying which two.
 - **A session starts from the researcher's answers.** Before starting a
-  session the assistant asks three things (owner ruling 25): what to
+  session the assistant asks three things: what to
   look for, as a lens (the researcher's own codes, topics, people's own
   words, actions, feelings or values, or other), and whether to point
   out passages no code fits; how long a coded passage should be (a
   phrase, whole sentences by default, or a whole answer); and whether a
   passage may carry more than one code, a second code's reason then
   saying why both apply. The answers are the session's `instruction`,
-  which is now required: the default "Code all relevant segments" is
+  which a call must now carry (the tool refuses one without it): the
+  default "Code all relevant segments" is
   gone, and a call without one starts nothing and says what to ask.
   When the researcher is unsure, the assistant offers a short pilot. The
   texts no longer tell the assistant to prefer long passages
@@ -730,9 +786,10 @@ search or a silent limit.
   QualCoder 4.0 hands the memo to its own assistant, with a line asking
   the assistant to read through it, to name a concept from it when a
   reading rests on it, and to say what it does not cover; when the memo
-  is empty it says to ask the researcher what the study asks. The
+  has no public part it says to ask the researcher what the study
+  asks. The
   private part of the memo is never sent.
-- **Creating proposed codes creates codes only** (owner ruling 25).
+- **Creating proposed codes creates codes only**.
   `create_proposed_codes` loses `apply_coded_segments`, which wrote a
   proposal's evidence as codings, under the rationale, with no reading
   and no decision on each passage, and into any file, even one outside
@@ -744,15 +801,16 @@ search or a silent limit.
   longer store shorter and longer spans, which only
   `get_coding_session_info` returned; a session file that holds them
   loses them when it is next saved.
-- **The counts say what they count** (owner ruling 26). "Saturation"
+- **The counts say what they count**. "Saturation"
   and "prominent themes" are gone from every text the server sends.
   `get_coding_frequencies` says, in its description and its answer
   (`counts_note`), that it counts codings, not participants or
   importance. `search_files`' filter by what is already coded calls a
   file whose every match is coded just that, and its answer (`note`)
   offers the files returned as where coding has not reached, adding
-  that the count does not mean a code is complete; the help topic
-  `saturation_and_novelty` is renamed `not_yet_coded` and says the same.
+  that the count does not mean a code is complete; the help overview's
+  entry `saturation_and_novelty` is renamed `not_yet_coded` and says the
+  same.
   The rest of the server's wording waits for the methods review.
 - **A reading stays with the code it was given for.** `edit_suggestion`
   takes `reading`. Moving a suggestion to another code without it
@@ -769,7 +827,9 @@ search or a silent limit.
   refused; they now say reopen, edit, decide again.
 - **The two decision tools say what they did not do.**
   `update_suggestion_status` and `update_proposal_status` list GUIDs that
-  name nothing in the session (`not_found`), refuse a GUID sent in more
+  name nothing in the session (`not_found` in `update_proposal_status`'
+  answer, a "Not found in this session" line in
+  `update_suggestion_status`'), refuse a GUID sent in more
   than one list (it used to be counted both ways and end rejected), and
   say "Nothing changed" when nothing did. `review_suggestions` and
   `review_proposals` name the GUIDs they did not find.
@@ -788,7 +848,7 @@ search or a silent limit.
   assistant when it sent `context_before` or `context_after`, stored
   unchecked, and shown under "Context Before" as if it were the file.
   `record_suggestions` now sets those fields aside (and says how many),
-  and session files keep no surrounding text at all (owner ruling 25):
+  and session files keep no surrounding text at all:
   `review_suggestions` reads it from the file each time, and shows each
   suggestion in the order a researcher reads it: in a transcript the
   nearest earlier turn by another speaker, whatever it says, then the
@@ -798,18 +858,19 @@ search or a silent limit.
   alphabet, apostrophes, "Speaker 2"), an optional bracketed timestamp
   and a colon that no digit follows, starting a paragraph; a name counts
   as a speaker only when it opens more than one paragraph, so a label
-  seen once ("The problem was this:", a field note's "Reflection:") is a
-  paragraph with no speaker label. Speakers are compared by name alone,
+  seen once ("The problem was this:", a field note's "Reflection:") is
+  counted as a paragraph with no repeated speaker label. Speakers are compared by name alone,
   so "Respondent [00:01:09]:" and "RESPONDENT:" are the speaker of
   "Respondent:". A file without such labels, prose whose paragraphs open
-  "Monday:", "Tuesday:", and a file with an unbracketed time after the
+  "Monday:", "Tuesday:", each once, and a file with an unbracketed time
+  after the
   name (Otter's "Name  0:03", whose minutes would otherwise make one
   person a new speaker each minute) show none. When the nearest turn has
   three words or fewer and no question mark in any script ("Mm-hmm.",
   "Describe your manager."), the one before it by another speaker is
   shown with it, under a heading that says so, and the turns by the same
-  label as the passage and the unlabelled paragraphs left out between are
-  counted, never skipped silently. A turn over 1,200 characters is shown
+  label as the passage and the paragraphs with no repeated speaker label
+  left out between are counted, never skipped silently. A turn over 1,200 characters is shown
   by its two ends, the cut marked "[… N characters not shown …]". The
   passage's unit and the longer span offered beside it are named with
   one word, "paragraph" or "speaker turn".
@@ -879,14 +940,16 @@ search or a silent limit.
 ### Deprecated: what goes in v0.15
 
 Each of these still works in v0.14, and says in its description and in
-its answer that it is deprecated and will be removed in v0.15 (owner
-ruling 25).
+its answer that it is deprecated and will be removed in v0.15 (the owner's
+decision).
 
 - **`read_pseudonym_list`.** QualCoder's Pseudonyms dialog (the button
   in Manage Files) shows the same list without sending it to the AI
-  provider. The tool keeps its marks: the host asks before each call.
+  provider. The tool keeps its marks, so a host that honours them asks
+  before each call.
 - **`export_refi_qda`, both the whole-project and the session export.**
-  It files every coding under the AI coder name and leaves out cases,
+  It files every coding under the AI coder name, a hidden coder's too,
+  and leaves out cases,
   annotations, journals and media, and a session's export includes
   rejected suggestions unmarked. QualCoder's own export (Project, Export,
   REFI-QDA Project export) keeps each coder, the cases, the notes and
@@ -945,9 +1008,12 @@ server-wide changes:
   a null is stored as empty (it used to be the word "None").
 - **`replace=true` keeps the pending items when every new item is
   refused** (`pending_kept`, with a note, and the session file as it
-  was); items already in the session are skipped, not refused, and
-  replace as before.
-- **`set_memo`'s `target_id` may be left out** for the project memo.
+  was); suggestions already in the session are skipped, not refused,
+  and the pending ones are replaced as before, and a proposal already
+  there is refused.
+- **`set_memo` takes `target_type` `project`** (0.13 refused it), with
+  `target_id` left out or null; the public part is replaced and the
+  private part kept.
 - **`list_available_projects`**: `search_directories` replaces the usual
   places, `~` is expanded, a relative folder is refused, and the answer
   carries `searched`.
@@ -963,6 +1029,18 @@ server-wide changes:
   old meaning (work still to apply) is `stale_sessions_with_work_to_apply`.
   `list_coding_sessions`' `project_path` finds a project's sessions by
   its folder or its `data.qda`, in any spelling of the path.
+- **Two people who share a name**: one file per call gives them two
+  pseudonyms in the file text only; with `rewrite_memos` on, the run
+  that carries the name rewrites it in notes across the whole project,
+  the other person's included. Keep `rewrite_memos` off on every run of
+  a shared name and change those notes by hand; 0.13 promised two
+  pseudonyms and behaved the same.
+- **`pseudonymise_source`'s result no longer carries `old_sha256`, and
+  its run record is format 3**: `old_text_hmac_sha256` and
+  `new_text_hmac_sha256` (keyed) with `old_length` and `new_length`,
+  where format 2 had `old_fingerprint` and `new_fingerprint`. A script
+  that read the plain digests needs a look; records already written
+  keep them.
 - **Backups are listed and pruned by the time in their names**, each
   with `dated_from` (a name dated ahead of the clock is dated by its
   folder and flagged); `prune_backups(older_than_days=...)` judges by
@@ -970,6 +1048,20 @@ server-wide changes:
   whole name is one this server gives its backups: any other with the
   prefix (no time, or a Finder duplicate's " copy") is listed under
   `never_removed`.
+- **A backup holding a journal or WAL file that is not empty, or whose
+  `data.qda` is a link, is `unclean`**: `list_backups` marks it
+  (`unclean`, `unclean_backups`), a prune's preview names it when kept,
+  and `restore_backup` refuses it, backups 0.13 took while QualCoder was
+  writing included (0.13 tried and failed with a database error);
+  choose another backup.
+- **A project whose `data.qda` links to a file outside its folder is
+  refused** by every write that takes a backup and by
+  `copy_project_to_workspace`, where 0.13 wrote and copied without the
+  database; put the database file itself in the project folder.
+- **While a backup is taken, QualCoder's own saves wait**, about 1.2
+  seconds per gigabyte of database; from about 4 GB a save in an open
+  QualCoder window can fail, so close a large project in QualCoder
+  before asking for a write.
 - **In the `core` set**, the texts it serves and this server's own
   words in its answers mark each tool it does not register: "(not
   available in this tool set)"; the project's text is returned as it
@@ -977,10 +1069,45 @@ server-wide changes:
 - **Every tool carries MCP's hints** (`readOnlyHint`,
   `destructiveHint`, `idempotentHint`, `openWorldHint`), and
   `read_pseudonym_list` carries `anthropic/requiresUserInteraction` in
-  its `_meta`; in an auto mode a host approves read-only tools and a
-  classifier decides on the rest. INSTALL.md says what each host does.
+  its `_meta`; in Claude Code's auto mode read-only tools are approved
+  and a classifier decides on the rest (Cowork's Auto approves a
+  read-only tool only when it is set to always allow). INSTALL.md says
+  what each host does.
+- **A third tool set, `lifecycle`** (`QUALCODER_MCP_TOOLSET=lifecycle`)
+  is the 73 tools of `full` plus `create_project`; `full` and `core` are
+  unchanged. 0.13 refuses the value at start-up, so a configuration
+  that sets it cannot be taken back to 0.13 as it is.
+- **The one-click extension** installs the server in Claude Desktop with
+  the `lifecycle` set and puts projects in `~/QualCoder projects`, so new
+  workspace copies land there, not in `~/Documents/Qualcoder MCP
+  Projects`. Beside a hand-made configuration it shows every tool
+  twice: remove the `qualcoder` entry from the host's configuration, or
+  switch one of the two off.
+- **A project set in `QUALCODER_PROJECT_PATH` is used from the first
+  call**: `list_backups`, `prune_backups`, `restore_backup`,
+  `set_project_ai_coder_name`, `read_pseudonym_list` and
+  `pseudonymise_source`, `import_text_file` with
+  `apply_project_pseudonyms` and the tools that work on a coding session
+  no longer answer "No Qualcoder project selected" before another tool
+  has run; one that does not exist stops the server
+  without naming its path.
+- **Some refusals are worded differently**, so a script that matches
+  their text needs a look: an unknown code id now points to
+  `get_coding_frequencies` and the codes resource, an unknown file id to
+  the files resource or a name search; `analyze_for_coding`'s unknown
+  code reads "No session was started: no code matches [...]", and
+  `export_code_report`'s adds ": no code has that name in any letter
+  case".
+- **Fewer "APPEARS to be open in QualCoder" hints**: the process scan
+  reads a program's name, not its command line, so a shell or editor
+  that mentions QualCoder no longer adds `qualcoder_gui_hint`.
+- **Three prompts are reworded** (`summarize_project`, `explore_case`,
+  `analyze_theme`): they name the resources and tools that exist
+  instead of `list_all_codes` and the like; their names and arguments
+  are unchanged.
 
-The desktop extension's changes:
+The folder for projects and export paths (every install; the desktop
+extension sets the folder):
 
 - **The export tools refuse a relative `output_path`**
   (`export_codebook`, `export_coded_segments_report`,
@@ -1013,7 +1140,7 @@ The reads, queries and exports:
   probe that is not such a number ("nan", "inf", "-inf", "1_000",
   full-width digits) is refused by all five, where 0.13 compared it:
   "lt inf" no longer answers every value, and `equals` with a
-  full-width "12" is refused rather than answering by text.
+  full-width "12" is refused, where 0.13 read it as 12.
 - **Reads answer a refusal where they answered empty.** A code, case or
   file id that does not exist, a coder with no codings anywhere in the
   project, an attribute name that is not one of that kind (names are
@@ -1023,6 +1150,25 @@ The reads, queries and exports:
   contents. `export_coded_segments_report` writes no file for an
   unknown coder or file id. A known value with nothing in scope still
   answers empty.
+- **Region and audio/video codings are counted as not shown**:
+  `get_coded_segments` gains `codings_not_shown`, and
+  `get_coding_frequencies` and `get_project_summary` gain
+  `codings_not_counted`, on a project that has them.
+- **A PDF with no usable text is named and refused**:
+  `analyze_for_coding` and `link_file_to_case` refuse it where 0.13
+  went on, `get_project_summary` lists it under `unusable_pdfs`,
+  `analyze_file_with_coding` marks it `unusable_pdf`, and `search_files`
+  counts it as not searched.
+- **New keys in the other answers**: `code_match` (`search_coded_text`,
+  `export_code_report`); `case_match` (`link_file_to_case`,
+  `import_text_file`); `segments_returned`, `segments_total` and
+  `truncated` (`export_code_report`); each result's `applies_to`
+  (`search_memos`); `old_parent_code` and `old_parent_code_id`
+  (`move_code_to_category`); `source_code_has_memo`,
+  `source_memo_carried_to_target` and `source_memo_note`
+  (`merge_codes`); `session_codes` and `session_file_ids` on a
+  suggestion refused for scope; `in_more_than_one_list` on the two-list
+  refusals. A caller that compares a whole answer's shape sees them.
 - **Names are found as the codebook tools find them.** `code_name` in
   `search_coded_text` and `export_code_report`, and `case_name` in
   `link_file_to_case` and `import_text_file`, use the exact name after
@@ -1115,8 +1261,11 @@ The AI coding loop:
   GUID is counted once, and approved, rejected and reopened count only a
   status that moved (one already in that status is counted in
   `unchanged`), so approving an approved suggestion now answers
-  "Nothing changed" and 0 where it said 1. Both answers gain
-  `not_found`, and `update_suggestion_status` takes `reopen`.
+  "Nothing changed" and 0 where it said 1. Both answers say what was
+  not found (`not_found` in `update_proposal_status`, a "Not found in
+  this session" line in `update_suggestion_status`, whose text also
+  counts only moves and whose two-list refusal is JSON), and
+  `update_suggestion_status` takes `reopen`.
 - **`record_suggestions` no longer takes `context_before` or
   `context_after`, and session files keep no surrounding text.** A
   caller that sends them has them set aside, and the answer counts them
@@ -1140,7 +1289,9 @@ The AI coding loop:
   (`status`, `approval_withdrawn` in the answer), and
   `create_proposed_codes` creates nothing for it until it is approved
   again. A call whose values are already the proposal's own answers
-  `changed: false` and leaves the approval standing.
+  `changed: false` and leaves the approval standing, with no `success`
+  or `changes` (0.13 answered `success: true` with the `changes` it
+  made).
 - **A merged proposal is final.** `merge_proposals` answers
   `source_status: "merged"` where it said `"rejected"`, and gives the
   target's `status`; the source can no longer be approved
@@ -1180,16 +1331,15 @@ The AI coding loop:
   `context_ignored` with `context_note`, when those were sent.
   `analyze_for_coding`: `not_found`, `ambiguous_code_names` and
   `project_memo`. `edit_suggestion`: `reading`, `reading_cleared`,
-  `reason_note` and `reading_note`. `update_suggestion_status` and
-  `update_proposal_status`: `unchanged` and `not_found`, and
-  `update_proposal_status` `changed` and `message` too.
+  `reason_note` and `reading_note`. `update_proposal_status`:
+  `unchanged`, `not_found`, `changed` and `message`.
   `get_coding_session_info`: each suggestion's `reading`,
   `reading_cleared`, `applied_ctid`, `turn_before`, `context_unit` and
   `context_note`, and the session's `scope`; each proposal's
-  `merged_into`; it no longer carries `min_confidence` or a suggestion's
-  `confidence`, `context_from_file` or stored context, a span
-  alternative's `preview`, or `span_alternatives` on a proposal's
-  `example_segments`. `compare_coders`: `files_coded_by_one_coder_only`
+  `merged_into`; it no longer carries `min_confidence`, a suggestion's
+  `confidence`, a span alternative's `preview`, or `span_alternatives`
+  on a proposal's `example_segments`, and its `context_before` and
+  `context_after` are read from the file. `compare_coders`: `files_coded_by_one_coder_only`
   (and its count beyond 50) and `files_coded_by_neither`. A caller that
   compares a whole answer's shape sees them.
 - **Two session files are refused** that no release ever wrote: one

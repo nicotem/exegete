@@ -2475,6 +2475,12 @@ class TestFixRound4TheEarlierTurn:
             "The ward was calm in the morning and the handover was clear.",
             "The charge nurse put it plainly: nobody gets a break on this "
             "ward.", f"Staff said: {T4}"]), None),
+        "a sentence with a colon inside a transcript": (B2.join([
+            "I: What was the ward like?", "P: It was calm.",
+            "The charge nurse put it plainly: nobody gets a break on this "
+            "ward.", f"P: {T4}"]),
+            "I: What was the ward like?\n[not shown: 1 turn(s) by the "
+            "passage's speaker and 1 paragraph(s) with no speaker label]"),
         "a timestamp before the name": (B2.join([
             "[00:01:02] Interviewer: Did you ever think of leaving?",
             "[00:01:09] Participant: Not really, no.",

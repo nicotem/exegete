@@ -256,6 +256,13 @@ CONFIDENCE_NOT_TAKEN = (
 READING_NOT_GIVEN = "not given (recorded before v0.14)"
 READING_CLEARED = ("not given (cleared when the code was changed; give one "
                    "with edit_suggestion's reading)")
+# What warns in v0.14 and goes in v0.15 (owner ruling 25, questions 3, 7
+# and 8): one sentence, the same in the tool's description and in its
+# answer, so a test can pin one source of wording
+DEPRECATED_PSEUDONYM_LIST = (
+    "Deprecated, removed in v0.15: QualCoder's Pseudonyms dialog (the "
+    "button in Manage Files) shows this list without sending it anywhere.")
+
 # analyze_for_coding without the researcher's answers (owner ruling 25,
 # question 5, with the Saldaña reading's item 17)
 INSTRUCTION_REQUIRED = (
@@ -3908,14 +3915,13 @@ def get_current_project() -> str:
 
 @mcp.tool(annotations=TOOL_DISCLOSES)
 @_tool_guard
+@_with_guidance(DEPRECATED_PSEUDONYM_LIST, before="Call it only")
 def read_pseudonym_list() -> str:
     """This sends every real name in the project's pseudonyms.json, with its pseudonym, to the AI provider.
 
     Call it only when the researcher has asked, in this conversation, to
-    see or check the project's pseudonym list. QualCoder's Pseudonyms
-    dialog (the button in Manage Files) shows the same list without
-    sending it anywhere, and get_current_project says whether the file
-    exists and how many entries it has without any name.
+    see or check the project's pseudonym list. get_current_project says
+    whether the file exists and how many entries it has without any name.
 
     The list is the project's own pseudonyms.json: QualCoder's import-time
     list, and the researcher's reverse key. Each call that returns it
@@ -3931,10 +3937,12 @@ def read_pseudonym_list() -> str:
     """
     _adopt_configured_project()
     if current_project_path is None:
-        return json.dumps({"error": _no_project_message()}, indent=2)
+        return json.dumps({"error": _no_project_message(),
+                           "deprecated": DEPRECATED_PSEUDONYM_LIST}, indent=2)
     report, entries = _pseudonyms_json_read()
     if entries is None:
-        return json.dumps({"pseudonyms_json": report}, indent=2)
+        return json.dumps({"pseudonyms_json": report,
+                           "deprecated": DEPRECATED_PSEUDONYM_LIST}, indent=2)
     report["entries_list"] = [{"original": item["original"],
                                "pseudonym": item["pseudonym"]}
                               for item in entries]
@@ -3943,7 +3951,8 @@ def read_pseudonym_list() -> str:
     logger.info("read_pseudonym_list returned the project's "
                 "pseudonyms.json list (%d entries) to the conversation.",
                 len(entries))
-    return json.dumps({"pseudonyms_json": report}, indent=2)
+    return json.dumps({"pseudonyms_json": report,
+                       "deprecated": DEPRECATED_PSEUDONYM_LIST}, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS)

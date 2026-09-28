@@ -1776,3 +1776,30 @@ class TestFixRound2TheTextAroundAPassage:
         assert "read from the file now and never stored" in review
         edit = " ".join(tools["edit_suggestion"].description.split())
         assert "context shown by review_suggestions is refreshed" not in edit
+
+
+class TestFixRound2WhatGoesInV015:
+    """Owner ruling 25, questions 3, 7 and 8: what goes in v0.15 warns in
+    v0.14, one sentence in the tool's description and in its answer."""
+
+    @staticmethod
+    def _described(tool, sentence):
+        description = server.mcp._tool_manager._tools[tool].description
+        assert sentence in description, tool
+        assert sentence.startswith("Deprecated, removed in v0.15: ")
+
+    def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
+        self._described("read_pseudonym_list",
+                        server.DEPRECATED_PSEUDONYM_LIST)
+        present = jcall("read_pseudonym_list")
+        assert present["deprecated"] == server.DEPRECATED_PSEUDONYM_LIST
+        assert "Pseudonyms dialog (the button in Manage Files)" in \
+            present["deprecated"]
+        server.current_project_path = None
+        server.db = None
+        closed = jcall("read_pseudonym_list")
+        assert "error" in closed
+        assert closed["deprecated"] == server.DEPRECATED_PSEUDONYM_LIST
+        # its marks stay: the host still asks before the names leave
+        assert server.mcp._tool_manager._tools[
+            "read_pseudonym_list"].annotations == server.TOOL_DISCLOSES

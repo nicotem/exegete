@@ -5552,7 +5552,11 @@ class TestTheInspectionRoutes:
 
     @staticmethod
     def _list():
-        return json.loads(server.read_pseudonym_list())
+        # v0.14's coding-loop fix round 2 (owner ruling 25, question 3):
+        # every answer carries the deprecation sentence
+        out = json.loads(server.read_pseudonym_list())
+        assert out.pop("deprecated") == server.DEPRECATED_PSEUDONYM_LIST
+        return out
 
     def test_get_current_project_reports_presence_and_count_without_a_name(
             self, project):
@@ -7646,7 +7650,8 @@ class TestProjectPseudonyms:
         (project / "pseudonyms.json").mkdir()
         assert json.loads(server.read_pseudonym_list()) == {
             "pseudonyms_json": {"present": True, "entries": None,
-                                "error": self.NOT_REGULAR}}
+                                "error": self.NOT_REGULAR},
+            "deprecated": server.DEPRECATED_PSEUDONYM_LIST}
 
     def test_a_huge_file_is_refused_value_free(self, project):
         """A 64 MB file at that name is refused with the size message;

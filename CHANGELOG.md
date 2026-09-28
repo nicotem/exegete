@@ -834,6 +834,16 @@ search or a silent limit.
   or writes ("allow once"), and the researcher's own reading of the
   counts.
 
+### Deprecated: what goes in v0.15
+
+Each of these still works in v0.14, and says in its description and in
+its answer that it is deprecated and will be removed in v0.15 (owner
+ruling 25).
+
+- **`read_pseudonym_list`.** QualCoder's Pseudonyms dialog (the button
+  in Manage Files) shows the same list without sending it to the AI
+  provider. The tool keeps its marks: the host asks before each call.
+
 ### Upgrading from 0.13.x
 
 - Upgrade the package and restart the MCP host fully so it reloads the

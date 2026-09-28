@@ -342,8 +342,10 @@ class TestDeleteUnderTheOtherSpelling:
         nfc = lambda n: unicodedata.normalize("NFC", n)
         nfd = lambda n: unicodedata.normalize("NFD", n)
         self._run(tmp_path, composed, nfc, nfd, nfd)
-        # and recorded decomposed, applied composed, deleted decomposed
-        self._run(tmp_path / "again", composed, nfd, nfc, nfd)
+        # and recorded and applied decomposed, deleted composed: each half
+        # records and deletes under different spellings, so each guards
+        # the fix on its own (the merge fix's re-verification, note 1)
+        self._run(tmp_path / "again", composed, nfd, nfd, nfc)
 
     def test_the_pass_asks_same_project_on_every_platform(
             self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
@@ -351,7 +353,10 @@ class TestDeleteUnderTheOtherSpelling:
         this one shows on every platform that the pass takes a session's
         project through SessionManager.same_project: with the comparison
         answering "the same" for a real second project, that project's
-        session is marked too; answering as it would, it is not."""
+        session is marked too. The other half, that a real second
+        project's session is not marked when the comparison answers as
+        it would, is the coding loop's
+        test_another_projects_session_is_never_touched."""
         import shutil
         sid = _session()
         guid = _record(sid, _item())["recorded"][0]["guid"]

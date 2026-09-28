@@ -1138,17 +1138,25 @@ The AI coding loop:
   (`reading_cleared` in the answer; the memo then carries the reason
   only), and with it the answer says the reason was written for the old
   code (`reason_note`).
-- **New keys in the answers.** `record_suggestions`: each entry's
-  `reading`, and `confidence_ignored` and `context_ignored` when those
-  were sent; `analyze_for_coding`: `not_found`,
-  `ambiguous_code_names` and `project_memo`; `edit_suggestion`: `reading`,
-  `reading_cleared`, `reason_note`; `get_coding_session_info`:
-  `context_note`, `question`, `context_unit`, and
-  sessions and suggestions carry `scope`, `applied_ctid`,
-  `reading_cleared`; `compare_coders`:
-  `files_coded_by_one_coder_only` (and its count beyond 50) and
-  `files_coded_by_neither`. A caller that compares a whole answer's
-  shape sees them.
+- **New keys in the answers, and keys gone.** `record_suggestions`: each
+  entry's `reading`; `confidence_ignored` with `confidence_note`, and
+  `context_ignored` with `context_note`, when those were sent.
+  `analyze_for_coding`: `not_found`, `ambiguous_code_names` and
+  `project_memo`. `edit_suggestion`: `reading`, `reading_cleared`,
+  `reason_note` and `reading_note`. `update_suggestion_status` and
+  `update_proposal_status`: `unchanged` and `not_found`, and
+  `update_proposal_status` `changed` and `message` too.
+  `get_coding_session_info`: each suggestion's `reading`,
+  `reading_cleared`, `applied_ctid`, `question`, `context_unit` and
+  `context_note`, and the session's `scope`; it no longer carries
+  `min_confidence` or a suggestion's `confidence`, `context_from_file`
+  or stored context. `compare_coders`: `files_coded_by_one_coder_only`
+  (and its count beyond 50) and `files_coded_by_neither`. A caller that
+  compares a whole answer's shape sees them.
+- **Two session files are refused** that no release ever wrote: one
+  holding another session's id (a copy: every tool refuses it and the
+  session list leaves it out), and one whose scope cannot be read (every
+  suggestion recorded into it is refused, with the reason).
 - **The memo form of a newly applied coding.** "Reading: explicit (the
   passage states what the code names)" or "Reading: interpretive (the
   code rests on what the passage implies rather than on what it says)",

@@ -64,9 +64,10 @@ QualCoder window has the project open before writing. An open 4.0
 window will not show changes written by this server until the project
 is closed and reopened there.
 
-### Automatic Backups
+### Backups
 
-Every write operation creates a timestamped backup:
+Every write makes a timestamped backup first, unless it is called with
+`create_backup=false` where the tool offers that:
 
 ```
 your_project_backup_20251029_143045.qda

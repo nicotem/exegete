@@ -6834,8 +6834,18 @@ def analyze_for_coding(
         if missing_codes:
             not_found["code_names"] = missing_codes
         if not codes_to_use:
+            # Said as it is: a name matching two codes did match (fix
+            # round 2); only a name matching nothing is "not found"
+            reasons = []
+            if missing_codes:
+                reasons.append(f"no code matches {missing_codes}")
+            if ambiguous:
+                reasons.append(f"each of {sorted(ambiguous)} matches two "
+                               f"codes (see ambiguous_code_names); give "
+                               f"one exactly")
             answer: Dict[str, Any] = {
-                "error": f"No codes found matching: {code_names}",
+                "error": "No session was started: " + "; ".join(reasons)
+                         + ".",
                 "not_found": not_found}
             if ambiguous:
                 answer["ambiguous_code_names"] = ambiguous
@@ -7266,8 +7276,8 @@ def record_suggestions(
 
     Every suggestion is validated against the project before it is stored:
     - the file must exist and be a text source
-    - the code must exist (give code_id, or code_name matched exactly,
-      else ignoring letter case)
+    - the code must exist (code_id, or code_name by analyze_for_coding's
+      rule; a name matching two codes is refused)
     - the file, and the code when the session names codes, must be in
       the session's scope (analyze_for_coding's file_ids and code_names);
       anything outside it is refused with the reason
@@ -7776,8 +7786,8 @@ def edit_suggestion(
             segment_text. Mutually exclusive with the manual span
             parameters.
         code_id: Change the code by id (existing codes only)
-        code_name: Change the code by name (matched exactly, else
-                   ignoring letter case, against the live codebook)
+        code_name: Change the code by name (analyze_for_coding's rule;
+                   a name matching two codes is refused)
         reading: "explicit" or "interpretive", for the suggestion as
                  edited
 
@@ -7981,6 +7991,14 @@ def edit_suggestion(
         sugg.segment_text = fulltext[new_start:new_end]
         sugg.span_alternatives = _compute_span_alternatives(
             fulltext, new_start, new_end)
+        if sugg.reading is not None and not wants_label:
+            # A cut can drop the words that stated the code (the
+            # re-verification's security note 3): the reading stays, and
+            # the answer says it was given for the passage as it was
+            result["reading_note"] = (
+                f"The reading ({sugg.reading}) was given for the passage "
+                f"before this edit; check it still holds, and pass reading "
+                f"to change it.")
         if not db_position_safe(fulltext):
             result["position_safety_warning"] = (
                 f"File '{sugg.file_name}' contains \r\n or characters "
@@ -9074,11 +9092,21 @@ def delete_coding(coding_id: int, create_backup: bool = True,
         updates = _mark_removed_in_sessions(deleted)
         if updates:
             result["sessions_updated"] = updates
-            result["sessions_note"] = (
-                "The suggestion this coding came from is marked removed in "
-                "its session: approve it again to re-apply it, reopen it "
-                "(update_suggestion_status) to edit it, or record the "
-                "passage again.")
+            # The note follows the entries (the re-verification's security
+            # note 2): a session that could not be saved still says
+            # applied, and approving it again would do nothing
+            if all(u["status"] == "removed" for u in updates):
+                result["sessions_note"] = (
+                    "The suggestion this coding came from is marked removed "
+                    "in its session: approve it again to re-apply it, reopen "
+                    "it (update_suggestion_status) to edit it, or record the "
+                    "passage again.")
+            else:
+                result["sessions_note"] = (
+                    "The coding is deleted, but a session entry above says "
+                    "\"not saved\": that session still calls the "
+                    "suggestion applied, so approving it again does nothing "
+                    "there; record the passage again to re-apply it.")
     _attach_hidden_target_note(result, "deleted_coding")
     return _ai_json(result, indent=2)
 
@@ -11120,6 +11148,10 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
             guid=proposal.guid, status=proposal.status)
         if evidence_rejected:
             unchanged["evidence_rejected"] = evidence_rejected
+        # A colour that snaps to the one held is no change, but the
+        # answer still says what was asked and what is stored (fix
+        # round 2)
+        unchanged.update(color_disclosure)
         return json.dumps(unchanged, indent=2)
     # An approval binds what was approved (v0.14, the claims audit's
     # item 1): a renamed, redefined or re-evidenced proposal is not the

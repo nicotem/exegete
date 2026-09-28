@@ -62,9 +62,13 @@ def guids_in_more_than_one(*lists: Optional[List[Any]]) -> List[Any]:
     return [key for key, where in seen.items() if len(where) > 1]
 
 
-# What the server writes as a proposal's merged_into: a GUID. Anything
-# else in a session file (crafted or damaged) is not echoed (fix round 1).
-_GUID_SHAPE = re.compile(r"^[0-9A-Za-z-]{1,64}$")
+# What the server writes as a proposal's merged_into: a GUID, uuid4's own
+# shape. Anything else in a session file (crafted or damaged) is not
+# echoed (fix round 1); matched whole, so no trailing newline gets
+# through (fix round 2)
+_GUID_SHAPE = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{12}")
 
 
 def unique_in_order(values: Optional[List[Any]]) -> List[Any]:
@@ -260,7 +264,7 @@ class ProposedCode:
         # the target's GUID, once merged; only that shape is kept, since it
         # is echoed into the conversation
         self.merged_into = (merged_into if isinstance(merged_into, str)
-                            and _GUID_SHAPE.match(merged_into) else None)
+                            and _GUID_SHAPE.fullmatch(merged_into) else None)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -1013,6 +1017,17 @@ class SessionManager:
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         data = json.load(f)
+
+                    # A copy whose inner id is not its file's name is
+                    # refused by every tool (load_session), so it is not
+                    # listed either: listed, it showed the real session's
+                    # id twice (fix round 2)
+                    if data.get('session_id') != \
+                            filepath.stem[len("session_"):]:
+                        logger.warning(f"Skipping session file "
+                                       f"{filepath.name}: it holds another "
+                                       f"session's id")
+                        continue
 
                     # Filter by project if specified
                     if wanted and not self.same_project(

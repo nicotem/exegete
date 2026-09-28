@@ -101,8 +101,8 @@ approval of each suggestion.
 | `analyze_for_coding(file_ids, code_names, instruction)` | Create an analysis session |
 | `record_suggestions(coding_session_id, suggestions, replace)` | Persist Claude's suggestions (text-verified) |
 | `review_suggestions(coding_session_id, suggestion_guids, show_context)` | Inspect suggestions in detail |
-| `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, support)` | Adjust a pending suggestion's span, code or label before approval (session-only); a new code without a new label clears the label |
-| `update_suggestion_status(coding_session_id, approve, reject)` | Approve/reject by GUID |
+| `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` | Adjust a pending suggestion's span, code or reading before approval (session-only); a new code without a new reading clears the reading |
+| `update_suggestion_status(coding_session_id, approve, reject, reopen)` | Approve, reject, or reopen (back to pending, to edit and decide again) by GUID |
 | `apply_codings(coding_session_id, create_backup, owner: restricted, see attribution)` | **Write** approved suggestions (project-bound, validated, all-or-nothing). An approved suggestion whose identical coding already exists is left alone and reported by id; that check reads the base table, so on a project that hides the AI coder it discloses that one such row exists (PRIVACY.md) |
 | `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coded segment (on projects with the coder-visibility capability, QualCoder 3.8.2 and 4.0, schema v14 and later, a hidden coder's row, or a row whose memo carries a `#####` private note, is refused without the override) |
 | `list_backups()` / `restore_backup(backup_path, preview_token)` | List snapshots / guarded project restore (previews first, then the token the preview returns) |

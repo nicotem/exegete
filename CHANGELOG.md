@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.14.0-alpha] - 2026-09-28
+
+v0.14, starting a study from the conversation, safely, as ruled from
+2026-09-23 to 2026-09-28, in six parts. A workbench for the tests: a
+time limit on every CI job and on every test. Privacy: the run record's
+fingerprints keyed, and one rule for error answers and log lines, which
+carry the kind of error and never SQLite's message, and no name or path
+in the log. Creating a project: `create_project`, in an opt-in
+`lifecycle` tool set, makes a new project in QualCoder 4.0's format in
+one transaction. Existing projects handled honestly: backups taken with
+SQLite's own online backup and an unclean one refused, saved graphs
+cleaned after a category is deleted or merged, PDFs with no usable text
+named and refused, region codings disclosed. What the server tells the
+assistant and the researcher, after a claims audit of every tool and
+text, in three parts: server-wide (every tool's marks, an undeclared
+argument refused, `#####` refused rather than cut), the reads, queries
+and exports (a wrong id, name or coder refused, case folding beyond A
+to Z, numeric comparisons that say what they left out, the
+co-occurrence window as a distance), and the AI coding loop (the
+confidence score replaced by a reading, explicit or interpretive; a
+session started from three questions to the researcher; no surrounding
+text kept in session files; `apply_coded_segments` removed; what goes
+in v0.15 deprecated). And a one-click extension for Claude Desktop, with
+a folder for projects, `QUALCODER_MCP_WORKSPACE`. One tool added,
+`create_project`: 73 tools in `full`, 21 in `core`, 74 in `lifecycle`.
+The dependency floor is unchanged, `mcp>=1.17.0,<2`. Parity claims cite
+QualCoder master at pinned commit 9bddf17 and the 3.8.2 tag; a created
+project follows the 4.0-Beta release, which writes the same project as
+the pin. Each part went through a QA gate, a Security gate and
+re-verification until clean, then CI on ten jobs. The acceptance run
+inside QualCoder, headless, in 4.0 at the pin, in the 4.0-Beta and in
+3.8.2: the projects `create_project` makes open with no exception, keep
+every row and behave as the tool's answer says (645 of 645 checks), and
+after v0.13's `rename_case`, `rename_file` and `pseudonymise_source`
+with notes rewritten, QualCoder's own lists, dialogs and coding view
+show the new names, the codings on the pseudonyms and the private parts
+of notes unchanged, and its own import applies the saved
+`pseudonyms.json` (870 of 870 checks, on a project this server created
+and on one QualCoder 3.8.2 made; the same checks on the projects before
+the tools fail where they should).
+
 ### Added
 
 - **A one-click install for Claude Desktop**: the server as a desktop

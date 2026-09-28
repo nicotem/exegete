@@ -2227,6 +2227,17 @@ class TestFixRound3NoSpanTextStored:
         assert "↔ longer (full speaker turn, " in small
         assert "“" not in small.split("↔ longer")[1].splitlines()[0]
 
+    def test_the_alternatives_are_made_without_their_text(self):
+        # both layers hold: the entries are made without a preview, and a
+        # suggestion drops one it is given (an older file's)
+        text = f"Respondent: {self.NAME} said so. {self.PASSAGE} Then more."
+        start = text.index(self.PASSAGE)
+        made = server._compute_span_alternatives(
+            text, start, start + len(self.PASSAGE))
+        assert made and all(set(alt) == {"label", "unit", "start_pos",
+                                         "end_pos", "length"}
+                            for alt in made)
+
     def test_where_the_passage_still_matches_the_preview_is_the_files(
             self, setup_server, qualcoder_db_path):
         # the name only after the passage: the run leaves the passage where

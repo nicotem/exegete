@@ -2355,7 +2355,9 @@ B2 = "\n\n"
 
 # Otter's text export, as the round-4 re-check built it (rv4E1qa/runs/
 # otter_313, otter_hour_313): "Name  m:ss" on the line above each
-# paragraph, blank lines between; the minute turns inside one answer
+# paragraph, blank lines between; the minute (or the hour) turns inside
+# one answer, and each "name and minute" opens two paragraphs, so the
+# rule that a name must recur does not hide the fault by itself
 OTTER = B2.join([
     "Nicola Tempini  1:23\nMm-hmm.",
     "Jane Okafor  1:25\nIt was the paperwork more than anything.",
@@ -2363,14 +2365,19 @@ OTTER = B2.join([
     "Jane Okafor  1:56\nShe was new that year, like me, so we were both "
     "finding our feet.",
     f"Jane Okafor  2:19\n{T4}",
-    "Nicola Tempini  3:01\nRight."])
+    "Nicola Tempini  2:40\nRight.",
+    "Jane Okafor  2:43\nI mean, she was polite enough, but nothing ever "
+    "changed."])
 OTTER_HOUR = B2.join([
     "Nicola Tempini  00:59:23\nMm-hmm.",
     "Jane Okafor  00:59:25\nIt was the paperwork more than anything.",
     "Nicola Tempini  00:59:52\nTell me about your manager.",
     "Jane Okafor  00:59:56\nShe was new that year, like me, so we were "
     "both finding our feet.",
-    f"Jane Okafor  01:00:19\n{T4}"])
+    f"Jane Okafor  01:00:19\n{T4}",
+    "Nicola Tempini  01:00:38\nRight.",
+    "Jane Okafor  01:00:40\nI mean, she was polite enough, but nothing "
+    "ever changed."])
 
 
 class TestFixRound5TheEarlierTurn:

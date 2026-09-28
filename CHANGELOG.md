@@ -791,12 +791,22 @@ search or a silent limit.
   and session files keep no surrounding text at all (owner ruling 25):
   `review_suggestions` reads it from the file each time, and shows each
   suggestion in the order a researcher reads it: in a transcript the
-  turn before the passage (the nearest earlier turn by another speaker,
-  found by its speaker label, whatever its punctuation, so a prompt such
-  as "Tell me about your manager." or another participant's aside is
-  shown as it is; only a short backchannel such as "Mm-hmm." is passed
-  over), then the paragraph or speaker turn that holds it, the coded
-  words marked, then the code, the reading and the reason.
+  nearest earlier turn by another speaker, whatever it says, then the
+  paragraph or speaker turn that holds the passage, the coded words
+  marked, then the code, the reading and the reason. The earlier turn is
+  found by speaker labels: a name of at most four words (letters in any
+  alphabet, apostrophes, "Speaker 2"), an optional bracketed timestamp
+  and a colon, starting a paragraph, in a file where some speaker's name
+  starts more than one paragraph; speakers are compared by name alone,
+  so "Respondent [00:01:09]:" and "RESPONDENT:" are the speaker of
+  "Respondent:". A file without such labels, or prose whose paragraphs
+  open "Monday:", "Tuesday:", shows none. When the nearest turn has
+  three words or fewer and no question mark in any script ("Mm-hmm.",
+  "Describe your manager."), the one before it by another speaker is
+  shown with it, and the turns by the passage's speaker and the
+  unlabelled paragraphs left out between are counted, never skipped
+  silently. A turn over 1,200 characters is shown by its two ends, the
+  cut marked.
   `get_coding_session_info` gives the same (`turn_before`,
   `context_before`, `context_after`, `context_unit`). While the
   session's project is not the one open, or when the file no longer
@@ -1111,11 +1121,13 @@ The AI coding loop:
   `context_after`, and each span alternative's `preview`, when it is
   next saved; `get_coding_session_info` no longer carries a `preview` on
   a suggestion's `span_alternatives`. The review's layout changed
-  (the turn before, passage in its paragraph or turn, code, reading,
-  reason:
+  (the earlier turn by another speaker, passage in its paragraph or
+  turn, code, reading, reason:
   "Context Before", "Segment Text" and "AI Reasoning" are gone); a
   script that parses it needs a look. `get_coding_session_info`'s
-  suggestions gain `turn_before` (when there is one) and `context_unit`.
+  suggestions gain `turn_before` (when there is one: the text the review
+  shows under its earlier-turn heading, one turn or two with the count of
+  what lies between) and `context_unit`.
 - **Changing an approved proposal withdraws the approval.** Approve,
   then rename, redefine, recolour, recategorise or re-evidence it with
   `update_proposal`, or merge evidence into it: it is pending again

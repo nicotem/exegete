@@ -1716,30 +1716,31 @@ class TestFixRound2TheTextAroundAPassage:
                  out.index("**Reason:** reason for Stress")]
         assert order == sorted(order)
         assert "**Passage, in its speaker turn**" in out
-        # the nearest earlier turn by another speaker (fix round 3):
-        # not the same speaker's, not a backchannel ("Take your time.",
-        # three words and no question mark), not an earlier turn
-        assert "**The turn before it:**" in out
-        assert "Take your time." not in out
+        # the nearest earlier turn by another speaker (fix round 4): "Take
+        # your time." asks nothing in three words, so the one before it
+        # comes too; the passage speaker's own turn between is said
+        assert "**Earlier turns by other speakers**" in out
+        assert ("Interviewer: How do the deadlines feel to you?\n"
+                "Interviewer: Take your time.\n"
+                "[not shown: 1 turn(s) by the passage's speaker]") in out
         assert "Is that fine?" not in out
         assert "Shall we begin?" not in out
         assert "Happy to help?" not in out
         assert "And at home?" not in out
 
-    def test_a_turn_cut_by_the_search_window_is_not_read(
+    def test_words_like_a_label_inside_a_paragraph_are_not_one(
             self, setup_server, qualcoder_db_path):
-        # the search looks back 2000 characters; the turn the window cuts
-        # into is not a whole turn, so words inside it that look like a
-        # speaker label are not taken for one
-        tail = "Q: is it so? "
-        tail += "b" * (1999 - len(tail))
-        text = (f"Interviewer: {'a' * 50}{tail}\n"
+        # a label starts a paragraph; "Q:" inside one is text. A long turn
+        # is shown by its two ends, the cut marked
+        body = "a" * 700 + " Q: is it so? " + "b" * 700
+        text = (f"P1: I started in March.\nInterviewer: {body}\n"
                 f"P1: They pile up. {self.PASSAGE} Then I go running.\n")
-        assert len(text.split("\n")[0]) - text.index("Q: is it") == 1999
         sid, _ = self._transcript_session(qualcoder_db_path, text)
         entry = jcall("get_coding_session_info",
                       coding_session_id=sid)["suggestions"][0]
-        assert "turn_before" not in entry
+        shown = entry["turn_before"]
+        assert shown.startswith("Interviewer: aaa") and " […] " in shown
+        assert "Q: is it so?" not in shown and shown.endswith("bbb")
         assert entry["context_unit"] == "speaker turn"
 
     def test_blank_line_transcripts_too(self, setup_server,
@@ -1754,7 +1755,7 @@ class TestFixRound2TheTextAroundAPassage:
         sid = new_session()
         record(sid, item(COPE, "Coping"))
         out = call("review_suggestions", coding_session_id=sid)
-        assert "The turn before it" not in out
+        assert "Earlier turn" not in out
         assert "**Passage, in its paragraph**" in out
         assert f"deadlines. ⟦{COPE}⟧" in out
 
@@ -1763,8 +1764,10 @@ class TestFixRound2TheTextAroundAPassage:
         sid, _ = self._transcript_session(qualcoder_db_path)
         entry = jcall("get_coding_session_info",
                       coding_session_id=sid)["suggestions"][0]
-        assert entry["turn_before"] == ("Interviewer: How do the deadlines "
-                                        "feel to you?")
+        assert entry["turn_before"] == (
+            "Interviewer: How do the deadlines feel to you?\n"
+            "Interviewer: Take your time.\n"
+            "[not shown: 1 turn(s) by the passage's speaker]")
         assert entry["context_before"] == "P1: They pile up. "
         assert entry["context_after"] == " Then I go running."
         assert entry["context_unit"] == "speaker turn"
@@ -1784,10 +1787,10 @@ class TestFixRound2TheTextAroundAPassage:
     def test_the_texts_say_it_is_read_not_stored(self):
         tools = server.mcp._tool_manager._tools
         review = " ".join(tools["review_suggestions"].description.split())
-        assert "in a transcript the turn before it (the nearest earlier " \
-            "turn by another speaker, found by its speaker label; a short " \
-            "backchannel skipped), then the paragraph or turn holding the " \
-            "passage" in review
+        assert "the nearest earlier turn by another speaker (found by " \
+            "speaker labels, so none where the file has none; a short turn " \
+            "asking nothing comes with the one before it), then the " \
+            "paragraph or turn holding the passage" in review
         assert "read from the file now, never stored" in review
         edit = " ".join(tools["edit_suggestion"].description.split())
         assert "context shown by review_suggestions is refreshed" not in edit
@@ -2332,61 +2335,195 @@ class TestFixRound3TheUpgradingList:
                 "`get_coding_session_info` returned") in whole
 
 
-class TestFixRound3TheTurnBefore:
-    """The methods re-verification's second point: the review shows the
-    nearest earlier turn by another speaker whatever its punctuation, so
-    it never presents an earlier question as the one the passage
-    answers; only a short backchannel is passed over."""
 
-    PASSAGE = "She never listened to any of us."
 
-    def _turn_before(self, qualcoder_db_path, text):
+# =============================================================================
+# FIX ROUND 4 (the turn before a passage: never misleading)
+# =============================================================================
+
+T4 = "She never listened to any of us, not once in three years."
+OWN1 = "[not shown: 1 turn(s) by the passage's speaker]"
+B2 = "\n\n"
+
+
+class TestFixRound4TheEarlierTurn:
+    """The re-verification of round 3, on all three lenses: the review's
+    earlier turn claims no more than its rule finds. Speakers are compared
+    by name; nothing is passed over silently (a short turn that asks
+    nothing comes with the one before it, and what lies between is said);
+    a label is a short name at a paragraph's start, in any alphabet; and a
+    file is a transcript only when a speaker name recurs. The cases are
+    the re-verification's probe transcripts (rv3E1qa/probe/turn.py and
+    turn2.py, and the methods lens's), with what the rule now shows."""
+
+    CASES = {
+        # one-to-one interviews
+        "question just before": (B2.join([
+            "I: How was your first year?", "P: Busy.",
+            "I: What was your manager like?", f"P: {T4}"]),
+            "I: What was your manager like?"),
+        "imperative prompt": (B2.join([
+            "I: Did you ever think of leaving?",
+            "P: Not really, no, I liked the place.",
+            "I: Tell me about your manager.", f"P: {T4}"]),
+            "I: Tell me about your manager."),
+        "a three-word prompt": (B2.join([
+            "I: Did you ever think of leaving?",
+            "P: Not really, no, I liked the place.",
+            "I: Describe your manager.", f"P: {T4}"]),
+            f"I: Did you ever think of leaving?\n{OWN1}\n"
+            f"I: Describe your manager."),
+        "a backchannel": (B2.join([
+            "I: What was your manager like?", "P: Well.", "I: Mm-hmm.",
+            f"P: {T4}"]),
+            f"I: What was your manager like?\n{OWN1}\nI: Mm-hmm."),
+        "why": (B2.join([
+            "I: Did you ever think of leaving?",
+            "P: Once, when the rota changed.", "I: Why?", f"P: {T4}"]),
+            "I: Why?"),
+        "a two-paragraph prompt": (B2.join([
+            "I: Did you ever think of leaving?",
+            "P: Once, when the rota changed.",
+            "I: I want to ask about your manager now.",
+            "What was a normal day with her like?", f"P: {T4}"]),
+            "I: I want to ask about your manager now.\n[not shown: 1 "
+            "paragraph(s) with no speaker label]"),
+        # timestamps and letter case
+        "timestamped, a backchannel between": (B2.join([
+            "Interviewer [00:01:02]: What was your manager like?",
+            "Respondent [00:01:09]: Hard to say, honestly, it changed a "
+            "lot over the years.",
+            "Interviewer [00:01:30]: Mm-hmm.",
+            f"Respondent [00:01:35]: {T4}"]),
+            f"Interviewer [00:01:02]: What was your manager like?\n{OWN1}"
+            f"\nInterviewer [00:01:30]: Mm-hmm."),
+        "timestamped, an answer over two segments": (B2.join([
+            "Interviewer [00:01:02]: What was your manager like?",
+            "Respondent [00:01:09]: Hard to say, honestly, it changed a "
+            "lot over the years.",
+            f"Respondent [00:01:35]: {T4}"]),
+            f"Interviewer [00:01:02]: What was your manager like?\n{OWN1}"),
+        "timestamped, numbered speakers": ("\n".join([
+            "Speaker 1 [00:01:02]: What was your manager like?",
+            "Speaker 2 [00:01:09]: Hard to say, honestly, it changed a "
+            "lot over the years.",
+            "Speaker 1 [00:01:30]: Right.",
+            f"Speaker 2 [00:01:35]: {T4}"]),
+            f"Speaker 1 [00:01:02]: What was your manager like?\n{OWN1}\n"
+            f"Speaker 1 [00:01:30]: Right."),
+        "labels in two letter cases": (B2.join([
+            "INTERVIEWER: What was your manager like?",
+            "RESPONDENT: Hard to say, honestly, it changed a lot.",
+            "INTERVIEWER: Mm-hmm.", f"Respondent: {T4}"]),
+            f"INTERVIEWER: What was your manager like?\n{OWN1}\n"
+            f"INTERVIEWER: Mm-hmm."),
+        "one speaker in bold and plain labels": (B2.join([
+            "**Interviewer:** What was your manager like?",
+            "**Respondent:** She was new that year.",
+            f"Respondent: {T4}"]),
+            f"**Interviewer:** What was your manager like?\n{OWN1}"),
+        "bold labels": (B2.join([
+            "**Interviewer:** Did you ever think of leaving?",
+            "**Participant:** Not really, no, I liked the place.",
+            "**Interviewer:** Tell me about your manager.",
+            f"**Participant:** {T4}"]),
+            "**Interviewer:** Tell me about your manager."),
+        # groups
+        "a group aside": ("\n".join([
+            "Facilitator: Was your manager supportive?",
+            "Anna: Mine was, most of the time.",
+            "Ben: I disagree.", f"Anna: {T4}"]),
+            f"Facilitator: Was your manager supportive?\n{OWN1}\n"
+            f"Ben: I disagree."),
+        "a longer group aside": (B2.join([
+            "I: How did the merger affect you?",
+            "P1: It was hard to keep up with it all.",
+            "P2: It changed things for all of us, honestly.",
+            f"P1: {T4}"]),
+            "P2: It changed things for all of us, honestly."),
+        # names in any alphabet, with apostrophes
+        "Siân": ("\n".join([
+            "Facilitator: Was your manager supportive?",
+            "Tom: Mine was fine, most weeks.",
+            "Siân: Mine was awful, a nightmare really.", f"Tom: {T4}"]),
+            "Siân: Mine was awful, a nightmare really."),
+        "O'Brien": ("\n".join([
+            "Facilitator: Was your manager supportive?",
+            "Tom: Mine was fine, most weeks.",
+            "O'Brien: Mine was awful, a nightmare really.", f"Tom: {T4}"]),
+            "O'Brien: Mine was awful, a nightmare really."),
+        # question marks in other scripts
+        "a full-width question mark": (B2.join([
+            "I: 好的，谢谢你来，我们开始吧，先聊聊你的工作。",
+            "P: 好的。", "I: 你的经理怎么样？", f"P: {T4}"]),
+            "I: 你的经理怎么样？"),
+        "an Arabic question mark": (B2.join([
+            "I: Did you ever think of leaving?", "P: Once.",
+            "I: لماذا بقيت؟", f"P: {T4}"]),
+            "I: لماذا بقيت؟"),
+        # prose, and layouts the rule does not read: nothing shown
+        "prose": (B2.join([
+            "The ward was calm in the morning.",
+            "Two new starters shadowed the charge nurse and asked many "
+            "questions.", T4]), None),
+        "prose with day headings": (B2.join([
+            "Monday: the ward was calm and the new starters shadowed the "
+            "charge nurse.",
+            "Tuesday: an alarm went off twice and nobody explained it.",
+            f"Wednesday: {T4}"]), None),
+        "prose with a colon in a sentence": (B2.join([
+            "The ward was calm in the morning and the handover was clear.",
+            "The charge nurse put it plainly: nobody gets a break on this "
+            "ward.", f"Staff said: {T4}"]), None),
+        "a timestamp before the name": (B2.join([
+            "[00:01:02] Interviewer: Did you ever think of leaving?",
+            "[00:01:09] Participant: Not really, no.",
+            "[00:01:30] Interviewer: Tell me about your manager.",
+            f"[00:01:35] Participant: {T4}"]), None),
+    }
+
+    @staticmethod
+    def _shown(qualcoder_db_path, text):
         _sql(qualcoder_db_path,
              "INSERT INTO source (id, name, fulltext, owner, date) VALUES "
              "(21, 't.txt', ?, 'T', '2024-01-01')", (text,))
         sid = new_session(file_ids=[21])
-        record(sid, item(self.PASSAGE, file_id=21))
+        record(sid, item(T4, file_id=21))
         review = call("review_suggestions", coding_session_id=sid)
         entry = jcall("get_coding_session_info",
                       coding_session_id=sid)["suggestions"][0]
         return review, entry.get("turn_before")
 
-    @pytest.mark.parametrize("sep", ["\n", "\n\n"])
-    def test_an_imperative_prompt_is_the_turn_before(self, setup_server,
-                                                     qualcoder_db_path, sep):
-        text = sep.join(["I: Did you ever think of leaving?",
-                         "P: Not really, no.",
-                         "I: Tell me about your manager.",
-                         f"P: {self.PASSAGE}"])
-        review, before = self._turn_before(qualcoder_db_path, text)
-        assert before == "I: Tell me about your manager."
-        assert "**The turn before it:**\n```\nI: Tell me about your " \
-            "manager.\n```" in review
-        assert "Did you ever think of leaving?" not in review
+    @pytest.mark.parametrize("case", sorted(CASES))
+    def test_the_probe_transcripts(self, setup_server, qualcoder_db_path,
+                                   case):
+        text, expected = self.CASES[case]
+        review, shown = self._shown(qualcoder_db_path, text)
+        assert shown == expected
+        if expected is None:
+            assert "Earlier turn" not in review
+        else:
+            assert f"```\n{expected}\n```" in review
 
-    def test_a_group_aside_is_shown_as_what_it_is(self, setup_server,
-                                                  qualcoder_db_path):
-        text = "\n".join(["I: How was the reorganisation for you?",
-                          "P2: Same for me, honestly, it was awful.",
-                          f"P1: {self.PASSAGE}"])
-        review, before = self._turn_before(qualcoder_db_path, text)
-        assert before == "P2: Same for me, honestly, it was awful."
-        assert "How was the reorganisation for you?" not in review
+    def test_the_heading_says_the_rule(self, setup_server,
+                                       qualcoder_db_path):
+        one, _ = self._shown(qualcoder_db_path,
+                             self.CASES["imperative prompt"][0])
+        assert ("**Earlier turn by another speaker** (the nearest, by "
+                "speaker labels):") in one
+        _sql(qualcoder_db_path, "DELETE FROM source WHERE id = 21")
+        two, _ = self._shown(qualcoder_db_path,
+                             self.CASES["a backchannel"][0])
+        assert ("**Earlier turns by other speakers** (the nearest, by "
+                "speaker labels, is short and asks nothing, so the one "
+                "before it is shown too):") in two
+        for text in (one, two):
+            assert "The turn before it" not in text
+            assert "Question before it" not in text
 
-    def test_a_backchannel_is_passed_over(self, setup_server,
-                                          qualcoder_db_path):
-        text = "\n".join(["I: What was the hardest part of the shift?",
-                          "P: The nights.",
-                          "I: Mm-hmm.",
-                          f"P: The nights, and my manager. {self.PASSAGE}"])
-        review, before = self._turn_before(qualcoder_db_path, text)
-        assert before == "I: What was the hardest part of the shift?"
-        assert "I: Mm-hmm." not in review
-
-    def test_the_heading_is_the_turn_not_the_question(self, setup_server,
-                                                      qualcoder_db_path):
-        text = "\n".join(["I: Tell me about your manager.",
-                          f"P: {self.PASSAGE}"])
-        review, _ = self._turn_before(qualcoder_db_path, text)
-        assert "**The turn before it:**" in review
-        assert "Question before it" not in review
+    def test_prose_is_a_paragraph_not_a_turn(self, setup_server,
+                                             qualcoder_db_path):
+        review, _ = self._shown(
+            qualcoder_db_path, self.CASES["prose with day headings"][0])
+        assert "**Passage, in its paragraph**" in review
+        assert "speaker turn" not in review

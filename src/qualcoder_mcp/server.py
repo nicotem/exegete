@@ -7061,39 +7061,112 @@ def _ambiguous_code_reason(name: str, twins: List[str]) -> str:
             f"exactly")
 
 
-def _passage_context(fulltext: str, start: int, end: int
-                     ) -> Dict[str, Any]:
+# The turn before a passage (fix round 4). A heuristic over files laid out
+# in many ways, so it claims no more than its rule finds: an unusual layout
+# makes it less helpful, never misleading.
+#
+# - A speaker label starts a paragraph (or a line, in a file with no blank
+#   line): optional bold marks, a name of at most four words that starts
+#   with a letter in any script and may hold letters, digits, apostrophes,
+#   hyphens and full stops ("Siân", "O'Brien", "Speaker 2"), an optional
+#   bracketed part (a timestamp), a colon.
+# - Speakers are compared by name alone: bold marks, the bracketed part,
+#   the colon and spacing removed, letter case ignored, so "Respondent
+#   [00:01:09]:" and "RESPONDENT:" are the speaker of "Respondent:".
+# - A file counts as a transcript only when some speaker name starts more
+#   than one of its paragraphs; field notes opening "Monday:", "Tuesday:"
+#   are prose, not turns.
+_TURN_LABEL_RE = re.compile(
+    r"(?:\*\*)?(?P<name>[^\W\d_][\w'’.\-]*(?:[ \t]+[^\W_][\w'’.\-]*){0,3})"
+    r"(?:\*\*)?(?:[ \t]*\[[^\]\n]{1,40}\])?[ \t]*:(?:\*\*)?")
+# A question mark in any script: ASCII, full-width (Chinese, Japanese),
+# Arabic, Greek (U+037E), inverted, reversed, Armenian, Ethiopic, small
+_QUESTION_MARKS = frozenset("?？؟;¿⸮՞፧﹖")
+# How far back the walk looks for an earlier turn, in paragraphs, and how
+# much of a long turn is shown (its two ends, the cut marked)
+_TURN_WALK_LIMIT = 50
+_TURN_SHOWN_CAP = 1200
+_TURN_SHOWN_END = 500
+
+
+def _transcript_units(fulltext: str):
+    """The file's paragraphs (or lines, in a file with no blank line), each
+    as (start, end, speaker name or None), and whether the file is a
+    transcript by the rule above. Computed once per file per review."""
+    sep_re = _PARAGRAPH_SEP_RE
+    if not sep_re.search(fulltext) and "\n" in fulltext:
+        sep_re = _SINGLE_NEWLINE_RE
+    units, unit_start = [], 0
+    bounds = [(m.start(), m.end()) for m in sep_re.finditer(fulltext)]
+    for sep_start, sep_end in bounds + [(len(fulltext), len(fulltext))]:
+        u_start, u_end = _trim_span(fulltext, unit_start, sep_start)
+        if u_start < u_end:
+            label = _TURN_LABEL_RE.match(fulltext, u_start, u_end)
+            name = (" ".join(label.group("name").split()).casefold()
+                    if label else None)
+            units.append((u_start, u_end, name))
+        unit_start = sep_end
+    names = [u[2] for u in units if u[2] is not None]
+    return sep_re, units, len(set(names)) < len(names)
+
+
+def _is_short_statement(text: str) -> bool:
+    """A turn's words after its label: at most three and no question
+    mark in any script (the case where the turn before it is shown too)."""
+    label = _TURN_LABEL_RE.match(text)
+    said = text[label.end():] if label else text
+    return (len(re.findall(r"\w+", said)) <= 3
+            and not any(ch in _QUESTION_MARKS for ch in said))
+
+
+def _not_shown_line(own: int, unlabelled: int) -> Optional[str]:
+    """The line that says what lies between two shown texts."""
+    parts = []
+    if own:
+        parts.append(f"{own} turn(s) by the passage's speaker")
+    if unlabelled:
+        parts.append(f"{unlabelled} paragraph(s) with no speaker label")
+    return f"[not shown: {' and '.join(parts)}]" if parts else None
+
+
+def _passage_context(fulltext: str, start: int, end: int,
+                     transcript=None) -> Dict[str, Any]:
     """The file's own text around a passage, as the review shows it (owner
     ruling 25, question 9, with the reading's item 20): the paragraph or
-    speaker turn that holds it, and, in a transcript, the turn before it.
-    Read from the file each time; nothing of it is stored.
+    speaker turn that holds it, and, in a transcript, the nearest earlier
+    turn by another speaker. Read from the file each time; nothing of it
+    is stored.
 
-    Returns {"unit", "before", "after"} and "turn_before" when there is one:
-    before and after are the unit's text either side of the passage (the
-    speaker label kept, so it says who speaks). The unit is the
-    paragraph (blank lines), else the speaker turn (single newlines in a
-    file with no blank line); one longer than max(1500, 4x the passage)
-    gives way to one sentence either side. The turn before is the nearest
-    earlier unit, within 2000 characters, whose speaker label differs
-    from the passage's own, whatever its punctuation: a prompt ("Tell me
-    about ...") or another participant's aside is shown as it is, never
-    passed over for an earlier question (fix round 3). Only a short
-    backchannel ("Mm-hmm.", "Right, okay.": at most three words and no
-    question mark) is passed over, to the turn before it."""
+    Returns {"unit", "before", "after"}, and "turn_before" and
+    "turn_before_count" when there is an earlier turn: before and after
+    are the unit's text either side of the passage (the speaker label
+    kept, so it says who speaks). The unit is the paragraph (blank lines,
+    else lines), a "speaker turn" when it starts with a label in a
+    transcript; one longer than max(1500, 4x the passage) gives way to
+    one sentence either side. The earlier turn is the nearest earlier
+    labelled paragraph whose speaker is not the passage's, whatever it
+    says; when it is short and asks nothing (at most three words, no
+    question mark in any script) the nearest earlier one by another
+    speaker than the passage's is shown with it. Paragraphs between that
+    are not shown (the passage speaker's own turns, paragraphs with no
+    label) are said to be there, never skipped silently (fix round 4).
+    `transcript` is `_transcript_units(fulltext)`, when already made."""
     n = len(fulltext)
     t_start, t_end = _trim_span(fulltext, max(0, start), min(end, n))
-    sep_re, unit = _PARAGRAPH_SEP_RE, "paragraph"
-    if not sep_re.search(fulltext) and "\n" in fulltext:
-        sep_re, unit = _SINGLE_NEWLINE_RE, "speaker turn"
+    sep_re, units, is_transcript = (transcript if transcript is not None
+                                    else _transcript_units(fulltext))
     para_start = 0
     for m in sep_re.finditer(fulltext, 0, t_start):
         para_start = m.end()
     m = sep_re.search(fulltext, t_end)
     para_end = m.start() if m else n
     para_start, para_end = _trim_span(fulltext, para_start, para_end)
-    label = _SPEAKER_LABEL_RE.match(fulltext, para_start, para_end)
-    if label is not None and unit == "paragraph":
-        unit = "speaker turn"
+    # The passage's own paragraph among the units, and its speaker
+    index = next((i for i, (u_start, u_end, _) in enumerate(units)
+                  if u_start <= t_start < max(u_end, u_start + 1)), None)
+    speaker = (units[index][2] if index is not None and is_transcript
+               else None)
+    unit = "speaker turn" if speaker is not None else "paragraph"
     if (para_end - para_start) > max(_PARAGRAPH_CAP, 4 * (t_end - t_start)):
         sentences = _sentence_spans_global(fulltext)
         before = [sp for sp in sentences if sp[1] <= t_start]
@@ -7106,27 +7179,46 @@ def _passage_context(fulltext: str, start: int, end: int
         "before": fulltext[min(para_start, t_start):t_start],
         "after": fulltext[t_end:max(para_end, t_end)],
     }
-    if label is None:
+    if speaker is None:
         return context
-    speaker = label.group(0).strip()
-    window = max(0, para_start - _ALTERNATIVE_SCAN_WINDOW)
-    units, unit_start = [], window
-    for m in sep_re.finditer(fulltext, window, para_start):
-        units.append((unit_start, m.start()))
-        unit_start = m.end()
-    if window > 0 and units:
-        units.pop(0)            # cut by the window: not a whole unit
-    for u_start, u_end in reversed(units):
-        u_start, u_end = _trim_span(fulltext, u_start, u_end)
-        other = _SPEAKER_LABEL_RE.match(fulltext, u_start, u_end)
-        if (u_start >= u_end or other is None
-                or other.group(0).strip() == speaker):
-            continue
-        said = fulltext[other.end():u_end]
-        if "?" not in said and len(re.findall(r"\w+", said)) <= 3:
-            continue            # a backchannel: the turn before it
-        context["turn_before"] = fulltext[u_start:u_end]
-        break
+
+    def earlier_turn(below):
+        """The nearest labelled unit before index `below` whose speaker is
+        not the passage's, with the counts of units passed on the way."""
+        own = unlabelled = 0
+        for i in range(below - 1, max(-1, below - 1 - _TURN_WALK_LIMIT), -1):
+            name = units[i][2]
+            if name is None:
+                unlabelled += 1
+            elif name == speaker:
+                own += 1
+            else:
+                return i, own, unlabelled
+        return None, own, unlabelled
+
+    first, own, unlabelled = earlier_turn(index)
+    if first is None:
+        return context
+    def text_of(i):
+        text = fulltext[units[i][0]:units[i][1]]
+        if len(text) > _TURN_SHOWN_CAP:
+            text = (f"{text[:_TURN_SHOWN_END]} […] "
+                    f"{text[-_TURN_SHOWN_END:]}")
+        return text
+    shown = [text_of(first)]
+    after_first = _not_shown_line(own, unlabelled)
+    if after_first:
+        shown.append(after_first)
+    count = 1
+    if _is_short_statement(text_of(first)):
+        second, own, unlabelled = earlier_turn(first)
+        if second is not None:
+            between = _not_shown_line(own, unlabelled)
+            shown = ([text_of(second)] + ([between] if between else [])
+                     + shown)
+            count = 2
+    context["turn_before"] = "\n".join(shown)
+    context["turn_before_count"] = count
     return context
 
 
@@ -7159,6 +7251,7 @@ def _contexts_for_display(session: AICodingSession,
                 for sugg in suggestions}
     ro_db = get_db()
     cache: Dict[int, Optional[Dict[str, Any]]] = {}
+    units: Dict[int, Any] = {}
     out: Dict[str, Tuple[Optional[Dict[str, Any]], Optional[str]]] = {}
     for sugg in suggestions:
         if sugg.file_id not in cache:
@@ -7169,7 +7262,10 @@ def _contexts_for_display(session: AICodingSession,
             and 0 <= sugg.start_pos < sugg.end_pos <= len(text)) else None
         if span is not None and span in (
                 sugg.segment_text, sugg.segment_text.replace("\u2029", "\n")):
-            context = _passage_context(text, sugg.start_pos, sugg.end_pos)
+            if sugg.file_id not in units:
+                units[sugg.file_id] = _transcript_units(text)
+            context = _passage_context(text, sugg.start_pos, sugg.end_pos,
+                                       units[sugg.file_id])
             if with_alternatives:
                 context["alternatives"] = [
                     {**alt, "preview": _span_preview(
@@ -7539,7 +7635,7 @@ def record_suggestions(
             "end_pos": end_pos,
             "reading": reading,
             "positions_corrected": corrected,
-            # labels only — the alternatives (positions and gloss) live on
+            # labels only: the alternatives (positions and gloss) live on
             # the suggestion; review_suggestions shows them compactly
             "alternatives": [a["label"]
                              for a in suggestion.span_alternatives],
@@ -7610,19 +7706,19 @@ def review_suggestions(
 ) -> str:
     """Review coding suggestions in detail.
 
-    Shows each suggestion as the researcher judges it: in a transcript
-    the turn before it (the nearest earlier turn by another speaker,
-    found by its speaker label; a short backchannel skipped), then the
-    paragraph or turn holding the passage, marked, then code, reading and
-    reason. That text is read from the file now, never stored; with
+    Shows each suggestion as the researcher judges it: the nearest
+    earlier turn by another speaker (found by speaker labels, so none
+    where the file has none; a short turn asking nothing comes with the
+    one before it), then the paragraph or turn holding the passage,
+    marked, then code, reading and reason. That text is read from the file now, never stored; with
     another project open none is shown. edit_suggestion adjusts a span in
     place.
 
     SPAN ALTERNATIVES: a pending, unadjusted suggestion may carry
     shorter/longer spans (core sentence; paragraph or speaker turn).
-    Offer them in one line ("shorter (1 sentence, 89 chars) or longer
-    (paragraph, 412 chars)?"), never as full quotes; mention them once
-    unless the researcher has been adjusting spans. One pick applies via
+    Offer them in one line ("shorter (1 sentence, 89 chars)?"), never
+    as full quotes; mention them once unless the researcher has been
+    adjusting spans. One pick applies via
     edit_suggestion(use_alternative=...). An "(adjusted)" suggestion gets
     no offers.
 
@@ -7697,7 +7793,12 @@ def review_suggestions(
         context, note = (contexts[sugg.guid] if show_context
                          else (None, None))
         if context is not None and context.get("turn_before"):
-            output.append(f"\n**The turn before it:**")
+            output.append(
+                "\n**Earlier turn by another speaker** (the nearest, by "
+                "speaker labels):" if context["turn_before_count"] == 1 else
+                "\n**Earlier turns by other speakers** (the nearest, by "
+                "speaker labels, is short and asks nothing, so the one "
+                "before it is shown too):")
             output.append(f"```\n{context['turn_before']}\n```")
         if context is not None and (context["before"] or context["after"]):
             output.append(f"\n**Passage, in its {context['unit']}** "

@@ -196,7 +196,7 @@ Status: PENDING
 
 File: interview_002.txt (ID: 2), position 892-1045
 
-The turn before it:
+Earlier turn by another speaker (the nearest, by speaker labels):
 Interviewer: Talk me through a normal working day.
 
 Passage, in its speaker turn (the coded words between ⟦ and ⟧):
@@ -211,10 +211,13 @@ Reason: The participant does not name stress; interruptions, inability
 to focus and exhaustion are read as workplace stress.
 ```
 
-The turn before (the nearest earlier turn by another speaker, found by
-its speaker label, whether or not it asks a question; a short
-backchannel such as "Mm-hmm." is passed over), the text around the
-passage and the text of any shorter or longer span offered are read from
+The earlier turn (the nearest by another speaker, found by speaker
+labels: a name of a few words and a colon at the start of a paragraph,
+compared by name so "Respondent [00:01:09]:" and "RESPONDENT:" are one
+speaker, in a file where a speaker's name recurs; nothing is shown in a
+file without them; a turn of three words or fewer that asks nothing is
+shown with the one before it, and the turns and paragraphs left out in
+between are counted), the text around the passage and the text of any shorter or longer span offered are read from
 the file each time you review; the session file keeps none of it. While another project is open, the review
 shows the passage alone and says why.
 

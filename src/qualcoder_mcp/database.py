@@ -7901,7 +7901,7 @@ class QualcoderDatabase:
                           ) -> Dict[str, Any]:
         """The project memo (v0.14): the project row's `memo`, written
         with QualCoder's own statement, `update project set memo=?`
-        (__main__.py:1952 at the pin; the project has one row). As for
+        (__main__.py:1953 at the pin; the project has one row). As for
         every other memo, only the public part is replaced: the private
         part after '#####' survives verbatim and is never returned.
         QualCoder 4.0's own assistant reads the public part as the
@@ -10326,7 +10326,8 @@ class QualcoderDatabase:
         (QualCoder's case-side placeholder heal is a no-op in 3.8.2).
         Every path writes the value with this server's owner and the
         date (v0.14, claims audit item 18), as QualCoder's case path does
-        (cases.py:670-679). A named departure: QualCoder's file and
+        (cases.py:741-750 at 9bddf17; 3.8.2 cases.py:670-679). A named
+        departure: QualCoder's file and
         journal edits write the value alone (manage_files.py:1259,
         :2257, journals.py:827 at 9bddf17), so a placeholder QualCoder
         made kept "Researcher" and its old date under the AI's value,
@@ -10412,8 +10413,9 @@ class QualcoderDatabase:
                 previous = None
             else:
                 # Every domain refreshes owner and date, as QualCoder's
-                # case path does (cases.py:670-679); its file and journal
-                # paths write the value alone, a departure named above
+                # case path does (cases.py:741-750 at 9bddf17); its file
+                # and journal paths write the value alone, a departure
+                # named above
                 self.conn.execute(
                     "UPDATE attribute SET value = ?, date = ?, owner = ? "
                     "WHERE attrid = ?",

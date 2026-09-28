@@ -2129,3 +2129,30 @@ class TestFixRound2TheMinors:
         guide = (root / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")
         assert "| `update_suggestion_status(coding_session_id, approve, " \
             "reject, reopen)` |" in guide
+
+    def test_apply_says_which_memos_have_no_reading(self, setup_server):
+        sid = new_session()
+        moved, kept = [r["guid"] for r in record(
+            sid, item(), item(COPE, "Coping"))["recorded"]]
+        cleared = jcall("edit_suggestion", coding_session_id=sid,
+                        suggestion_guid=moved, code_name="Coping")
+        assert "reading_cleared" in cleared
+        out = approve_and_apply(sid, [moved, kept])
+        flat = " ".join(out.split())
+        assert "Each memo gives the reading first (explicit or " \
+            "interpretive), then the reason; 1 had no reading" in flat
+        sid = new_session()                 # every memo with its reading
+        g = record(sid, item())["recorded"][0]["guid"]
+        again = " ".join(approve_and_apply(sid, [g]).split())
+        assert "then the reason." in again and "had no reading" not in again
+
+    def test_a_code_change_with_a_reading_says_whose_reason_it_is(
+            self, setup_server):
+        sid = new_session()
+        g = record(sid, item())["recorded"][0]["guid"]
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=g, code_name="Coping",
+                    reading="interpretive")
+        assert out["reason_note"].startswith(
+            "The reason was written for 'Stress'")
+        assert "reading_cleared" not in out

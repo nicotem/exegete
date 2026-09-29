@@ -626,12 +626,12 @@ class TestTheRunsJournalWriteAndTheLastRoutes:
 
     def test_this_servers_own_errors_still_reach_a_resource_reader(self):
         """The resource guard answers this server's own messages as a tool
-        would, "No Qualcoder project selected" among them, as content."""
+        would, "No QualCoder project selected" among them, as content."""
         original = (server.db, server.current_project_path)
         server.db, server.current_project_path = None, None
         try:
             answer = json.loads(server.list_all_codes())
-            assert answer["error"].startswith("No Qualcoder project selected")
+            assert answer["error"].startswith("No QualCoder project selected")
         finally:
             server.db, server.current_project_path = original
 
@@ -1312,7 +1312,7 @@ class TestResourcesLogNothingOverTheWire:
         assert _named_lines(stderr) == [], stderr
         assert "Error reading resource" not in stderr
         first = json.loads(answers[0])
-        assert first["error"].startswith("No Qualcoder project selected")
+        assert first["error"].startswith("No QualCoder project selected")
         assert "The last project used on this machine was" in first["error"]
 
     def test_a_misconfigured_project_path(self, tmp_path):

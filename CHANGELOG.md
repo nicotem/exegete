@@ -7,7 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+v0.15, a first change: the lock refreshed, four served texts reworded,
+two docstrings and two leftovers from 0.14.0's preparation.
+
+### Security: the lock refreshed
+
+- The libraries the MCP library brings that a dependency scanner flagged
+  in 0.14.0 now lock above every published advisory's fixed version:
+  anyio 4.11.0 to 4.15.1, starlette 0.49.1 to 1.7.0, python-multipart
+  0.0.20 to 0.0.32, idna 3.11 to 3.20, click 8.3.0 to 8.5.0 and
+  python-dotenv 1.2.1 to 1.2.3. With them typing-extensions moves from
+  4.15.0 to 4.16.0 (anyio 4.15 needs it), and sniffio and, on Windows,
+  colorama are no longer installed (anyio and click no longer need
+  them). mcp stays at 1.30.0; `pyproject.toml` is unchanged, the six
+  computers of `[tool.uv]` included.
+- cryptography does not move: 50.0.1 is the newest, and Intel Macs keep
+  48.0.1 and Windows on Arm 46.0.3, the last versions with a wheel
+  there. Their advisories stand; the server never imports cryptography.
+- The advisory check (OSV, 29 September 2026, the runtime set the lock
+  installs): records against 2 of 33 package versions, cryptography
+  48.0.1 and 46.0.3, where 0.14.0's lock had 8 of 35. So 0.14.0's known
+  limit on scanners holds now for cryptography on those two computers
+  only.
+
+### Changed: what the server says
+
+- Where the researcher's coder name is: `create_project`'s question and
+  description now point to QualCoder's Project menu, Settings, "Current
+  coder" (on a Mac, the question adds, it may be under the QualCoder
+  menu), where they said "(Settings, Coder name)". The description is
+  reworded within its old length.
+- A project older than QualCoder 3.8's format is refused with "Open it
+  once in QualCoder 3.8 or newer, which updates it as it opens, then
+  close it there and try again", where it said to open and save it in
+  QualCoder 3.8.
+- `list_available_projects`, finding nothing, says so and that a new
+  project can be made with `create_project` (marked where the tool set
+  lacks it) or in QualCoder, where it said to make sure a project had
+  been created in QualCoder.
+- "QualCoder" is spelt so in what the server serves: the error "No
+  QualCoder project selected", three tool descriptions
+  (`get_current_project`, `list_available_projects`, `select_project`),
+  the four prompts, the help's overview and `apply_codings` topic, the
+  closing line of `apply_codings`, and the refusal of a database that
+  lacks QualCoder's tables. Kept as they are: the folder `~/Documents/Qualcoder
+  MCP Projects`, the origin written into a REFI-QDA export, the
+  server's name in the MCP handshake (an identifier) and the log lines.
+- The memo-privacy module's docstring and `_ai_json`'s now say only what
+  this server does with the part of a memo from its `#####`, and give
+  the mark to QualCoder 3.8.2 and 4.0 both.
+- The tool descriptions measure as in 0.14.0 on both interpreters, in
+  every tool set.
+
+### Fixed
+
+- The test that starts a second test run to check the workspace setting
+  now gives it a base folder of its own, so a full run no longer leaves
+  a `pytest-of-<user>` folder in the system's temporary directory.
+- `scripts/create_test_project.py` finds each example coding's position
+  in its file's text; the positions were typed in and did not match
+  (one quote also spanned a line break).
+- Tests: `tests/test_v015_first_change.py` pins each new text where it
+  is served, walks the source for a served string spelt "Qualcoder",
+  checks the example codings against their text and the lock against
+  the advisories' fixed versions; the pins on the old texts follow them.
 
 ## [0.14.0-alpha] - 2026-09-28
 

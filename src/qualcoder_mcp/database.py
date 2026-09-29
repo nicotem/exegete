@@ -133,8 +133,9 @@ class SchemaCapabilities:
         }
 
 # Columns this server reads or writes that older QualCoder schemas lack.
-# If any are missing, the project must be opened and saved in QualCoder 3.8
-# (which migrates the schema) before this server can use it.
+# If any are missing, the project must be opened once in QualCoder 3.8 or
+# newer (which migrates the schema as it opens: 3.8.2's open_project,
+# __main__.py 2765-2822) before this server can use it.
 # code_text.important: added in schema v3; project.codername: added in v5
 # and selected unconditionally by get_project_info.
 REQUIRED_COLUMNS = {
@@ -3035,7 +3036,7 @@ class QualcoderDatabase:
             missing_tables = set(required_tables) - existing_tables
             if missing_tables:
                 raise ValueError(
-                    f"Invalid Qualcoder database: missing tables {missing_tables}"
+                    f"Invalid QualCoder database: missing tables {missing_tables}"
                 )
         except sqlite3.OperationalError as e:
             if _is_locked_error(e):
@@ -3226,8 +3227,9 @@ class QualcoderDatabase:
                         f"This project was created with an older QualCoder "
                         f"(database schema {version}; missing column(s) "
                         f"{', '.join(table + '.' + c for c in missing)}). "
-                        f"Open and save the project in QualCoder 3.8 to "
-                        f"upgrade it, then try again."
+                        "Open it once in QualCoder 3.8 or newer, which "
+                        "updates it as it opens, then close it there and "
+                        "try again."
                     )
         except sqlite3.OperationalError as e:
             if _is_locked_error(e):

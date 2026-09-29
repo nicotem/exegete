@@ -156,7 +156,7 @@ class TestResourcesNoProject:
             # every error a resource raises, with its traceback, and this
             # text can carry the last-used project's path.
             data = json.loads(server.get_project_info())
-            assert data["error"].startswith("No Qualcoder project selected")
+            assert data["error"].startswith("No QualCoder project selected")
         finally:
             server.db = original_db
             server.current_project_path = original_path

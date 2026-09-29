@@ -389,7 +389,11 @@ class TestTheCoderName:
         answer = json.loads(server.create_project("Study"))
         text = refused(answer)
         assert answer["action_required"] == "ask_researcher_coder_name"
-        assert "Settings, Coder name" in text and "never be guessed" in text
+        # v0.15: where QualCoder shows it (both versions' settings dialog)
+        assert ("QualCoder's Project menu, Settings, where it says "
+                "\"Current coder\"") in text
+        assert "Settings, Coder name" not in text
+        assert "never be guessed" in text
         assert "coder_name_not_known=true" in text
         assert not workspace().exists()
 

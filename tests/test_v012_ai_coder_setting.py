@@ -837,7 +837,7 @@ class TestSetterValidation:
         monkeypatch.setattr(server, "current_project_path", None)
         monkeypatch.delenv("QUALCODER_PROJECT_PATH", raising=False)
         out = json.loads(server.set_project_ai_coder_name("X"))
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No QualCoder project selected" in out["error"]
 
 
 # =============================================================================

@@ -711,7 +711,7 @@ class TestAConfiguredProjectAtFirstUse:
 
     def test_prune_backups_answers_first(self, configured):
         out = json.loads(server.prune_backups(keep_last=5))
-        assert "No Qualcoder project selected" not in json.dumps(out)
+        assert "No QualCoder project selected" not in json.dumps(out)
         assert "error" not in out, out
 
     def test_restore_backup_answers_first(self, configured):
@@ -727,7 +727,7 @@ class TestAConfiguredProjectAtFirstUse:
     ])
     def test_the_other_tools_that_asked_first(self, configured, call):
         out = json.loads(call())
-        assert "No Qualcoder project selected" not in json.dumps(out)
+        assert "No QualCoder project selected" not in json.dumps(out)
         assert "No project currently open" not in json.dumps(out)
         assert out.get("error") is None, out
 
@@ -738,7 +738,7 @@ class TestAConfiguredProjectAtFirstUse:
         server.db = None
         server.current_project_path = None
         out = json.loads(server.list_backups())
-        assert "No Qualcoder project selected" not in out["error"]
+        assert "No QualCoder project selected" not in out["error"]
         assert server.current_project_path is None
 
     def test_without_a_configured_project_nothing_changes(self, opened,
@@ -747,7 +747,7 @@ class TestAConfiguredProjectAtFirstUse:
         server.db = None
         server.current_project_path = None
         out = json.loads(server.list_backups())
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No QualCoder project selected" in out["error"]
 
     def test_over_the_wire_the_first_call_is_list_backups(self, tmp_path):
         """The real start-up path: a server started with the project in
@@ -1386,14 +1386,14 @@ class TestTheOtherAdoptions:
         out = json.loads(server.record_suggestions(sid, [
             {"file_id": 1, "code_name": "Stress", "segment_text":
              "I feel stressed", "reasoning": "r", "reading": "explicit"}]))
-        assert "No Qualcoder project selected" not in json.dumps(out)
+        assert "No QualCoder project selected" not in json.dumps(out)
         assert out.get("recorded_count") == 1, out
 
     def test_pseudonymise_source(self, configured):
         out = json.loads(server.pseudonymise_source(
             mapping=[{"original": "deadlines", "pseudonym": "targets"}],
             file_id=1))
-        assert "No Qualcoder project selected" not in json.dumps(out)
+        assert "No QualCoder project selected" not in json.dumps(out)
         assert "preview_token" in out, out
 
     def test_import_text_files_pseudonym_route(self, configured):
@@ -1403,7 +1403,7 @@ class TestTheOtherAdoptions:
         out = json.loads(server.import_text_file(
             "new.txt", "Thomas said so.", apply_project_pseudonyms=True,
             create_backup=False))
-        assert "No Qualcoder project selected" not in json.dumps(out)
+        assert "No QualCoder project selected" not in json.dumps(out)
         assert out.get("success") is True, out
 
 

@@ -550,10 +550,13 @@ def make_session(project_path: str, suggestions: List[CodingSuggestion]) -> AICo
     return sess
 
 
-def run_pytest_in_a_child(target: str, tmp_path: Path, cwd, timeout=300):
+def run_pytest_in_a_child(target: str, tmp_path: Path, cwd, timeout=300,
+                          *, extra_args=(), env=None):
     """`pytest -ra -q` over `target` in a fresh interpreter, the way CI
     runs the suite; returns the finished process and the folder the child
-    was given as its system temporary directory.
+    was given as its system temporary directory. `extra_args` go before
+    the target; `env` is the environment to start from (this one's by
+    default).
 
     v0.14 (the workbench): the child used to take pytest's default base
     folder, `pytest-of-<user>` in the system's temporary directory, and
@@ -567,13 +570,13 @@ def run_pytest_in_a_child(target: str, tmp_path: Path, cwd, timeout=300):
     import subprocess
     system_tmp = tmp_path / "child-system-tmp"
     system_tmp.mkdir()
-    env = dict(os.environ)
+    env = dict(os.environ if env is None else env)
     for name in ("TMPDIR", "TEMP", "TMP", "PYTEST_DEBUG_TEMPROOT"):
         env[name] = str(system_tmp)
     result = subprocess.run(
         [sys.executable, "-B", "-m", "pytest", "-ra", "-q",
          "-p", "no:cacheprovider", f"--basetemp={tmp_path / 'child-base'}",
-         target],
+         *extra_args, target],
         cwd=str(cwd), env=env, capture_output=True, text=True,
         timeout=timeout)
     return result, system_tmp

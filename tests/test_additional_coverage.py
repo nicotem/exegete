@@ -60,12 +60,12 @@ class TestNoProjectLoaded:
     def test_search_coded_text_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.search_coded_text("test"))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_coded_segments_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_coded_segments(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_search_files_no_project(self):
         # search_files catches exceptions and returns JSON error
@@ -76,72 +76,72 @@ class TestNoProjectLoaded:
     def test_get_coding_frequencies_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_coding_frequencies())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_search_memos_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.search_memos("test"))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_export_code_report_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.export_code_report("Test"))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_project_summary_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_project_summary())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_analyze_file_with_coding_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.analyze_file_with_coding(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_list_attribute_types_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.list_attribute_types())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_file_attributes_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_file_attributes(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_case_attributes_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_case_attributes(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_query_by_attribute_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.query_by_attribute("Age", "30"))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_find_cooccurring_codes_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.find_cooccurring_codes(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_case_code_matrix_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_case_code_matrix())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_codes_by_case_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_codes_by_case(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_cases_by_code_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.get_cases_by_code(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_analyze_for_coding_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
         data = json.loads(server.analyze_for_coding(file_ids=[1], instruction="test"))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     # Resources
     def test_get_project_info_no_project(self):
@@ -149,63 +149,63 @@ class TestNoProjectLoaded:
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.get_project_info())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_list_all_codes_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.list_all_codes())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_list_all_categories_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.list_all_categories())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_code_info_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.get_code_info(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_list_all_files_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.list_all_files())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_file_content_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.get_file_content(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_list_all_cases_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.list_all_cases())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_case_info_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.get_case_info(1))
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
     def test_get_journal_entries_no_project(self):
         # A resource answers the error as its content since v0.14's
         # fix round 1 (the MCP library logs every error a resource
         # raises, with its traceback)
         data = json.loads(server.get_journal_entries())
-        assert "No Qualcoder project selected" in data["error"]
+        assert "No QualCoder project selected" in data["error"]
 
 
 # =============================================================================

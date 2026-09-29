@@ -144,11 +144,13 @@ realistic about the future here. I'm building my network and keeping my options 
         ("interview_003.txt", interview_3)
     ]
 
+    file_ids = {}
     for name, text in files:
         cur.execute("""
             INSERT INTO source (name, fulltext, mediapath, memo, owner, date)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (name, text, None, f"Test interview transcript: {name}", "test_user", now))
+        file_ids[name] = (cur.lastrowid, text)
 
     # Insert code categories
     categories = [
@@ -229,18 +231,23 @@ realistic about the future here. I'm building my network and keeping my options 
         """, (attr_name, attr_type, value, case_id, now, "test_user"))
 
     # Insert a few example coded segments (just to show the project is functional)
-    # These are manual codings - AI will add more
+    # These are manual codings - AI will add more. Each position is found
+    # in its file's text (v0.15: they used to be typed in, and did not
+    # match their text; the second quote spans a line break)
     example_codings = [
-        (1, 1, "The main issue is the constant pressure from deadlines.", 150, 207, "Manual test coding"),
-        (2, 1, "Exercise helps a lot - I try to go for a run after work to clear my head.", 523, 601, "Manual test coding"),
-        (6, 2, "We're expected to deliver high-quality results, but we don't have the tools or the staff", 341, 430, "Manual test coding")
+        (1, "interview_001.txt", "The main issue is the constant pressure from deadlines."),
+        (2, "interview_001.txt", "Exercise helps a lot - I try to go for a run after work to clear\nmy head."),
+        (6, "interview_002.txt", "We're expected to deliver high-quality results, but we don't have\nthe tools or the staff"),
     ]
 
-    for cid, fid, seltext, pos0, pos1, memo in example_codings:
+    for cid, file_name, seltext in example_codings:
+        fid, text = file_ids[file_name]
+        pos0 = text.index(seltext)
+        pos1 = pos0 + len(seltext)
         cur.execute("""
             INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, date, memo, important)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (cid, fid, seltext, pos0, pos1, "test_user", now, memo, 0))
+        """, (cid, fid, seltext, pos0, pos1, "test_user", now, "Manual test coding", 0))
 
     # Insert a journal entry
     cur.execute("""

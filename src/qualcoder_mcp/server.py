@@ -784,7 +784,7 @@ def _mru_hint() -> str:
 
 def _no_project_message() -> str:
     """The uniform "no project selected" error text (with MRU hint)."""
-    return ("No Qualcoder project selected. Use 'list_available_projects' "
+    return ("No QualCoder project selected. Use 'list_available_projects' "
             "to discover projects, then 'select_project' to choose one. "
             "Or set QUALCODER_PROJECT_PATH environment variable."
             + _mru_hint())
@@ -901,7 +901,7 @@ def _resource_guard(fn):
     raises with its traceback at ERROR, which reaches the host's log
     (mcp 1.30.0, `server/fastmcp/server.py` 406-411). A raised error's
     message would therefore be logged whatever it was, and several of
-    this server's own messages carry a path: "No Qualcoder project
+    this server's own messages carry a path: "No QualCoder project
     selected" with the last-used project's path, and every refusal of a
     configured path (`validate_qda_path`). So a resource returns the
     error JSON a tool would answer for the same error (`_error_answer`,
@@ -1425,13 +1425,14 @@ def _attach_hidden_target_note(result: Any, key: Optional[str] = None) -> None:
 def _ai_json(payload: Any, **dumps_kwargs) -> str:
     """json.dumps for AI-facing results, with memo privacy applied.
 
-    Every string under a 'memo' key is reduced to its public part: the
-    QC 4.0 convention keeps everything from the first '#####' marker
-    onward private from the AI (see memo_privacy.py). The strip is
-    silent by owner ruling. Used by every tool and resource that can
-    return memo content into the conversation; the file-export tools
-    (REFI-QDA, codebook, report and CSV files) deliberately do NOT use
-    it, because QualCoder's own exports carry full memos (parity).
+    Every string under a 'memo' key is reduced to its public part: this
+    server passes on nothing from the first '#####' marker onward, the
+    mark QualCoder (3.8.2 and 4.0) gives a memo's personal note (see
+    memo_privacy.py). The strip is silent by owner ruling. Used by every
+    tool and resource that can return memo content into the
+    conversation; the file-export tools (REFI-QDA, codebook, report and
+    CSV files) deliberately do NOT use it, because QualCoder's own
+    exports carry full memos (parity).
     """
     return json.dumps(strip_private_memos(payload), **dumps_kwargs)
 
@@ -2600,7 +2601,7 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
     _adopt_configured_project()
     if current_project_path is None:
         return {
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No QualCoder project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         }
     try:
@@ -2939,7 +2940,7 @@ def _alternative_gloss(alt: Dict[str, Any],
 @mcp.resource("qualcoder://project/info")
 @_resource_guard
 def get_project_info() -> str:
-    """Get information about the current Qualcoder project.
+    """Get information about the current QualCoder project.
 
     Returns project metadata including version, date, coder name, and memo.
     """
@@ -3175,13 +3176,22 @@ def is_relative_folder(text: str, path_class: type = Path) -> bool:
     return not path.is_absolute() and not path.root
 
 
+# What list_available_projects answers when it finds no project (v0.15:
+# it used to say to create one in QualCoder, which the `lifecycle` tool set
+# contradicts; create_project is marked where the set lacks it).
+NO_PROJECTS_FOUND = (
+    "No QualCoder projects found in the folders searched. To look "
+    "elsewhere, call again with search_directories. A new project can be "
+    "made with create_project, or in QualCoder.")
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_available_projects(search_directories: Optional[List[str]] = None) -> str:
-    """Discover Qualcoder projects on your system.
+    """Discover QualCoder projects on your system.
 
     This tool searches common locations for .qda files and returns a list
-    of available Qualcoder projects. By default, it searches:
+    of available QualCoder projects. By default, it searches:
     - the workspace folder, when the host set one (its top level only)
     - ~/Documents/QualCoder_projects
     - ~/Documents/QualCoder
@@ -3244,8 +3254,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
         if not projects:
             return json.dumps({
                 "projects": [],
-                "message": "No Qualcoder projects found. Make sure you have created "
-                          "at least one project in Qualcoder, or specify search_directories.",
+                "message": _mark_unregistered(NO_PROJECTS_FOUND),
                 "default_search_paths": top_level_only + usual
                 if not search_directories else usual,
                 "searched": searched,
@@ -3344,7 +3353,7 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
 def select_project(project_path: str) -> str:
-    """Switch to a different Qualcoder project.
+    """Switch to a different QualCoder project.
 
     Use this tool to change which project you're working with. You can get
     a list of available projects using 'list_available_projects' first.
@@ -8745,7 +8754,7 @@ def apply_codings(
 
     output.extend(_already_existing_lines())
 
-    output.append(f"\n\n**You can now open the project in Qualcoder to see the AI-coded segments.**")
+    output.append(f"\n\n**You can now open the project in QualCoder to see the AI-coded segments.**")
     unlabelled = sum(1 for s in to_write if s.reading is None)
     output.append(f"All codings are attributed to '{owner}'. Each memo "
                   f"gives the reading first (explicit or interpretive), "
@@ -9373,7 +9382,7 @@ def list_backups() -> str:
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No QualCoder project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         })
 
@@ -9574,7 +9583,7 @@ def prune_backups(keep_last: Optional[int] = None,
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No QualCoder project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         })
 
@@ -9965,7 +9974,7 @@ def restore_backup(backup_path: str,
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No QualCoder project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         })
 
@@ -10476,8 +10485,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     # Comprehensive help documentation
     tool_help = {
         "overview": {
-            "title": "AI-Assisted Coding for Qualcoder",
-            "description": "Use Claude to help code your qualitative data. Claude can analyse interview transcripts, suggest codes, and create coded segments that you can review and apply directly to your Qualcoder project.",
+            "title": "AI-Assisted Coding for QualCoder",
+            "description": "Use Claude to help code your qualitative data. Claude can analyse interview transcripts, suggest codes, and create coded segments that you can review and apply directly to your QualCoder project.",
             "workflow": {
                 "step_1": "Ask the researcher the three questions first, "
                           "then start a coding session for the files and "
@@ -10590,7 +10599,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "Review, then record the researcher's decision on each "
                 "suggestion before applying (the server writes what is "
                 "marked approved; it cannot see who approved it)",
-                "Apply codings directly to Qualcoder database (with a backup "
+                "Apply codings directly to QualCoder database (with a backup "
                 "first, unless create_backup is false)",
                 "Writes refuse to run while a released QualCoder (3.x) has the "
                 "project open (lock file); an open QualCoder 4.0 window is "
@@ -10640,7 +10649,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             ]
         },
         "apply_codings": {
-            "purpose": "Apply approved coding suggestions directly to the Qualcoder database",
+            "purpose": "Apply approved coding suggestions directly to the QualCoder database",
             "when_to_use": "After reviewing suggestions and approving the ones you want",
             "workflow": [
                 "1. Run analyze_for_coding on your files",
@@ -17776,7 +17785,7 @@ def analyze_theme(theme_name: str) -> str:
     Args:
         theme_name: The name of the code/theme to analyse
     """
-    return _mark_unregistered(f"""Please analyse the theme '{theme_name}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please analyse the theme '{theme_name}' in this QualCoder project.
 
 Use the following tools to gather information:
 1. First find the code and its id: get_coding_frequencies lists every
@@ -17804,7 +17813,7 @@ def compare_codes(code1: str, code2: str) -> str:
         code1: Name of the first code
         code2: Name of the second code
     """
-    return _mark_unregistered(f"""Please compare and contrast the codes '{code1}' and '{code2}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please compare and contrast the codes '{code1}' and '{code2}' in this QualCoder project.
 
 Use these tools to gather data:
 1. Use get_coded_segments for both codes (get_coding_frequencies gives
@@ -17824,11 +17833,11 @@ Provide a comparison grounded in verbatim segments. If the two codes do not diff
 def summarize_project() -> str:
     """Generate a prompt for describing the state of a project.
 
-    This prompt template helps describe what a Qualcoder project holds
+    This prompt template helps describe what a QualCoder project holds
     and how far its coding has progressed, without drawing analytic
     conclusions from counts.
     """
-    return _mark_unregistered("""Please describe the state of this Qualcoder project.
+    return _mark_unregistered("""Please describe the state of this QualCoder project.
 
 Use the following tools and resources:
 1. get_project_summary - for overall statistics and the number of files
@@ -17859,7 +17868,7 @@ def explore_case(case_name: str) -> str:
     Args:
         case_name: The name of the case to explore
     """
-    return _mark_unregistered(f"""Please explore and analyse the case '{case_name}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please explore and analyse the case '{case_name}' in this QualCoder project.
 
 Use these tools and resources to gather information:
 1. get_case_code_matrix lists every case with its id (so does the
@@ -17895,12 +17904,13 @@ def _create_project_refusal(text: str, **extra: Any) -> str:
 # missing (the owner's ruling 6 of 2026-09-25), and the warning for an
 # explicit "not known" (the study's 7.5 wording).
 CODER_NAME_ASK = (
-    "Ask the researcher for the coder name they use in QualCoder "
-    "(Settings, Coder name), exactly as it appears there, and call again "
-    "with it as coder_name. It is the researcher's own name for their "
-    "codings, not the AI's, and must never be guessed. If they do not use "
-    "QualCoder yet or do not know it, call again with "
-    "coder_name_not_known=true instead.")
+    "Ask the researcher for the coder name they use in QualCoder (in "
+    "QualCoder's Project menu, Settings, where it says \"Current coder\"; "
+    "on a Mac it may be under the QualCoder menu instead), exactly as it "
+    "appears there, and call again with it as coder_name. It is the "
+    "researcher's own name for their codings, not the AI's, and must never "
+    "be guessed. If they do not use QualCoder yet or do not know it, call "
+    "again with coder_name_not_known=true instead.")
 CODER_NAME_NOT_KNOWN_WARNING = (
     "The researcher's QualCoder coder name is not known, so the check that "
     "keeps the AI's codings apart from the researcher's own is off. It "
@@ -18099,14 +18109,14 @@ def create_project(name: str, directory: Optional[str] = None,
     imported at once. Nothing existing is ever changed: a name already in
     use is refused, never replaced or given a "_1".
 
-    THE RESEARCHER'S CODER NAME: ask the researcher for the coder name
-    they use in QualCoder (Settings, Coder name) and pass it exactly as
-    they give it. It is their own name, not the AI's, and must never be
-    guessed or taken from anywhere else: a wrong name makes QualCoder ask
-    them to keep or switch names when they open the project. If they do
-    not use QualCoder yet or do not know it, pass coder_name_not_known=true
-    instead; the project is then created, and the result says what that
-    means. With neither, nothing is created and the answer asks for it.
+    THE RESEARCHER'S CODER NAME: ask the researcher for the coder name they
+    use in QualCoder (Project menu, Settings, "Current coder") and pass it
+    exactly as they give it. It is their own name, not the AI's, and must
+    never be guessed or taken from anywhere else: a wrong name makes QualCoder
+    ask them to keep or switch names when they open the project. If they do
+    not use QualCoder yet, or do not know it, pass coder_name_not_known=true
+    instead; the project is then created, and the result says what that means.
+    With neither, nothing is created, and the answer asks for it.
 
     Names: the name becomes a folder, so it may not hold / \\ : < > | ? *
     or ", end in a dot or a space, start with a dot, be a Windows device
@@ -18123,8 +18133,8 @@ def create_project(name: str, directory: Optional[str] = None,
                    this server's workspace, ~/Documents/Qualcoder MCP
                    Projects unless the host set another (the answer
                    gives the path)
-        coder_name: The coder name the researcher uses in QualCoder
-                    (Settings, Coder name), exactly as they give it
+        coder_name: The coder name the researcher uses in QualCoder,
+                    exactly as they give it
         coder_name_not_known: True when the researcher does not know it;
                     then leave coder_name out
 

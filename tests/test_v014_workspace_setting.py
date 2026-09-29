@@ -317,7 +317,13 @@ class TestTheDescriptionsSayIt:
 
 def test_an_ambient_setting_does_not_reach_the_suite(tmp_path):
     """The sandbox clears QUALCODER_MCP_WORKSPACE: with it exported, a
-    test still finds the workspace inside its own temporary folder."""
+    test still finds the workspace inside its own temporary folder.
+
+    The child run is started as the rate tests start theirs
+    (`run_pytest_in_a_child`, v0.15): it used to take pytest's default
+    base folder and leave `pytest-of-<user>` in the system's temporary
+    directory on every run of the suite; it now leaves nothing there."""
+    from track5_helpers import run_pytest_in_a_child
     probe = tmp_path / "test_probe_ambient.py"
     probe.write_text(
         "import os\n"
@@ -334,14 +340,13 @@ def test_an_ambient_setting_does_not_reach_the_suite(tmp_path):
     env[ENV] = str(elsewhere)
     env["PYTHONPATH"] = os.pathsep.join(
         [str(REPO / "src"), env.get("PYTHONPATH", "")])
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-         "-c", str(REPO / "pyproject.toml"), "--rootdir", str(tmp_path),
-         str(probe)],
-        env=env, capture_output=True, text=True, timeout=300,
-        cwd=str(tmp_path))
+    result, system_tmp = run_pytest_in_a_child(
+        str(probe), tmp_path, tmp_path, env=env,
+        extra_args=("-c", str(REPO / "pyproject.toml"),
+                    "--rootdir", str(tmp_path)))
     assert result.returncode == 0, result.stdout[-2000:] + result.stderr
     assert not elsewhere.exists()
+    assert sorted(p.name for p in system_tmp.iterdir()) == []
 
 
 class TestExportsRefuseARelativePath:

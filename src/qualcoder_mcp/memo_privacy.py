@@ -1,14 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Memo privacy: QualCoder's '#####' personal-note convention.
 
-QualCoder 4.0 lets researchers keep the tail of any memo private from
-the AI: everything from the first '#####' marker onward is never shown
-to the model, and AI memo updates preserve that private suffix
-verbatim (upstream src/qualcoder/ai_memo.py:28-59 at pin 9bddf17,
-applied to tool results in ai_mcp_server.py:210-223). This server
-honours the same convention on every memo it returns to the client and
-on every memo it writes, so a project touched by both tools keeps the
-same promise to the researcher.
+QualCoder (3.8.2 and 4.0) marks the tail of a memo as a personal note:
+everything from the first '#####' onward. This module speaks only for
+this server, which honours the mark on every memo it returns to the
+client (it passes on only the text before the mark) and on every memo
+it writes (the part from the mark onward is kept verbatim). What
+QualCoder's own AI features do with the mark is QualCoder's to say.
 
 PERSONAL_NOTE_MARK, _SEPARATOR_CHARS, split_public_private_memo,
 extract_ai_memo and merge_public_memo are QualCoder's own code, copied

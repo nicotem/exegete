@@ -907,7 +907,8 @@ class TestTheConfirmArgumentIsGone:
     # a human hands over, and they are where the instruction survived a
     # round that had already corrected the docstrings and the README.
     SHIPPED_GUIDES = ("AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
-                      "README.md", "QUICKSTART.md", "INSTALL.md")
+                      "README.md", "TOOLS.md", "QUICKSTART.md",
+                      "INSTALL.md")
 
     @staticmethod
     def _asks_for_the_flag(text):
@@ -957,8 +958,9 @@ class TestTheConfirmArgumentIsGone:
             "returns)")
 
     def test_the_readme_lists_the_token_not_the_flag(self):
+        # v0.14.1: the tool list moved from README.md to TOOLS.md
         readme = (Path(__file__).resolve().parents[1]
-                  / "README.md").read_text(encoding="utf-8")
+                  / "TOOLS.md").read_text(encoding="utf-8")
         for name in self.TOKEN_GATED:
             line = next(ln for ln in readme.splitlines()
                         if ln.startswith(f"- `{name}("))

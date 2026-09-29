@@ -3701,8 +3701,8 @@ class TestTheFileTextCountStaysCheap:
         """`size` characters of the repository's documents, curly-quoted
         (the lanes' corpus); the fixture's names taken out."""
         base = ""
-        for name in ("README.md", "PRIVACY.md", "CHANGELOG.md",
-                     "INSTALL.md"):
+        for name in ("README.md", "TOOLS.md", "PRIVACY.md",
+                     "CHANGELOG.md", "INSTALL.md"):
             base += (Path(__file__).resolve().parents[1] / name).read_text(
                 encoding="utf-8")
         base = base.encode("ascii", "ignore").decode("ascii")

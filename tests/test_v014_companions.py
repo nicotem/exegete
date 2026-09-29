@@ -315,9 +315,11 @@ class TestTheDocumentsInFixRound1:
         assert "records the new project as the last-used one" in privacy
 
     def test_the_readme_says_what_a_failure_leaves(self):
-        """QA m3, Security 6: nothing committed, and the leftover named."""
-        readme = _read_flat("README.md")
-        assert "nothing half-made is left" not in readme
+        """QA m3, Security 6: nothing committed, and the leftover named.
+        (v0.14.1: the section moved to TOOLS.md.)"""
+        readme = _read_flat("TOOLS.md")
+        for name in ("README.md", "TOOLS.md"):
+            assert "nothing half-made is left" not in _read_flat(name)
         assert "nothing committed is left" in readme
         assert "is recognised as such next time" in readme
         assert "iCloud's \"Desktop & Documents Folders\" switched on" in \

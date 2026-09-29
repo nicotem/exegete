@@ -2460,7 +2460,8 @@ def _documents_prose(size):
     with the fixture's names taken out: the second re-verification's
     corpus for its B2-2 shapes."""
     base = ""
-    for name in ("README.md", "PRIVACY.md", "CHANGELOG.md", "INSTALL.md"):
+    for name in ("README.md", "TOOLS.md", "PRIVACY.md", "CHANGELOG.md",
+                 "INSTALL.md"):
         base += (Path(__file__).resolve().parents[1] / name).read_text(
             encoding="utf-8")
     base = base.encode("ascii", "ignore").decode("ascii")

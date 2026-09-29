@@ -993,10 +993,13 @@ class TestTextsThatSentTheAssistantNowhere:
                 "public part (project_memo)") in text
 
     def test_readme_no_longer_says_a_journal_entry_is_updated(self):
-        readme = (Path(__file__).parent.parent / "README.md").read_text(
-            encoding="utf-8")
-        assert "Add or update a research journal entry" not in readme
-        assert "a name already in use is refused" in readme
+        # v0.14.1: the tool list moved from README.md to TOOLS.md
+        root = Path(__file__).parent.parent
+        for name in ("README.md", "TOOLS.md"):
+            text = (root / name).read_text(encoding="utf-8")
+            assert "Add or update a research journal entry" not in text
+        tools = (root / "TOOLS.md").read_text(encoding="utf-8")
+        assert "a name already in use is refused" in tools
 
 
 # ---------------------------------------------------------------------------

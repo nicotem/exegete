@@ -620,7 +620,8 @@ class TestApprovalIsDescribedHonestly:
             assert "approves each item" not in text
         assert "never bypassed" not in server.METHODS_GUIDANCE
 
-    @pytest.mark.parametrize("doc", ["README.md", "PRIVACY.md", "INSTALL.md"])
+    @pytest.mark.parametrize("doc", ["README.md", "TOOLS.md", "PRIVACY.md",
+                                     "INSTALL.md"])
     def test_the_researcher_facing_documents(self, doc):
         text = " ".join((Path(__file__).parent.parent / doc)
                         .read_text(encoding="utf-8").split())
@@ -1317,7 +1318,7 @@ class TestFixRoundTextsTrue:
         assert "files_coded_by_neither" in cc
         assert "is told to read each file" in cc
         assert "saw every" not in cc
-        readme = " ".join((Path(__file__).parent.parent / "README.md")
+        readme = " ".join((Path(__file__).parent.parent / "TOOLS.md")
                           .read_text(encoding="utf-8").split())
         assert ("an approved target returns to pending when it gains "
                 "evidence") in readme
@@ -2150,7 +2151,7 @@ class TestFixRound2TheMinors:
         assert "Every write operation creates a timestamped backup" \
             not in workflow
         assert "unless it is called with `create_backup=false`" in workflow
-        readme = (root / "README.md").read_text(encoding="utf-8")
+        readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()
                     if l.startswith("- `analyze_for_coding("))
         assert "`ambiguous_code_names`" in line

@@ -538,13 +538,13 @@ class TestFormatCharactersAreRefusedAsAClass:
     def test_the_two_documents_say_what_the_code_does(self):
         """The shipped docstring and the README sentence both used to
         promise that bidi characters were refused while three of them
-        were accepted."""
+        were accepted. (v0.14.1: the sentence moved to TOOLS.md.)"""
         from qualcoder_mcp.database import validate_coder_name
         doc = validate_coder_name.__doc__
         assert "category Cf" in doc
         assert "ZWNJ and ZWJ" in doc
         root = Path(__file__).resolve().parents[1]
-        readme = (root / "README.md").read_text(encoding="utf-8")
+        readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         paragraphs = [" ".join(p.split()) for p in readme.split("\n\n")]
         sentence = [p for p in paragraphs
                     if "stop the server at startup" in p]

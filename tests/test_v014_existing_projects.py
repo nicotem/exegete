@@ -1057,7 +1057,8 @@ class TestTheSharedNameCaveat:
         return _flat(next(t.description for t in tools
                           if t.name == "pseudonymise_source"))
 
-    @pytest.mark.parametrize("where", ["description", "README.md",
+    # v0.14.1: README's tool list moved to TOOLS.md
+    @pytest.mark.parametrize("where", ["description", "TOOLS.md",
                                        "PRIVACY.md", "CHANGELOG.md"])
     def test_the_caveat_and_the_safe_route(self, where):
         text = (self._description() if where == "description" else
@@ -1100,15 +1101,18 @@ class TestTheDocumentsSayIt:
             assert phrase in section, phrase
 
     def test_the_readme(self):
-        readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
+        """v0.14.1: README's tool list and conventions moved to TOOLS.md,
+        and its troubleshooting paragraph to INSTALL.md."""
+        readme = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         for phrase in ("the category's own node in QualCoder's saved graphs",
                        "files_refused", "codings_not_shown",
                        "codings_not_counted", "marked unclean",
                        "an unclean backup is refused",
-                       "copied with SQLite's own online backup",
-                       "a configured project is used by whichever tool "
-                       "comes first"):
+                       "copied with SQLite's own online backup"):
             assert phrase in readme, phrase
+        install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
+        assert ("a configured project is used by whichever tool comes "
+                "first") in install
 
     def test_privacy_and_install(self, tmp_path, monkeypatch, capsys):
         privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
@@ -1416,7 +1420,7 @@ class TestTheFixRoundDocuments:
                           if t.name == "copy_project_to_workspace"))
         assert "QualCoder's own saves wait while it runs" in copy
         for name, phrase in (
-                ("README.md", "QualCoder's own saves wait for it"),
+                ("TOOLS.md", "QualCoder's own saves wait for it"),
                 ("PRIVACY.md", "QualCoder's own saves wait for it"),
                 ("CHANGELOG.md", "QualCoder's own saves wait")):
             text = _flat((REPO / name).read_text(encoding="utf-8"))
@@ -1430,7 +1434,7 @@ class TestTheFixRoundDocuments:
         assert "and by link_file_to_case" in changelog
         assert "a real text layer that quotes a PDF header there is " \
                "taken for one" in changelog
-        readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
+        readme = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         assert "QualCoder's own count when no coder is hidden" in readme
         privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
         assert "Copy the whole project folder by hand, with QualCoder " \

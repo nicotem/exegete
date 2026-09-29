@@ -119,7 +119,7 @@ def test_the_guide_readme_and_changelog_name_the_tools():
     assert "is renamed with `rename_case` or `rename_file`; an imported " \
            "file's stored copy keeps its original name and text." \
            in _flat("AI_CODING_GUIDE.md")
-    readme = _flat("README.md")
+    readme = _flat("TOOLS.md")   # v0.14.1: the tool list moved there
     assert "- `rename_case(case_id, new_name, create_backup)` - **WRITES " \
            "TO DATABASE**" in readme
     assert "- `rename_file(file_id, new_name, create_backup)` - **WRITES " \
@@ -151,7 +151,7 @@ def test_the_documents_count_the_tools_the_server_registers():
     assert f"(the default when you configure the server yourself, " \
            f"`QUALCODER_MCP_TOOLSET=full`; the Claude Desktop extension " \
            f"defaults to `lifecycle`) registers {count} tools" \
-        in _flat("README.md")
+        in _flat("TOOLS.md")
     install = _flat("INSTALL.md")
     # v0.14: `full` is no longer every tool once `lifecycle` exists
     assert f"`full` (default) registers {count} tools" in install
@@ -201,7 +201,7 @@ def test_the_import_states_its_name_rules():
            "UTF-8;" in flat
     assert "not a name already in the project's documents folder" in flat
     assert "The name follows `rename_file`'s rules (at most 200 bytes in " \
-           "UTF-8;" in _flat("README.md")
+           "UTF-8;" in _flat("TOOLS.md")
 
 
 def test_privacy_says_rename_file_reads_the_backups():
@@ -261,13 +261,13 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
     assert tail.format("`rewrite_memos`") in _flat("PRIVACY.md")
 
 
-def test_the_roadmap_counts_the_rename_tools_as_done():
-    """The Brief 2 merge fix (N3): README's list of what v0.13 completed
-    names the rename tools beside the two pseudonymisation items. The
-    release preparation named the list for the release and moved the
-    plan on to v0.14; v0.14's release preparation moved it on again."""
-    readme = _flat("README.md")
-    done = readme[readme.index("**Completed in v0.13.0:**"):
-                  readme.index("**Completed in v0.14.0 (this release):**")]
-    assert "`rename_case` and `rename_file` rename a case or a file's " \
-           "entry the way QualCoder does" in done
+def test_the_readme_keeps_no_completed_lists():
+    """v0.14.1's README review retired the Brief 2 merge fix's test (N3),
+    which pinned README's "Completed in v0.13.0" list naming the rename
+    tools. The README no longer keeps a release history: the CHANGELOG
+    is the record of each release, and it names the two tools under
+    "Added" (`test_the_guide_readme_and_changelog_name_the_tools`)."""
+    for name in ("README.md", "TOOLS.md"):
+        assert "Completed in v0." not in _flat(name), name
+    unreleased = _flat("CHANGELOG.md").split("## [0.12")[0]
+    assert "### Added: `rename_case` and `rename_file`" in unreleased

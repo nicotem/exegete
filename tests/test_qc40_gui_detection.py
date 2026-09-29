@@ -609,7 +609,7 @@ class TestProcessScanCallersAreDocumented:
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's
         # callers are these four (restore_backup: its preview, the call
-        # without a token). Update PRIVACY.md and README.md when this set
+        # without a token). Update PRIVACY.md and TOOLS.md when this set
         # grows.
         assert _tools_running_the_process_scan() == self.EXPECTED
 
@@ -622,8 +622,9 @@ class TestProcessScanCallersAreDocumented:
         # surprised (v0.12 replaced confirm with the preview token)
         assert "without a preview_token" in bullet
 
-    def test_readme_names_every_caller(self):
-        readme = (_ROOT / "README.md").read_text(encoding="utf-8")
+    def test_tools_md_names_every_caller(self):
+        # v0.14.1: the paragraph moved from README.md to TOOLS.md
+        readme = (_ROOT / "TOOLS.md").read_text(encoding="utf-8")
         para = _paragraph_after(readme, "`qualcoder_gui_signals` by")
         for tool in _tools_running_the_process_scan():
             assert f"`{tool}`" in para, tool

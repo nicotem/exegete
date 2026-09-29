@@ -339,10 +339,11 @@ class TestCoreModeEndToEnd:
 class TestTheReadmeToolList:
     """The tool counts, the measured size and the README's tool list are
     updated together (v0.14 brief C): every tool the widest set
-    registers has an entry, named as it is called."""
+    registers has an entry, named as it is called. (v0.14.1: the tool
+    list moved from README.md to TOOLS.md.)"""
 
     def test_every_tool_has_an_entry(self):
-        readme = (REPO / "README.md").read_text(encoding="utf-8")
+        readme = (REPO / "TOOLS.md").read_text(encoding="utf-8")
         section = readme[readme.index("## Available Tools"):]
         section = section[:section.index("\n## ", 5)]
         server._apply_toolset("lifecycle")
@@ -550,7 +551,7 @@ class TestThePublishedSchemaBudget:
                 f"and the documents say {expected:,}. This is the "
                 f"environment they name, so the figure has rotted: "
                 f"re-measure both toolsets and update CHANGELOG.md, "
-                f"README.md, INSTALL.md and this class together. If the "
+                f"TOOLS.md, INSTALL.md and this class together. If the "
                 f"installed mcp is no longer {self.REFERENCE_MCP}, the "
                 f"version those documents name is stale as well.")
             return
@@ -642,7 +643,8 @@ class TestThePublishedSchemaBudget:
     LIFECYCLE_TOKENS = "49k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
-        readme = self._read("README.md")
+        # v0.14.1: the README's measurement block moved to TOOLS.md
+        readme = self._read("TOOLS.md")
         assert (f"the `lifecycle` definitions run to about "
                 f"{self.LIFECYCLE_ROUNDED} characters, roughly "
                 f"{self.LIFECYCLE_TOKENS} tokens") in readme
@@ -652,7 +654,7 @@ class TestThePublishedSchemaBudget:
             self.LIFECYCLE_TOKENS[:-1])
 
     def test_the_readme_quotes_the_same_measurement(self):
-        readme = self._read("README.md")
+        readme = self._read("TOOLS.md")
         assert f"about {self.FULL_ROUNDED} characters for `full`" in readme
         assert f"about {self.CORE_ROUNDED} characters for" in readme
         assert f"roughly {self.FULL_TOKENS} tokens" in readme

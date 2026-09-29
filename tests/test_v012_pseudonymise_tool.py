@@ -8565,7 +8565,8 @@ class TestTheDocumentsTellTheTruth:
         "number",
     ])
     def test_readme_says_it(self, sentence):
-        assert " ".join(sentence.split()) in self._flat("README.md")
+        # v0.14.1: the tool list and the conventions moved to TOOLS.md
+        assert " ".join(sentence.split()) in self._flat("TOOLS.md")
 
     @pytest.mark.parametrize("claim", [
         "PDFs, media and `ai_data/` are scanned and counted",
@@ -8580,7 +8581,8 @@ class TestTheDocumentsTellTheTruth:
         "Rewriting the public part of memos under a separate switch",
     ])
     def test_readme_no_longer_claims_it(self, claim):
-        assert claim not in self._flat("README.md")
+        for name in ("README.md", "TOOLS.md"):
+            assert claim not in self._flat(name), name
 
     @pytest.mark.parametrize("sentence", [
         # B3: the promise, scoped to what re-reads; v0.14 closes the
@@ -8807,10 +8809,12 @@ class TestTheDocumentsTellTheTruth:
                 "can still come out differently, and the result says "
                 "so.") in entry
         assert "QualCoder applies the file one entry at a time" not in entry
-        readme = self._flat("README.md")
+        readme = self._flat("TOOLS.md")
         assert ("(QualCoder's text and transcript imports (not PDFs) apply "
                 "the file one entry at a time, case-sensitively;") in readme
-        assert "QualCoder applies the file one entry at a time" not in readme
+        for name in ("README.md", "TOOLS.md"):
+            assert "QualCoder applies the file one entry at a time" \
+                not in self._flat(name), name
 
     def test_the_changelog_counts_the_rounds(self):
         entry = self._flat("CHANGELOG.md").split("## [0.11")[0]
@@ -8822,16 +8826,18 @@ class TestTheDocumentsTellTheTruth:
     def test_the_readme_says_the_override_rule_as_ruled(self):
         """Ruling 7.4. README's entry for the tool lists the classes the
         preview reports and names the ones that gate the run; it is what
-        a researcher reads instead of the description."""
-        readme = self._flat("README.md")
+        a researcher reads instead of the description. (v0.14.1: the
+        entry moved to TOOLS.md.)"""
+        readme = self._flat("TOOLS.md")
         assert ("counts (`shifted`, `substituted`, `resized`, `snapped`, "
                 "`deleted`, `clamped`), never names, and "
                 "`allow_hidden_coder` is required when `snapped`, "
                 "`deleted` or `clamped` is non-zero: a pure shift, a "
                 "substitution and a resize change no coding decision, "
                 "whatever the two lengths") in readme
-        assert "when `snapped`, `resized` or `deleted` is non-zero" \
-            not in readme
+        for name in ("README.md", "TOOLS.md"):
+            assert "when `snapped`, `resized` or `deleted` is non-zero" \
+                not in self._flat(name), name
 
     def test_the_changelog_records_the_acceptance_checks_as_planned(self):
         """The owner's second ruling of 2026-09-16: the six in-QualCoder

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """v0.14 release, fix round 1 (texts only): each text the round changed,
-pinned where it is served or published.
+pinned where it is served or published. (v0.14.1: the
+prerequisites test follows the README review's text by stage.)
 
 The release gates at ea3c618 found no major; the round fixes what is
 cheap and true now. One served text: the span hint after a first manual
@@ -57,22 +58,48 @@ def test_the_span_hint_offers_the_shortcut_only_where_one_was_computed(
 
 
 def test_the_prerequisites_line_says_when_qualcoder_is_needed():
+    """v0.14.1, the README review (ruling 29): QualCoder as a prerequisite
+    by stage, in README's "What you need, at each stage" and INSTALL's
+    "What You'll Need", each fact read from the code it rests on. The
+    v0.14 line this test first pinned is gone with the section it sat
+    in."""
     readme = _doc("README.md")
     assert "**Qualcoder** with at least one project created" not in readme
-    assert ("**QualCoder** ([download here](https://github.com/ccbogel/"
-            "QualCoder)), recommended, and needed to import documents "
-            "(Word, PDF, audio, video; this server imports only text given "
-            "in the conversation) and to see the coding in the text. With "
-            "the Claude Desktop extension, or the `lifecycle` tool set, a "
-            "new project can be started in the conversation; otherwise at "
-            "least one project made in QualCoder is needed") in readme
+    assert "otherwise at least one project made in QualCoder is needed" \
+        not in readme
+    stages = readme[readme.index("### What you need, at each stage"):
+                    readme.index("### Claude Desktop, with one click")]
+    assert "QualCoder is not needed to start." in stages
+    assert ("Leave the extension's \"Tool set\" setting as it comes "
+            "(`lifecycle`): with it you can create a project") in stages
+    assert ("The other two choices, `full` and `core`, cannot create a "
+            "project") in stages
+    assert ("**QualCoder is recommended from the start, and needed** to "
+            "bring in documents (Word, PDF, images, audio, video)") in stages
+    assert "qualcoder-mcp imports only text the assistant hands it" \
+        in stages
+    assert "Its standard tool set, `full`, cannot create a project" \
+        in stages
+    install = _doc("INSTALL.md")
+    assert "**Qualcoder installed** with at least one project created" \
+        not in install
+    needs = install[install.index("## What You'll Need"):
+                    install.index("## Recommended: Install from PyPI")]
+    assert ("On this route the default tool set, `full`, has no tool that "
+            "creates a project") in needs
+    assert "unless you add `QUALCODER_MCP_TOOLSET=lifecycle`" in needs
+    assert ("**QualCoder itself**, recommended, and needed to bring in "
+            "documents") in needs
     # The facts it rests on: the extension's tool set defaults to
-    # lifecycle, which alone has create_project, and a file is imported
-    # from text passed in the call
+    # lifecycle, which alone has create_project (not full, the default
+    # configured by hand, and not core), and a file is imported from text
+    # passed in the call
     manifest = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
     assert manifest["user_config"]["toolset"]["default"] == "lifecycle"
     assert "create_project" in server.LIFECYCLE_TOOLS
+    assert "create_project" not in server.CORE_TOOLSET
+    assert "create_project" not in server.mcp._tool_manager._tools
     params = inspect.signature(server.import_text_file).parameters
     assert "content" in params and "path" not in params
 

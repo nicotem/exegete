@@ -764,16 +764,24 @@ class TestTheDocuments:
         assert documented == read
 
     def test_readmes_install_line_points_to_it(self):
+        """v0.14.1: README's "Start here" gives the one-click route before
+        the Terminal route, and links INSTALL.md's section for it."""
         text = (REPO / "README.md").read_text(encoding="utf-8")
-        install = _section(text, "## Installation")
-        assert install.index("### Claude Desktop: the one-click extension") \
-            < install.index("### The Terminal route: install from PyPI")
-        assert "INSTALL.md" in _section(
-            install, "### Claude Desktop: the one-click extension")
+        start = _section(text, "## Start here")
+        one_click = _section(start, "### Claude Desktop, with one click")
+        one_click = one_click[:one_click.index("**A first project.**")]
+        assert start.index("### Claude Desktop, with one click") \
+            < start.index("**Other assistants.**")
+        assert ("INSTALL.md#claude-desktop-the-one-click-extension-"
+                "recommended") in one_click
+        assert "double-click the file" in " ".join(one_click.split()).lower()
 
     def test_the_workspace_setting_is_named_where_the_folder_is(self):
-        for name in ("README.md", "PRIVACY.md", "INSTALL.md"):
+        # v0.14.1: README names only the extension's folder, which
+        # needs no qualifier; the workspace paragraphs moved to TOOLS.md
+        for name in ("TOOLS.md", "PRIVACY.md", "INSTALL.md"):
             assert "QUALCODER_MCP_WORKSPACE" in _flat(name), name
+        assert "Qualcoder MCP Projects" not in _flat("README.md")
         assert "QUALCODER_MCP_WORKSPACE" in _flat("CHANGELOG.md").split(
             "## [0.13")[0]
 
@@ -804,8 +812,8 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
     def test_every_shipped_document(self):
         documents = sorted(p for p in REPO.glob("*.md")
                            if p.name != "CHANGELOG.md")
-        assert {"README.md", "AI_CODING_WORKFLOW.md", "INSTALL.md",
-                "PRIVACY.md"} <= {p.name for p in documents}
+        assert {"README.md", "TOOLS.md", "AI_CODING_WORKFLOW.md",
+                "INSTALL.md", "PRIVACY.md"} <= {p.name for p in documents}
         offenders = []
         for path in documents:
             offenders += self._offenders(

@@ -57,10 +57,11 @@ What stays local, always:
   secret by itself, with the same two effects, when it finds the file
   malformed or, on macOS and Linux, readable by other accounts (after a
   restore or a sync tool widened its mode), and logs that it did. The
-  export tools refuse paths inside this folder as it is spelled; on
-  macOS and Windows, whose file systems ignore letter case, a spelling
-  in another letter case (`~/.QUALCODER_MCP`) is not yet caught (the
-  guard is fixed in v0.15).
+  export tools refuse paths inside this folder as it is spelled. On
+  Windows the guard's comparison ignores letter case, so a spelling in
+  another letter case is refused there too. On macOS, whose file system
+  usually ignores letter case, such a spelling (`~/.QUALCODER_MCP`) is
+  not yet caught (the guard is fixed in v0.15).
 - the last-used project pointer (`~/.qualcoder_mcp/mru_project.json`:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful

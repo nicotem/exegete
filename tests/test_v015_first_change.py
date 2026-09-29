@@ -40,10 +40,21 @@ def _flat(text):
 
 
 def _descriptions(mode):
-    """Every tool description the `mode` set serves, as served."""
-    server._apply_toolset(mode)  # the suite's registry fixture undoes it
-    return {t.name: t.description or ""
-            for t in asyncio.run(server.mcp.list_tools())}
+    """Every tool description the `mode` set serves, as served; the
+    registry is put back as it was (as the size pin does), so modes can
+    follow one another in a test."""
+    before = dict(server.mcp._tool_manager._tools)
+    instructions = server.mcp._mcp_server.instructions
+    server._apply_toolset(mode)
+    try:
+        tools = asyncio.run(server.mcp.list_tools())
+        expected = {"full": 73, "core": 21, "lifecycle": 74}[mode]
+        assert len(tools) == expected, (mode, len(tools))
+        return {t.name: t.description or "" for t in tools}
+    finally:
+        server.mcp._tool_manager._tools.clear()
+        server.mcp._tool_manager._tools.update(before)
+        server.mcp._mcp_server.instructions = instructions
 
 
 @pytest.fixture(autouse=True)
@@ -324,7 +335,7 @@ def test_the_example_codings_sit_on_their_text(tmp_path):
     finally:
         conn.close()
     assert [(cid, name) for cid, name, *_ in rows] == [
-        (1, "interview_001.txt"), (1 + 1, "interview_001.txt"),
+        (1, "interview_001.txt"), (2, "interview_001.txt"),
         (6, "interview_002.txt")]
     for cid, name, seltext, pos0, pos1, fulltext in rows:
         assert fulltext[pos0:pos1] == seltext, (cid, name)

@@ -62,8 +62,10 @@ two docstrings and two leftovers from 0.14.0's preparation.
 ### Fixed
 
 - The test that starts a second test run to check the workspace setting
-  now gives it a base folder of its own, so a full run no longer leaves
-  a `pytest-of-<user>` folder in the system's temporary directory.
+  now gives it a base folder inside its own, as the two rate tests do,
+  so it no longer adds a folder to `pytest-of-<user>` in the system's
+  temporary directory on every run; a full run given a base folder of
+  its own (`--basetemp`) now leaves nothing there.
 - `scripts/create_test_project.py` finds each example coding's position
   in its file's text; the positions were typed in and did not match
   (one quote also spanned a line break).

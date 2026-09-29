@@ -47,7 +47,16 @@ server.
   request #1571, merged on 10 September 2026, adds a setting, off by
   default, that opens it to MCP hosts on the same computer while
   QualCoder runs; it is in no release yet (checked 29 September 2026).
-  The sentence that it has no way in from outside is gone.
+  The sentence that it has no way in from outside is gone. After the
+  facts, the README says that this project welcomes that server and is
+  ready to cooperate with QualCoder's developers; that its own aim is a
+  whole project run from the conversation, with QualCoder as a
+  companion that opens the same project at any time, a direction and
+  not yet a fact; and that the commitments hold on the way.
+- TOOLS.md, on a project started from the conversation: keep it in one
+  QualCoder, since moving it between 3.8.2 and 4.0 is what changes it
+  (it said to work on such a project in QualCoder 4.0; the README still
+  recommends 3.8.2).
 - "Qualcoder" is spelt "QualCoder" in the prose of README, INSTALL,
   TOOLS and the workflow guide; the folder `~/Documents/Qualcoder MCP
   Projects` and the server's own messages keep their spelling.

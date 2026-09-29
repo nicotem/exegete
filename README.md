@@ -292,6 +292,19 @@ an official MCP server with QualCoder 4.0's final release.
 [TOOLS.md, "Supported QualCoder versions"](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#supported-qualcoder-versions)
 gives the commits these facts were read at.
 
+This project welcomes QualCoder's own server, and is ready to
+cooperate with QualCoder's developers. qualcoder-mcp has an aim of its
+own: that a whole project, from its creation to the finished analysis,
+can be run from the conversation, with QualCoder as a companion that
+opens the same project at any time. That is a direction, not yet a
+fact: today QualCoder is still needed for several things, among them
+bringing in documents, coding images, audio and video, and graphs
+("What you need, at each stage", above, lists them). On the way there,
+the commitments above hold: every project stays a QualCoder project,
+in QualCoder's format; qualcoder-mcp follows QualCoder's rules and
+names any departure with its reason; and you work on a project in one
+program at a time.
+
 ## Read next
 
 - [INSTALL.md](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md):

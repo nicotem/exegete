@@ -6,11 +6,12 @@ data goes, how to start, what it adds, three commitments), and its
 reference moved to TOOLS.md, its install detail to INSTALL.md and its
 contributor material to CONTRIBUTING.md. Pinned here: independence from
 QualCoder and the provenance wording; the three commitments; the dated
-facts on QualCoder's own MCP server; the three questions as what the
-assistant is told; "QualCoder" spelled so in prose; and every link and
-anchor in the documents the review touched. (The prerequisites by stage
-are pinned in test_v014_release_fix1_texts.py, where the line they
-replace was pinned.)
+facts on QualCoder's own MCP server, and this project's stance after
+them; a project from the conversation kept in one QualCoder; the three
+questions as what the assistant is told; "QualCoder" spelled so in
+prose; and every link and anchor in the documents the review touched.
+(The prerequisites by stage are pinned in test_v014_release_fix1_texts.py,
+where the line they replace was pinned.)
 """
 
 import re
@@ -187,7 +188,7 @@ def test_the_three_commitments():
 
 
 # ---------------------------------------------------------------------------
-# QualCoder's own MCP server: facts, dated, no positioning
+# QualCoder's own MCP server: facts, dated, then this project's stance
 # ---------------------------------------------------------------------------
 
 def test_no_document_says_qualcoders_server_has_no_external_transport():
@@ -208,12 +209,63 @@ def test_the_upstream_server_is_stated_as_dated_fact():
                 "with QualCoder 4.0's final release") in text
     assert "merged on 10 September 2026 as commit `0160ece`" in tools
     assert "(`master`, at `c21e191` on 29 September 2026)" in tools
-    # The positioning and the claim #1571 made stale are gone
+    # The old positioning and the claim #1571 made stale are gone
     for text in (readme, tools):
         assert "is the external MCP surface for QualCoder projects" \
             not in text
         assert "will not display changes written by external tools" \
             not in text
+
+
+def _stance(readme):
+    """The paragraph after the dated facts, up to the next section."""
+    facts = readme.index("**QualCoder's own MCP server** (checked 29 "
+                         "September 2026).")
+    after = readme.index("gives the commits these facts were read at.",
+                         facts)
+    return readme[after:readme.index("## Read next", after)]
+
+
+def test_the_readme_states_the_projects_stance_after_the_facts():
+    # The owner's decision of 29 September: a cooperative stance and the
+    # project's own aim, stated after the facts, with no comparison
+    readme = _flat("README.md")
+    stance = _stance(readme)
+    assert ("This project welcomes QualCoder's own server, and is ready "
+            "to cooperate with QualCoder's developers.") in stance
+    assert ("qualcoder-mcp has an aim of its own: that a whole project, "
+            "from its creation to the finished analysis, can be run from "
+            "the conversation, with QualCoder as a companion that opens "
+            "the same project at any time.") in stance
+    # The aim is a direction, and the paragraph says what still needs
+    # QualCoder today, pointing to the section that lists it
+    assert ("That is a direction, not yet a fact: today QualCoder is "
+            "still needed for several things") in stance
+    assert '("What you need, at each stage", above, lists them)' in stance
+    assert ("**QualCoder is recommended from the start, and needed** to "
+            "bring in documents") in readme
+    # The interoperability commitments, restated
+    assert ("the commitments above hold: every project stays a QualCoder "
+            "project, in QualCoder's format; qualcoder-mcp follows "
+            "QualCoder's rules and names any departure with its reason; "
+            "and you work on a project in one program at a time.") \
+        in stance
+    # No comparison, no criticism, no work claimed as under way
+    for words in ("unlike", "better", "whereas", "instead of", "rather "
+                  "than", "is working with", "not a good approach"):
+        assert words not in stance.lower(), words
+
+
+def test_a_project_from_the_conversation_stays_in_one_qualcoder():
+    # The owner's decision of 29 September: 3.8.2 stays recommended, and
+    # TOOLS.md no longer sends such a project to 4.0
+    tools = _flat("TOOLS.md")
+    opening = tools[tools.index("**Opening it in QualCoder.**"):
+                    tools.index("**The project memo**")]
+    assert ("Keep such a project in one QualCoder: moving it between 3.8.2 "
+            "and 4.0 is what changes it.") in opening
+    assert "Work on such a project in QualCoder 4.0." not in opening
+    assert '3.8.2, the release marked "Latest"' in _flat("README.md")
 
 
 # ---------------------------------------------------------------------------

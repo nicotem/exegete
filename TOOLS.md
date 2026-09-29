@@ -255,7 +255,8 @@ tools plus `create_project`.
   into a category goes back under its parent code; the sub-codes of a
   code deleted in 3.8.2 become ordinary codes with no category; and a
   graph saved after another was deleted can show the deleted graph's
-  memo notes. Work on such a project in QualCoder 4.0.
+  memo notes. Keep such a project in one QualCoder: moving it between
+  3.8.2 and 4.0 is what changes it.
 - **The project memo** starts empty, as QualCoder leaves it;
   `set_memo` with the target `project` writes it (research questions,
   methodology, participants), and QualCoder 4.0's own assistant reads it

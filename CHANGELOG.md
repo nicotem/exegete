@@ -7,7 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+v0.14.1, the README review: documentation only, no change to the
+server.
+
+### Changed: the README is a front page, and its reference moves out
+
+- README.md now says what qualcoder-mcp is and is not (its own software
+  on QualCoder's project format, not made or endorsed by QualCoder's
+  developers, with the provenance wording and NOTICE), where
+  participants' words go, and how to start: the one-click extension
+  first, what you need at each stage, a first project, working on a
+  copy, and one program at a time. Then what it adds, and three
+  commitments: compatibility with QualCoder, symmetry as a commitment
+  with a dated table of what each side does, and interoperability.
+- QualCoder as a prerequisite, by stage (README, and INSTALL.md's "What
+  You'll Need"): not needed to start with the extension's default tool
+  set, `lifecycle`; recommended, and needed to bring in documents, to
+  see the coding in the text, to code images, audio and video, and for
+  graphs; the Terminal route's default set, `full`, cannot create a
+  project.
+- New file, TOOLS.md: the reference, moved from the README with its
+  headings and words: every tool, the resources and prompts, the AI
+  coder name, starting a project, supported QualCoder versions, working
+  alongside QualCoder 4.0 (QualCoder 3.8.2's edit-mode caution under a
+  heading of its own), AI-assisted coding, data safety and the example
+  requests.
+- INSTALL.md takes "Choosing your AI host", the PyPI forms of the
+  Claude Desktop and Claude Code configuration, and the README's
+  troubleshooting and updating sentences; CONTRIBUTING.md takes the
+  architecture, the project structure and the MCP Inspector. The
+  README's "Completed in" lists are cut: this file is the record of
+  each release.
+- The three questions: the coding walk-through now says the assistant
+  is told to ask them and to pass the answers as the session's
+  `instruction`, and that the server cannot tell whether the
+  instruction holds the researcher's answers (`get_coding_session_info`
+  shows it).
+- QualCoder's own MCP server, stated as dated fact: QualCoder's pull
+  request #1571, merged on 10 September 2026, adds a setting, off by
+  default, that opens it to MCP hosts on the same computer while
+  QualCoder runs; it is in no release yet (checked 29 September 2026).
+  The sentence that it has no way in from outside is gone.
+- "Qualcoder" is spelt "QualCoder" in the prose of README, INSTALL,
+  TOOLS and the workflow guide; the folder `~/Documents/Qualcoder MCP
+  Projects` and the server's own messages keep their spelling.
+- Tests: every pin on README text follows its text; new pins for the
+  opening, the commitments, the dated upstream facts, the three
+  questions, the spelling, and every link and anchor in the documents
+  the review touched. The pin on the README's "Completed in v0.13.0"
+  list is retired with the list.
 
 ## [0.14.0-alpha] - 2026-09-28
 

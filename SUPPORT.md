@@ -1,6 +1,6 @@
 # Support
 
-Thanks for using the QualCoder MCP server. This is an **experimental
+Thanks for using qualcoder-mcp. This is an **experimental
 alpha** built by one researcher. Feedback, bug reports, and feature
 ideas are genuinely wanted: they directly shape what gets built next.
 

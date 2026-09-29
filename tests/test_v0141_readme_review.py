@@ -54,6 +54,54 @@ def test_the_readme_says_what_it_is_not():
 
 
 # ---------------------------------------------------------------------------
+# The private part of a memo: what qualcoder-mcp does, and only that
+# ---------------------------------------------------------------------------
+
+# QualCoder's AI chat, asked to discuss a code, sends that code's memo
+# whole, the part after `#####` included, unless "Send memos" is unticked
+# (3.8.2 and the 4.0 beta). So no document may say that QualCoder's AI
+# never sends, or never sees, that part.
+SAYS_QUALCODERS_AI_KEEPS_IT = re.compile(
+    r"\bAI\b(?: features)? never (?:sends?|sees?)\b")
+
+
+def test_no_document_says_qualcoders_ai_keeps_the_private_part():
+    for path in sorted(REPO.glob("*.md")):
+        text = _flat(path.name)
+        for claim in ("QualCoder's own AI features never send",
+                      "its built-in AI never sees"):
+            assert claim not in text, (path.name, claim)
+        assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(text), path.name
+
+
+def test_the_private_part_is_stated_for_this_server_only():
+    readme = _flat("README.md")
+    data = readme[readme.index("## Where your data goes"):
+                  readme.index("## Start here")]
+    assert ("qualcoder-mcp never passes the part of a memo from a `#####` "
+            "mark onward (QualCoder's mark for a private note) to the "
+            "assistant, whichever QualCoder made the project.") in data
+    assert ("exported files keep the whole memo, private part "
+            "included") in data
+    privacy = _flat("PRIVACY.md")
+    assert ("QualCoder (3.8.2 and 4.0) uses a marker for memos: everything "
+            "from the first `#####` onward is a private note. This server "
+            "honours the convention, whichever QualCoder made the "
+            "project:") in privacy
+    assert "QualCoder 4.0 introduces a marker" not in privacy
+
+
+def test_the_private_part_check_would_notice():
+    for sentence in ("which QualCoder's own AI features never send",
+                     "a private zone that its built-in AI never sees",
+                     "QualCoder's AI never sends it"):
+        assert SAYS_QUALCODERS_AI_KEEPS_IT.search(sentence), sentence
+    assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(
+        'an emptied "Folder for projects" never sends projects into a '
+        "synced Documents folder")
+
+
+# ---------------------------------------------------------------------------
 # The three commitments, symmetry as an aim with a dated table
 # ---------------------------------------------------------------------------
 

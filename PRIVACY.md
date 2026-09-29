@@ -1,7 +1,7 @@
 # Data Flow & Privacy
 
 This document explains exactly what happens to your research data when
-you use the QualCoder MCP server. It is factual and deliberately
+you use qualcoder-mcp. It is factual and deliberately
 sober: this tool makes the data flow explicit precisely so you can make
 an informed decision, which many AI integrations do not. It is not legal
 advice.
@@ -28,7 +28,7 @@ must understand:
 > transcript through this tool sends the returned portions of that
 > transcript to that provider.
 
-What stays local, always:
+What stays local, always, unless a sync service copies the folder it is in:
 
 - your QualCoder project itself (the `.qda` folder and database)
 - automatic backups created before writes, and the safety backup a
@@ -203,10 +203,9 @@ sensitive content you hold.
 
 ## Keeping notes private from the AI: the '#####' memo convention
 
-QualCoder 4.0 introduces a marker for memos: everything from the first
-`#####` onward is a private zone that its built-in AI never sees. This
-server honours the same convention, so a project touched by both tools
-keeps the same promise:
+QualCoder (3.8.2 and 4.0) uses a marker for memos: everything from the
+first `#####` onward is a private note. This server honours the
+convention, whichever QualCoder made the project:
 
 - **Reads**: every tool and resource that returns memo content (code,
   category, file, case, attribute-type and coding memos, annotations,

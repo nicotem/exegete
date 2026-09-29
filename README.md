@@ -5,13 +5,19 @@ project.**
 
 qualcoder-mcp is a growing suite of tools for qualitative analysis that
 works directly on [QualCoder](https://github.com/ccbogel/QualCoder)
-projects. It is its own software: it runs on your computer, reads and
-writes QualCoder's project format, follows QualCoder's rules wherever
-the two must agree, and adds tools of its own for working with an AI
-assistant. Your project stays a QualCoder project, and QualCoder opens
-it. You use qualcoder-mcp from an AI assistant such as Claude Desktop;
-the Model Context Protocol (MCP) in its name is only the standard way
-an assistant reaches tools on your computer.
+projects (QualCoder is a free program for qualitative data analysis).
+It is its own software: it runs on your computer, reads and writes
+QualCoder's project format, follows QualCoder's rules wherever the two
+must agree, and adds tools of its own for working with an AI assistant.
+Your project stays a QualCoder project, and QualCoder opens it. You use
+qualcoder-mcp from an AI assistant such as Claude Desktop; the Model
+Context Protocol (MCP) in its name is only the standard way an
+assistant reaches tools on your computer. You ask in your own words,
+and the assistant uses the tools to do it: start a project, bring in
+transcripts, suggest codings for the files you choose, compare two
+coders, replace participants' names and export reports. The assistant
+suggests; whether a code fits the words, and what a coding means, stays
+your judgement.
 
 **What it is not.** It is not a remote control for the QualCoder
 application: it does not start or control QualCoder, and QualCoder need
@@ -37,27 +43,33 @@ and sends nothing anywhere itself. What the assistant reads through it
 goes to the AI provider behind your assistant: Anthropic for Claude
 Desktop and Claude's other apps, and no outside provider at all with a
 fully local model, which needs another assistant, such as LM Studio,
-set up by the Terminal route (Experimental). Text you bring in through
-the conversation (pasted or attached, then imported) goes to the
-provider in full; a file you import in QualCoder does not, only what
-the assistant later reads of it.
+set up by the Terminal route (installing by typing commands, as
+INSTALL.md shows; Experimental: no local model has yet been evaluated
+with qualcoder-mcp). Text you bring in through the conversation (pasted
+or attached, then imported) goes to the provider in full; a file you
+import in QualCoder does not, only what the assistant later reads of
+it.
 
 Your project, its backups, your exports, the lists of suggestions
 waiting for your review, and Claude Desktop's own log of the extension
-(which keeps a copy of what the tools returned; INSTALL.md says where)
-stay on your computer. The part of a memo from a `#####` mark onward,
-which QualCoder's own AI features never send (in 3.8.2 and the 4.0
-beta), is never passed to the assistant either, whichever QualCoder
-made the project. The mark works in memos, annotations and journal
-entries, not in the text of a transcript. Replacing names reduces the
-risk; it does not make anyone anonymous.
+(which keeps a copy of every request and answer, names and quoted text
+included; INSTALL.md says where) stay on your computer, unless they are
+in a folder that iCloud, OneDrive or another sync service copies.
+qualcoder-mcp never passes the part of a memo from a `#####` mark
+onward (QualCoder's mark for a private note) to the assistant,
+whichever QualCoder made the project. The mark works in memos,
+annotations and journal entries, not in the text of a transcript, and
+exported files keep the whole memo, private part included. Replacing
+names reduces the risk; it does not make anyone anonymous.
 
 Which provider, and under which terms, is decided by your assistant and
 your account, not by qualcoder-mcp. On a personal Claude plan (Free,
 Pro or Max), open https://claude.ai/settings/data-privacy-controls and
-check the Model Improvement setting yourself before you use participant
-data. On an account your university or employer provides, ask whoever
-manages it which terms apply.
+check the Model Improvement setting yourself (Anthropic's consumer
+terms say your conversations may be used to train its models unless
+you opt out there; PRIVACY.md quotes them, with the exceptions) before
+you use participant data. On an account your university or employer
+provides, ask whoever manages it which terms apply.
 [PRIVACY.md](https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md)
 quotes the terms, and covers consent, institutional accounts and fully
 local models: read it before you use participant data.
@@ -81,19 +93,22 @@ local models: read it before you use participant data.
   text; to code images, audio, video or an area of a PDF page; for
   graphs; and for the reports in its Reports menu.
   [Download QualCoder](https://github.com/ccbogel/QualCoder/releases):
-  3.8.2, the release marked "Latest", further down the page. The
-  "4.0-Beta" at the top also works, but it is a test version, and
-  qualcoder-mcp cannot tell when it has your project open (see "One
-  program at a time" below).
+  3.8.2, the release marked "Latest", further down the page, for
+  Windows or a Mac with Apple Silicon (M1 or later; QualCoder offers no
+  download for older Intel Macs). Its notes on that page say how to
+  open it the first time. The "4.0-Beta" at the top also works, but it
+  is a test version, and qualcoder-mcp cannot tell when it has your
+  project open (see "One program at a time" below).
 - **The Terminal route**
   ([INSTALL.md](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md))
   needs Python 3.10 or newer. Its standard tool set, `full`, cannot
   create a project: use a project made in QualCoder, or switch project
   creation on as INSTALL.md shows.
 - **Projects** from QualCoder 3.8.2 and the 4.0 beta work (see "Three
-  commitments" below). A project from a QualCoder older than 3.8 can be
-  read; to change it, open it once in QualCoder 3.8 or newer, which
-  updates it as it opens, then close it.
+  commitments" below). A project from a QualCoder older than 3.8 must
+  be opened once in QualCoder 3.8 or newer, which updates it as it
+  opens, and closed again before qualcoder-mcp can change it (the
+  oldest formats cannot even be read before that).
 
 ### Claude Desktop, with one click
 
@@ -106,10 +121,15 @@ local models: read it before you use participant data.
    marked Pre-release). Under its Assets, download the file whose name
    ends in `.mcpb` (for example `qualcoder-mcp-0.14.0-alpha.mcpb`), not
    "Source code".
-3. **Install it.** Double-click the file. Claude Desktop shows its usual
+3. **Install it.** Double-click the file (if Claude does not open, drag
+   the file onto Claude's window). Claude Desktop shows its usual
    warning to install only extensions whose developer you trust: click
    Install, and Install again when it says it must fetch a few things it
    needs (a minute or two, online). No Terminal, no configuration file.
+
+To check: start a new conversation, click "+", then Connectors:
+qualcoder-mcp is listed. Claude asks before it uses a tool; "Allow
+once" keeps it asking ("What it does", below, says why that matters).
 
 The extension is not signed by its developer; a computer or Claude
 account managed by your university or employer may refuse it.
@@ -118,18 +138,30 @@ says what you will see then, and what the extension's two settings do.
 
 ### A first session
 
-**A first project.** Creating a project is Experimental. With the
-extension's settings as they come, ask Claude, for example: "Create a
-new QualCoder project called Practice." It is made in QualCoder 4.0's
-format, in the extension's "Folder for projects": by default a folder
-called "QualCoder projects" in your home folder (the one named after
-you), not in Documents, which iCloud or OneDrive may sync. Claude asks
-for the coder name you use in QualCoder (in QualCoder: Settings, Coder
-name), so that what is coded through the conversation is kept apart
-from what you code in QualCoder; if you do not use QualCoder yet, say
-so, and the project is still created.
+**A first project.** Creating a project is Experimental (new in 0.14,
+and few people have used it yet). With the extension's settings as they
+come, ask Claude, for example: "Create a new QualCoder project called
+Practice." It is made in QualCoder 4.0's format, in the extension's
+"Folder for projects": by default a folder called "QualCoder projects"
+in your home folder (the one named after you), not in Documents, which
+iCloud or OneDrive may sync. QualCoder 3.8.2 opens it too, but shows a
+code made under another code as an ordinary code; before you move such
+a project between 3.8.2 and 4.0, read
+["Opening it in QualCoder" in TOOLS.md](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental).
+Claude asks for the coder name you use in QualCoder (in QualCoder's
+Project menu, Settings, where it says "Current coder"; on a Mac it may
+be under the QualCoder menu instead), so that what is coded through the
+conversation is kept apart from what you code in QualCoder; if you do
+not use QualCoder yet, say so, and the project is still created.
 [TOOLS.md, "Starting a project from the conversation"](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental)
 has the rules.
+
+To see it in QualCoder: Project, Open Project, and choose
+`Practice.qda` in that folder (on a Mac, Finder's Go menu, Home, opens
+your home folder). Practise with text that is not from a participant: a
+page you write yourself, or a published text you may use. Anything you
+paste or attach goes to Anthropic in full ("Where your data goes",
+above).
 
 **A project you already have.** Try the assistant on a practice
 project first. For a real study, ask Claude to copy your project into
@@ -145,7 +177,8 @@ once the project is opened again.
 ### Other assistants, and updates
 
 **Other assistants.** Claude Code, LM Studio (fully local) and other
-MCP hosts, and Claude Desktop set up by hand, take the Terminal route:
+MCP hosts (assistants that can use MCP tools), and Claude Desktop set
+up by hand, take the Terminal route:
 [INSTALL.md](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md)
 has each.
 
@@ -157,12 +190,6 @@ touches your projects.
 
 ## What it does that QualCoder does not
 
-You ask in your own words, and the assistant uses the tools to do it:
-start a project, bring in transcripts, suggest codings for the files
-you choose, compare two coders, replace participants' names and export
-reports. The assistant suggests; whether a code fits the words, and
-what a coding means, stays your judgement.
-
 QualCoder has AI features of its own: in 3.8.2 an AI chat, and an AI
 search that finds passages for you to code; in the 4.0 beta, an
 assistant that changes the project from inside QualCoder's window,
@@ -173,11 +200,12 @@ QualCoder), and QualCoder opens the same project at any time.
 qualcoder-mcp adds:
 
 - **Suggestions that wait for your decision.** Each suggested coding is
-  checked to quote the file's text word for word, and comes to you with
-  the passage, the assistant's reading of it (explicit or interpretive)
-  and its reason. Suggested codings, and proposed codes, wait in a
-  review list outside the project and are written only once approved in
-  the conversation. The assistant passes your decisions on:
+  checked to quote the file's text word for word and recorded with the
+  assistant's reading of it (explicit or interpretive); the assistant is
+  told to bring it to you with the passage, that reading and its
+  reason. Suggested codings, and proposed codes, wait in a review list
+  outside the project and are written only once approved in the
+  conversation. The assistant passes your decisions on:
   qualcoder-mcp records the approval the assistant reports and cannot
   tell whether you gave it. So keep your assistant asking before each
   change ("allow once" for the tools that decide and write:
@@ -186,7 +214,7 @@ qualcoder-mcp adds:
   that the counts it shows (approved, rejected, pending) match what you
   said. If they do not, say so and refuse `apply_codings` until they do:
   no coding is written before it runs.
-- **A preview before anything destructive.** Merging or deleting codes
+- **A preview before the larger changes.** Merging or deleting codes
   and categories, replacing names in stored text, and restoring or
   pruning backups each show first what would change, and go ahead only
   if nothing has changed since the preview. (QualCoder 4.0's assistant
@@ -226,7 +254,7 @@ pre-release:
 |---|---|---|
 | Create a project | Yes | Yes, in the extension's default tool set (Experimental; from 0.14) |
 | Import sources | Text, documents, PDFs, images, audio, video | Text the assistant hands over |
-| Code text, including a PDF's text | Yes | Yes, once approved in the conversation (not a PDF with no text layer) |
+| Code text, including a PDF's text | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, or an area of a PDF page | Yes | No |
 | Codebook: create, rename, move, merge, delete | Yes | Yes, with a preview before merging or deleting; nesting an existing code under another is done in QualCoder |
 | Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, and taking a file out of a case |
@@ -235,7 +263,7 @@ pre-release:
 | Graphs | Yes | No |
 | Comparing two coders | Per code, with a figure QualCoder labels Kappa | The same figure, and Cohen's kappa beside it; set against the AI coder name it is not agreement between independent coders |
 | Pseudonyms | Applied when a file is imported | Also applied to text already coded |
-| AI suggestions for coding | 3.8.2: an AI search finds passages, which you code; 4.0 beta: its assistant codes as it works, within the AI permission you set (read only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation |
+| AI suggestions for coding | 3.8.2: an AI search finds passages, which you code; 4.0 beta: its assistant codes as it works, within the AI permission you set (read only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
 
 **Interoperability.** Work on a project in QualCoder and from the
 conversation, one at a time: close the project in QualCoder before the
@@ -253,13 +281,13 @@ delete codings near its new end, whether or not qualcoder-mcp is used.
 **QualCoder's own MCP server** (checked 29 September 2026). QualCoder
 4.0's assistant works through an MCP server built into QualCoder. In
 the 4.0-Beta pre-release (3 September 2026), that server serves only
-QualCoder's own window. QualCoder's pull request
-[#1571](https://github.com/ccbogel/QualCoder/pull/1571), merged on
-10 September 2026, adds a setting, off by default, that opens it to MCP
-hosts on the same computer while QualCoder runs, for the project open
-in QualCoder. It is on QualCoder's development version and in no
-release yet; its author, kaixxx, proposes that QualCoder release an
-official MCP server with QualCoder 4.0's final release.
+QualCoder's own window. QualCoder's pull request (a proposed change to
+its code) [#1571](https://github.com/ccbogel/QualCoder/pull/1571),
+merged on 10 September 2026, adds a setting, off by default, that opens
+it to MCP hosts on the same computer while QualCoder runs, for the
+project open in QualCoder. It is on QualCoder's development version and
+in no release yet; its author, kaixxx, proposes that QualCoder release
+an official MCP server with QualCoder 4.0's final release.
 [TOOLS.md, "Supported QualCoder versions"](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#supported-qualcoder-versions)
 gives the commits these facts were read at.
 
@@ -288,16 +316,18 @@ gives the commits these facts were read at.
 
 ## What comes next
 
-- v0.15, the safety net: undo for what a session did, choosing which
-  occurrences of a name to leave, the smaller items of the claims
-  audit, and the removal of what v0.14 deprecates
-- v0.16, chat-first: three graph reads (co-occurrence, the code
-  hierarchy, counts by attribute value), PDFs announced with QualCoder
-  4.0's text extraction, and counts for the places a rename cannot reach
-- v0.17: the Manual, and quote-anchored writes
-- Media region coding (images, audio/video, PDF)
-- Further QualCoder 4.0 interoperability (later phases)
-- Further refinements driven by tester feedback
+- v0.15: undo for what a session did; when names are replaced,
+  choosing which places to leave as they are; and the removal of the
+  tools and options 0.14 marks as going (TOOLS.md names each, the
+  REFI-QDA export among them)
+- v0.16: more of the work from the conversation: codes that occur
+  together, the code tree and code counts by attribute, as tables;
+  PDF text labelled as QualCoder's extraction; and counts of the places
+  replacing names cannot reach
+- v0.17: a Manual, and codings placed by the words quoted rather than
+  by position
+- Later: coding images, audio, video and areas of PDF pages; more work
+  alongside QualCoder 4.0; and changes testers ask for
   ([file yours](https://github.com/nicotem/qualcoder_mcp/issues))
 
 ## Disclaimer

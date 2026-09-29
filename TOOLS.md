@@ -81,8 +81,8 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > Two facts about how the tools relate (checked 29 September 2026).
 > QualCoder 4.0 ships its own embedded AI assistant, built on an MCP
 > server inside QualCoder. In the 4.0-Beta pre-release (3 September 2026,
-> tag `4.0-Beta`), as at commit `9bddf17`, that server serves only
-> QualCoder's own window. QualCoder's pull request
+> tag `4.0-Beta` at `2c3ef57`), as at the pinned commit `9bddf17` before
+> it, that server serves only QualCoder's own window. QualCoder's pull request
 > [#1571](https://github.com/ccbogel/QualCoder/pull/1571) ("External MCP
 > server access", by kaixxx), merged on 10 September 2026 as commit
 > `0160ece`, adds a setting in QualCoder, off by default, that opens that

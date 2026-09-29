@@ -1,7 +1,7 @@
 # AI-Assisted Coding Guide
 
-Guide to coding qualitative data with Claude through the QualCoder MCP
-server (the conversational workflow, v0.6.0 and later).
+Guide to coding qualitative data with Claude through qualcoder-mcp
+(the conversational workflow, v0.6.0 and later).
 
 > **This guide replaces the v0.3.0 export/import guide.** The old
 > `suggest_coding_for_files` / `export_coding_suggestions` /
@@ -64,8 +64,8 @@ reports against what you said.
   from the conversation
 - A project schema from v14 (QualCoder 3.8.x) through v17 (the
   QualCoder 4.0-Beta pre-release); see "Supported QualCoder versions"
-  in TOOLS.md. Older projects: open and save them in QualCoder 3.8
-  once to upgrade
+  in TOOLS.md. Older projects: open them once in QualCoder 3.8 or
+  newer, which updates them as they open
 
 ## Quick Start
 

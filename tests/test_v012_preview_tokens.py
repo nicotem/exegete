@@ -22,10 +22,10 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp import preview_tokens as pt
-from qualcoder_mcp.database import QualcoderDatabase
+from exegete import preview_tokens as pt
+from exegete.database import QualcoderDatabase
 
 POSIX_ONLY = pytest.mark.skipif(
     sys.platform == "win32",

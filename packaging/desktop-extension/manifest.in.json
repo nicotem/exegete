@@ -6,7 +6,7 @@
   "documentation": "https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md",
   "server": {
     "type": "uv",
-    "entry_point": "src/qualcoder_mcp/server.py",
+    "entry_point": "src/exegete/server.py",
     "mcp_config": {
       "command": "uv",
       "args": [
@@ -14,7 +14,7 @@
         "--frozen",
         "--directory",
         "${__dirname}",
-        "qualcoder-mcp"
+        "exegete"
       ],
       "env": {
         "QUALCODER_MCP_TOOLSET": "${user_config.toolset}",

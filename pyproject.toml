@@ -1,7 +1,7 @@
 [project]
-name = "qualcoder-mcp"
+name = "exegete"
 version = "0.14.0-alpha"
-description = "Model Context Protocol server for Qualcoder qualitative data analysis with AI-assisted coding"
+description = "Exegete: AI-assisted qualitative analysis of QualCoder projects, from the conversation. An MCP server, formerly qualcoder-mcp."
 authors = [{name = "Niccolò Tempini", email = "n.tempini@exeter.ac.uk"}]
 # PEP 639 SPDX licence expression (setuptools >= 77). LGPL-3.0-or-later
 # from v0.13, QualCoder's own licence; releases up to 0.12.1 were
@@ -55,11 +55,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nicotem/qualcoder_mcp"
-Repository = "https://github.com/nicotem/qualcoder_mcp"
-Issues = "https://github.com/nicotem/qualcoder_mcp/issues"
-Changelog = "https://github.com/nicotem/qualcoder_mcp/blob/main/CHANGELOG.md"
-Privacy = "https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md"
+Homepage = "https://github.com/nicotem/exegete"
+Repository = "https://github.com/nicotem/exegete"
+Issues = "https://github.com/nicotem/exegete/issues"
+Changelog = "https://github.com/nicotem/exegete/blob/main/CHANGELOG.md"
+Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 
 [project.optional-dependencies]
 dev = [
@@ -91,7 +91,7 @@ faulthandler_timeout = 600
 # this suite. tests/test_suite_hygiene.py covers the compile-time half,
 # which no runtime filter can see.
 filterwarnings = [
-    "error:::qualcoder_mcp.*",
+    "error:::exegete.*",
 ]
 # One filter is deliberately NOT here (fix round 2): the one that turns
 # pytest's PytestUnraisableExceptionWarning into an error. An unclosed
@@ -130,7 +130,10 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [project.scripts]
-qualcoder-mcp = "qualcoder_mcp.server:main"
+# `exegete.server:main` is a promise kept for good: the old name's last
+# release will call it with no upper limit on the version it asks for
+# (tests/test_v0141_rename.py pins it).
+exegete = "exegete.server:main"
 
 # For uv, which the Claude Desktop extension installs with (v0.14; pip
 # and PyPI builds ignore this table). The extension's `uv sync` must

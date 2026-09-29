@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from qualcoder_mcp.sessions import (
+from exegete.sessions import (
     CodingSuggestion,
     AICodingSession,
     SessionManager

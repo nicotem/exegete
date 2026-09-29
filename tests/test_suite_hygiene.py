@@ -18,9 +18,9 @@ import warnings
 import pytest
 
 import track5_helpers as H
-from qualcoder_mcp import database
+from exegete import database
 
-PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "src" / "qualcoder_mcp"
+PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "src" / "exegete"
 
 
 class TestNothingIsWrittenOutsideTheSandbox:
@@ -123,7 +123,7 @@ class TestNothingIsWrittenOutsideTheSandbox:
         resolved = database.default_workspace().resolve()
         assert resolved.is_relative_to(tmp_path.resolve())
         assert not resolved.is_relative_to(H.REAL_WORKSPACE)
-        import qualcoder_mcp.server as _server
+        import exegete.server as _server
         assert not pathlib.Path(
             _server.session_manager.storage_dir).is_relative_to(
                 H.REAL_STATE_HOME)
@@ -178,7 +178,7 @@ class TestTheDefaultWorkspaceIsResolvedWhenAsked:
         # Through the registered tool as well, which is the route the
         # suite's whole-registry sweeps take with production defaults.
         import json
-        import qualcoder_mcp.server as _server
+        import exegete.server as _server
         out = json.loads(_server.copy_project_to_workspace(qualcoder_db_path))
         assert out["success"] is True
         assert pathlib.Path(out["workspace_copy"]).resolve().is_relative_to(
@@ -193,8 +193,8 @@ class TestTheDefaultWorkspaceIsResolvedWhenAsked:
         so a constant redirected somewhere that is neither the sandbox
         nor the real folder is reported too.
         """
-        import qualcoder_mcp.server as _server
-        from qualcoder_mcp import preview_tokens
+        import exegete.server as _server
+        from exegete import preview_tokens
         sandbox = tmp_path.resolve()
         bindings = {
             "Path.home()": pathlib.Path.home(),
@@ -360,13 +360,13 @@ class TestTheSourceCompilesWithoutWarnings:
             # which arrives as a DeprecationWarning the import machinery
             # owns rather than our module.
             "warnings.simplefilter('ignore')\n"
-            "warnings.filterwarnings('error', module=r'qualcoder_mcp.*')\n"
+            "warnings.filterwarnings('error', module=r'exegete.*')\n"
             "warnings.filterwarnings('error', category=SyntaxWarning)\n"
             "warnings.filterwarnings('error', "
             "message='invalid escape sequence')\n"
-            "import qualcoder_mcp\n"
-            "for info in pkgutil.iter_modules(qualcoder_mcp.__path__):\n"
-            "    importlib.import_module('qualcoder_mcp.' + info.name)\n"
+            "import exegete\n"
+            "for info in pkgutil.iter_modules(exegete.__path__):\n"
+            "    importlib.import_module('exegete.' + info.name)\n"
         )
         env = dict(os.environ)
         env["PYTHONPYCACHEPREFIX"] = str(tmp_path / "pycache")
@@ -821,7 +821,7 @@ class TestNoFixtureBuildsAProjectQualCoderCannotMake:
     ALLOWED = {"test_qc40_visibility.py", "test_v012_ai_coder_setting.py"}
 
     def test_the_stock_fixture_declares_nothing(self, setup_server):
-        import qualcoder_mcp.server as server_module
+        import exegete.server as server_module
         caps = server_module.db.capabilities
         assert caps.visibility_declared() is False
         assert caps.visibility_incomplete is False

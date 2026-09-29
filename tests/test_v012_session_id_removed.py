@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 
 RESERVED_ARGUMENT_NAMES = {"session_id", "request_id", "conversation_id",
                            "user_id", "context", "metadata"}
@@ -158,7 +158,7 @@ def _package_modules():
     """
     return {name: module
             for name, module in sorted(sys.modules.items())
-            if name == "qualcoder_mcp" or name.startswith("qualcoder_mcp.")}
+            if name == "exegete" or name.startswith("exegete.")}
 
 
 def _home_with_nested_sandbox(tmp_path):
@@ -228,9 +228,9 @@ def _module_paths_under(root, sandbox):
     root = Path(root).expanduser().resolve()
     found = []
     modules = _package_modules()
-    for label in ("qualcoder_mcp.server", "qualcoder_mcp.database",
-                  "qualcoder_mcp.sessions", "qualcoder_mcp.project_settings",
-                  "qualcoder_mcp.preview_tokens", "qualcoder_mcp.cursors"):
+    for label in ("exegete.server", "exegete.database",
+                  "exegete.sessions", "exegete.project_settings",
+                  "exegete.preview_tokens", "exegete.cursors"):
         assert modules.get(label) is not None, (
             f"{label} is not imported, so this sweep is walking less of "
             f"the package than it claims to")
@@ -336,7 +336,7 @@ class TestNoResponseCarriesSessionId:
         monkeypatch.setenv("HOME", str(home))          # call-time Path.home()
         monkeypatch.setenv("USERPROFILE", str(home))   # ... and on Windows
 
-        from qualcoder_mcp import database
+        from exegete import database
         monkeypatch.setattr(server, "_MRU_FILE",
                             home / ".qualcoder_mcp" / "mru_project.json")
 
@@ -505,7 +505,7 @@ class TestTheRotGuardSurvivesATempRootInsideHome:
                             home / ".qualcoder_mcp" / "mru_project.json")
         reported = _module_paths_under(home, sandbox)
         assert len(reported) == 1, reported
-        assert reported[0].startswith("qualcoder_mcp.server._MRU_FILE = "), \
+        assert reported[0].startswith("exegete.server._MRU_FILE = "), \
             reported
 
 
@@ -513,7 +513,7 @@ class TestTheRotGuardWalksThePackageItClaims:
     """Fix round 4, T9: the guard's prose said the package, its code said
     three hand-listed modules and the Path type.
 
-    qualcoder_mcp also ships memo_privacy and refi_export, and a constant
+    exegete also ships memo_privacy and refi_export, and a constant
     written as `str(Path.home() / "...")` is as easy to write as the Path
     version. Both were invisible to a guard whose whole purpose is that
     it cannot rot in silence, and whose own comment read "and nothing
@@ -533,18 +533,18 @@ class TestTheRotGuardWalksThePackageItClaims:
     def test_the_walk_covers_every_imported_module_of_the_package(self):
         """Non-vacuity for the walk itself, not only for what it found."""
         walked = set(_package_modules())
-        assert {"qualcoder_mcp", "qualcoder_mcp.server",
-                "qualcoder_mcp.database", "qualcoder_mcp.sessions",
-                "qualcoder_mcp.memo_privacy",
-                "qualcoder_mcp.project_settings",
-                "qualcoder_mcp.preview_tokens",
-                "qualcoder_mcp.cursors",
-                "qualcoder_mcp.coder_comparison"} <= walked, walked
+        assert {"exegete", "exegete.server",
+                "exegete.database", "exegete.sessions",
+                "exegete.memo_privacy",
+                "exegete.project_settings",
+                "exegete.preview_tokens",
+                "exegete.cursors",
+                "exegete.coder_comparison"} <= walked, walked
 
     def test_a_path_in_a_module_the_old_walk_missed_is_reported(
         self, tmp_path, monkeypatch
     ):
-        from qualcoder_mcp import memo_privacy
+        from exegete import memo_privacy
 
         home, sandbox = _home_with_nested_sandbox(tmp_path)
         self._redirect_the_known_constants(monkeypatch, sandbox)
@@ -554,7 +554,7 @@ class TestTheRotGuardWalksThePackageItClaims:
         reported = _module_paths_under(home, sandbox)
         assert len(reported) == 1, reported
         assert reported[0].startswith(
-            "qualcoder_mcp.memo_privacy._PLANTED_CACHE = "), reported
+            "exegete.memo_privacy._PLANTED_CACHE = "), reported
 
     def test_an_absolute_string_constant_is_reported_too(
         self, tmp_path, monkeypatch
@@ -567,7 +567,7 @@ class TestTheRotGuardWalksThePackageItClaims:
         reported = _module_paths_under(home, sandbox)
         assert len(reported) == 1, reported
         assert reported[0].startswith(
-            "qualcoder_mcp.server._PLANTED_DIR = "), reported
+            "exegete.server._PLANTED_DIR = "), reported
 
     def test_a_relative_string_is_not_mistaken_for_a_path(
         self, tmp_path, monkeypatch

@@ -29,8 +29,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))  # sibling test helpers
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import (QualcoderDatabase, QUALCODER_COLORS,
+import exegete.server as server
+from exegete.database import (QualcoderDatabase, QUALCODER_COLORS,
                                     QUALCODER_LOCK_FILENAME, snap_to_palette,
                                     normalize_name, name_key, validate_qda_path)
 from test_v17_support import make_project, add_subcode  # noqa: E402
@@ -1134,7 +1134,7 @@ class TestProposalNameNormalisation:
         """Both spellings forced onto the session (an old session file could
         hold them), then approved: pre-validation refuses the batch, so no
         backup is taken and no row is written."""
-        from qualcoder_mcp.sessions import ProposedCode
+        from exegete.sessions import ProposedCode
 
         sid = _sid()
         session = server.session_manager.load_session(sid)
@@ -1157,7 +1157,7 @@ class TestProposalNameNormalisation:
                                                  qualcoder_db_path):
         """An old session file can still hold an un-collapsed name; the echo
         has to report the name as stored, not as proposed."""
-        from qualcoder_mcp.sessions import ProposedCode
+        from exegete.sessions import ProposedCode
 
         sid = _sid()
         session = server.session_manager.load_session(sid)
@@ -1231,7 +1231,7 @@ class TestProposalColourDisclosure:
         written by v0.11 (or edited by hand) carries an off-palette colour.
         The researcher approved that colour and a different one was written
         with nothing in the result saying so."""
-        from qualcoder_mcp.sessions import ProposedCode
+        from exegete.sessions import ProposedCode
 
         sid = _sid()
         session = server.session_manager.load_session(sid)
@@ -1300,7 +1300,7 @@ class TestReviewScreenSurvivesACorruptedProposalColour:
         only way to the state this class is about is a session file
         written by an older release, edited by hand, or corrupted.
         """
-        from qualcoder_mcp.sessions import ProposedCode
+        from exegete.sessions import ProposedCode
 
         session = server.session_manager.load_session(sid)
         guids = []
@@ -1465,7 +1465,7 @@ class TestSubcodeMoves:
 
     @pytest.fixture
     def env(self, tmp_path, monkeypatch):
-        from qualcoder_mcp.sessions import SessionManager
+        from exegete.sessions import SessionManager
         saved = (server.db, server.current_project_path, server.session_manager)
         server.db = None
         server.current_project_path = None

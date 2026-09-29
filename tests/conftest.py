@@ -15,15 +15,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # with the test files that import it by name (track5_helpers).
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import database as _database
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.project_settings import DEFAULT_AI_CODER_NAME, SIDECAR_NAME
+import exegete.server as server
+from exegete import database as _database
+from exegete.database import QualcoderDatabase
+from exegete.project_settings import DEFAULT_AI_CODER_NAME, SIDECAR_NAME
 from track5_helpers import (write_fixture_sidecar, REAL_WORKSPACE,
                             WORKSPACE_UNREADABLE, real_workspace_entries,
                             GUARDED_REAL_FOLDERS, SHARING_VIOLATION,
                             open_paths_under)
-from qualcoder_mcp.sessions import SessionManager, AICodingSession, CodingSuggestion
+from exegete.sessions import SessionManager, AICodingSession, CodingSuggestion
 from hypothesis import HealthCheck as _HealthCheck
 from hypothesis import settings as _hypothesis_settings
 
@@ -96,7 +96,7 @@ def _isolate_preview_secret(tmp_path, _sandbox_patch):
     developer's own secret, and a rotation invalidates tokens the real
     server issued.
     """
-    from qualcoder_mcp import preview_tokens
+    from exegete import preview_tokens
     _sandbox_patch.setattr(preview_tokens, "STATE_HOME",
                            tmp_path / "token_state")
 

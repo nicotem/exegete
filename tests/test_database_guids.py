@@ -7,7 +7,7 @@ import uuid
 from contextlib import closing
 from pathlib import Path
 
-from qualcoder_mcp.database import QualcoderDatabase
+from exegete.database import QualcoderDatabase
 
 
 @pytest.fixture

@@ -17,9 +17,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp.sessions import SessionManager
+from exegete.sessions import SessionManager
 from test_v17_support import make_project
 
 REPO = Path(__file__).resolve().parent.parent
@@ -184,7 +184,7 @@ class TestSavedGraphsAfterACategoryGoes:
 # 2. PDF guard rails
 # ===========================================================================
 
-from qualcoder_mcp import database as dbmod  # noqa: E402
+from exegete import database as dbmod  # noqa: E402
 
 ARTICLE = ("The things in themselves are what first appear to reason. "
            "Hume tells us that reason is the slave of the passions.")
@@ -531,7 +531,7 @@ class TestTheCaseRead:
         assert "Participant" not in text
 
     def test_the_database_refuses_the_link_too(self, pdf_project):
-        from qualcoder_mcp.database import QualcoderDatabase
+        from exegete.database import QualcoderDatabase
         _case_with_links(pdf_project)
         wdb = QualcoderDatabase(str(pdf_project), read_only=False)
         try:
@@ -650,7 +650,7 @@ class TestRegionCodingsDisclosed:
     def test_a_hidden_coders_areas_are_not_counted(self, tmp_path):
         """On a project that hides a coder, the count is the visible
         coders' own, as the read's is."""
-        from qualcoder_mcp import new_project
+        from exegete import new_project
         folder = tmp_path / "Hidden.qda"
         new_project.write_project(folder, new_project.creation_statements(
             "carol", new_project.about_line("0.14.0"),
@@ -768,7 +768,7 @@ class TestAConfiguredProjectAtFirstUse:
         env["QUALCODER_PROJECT_PATH"] = str(folder)
         env.pop("QUALCODER_MCP_TOOLSET", None)
         params = StdioServerParameters(
-            command=sys.executable, args=["-m", "qualcoder_mcp.server"],
+            command=sys.executable, args=["-m", "exegete.server"],
             env=env)
 
         async def drive():
@@ -789,7 +789,7 @@ class TestAConfiguredProjectAtFirstUse:
 # ===========================================================================
 
 import subprocess  # noqa: E402
-from qualcoder_mcp.database import (backup_project,  # noqa: E402
+from exegete.database import (backup_project,  # noqa: E402
                                     copy_project_to_workspace,
                                     DatabaseLockedError)
 
@@ -875,7 +875,7 @@ class TestBackupsMadeConsistently:
     def test_a_database_kept_locked_refuses_the_write(self, opened,
                                                       monkeypatch):
         """Past the wait, no backup and so no write: said as a lock."""
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         monkeypatch.setattr(database, "BACKUP_BUSY_SECONDS", 0.2)
         folder = opened("v17")
         server.select_project(str(folder))
@@ -1220,7 +1220,7 @@ class TestALinkedDatabase:
         file. A byte copy took them (a state never committed, restored
         silently); the online backup waits for the lock and, past the
         wait, takes no backup at all."""
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         monkeypatch.setattr(database, "BACKUP_BUSY_SECONDS", 0.3)
         folder = opened("v17")
         target = _link_database(folder)
@@ -1299,7 +1299,7 @@ class TestTheSmallerFixes:
 
     def test_the_database_copied_as_a_file_is_said(self, opened, tmp_path,
                                                    monkeypatch):
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         real = database._copy_database
 
         def as_file(source, dest, report=None):

@@ -19,7 +19,7 @@ them may make a tool description longer (the budget test pins the sizes).
 import json
 from pathlib import Path
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 
 REPO = Path(__file__).resolve().parents[1]
 

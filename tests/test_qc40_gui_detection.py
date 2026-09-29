@@ -26,9 +26,9 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-import qualcoder_mcp.database as database
-from qualcoder_mcp.database import (
+import exegete.server as server
+import exegete.database as database
+from exegete.database import (
     GUI_SIGNAL_FRESH_SECONDS,
     _filter_qualcoder_processes,
     qualcoder_gui_signals,
@@ -520,7 +520,7 @@ class TestDatabaseOpenErrorIsGeneric:
     def test_tools_return_fixed_text(self, setup_server, qualcoder_db_path,
                                      no_process_hits, how, caplog):
         self._damage(qualcoder_db_path, how)
-        with caplog.at_level("ERROR", logger="qualcoder_mcp.server"):
+        with caplog.at_level("ERROR", logger="exegete.server"):
             for call in (
                 lambda: server.get_current_project(),
                 lambda: server.list_backups(),
@@ -568,7 +568,7 @@ _ROOT = Path(__file__).parent.parent
 def _tools_running_the_process_scan():
     """Top-level functions in server.py that call qualcoder_gui_signals
     without include_process_scan=False (the scan runs by default)."""
-    src = (_ROOT / "src" / "qualcoder_mcp" / "server.py").read_text(
+    src = (_ROOT / "src" / "exegete" / "server.py").read_text(
         encoding="utf-8")
     callers = set()
     for fn in ast.parse(src).body:

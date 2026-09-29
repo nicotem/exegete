@@ -24,8 +24,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.sessions import (AICodingSession, CodingSuggestion,
+import exegete.server as server
+from exegete.sessions import (AICodingSession, CodingSuggestion,
                                     SessionManager)
 
 # The fixture project's file 1 (conftest.qualcoder_db_path)
@@ -1370,7 +1370,7 @@ class TestFixRound2TheReading:
     explained once at the first review."""
 
     def test_the_two_glosses(self):
-        from qualcoder_mcp.sessions import READING_LABELS
+        from exegete.sessions import READING_LABELS
         assert READING_LABELS == {
             "explicit": "the passage states what the code names",
             "interpretive": ("the code rests on what the passage implies "
@@ -2123,7 +2123,7 @@ class TestFixRound2TheMinors:
         "deadbeef"])
     def test_merged_into_keeps_only_a_whole_guid(self, setup_server,
                                                  crafted):
-        from qualcoder_mcp.sessions import ProposedCode
+        from exegete.sessions import ProposedCode
         kept = ProposedCode(name="A", status="merged",
                             merged_into="0f0f0f0f-0000-4000-8000-00000000abcd")
         assert kept.merged_into == "0f0f0f0f-0000-4000-8000-00000000abcd"

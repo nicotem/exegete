@@ -21,10 +21,10 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
-from qualcoder_mcp.database import (
+from exegete.sessions import AICodingSession, CodingSuggestion
+from exegete.database import (
     BACKUP_IGNORE_PATTERNS,
     QUALCODER_BACKUP_IGNORE_PATTERNS,
     backup_project,
@@ -209,7 +209,7 @@ class TestCopyFailureCleanup:
     def test_partial_backup_is_not_listed_as_restorable(
             self, setup_server, qualcoder_db_path, monkeypatch):
         import shutil
-        import qualcoder_mcp.database as database
+        import exegete.database as database
 
         def half_copy(src, dst, **_kwargs):
             # v0.14: the folder is claimed and the database written before
@@ -366,7 +366,7 @@ class TestOutwardSymlinksNotFollowed:
         (project / "documents" / "real.txt").write_text("r", encoding="utf-8")
         _symlink(Path("real.txt"), project / "documents" / "in.txt")
         _symlink(project / "nowhere", project / "documents" / "dangling.txt")
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         monkeypatch.setattr(database, "default_workspace",
                             lambda: tmp_path / "ws")
         out = json.loads(server.copy_project_to_workspace(qualcoder_db_path))
@@ -381,7 +381,7 @@ class TestOutwardSymlinksNotFollowed:
 
     def test_clean_copy_reports_zero(self, setup_server, qualcoder_db_path,
                                      tmp_path, monkeypatch):
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         monkeypatch.setattr(database, "default_workspace",
                             lambda: tmp_path / "ws")
         out = json.loads(server.copy_project_to_workspace(qualcoder_db_path))
@@ -528,7 +528,7 @@ class TestSymlinkLoopsNotFollowed:
             self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
         project, docs = self._project(qualcoder_db_path)
         _symlink(Path(".."), docs / "up")
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         monkeypatch.setattr(database, "default_workspace",
                             lambda: tmp_path / "ws")
         out = json.loads(server.copy_project_to_workspace(qualcoder_db_path))
@@ -550,7 +550,7 @@ class TestSymlinkLoopsNotFollowed:
         import logging
         project, docs = self._project(qualcoder_db_path)
         _symlink(Path(".."), docs / "up")
-        with caplog.at_level(logging.WARNING, logger="qualcoder_mcp.database"):
+        with caplog.at_level(logging.WARNING, logger="exegete.database"):
             backup_project(qualcoder_db_path)
         assert any("already being copied" in r.getMessage()
                    for r in caplog.records)

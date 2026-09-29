@@ -19,10 +19,10 @@ from pathlib import Path
 import pytest
 from hypothesis import HealthCheck, assume, given, settings, strategies as st
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp import coder_comparison as cc
-from qualcoder_mcp.database import (CoderVisibilityUnreadable,
+from exegete import coder_comparison as cc
+from exegete.database import (CoderVisibilityUnreadable,
                                     QualcoderDatabase)
 
 SECOND = "Second Coder"
@@ -460,7 +460,7 @@ class TestResultShape:
         assert "It is not Cohen's kappa" in out["method"]["kappa_qualcoder"]
 
     def test_the_four_coder_roles(self, setup_server, qualcoder_db_path):
-        from qualcoder_mcp.project_settings import (DEFAULT_AI_CODER_NAME,
+        from exegete.project_settings import (DEFAULT_AI_CODER_NAME,
                                                     KNOWN_AI_ASSISTANT_OWNER)
         speaker = "\U0001F4CC Speaker coding"
         for ctid, owner in ((80, DEFAULT_AI_CODER_NAME),

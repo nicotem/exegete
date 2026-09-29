@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Folded into the main suite from the v0.6.0-alpha parallel test campaign
 # (track 5b, fault injection); adapted paths/fixtures only — test logic unchanged.
-"""Fault-injection tests for qualcoder_mcp write-failure recovery paths.
+"""Fault-injection tests for exegete write-failure recovery paths.
 
 Track 5b — targets the uncovered recovery arcs found by the property-testing
 track (coverage run at v0.6.0-alpha):
@@ -36,7 +36,7 @@ For every injected fault the tests assert:
 
 Self-contained: builds its own v14 projects (same schema as tests/conftest.py)
 and does not use any fixtures from the main test suite. Runs against the
-qualcoder_mcp package importable from the active environment.
+exegete package importable from the active environment.
 """
 
 import json
@@ -53,15 +53,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
 from track5_helpers import write_fixture_sidecar
-from qualcoder_mcp.database import (
+from exegete.database import (
     DB_LOCKED_MESSAGE,
     QualcoderDatabase,
     QUALCODER_LOCK_FILENAME,
 )
-from qualcoder_mcp.sessions import (
+from exegete.sessions import (
     SessionManager,
     AICodingSession,
     CodingSuggestion,

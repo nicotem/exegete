@@ -23,11 +23,11 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp import project_settings as ps
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.project_settings import (
+from exegete import project_settings as ps
+from exegete.database import QualcoderDatabase
+from exegete.project_settings import (
     AI_CODER_NAME_ENV,
     DEFAULT_AI_CODER_NAME,
     KNOWN_AI_ASSISTANT_OWNER,
@@ -172,7 +172,7 @@ def _house_rules(texts, labels=None):
 
 def _approved_session(server_mod, project_path):
     """A session with one approved suggestion, for apply_codings."""
-    from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
+    from exegete.sessions import AICodingSession, CodingSuggestion
     session = AICodingSession(project_path=project_path,
                               description="ask flow", file_ids=[1],
                               code_names=["Stress"], instruction="t")
@@ -405,7 +405,7 @@ class TestTheAsk:
 
     def test_create_proposed_codes_asks_and_keeps_the_proposals(
             self, setup_server_unset, qualcoder_db_path):
-        from qualcoder_mcp.sessions import AICodingSession, ProposedCode
+        from exegete.sessions import AICodingSession, ProposedCode
         session = AICodingSession(project_path=qualcoder_db_path,
                                   description="proposals")
         proposal = ProposedCode(name="Proposed One")
@@ -1259,7 +1259,7 @@ class TestRestartResilience:
 
     def test_a_session_recorded_under_another_name_warns_on_apply(
             self, setup_server, qualcoder_db_path):
-        from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
+        from exegete.sessions import AICodingSession, CodingSuggestion
         session = AICodingSession(
             project_path=qualcoder_db_path, description="snapshot",
             file_ids=[1], code_names=["Stress"], instruction="t", ai_coder_name_at_record="Qwen 3.8 6bit")

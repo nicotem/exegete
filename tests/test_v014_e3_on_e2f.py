@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 from test_v014_server_wide import host_json, host_session, text_of
 
 REPO = Path(__file__).parent.parent

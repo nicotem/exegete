@@ -5,7 +5,7 @@
 Usage: python scripts/create_test_project.py <new folder ending in .qda>
 
 The project is made by the server's own creation code
-(qualcoder_mcp.new_project: QualCoder 4.0's format, one transaction),
+(exegete.new_project: QualCoder 4.0's format, one transaction),
 then filled with three interview transcripts, codes in categories,
 cases with attributes, three codings and a journal entry. The folder
 must not exist yet: this script never deletes or replaces anything
@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from qualcoder_mcp import new_project  # noqa: E402
+from exegete import new_project  # noqa: E402
 
 
 def create_test_project(project_folder: str) -> str:

@@ -24,7 +24,7 @@ from track5_helpers import write_fixture_sidecar
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -220,7 +220,7 @@ class TestStartupFailsLoudly:
         home.mkdir()
         env = _server_env(home, project, toolset="banana")
         proc = subprocess.run(
-            [str(VENV_PY), "-m", "qualcoder_mcp.server"],
+            [str(VENV_PY), "-m", "exegete.server"],
             env=env, capture_output=True, timeout=60,
             cwd=str(tmp_path),
             # decode captured output as UTF-8 explicitly: Windows would
@@ -246,7 +246,7 @@ class TestCoreModeEndToEnd:
         home.mkdir()
         params = StdioServerParameters(
             command=str(VENV_PY),
-            args=["-m", "qualcoder_mcp.server"],
+            args=["-m", "exegete.server"],
             env=_server_env(home, project, toolset="core"),
         )
 
@@ -368,7 +368,7 @@ class TestLifecycleModeEndToEnd:
         home.mkdir()
         params = StdioServerParameters(
             command=str(VENV_PY),
-            args=["-m", "qualcoder_mcp.server"],
+            args=["-m", "exegete.server"],
             env=_server_env(home, project, toolset="lifecycle"),
         )
 
@@ -755,7 +755,7 @@ class TestTheDeclaredMcpFloorSupportsCoreMode:
         the gate makes. If `_apply_toolset` stops using the public
         helper, this pin says so and the floor can be revisited."""
         assert hasattr(server.mcp, "remove_tool")
-        source = (REPO / "src" / "qualcoder_mcp" / "server.py").read_text(
+        source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
         assert "mcp.remove_tool(name)" in source
 

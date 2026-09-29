@@ -27,8 +27,8 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import (QUALCODER_LOCK_FILENAME, name_key,
+import exegete.server as server
+from exegete.database import (QUALCODER_LOCK_FILENAME, name_key,
                                     normalize_name, validate_qda_path)
 
 
@@ -735,7 +735,7 @@ class TestTheEndingRule:
         assert out.get("changed") is True, out
 
     def test_the_rule_is_a_transcribed_copy_of_the_refi_type(self):
-        from qualcoder_mcp.database import refi_declared_text_type as t
+        from exegete.database import refi_declared_text_type as t
         # refi.py:3160-3168 at 9bddf17, transcribed.
         assert [t(n) for n in ("a.txt", "a", "a.b.docx", "a.transcribed",
                                "D. Thomas notes", "a.", "a.Transcribed")] \
@@ -1002,7 +1002,7 @@ class TestTheDatabaseHalf:
 
     @pytest.fixture
     def wdb(self, project):
-        from qualcoder_mcp.database import QualcoderDatabase
+        from exegete.database import QualcoderDatabase
         db = QualcoderDatabase(str(project), read_only=False)
         yield db
         db.close()
@@ -1087,7 +1087,7 @@ class TestNamesWindowsCannotStore:
             "Windows cannot store it as a file.")
 
     def test_a_trailing_space_is_refused_too(self):
-        from qualcoder_mcp.database import file_name_problem
+        from exegete.database import file_name_problem
         assert file_name_problem("P01.txt ").startswith(
             "A file name must not end with a dot or a space")
 
@@ -1486,7 +1486,7 @@ class TestSavedDisplaysAndFiltersByTheirValues:
                server.OLD_NAME_LEFT_IN_NOTE
 
     def test_a_text_in_no_saved_shape_is_read_whole(self):
-        from qualcoder_mcp.database import (saved_display_values,
+        from exegete.database import (saved_display_values,
                                             saved_filter_values)
         assert saved_filter_values("case name like OR") == \
             ["case name like OR"]
@@ -1735,7 +1735,7 @@ class TestAUtf16Database:
         the fallback is reached only by bytes no encoding can read, which
         in a UTF-8 database is the B-6 pin below; here, the codec it
         would use for each encoding SQLite names."""
-        from qualcoder_mcp.database import sqlite_text_codec
+        from exegete.database import sqlite_text_codec
         assert [sqlite_text_codec(e) for e in
                 ("UTF-8", "UTF-16le", "UTF-16be", "UTF-16")] == \
             ["utf-8", "utf-16-le", "utf-16-be", "utf-16"]

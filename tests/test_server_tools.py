@@ -13,8 +13,8 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.project_settings import DEFAULT_AI_CODER_NAME
+import exegete.server as server
+from exegete.project_settings import DEFAULT_AI_CODER_NAME
 
 
 # =============================================================================

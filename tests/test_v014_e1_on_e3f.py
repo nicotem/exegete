@@ -20,12 +20,12 @@ import xml.etree.ElementTree as ET
 from contextlib import closing
 from pathlib import Path
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import unicodedata
 
 import pytest
 
-from qualcoder_mcp.sessions import AICodingSession, SessionManager
+from exegete.sessions import AICodingSession, SessionManager
 from test_v014_server_wide import (_folds, body_of, host_json, host_session,
                                    text_of)
 

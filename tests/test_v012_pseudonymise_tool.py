@@ -46,20 +46,20 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
 from track5_helpers import write_fixture_sidecar
-from qualcoder_mcp import preview_tokens as pt
-from qualcoder_mcp import pseudonymise as P
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.memo_privacy import split_public_private_memo
-from qualcoder_mcp.project_settings import (AI_CODER_NAME_ENV,
+from exegete import preview_tokens as pt
+from exegete import pseudonymise as P
+from exegete.database import QualcoderDatabase
+from exegete.memo_privacy import split_public_private_memo
+from exegete.project_settings import (AI_CODER_NAME_ENV,
                                             DEFAULT_AI_CODER_NAME,
                                             KNOWN_AI_ASSISTANT_OWNER,
                                             NEWER_FORMAT_MESSAGE,
                                             SIDECAR_NAME,
                                             UNREADABLE_MESSAGE)
-from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
+from exegete.sessions import AICodingSession, CodingSuggestion
 
 POSIX_ONLY = pytest.mark.skipif(
     sys.platform == "win32",
@@ -1275,7 +1275,7 @@ class TestAiAttribution:
         writer is the one that ships, so the history it builds is the
         history the helper will read.
         """
-        from qualcoder_mcp.project_settings import write_ai_coder_name
+        from exegete.project_settings import write_ai_coder_name
         for name in names:
             write_ai_coder_name(folder, name, note="t",
                                 host_declaration=None)
@@ -1284,7 +1284,7 @@ class TestAiAttribution:
         """The set comes from the helper, never from a literal, so a
         project that renamed its AI coder twice still recognises its own
         earlier work (D7 1.2)."""
-        from qualcoder_mcp.project_settings import ai_coder_names_for_project
+        from exegete.project_settings import ai_coder_names_for_project
         self._set_names(project, ["Older Still", "Old One", "Qwen 3.8 6bit"])
         names = set(ai_coder_names_for_project(project))
         assert {"Qwen 3.8 6bit", "Old One", "Older Still"} <= names
@@ -2578,7 +2578,7 @@ class TestTheNotePlan:
                 assert len(public) >= P.MIN_PSEUDONYM_CHARS
 
     def test_the_too_long_guard_is_not_applied_to_a_rewrite(self, project):
-        from qualcoder_mcp.database import MAX_TEXT_CONTENT_LENGTH
+        from exegete.database import MAX_TEXT_CONTENT_LENGTH
         long_note = "Thomas " + "x" * MAX_TEXT_CONTENT_LENGTH
         _plant_note(project, "UPDATE source SET memo=? WHERE id=1",
                     long_note)
@@ -4629,7 +4629,7 @@ class TestSavingTheMappingIntoPseudonymsJson:
         the name is swapped for a link at the reader's own close, inside
         the merge the run's transaction makes, so only a mode taken from
         the descriptor that was read is 0600."""
-        from qualcoder_mcp import database as database_module
+        from exegete import database as database_module
         _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"}])
         os.chmod(project / "pseudonyms.json", 0o600)
         loud = tmp_path / "world.json"
@@ -4760,7 +4760,7 @@ class TestSavingTheMappingIntoPseudonymsJson:
             text = re.sub(rf"(?<!\w){re.escape(entry['original'])}(?!\w)",
                           entry["pseudonym"], text)
         assert text == stored
-        from qualcoder_mcp.database import read_project_pseudonyms
+        from exegete.database import read_project_pseudonyms
         entries, encoding = read_project_pseudonyms(project)
         assert encoding == "utf-8"
         assert entries == [{"original": "Mary Ann", "pseudonym": "Sam"},
@@ -5336,7 +5336,7 @@ class TestTheMappingAcrossARestore:
         then removed outside this server, so the backups the prune would
         remove now hold the only copy. The execute is refused, as a
         project changed since its preview, and removes nothing."""
-        from qualcoder_mcp.database import backup_project
+        from exegete.database import backup_project
         backup, saved = self._saved_run(project)
         backup_project(project)                 # holds the saved file too
         out = json.loads(server.prune_backups(keep_last=0))
@@ -6265,7 +6265,7 @@ class TestASymlinkNamedAfterTheParticipant:
     def test_the_log_line_carries_the_count_and_the_reason_never_the_path(
             self, project, tmp_path, caplog):
         import logging
-        from qualcoder_mcp import database
+        from exegete import database
         rel = self._link(project, tmp_path, "Thomas videos")
         caplog.set_level(logging.DEBUG)
         report = {}
@@ -7520,9 +7520,9 @@ class TestProjectPseudonyms:
         """
         payload = '[{"original": "André", "pseudonym": "Alex"}]'
         (project / "pseudonyms.json").write_bytes(payload.encode("cp1252"))
-        from qualcoder_mcp.database import read_project_pseudonyms
+        from exegete.database import read_project_pseudonyms
         monkeypatch.setattr(
-            "qualcoder_mcp.database.locale.getpreferredencoding",
+            "exegete.database.locale.getpreferredencoding",
             lambda do_setlocale=True: "UTF-8")
         with pytest.raises(ValueError) as excinfo:
             read_project_pseudonyms(project)
@@ -7535,9 +7535,9 @@ class TestProjectPseudonyms:
         """The other half: on the machine that wrote it, it reads."""
         payload = '[{"original": "André", "pseudonym": "Alex"}]'
         (project / "pseudonyms.json").write_bytes(payload.encode("cp1252"))
-        from qualcoder_mcp.database import read_project_pseudonyms
+        from exegete.database import read_project_pseudonyms
         monkeypatch.setattr(
-            "qualcoder_mcp.database.locale.getpreferredencoding",
+            "exegete.database.locale.getpreferredencoding",
             lambda do_setlocale=True: "cp1252")
         entries, encoding = read_project_pseudonyms(project)
         assert entries == [{"original": "André",
@@ -7548,7 +7548,7 @@ class TestProjectPseudonyms:
         payload = json.dumps([{"original": "Thomas", "pseudonym": "Alex"}])
         (project / "pseudonyms.json").write_bytes(
             b"\xef\xbb\xbf" + payload.encode("utf-8"))
-        from qualcoder_mcp.database import read_project_pseudonyms
+        from exegete.database import read_project_pseudonyms
         entries, encoding = read_project_pseudonyms(project)
         assert entries[0]["original"] == "Thomas"
         assert encoding == "utf-8-sig"
@@ -7658,7 +7658,7 @@ class TestProjectPseudonyms:
         that nothing of it is read is pinned by the test after this one
         (memory measured inside the full suite read other tests'
         allocations, so the pin counts the reads instead)."""
-        from qualcoder_mcp.database import PSEUDONYMS_JSON_MAX_BYTES
+        from exegete.database import PSEUDONYMS_JSON_MAX_BYTES
         with open(project / "pseudonyms.json", "wb") as handle:
             handle.truncate(64 * PSEUDONYMS_JSON_MAX_BYTES)
         out = json.loads(server.get_current_project())
@@ -7673,7 +7673,7 @@ class TestProjectPseudonyms:
         whole: `fstat` is made to report a small file over a large one,
         and the bytes asked of `os.read` are counted. Both patches act on
         the file's own descriptor only (`_on_the_file`)."""
-        from qualcoder_mcp import database as db_module
+        from exegete import database as db_module
         limit = db_module.PSEUDONYMS_JSON_MAX_BYTES
         with open(project / "pseudonyms.json", "wb") as handle:
             handle.truncate(64 * limit)
@@ -7701,7 +7701,7 @@ class TestProjectPseudonyms:
 
     def test_the_size_is_checked_before_anything_is_read(self, project,
                                                           monkeypatch):
-        from qualcoder_mcp import database as db_module
+        from exegete import database as db_module
         limit = db_module.PSEUDONYMS_JSON_MAX_BYTES
         with open(project / "pseudonyms.json", "wb") as handle:
             handle.truncate(2 * limit)
@@ -7926,7 +7926,7 @@ class TestStructureAndWindowsSafety:
         the report says plainly that no mutation of it can be made to go
         red through behaviour.
         """
-        from qualcoder_mcp import database as db_module
+        from exegete import database as db_module
         node = self._function(db_module.__file__, "pseudonymise_write")
         verify_line = None
         first_write_line = None
@@ -7961,7 +7961,7 @@ class TestStructureAndWindowsSafety:
         syntax: a sweep for the word "encoding" would be satisfied by a
         comment."""
         import importlib
-        target = importlib.import_module(f"qualcoder_mcp.{module}")
+        target = importlib.import_module(f"exegete.{module}")
         node = self._function(target.__file__, name)
         opening = {"open", "fdopen", "read_text", "write_text"}
         for inner in ast.walk(node):
@@ -8019,7 +8019,7 @@ class TestStructureAndWindowsSafety:
         """The simplest way to keep a name out of the log is to have
         nowhere to put one. Read as syntax, not as a grep for
         "logger"."""
-        from qualcoder_mcp import pseudonymise as engine
+        from exegete import pseudonymise as engine
         tree = ast.parse(Path(engine.__file__).read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -8047,7 +8047,7 @@ class TestStructureAndWindowsSafety:
         variable is refused even when it happens to be safe today,
         because a sweep that accepts one accepts the next one too.
         """
-        from qualcoder_mcp import pseudonymise as engine
+        from exegete import pseudonymise as engine
         source = Path(engine.__file__).read_text(encoding="utf-8")
         tree = ast.parse(source)
         module_constants = {
@@ -8926,7 +8926,7 @@ class TestTheVisibilityDeclarationIsRereadPerCall:
         """The one-way half. `coder_names` going away mid-connection is
         damage, not a legitimate state change: QualCoder's migration is
         additive and never withdraws the column."""
-        from qualcoder_mcp.database import CoderVisibilityUnreadable
+        from exegete.database import CoderVisibilityUnreadable
         folder = build_project(tmp_path / "early.qda")
         add_coding(folder, 1, 1, 0, 6)
         write_fixture_sidecar(str(folder))
@@ -8986,7 +8986,7 @@ class TestTheVisibilityDeclarationIsRereadPerCall:
         reported that no override was needed. Now it is "cannot be
         decided", which every caller already handles.
         """
-        from qualcoder_mcp.database import CoderVisibilityUnreadable
+        from exegete.database import CoderVisibilityUnreadable
         folder = self._connected_before_qualcoder(tmp_path)
         hide_coder(folder, "Hidden Helga")
         # No call has seen the declaration yet: since v0.14's fix round 1
@@ -9170,7 +9170,7 @@ class TestTheOlderTokenGatedToolsRereadTheDeclarationToo:
         """Controls for the six: restore_backup and prune_backups name
         no coder on any project; pinned so the count of six is a count
         of six and not of four."""
-        from qualcoder_mcp.database import backup_project
+        from exegete.database import backup_project
         folder = self._arrived(tmp_path)
         backup = backup_project(folder)
         backup_project(folder)                  # two, so one can be pruned

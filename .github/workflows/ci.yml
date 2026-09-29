@@ -184,7 +184,7 @@ jobs:
         run: |
           node --version
           npm ci --ignore-scripts --no-audit --no-fund
-          npx --no-install mcpb validate ../../../dist/mcpb/qualcoder-mcp-*/manifest.json
+          npx --no-install mcpb validate ../../../dist/mcpb/exegete-*/manifest.json
           npx --no-install mcpb info ../../../dist/mcpb/*.mcpb
 
       # The uv Claude Desktop 2.9939.2 downloads when a computer has none.
@@ -200,7 +200,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          cd dist/mcpb/qualcoder-mcp-*/
+          cd dist/mcpb/exegete-*/
           for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             echo "== $target"
             uv sync --frozen --dry-run --no-install-project --no-build --python "$(cat .python-version)" --python-platform "$target"

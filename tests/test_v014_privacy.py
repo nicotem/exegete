@@ -38,10 +38,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import preview_tokens as pt
-from qualcoder_mcp import database as dbmod
-from qualcoder_mcp.database import QualcoderDatabase
+import exegete.server as server
+from exegete import preview_tokens as pt
+from exegete import database as dbmod
+from exegete.database import QualcoderDatabase
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     TEXT, add_coding, execute_from, preview_of, project, query)
 
@@ -648,7 +648,7 @@ SAFE_CALLS = {"sqlite_error_label", "error_label", "error_text",
 SAFE_ATTRIBUTES = {"sqlite_errorname", "sqlite_errorcode", "errno",
                    "__class__"}
 SQLITE_CAPABLE = ("sqlite3.", "Exception", "BaseException")
-SOURCE = Path(__file__).resolve().parent.parent / "src" / "qualcoder_mcp"
+SOURCE = Path(__file__).resolve().parent.parent / "src" / "exegete"
 
 
 def _unsafe_uses(tree, capable=SQLITE_CAPABLE):
@@ -1259,7 +1259,7 @@ class _Wire:
         self.sessions += 1
         errfile = self.root / f"stderr-{self.sessions}.log"
         params = StdioServerParameters(
-            command=sys.executable, args=["-B", "-m", "qualcoder_mcp.server"],
+            command=sys.executable, args=["-B", "-m", "exegete.server"],
             env=self.env(configured))
 
         async def session():
@@ -1437,7 +1437,7 @@ class TestTheSchemaVersionInTheLog:
 class TestPseudonymsJsonErrorsAreAnsweredByKind:
 
     def _unreadable(self, project, monkeypatch, error):
-        from qualcoder_mcp import database as database_module
+        from exegete import database as database_module
         (project / "pseudonyms.json").write_text(
             '[{"original": "Thomas", "pseudonym": "Alex"}]',
             encoding="utf-8")

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Folded into the main suite from the v0.6.0-alpha parallel test campaign
 # (track 5, property-based/Hypothesis); adapted paths/fixtures only — test logic unchanged.
-"""Track #5 - property-based tests (Hypothesis) for qualcoder_mcp.
+"""Track #5 - property-based tests (Hypothesis) for exegete.
 
 Generators build random-but-VALID v14 QualCoder projects (varying #files,
 unicode fulltext, #codes/categories with random tree shapes, #codings with
@@ -43,7 +43,7 @@ from track5_helpers import server
 def _ex(n: int) -> int:
     """Suite-friendly example counts; TRACK5_FULL=1 restores the originals."""
     return n if os.environ.get("TRACK5_FULL") else max(10, n // 5)
-from qualcoder_mcp.sessions import CodingSuggestion
+from exegete.sessions import CodingSuggestion
 
 # ---------------------------------------------------------------------------
 # strategies

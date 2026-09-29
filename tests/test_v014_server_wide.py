@@ -16,8 +16,8 @@ from pathlib import Path
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import read_project_pseudonyms
+import exegete.server as server
+from exegete.database import read_project_pseudonyms
 
 
 def host_session(drive):
@@ -330,7 +330,7 @@ class TestPseudonymsFileAdvice:
         payload = '[{"original": "André", "pseudonym": "Alex"}]'
         (tmp_path / "pseudonyms.json").write_bytes(payload.encode("cp1252"))
         monkeypatch.setattr(
-            "qualcoder_mcp.database.locale.getpreferredencoding",
+            "exegete.database.locale.getpreferredencoding",
             lambda do_setlocale=True: "UTF-8")
         with pytest.raises(ValueError) as excinfo:
             read_project_pseudonyms(tmp_path)
@@ -371,7 +371,7 @@ class TestPseudonymsFileAdvice:
 import ast
 import re
 
-import qualcoder_mcp
+import exegete
 
 # A snake_case word in running text; a path segment or an address part
 # (after / . : or -) is not a name.
@@ -537,7 +537,7 @@ def _sendable_literals():
     can reach an answer: not a docstring, not a dictionary key or index,
     not an argument of a log call, and not the label
     `_raise_query_error` logs."""
-    package = Path(qualcoder_mcp.__file__).parent
+    package = Path(exegete.__file__).parent
     for path in sorted(package.glob("*.py")):
         tree_ = ast.parse(path.read_text(encoding="utf-8"))
         skip = set()
@@ -1228,7 +1228,7 @@ import os
 import time
 from datetime import datetime, timedelta
 
-from qualcoder_mcp.database import backup_time_from_name
+from exegete.database import backup_time_from_name
 
 
 def _backup_folder(parent, name, mtime):
@@ -1630,7 +1630,7 @@ class TestSessionFilesAfterPseudonymising:
             in privacy
 
     def test_the_session_list_matches_every_form_of_the_path(self, tmp_path):
-        from qualcoder_mcp.sessions import SessionManager
+        from exegete.sessions import SessionManager
         folder = tmp_path / "P.qda"
         folder.mkdir()
         (folder / "data.qda").write_bytes(b"")
@@ -2026,8 +2026,8 @@ def _core_reachable_texts():
     through the package), that names a tool core lacks, and that is not
     marked where it is written: passed to `_mark_unregistered`, or a
     constant every use of which is."""
-    import qualcoder_mcp
-    package = Path(qualcoder_mcp.__file__).parent
+    import exegete
+    package = Path(exegete.__file__).parent
     missing = set(server.ALL_TOOL_NAMES) - set(server.CORE_TOOLSET)
     word = re.compile(r"(?<![A-Za-z0-9_])(" + "|".join(
         sorted(missing, key=len, reverse=True)) + r")(?![A-Za-z0-9_])")
@@ -2273,7 +2273,7 @@ class TestOneProjectUnderTwoSpellings:
 
     def test_a_project_no_longer_on_disk_is_compared_by_its_path(
             self, tmp_path):
-        from qualcoder_mcp.sessions import SessionManager
+        from exegete.sessions import SessionManager
         gone = tmp_path / "Gone.qda"
         assert SessionManager.same_project(gone, gone / "data.qda")
         assert not SessionManager.same_project(gone,

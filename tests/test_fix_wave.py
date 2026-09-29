@@ -19,10 +19,10 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-import qualcoder_mcp.database as dbmod
-from qualcoder_mcp.database import (
+import exegete.database as dbmod
+from exegete.database import (
     QualcoderDatabase,
     validate_qda_path,
     qualcoder_lock_state,
@@ -30,7 +30,7 @@ from qualcoder_mcp.database import (
     QUALCODER_LOCK_FILENAME,
     backup_project,
 )
-from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
+from exegete.sessions import AICodingSession, CodingSuggestion
 
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."

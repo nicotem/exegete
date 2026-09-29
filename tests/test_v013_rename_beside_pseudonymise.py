@@ -14,8 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import QualcoderDatabase
+import exegete.server as server
+from exegete.database import QualcoderDatabase
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     execute_from, preview_of, project, query)
 
@@ -161,7 +161,7 @@ def test_the_documents_count_the_tools_the_server_registers():
 
 def test_every_rename_text_keeps_the_house_rules():
     from test_v012_pseudonymise_tool import _house_rules
-    from qualcoder_mcp import database as D
+    from exegete import database as D
     texts = [server.rename_case.__doc__, server.rename_file.__doc__,
              server.RENAME_CASE_NOTE, server.RENAME_FILE_NOTE,
              server.RENAME_FILE_SEARCH_INDEX_NOTE,

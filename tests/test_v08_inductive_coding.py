@@ -22,7 +22,7 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 
 FULLTEXT = ("This is interview text. I feel stressed about deadlines. "
             "I cope by exercising.")

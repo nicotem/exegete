@@ -19,8 +19,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import database
+import exegete.server as server
+from exegete import database
 
 ENV = "QUALCODER_MCP_WORKSPACE"
 REPO = Path(__file__).resolve().parent.parent
@@ -59,7 +59,7 @@ def _start(env_value, tmp_path):
                  "QUALCODER_MCP_AI_CODER_NAME"):
         env.pop(name, None)
     return subprocess.run(
-        [sys.executable, "-m", "qualcoder_mcp.server"], env=env,
+        [sys.executable, "-m", "exegete.server"], env=env,
         input="", capture_output=True, text=True, timeout=60,
         cwd=str(tmp_path))
 
@@ -166,7 +166,7 @@ class TestTheServerChecksItAtStart:
         for name in ("QUALCODER_PROJECT_PATH", "QUALCODER_MCP_TOOLSET"):
             env.pop(name, None)
         result = subprocess.run(
-            [sys.executable, "-m", "qualcoder_mcp.server"], env=env,
+            [sys.executable, "-m", "exegete.server"], env=env,
             input="", capture_output=True, text=True, timeout=60,
             cwd=str(tmp_path))
         assert result.returncode == 1
@@ -321,7 +321,7 @@ def test_an_ambient_setting_does_not_reach_the_suite(tmp_path):
     probe = tmp_path / "test_probe_ambient.py"
     probe.write_text(
         "import os\n"
-        "from qualcoder_mcp import database\n"
+        "from exegete import database\n"
         "def test_probe(tmp_path):\n"
         "    assert os.environ.get('QUALCODER_MCP_WORKSPACE') is None\n"
         "    assert database.default_workspace().resolve()"

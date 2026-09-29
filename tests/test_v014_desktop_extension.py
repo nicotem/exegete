@@ -32,8 +32,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import build_desktop_extension as build           # noqa: E402
 import smoke_desktop_extension as smoke           # noqa: E402
-import qualcoder_mcp.server as server             # noqa: E402
-from qualcoder_mcp import database                # noqa: E402
+import exegete.server as server             # noqa: E402
+from exegete import database                # noqa: E402
 
 try:
     import tomllib
@@ -79,7 +79,11 @@ class TestTypedOnce:
     def test_the_rest_of_pyprojects_fields(self, built):
         manifest, _, _ = built
         meta = PYPROJECT["project"]
-        assert manifest["name"] == meta["name"]
+        # v0.14.1, the rename: the identifier is NOT pyproject's name any
+        # more, which became `exegete`; it stays `qualcoder-mcp` for good
+        # (tests/test_v0141_rename.py pins it against a renamed copy).
+        assert manifest["name"] == build.EXTENSION_NAME == "qualcoder-mcp"
+        assert manifest["name"] != meta["name"]
         assert manifest["license"] == meta["license"]
         assert manifest["keywords"] == meta["keywords"]
         assert manifest["author"]["name"] == meta["authors"][0]["name"]
@@ -211,7 +215,7 @@ class TestTheSettings:
             database.WORKSPACE_ENV: "${user_config.projects_folder}",
             database.WORKSPACE_REQUIRED_ENV: "1",
         }
-        source = (REPO / "src" / "qualcoder_mcp" / "server.py").read_text(
+        source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
         assert 'os.environ.get("QUALCODER_MCP_TOOLSET"' in source
         assert database.WORKSPACE_ENV == "QUALCODER_MCP_WORKSPACE"
@@ -234,7 +238,7 @@ class TestTheSettings:
         # never re-resolving it against a tester's own uv settings
         assert config["args"] == ["run", "--frozen", "--directory",
                                   "${__dirname}", *scripts]
-        assert scripts["qualcoder-mcp"] == "qualcoder_mcp.server:main"
+        assert scripts == {"exegete": "exegete.server:main"}
         assert (REPO / server_block["entry_point"]).is_file()
 
 
@@ -695,7 +699,7 @@ class TestCiBuildsIt:
         assert "working-directory: packaging/desktop-extension/validator" \
             in job
         assert "npx --no-install mcpb validate " \
-               "../../../dist/mcpb/qualcoder-mcp-*/manifest.json" in job
+               "../../../dist/mcpb/exegete-*/manifest.json" in job
 
     def test_it_is_installed_and_started_as_the_app_does(self):
         job = self._job("desktop-extension")
@@ -754,7 +758,7 @@ class TestTheDocuments:
 
     def test_install_documents_every_variable_the_server_reads(self):
         source = "".join(p.read_text(encoding="utf-8") for p in
-                         (REPO / "src" / "qualcoder_mcp").glob("*.py"))
+                         (REPO / "src" / "exegete").glob("*.py"))
         read = set(re.findall(r'"(QUALCODER_[A-Z_]+)"', source))
         assert database.WORKSPACE_ENV in read
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")

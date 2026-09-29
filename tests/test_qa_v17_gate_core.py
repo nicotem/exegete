@@ -20,11 +20,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
 from track5_helpers import write_fixture_sidecar
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.sessions import SessionManager
+from exegete.database import QualcoderDatabase
+from exegete.sessions import SessionManager
 
 import test_v17_support as v17fix
 

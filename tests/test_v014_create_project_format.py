@@ -26,8 +26,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from qualcoder_mcp import new_project
-from qualcoder_mcp.database import QualcoderDatabase
+from exegete import new_project
+from exegete.database import QualcoderDatabase
 from qc40_format_facts import facts, structure
 
 ORACLE = json.loads(
@@ -271,7 +271,7 @@ class TestOneTransaction:
 _KILL_SCRIPT = textwrap.dedent("""
     import os, sys
     sys.path.insert(0, {src!r})
-    from qualcoder_mcp import new_project as n
+    from exegete import new_project as n
     target, coder, after = sys.argv[1], sys.argv[2], int(sys.argv[3])
     real = n._connect
 

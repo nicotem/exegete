@@ -21,8 +21,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.sessions import SessionManager
+import exegete.server as server
+from exegete.sessions import SessionManager
 
 from test_v17_support import make_project, add_subcode, FULLTEXT  # noqa: E402,F401
 

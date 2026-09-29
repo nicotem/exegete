@@ -21,10 +21,10 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-import qualcoder_mcp.database as database
-from qualcoder_mcp.database import (
+import exegete.database as database
+from exegete.database import (
     QualcoderDatabase,
     QUALCODER_LOCK_FILENAME,
     QUALCODER_LOCK_TIMEOUT,
@@ -642,7 +642,7 @@ class TestHeartbeatProtocol:
     def test_lock_file_format_matches_qualcoder(self, setup_server,
                                                 qualcoder_db_path, monkeypatch):
         """During our write window the lock is QualCoder's two-line format."""
-        from qualcoder_mcp.database import hold_project_lock
+        from exegete.database import hold_project_lock
         import getpass
         folder = _lock(qualcoder_db_path).parent
         with hold_project_lock(folder) as held:

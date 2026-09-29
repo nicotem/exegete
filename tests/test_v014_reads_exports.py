@@ -20,7 +20,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server  # noqa: E402
+import exegete.server as server  # noqa: E402
 import track5_helpers as H  # noqa: E402
 
 
@@ -138,7 +138,7 @@ class TestCaseNameResolution:
 # ===========================================================================
 
 from test_v17_support import make_project, add_subcode  # noqa: E402
-from qualcoder_mcp.sessions import SessionManager  # noqa: E402
+from exegete.sessions import SessionManager  # noqa: E402
 
 
 @pytest.fixture
@@ -1712,7 +1712,7 @@ class TestTheUpgradingListNamesWhatChanged:
 
 import os  # noqa: E402
 import subprocess  # noqa: E402
-from qualcoder_mcp.database import QualcoderDatabase  # noqa: E402
+from exegete.database import QualcoderDatabase  # noqa: E402
 
 PAGED_FILES = {3: ("P1 interview.txt", "stressed", 64),
                4: ("Z", "worried", 3),
@@ -1839,8 +1839,8 @@ class TestPagingByStoredBytes:
         script.write_text(
             "import asyncio, json, sys\n"
             f"sys.path.insert(0, {str(Path(server.__file__).parent.parent)!r})\n"
-            "import qualcoder_mcp.server as server\n"
-            "from qualcoder_mcp.database import QualcoderDatabase\n"
+            "import exegete.server as server\n"
+            "from exegete.database import QualcoderDatabase\n"
             f"server.db = QualcoderDatabase({paged!r})\n"
             f"server.current_project_path = {paged!r}\n"
             "out = asyncio.run(server.mcp.call_tool('search_coded_text', "
@@ -1868,7 +1868,7 @@ class TestPagingByStoredBytes:
         assert time.perf_counter() - started < 60
 
     def test_a_forged_key_gets_the_one_cursor_refusal(self, paged):
-        from qualcoder_mcp import cursors
+        from exegete import cursors
         page = host("search_coded_text", query="stressed", limit=2)
         token = page["page"]["next_cursor"]
         body = token[len(cursors.CURSOR_PREFIX):]
@@ -2013,7 +2013,7 @@ def _old_cursor(query, limit, key, returned=1):
     """A cursor in the shape 0.13 (and this branch before fix round 3)
     minted: tag "sct", the fingerprint over the same five arguments, and
     the file name as text in the key."""
-    from qualcoder_mcp import cursors
+    from exegete import cursors
     args = {"query": query, "code_name": None, "limit": limit,
             "coder": None, "exclude_code_ids": []}
     fingerprint = cursors.fingerprint_arguments("sct", args)

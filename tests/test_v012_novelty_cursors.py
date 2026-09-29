@@ -25,10 +25,10 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp import cursors
-from qualcoder_mcp.database import QualcoderDatabase
+from exegete import cursors
+from exegete.database import QualcoderDatabase
 
 
 def _con(project_path):
@@ -726,7 +726,7 @@ class TestRestartResilience:
 
         script = (
             "import json, sys\n"
-            "import qualcoder_mcp.server as server\n"
+            "import exegete.server as server\n"
             "server.select_project(sys.argv[1])\n"
             "page = json.loads(server.get_coded_segments("
             "1, limit=3, strategy='sequential', cursor=sys.argv[2]))\n"
@@ -1052,7 +1052,7 @@ class TestImplementationDiscipline:
         """D4 3.2.6: keyset predicates are expanded lexicographic form, so
         no SQLite version floor is introduced and no build can order
         differently."""
-        from qualcoder_mcp import database
+        from exegete import database
         text = Path(database.__file__).read_text(encoding="utf-8")
         assert "ROW_NUMBER" not in text.upper()
         assert "OVER (" not in text.upper()

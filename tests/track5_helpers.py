@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Folded into the main suite from the v0.6.0-alpha parallel test campaign
 # (track 5, property-based/Hypothesis); adapted paths/fixtures only — test logic unchanged.
-"""Helpers for track5 property-based testing of qualcoder_mcp.
+"""Helpers for track5 property-based testing of exegete.
 
 Builds random-but-VALID v14 QualCoder projects, wires the server globals to
 them, and provides direct (out-of-band) invariant checks that read the SQLite
@@ -28,16 +28,16 @@ _SRC = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-import qualcoder_mcp.server as server  # noqa: E402
-from qualcoder_mcp import database as _database  # noqa: E402
-from qualcoder_mcp import preview_tokens as _preview_tokens  # noqa: E402
-from qualcoder_mcp.database import QualcoderDatabase  # noqa: E402
-from qualcoder_mcp.project_settings import (  # noqa: E402
+import exegete.server as server  # noqa: E402
+from exegete import database as _database  # noqa: E402
+from exegete import preview_tokens as _preview_tokens  # noqa: E402
+from exegete.database import QualcoderDatabase  # noqa: E402
+from exegete.project_settings import (  # noqa: E402
     DEFAULT_AI_CODER_NAME,
     SIDECAR_NAME,
     write_ai_coder_name,
 )
-from qualcoder_mcp.sessions import (  # noqa: E402
+from exegete.sessions import (  # noqa: E402
     SessionManager,
     AICodingSession,
     CodingSuggestion,

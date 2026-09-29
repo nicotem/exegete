@@ -16,3 +16,10 @@
 # MANIFEST.in directives are applied AFTER add_defaults, so this removes
 # what the default glob added (fix round 4).
 prune tests
+
+# v0.14.1, the rename: the old name's stand-in (src/qualcoder_mcp) ships
+# only in the old name's own package (packaging/pypi-old-name), never in
+# the exegete sdist or wheel (pyproject.toml says why), and that package's
+# folder is not part of this sdist either.
+prune src/qualcoder_mcp
+prune packaging/pypi-old-name

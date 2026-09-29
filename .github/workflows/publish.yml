@@ -8,10 +8,33 @@ name: Publish to PyPI
 #   2. PyPI, the real thing: publishing happens automatically when a
 #      GitHub Release is PUBLISHED.
 #
-# The owner must configure two trusted publishers on (Test)PyPI, both
-# pointing at this repository + this workflow file (publish.yml):
+# Two packages, built and uploaded together (v0.14.1, the rename):
+# `exegete`, the server, and `qualcoder-mcp`, the old name's package
+# (packaging/pypi-old-name), released beside every release until v1.0 so
+# that upgrades through the old name keep bringing the current server.
+# One upload step per index carries both: the action's README says that
+# running it twice in one job "is not considered supported", and PyPI's
+# one short-lived upload permission covers both projects when their
+# trusted publishers are identical (below).
+#
+# The trusted publishers the owner configures, four in all, every field
+# identical, letter case included (owner `nicotem`, repository `exegete`,
+# workflow `publish.yml`, and the environment named for the index):
 #   - test.pypi.org  → project qualcoder-mcp, environment "testpypi"
+#   - test.pypi.org  → project exegete (a pending publisher until the
+#                      first upload), environment "testpypi"
 #   - pypi.org       → project qualcoder-mcp, environment "pypi"
+#   - pypi.org       → project exegete (pending until the first
+#                      upload), environment "pypi"
+# PyPI links a pending publisher to an existing one only when all four
+# fields are equal, and the upload permission then covers every project
+# linked to it (warehouse: `reify` in oidc/models/github.py,
+# `caveats.ProjectID` in oidc/views.py).
+#
+# Protection (the rename study, decision 13; PROVISIONAL until the owner
+# confirms the protection he chose): the `pypi` environment is limited on
+# GitHub to tags matching `v*`, so nothing reaches PyPI except from a
+# release. `testpypi` stays open, since the rehearsal runs from a branch.
 
 on:
   workflow_dispatch:
@@ -39,8 +62,18 @@ jobs:
       - name: Install build tooling
         run: python -m pip install --upgrade pip build twine
 
+      # Manual runs only (the TestPyPI rehearsal), never a release: both
+      # packages take a practice version, the release's own plus
+      # .dev<run number>, so each rehearsal uploads file names never used
+      # before (TestPyPI refuses a used file name for good).
+      - name: Practice version (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        run: python scripts/practice_version.py "${{ github.run_number }}"
+
       - name: Build distributions
-        run: python -m build
+        run: |
+          python -m build
+          python -m build packaging/pypi-old-name --outdir dist/
 
       - name: Check distributions
         run: python -m twine check --strict dist/*
@@ -58,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/qualcoder-mcp
+      url: https://test.pypi.org/p/exegete
     permissions:
       id-token: write  # mandatory for Trusted Publishing (OIDC)
     steps:
@@ -80,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/qualcoder-mcp
+      url: https://pypi.org/p/exegete
     permissions:
       id-token: write  # mandatory for Trusted Publishing (OIDC)
     steps:
@@ -90,5 +123,12 @@ jobs:
           name: python-package-distributions
           path: dist/
 
+      # Both packages in one step, exegete first (alphabetical order).
+      # skip-existing: a release whose upload stopped after exegete can
+      # be run again without failing on the files already there.
+      # Recovery: re-run the failed job from the run's page; then check
+      # both project pages, pypi.org/p/exegete and pypi.org/p/qualcoder-mcp.
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2 (release/v1)
+        with:
+          skip-existing: true

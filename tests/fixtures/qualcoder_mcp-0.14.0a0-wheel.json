@@ -1,0 +1,21 @@
+{
+  "about": "The file list of the published qualcoder_mcp-0.14.0a0-py3-none-any.whl (pypi.org, read 30 September 2026), for the rename's offline upgrade test (tests/test_v0141_upgrade.py), which builds a stand-in for that release from it.",
+  "name": "qualcoder-mcp",
+  "version": "0.14.0a0",
+  "requires_dist": ["mcp<2,>=1.17.0"],
+  "console_scripts": {"qualcoder-mcp": "qualcoder_mcp.server:main"},
+  "modules": [
+    "qualcoder_mcp/__init__.py",
+    "qualcoder_mcp/coder_comparison.py",
+    "qualcoder_mcp/cursors.py",
+    "qualcoder_mcp/database.py",
+    "qualcoder_mcp/memo_privacy.py",
+    "qualcoder_mcp/new_project.py",
+    "qualcoder_mcp/preview_tokens.py",
+    "qualcoder_mcp/project_settings.py",
+    "qualcoder_mcp/pseudonymise.py",
+    "qualcoder_mcp/refi_export.py",
+    "qualcoder_mcp/server.py",
+    "qualcoder_mcp/sessions.py"
+  ]
+}

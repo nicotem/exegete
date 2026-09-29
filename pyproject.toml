@@ -74,6 +74,7 @@ dev = [
 [tool.pytest.ini_options]
 markers = [
     "giant: large 10k+ coding / 500k-char build; opt-in via TRACK6_GIANT=1",
+    "slow: the rename's offline upgrade tests; run when RENAME_TEST_WHEELHOUSE names a folder of wheels (CI's rename-upgrade job)",
 ]
 # The per-test limit (v0.14): when one test, setup and teardown included,
 # has run for ten minutes, pytest writes every thread's stack to the
@@ -128,6 +129,15 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+# v0.14.1, the rename: src/qualcoder_mcp is the old name's two-file
+# stand-in. It stays in the source for copies of it (an editable install
+# puts the whole src folder on the path, so `python -m
+# qualcoder_mcp.server` keeps working there), but it must never be in
+# this wheel or sdist: the old name's own package (packaging/
+# pypi-old-name) carries it, and if both carried it, `pip install
+# --upgrade qualcoder-mcp` would delete it. MANIFEST.in prunes it from
+# the sdist; tests/test_v0141_old_name_package.py checks both builds.
+exclude = ["qualcoder_mcp", "qualcoder_mcp.*"]
 
 [project.scripts]
 # `exegete.server:main` is a promise kept for good: the old name's last

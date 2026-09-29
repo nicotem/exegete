@@ -199,7 +199,9 @@ JOB_PERMISSIONS_RE = re.compile(r"^    permissions:")
 # same step VERIFIED_TAGS asks for when an action pin moves.
 WORKFLOW_JOBS = {
     # v0.14: the desktop extension's build and its cross-platform check.
-    "ci.yml": {"test", "desktop-extension", "desktop-extension-same"},
+    "ci.yml": {"test", "desktop-extension", "desktop-extension-same",
+               # v0.14.1: the rename's old name's package and upgrades.
+               "rename-upgrade"},
     "publish.yml": {"build", "publish-to-testpypi", "publish-to-pypi"},
 }
 

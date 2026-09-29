@@ -26,6 +26,7 @@ from mcp.server.fastmcp import Context
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from . import names
 from .database import (
     QualcoderDatabase,
     sqlite_error_label,
@@ -18446,21 +18447,37 @@ TTY_NOTICE = (
 )
 
 
-def _build_arg_parser() -> argparse.ArgumentParser:
+# v0.14.1, the rename: started through the old name (the `qualcoder-mcp`
+# command, or `python -m qualcoder_mcp.server`), the server says so in
+# one line on standard error, where the host keeps its log; standard
+# output is the protocol's alone.
+OLD_NAME_NOTE = (f"{names.OLD_COMMAND} is now called Exegete; the command "
+                 f"is `{names.COMMAND}`")
+
+
+def _build_arg_parser(started_as: Optional[str] = None
+                      ) -> argparse.ArgumentParser:
     """`--version` prints the installed package version and exits 0.
 
     The version comes from importlib.metadata through the package's
     __version__ (the single source of truth is pyproject.toml, read from
     the installed distribution), the same value the MCP handshake
-    advertises in serverInfo.version.
+    advertises in serverInfo.version. Started through the old name, the
+    answer says so: `exegete <version> (started as qualcoder-mcp)`.
     """
+    if started_as:
+        prog = started_as
+        version = (f"{names.COMMAND} {_package_version} "
+                   f"(started as {started_as})")
+    else:
+        prog = "qualcoder-mcp"
+        version = f"qualcoder-mcp {_package_version}"
     parser = argparse.ArgumentParser(
-        prog="qualcoder-mcp",
+        prog=prog,
         description="MCP server for QualCoder projects. It is started by an "
                     "MCP host over stdio; run it with --version to check the "
                     "installed version.")
-    parser.add_argument("--version", action="version",
-                        version=f"qualcoder-mcp {_package_version}")
+    parser.add_argument("--version", action="version", version=version)
     return parser
 
 
@@ -18481,12 +18498,24 @@ def _print_tty_notice_if_interactive(stream=None, err=None) -> bool:
     return True
 
 
-def main(argv: Optional[List[str]] = None):
-    """Main entry point for the MCP server."""
+def main(argv: Optional[List[str]] = None, *,
+         started_as: Optional[str] = None):
+    """Main entry point for the MCP server.
+
+    A promise kept for good (v0.14.1): `exegete.server:main`, called
+    with `started_as`, is what the old name's stand-in
+    (`qualcoder_mcp.server`) runs, and the old name's last release on
+    PyPI will call it with no upper limit on the version it asks for.
+    Never remove or rename it, or its `started_as` keyword
+    (tests/test_v0141_rename.py pins both).
+    """
     # Parse before anything else speaks: --version and the usage error for
     # an unknown argument must answer on their own stream with no log line
     # above them (v0.12 fix round 1, F16).
-    _build_arg_parser().parse_args(sys.argv[1:] if argv is None else argv)
+    _build_arg_parser(started_as).parse_args(
+        sys.argv[1:] if argv is None else argv)
+    if started_as:
+        logger.warning(OLD_NAME_NOTE)
 
     # Check for optional pre-configured project (Option B: Fixed Project)
     # EXPERIMENTAL: reduced tool surface for local-model hosts. Fail

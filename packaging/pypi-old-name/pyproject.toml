@@ -1,0 +1,53 @@
+# The old name's package: qualcoder-mcp is now Exegete.
+#
+# Released beside every Exegete release until v1.0, at the same version,
+# by the same workflow in the same upload step (.github/workflows/
+# publish.yml), so that `pip install --upgrade qualcoder-mcp`,
+# `pipx upgrade qualcoder-mcp` and `uv tool upgrade qualcoder-mcp` keep
+# bringing the current server. It holds nothing but the `qualcoder-mcp`
+# command and the two-file stand-in package `qualcoder_mcp`, which hands
+# over to `exegete.server:main`. The command and the stand-in must live
+# here and never in the `exegete` wheel: pip installs a new dependency
+# before it uninstalls the old release of the name being upgraded, and
+# would then delete them (the rename study, measured).
+#
+# tests/test_v0141_old_name_package.py keeps this file's version equal to
+# the main pyproject.toml's, the floor below equal to it, the stand-in
+# equal to src/qualcoder_mcp byte for byte, and the licence files equal to
+# the top-level ones (setuptools refuses licence files outside the
+# project's folder, hence the copies).
+[project]
+name = "qualcoder-mcp"
+version = "0.14.0-alpha"
+description = "qualcoder-mcp is now Exegete: this package installs Exegete and keeps the qualcoder-mcp command working."
+authors = [{name = "Niccolò Tempini", email = "n.tempini@exeter.ac.uk"}]
+license = "LGPL-3.0-or-later"
+license-files = ["COPYING.LESSER", "legal/GPL-3.0.txt", "NOTICE"]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+# A floor, never an exact pin, so that upgrading `exegete` on its own
+# never raises pip's conflict warning; the PEP 440 form of the version
+# above, which names a pre-release, so pip and uv accept a pre-release
+# of `exegete`. PROVISIONAL: decision 4 (a release beside every release
+# until v1.0).
+dependencies = ["exegete>=0.14.0a0"]
+
+[project.urls]
+Homepage = "https://github.com/nicotem/exegete"
+Repository = "https://github.com/nicotem/exegete"
+
+[project.scripts]
+qualcoder-mcp = "qualcoder_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

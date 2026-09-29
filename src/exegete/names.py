@@ -18,3 +18,12 @@ name is also part of a path or an import (the package folder
 DISTRIBUTION = "exegete"
 COMMAND = "exegete"
 PACKAGE = "exegete"
+
+# The old names, still answered: the old name's package on PyPI carries
+# the command `qualcoder-mcp`, and a two-file stand-in package
+# `qualcoder_mcp` (src/qualcoder_mcp, and its copy under
+# packaging/pypi-old-name) hands over to exegete.server:main, so that
+# `qualcoder-mcp` and `python -m qualcoder_mcp.server` start Exegete.
+OLD_DISTRIBUTION = "qualcoder-mcp"
+OLD_COMMAND = "qualcoder-mcp"
+OLD_PACKAGE = "qualcoder_mcp"

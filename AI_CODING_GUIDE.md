@@ -17,8 +17,9 @@ server (the conversational workflow, v0.6.0 and later).
 ## How It Works
 
 1. **You** ask Claude to analyse files for specific codes and answer
-   its three questions; your answers become the session's instruction
-   (`analyze_for_coding` creates the session)
+   the three questions it is told to ask; your answers become the
+   session's instruction (`analyze_for_coding` creates the session;
+   `get_coding_session_info` shows the instruction it recorded)
 2. **Claude** reads the files and records its suggestions into the
    session (`record_suggestions`); every suggestion is verified against
    the file text before it is stored; positions are corrected
@@ -124,13 +125,16 @@ approval of each suggestion.
 
 1. **Define Your Codes**: Have a clear codebook before AI coding
 2. **Test on Small Sample**: Start with 1-2 files to understand results
-3. **Answer the three questions**: before starting a session Claude asks
-   what to look for (your own codes, topics, people's own words, actions,
-   feelings or values, or other, and whether to point out passages no
-   code fits), how long a coded passage should be (a
+3. **Answer the three questions**: before starting a session Claude is
+   told to ask what to look for (your own codes, topics, people's own
+   words, actions, feelings or values, or other, and whether to point
+   out passages no code fits), how long a coded passage should be (a
    phrase, whole sentences by default, or a whole answer) and whether a
    passage may carry more than one code. Your answers become the session's
-   instruction; there is no default. Be specific ("segments where
+   instruction; there is no default instruction. The server refuses a
+   session without an instruction but cannot tell whether it holds your
+   answers: check the instruction the session records
+   (`get_coding_session_info` shows it). Be specific ("segments where
    participants describe feeling overwhelmed, not just mentions of the
    word stress"), and if you are unsure, ask for a short pilot first
 4. **Know Your Data**: Familiarise yourself with the files being coded
@@ -143,7 +147,10 @@ approval of each suggestion.
    (the passage states what the code names) or interpretive (the code
    rests on what the passage implies rather than on what it says).
    There is no numeric score and no threshold: an interpretive
-   reading can be exactly the one you want, and it is yours to judge
+   reading can be exactly the one you want, and it is yours to judge.
+   The instruction is where you say what counts as stated for your
+   study ("mark as interpretive anything the participant does not say
+   outright")
 3. **Review Statistics First**: Check counts before diving into details
 4. **Iterate if Needed**: `record_suggestions(replace=true)` discards the
    pending suggestions from a previous pass, unless every new one is
@@ -151,11 +158,21 @@ approval of each suggestion.
 
 ### Reviewing Suggestions
 
-1. **Read the interpretive ones closely**: the code rests on what the
-   passage implies rather than on what it says; the reason names the
-   words it rests on; check that the reading is one you share
-2. **Spot check the explicit ones**: the passage should state the code
-   in so many words; verify that it does
+1. **Read every suggestion, whatever its reading**: for an explicit one
+   (the passage states what the code names), check that the code is
+   right for the study: a passage can state what a code names and
+   still not be what your study means by it
+2. **For an interpretive one, read the words its reason names**: the
+   code rests on what the passage implies rather than on what it says;
+   decide whether you share the reading. It may draw on what the same
+   participant says elsewhere (the same file, the same speaker, the
+   interviewer's question, other files of the same case, naming the
+   file) and on the study's framework as the project memo states it,
+   naming the concept, but never on outside facts or assumptions; the
+   review does not yet show a passage drawn on from elsewhere, so open
+   the file the reason names. How many readings are interpretive
+   follows from the lens chosen (a feelings or values lens makes most
+   good readings interpretive), not from the quality of the coding
 3. **Read the reasoning**: it should point to the words that carry the
    code
 4. **Use Context**: the review shows each passage in its paragraph or

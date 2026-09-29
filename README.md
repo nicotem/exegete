@@ -97,7 +97,7 @@ host and not capability-evaluated on local models.
 - **macOS** (or Linux/Windows with appropriate paths)
 - **Python 3.10 or higher** (not with the Claude Desktop extension, which fetches its own)
 - **An MCP host**: Claude Desktop is the most common ([download here](https://claude.ai/download)); see "Choosing your AI host" above for alternatives
-- **Qualcoder** with at least one project created ([download here](https://github.com/ccbogel/QualCoder))
+- **QualCoder** ([download here](https://github.com/ccbogel/QualCoder)), recommended, and needed to import documents (Word, PDF, audio, video; this server imports only text given in the conversation) and to see the coding in the text. With the Claude Desktop extension, or the `lifecycle` tool set, a new project can be started in the conversation; otherwise at least one project made in QualCoder is needed
 
 ## Supported QualCoder versions
 

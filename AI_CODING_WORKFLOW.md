@@ -15,15 +15,15 @@ Complete guide to using Claude for AI-assisted qualitative coding with the conve
 
 The AI coding workflow in v0.4.0+ uses a **conversational approval process** where:
 
-1. Claude asks what to look for, how long a passage should be and
-   whether one passage may carry more than one code, then analyses your
-   files and creates suggestions
+1. Claude is told to ask what to look for, how long a passage should be
+   and whether one passage may carry more than one code, then analyses
+   your files and creates suggestions
 2. You review suggestions in the chat conversation
 3. You explicitly approve or reject specific suggestions
 4. Claude writes only approved suggestions directly to the database
 5. Automatic backups protect your data
 
-This approach gives you **full control** through natural conversation with Claude, with no import/export steps required.
+In this approach **you decide each item** through natural conversation with Claude, with no import/export steps required.
 
 ## Safety First
 
@@ -129,12 +129,16 @@ Only suggest a code where the participant says it in so many words
 ```
 
 **What Claude does:**
-1. Asks you three things first: what to look for (your own codes,
-   topics, people's own words, actions, feelings or values, or other,
-   and whether to point out passages no code fits), how long a coded
-   passage should be (a phrase, whole sentences by default, or a whole
-   answer) and whether a passage may carry more than one code. Your
-   answers become the session's instruction; there is no default
+1. Asks you three things first, as the server tells it to: what to
+   look for (your own codes, topics, people's own words, actions,
+   feelings or values, or other, and whether to point out passages no
+   code fits), how long a coded passage should be (a phrase, whole
+   sentences by default, or a whole answer) and whether a passage may
+   carry more than one code. Your answers become the session's
+   instruction; there is no default instruction. The server refuses a
+   session without an instruction but cannot tell whether it holds your
+   answers: check the instruction the session records
+   (`get_coding_session_info` shows it)
 2. Creates a new analysis session with unique ID (`analyze_for_coding`),
    which hands Claude the public part of your project memo, the study in
    your own words
@@ -161,9 +165,10 @@ Found 8 suggestions:
 1. File: interview_001.txt
    Code: Workplace Stress
    Position: 450-620
-   Text: "I often feel overwhelmed with the workload..."
+   Text: "The workload is the main source of stress in my job..."
    Reading: explicit (the passage states what the code names)
-   Reasoning: Direct expression of feeling overwhelmed by work demands
+   Reasoning: Names stress ("the main source of stress") and ties it
+   to work ("the workload")
    GUID: guid-001
 
 2. File: interview_001.txt
@@ -217,8 +222,9 @@ of the day.⟧ Sometimes I wonder if this job is worth the toll.
 
 Code: Workplace Stress (ID: 15)
 Reading: interpretive (the code rests on what the passage implies rather than on what it says)
-Reason: The participant does not name stress; interruptions, inability
-to focus and exhaustion are read as workplace stress.
+Reason: The participant does not name stress; "constant
+interruptions", "impossible to focus" and "exhausted" are read as
+workplace stress.
 ```
 
 The earlier turn (the nearest by another speaker, found by speaker
@@ -407,6 +413,17 @@ GUID: guid-02
 
 **You:**
 ```
+Show me 1, 3, 4 and 5 too
+```
+
+**Claude:**
+```
+[Shows suggestions 1, 3, 4 and 5 in the same way: text, reading
+and reasoning]
+```
+
+**You:**
+```
 Approve all except 5 (I don't read motivation into that one)
 ```
 
@@ -480,12 +497,14 @@ surrounding context]
 
 **You:**
 ```
-The first 4 look good. Show me Professional Development suggestions.
+All five look good. Show me the Career Satisfaction and Professional
+Development suggestions.
 ```
 
 **Claude:**
 ```
-[Shows 3 Professional Development suggestions]
+[Shows 4 Career Satisfaction and 3 Professional Development
+suggestions]
 ```
 
 **You:**
@@ -540,8 +559,8 @@ Apply them
 
 **1. Be Specific with Instructions**
 
-Before starting a session Claude asks you three things, and your answers
-become the session's instruction (there is no default one): what to look
+Before starting a session Claude is told to ask you three things, and
+your answers become the session's instruction (there is no default one): what to look
 for (your own codes, topics, people's own words, actions, feelings or
 values, or other, and whether to point out passages no code fits); how
 long a coded passage should be (a phrase, whole sentences by default, or
@@ -575,7 +594,8 @@ Don't analyse 20 files at once on your first try. Start with:
 
 **3. Review Before Applying**
 
-Always review at least a few suggestions before approving:
+Decide each suggestion; ask for details on any you want to read in
+context:
 ```
 Show me details for suggestions 1, 5, and 10
 ```
@@ -599,11 +619,12 @@ Analyse files 1-5 for Motivation codes
 Load session abc123 and show me the suggestions
 ```
 
-Claude remembers:
+The server keeps the session in a file of its own
+(`~/.qualcoder_mcp/sessions/`), not in the chat:
 - All suggestions
 - Your approvals/rejections
 - Session details
-- Ready to apply when you are
+- Ready to apply when you are, from a later conversation too
 
 **5. Explicit or interpretive, not a score**
 
@@ -614,7 +635,13 @@ and no threshold: a model's rating of its own confidence is not a
 measurement, and an interpretive reading can be exactly the one your
 analysis needs. If you want only what participants state outright, say
 so in the instruction; if you want interpretive readings, read each
-one against your own.
+one against your own. An interpretive reading may draw on what the
+same participant says elsewhere (the same file, the same speaker, the
+interviewer's question, other files of the same case, naming the file)
+and on the study's framework as the project memo states it, naming the
+concept, but never on outside facts or assumptions; the review does not
+yet show a passage drawn on from elsewhere, so open the file the reason
+names.
 
 **6. Work Iteratively**
 
@@ -720,7 +747,8 @@ made.
    feeling stressed, not just mentioning the word "stress"
    ```
 
-2. **Ask for explicit passages only:**
+2. **If your study wants only what participants state, ask for
+   explicit passages only:**
    ```
    Only suggest a code where the participant states it outright
    ```
@@ -842,14 +870,15 @@ Analyse files 1-3 for:
 Iterate to improve:
 
 ```
-# First pass, readings included
-Analyse file 5, and mark which suggestions are interpretive
+# First pass
+Analyse file 5 for [your codes]
 
-# Review the interpretive ones to see where the codes blur
+# Review every suggestion: do you share each interpretive reading?
+# For each code, note what it should cover and what it should not
 
-# Second pass with tuned instructions
-Analyse file 5 again but only code segments that explicitly
-mention [specific criteria]
+# Second pass with the instruction revised
+Analyse file 5 again: [code] covers [what it should cover],
+not [what it should not]
 ```
 
 ### Quality Control
@@ -874,7 +903,8 @@ Before starting AI coding:
 - [ ] Clear instructions prepared
 
 During coding:
-- [ ] Review at least some suggestions before approving
+- [ ] Decide each suggestion; ask for details on any you want to read
+      in context
 - [ ] Check what is marked explicit is stated, and what is
       interpretive is a reading you share
 - [ ] Reasoning aligns with your coding scheme

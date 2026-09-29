@@ -56,9 +56,11 @@ What stays local, always:
   can then no longer be checked; nothing else. The server replaces the
   secret by itself, with the same two effects, when it finds the file
   malformed or, on macOS and Linux, readable by other accounts (after a
-  restore or a sync tool widened its mode), and logs that it did. No
-  export can be written into this folder: the export tools refuse paths
-  inside it.
+  restore or a sync tool widened its mode), and logs that it did. The
+  export tools refuse paths inside this folder as it is spelled; on
+  macOS and Windows, whose file systems ignore letter case, a spelling
+  in another letter case (`~/.QUALCODER_MCP`) is not yet caught (the
+  guard is fixed in v0.15).
 - the last-used project pointer (`~/.qualcoder_mcp/mru_project.json`:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful

@@ -8207,12 +8207,14 @@ def edit_suggestion(
         if use_alternative is None:
             stats["manual_edits"] = stats.get("manual_edits", 0) + 1
             if stats["manual_edits"] == 1:
+                # Not every suggestion has an alternative (the release
+                # gate's note): offer it only where one was computed
                 result["span_shortcut_hint"] = (
                     "The researcher is adjusting spans. From now on, when "
-                    "presenting suggestions add one line offering the "
-                    "shortcut: every suggestion has precomputed "
-                    "shorter/longer spans; they can just say 'longer on "
-                    "#N'."
+                    "presenting a suggestion that has a precomputed "
+                    "shorter/longer span (not every one has), add one "
+                    "line offering the shortcut: they can just say "
+                    "'longer on #N'."
                 )
         elif use_alternative in ("shorter", "longer"):
             key = f"{use_alternative}_picks"

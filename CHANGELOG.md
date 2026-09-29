@@ -39,9 +39,11 @@ QualCoder master at pinned commit 9bddf17 and the 3.8.2 tag; a created
 project follows the 4.0-Beta release, which writes the same project as
 the pin. Each part was reviewed before it merged: a QA gate, a Security
 gate and re-verification until clean (the workbench, which changed
-nothing under `src/`, by one check), then CI on ten jobs; the suite at
-commit `32ecb60`, from a fresh clone in fresh virtual environments on
-Python 3.13.5 and 3.11.13: 5032 passed, 5 skipped, 0 failed. The
+nothing under `src/`, by one check), with CI green on every merge (six
+jobs until the extension merged, ten since, with the extension built on
+all three platforms and the builds compared); the suite at the release
+commit, from a fresh clone in fresh virtual environments on Python
+3.13.5 and 3.11.13: 5041 passed, 5 skipped, 0 failed. The
 acceptance run inside QualCoder, headless, in 4.0 at the pin, in the
 4.0-Beta and in 3.8.2: the projects `create_project` makes open with no exception, keep
 every row and behave as the tool's answer says (645 of 645 checks), and
@@ -153,9 +155,10 @@ the tools fail where they should).
   `openWorldHint`): the reading tools are marked read-only, the tools
   that can replace or remove work are marked destructive (the seven
   that ask for a preview among them), and none reaches beyond this
-  computer. In Claude Code's and Cowork's auto modes a read-only tool is
-  approved and a classifier decides on the rest; in their asking modes
-  a call is asked about unless allowed. `read_pseudonym_list`, which
+  computer. In Claude Code's auto mode a read-only tool is approved and
+  a classifier decides on the rest (Cowork's Auto approves a read-only
+  tool only when it is set to always allow); in their asking modes a
+  call is asked about unless allowed. `read_pseudonym_list`, which
   sends every real name in the project's pseudonyms file to the AI
   provider, is not marked read-only and carries
   `anthropic/requiresUserInteraction`, so that Claude Code (2.1.199 and
@@ -809,29 +812,44 @@ search or a silent limit.
   `ambiguous_code_names` with both, and `record_suggestions` and
   `edit_suggestion` refuse it saying which two.
 - **A session starts from the researcher's answers.** Before starting a
-  session the assistant asks three things: what to
+  session the assistant is told to ask three things: what to
   look for, as a lens (the researcher's own codes, topics, people's own
   words, actions, feelings or values, or other), and whether to point
   out passages no code fits; how long a coded passage should be (a
   phrase, whole sentences by default, or a whole answer); and whether a
   passage may carry more than one code, a second code's reason then
-  saying why both apply. The answers are the session's `instruction`,
-  which a call must now carry (the tool refuses one without it): the
-  default "Code all relevant segments" is
+  saying why both apply. The answers are to be the session's
+  `instruction`, which a call must now carry (the tool refuses one
+  without it): the default "Code all relevant segments" is
   gone, and a call without one starts nothing and says what to ask.
-  When the researcher is unsure, the assistant offers a short pilot. The
+  The server cannot tell whether an instruction holds the researcher's
+  answers: check the instruction the session records
+  (`get_coding_session_info` shows it). When the researcher is unsure,
+  the assistant is told to offer a short pilot. The
   texts no longer tell the assistant to prefer long passages
   ("researchers overwhelmingly widen short spans") or to put several
-  codes on every passage; a pairing the researcher adds at review is
-  looked for elsewhere only after they say yes, and the hint after three
+  codes on every passage; the assistant is told to look elsewhere for a
+  pairing the researcher adds at review only after they say yes, and the
+  hint after three
   picks of a longer or shorter passage asks whether to change the length
   instead of declaring the default "miscalibrated". The methods notes no
-  longer reframe "code everything", which Saldaña advises for newcomers.
+  longer list "code everything" among the requests to reframe.
+- **What an interpretive reading may rest on.** The grounding text the
+  assistant is given no longer forbids reading a passage by other
+  passages: an interpretive reading may draw on the same participant's
+  account (the same file; the same speaker in a group interview; the
+  interviewer's question; other files of the same case, naming the
+  file), quoting a few of those words in the reason, and on the study's
+  framework as the project memo states it, naming the concept; never on
+  outside facts or assumptions about the participant, their group or
+  what is typical. The review does not yet show a passage a reason draws
+  on from elsewhere (planned for v0.15): open the file the reason names.
 - **The study, at the start of a session.** `analyze_for_coding`'s
   answer carries the project memo's public part (`project_memo`), as
   QualCoder 4.0 hands the memo to its own assistant, with a line asking
-  the assistant to read through it, to name a concept from it when a
-  reading rests on it, and to say what it does not cover; when the memo
+  the assistant to use it to focus its reading, to name a concept from
+  it when a reading rests on it, and to say what it does not cover for
+  the session's files and codes; when the memo
   has no public part it says to ask the researcher what the study
   asks. The
   private part of the memo is never sent.

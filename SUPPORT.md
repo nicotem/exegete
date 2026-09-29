@@ -14,7 +14,7 @@ ideas are genuinely wanted: they directly shape what gets built next.
   redacted example is perfect. (For what happens to research data when
   you USE the tool, what leaves your machine and what stays local, see
   [PRIVACY.md](PRIVACY.md).)
-- **Questions**: check the [README](README.md) troubleshooting section
+- **Questions**: check the [INSTALL.md](INSTALL.md#troubleshooting) troubleshooting section
   and [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md) first, then open an
   issue. Questions are welcome; yours is probably the next person's too.
 - **Feature requests and ideas**: very welcome. The release philosophy
@@ -53,8 +53,8 @@ Issues help everyone, permanently. Please use
   be open (heuristics, which can miss an open window); never write while
   any QualCoder window has the same project open.
 - Include in bug reports: your QualCoder version (a 3.8.x release or
-  the 4.0-Beta pre-release; see "Supported QualCoder versions" in the
-  README for the supported project schemas),
+  the 4.0-Beta pre-release; see "Supported QualCoder versions" in
+  TOOLS.md for the supported project schemas),
   the project's schema version (the `databaseversion` value in the
   `schema` block that `get_current_project` returns), the server version
   (`qualcoder-mcp --version` in the environment you installed into, or

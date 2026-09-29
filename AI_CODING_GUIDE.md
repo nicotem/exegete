@@ -64,7 +64,7 @@ reports against what you said.
   from the conversation
 - A project schema from v14 (QualCoder 3.8.x) through v17 (the
   QualCoder 4.0-Beta pre-release); see "Supported QualCoder versions"
-  in the README. Older projects: open and save them in QualCoder 3.8
+  in TOOLS.md. Older projects: open and save them in QualCoder 3.8
   once to upgrade
 
 ## Quick Start
@@ -201,7 +201,7 @@ approval of each suggestion.
   private-note convention) is never shown to the AI and survives AI
   memo writes; where the project has the coder-visibility capability
   reads follow the per-coder visibility
-  setting (see "Working alongside QualCoder 4.0" in the README)
+  setting (see "Working alongside QualCoder 4.0" in TOOLS.md)
 - Every write creates a timestamped backup first unless called with
   `create_backup=false` (`list_backups` shows them, including QualCoder's own `_BKUP_` snapshots)
 - Sessions only apply to the project they were created in
@@ -213,8 +213,8 @@ approval of each suggestion.
 Claude itself does the analysis through the conversation, and the
 server only stores and applies what is marked approved (it cannot see
 who approved it; see above). (An API-key route and
-a fully local route exist too; see "Choosing your AI host" in the
-README.)
+a fully local route exist too; see "Choosing your AI host" in
+INSTALL.md.)
 
 **Can the AI create new codes?** Yes, with your approval: `propose_codes`
 records code proposals discovered in the data, you review and refine
@@ -233,7 +233,7 @@ asks, and your answer is stored with the project
 (`set_project_ai_coder_name`; `AI Coding Assistant` is the built-in
 quick pick, and `QUALCODER_MCP_AI_CODER_NAME` in the host's
 configuration only declares a name to offer first). See "Choosing the
-AI coder name" in README.md. AI work stays distinguishable from yours in
+AI coder name" in TOOLS.md. AI work stays distinguishable from yours in
 QualCoder, and rows written under an earlier name keep it.
 
 **Can I pseudonymise transcripts that are already coded?** Yes:

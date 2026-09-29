@@ -269,7 +269,7 @@ The private zone stays in your project database on disk; this
 convention controls only what enters the AI conversation. The QualCoder
 4.0 behaviour described in this section and the next two was verified
 against QualCoder master at commit 9bddf17 (pulled 2026-08-25, when 4.0
-was in beta); README.md and CHANGELOG.md carry the same pin. The coder
+was in beta); TOOLS.md and CHANGELOG.md carry the same pin. The coder
 visibility section was also verified against the 3.8.2 tag, which
 already creates the `coder_names` table, its `visibility` column and
 the four views (schema v14).

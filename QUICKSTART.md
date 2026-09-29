@@ -8,11 +8,11 @@ This guide will get you up and running with the Qualcoder MCP server in 10 minut
 - [ ] Claude Desktop installed, or any other MCP client: Claude Code
       users can skip the Desktop config below and just run
       `claude mcp add qualcoder -- <venv-python> -m qualcoder_mcp.server`
-      (see "Using with Claude Code" in the README)
+      (see "Alternative: Claude Code and other MCP clients" in INSTALL.md)
 - [ ] At least one Qualcoder project created (a `.qda` project folder)
 
 > Choosing between Claude plans, an API key, or a fully local model?
-> See "Choosing your AI host: data-governance options" in the README
+> See "Choosing your AI host: data-governance options" in INSTALL.md
 > (the API-key and LM Studio routes are Experimental).
 
 ## Installation Steps
@@ -20,9 +20,9 @@ This guide will get you up and running with the Qualcoder MCP server in 10 minut
 ### 1. Install the MCP Server
 
 The quickest install is from PyPI (`pip install qualcoder-mcp` in a
-virtual environment, or `pipx install qualcoder-mcp`; see "Installation"
-in the README, whose config examples use the resulting `qualcoder-mcp`
-command). The steps below use the source install:
+virtual environment, or `pipx install qualcoder-mcp`; see "Recommended:
+Install from PyPI" in INSTALL.md, whose config examples use the
+resulting `qualcoder-mcp` command). The steps below use the source install:
 
 ```bash
 # Navigate to where you want to install (e.g., Documents)
@@ -173,14 +173,14 @@ You should see it start without errors. Press Ctrl+C to stop.
 
 Once it's working:
 
-1. Read the [full README](README.md) for all features
-2. Try the example prompts in the Usage section
+1. Read [TOOLS.md](TOOLS.md) for all features
+2. Try the example prompts in its "Example requests" section
 3. Explore the available tools and resources
 4. Check out the prompt templates for analysis tasks
 
 ## Getting Help
 
-- Check the [README troubleshooting section](README.md#troubleshooting)
+- Check the [troubleshooting section of INSTALL.md](INSTALL.md#troubleshooting)
 - Review [MCP documentation](https://modelcontextprotocol.io/)
 - Check [Qualcoder documentation](https://github.com/ccbogel/QualCoder/wiki)
 - Bug reports, questions and feature ideas: [GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues)

@@ -84,10 +84,10 @@ is looked at first.
 6. **Document the change.** Add an entry under `Unreleased` in
    `CHANGELOG.md` (Keep a Changelog format). Update the docstring of
    every tool whose arguments or behaviour changed: the docstrings are
-   the documentation the AI model reads. Update `README.md`,
-   `INSTALL.md` and `PRIVACY.md` where they describe the behaviour you
-   changed; `PRIVACY.md` is the contract for what a tool result may
-   disclose.
+   the documentation the AI model reads. Update `TOOLS.md` (the tool
+   reference), `README.md`, `INSTALL.md` and `PRIVACY.md` where they
+   describe the behaviour you changed; `PRIVACY.md` is the contract for
+   what a tool result may disclose.
 
 ## Review before merge
 
@@ -164,6 +164,86 @@ rather than fewer.
   Lesser General Public License" keep their exact spelling, including
   when a sentence mentions them. Code comments follow the same rule when a line is
   touched.
+
+## How the server is built
+
+```
+┌──────────────────────────────┐
+│  MCP host (Claude Desktop,   │
+│  Claude Code, LM Studio ...) │
+└──────────────┬───────────────┘
+               │ MCP protocol (stdio)
+               │
+┌──────────────▼───────────────┐
+│  qualcoder-mcp               │  (this package)
+│  qualcoder_mcp               │
+└──────────────┬───────────────┘
+               │ SQLite connection (read-only by default;
+               │  guarded writes with backup, lock and
+               │  heuristic open-window checks)
+               │
+┌──────────────▼───────────────┐
+│  QualCoder project database  │
+│  (data.qda, in the .qda      │
+│  project folder)             │
+└──────────────────────────────┘
+```
+
+### Project structure
+
+```
+qualcoder_mcp/
+├── src/
+│   └── qualcoder_mcp/
+│       ├── __init__.py
+│       ├── server.py            # Main MCP server with resources, tools, prompts
+│       ├── database.py          # SQLite database interface
+│       ├── memo_privacy.py      # QualCoder's '#####' private-memo convention
+│       ├── new_project.py       # create_project: the folder and its schema v17 database
+│       ├── sessions.py          # AI coding session management
+│       ├── project_settings.py  # The project's AI coder name (qualcoder_mcp.json)
+│       ├── preview_tokens.py    # Preview tokens for the destructive tools
+│       ├── cursors.py           # Paging cursors for the search and segment tools
+│       ├── coder_comparison.py  # compare_coders: agreement and the two kappas
+│       ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
+│       └── refi_export.py       # REFI-QDA XML export
+├── scripts/
+│   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
+│   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
+│   └── create_test_project.py  # Test project generator
+├── packaging/
+│   └── desktop-extension/      # The extension's manifest template and its validator
+├── legal/
+│   └── GPL-3.0.txt         # The GNU GPL, version 3, which the LGPL incorporates
+├── pyproject.toml           # Package configuration
+├── README.md               # What it is, where data goes, how to start
+├── TOOLS.md                # Every tool, what it reads and writes
+├── CHANGELOG.md            # Version history
+├── INSTALL.md              # Detailed installation guide
+├── PRIVACY.md              # Data-flow disclosure
+├── CONTRIBUTING.md         # How to report, propose and review changes
+├── CITATION.cff            # Citation metadata
+├── SUPPORT.md              # Support policy (GitHub Issues only)
+├── COPYING.LESSER          # The licence: GNU LGPL, version 3
+└── NOTICE                  # Copyright, licence, and the code derived from QualCoder
+```
+
+### Using MCP Inspector for development
+
+For development and debugging, you can use the MCP Inspector:
+
+```bash
+# Install uv if you haven't already
+pip install uv
+
+# Run the inspector
+export QUALCODER_PROJECT_PATH="/path/to/your/project.qda"
+uv run --with "mcp[cli]" mcp dev src/qualcoder_mcp/server.py
+```
+
+This will open a web interface where you can test resources and tools.
+The server is built on the
+[MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
 
 ## Scope
 

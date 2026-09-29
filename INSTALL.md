@@ -1,6 +1,6 @@
-# Installation Guide for Qualcoder MCP Server
+# Installation Guide for qualcoder-mcp
 
-This guide will walk you through installing the Qualcoder MCP server step-by-step. No prior technical knowledge required!
+This guide will walk you through installing qualcoder-mcp step-by-step. No prior technical knowledge required!
 
 ## Claude Desktop: the one-click extension (recommended)
 
@@ -72,29 +72,61 @@ log" below before sharing it.
 the `qualcoder` entry from the configuration, or switch one of the two
 off under "+", Connectors; otherwise Claude sees every tool twice.
 
-Everything below is **the Terminal route**: for Claude Code, LM Studio
-and other MCP hosts, for Claude Desktop configured by hand, and for
-contributors who want the source.
+Everything below, after the choice of AI host, is **the Terminal
+route**: for Claude Code, LM Studio and other MCP hosts, for Claude
+Desktop configured by hand, and for contributors who want the source.
+
+## Choosing your AI host: data-governance options (Experimental)
+
+This server is host-agnostic stdio MCP. Which AI processes your data,
+and under which terms, is decided by the host you run and the account
+you sign into, not by this server. The terms attach to the account and
+product line, not to the client application. Three routes, from easiest
+to most private:
+
+| Route | What it means | Where to read more |
+|---|---|---|
+| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. | [PRIVACY.md](PRIVACY.md), rung 1 |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+
+The multi-host support (the core toolset and the two recipes) is
+**Experimental**: written from official documentation, functionally
+tested at the server level, but not yet exercised end to end on every
+host and not capability-evaluated on local models. Step-by-step guides
+for Claude Code and LM Studio, written for researchers rather than
+programmers, are considered on request: ask in
+[GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues).
 
 ## What You'll Need
 
 Before starting, make sure you have:
 
-- ✅ **A Mac computer** (or Linux or Windows; paths will be slightly different)
-- ✅ **Qualcoder installed** with at least one project created
-  - Download from: https://github.com/ccbogel/QualCoder
-  - Make sure you know where your `.qda` project folder is located
-    (QualCoder projects are folders ending in `.qda`, with a `data.qda`
-    database file inside)
-  - Supported: projects from QualCoder 3.8.x and from the QualCoder
-    4.0-Beta pre-release (project schemas v14 through v17); see
-    "Supported QualCoder versions" in the README
-- ✅ **An MCP host**: the step-by-step guide below uses Claude Desktop
-  (download from: https://claude.ai/download); recipes for Claude Code
-  and LM Studio follow further down
-- ✅ **Python 3.10 or newer**
+- ✅ **A computer** with macOS, Windows or Linux (paths differ
+  slightly), and **Python 3.10 or newer**
   - Check by opening Terminal and typing: `python3 --version`
   - If not installed, get it from: https://www.python.org/downloads/
+- ✅ **An MCP host**: the step-by-step guide below uses Claude Desktop
+  configured by hand (download from: https://claude.ai/download);
+  recipes for Claude Code and LM Studio follow further down
+- ✅ **A QualCoder project, or the `lifecycle` tool set.** On this
+  route the default tool set, `full`, has no tool that creates a
+  project, so you need a project made in QualCoder (a folder ending in
+  `.qda`, with a `data.qda` database file inside; know where it is),
+  unless you add `QUALCODER_MCP_TOOLSET=lifecycle` ("Environment
+  variables the server reads", below), which lets the assistant create
+  one in the conversation. Projects from QualCoder 3.8.x and from the
+  QualCoder 4.0-Beta pre-release work (project schemas v14 through
+  v17); see "Supported QualCoder versions" in
+  [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
+- ✅ **QualCoder itself**, recommended, and needed to bring in
+  documents (Word, PDF, images, audio, video) and any text you would
+  rather not pass through the conversation (this server imports only
+  text the assistant hands it), to see the coding in the text, to code
+  images, audio, video or an area of a PDF page, and for graphs:
+  https://github.com/ccbogel/QualCoder/releases (3.8.2 is the release
+  marked "Latest"; the 4.0-Beta at the top of the page is a test
+  version)
 
 ---
 
@@ -131,7 +163,7 @@ On Mac:
 1. Press `Cmd + Space` to open Spotlight
 2. Type "Terminal" and press Enter
 
-### Step 2: Download the Qualcoder MCP Server
+### Step 2: Download qualcoder-mcp
 
 Copy and paste these commands into Terminal, one at a time:
 
@@ -179,7 +211,7 @@ venv\Scripts\activate
 ### Step 5: Install the Package
 
 ```bash
-# Install the Qualcoder MCP server
+# Install qualcoder-mcp
 pip install -e .
 ```
 
@@ -201,7 +233,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 ### Option A: Dynamic Project Selection (Recommended)
 
-**Best for**: People with multiple Qualcoder projects
+**Best for**: People with multiple QualCoder projects
 
 1. **Find your username**:
    - In Terminal, type: `whoami` and press Enter
@@ -232,18 +264,38 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 }
 ```
 
+With a **PyPI install** (pip, pipx or uv), point the client straight at
+the installed `qualcoder-mcp` command instead, using the absolute path
+from `which qualcoder-mcp` (Claude Desktop does not inherit your shell's
+PATH), and leave out `args`:
+
+```json
+{
+  "mcpServers": {
+    "qualcoder": {
+      "command": "/Users/YOUR_USERNAME/qualcoder-mcp-venv/bin/qualcoder-mcp"
+    }
+  }
+}
+```
+
 **Important**: If you already have other MCP servers configured, add the "qualcoder" section inside the existing `mcpServers` block, separated by a comma.
 
 5. **Save and Close** the configuration file
 
+After the restart (Step 7), ask Claude to list your projects and select
+one; you can switch projects at any time.
+[PROJECT_SELECTION_GUIDE.md](PROJECT_SELECTION_GUIDE.md) has the
+details.
+
 ### Option B: Fixed Project Path (Simpler)
 
-**Best for**: People with one main Qualcoder project
+**Best for**: People with one main QualCoder project
 
 1. **Find your .qda project folder**:
-   - Open Qualcoder
+   - Open QualCoder
    - Look at your project and note its location
-   - **Important**: Qualcoder projects are **folders** with `.qda` extension, not single files
+   - **Important**: QualCoder projects are **folders** with `.qda` extension, not single files
    - Each project folder contains a `data.qda` database file inside
    - Common locations:
      - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/` (folder)
@@ -299,8 +351,8 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 3. **Verify it's working**:
    - Open a new conversation
-   - Type: "List my available Qualcoder projects" (Option A) or "Give
-     me a summary of my Qualcoder project" (Option B)
+   - Type: "List my available QualCoder projects" (Option A) or "Give
+     me a summary of my QualCoder project" (Option B)
    - If configured correctly, Claude calls the qualcoder tools and
      answers from your project. If it says it has no such tool, the
      server is not connected: see Troubleshooting below
@@ -313,14 +365,22 @@ Claude Desktop is not required: the server speaks standard MCP over
 stdio, so **any MCP client can host it** (researchers run it under
 Claude Code, including in editor side panels such as Obsidian's).
 
-**Claude Code**: register it with one command (use the venv Python
-path from Step 5):
+**Claude Code**: register it with one command. With a PyPI install:
+
+```bash
+claude mcp add qualcoder -- qualcoder-mcp
+```
+
+(Claude Code resolves commands on your shell PATH; if in doubt, use the
+absolute path from `which qualcoder-mcp`.) With a source install, use
+the venv Python path from Step 5:
 
 ```bash
 claude mcp add qualcoder -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
 ```
 
-Or add a `.mcp.json` to the folder you run Claude Code from:
+Or add a `.mcp.json` to the folder you run Claude Code from (with a
+PyPI install, `"command": "qualcoder-mcp"` and no `args`):
 
 ```json
 {
@@ -367,7 +427,7 @@ variable is optional.
   `core` registers the 21-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
   registers the full set plus `create_project`, 74 tools, so that a
-  study can be started from the conversation (README.md, "Starting a
+  study can be started from the conversation (TOOLS.md, "Starting a
   project from the conversation"). Configured by hand, creating
   projects stays out of the default set, so that researchers opt in to
   a tool that makes folders on their disk; the desktop extension sets
@@ -401,7 +461,7 @@ variable is optional.
   coder name it would like to write under. Since v0.12 the name that
   rows actually carry is the PROJECT's setting, which the researcher
   chooses through `set_project_ai_coder_name` the first time a write
-  needs it (see the attribution section of README.md); the declaration
+  needs it (see "Choosing the AI coder name" in TOOLS.md); the declaration
   is offered as the first quick pick in that question, and if it differs
   from a name the project already has, the next write asks which to use
   rather than re-attributing anything. Declare the model this host runs
@@ -763,7 +823,7 @@ behaviour, not an error. Press Ctrl+C to stop it.
 
 In Claude Desktop, try:
 ```
-List my available Qualcoder projects
+List my available QualCoder projects
 ```
 
 Claude should show you the `.qda` project folders it found. Then:
@@ -775,7 +835,7 @@ Select the "MyProject" project
 
 In Claude Desktop, try:
 ```
-Give me a summary of my Qualcoder project
+Give me a summary of my QualCoder project
 ```
 
 Claude should respond with information about your project!
@@ -806,9 +866,12 @@ Analyse the transcript for file 1 with all its coding
    (see "Updating the MCP Server").
 
 1. **Check your paths**:
-   - Make sure the Python path is correct in your config
-   - In Terminal with venv activated, type: `which python`
+   - Make sure the command path is correct in your config
+   - With a PyPI install, type `which qualcoder-mcp` in Terminal; with
+     a source install, activate the venv and type `which python`
    - Use that full path in your Claude config
+   - After any change to the configuration, fully quit and reopen
+     Claude Desktop (Step 7)
 
 2. **Check your .qda project path** (Option B only):
    - Make sure the folder exists: `ls -ld /path/to/your/project.qda`
@@ -844,7 +907,7 @@ to discover projects, then 'select_project' to choose one. Or set
 QUALCODER_PROJECT_PATH environment variable." (`get_current_project`
 says "No project currently open" instead.) Just select a project:
 ```
-List my available Qualcoder projects
+List my available QualCoder projects
 Select the "ProjectName" project
 ```
 
@@ -860,6 +923,14 @@ host has restarted the server process between turns and the in-memory
 selection was lost; the hint gets you back with one call. For
 single-project work, pinning `QUALCODER_PROJECT_PATH` in the server's
 `env` block (Option B) avoids that round trip.
+
+With Option B, make sure the `env` section in your configuration
+includes the `QUALCODER_PROJECT_PATH` variable with the full path to
+your `.qda` project folder (or its `data.qda` file); since 0.14 a
+configured project is used by whichever tool comes first (before, the
+backup tools and a few others gave this error until another tool had
+run), and a configured path that cannot be opened is answered with the
+reason.
 
 ### Python Not Found
 
@@ -932,7 +1003,7 @@ Before sharing such a file, read it as you would the conversation.
 
 ### Learn What You Can Do
 
-Check out the main README.md for:
+[TOOLS.md](TOOLS.md) has:
 - Example queries and prompts
 - Full list of available tools
 - Advanced features (co-occurrence analysis, demographics, etc.)
@@ -1017,10 +1088,14 @@ terminal:
 # git:   ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server --version
 ```
 
-The server also reports its version to the host in the MCP handshake
+It prints `qualcoder-mcp` followed by the version and exits; version
+`0.14.0-alpha` shows as `0.14.0a0`, its normalised form. The server
+also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a
-convenience, not proof.
+convenience, not proof. The
+[Releases page](https://github.com/nicotem/qualcoder_mcp/releases) and
+[CHANGELOG.md](CHANGELOG.md) say what each release changed.
 
 Updating never touches your data: the server is code-only, and your
 QualCoder projects and backups stay exactly where they are.
@@ -1165,7 +1240,7 @@ around.
 ## Getting Help
 
 - **Problems with this server**: check the Troubleshooting section
-  above and the README's troubleshooting section, then open an issue on
+  above, then open an issue on
   [GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues).
   That is the only support channel (email requests receive no reply);
   see [SUPPORT.md](SUPPORT.md). Never paste research data into an
@@ -1174,7 +1249,7 @@ around.
   Claude Code, LM Studio) and the toolset mode (full, core or
   lifecycle).
 - **MCP Documentation**: https://modelcontextprotocol.io/
-- **Qualcoder Help**: https://github.com/ccbogel/QualCoder/wiki
+- **QualCoder Help**: https://github.com/ccbogel/QualCoder/wiki
 - **Claude Desktop**: https://claude.ai/help
 
 ---
@@ -1240,7 +1315,7 @@ desktop extension, its "Folder for projects", by default
 
 Now that you're installed, you can:
 
-1. ✅ Explore your Qualcoder data with natural language queries
+1. ✅ Explore your QualCoder data with natural language queries
 2. ✅ Get AI-assisted thematic analysis
 3. ✅ Discover patterns and relationships in your coding
 4. ✅ Query by demographics and attributes

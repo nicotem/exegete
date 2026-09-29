@@ -1,0 +1,7 @@
+{
+  "about": "A run-record text fingerprint computed by qualcoder-mcp 0.14.0 (commit dfd2096, qualcoder_mcp.server.run_record_text_digest) with this test key, for tests/test_v0141_state_folder.py: after the state folder moves, the same key must give the same fingerprint.",
+  "secret": "5f0c3e1a9b7d2468ace013579bdf2468ace013579bdf0123456789abcdef0123",
+  "text": "Interview 3. Maria said the clinic closed early on Tuesdays.\n",
+  "label": "qualcoder-mcp run record text\n",
+  "digest": "4e07c61e0ed862890ebf74737ea31b1089aa8d85e1cd1335294c398594c6cbbe"
+}

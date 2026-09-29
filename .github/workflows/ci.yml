@@ -240,19 +240,29 @@ jobs:
           test "$(ls builds/*/*.mcpb | wc -l)" -eq 3
           test "$(sha256sum builds/*/*.mcpb | cut -d' ' -f1 | sort -u | wc -l)" -eq 1
 
-  # v0.14.1, the rename: the old name's package, built on every push, and
-  # the upgrade paths through the old name, offline. The wheelhouse is
-  # fetched once; the tests then install only from it (--no-index), so
-  # the real PyPI's qualcoder-mcp can never make them pass. One computer
-  # is enough: the paths are pip's and uv's, not the platform's.
+  # v0.14.1, the rename: the old name's package, built on every push, the
+  # upgrade paths through the old name, offline, and the published 0.14.0
+  # working through the state folder's link. The wheelhouse is fetched
+  # once; the tests then install only from it (--no-index), so the real
+  # PyPI's qualcoder-mcp can never make them pass. Linux runs them all
+  # (the upgrade paths are pip's and uv's, not the platform's); Windows
+  # runs the 0.14.0 proof, through a junction.
   rename-upgrade:
-    name: the rename, the old name's package and its upgrades
-    runs-on: ubuntu-latest
+    name: the rename (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     # Two wheels, a handful of scratch environments and offline installs
     # take a few minutes; twenty ends a hang well before the suite's.
     timeout-minutes: 20
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            tests: tests/test_v0141_upgrade.py tests/test_v0141_old_name_package.py tests/test_v0141_stand_in.py tests/test_v0141_proof_0140.py
+          - os: windows-latest
+            tests: tests/test_v0141_proof_0140.py
 
     steps:
       - name: Check out repository
@@ -276,8 +286,13 @@ jobs:
       - name: Build the old name's package
         run: python -m build packaging/pypi-old-name --outdir dist/old-name
 
+      # The published qualcoder-mcp 0.14.0a0 comes too, for the proof
+      # that it works through the link (or junction) the move leaves.
       - name: Fetch the wheelhouse for the offline tests
-        run: pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "setuptools==84.0.0"
+        shell: bash
+        run: |
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "setuptools==84.0.0"
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --no-deps --only-binary=:all: "qualcoder-mcp==0.14.0a0"
 
       # RENAME_TESTS_MUST_RUN turns a skip into a failure, so this job
       # can never pass by running nothing.
@@ -285,4 +300,5 @@ jobs:
         env:
           RENAME_TEST_WHEELHOUSE: ${{ runner.temp }}/wheelhouse
           RENAME_TESTS_MUST_RUN: "1"
-        run: python -m pytest -ra tests/test_v0141_upgrade.py tests/test_v0141_old_name_package.py tests/test_v0141_stand_in.py
+        shell: bash
+        run: python -m pytest -ra ${{ matrix.tests }}

@@ -465,7 +465,7 @@ def _served_texts_now():
                 prompt.description or ""
         for res in (await client.list_resources()).resources:
             texts[f"description of {res.uri}"] = res.description or ""
-            if str(res.uri).startswith("qualcoder://guidance/"):
+            if str(res.uri).startswith("exegete://guidance/"):
                 got = await client.read_resource(res.uri)
                 texts[f"resource {res.uri}"] = "\n".join(
                     c.text for c in got.contents)
@@ -507,9 +507,9 @@ class TestEveryNamedToolIsThere:
                     "get_case_info"):
             assert not any(old in text for text in texts.values()), old
         assert "get_case_code_matrix" in texts["prompt explore_case"]
-        assert "qualcoder://cases/list" in texts["prompt explore_case"]
+        assert "exegete://cases/list" in texts["prompt explore_case"]
         assert "get_coding_frequencies" in texts["prompt analyze_theme"]
-        assert "qualcoder://files/list" in texts["prompt summarize_project"]
+        assert "exegete://files/list" in texts["prompt summarize_project"]
 
     def test_core_marks_what_it_lacks_and_full_does_not(self):
         core, _ = served_texts("core")
@@ -518,7 +518,7 @@ class TestEveryNamedToolIsThere:
         assert ("explain_ai_coding_tools('methodology_vocabulary')"
                 + server.NOT_IN_THIS_TOOL_SET) in core["instructions"]
         assert ("propose_codes" + server.NOT_IN_THIS_TOOL_SET
-                in core["resource qualcoder://guidance/methods"])
+                in core["resource exegete://guidance/methods"])
         full, _ = served_texts("full")
         assert not any(server.NOT_IN_THIS_TOOL_SET in text
                        for text in full.values())
@@ -1608,7 +1608,7 @@ class TestSessionFilesAfterPseudonymising:
             [suggesting, proposing, finished["reject"], finished["create"]])
         assert done["stale_sessions_with_work_to_apply"] == [proposing]
         note = [n for n in done["notes"] if "coding session file" in n]
-        assert len(note) == 1 and "~/.qualcoder_mcp/sessions/" in note[0]
+        assert len(note) == 1 and "~/.exegete/sessions/" in note[0]
         for session_id in (suggesting, proposing):
             stored = (server.session_manager.storage_dir
                       / f"session_{session_id}.json").read_text(
@@ -1697,9 +1697,9 @@ class TestHiddenCodersOnTheCodebook:
         self._project(tmp_path)
 
         async def drive(client):
-            codes = await client.read_resource("qualcoder://codes/list")
+            codes = await client.read_resource("exegete://codes/list")
             cats = await client.read_resource(
-                "qualcoder://categories/list")
+                "exegete://categories/list")
             code_id = [c for c in json.loads(codes.contents[0].text)
                        if c["name"] == "Alices code"][0]["id"]
             preview = json.loads(text_of(await client.call_tool(
@@ -1709,7 +1709,7 @@ class TestHiddenCodersOnTheCodebook:
                 "merge_codes", {"from_code_id": code_id, "into_code_id": 1,
                                 "preview_token":
                                     preview["preview_token"]})))
-            target = await client.read_resource("qualcoder://codes/1")
+            target = await client.read_resource("exegete://codes/1")
             return (json.loads(codes.contents[0].text),
                     json.loads(cats.contents[0].text), preview, done,
                     json.loads(target.contents[0].text))
@@ -1766,8 +1766,8 @@ class TestHiddenCodersOnTheCodebook:
             view = json.loads(text_of(await client.call_tool(
                 "analyze_file_with_coding", {"file_id": 1})))
             found = {}
-            for uri in ("qualcoder://files/list", "qualcoder://cases/list",
-                        "qualcoder://journal"):
+            for uri in ("exegete://files/list", "exegete://cases/list",
+                        "exegete://journal"):
                 got = await client.read_resource(uri)
                 found[uri] = json.loads(got.contents[0].text)
             return view, found
@@ -1911,8 +1911,8 @@ class TestPromisesKeptOverEveryTool:
             for res in (await client.list_resources()).resources:
                 got = await client.read_resource(res.uri)
                 texts.extend(c.text for c in got.contents)
-            for uri in ("qualcoder://codes/1", "qualcoder://files/1",
-                        "qualcoder://cases/1"):
+            for uri in ("exegete://codes/1", "exegete://files/1",
+                        "exegete://cases/1"):
                 got = await client.read_resource(uri)
                 texts.extend(c.text for c in got.contents)
             return texts
@@ -2007,7 +2007,7 @@ class TestCoreAnswersAreMarked:
                     "segment_text": passage, "reasoning": "r"}]})
             search = await call("search_coded_text",
                                 {"query": "merge_codes"})
-            codes = await client.read_resource("qualcoder://codes/list")
+            codes = await client.read_resource("exegete://codes/list")
             return view, recorded, search, codes.contents[0].text
 
         view, recorded, search, codes = host_session(read)

@@ -96,6 +96,7 @@ class TestVersionFlag:
         assert proc.stdout.strip() == f"qualcoder-mcp {exegete.__version__}"
         assert proc.stderr == ""
         assert not (home / ".qualcoder_mcp").exists()
+        assert not (home / ".exegete").exists()
 
     def test_importing_the_module_writes_nothing_and_touches_nothing(self, tmp_path):
         """The module may configure logging at import (the plain stderr

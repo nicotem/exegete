@@ -22,7 +22,9 @@ from exegete.project_settings import DEFAULT_AI_CODER_NAME, SIDECAR_NAME
 from track5_helpers import (write_fixture_sidecar, REAL_WORKSPACE,
                             WORKSPACE_UNREADABLE, real_workspace_entries,
                             GUARDED_REAL_FOLDERS, SHARING_VIOLATION,
-                            open_paths_under)
+                            open_paths_under, GUARDED_STATE_FOLDERS,
+                            state_folder_snapshot)
+from exegete import names as _names
 from exegete.sessions import SessionManager, AICodingSession, CodingSuggestion
 from hypothesis import HealthCheck as _HealthCheck
 from hypothesis import settings as _hypothesis_settings
@@ -77,7 +79,7 @@ def _sandbox_patch():
 
 @pytest.fixture(autouse=True)
 def _isolate_mru_state(tmp_path, _sandbox_patch):
-    """Keep the P1-6 MRU state file out of the real ~/.qualcoder_mcp.
+    """Keep the P1-6 MRU state file out of the real state folder.
 
     select_project records the most-recently-used project on disk;
     without this, every test that selects a fixture project would
@@ -89,16 +91,22 @@ def _isolate_mru_state(tmp_path, _sandbox_patch):
 
 @pytest.fixture(autouse=True)
 def _isolate_preview_secret(tmp_path, _sandbox_patch):
-    """Keep the B2 preview-token secret out of the real ~/.qualcoder_mcp.
+    """Keep the B2 preview-token secret out of the real state folder.
 
     The same reasoning as the MRU isolation above: a test that previews a
     destructive operation would otherwise create or rotate the
     developer's own secret, and a rotation invalidates tokens the real
-    server issued.
+    server issued. v0.14.1: the folder the state folder was moved from,
+    which the guards refuse too, is the sandbox's as well, and no run's
+    choice of the old folder (a move that failed in a test of main())
+    outlives its test.
     """
-    from exegete import preview_tokens
+    from exegete import preview_tokens, state_folder
     _sandbox_patch.setattr(preview_tokens, "STATE_HOME",
                            tmp_path / "token_state")
+    _sandbox_patch.setattr(preview_tokens, "OLD_STATE_HOME",
+                           tmp_path / "old_token_state")
+    _sandbox_patch.setattr(state_folder, "_this_run", None)
 
 
 @pytest.fixture(autouse=True)
@@ -131,7 +139,12 @@ def _isolate_home(tmp_path, _sandbox_patch):
     # v0.14: a workspace set in the developer's or CI's environment (the
     # desktop extension's folder for projects) would point the workspace
     # back outside the sandbox; tests that exercise it set it themselves.
-    _sandbox_patch.delenv("QUALCODER_MCP_WORKSPACE", raising=False)
+    # v0.14.1: every setting the server reads, under both spellings, so a
+    # developer's or CI's own EXEGETE_... or QUALCODER_... value cannot
+    # leak into a test.
+    for spellings in _names.SETTINGS.values():
+        for name in spellings:
+            _sandbox_patch.delenv(name, raising=False)
     assert Path.home().resolve() == home.resolve()
     assert _database.default_workspace().resolve().is_relative_to(
         tmp_path.resolve())
@@ -171,6 +184,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 # The baseline for the guard below, and the proof that it was taken
 # before anything could write. Both are filled by `pytest_sessionstart`.
 WORKSPACE_BASELINE = {}
+# v0.14.1: the two real state folders, in full (state_folder_snapshot)
+STATE_BASELINE = {}
 BASELINE_PRECEDED_TEST_IMPORTS = None
 
 
@@ -192,6 +207,8 @@ def pytest_sessionstart(session):
         name.startswith("test_") for name in list(sys.modules))
     for label, folder in GUARDED_REAL_FOLDERS.items():
         WORKSPACE_BASELINE[label] = real_workspace_entries(folder)
+    for label, folder in GUARDED_STATE_FOLDERS.items():
+        STATE_BASELINE[label] = state_folder_snapshot(folder)
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -202,7 +219,8 @@ def _nothing_is_written_to_the_real_workspace():
     The companion guard to the isolation fixtures above: they redirect
     the constants, and this one proves that no route into the
     researcher's own `~/Documents/Qualcoder MCP Projects` or
-    `~/.qualcoder_mcp` survived. In the spirit of the test-rot guard, it
+    the state folders (`~/.exegete`, and `~/.qualcoder_mcp`, its earlier
+    name) survived. In the spirit of the test-rot guard, it
     pins the ABSENCE, so a future test that reaches a real folder by
     another route (a hard-coded path, a `workspace=` argument built from
     Path.home(), an import-bound object nobody redirected, a re-import
@@ -238,6 +256,21 @@ def _nothing_is_written_to_the_real_workspace():
             problems.append(
                 f"the suite created {len(added)} {noun} in the real "
                 f"{label} {folder}: {added[:10]}")
+    # v0.14.1: the state folders are compared whole (existence, link,
+    # entries, sizes, modification times), since the move code renames
+    # and links rather than adds. A server of the developer's own running
+    # while the suite runs can also change them; the message says so.
+    assert set(STATE_BASELINE) == set(GUARDED_STATE_FOLDERS)
+    for label, folder in GUARDED_STATE_FOLDERS.items():
+        before = STATE_BASELINE[label]
+        after = state_folder_snapshot(folder)
+        if WORKSPACE_UNREADABLE in (before, after):
+            continue
+        if before != after:
+            problems.append(
+                f"the real {label} {folder} changed during the run (if a "
+                f"server of your own ran meanwhile, run again with it "
+                f"stopped)")
     if problems:
         raise AssertionError(
             "; ".join(problems) + "; tests must stay inside tmp_path")
@@ -418,7 +451,7 @@ def _windows_sharing_semantics():
 
 @pytest.fixture(autouse=True)
 def _isolate_session_manager(tmp_path, _sandbox_patch):
-    """Keep AI coding sessions out of the real ~/.qualcoder_mcp/sessions.
+    """Keep AI coding sessions out of the real state folder.
 
     `server.session_manager` is an INSTANCE built at import time, and
     its storage directory is `expanduser`d in the constructor, so a test
@@ -468,7 +501,8 @@ def _isolate_ai_coder_name(_sandbox_patch):
     spurious failures (QA round 1, F21). Tests that exercise the
     variable set it themselves through monkeypatch.
     """
-    _sandbox_patch.delenv("QUALCODER_MCP_AI_CODER_NAME", raising=False)
+    for name in _names.SETTINGS["ai_coder_name"]:
+        _sandbox_patch.delenv(name, raising=False)
 
 
 # =============================================================================

@@ -576,7 +576,8 @@ def _inside(path: Path, folder: Optional[Path]) -> bool:
 
 def check_parent_folder(parent: Path, state_home: Optional[Path],
                         is_default: bool,
-                        qualcoder_settings: Optional[Path] = None) -> None:
+                        qualcoder_settings: Optional[Path] = None,
+                        old_state_home: Optional[Path] = None) -> None:
     """Refuse a parent folder a project must not be created in.
 
     `parent` is resolved. The researcher's own folder must exist and be
@@ -597,11 +598,13 @@ def check_parent_folder(parent: Path, state_home: Optional[Path],
         if not parent.is_dir():
             raise Refusal(f"'{parent}' is not a folder. Name an existing "
                           f"folder, or leave `directory` out.")
-    if _inside(parent, state_home):
+    # v0.14.1: the folder the state folder was moved from is refused as
+    # well, for good, whether or not it exists
+    if _inside(parent, state_home) or _inside(parent, old_state_home):
         raise Refusal(
             f"{where} is inside this server's state folder "
-            f"(~/.qualcoder_mcp), which holds its internal state; choose "
-            f"another folder.")
+            f"(~/.exegete, or ~/.qualcoder_mcp, its earlier name), which "
+            f"holds its internal state; choose another folder.")
     if _inside(parent, qualcoder_settings):
         raise Refusal(
             f"{where} is inside QualCoder's own settings folder "

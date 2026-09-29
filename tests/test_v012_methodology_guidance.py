@@ -60,7 +60,7 @@ class TestCanonicalBlocks:
         assert "Prefer a caveat or a reframing over a refusal" in v
         assert "never" in v and "replaces the researcher's approval" in v
         assert "never a" in v and "reason to withhold project data" in v
-        assert "qualcoder://project/info" in v
+        assert "exegete://project/info" in v
 
     def test_added_text_uses_ascii_punctuation_and_british_spelling(self):
         for text in (server.GROUNDING_RULES, server.METHODOLOGY_VOCABULARY,
@@ -167,9 +167,9 @@ class TestExplainAiCodingTools:
         assert list(v["decisions"]) == LABELS
         assert {e["decision"] for e in v["examples"]} == set(LABELS)
         assert "never replaces the researcher's approval" in v["limits"]
-        assert "qualcoder://project/info" in v["framework"]
+        assert "exegete://project/info" in v["framework"]
         m = json.loads(server.explain_ai_coding_tools("methods_notes"))
-        assert m["resource"] == "qualcoder://guidance/methods"
+        assert m["resource"] == "exegete://guidance/methods"
 
     def test_overview_gains_grounding_and_idempotent_writes(self):
         o = json.loads(server.explain_ai_coding_tools())
@@ -205,7 +205,7 @@ class TestMethodsResource:
 
     def test_registered_as_markdown_resource(self):
         res = asyncio.run(server.mcp.list_resources())
-        match = [r for r in res if str(r.uri) == "qualcoder://guidance/methods"]
+        match = [r for r in res if str(r.uri) == "exegete://guidance/methods"]
         assert len(match) == 1
         assert match[0].mimeType == "text/markdown"
         assert "Static; needs no project" in (match[0].description or "")
@@ -216,7 +216,7 @@ class TestMethodsResource:
         removed = server._apply_toolset("core")
         try:
             uris = {str(r.uri) for r in asyncio.run(server.mcp.list_resources())}
-            assert "qualcoder://guidance/methods" in uris
+            assert "exegete://guidance/methods" in uris
         finally:
             for name, tool in removed.items():
                 server.mcp._tool_manager._tools[name] = tool
@@ -266,7 +266,7 @@ class TestHandshakeInstructions:
     def test_instructions_reach_the_low_level_server(self):
         assert server.mcp._mcp_server.instructions == server.SERVER_INSTRUCTIONS
         assert "evidence discipline" in server.SERVER_INSTRUCTIONS
-        assert "qualcoder://guidance/methods" in server.SERVER_INSTRUCTIONS
+        assert "exegete://guidance/methods" in server.SERVER_INSTRUCTIONS
         assert "Coding suggestions and code proposals are written to the " \
             "project only when each item has been marked approved" \
             in server.SERVER_INSTRUCTIONS

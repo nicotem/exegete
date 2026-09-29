@@ -90,7 +90,7 @@ def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
 EXPECTED_TOOLS = 73
-EXPECTED_CONCRETE_RESOURCES = 7   # six data resources + qualcoder://guidance/methods (0.12)
+EXPECTED_CONCRETE_RESOURCES = 7   # six data resources + exegete://guidance/methods (0.12)
 EXPECTED_RESOURCE_TEMPLATES = 3
 EXPECTED_RESOURCES_TOTAL = 10
 EXPECTED_PROMPTS = 4
@@ -470,7 +470,7 @@ def test_initialize_carries_methodology_instructions():
 
     instructions = run(scenario())
     assert "evidence discipline" in instructions
-    assert "qualcoder://guidance/methods" in instructions
+    assert "exegete://guidance/methods" in instructions
     assert "\u2014" not in instructions
 
 
@@ -479,7 +479,7 @@ def test_methods_guidance_resource_over_wire():
     no project (this client never selects one)."""
     async def scenario():
         async with Client() as s:
-            res = await s.read_resource("qualcoder://guidance/methods")
+            res = await s.read_resource("exegete://guidance/methods")
             block = res.contents[0]
             return getattr(block, "mimeType", None), getattr(block, "text", "")
 
@@ -493,7 +493,7 @@ def test_read_resource_over_wire(standard_project):
     async def scenario():
         async with Client() as s:
             await s.call_tool("select_project", {"project_path": standard_project})
-            r = await s.read_resource("qualcoder://project/info")
+            r = await s.read_resource("exegete://project/info")
             return "".join(c.text for c in r.contents if getattr(c, "text", None))
 
     body = run(scenario())

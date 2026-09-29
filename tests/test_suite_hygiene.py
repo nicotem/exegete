@@ -124,11 +124,11 @@ class TestNothingIsWrittenOutsideTheSandbox:
         assert resolved.is_relative_to(tmp_path.resolve())
         assert not resolved.is_relative_to(H.REAL_WORKSPACE)
         import exegete.server as _server
-        assert not pathlib.Path(
-            _server.session_manager.storage_dir).is_relative_to(
-                H.REAL_STATE_HOME)
-        assert not pathlib.Path(_server._MRU_FILE).is_relative_to(
-            H.REAL_STATE_HOME)
+        for real in (H.REAL_STATE_HOME, H.REAL_OLD_STATE_HOME):
+            assert not pathlib.Path(
+                _server.session_manager.storage_dir).is_relative_to(real)
+            assert not pathlib.Path(_server._mru_file()).is_relative_to(
+                real)
 
 
 class TestTheDefaultWorkspaceIsResolvedWhenAsked:
@@ -194,18 +194,26 @@ class TestTheDefaultWorkspaceIsResolvedWhenAsked:
         nor the real folder is reported too.
         """
         import exegete.server as _server
-        from exegete import preview_tokens
+        from exegete import preview_tokens, state_folder
         sandbox = tmp_path.resolve()
         bindings = {
             "Path.home()": pathlib.Path.home(),
             "database.default_workspace()": database.default_workspace(),
             "server._MRU_FILE": _server._MRU_FILE,
+            "server._mru_file()": _server._mru_file(),
             "preview_tokens.STATE_HOME": preview_tokens.STATE_HOME,
             "preview_tokens.state_home()": preview_tokens.state_home(),
+            # v0.14.1: the folder the state folder was moved from, which
+            # the guards refuse, and the two the move works on
+            "preview_tokens.OLD_STATE_HOME": preview_tokens.OLD_STATE_HOME,
+            "preview_tokens.old_state_home()":
+                preview_tokens.old_state_home(),
+            "state_folder.new_path()": state_folder.new_path(),
+            "state_folder.old_path()": state_folder.old_path(),
             "server.session_manager.storage_dir":
                 _server.session_manager.storage_dir,
         }
-        assert len(bindings) >= 6          # the walk is not empty
+        assert len(bindings) >= 11         # the walk is not empty
         outside = {name: str(path) for name, path in bindings.items()
                    if not pathlib.Path(path).resolve().is_relative_to(
                        sandbox)}

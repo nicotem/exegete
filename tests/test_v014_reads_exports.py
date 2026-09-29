@@ -1850,8 +1850,11 @@ class TestPagingByStoredBytes:
             encoding="utf-8")
         home = tmp_path / "childhome"
         home.mkdir()
-        env = dict(os.environ, HOME=str(home), USERPROFILE=str(home),
-                   QUALCODER_MCP_STATE_HOME=str(home / "state"))
+        # The home alone keeps the child's state folder here: the server
+        # finds it through HOME (USERPROFILE on Windows) and reads no
+        # variable naming it (v0.14.1: QUALCODER_MCP_STATE_HOME, once set
+        # here, was never read by anything).
+        env = dict(os.environ, HOME=str(home), USERPROFILE=str(home))
         started = time.perf_counter()
         try:
             done = subprocess.run([sys.executable, "-B", str(script)],

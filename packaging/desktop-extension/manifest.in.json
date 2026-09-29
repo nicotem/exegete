@@ -17,6 +17,9 @@
         "exegete"
       ],
       "env": {
+        "EXEGETE_TOOLSET": "${user_config.toolset}",
+        "EXEGETE_WORKSPACE": "${user_config.projects_folder}",
+        "EXEGETE_WORKSPACE_REQUIRED": "1",
         "QUALCODER_MCP_TOOLSET": "${user_config.toolset}",
         "QUALCODER_MCP_WORKSPACE": "${user_config.projects_folder}",
         "QUALCODER_MCP_WORKSPACE_REQUIRED": "1"

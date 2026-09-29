@@ -30,6 +30,7 @@ if str(_SRC) not in sys.path:
 
 import exegete.server as server  # noqa: E402
 from exegete import database as _database  # noqa: E402
+from exegete import names as _names  # noqa: E402
 from exegete import preview_tokens as _preview_tokens  # noqa: E402
 from exegete.database import QualcoderDatabase  # noqa: E402
 from exegete.project_settings import (  # noqa: E402
@@ -62,12 +63,27 @@ TMP_ROOT = Path(__file__).resolve().parent / "tmp"
 # session file lands one directory down (fix round 2, the widening the
 # gate asked for).
 REAL_WORKSPACE = Path(_database.default_workspace())
-REAL_STATE_HOME = Path(_preview_tokens.STATE_HOME)
+# v0.14.1: the state folder moved from ~/.qualcoder_mcp to ~/.exegete,
+# and the move code is exactly what touches the old one, which on a
+# developer's computer holds the real key and records: both are named
+# here, from the home folder at import (before any fixture moves it), and
+# both are watched in full at the session's end against a snapshot taken
+# at its start (conftest). Neither is assumed absent: after the owner's
+# live check ~/.exegete exists legitimately.
+REAL_STATE_HOME = Path.home() / _names.STATE_FOLDER
+REAL_OLD_STATE_HOME = Path.home() / _names.OLD_STATE_FOLDER
 WORKSPACE_UNREADABLE = "unreadable"
 
 GUARDED_REAL_FOLDERS = {
     "workspace": REAL_WORKSPACE,
     "state home": REAL_STATE_HOME,
+    "old state home": REAL_OLD_STATE_HOME,
+}
+# The two state folders, watched for any change at all, not only for
+# entries added (conftest's session-end guard).
+GUARDED_STATE_FOLDERS = {
+    "state home": REAL_STATE_HOME,
+    "old state home": REAL_OLD_STATE_HOME,
 }
 # v0.14: when the environment sets QUALCODER_MCP_WORKSPACE (the desktop
 # extension's folder for projects), REAL_WORKSPACE above is that folder,
@@ -76,6 +92,34 @@ GUARDED_REAL_FOLDERS = {
 if Path(_database.standard_workspace()) != REAL_WORKSPACE:
     GUARDED_REAL_FOLDERS["standard workspace"] = Path(
         _database.standard_workspace())
+
+
+def state_folder_snapshot(folder):
+    """Everything about one of the real state folders a suite could
+    change: whether it exists, whether it is a link and to what, and the
+    size and modification time of every entry inside it (recursive).
+    None when nothing is at the path; the unreadable marker when it
+    cannot be listed."""
+    path = Path(folder)
+    if not os.path.lexists(path):
+        return None
+    try:
+        link = os.path.islink(path)
+        entries = {}
+        if path.is_dir():
+            for entry in sorted(path.rglob("*")):
+                info = entry.lstat()
+                entries[entry.relative_to(path).as_posix()] = (
+                    info.st_size, info.st_mtime_ns,
+                    stat_module.S_IFMT(info.st_mode))
+        top = path.lstat()
+        return {"link": link,
+                "target": os.readlink(path) if link else None,
+                "mode": stat_module.S_IMODE(top.st_mode),
+                "mtime": top.st_mtime_ns,
+                "entries": entries}
+    except OSError:
+        return WORKSPACE_UNREADABLE
 
 
 def real_workspace_entries(workspace=None):

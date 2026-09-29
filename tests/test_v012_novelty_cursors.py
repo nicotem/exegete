@@ -346,7 +346,7 @@ class TestValidationTexts:
         assert out["error"] == (
             "exclude_code_ids contains unknown code id(s): 41, 42. Use "
             "get_coding_frequencies, which lists every code with its id, "
-            "or the qualcoder://codes/list resource.")
+            "or the exegete://codes/list resource.")
 
     @pytest.mark.parametrize("bad", [["1"], [1.5], [True], [[1]], [0], [-3],
                                      "1,2"])
@@ -384,7 +384,7 @@ class TestValidationTexts:
         # pattern, so the resource first and a name search after it
         assert out["error"] == (
             "file_ids contains unknown file id(s): 9. The "
-            "qualcoder://files/list resource lists every file with its id; "
+            "exegete://files/list resource lists every file with its id; "
             "without it, search_files with part of the file's name as the "
             "pattern finds it (it searches names by default).")
 

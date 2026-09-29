@@ -198,9 +198,10 @@ class TestProbeGate:
         p = v17fix.make_project(tmp_path, "v17")
         _exec(p, "UPDATE project SET databaseversion = 'v19'")
         _attach(p, tmp_path)
-        # refused without the override, naming the env var
+        # refused without the override, naming the env var (v0.14.1: its
+        # new spelling; the earlier one, set below, is still read)
         out = json.loads(server.set_memo("code", 1, "future"))
-        assert "error" in out and "QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA" in out["error"]
+        assert "error" in out and "EXEGETE_ALLOW_UNKNOWN_SCHEMA" in out["error"]
 
         monkeypatch.setenv("QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA", "1")
         _attach(p, tmp_path)  # fresh connection under the override
@@ -217,7 +218,7 @@ class TestProbeGate:
         _exec(p, "UPDATE project SET databaseversion = 'banana'")
         _attach(p, tmp_path)
         out = json.loads(server.set_memo("code", 1, "nope"))
-        assert "error" in out and "QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA" in out["error"]
+        assert "error" in out and "EXEGETE_ALLOW_UNKNOWN_SCHEMA" in out["error"]
 
     def test_no_warning_leakage_when_unset(self, tmp_path):
         p = v17fix.make_project(tmp_path, "v14")

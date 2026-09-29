@@ -499,7 +499,7 @@ class TestTheQueryHelperAndTheRoutesWithNoTrigger:
         _ddl(project, _not_utf8("code_name", "memo", "cid = 1"))
         caplog.set_level(logging.DEBUG)
         contents = asyncio.run(server.mcp.read_resource(
-            "qualcoder://codes/list"))
+            "exegete://codes/list"))
         text = "".join(item.content for item in contents)
         _assert_no_leak(caplog, text)
         assert json.loads(text) == {"error": server.DB_UNAVAILABLE_ERROR}
@@ -1213,12 +1213,12 @@ class TestAnArrivalInQualCodersOwnOrder:
 # for in every line (QA F1, Security secB-1, and their refuters' scenarios).
 
 CONCRETE_RESOURCES = [
-    "qualcoder://project/info", "qualcoder://codes/list",
-    "qualcoder://categories/list", "qualcoder://files/list",
-    "qualcoder://cases/list", "qualcoder://journal",
-    "qualcoder://guidance/methods"]
-TEMPLATE_RESOURCES = ["qualcoder://codes/1", "qualcoder://files/1",
-                      "qualcoder://cases/1"]
+    "exegete://project/info", "exegete://codes/list",
+    "exegete://categories/list", "exegete://files/list",
+    "exegete://cases/list", "exegete://journal",
+    "exegete://guidance/methods"]
+TEMPLATE_RESOURCES = ["exegete://codes/1", "exegete://files/1",
+                      "exegete://cases/1"]
 
 
 class _Wire:
@@ -1240,8 +1240,11 @@ class _Wire:
         import os
         env = {k: v for k, v in os.environ.items()
                if k != "QUALCODER_PROJECT_PATH"}
+        # The home alone keeps the child's state folder here: the server
+        # finds it through HOME (USERPROFILE on Windows) and reads no
+        # variable naming it (v0.14.1: QUALCODER_MCP_STATE_HOME, once set
+        # here, was never read by anything).
         env.update(HOME=str(self.home), USERPROFILE=str(self.home),
-                   QUALCODER_MCP_STATE_HOME=str(self.home / ".qualcoder_mcp"),
                    PYTHONPATH=str(Path(server.__file__).parents[1]),
                    PYTHONDONTWRITEBYTECODE="1")
         if configured is not None:
@@ -1358,7 +1361,7 @@ class TestResourcesLogNothingOverTheWire:
                  ("tool", "select_project",
                   {"project_path": str(wire.project.parent
                                        / f"{MARK} typo.qda")}),
-                 ("read", "qualcoder://codes/list", None)]
+                 ("read", "exegete://codes/list", None)]
         answers, stderr = wire.run(
             steps, during=lambda i: held() if i == 2
             else contextlib.nullcontext())

@@ -429,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 195_325          # 73 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 64_835           # 21 tools, same environment
-    FULL_MEASURED_310 = 205_033      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 68_127
+    FULL_MEASURED = 195_313          # 73 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 64_827           # 21 tools, same environment
+    FULL_MEASURED_310 = 205_021      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 68_119
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 197_910     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 207_758
+    LIFECYCLE_MEASURED = 197_898     # 74 tools, same environment
+    LIFECYCLE_MEASURED_310 = 207_746
 
     # Why two per cent, away from the reference environment.
     #
@@ -462,8 +462,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "195,325"
-    CORE_CHARS = "64,835"
+    FULL_CHARS = "195,313"
+    CORE_CHARS = "64,827"
     FULL_ROUNDED = "195,000"
     CORE_ROUNDED = "65,000"
     FULL_TOKENS = "49k"
@@ -491,9 +491,18 @@ class TestThePublishedSchemaBudget:
         description, `set_memo`'s project target and `select_project`'s
         signals), so the release being written
         is the Unreleased entry, and the 0.13 figure is history
-        (`_v013_entry`).
+        (`_v013_entry`). v0.14.1 moves it once more (the rename: the
+        resource addresses in the tools' texts), so the current entry is
+        the Unreleased one alone and 0.14.0's figure is history
+        (`_v0140_entry`).
         """
-        return cls._read("CHANGELOG.md").split("## [0.13")[0]
+        return cls._read("CHANGELOG.md").split("## [0.14.0")[0]
+
+    @classmethod
+    def _v0140_entry(cls):
+        """The 0.14.0 entry, whose figure is history and stays put."""
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [0.14.0"):text.index("## [0.13")]
 
     @classmethod
     def _v013_entry(cls):
@@ -620,6 +629,10 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0140 = self._v0140_entry()
+        assert v0140.count("Serialised tool") == 1
+        assert "full = 195,325 characters" in v0140
+        assert self.FULL_CHARS not in v0140
         v013 = self._v013_entry()
         assert v013.count("Serialised tool") == 1
         assert "full = 171,040 characters" in v013

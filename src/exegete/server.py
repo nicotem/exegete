@@ -26,7 +26,7 @@ from mcp.server.fastmcp import Context
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from . import names
+from . import env_settings, names, state_folder
 from .database import (
     QualcoderDatabase,
     sqlite_error_label,
@@ -127,6 +127,7 @@ from .preview_tokens import (
     issue,
     load_secret,
     state_home as preview_tokens_state_home,
+    old_state_home as preview_tokens_old_state_home,
     verify,
 )
 from .project_settings import (
@@ -213,7 +214,7 @@ GROUNDING_RULES = """GROUNDING RULES (every analysis tool expects these):
   whatever it says."""
 
 METHODOLOGY_VOCABULARY = """METHODOLOGICAL JUDGEMENT: before acting on a request, ask whether it is
-sound for this study; the project memo (qualcoder://project/info) may
+sound for this study; the project memo (exegete://project/info) may
 state the methodology, and if it is unclear, ask and suggest recording it
 there. Four outcomes, in the vocabulary QualCoder 4.0's own assistant
 uses:
@@ -363,7 +364,7 @@ SERVER_INSTRUCTIONS = (
     "tools, quote it verbatim, treat a null result as a valid result, and "
     "judge whether a request is methodologically sound for the study before "
     "acting (explain_ai_coding_tools('methodology_vocabulary') or the "
-    "qualcoder://guidance/methods resource). Coding suggestions and code "
+    "exegete://guidance/methods resource). Coding suggestions and code "
     "proposals are written to the project only when each item has been "
     "marked approved, which you do only on the researcher's word: the "
     "server cannot tell who approved."
@@ -518,7 +519,7 @@ TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
 # offers no "don't ask again", lets no allow rule skip it, and denies it
 # in dontAsk ("Require approval for a specific tool", code.claude.com's
 # MCP page). Earlier versions ignore it. It is sent by
-# `_QualcoderMCP.list_tools`, which the mcp floor (1.17) needs: its
+# `_ExegeteMCP.list_tools`, which the mcp floor (1.17) needs: its
 # FastMCP sends no tool metadata of its own.
 TOOL_META = {
     "read_pseudonym_list": {"anthropic/requiresUserInteraction": True},
@@ -567,9 +568,28 @@ def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
                        "arguments": declared}, indent=2)
 
 
-class _QualcoderMCP(FastMCP):
+# v0.14.1: the resources' addresses moved from qualcoder:// to
+# exegete:// (QualCoder's own MCP server uses qualcoder://, and one host
+# can hold both servers). The earlier addresses are still answered, and no
+# longer listed, until v1.0, so a conversation resumed across the update
+# still reads what its earlier instructions named.
+_OLD_RESOURCE_PREFIX = f"{names.OLD_RESOURCE_SCHEME}://"
+_RESOURCE_PREFIX = f"{names.RESOURCE_SCHEME}://"
+
+
+def current_resource_address(uri: Any) -> Any:
+    """A qualcoder:// address as its exegete:// twin; any other as it is.
+    (A scheme ignores letter case.)"""
+    text = str(uri)
+    if text[:len(_OLD_RESOURCE_PREFIX)].lower() == _OLD_RESOURCE_PREFIX:
+        return _RESOURCE_PREFIX + text[len(_OLD_RESOURCE_PREFIX):]
+    return uri
+
+
+class _ExegeteMCP(FastMCP):
     """FastMCP, with every tool refusing an argument it does not declare
-    (v0.14, server-wide).
+    (v0.14, server-wide), and the resources' earlier addresses answered
+    (v0.14.1).
 
     The check sits on the host's own path: `call_tool` is the method the
     MCP request handler calls, and the one this suite's host-path tests
@@ -610,6 +630,11 @@ class _QualcoderMCP(FastMCP):
         # walks every text a core tool can reach to keep it so.
         return await super().call_tool(name, arguments)
 
+    async def read_resource(self, uri):
+        # The earlier scheme is rewritten before matching, templates
+        # included; only exegete:// is registered, so only it is listed
+        return await super().read_resource(current_resource_address(uri))
+
     async def list_tools(self):
         tools = await super().list_tools()
         for tool in tools:
@@ -620,7 +645,7 @@ class _QualcoderMCP(FastMCP):
 
 
 # Initialize MCP server
-mcp = _QualcoderMCP("Qualcoder", instructions=SERVER_INSTRUCTIONS)
+mcp = _ExegeteMCP("Qualcoder", instructions=SERVER_INSTRUCTIONS)
 # Advertise OUR version in the MCP handshake (serverInfo.version) instead of
 # the mcp SDK's own version, which FastMCP falls back to (track3 L-1). The
 # FastMCP constructor has no version parameter in this SDK line, so set it on
@@ -664,13 +689,25 @@ current_project_path: Optional[str] = None
 session_manager = SessionManager()
 
 # P1-6: most-recently-used project hint. Recorded on every successful
-# select_project in the existing on-disk state home (~/.qualcoder_mcp/),
+# select_project in the server's state folder (~/.exegete/),
 # and appended to "no project selected" errors so a client whose host
 # recycled the server process (observed with LM Studio) can recover with
 # ONE deterministic select_project call. The selection itself is NEVER
 # auto-restored (owner-rejected: it would break explicit-selection
 # semantics, and concurrent hosts would clobber each other).
-_MRU_FILE = Path.home() / ".qualcoder_mcp" / "mru_project.json"
+MRU_FILENAME = "mru_project.json"
+# None: the hint lives in the state folder chosen at CALL time (v0.14.1),
+# the same choice as the token secret's and the sessions'; the test
+# sandbox sets a file of its own.
+_MRU_FILE: Optional[Path] = None
+
+
+def _mru_file() -> Path:
+    """Where the most-recently-used project hint is kept."""
+    if _MRU_FILE is not None:
+        return Path(_MRU_FILE)
+    return preview_tokens_state_home() / MRU_FILENAME
+
 # The payload is about 120 bytes; anything larger is not ours (S-H1)
 MRU_READ_MAX_BYTES = 4096
 
@@ -685,8 +722,9 @@ def _open_mru_tmp():
     through, crash litter is never reopened, and the file is
     owner-readable only (S-H1). Mode bits are ignored on Windows.
     """
-    fd, name = tempfile.mkstemp(dir=_MRU_FILE.parent,
-                                prefix=f"{_MRU_FILE.name}.", suffix=".tmp")
+    mru = _mru_file()
+    fd, name = tempfile.mkstemp(dir=mru.parent,
+                                prefix=f"{mru.name}.", suffix=".tmp")
     return fd, Path(name)
 
 
@@ -701,11 +739,9 @@ def _remember_mru_project(project_path: str) -> None:
     tmp = None
     try:
         # Same folder as the token secret, same rule: owner-only, and a
-        # wider one is narrowed rather than left (fix round 4). The
-        # helper reads preview_tokens.STATE_HOME, which is the real
-        # folder in production and the sandbox's in the suite, while
-        # _MRU_FILE.parent is whichever of the two this process uses.
-        ensure_state_dir(_MRU_FILE.parent)
+        # wider one is narrowed rather than left (fix round 4).
+        mru = _mru_file()
+        ensure_state_dir(mru.parent)
         payload = {
             "project_path": str(project_path),
             "updated": datetime.now().isoformat(timespec="seconds"),
@@ -713,7 +749,7 @@ def _remember_mru_project(project_path: str) -> None:
         fd, tmp = _open_mru_tmp()
         # The descriptor is unowned until `os.fdopen` takes it, and the
         # cleanup below can only unlink the temp on POSIX while it is
-        # still open. On Windows the unlink fails and ~/.qualcoder_mcp
+        # still open. On Windows the unlink fails and the state folder
         # accumulates temps (fix round 5).
         try:
             handle = os.fdopen(fd, "w", encoding="utf-8")
@@ -722,7 +758,7 @@ def _remember_mru_project(project_path: str) -> None:
             raise
         with handle as f:
             json.dump(payload, f)
-        tmp.replace(_MRU_FILE)
+        tmp.replace(mru)
     except Exception as e:
         logger.debug("Could not record MRU project: %s", error_label(e))
         if tmp is not None:
@@ -766,7 +802,7 @@ def _mru_hint() -> str:
     multibyte payload cannot slip under a character count (fix round 3).
     """
     try:
-        with open(_MRU_FILE, "rb") as f:
+        with open(_mru_file(), "rb") as f:
             raw = f.read(MRU_READ_MAX_BYTES + 1)
         if len(raw) > MRU_READ_MAX_BYTES:
             return ""
@@ -787,8 +823,8 @@ def _no_project_message() -> str:
     """The uniform "no project selected" error text (with MRU hint)."""
     return ("No Qualcoder project selected. Use 'list_available_projects' "
             "to discover projects, then 'select_project' to choose one. "
-            "Or set QUALCODER_PROJECT_PATH environment variable."
-            + _mru_hint())
+            f"Or set {env_settings.new_name('project_path')} in the host's "
+            f"configuration." + _mru_hint())
 
 
 # Fixed, path-free text for any database that will not open or errors
@@ -882,8 +918,8 @@ UNEXPECTED_RESOURCE_ERROR = (
 # get_project_summary lists only the ten codes most used, export_codebook
 # writes a file, and search_files needs a pattern.
 LIST_CODES_HINT = ("Use get_coding_frequencies, which lists every code with "
-                   "its id, or the qualcoder://codes/list resource.")
-LIST_FILES_HINT = ("The qualcoder://files/list resource lists every file "
+                   "its id, or the exegete://codes/list resource.")
+LIST_FILES_HINT = ("The exegete://files/list resource lists every file "
                    "with its id; without it, search_files with part of the "
                    "file's name as the pattern finds it (it searches names "
                    "by default).")
@@ -906,7 +942,7 @@ def _resource_guard(fn):
     selected" with the last-used project's path, and every refusal of a
     configured path (`validate_qda_path`). So a resource returns the
     error JSON a tool would answer for the same error (`_error_answer`,
-    one policy for both), as `qualcoder://cases/{id}` already answered a
+    one policy for both), as `exegete://cases/{id}` already answered a
     missing case, and the library logs nothing. The hint to the
     last-used project stays in the answer, where it helps, as it does in
     a tool's; a host that records every answer records it there, as it
@@ -925,7 +961,7 @@ def _resource_guard(fn):
 def _host_set_workspace() -> Optional[str]:
     """The workspace QUALCODER_MCP_WORKSPACE names, as text, or None when
     it is not set (or not usable, which stops the server at start-up)."""
-    if not os.environ.get(WORKSPACE_ENV, "").strip() \
+    if not (env_settings.value("workspace") or "").strip() \
             or workspace_setting_problem() is not None:
         return None
     return str(default_workspace())
@@ -1105,7 +1141,7 @@ def _selection_after_failure(previous: Optional[str]) -> Tuple[str, Any]:
     the sentence that ends its answer, and the name for its
     `selected_project` (null when none)."""
     if current_project_path is None and \
-            os.environ.get("QUALCODER_PROJECT_PATH"):
+            env_settings.value("project_path"):
         # With nothing selected, the next tool opens the project set in
         # the host's configuration, so "No project is selected" would
         # send the next write somewhere unsaid (fix round 1). It is
@@ -1116,7 +1152,8 @@ def _selection_after_failure(previous: Optional[str]) -> Tuple[str, Any]:
             logger.error("The configured project would not open after a "
                          "failed selection: %s", error_label(e))
             return ("No project is selected, and the project set in the "
-                    "host's configuration (QUALCODER_PROJECT_PATH) could "
+                    f"host's configuration "
+                    f"({env_settings.read('project_path').name}) could "
                     "not be opened either."), None
         if current_project_path is not None:
             name = project_display_name(current_project_path)
@@ -1175,7 +1212,7 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
 
     if db is None:
         # Try environment variable first
-        db_path = os.environ.get("QUALCODER_PROJECT_PATH")
+        db_path = env_settings.value("project_path")
 
         if not db_path:
             raise ValueError(_no_project_message())
@@ -1184,8 +1221,8 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             db = QualcoderDatabase(db_path, read_only=read_only)
             current_project_path = db_path
             # Neither the path nor the folder's name (v0.14)
-            logger.info("Connected to the project set in "
-                        "QUALCODER_PROJECT_PATH")
+            logger.info("Connected to the project set in %s",
+                        env_settings.read("project_path").name)
         except (DatabaseLockedError, UnsupportedSchemaError):
             # Their own texts, which carry no path: a lock is a moment,
             # an old schema has its advice
@@ -1202,7 +1239,7 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
 
 
 CONFIGURED_PROJECT_UNAVAILABLE = (
-    "The project set in QUALCODER_PROJECT_PATH could not be opened: it was "
+    "The project set in the host's configuration could not be opened: it was "
     "not found, is not a QualCoder project folder, or its database will not "
     "open. Check the path in the host's configuration; if QualCoder has the "
     "project open, close it and retry. While the database will not open, no "
@@ -1233,7 +1270,7 @@ def _adopt_configured_project() -> None:
     than "no project selected".
     """
     if current_project_path is None and db is None \
-            and os.environ.get("QUALCODER_PROJECT_PATH"):
+            and env_settings.value("project_path"):
         get_db()
 
 
@@ -1994,16 +2031,17 @@ def _ai_coder_name() -> str:
     Raises:
         ValueError: If the configured value is invalid.
     """
-    raw = os.environ.get(AI_CODER_NAME_ENV)
+    reading = env_settings.read("ai_coder_name")
+    raw = reading.value
     if raw is None:
         return DEFAULT_AI_CODER_NAME
     if not raw.strip():
         raise ValueError(
-            f"{AI_CODER_NAME_ENV} is set but empty. Set it to the coder "
+            f"{reading.name} is set but empty. Set it to the coder "
             f"name this server should write under (for example "
             f"\"{DEFAULT_AI_CODER_NAME}\" or QualCoder 4.0's \"AI Agent\"), "
             f"or unset it to use the default.")
-    return validate_coder_name(raw, AI_CODER_NAME_ENV)
+    return validate_coder_name(raw, reading.name)
 
 
 def _export_owner_and_source() -> Tuple[str, str]:
@@ -2148,7 +2186,8 @@ def _mismatch_refusal(current: str, declared: str) -> Dict[str, Any]:
     return {
         "error": (
             f"This host declares the AI coder name \"{declared}\" "
-            f"({AI_CODER_NAME_ENV}), but this project's current AI coder "
+            f"({env_settings.read('ai_coder_name').name}), but this "
+            f"project's current AI coder "
             f"name is \"{current}\". Nothing was written. Ask the user "
             f"which name to use here, then call set_project_ai_coder_name "
             f"with \"{declared}\" to switch the project to it, or with "
@@ -2937,7 +2976,7 @@ def _alternative_gloss(alt: Dict[str, Any],
 # RESOURCES - Read-only data access
 # ============================================================================
 
-@mcp.resource("qualcoder://project/info")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://project/info")
 @_resource_guard
 def get_project_info() -> str:
     """Get information about the current Qualcoder project.
@@ -2948,7 +2987,7 @@ def get_project_info() -> str:
     return _ai_json(info, indent=2)
 
 
-@mcp.resource("qualcoder://codes/list")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://codes/list")
 @_resource_guard
 def list_all_codes() -> str:
     """Get a list of all codes in the project.
@@ -2960,7 +2999,7 @@ def list_all_codes() -> str:
     return _ai_json(codes, indent=2)
 
 
-@mcp.resource("qualcoder://categories/list")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://categories/list")
 @_resource_guard
 def list_all_categories() -> str:
     """Get a list of all code categories.
@@ -2971,7 +3010,7 @@ def list_all_categories() -> str:
     return _ai_json(categories, indent=2)
 
 
-@mcp.resource("qualcoder://codes/{code_id}")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://codes/{{code_id}}")
 @_resource_guard
 def get_code_info(code_id: int) -> str:
     """Get detailed information about a specific code.
@@ -2988,7 +3027,7 @@ def get_code_info(code_id: int) -> str:
     return _ai_json(code, indent=2)
 
 
-@mcp.resource("qualcoder://files/list")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://files/list")
 @_resource_guard
 def list_all_files() -> str:
     """Get a list of all source files in the project.
@@ -3000,7 +3039,7 @@ def list_all_files() -> str:
     return _ai_json(files, indent=2)
 
 
-@mcp.resource("qualcoder://files/{file_id}")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://files/{{file_id}}")
 @_resource_guard
 def get_file_content(file_id: int) -> str:
     """Get the content of a specific text file.
@@ -3017,7 +3056,7 @@ def get_file_content(file_id: int) -> str:
     return _ai_json(file_data, indent=2)
 
 
-@mcp.resource("qualcoder://cases/list")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://cases/list")
 @_resource_guard
 def list_all_cases() -> str:
     """Get a list of all cases in the project.
@@ -3029,7 +3068,7 @@ def list_all_cases() -> str:
     return _ai_json(cases, indent=2)
 
 
-@mcp.resource("qualcoder://cases/{case_id}")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://cases/{{case_id}}")
 @_resource_guard
 def get_case_info(case_id: int) -> str:
     """Get detailed information about a specific case.
@@ -3045,7 +3084,7 @@ def get_case_info(case_id: int) -> str:
     return _ai_json(case, indent=2)
 
 
-@mcp.resource("qualcoder://journal")
+@mcp.resource(f"{names.RESOURCE_SCHEME}://journal")
 @_resource_guard
 def get_journal_entries() -> str:
     """Get all journal entries from the project.
@@ -3103,7 +3142,7 @@ write on the call itself, with a backup.
 The project memo is the conventional home for research questions,
 methodology and data description; QualCoder seeds an empty project memo
 with those three headings. Read its public part through
-qualcoder://project/info or get_project_summary. Text after a '#####'
+exegete://project/info or get_project_summary. Text after a '#####'
 marker is the researcher's private zone and is never shown to you; do
 not try to infer it.
 
@@ -3143,13 +3182,13 @@ session stores the instruction on disk, so it survives a host restart.
 analyze_for_coding's answer carries the project memo's public part
 (project_memo), as QualCoder 4.0 hands the memo to its own assistant in
 every chat; outside a coding session, read it through
-get_project_summary or qualcoder://project/info. Ask the
+get_project_summary or exegete://project/info. Ask the
 researcher which framework applies before assuming one.
 """
 
 
 @mcp.resource(
-    "qualcoder://guidance/methods",
+    f"{names.RESOURCE_SCHEME}://guidance/methods",
     mime_type="text/markdown",
     description="Grounding rules, the four-way methodological vocabulary, and "
                 "citations to the method literature QualCoder 4.0 ships "
@@ -3380,7 +3419,7 @@ def select_project(project_path: str) -> str:
     since the next tool would use it.
 
     A successful selection is recorded as this machine's most recently used
-    project (~/.qualcoder_mcp/mru_project.json) so that a later "no project
+    project (~/.exegete/mru_project.json) so that a later "no project
     selected" error can name it; the selection itself is never restored
     automatically.
 
@@ -4215,11 +4254,11 @@ def _resolve_exclude_code_ids(db_, value: Any) -> List[int]:
 
 # Where the assistant can find the ids a refusal below says do not exist.
 _ID_LISTS = {
-    "code": "get_coding_frequencies or the qualcoder://codes/list resource "
+    "code": "get_coding_frequencies or the exegete://codes/list resource "
             "lists every code with its id",
-    "file": "the qualcoder://files/list resource lists every file with its "
+    "file": "the exegete://files/list resource lists every file with its "
             "id; search_files finds one by name",
-    "case": "the qualcoder://cases/list resource lists every case with its "
+    "case": "the exegete://cases/list resource lists every case with its "
             "id",
 }
 
@@ -5367,9 +5406,7 @@ def export_refi_qda(
         })
     if _inside_state_home(out_file):
         return json.dumps({
-            "error": "Refusing to write the export inside this server's "
-                     "state folder (~/.qualcoder_mcp), which holds session "
-                     "files and internal state; choose another location."
+            "error": STATE_FOLDER_EXPORT_REFUSAL
         })
     project_folder = validate_qda_path(current_project_path).parent
     if project_folder in out_file.parents or out_file.parent == project_folder:
@@ -10777,7 +10814,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                                "step and ask; decline and offer an alternative); "
                                "the labels are for your own reasoning and for "
                                "this help text",
-            "framework": "The project memo (qualcoder://project/info) may state "
+            "framework": "The project memo (exegete://project/info) may state "
                          "the study's methodology; QualCoder seeds new project "
                          "memos with a Methodology heading. If it is unclear, "
                          "ask, and suggest recording it there",
@@ -10788,7 +10825,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         },
         "methods_notes": {
             "purpose": "Where to read more",
-            "resource": "qualcoder://guidance/methods",
+            "resource": "exegete://guidance/methods",
             "note": "The resource carries the grounding rules, the four-way "
                     "vocabulary, and citations to the method literature QualCoder "
                     "4.0 ships prompts for; it needs no project to be selected"
@@ -13269,7 +13306,7 @@ def _pseudonymisation_dir() -> Path:
     `preview_tokens.state_home()` rather than a second `Path.home()` of
     our own, so the suite's isolation of the state home covers this
     folder too and no test can write a manifest into the researcher's
-    own `~/.qualcoder_mcp`.
+    own `~/.exegete` (or `~/.qualcoder_mcp`, its earlier name).
     """
     return preview_tokens_state_home() / PSEUDONYMISATION_DIRNAME
 
@@ -14458,7 +14495,7 @@ def _sessions_note(holding: List[str], to_apply: List[str]) -> List[str]:
             f"text, real names included: a suggestion's passage (and, in a "
             f"file written before v0.14, the text around it) or a proposed "
             f"code's evidence. They are in "
-            f"this server's sessions folder (~/.qualcoder_mcp/sessions/, "
+            f"this server's sessions folder (~/.exegete/sessions/, "
             f"one file per session). ")
     if to_apply:
         note += (f"{len(to_apply)} of them have work still to apply "
@@ -14623,7 +14660,7 @@ def run_record_text_digest(secret: str, text: str) -> str:
     token secret over `RUN_RECORD_TEXT_LABEL` and the text as UTF-8.
 
     Only someone holding the secret (this account's
-    `~/.qualcoder_mcp/preview_secret`, or the state home the server was
+    `~/.exegete/preview_secret`, or the state home the server was
     given) can compute it, so it tells, on this account, whether a text at
     hand is the one a run read or wrote, and confirms nothing to anyone
     else who holds the record and the pseudonymised text.
@@ -15391,7 +15428,7 @@ def pseudonymise_source(
                 "Or call pseudonymise_source again with "
                 "record_in_journal=false and the same preview_token: the "
                 "rewrite itself writes no owner, so it needs no coder "
-                "name. The run manifest in ~/.qualcoder_mcp still records "
+                "name. The run manifest in ~/.exegete still records "
                 "it.")
 
     captured: Dict[str, Any] = {}
@@ -15664,7 +15701,7 @@ def pseudonymise_source(
     if written_to is None:
         result["manifest_path"] = None
         result["manifest_note"] = (
-            "The run manifest could not be written to ~/.qualcoder_mcp; "
+            "The run manifest could not be written to ~/.exegete; "
             "the rewrite itself committed and is unaffected. Check the "
             "permissions on that folder.")
     else:
@@ -16107,7 +16144,7 @@ def rename_case(case_id: int, new_name: str,
     ignoring letter case, '_' and '.' separating words; each count only
     when not zero), and `note` names the rest.
 
-    Find a case id in qualcoder://cases/list, get_case_code_matrix, a
+    Find a case id in exegete://cases/list, get_case_code_matrix, a
     create_case answer, or QualCoder's own id column.
 
     QualCoder 4.0 writes no lock file, so this server cannot see a 4.0 window that has the project open: a Manage Cases window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
@@ -16609,7 +16646,7 @@ def rename_file(file_id: int, new_name: str,
     `search_index_note` and
     `note`.
 
-    Find a file id in qualcoder://files/list or search_files.
+    Find a file id in exegete://files/list or search_files.
 
     QualCoder 4.0 writes no lock file, so this server cannot see a 4.0 window that has the project open: a Manage Files window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
 
@@ -16794,8 +16831,17 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
 # REPORT EXPORTS (v0.8 phase B) — file artefacts with QualCoder-parity shapes
 # ============================================================================
 
+# The export tools' refusal of a path inside the state folder.
+STATE_FOLDER_EXPORT_REFUSAL = (
+    "Refusing to write the export inside this server's state folder "
+    "(~/.exegete, or ~/.qualcoder_mcp, its earlier name), which holds "
+    "session files and internal state; choose another location.")
+
+
 def _inside_state_home(out_file) -> bool:
-    """Whether an export path lands inside ~/.qualcoder_mcp (D3 5.2).
+    """Whether an export path lands inside the state folder (D3 5.2), or
+    inside the folder it was moved from (v0.14.1), whether or not that
+    one exists: an older copy of the server may recreate it.
 
     The state home holds the preview-token secret, the session files and
     the MRU pointer. No export has business there, and refusing on
@@ -16804,11 +16850,18 @@ def _inside_state_home(out_file) -> bool:
     traversing path cannot slip past the comparison.
     """
     try:
-        home = Path(preview_tokens_state_home()).resolve()
         target = Path(out_file).resolve()
     except (OSError, RuntimeError):
         return False
-    return home == target or home in target.parents
+    for folder in (preview_tokens_state_home(),
+                   preview_tokens_old_state_home()):
+        try:
+            home = Path(folder).resolve()
+        except (OSError, RuntimeError):
+            continue
+        if home == target or home in target.parents:
+            return True
+    return False
 
 
 def _relative_output_refusal(output_path: Any) -> Optional[str]:
@@ -16896,9 +16949,7 @@ def _resolve_export_path(output_path: str, suffix: str, default_name: str,
             }
     if _inside_state_home(out_file):
         return None, {
-            "error": "Refusing to write the export inside this server's "
-                     "state folder (~/.qualcoder_mcp), which holds session "
-                     "files and internal state; choose another location."
+            "error": STATE_FOLDER_EXPORT_REFUSAL
         }
     project_folder = validate_qda_path(current_project_path).parent
     if project_folder in out_file.parents or out_file.parent == project_folder:
@@ -17781,7 +17832,7 @@ def analyze_theme(theme_name: str) -> str:
 
 Use the following tools to gather information:
 1. First find the code and its id: get_coding_frequencies lists every
-   code with its id (so does the qualcoder://codes/list resource), and
+   code with its id (so does the exegete://codes/list resource), and
    search_coded_text finds passages already coded that mention the theme
 2. Then use get_coded_segments with that code_id to retrieve its
    segments, page by page until the answer says there are no more
@@ -17835,9 +17886,9 @@ Use the following tools and resources:
 1. get_project_summary - for overall statistics and the number of files
    of each type
 2. get_coding_frequencies - every code with its category and how often
-   it is used (the qualcoder://codes/list and
-   qualcoder://categories/list resources show the coding scheme too)
-3. the qualcoder://files/list resource - to see which files the project
+   it is used (the exegete://codes/list and
+   exegete://categories/list resources show the coding scheme too)
+3. the exegete://files/list resource - to see which files the project
    holds; if you cannot read resources, ask the researcher rather than
    guessing
 
@@ -17864,10 +17915,10 @@ def explore_case(case_name: str) -> str:
 
 Use these tools and resources to gather information:
 1. get_case_code_matrix lists every case with its id (so does the
-   qualcoder://cases/list resource); find the case there
+   exegete://cases/list resource); find the case there
 2. get_codes_by_case with that case_id gives the codes that appear in
    it, get_case_attributes its attributes, and the
-   qualcoder://cases/{{case_id}} resource its text segments; if you
+   exegete://cases/{{case_id}} resource its text segments; if you
    cannot read resources, ask the researcher which files belong to the
    case and pass them to get_coded_segments as file_ids, one code at a
    time
@@ -18075,7 +18126,8 @@ def _create_project_place_refusal(name: Any, directory: Any):
             directory, default_workspace())
         new_project.check_parent_folder(
             parent, Path(preview_tokens_state_home()).resolve(), is_default,
-            Path.home() / ".qualcoder")
+            Path.home() / ".qualcoder",
+            Path(preview_tokens_old_state_home()).resolve())
         folder = parent / folder_name
         refusal = (new_project.windows_path_refusal(
             folder, os.name == "nt", new_project.windows_long_paths_enabled())
@@ -18306,7 +18358,9 @@ def _workspace_start_problem() -> Optional[str]:
     folder = _host_set_workspace()
     if folder is None:
         return None
-    unusable = (f"{WORKSPACE_ENV} is not a folder path this server can "
+    # The spelling the host's configuration used (v0.14.1)
+    setting = env_settings.read("workspace").name
+    unusable = (f"{setting} is not a folder path this server can "
                 f"use; check the folder in the host's configuration.")
     try:
         resolved = Path(folder).resolve()
@@ -18317,27 +18371,28 @@ def _workspace_start_problem() -> Optional[str]:
     # answer the conversation, still name the folder).
     if any(part.name.lower().endswith(new_project.PROJECT_SUFFIX)
            for part in (resolved,) + tuple(resolved.parents)):
-        return (f"{WORKSPACE_ENV} names a folder inside a QualCoder project "
+        return (f"{setting} names a folder inside a QualCoder project "
                 f"(a folder ending in .qda); a project inside a project is "
                 f"copied into every backup of the outer one. Choose another "
                 f"folder in the host's settings.")
     if "|" in str(resolved):
-        return (f"{WORKSPACE_ENV} names a folder whose path holds a '|'; "
+        return (f"{setting} names a folder whose path holds a '|'; "
                 f"QualCoder creates a project there but can never open it. "
                 f"Choose another folder in the host's settings.")
     install = _install_folder()
     if install is not None and (resolved == install
                                 or install in resolved.parents):
-        return (f"{WORKSPACE_ENV} names a folder inside the folder this "
+        return (f"{setting} names a folder inside the folder this "
                 f"server is installed in, which an update or an uninstall "
                 f"replaces, and the projects with it. Choose another folder "
                 f"in the host's settings.")
     try:
         new_project.check_parent_folder(
             resolved, Path(preview_tokens_state_home()).resolve(), True,
-            Path.home() / ".qualcoder")
+            Path.home() / ".qualcoder",
+            Path(preview_tokens_old_state_home()).resolve())
     except new_project.Refusal as error:
-        return f"{WORKSPACE_ENV}: {error}"
+        return f"{setting}: {error}"
     except (OSError, RuntimeError, ValueError):
         return unusable
     return None
@@ -18356,10 +18411,11 @@ def _install_folder() -> Optional[Path]:
 
 def _resolve_toolset_mode() -> str:
     """Read QUALCODER_MCP_TOOLSET (default full); unknown values raise."""
-    raw = os.environ.get("QUALCODER_MCP_TOOLSET", "full").strip().lower()
+    reading = env_settings.read("toolset")
+    raw = ("full" if reading.value is None else reading.value).strip().lower()
     if raw not in _VALID_TOOLSET_MODES:
         raise ValueError(
-            f"Unknown QUALCODER_MCP_TOOLSET value {raw!r}: valid values "
+            f"Unknown {reading.name} value {raw!r}: valid values "
             f"are 'full' (the standard set, used when the variable is not "
             f"set), 'core' (the reduced "
             f"supervised-coding set for local models) and 'lifecycle' (the "
@@ -18498,6 +18554,17 @@ def _print_tty_notice_if_interactive(stream=None, err=None) -> bool:
     return True
 
 
+def _settle_state_folder() -> None:
+    """Move the old state folder once, and choose this run's folder."""
+    result = state_folder.move()
+    state_folder.use_for_this_run(
+        None if result.state_home == state_folder.new_path()
+        else result.state_home)
+    if result.message:
+        (logger.info if result.outcome == "moved" else logger.warning)(
+            result.message)
+
+
 def main(argv: Optional[List[str]] = None, *,
          started_as: Optional[str] = None):
     """Main entry point for the MCP server.
@@ -18516,6 +18583,16 @@ def main(argv: Optional[List[str]] = None, *,
         sys.argv[1:] if argv is None else argv)
     if started_as:
         logger.warning(OLD_NAME_NOTE)
+
+    # v0.14.1: each setting is read under its new spelling and the earlier
+    # one; two spellings that disagree stop the server, as a wrong tool set
+    # or coder name does, and an earlier spelling used alone is named once.
+    for problem in env_settings.conflicts():
+        print(f"Error: {problem}", file=sys.stderr)
+    if env_settings.conflicts():
+        sys.exit(1)
+    for line in env_settings.old_spellings_in_use():
+        logger.warning(line)
 
     # Check for optional pre-configured project (Option B: Fixed Project)
     # EXPERIMENTAL: reduced tool surface for local-model hosts. Fail
@@ -18546,17 +18623,18 @@ def main(argv: Optional[List[str]] = None, *,
         print(f"Error: {workspace_problem}", file=sys.stderr)
         sys.exit(1)
 
-    db_path = os.environ.get("QUALCODER_PROJECT_PATH")
+    project_setting = env_settings.read("project_path")
+    db_path = project_setting.value
 
     if db_path:
         # Option B: Fixed project path provided
         if not Path(db_path).exists():
-            print("Error: the project set in QUALCODER_PROJECT_PATH was not "
-                  "found; check the path in the host's configuration.",
+            print(f"Error: the project set in {project_setting.name} was "
+                  f"not found; check the path in the host's configuration.",
                   file=sys.stderr)
             sys.exit(1)
         logger.info("Starting Qualcoder MCP server with the project set in "
-                    "QUALCODER_PROJECT_PATH")
+                    "%s", project_setting.name)
     else:
         # Option A: Dynamic project selection
         logger.info("Starting Qualcoder MCP server in dynamic mode (no project pre-configured)")
@@ -18564,6 +18642,12 @@ def main(argv: Optional[List[str]] = None, *,
 
     # Started by hand in a terminal? Say what is going on, then wait as before
     _print_tty_notice_if_interactive()
+
+    # v0.14.1: the state folder's one move, ~/.qualcoder_mcp to ~/.exegete,
+    # here and nowhere else: after every refusal above, never at import,
+    # never for --version (state_folder says how, and what happens when
+    # the move cannot be made)
+    _settle_state_folder()
 
     # Run the server using stdio transport
     mcp.run(transport="stdio")

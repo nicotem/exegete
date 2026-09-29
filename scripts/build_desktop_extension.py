@@ -213,7 +213,7 @@ def list_tools(files: Dict[str, bytes],
         env = {k: v for k, v in os.environ.items()
                if not k.startswith(("QUALCODER", "EXEGETE"))}
         env.update({"HOME": str(home), "USERPROFILE": str(home),
-                    "QUALCODER_MCP_TOOLSET": toolset,
+                    "EXEGETE_TOOLSET": toolset,
                     "PYTHONDONTWRITEBYTECODE": "1"})
         params = StdioServerParameters(
             command=sys.executable,

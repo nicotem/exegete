@@ -455,13 +455,13 @@ def _case_with_links(folder: Path) -> None:
 
 
 class TestTheCaseRead:
-    """Fix round 1, the first major: `qualcoder://cases/{id}` returned
+    """Fix round 1, the first major: `exegete://cases/{id}` returned
     a stored PDF file's bytes up to its first NUL, or whole without one."""
 
     def _read(self, case_id=1):
         import asyncio
         contents = asyncio.run(server.mcp.read_resource(
-            f"qualcoder://cases/{case_id}"))
+            f"exegete://cases/{case_id}"))
         return "".join(item.content for item in contents)
 
     def test_a_stored_pdf_file_gives_no_text_and_is_named(self, pdf_project):

@@ -70,6 +70,17 @@ server.
   the review touched. The pin on the README's "Completed in v0.13.0"
   list is retired with the list.
 
+### Measured
+
+- Serialised tool JSON as it stands after the rename's changes to the
+  tools' texts: full = 195,313 characters (about 48.8k tokens at
+  chars/4) over 73 tools, core = 64,827 (about 16.2k) over 21, and the
+  opt-in lifecycle set = 197,898 (about 49.5k) over 74, measured on
+  Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
+  Python 3.11.13 (the `.venv/`), 205,021, 68,119 and 207,746. The
+  resource addresses the texts name moved from `qualcoder://` to
+  `exegete://`, two characters shorter each time.
+
 ## [0.14.0-alpha] - 2026-09-28
 
 v0.14, starting a study from the conversation, safely, as ruled from

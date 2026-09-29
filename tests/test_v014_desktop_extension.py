@@ -209,16 +209,22 @@ class TestTheSettings:
         assert "Documents" not in default and "Desktop" not in default
 
     def test_each_setting_reaches_a_variable_the_server_reads(self):
+        """v0.14.1: each of the three under both spellings, always the
+        same value, until v1.0 (tests/test_v0141_compat.py says why)."""
+        from exegete import names
         env = TEMPLATE["server"]["mcp_config"]["env"]
-        assert env == {
-            "QUALCODER_MCP_TOOLSET": "${user_config.toolset}",
-            database.WORKSPACE_ENV: "${user_config.projects_folder}",
-            database.WORKSPACE_REQUIRED_ENV: "1",
-        }
+        expected = {}
+        for key, value in (("toolset", "${user_config.toolset}"),
+                           ("workspace", "${user_config.projects_folder}"),
+                           ("workspace_required", "1")):
+            for name in names.SETTINGS[key]:
+                expected[name] = value
+        assert env == expected
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
-        assert 'os.environ.get("QUALCODER_MCP_TOOLSET"' in source
-        assert database.WORKSPACE_ENV == "QUALCODER_MCP_WORKSPACE"
+        assert 'env_settings.read("toolset")' in source
+        assert database.WORKSPACE_ENV == "EXEGETE_WORKSPACE"
+        assert database.WORKSPACE_REQUIRED_ENV == "EXEGETE_WORKSPACE_REQUIRED"
 
     def test_the_default_folder_is_accepted_by_the_server(self, monkeypatch):
         monkeypatch.setenv(database.WORKSPACE_ENV,
@@ -757,10 +763,10 @@ class TestTheDocuments:
         assert "the Terminal route" in section
 
     def test_install_documents_every_variable_the_server_reads(self):
-        source = "".join(p.read_text(encoding="utf-8") for p in
-                         (REPO / "src" / "exegete").glob("*.py"))
-        read = set(re.findall(r'"(QUALCODER_[A-Z_]+)"', source))
-        assert database.WORKSPACE_ENV in read
+        # v0.14.1: every setting is read through one table, under both
+        # spellings (names.SETTINGS)
+        from exegete import names
+        read = {old for new, old in names.SETTINGS.values()}
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = _section(text, "## Environment variables the server reads")
         documented = set(re.findall(r"^- `(QUALCODER_[A-Z_]+)`", section,

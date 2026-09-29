@@ -211,7 +211,7 @@ class TestT1ProbeGateMatrix:
         out = json.loads(server.set_memo("code", 1, "x", create_backup=False))
         assert "v18" in out["error"]
         assert VERIFIED_MASTER_COMMIT in out["error"]
-        assert "QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA" in out["error"]
+        assert "EXEGETE_ALLOW_UNKNOWN_SCHEMA" in out["error"]
 
     def test_v18_allowed_with_override_and_warned(self, v17_env,
                                                   monkeypatch):

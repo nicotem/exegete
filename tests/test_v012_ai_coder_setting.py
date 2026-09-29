@@ -131,7 +131,7 @@ READS_THAT_MUST_NEVER_ASK = {
     "search_memos": lambda s: s.search_memos("x"),
     "get_case_code_matrix": lambda s: s.get_case_code_matrix(),
     "list_available_projects": lambda s: s.list_available_projects(),
-    # resource handlers (qualcoder://...)
+    # resource handlers (exegete://...)
     "get_project_info": lambda s: s.get_project_info(),
     "list_all_codes": lambda s: s.list_all_codes(),
     "list_all_categories": lambda s: s.list_all_categories(),
@@ -562,7 +562,7 @@ class TestMismatchRule:
         out = json.loads(server.create_code("Blocked", create_backup=False))
         assert out["error"] == (
             "This host declares the AI coder name \"B\" "
-            "(QUALCODER_MCP_AI_CODER_NAME), but this project's current AI "
+            f"({AI_CODER_NAME_ENV}), but this project's current AI "
             "coder name is \"A\". Nothing was written. Ask the user which "
             "name to use here, then call set_project_ai_coder_name with "
             "\"B\" to switch the project to it, or with \"A\" to keep it "

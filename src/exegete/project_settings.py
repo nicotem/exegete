@@ -31,6 +31,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from . import env_settings, names
 from .database import (KNOWN_AI_ASSISTANT_OWNER, validate_coder_name,
                        validate_coder_note)
 
@@ -60,7 +61,8 @@ SIDECAR_WRITE_MAX_BYTES = SIDECAR_READ_MAX_BYTES - 4096
 
 # The host declaration (v0.11's machine-wide setting, re-purposed by D7)
 # and this server's built-in default.
-AI_CODER_NAME_ENV = "QUALCODER_MCP_AI_CODER_NAME"
+# Read under both spellings (v0.14.1), through env_settings.
+AI_CODER_NAME_ENV = names.SETTINGS["ai_coder_name"][0]
 DEFAULT_AI_CODER_NAME = "AI Coding Assistant"
 # QualCoder 4.0's built-in assistant's owner string, re-exported from
 # database.py (one definition, H3). Rows under it that this project has
@@ -490,12 +492,12 @@ def host_declaration(environ: Optional[Dict[str, str]] = None) -> Optional[str]:
     (a test, an embedded use); a declaration we would refuse to write is
     not one to compare against either.
     """
-    env = os.environ if environ is None else environ
-    raw = env.get(AI_CODER_NAME_ENV)
+    reading = env_settings.read("ai_coder_name", environ)
+    raw = reading.value
     if raw is None:
         return None
     try:
-        return validate_coder_name(raw, AI_CODER_NAME_ENV)
+        return validate_coder_name(raw, reading.name)
     except ValueError:
         return None
 

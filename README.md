@@ -116,16 +116,18 @@ account managed by your university or employer may refuse it.
 [INSTALL.md, "Claude Desktop: the one-click extension"](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md#claude-desktop-the-one-click-extension-recommended)
 says what you will see then, and what the extension's two settings do.
 
-**A first project.** With the extension's settings as they come, ask
-Claude, for example: "Create a new QualCoder project called Practice."
-(Experimental.) It is made in QualCoder 4.0's format, in the
-extension's "Folder for projects": by default a folder called
-"QualCoder projects" in your home folder (the one named after you), not
-in Documents, which iCloud or OneDrive may sync. Claude asks for the
-coder name you use in QualCoder (in QualCoder: Settings, Coder name),
-so that what is coded through the conversation is kept apart from what
-you code in QualCoder; if you do not use QualCoder yet, say so, and the
-project is still created.
+### A first session
+
+**A first project.** Creating a project is Experimental. With the
+extension's settings as they come, ask Claude, for example: "Create a
+new QualCoder project called Practice." It is made in QualCoder 4.0's
+format, in the extension's "Folder for projects": by default a folder
+called "QualCoder projects" in your home folder (the one named after
+you), not in Documents, which iCloud or OneDrive may sync. Claude asks
+for the coder name you use in QualCoder (in QualCoder: Settings, Coder
+name), so that what is coded through the conversation is kept apart
+from what you code in QualCoder; if you do not use QualCoder yet, say
+so, and the project is still created.
 [TOOLS.md, "Starting a project from the conversation"](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental)
 has the rules.
 
@@ -139,6 +141,8 @@ project in QualCoder. With QualCoder 3.8.2 an open project is detected
 and the change is refused; the 4.0 beta cannot be detected, so there
 only you can make sure. An open 4.0 window shows Claude's changes only
 once the project is opened again.
+
+### Other assistants, and updates
 
 **Other assistants.** Claude Code, LM Studio (fully local) and other
 MCP hosts, and Claude Desktop set up by hand, take the Terminal route:

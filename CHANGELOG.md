@@ -51,6 +51,10 @@ server.
 - "Qualcoder" is spelt "QualCoder" in the prose of README, INSTALL,
   TOOLS and the workflow guide; the folder `~/Documents/Qualcoder MCP
   Projects` and the server's own messages keep their spelling.
+- README and PRIVACY.md now say only what qualcoder-mcp does with the
+  part of a memo after `#####`; they no longer speak for QualCoder's
+  own AI features. PRIVACY.md no longer says QualCoder 4.0 introduced
+  the mark: 3.8.2 has it.
 - Tests: every pin on README text follows its text; new pins for the
   opening, the commitments, the dated upstream facts, the three
   questions, the spelling, and every link and anchor in the documents

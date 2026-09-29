@@ -57,17 +57,38 @@ def test_the_readme_says_what_it_is_not():
 # The private part of a memo: what qualcoder-mcp does, and only that
 # ---------------------------------------------------------------------------
 
-# QualCoder's AI chat, asked to discuss a code, sends that code's memo
-# whole, the part after `#####` included, unless "Send memos" is unticked
-# (3.8.2 and the 4.0 beta). So no document may say that QualCoder's AI
-# never sends, or never sees, that part.
+# The documents speak only for qualcoder-mcp: they say what it does with
+# the part of a memo after `#####`, and nothing about what QualCoder's own
+# AI features do with it. So no document may say that QualCoder's AI never
+# sends, or never sees, that part. The pattern also catches the claim put
+# the other way round ("never shows it to its AI").
 SAYS_QUALCODERS_AI_KEEPS_IT = re.compile(
-    r"\bAI\b(?: features)? never (?:sends?|sees?)\b")
+    r"\bAI\b(?: features)? never (?:sends?|sees?)\b"
+    r"|\bnever (?:shows?|shown|sends?|sent|gives?|given|passes?|passed)\b"
+    r"[^.;:]{0,40}?\bto (?:its|QualCoder's)(?: own| built-in)? AI\b")
+
+# The one exception: this sentence in CHANGELOG.md's 0.11.0 entry, a dated
+# record of an old release, kept as that release published it. The
+# Unreleased entry records that the documents no longer speak for
+# QualCoder's own AI features.
+DATED_RECORD_0_11_0 = ("QualCoder 4.0 never shows it to its AI, and now "
+                       "neither does this server.")
+
+
+def _without_the_dated_record(name, text):
+    if name != "CHANGELOG.md":
+        return text
+    entry = text[text.index("## [0.11.0-alpha]"):
+                 text.index("## [0.10.1-alpha]")]
+    # Exempt once, and only inside that entry
+    assert text.count(DATED_RECORD_0_11_0) == 1
+    assert DATED_RECORD_0_11_0 in entry
+    return text.replace(DATED_RECORD_0_11_0, "")
 
 
 def test_no_document_says_qualcoders_ai_keeps_the_private_part():
     for path in sorted(REPO.glob("*.md")):
-        text = _flat(path.name)
+        text = _without_the_dated_record(path.name, _flat(path.name))
         for claim in ("QualCoder's own AI features never send",
                       "its built-in AI never sees"):
             assert claim not in text, (path.name, claim)
@@ -94,11 +115,47 @@ def test_the_private_part_is_stated_for_this_server_only():
 def test_the_private_part_check_would_notice():
     for sentence in ("which QualCoder's own AI features never send",
                      "a private zone that its built-in AI never sees",
-                     "QualCoder's AI never sends it"):
+                     "QualCoder's AI never sends it",
+                     DATED_RECORD_0_11_0,
+                     "the private part is never shown to QualCoder's AI"):
         assert SAYS_QUALCODERS_AI_KEEPS_IT.search(sentence), sentence
-    assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(
-        'an emptied "Folder for projects" never sends projects into a '
-        "synced Documents folder")
+    # What this project says of itself is not caught
+    for sentence in ('an emptied "Folder for projects" never sends projects '
+                     "into a synced Documents folder",
+                     "is never shown to the AI and survives AI memo writes",
+                     "qualcoder-mcp never passes the part of a memo from a "
+                     "`#####` mark onward (QualCoder's mark for a private "
+                     "note) to the assistant"):
+        assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(sentence), sentence
+
+
+def test_the_unreleased_entry_records_it_for_this_project_only():
+    changelog = _flat("CHANGELOG.md")
+    unreleased = changelog[changelog.index("## [Unreleased]"):
+                           changelog.index("## [0.14.0-alpha]")]
+    assert ("README and PRIVACY.md now say only what qualcoder-mcp does "
+            "with the part of a memo after `#####`; they no longer speak "
+            "for QualCoder's own AI features. PRIVACY.md no longer says "
+            "QualCoder 4.0 introduced the mark: 3.8.2 has it.") in unreleased
+
+
+def _flat_quotes(name):
+    """The document flattened, block quotes indented in lists included."""
+    return " ".join(re.sub(r"\n\s*>", " ", _read(name)).split())
+
+
+def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
+    readme = _flat("README.md")
+    quoted = "unless you opt out of training through your account settings"
+    assert ("(Anthropic's consumer terms allow training on your "
+            f'conversations "{quoted}"; PRIVACY.md quotes them, with the '
+            "exceptions)") in readme
+    assert "unless you opt out there" not in readme
+    # The quoted words are PRIVACY.md's own quotation of the Consumer Terms
+    privacy = _flat_quotes("PRIVACY.md")
+    rung = privacy[privacy.index("### Rung 1:"):
+                   privacy.index("### Rung 2:")]
+    assert f'including training our models, {quoted}"' in rung
 
 
 # ---------------------------------------------------------------------------

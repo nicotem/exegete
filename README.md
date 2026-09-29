@@ -66,10 +66,11 @@ Which provider, and under which terms, is decided by your assistant and
 your account, not by qualcoder-mcp. On a personal Claude plan (Free,
 Pro or Max), open https://claude.ai/settings/data-privacy-controls and
 check the Model Improvement setting yourself (Anthropic's consumer
-terms say your conversations may be used to train its models unless
-you opt out there; PRIVACY.md quotes them, with the exceptions) before
-you use participant data. On an account your university or employer
-provides, ask whoever manages it which terms apply.
+terms allow training on your conversations "unless you opt out of
+training through your account settings"; PRIVACY.md quotes them, with
+the exceptions) before you use participant data. On an account your
+university or employer provides, ask whoever manages it which terms
+apply.
 [PRIVACY.md](https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md)
 quotes the terms, and covers consent, institutional accounts and fully
 local models: read it before you use participant data.

@@ -515,8 +515,8 @@ class TestTheAiCoderNameSetter:
             server.SPEAKER_SYSTEM_CODER))
         assert "speaker coder" in answer["error"]
         assert "Nothing was changed" in answer["error"]
-        assert not (Path(server.current_project_path) /
-                    "qualcoder_mcp.json").exists()
+        for name in ("exegete.json", "qualcoder_mcp.json"):
+            assert not (Path(server.current_project_path) / name).exists()
 
 
 # ---------------------------------------------------------------------------

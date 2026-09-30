@@ -123,8 +123,10 @@ question, you answer, and it calls
 set_project_ai_coder_name("Qwen 3.8 6bit", note="LM Studio 0.4.22")
 ```
 
-The answer is stored in `qualcoder_mcp.json` in the project folder,
-beside `data.qda`, so it travels with backups, copies and a synced
+The answer is stored in `exegete.json` in the project folder,
+beside `data.qda` (until 0.14.0, `qualcoder_mcp.json`: it is still read
+in a project that has only that file, and the first change of name
+carries it into `exegete.json`), so it travels with backups, copies and a synced
 folder, and two hosts talking to one project agree on it. Reads never
 ask. You can change the name at any time with the same tool; earlier
 rows keep the name they were written under, and the project remembers
@@ -613,7 +615,7 @@ each one does.
 - `select_project(project_path)` - Open/switch to a different project (reports `qualcoder_gui_signals` and remembers the selection for the recovery hint)
 - `get_current_project()` - Show which project is open, whether a released QualCoder has it open (`qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name
 - `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (the `lifecycle` toolset only): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in the server's workspace or an existing folder, then selects it. Asks for the researcher's own QualCoder coder name (or an explicit "not known") after every other check; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
-- `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `qualcoder_mcp.json`); refuses the researcher's own coder name, QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
+- `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `exegete.json`); refuses the researcher's own coder name, QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
 - `read_pseudonym_list()` - **Sends real names to the AI provider**: returns the entries of the project's own `pseudonyms.json` (the researcher's reverse key), for use only when the researcher asks to see or check the list; each call writes one log line with the count and no name. In the full and lifecycle tool sets (so in the Claude Desktop extension by default), not in core. QualCoder's Pseudonyms dialog (the button in Manage Files) shows the same list without sending it anywhere. **Deprecated, removed in v0.15** (its answer says so)
 
 **Core Data Analysis:**

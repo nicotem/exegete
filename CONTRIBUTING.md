@@ -204,7 +204,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── memo_privacy.py      # QualCoder's '#####' private-memo convention
 │   │   ├── new_project.py       # create_project: the folder and its schema v17 database
 │   │   ├── sessions.py          # AI coding session management
-│   │   ├── project_settings.py  # The project's AI coder name (qualcoder_mcp.json)
+│   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas

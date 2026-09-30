@@ -1544,9 +1544,14 @@ yet, and the first start after the update moves the server's own folder
   so an older copy of the server on the same computer keeps using the
   same folder and key. If a backup or sync rule of yours names the old
   folder, change it. PRIVACY.md says more.
-- **Your projects** are unchanged. The small file Exegete keeps in a
-  project folder for the AI coder name keeps its name,
-  `qualcoder_mcp.json`, so every version agrees on it. Projects created
+- **Your projects** are unchanged, except for one small file. Exegete
+  keeps the AI coder name in `exegete.json` in the project folder. A
+  project from before still has `qualcoder_mcp.json`, which is read as
+  before; the first time the name is stored again, it is carried into
+  `exegete.json`, and `qualcoder_mcp.json` stays, marked so that an
+  older copy of the server (0.12 to 0.14) refuses to write it rather
+  than use an outdated name: if one says the file "was written by a
+  newer version", update that copy. Projects created
   earlier still name qualcoder-mcp as their creator; new ones name
   Exegete. The resource addresses are now `exegete://...`; the old
   `qualcoder://...` ones are still answered until v1.0.

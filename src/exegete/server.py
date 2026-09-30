@@ -137,7 +137,7 @@ from .project_settings import (
     HISTORY_ECHO,
     KNOWN_AI_ASSISTANT_OWNER,
     LEGACY_IMPORT_OWNER,
-    NEWER_FORMAT_MESSAGE,
+    OLD_SIDECAR_NAME,
     READ_ONLY_FOLDER_MESSAGE,
     SIDECAR_NAME,
     SIDECAR_NEWER_FORMAT,
@@ -145,7 +145,6 @@ from .project_settings import (
     SIDECAR_UNREADABLE,
     SIDECAR_UNSET,
     SidecarWriteError,
-    UNREADABLE_MESSAGE,
     UNSET_HINT,
     ai_coder_names_for_project,
     echoed_history,
@@ -153,9 +152,11 @@ from .project_settings import (
     host_declaration,
     known_ai_set,
     mismatch as ai_coder_name_mismatch,
+    newer_format_message,
     normalise_for_case_compare,
     read_sidecar,
     sidecar_path,
+    unreadable_message,
     write_ai_coder_name,
 )
 from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
@@ -2266,9 +2267,9 @@ def _resolve_write_owner(
         return None, {"error": _no_project_message()}
     state = read_sidecar(_current_project_folder())
     if state.status == SIDECAR_UNREADABLE:
-        return None, {"error": UNREADABLE_MESSAGE}
+        return None, {"error": unreadable_message(state.path)}
     if state.status == SIDECAR_NEWER_FORMAT:
-        return None, {"error": NEWER_FORMAT_MESSAGE}
+        return None, {"error": newer_format_message(state.path)}
     if not state.is_set:
         return None, _ask_refusal(owner_supplied=tool_owner is not None)
     current = state.name
@@ -2312,7 +2313,7 @@ def _ai_coder_name_report() -> Dict[str, Any]:
     block: Dict[str, Any] = {}
     if state.status == SIDECAR_UNREADABLE:
         block["ai_coder_name"] = {"name": None, "source": SIDECAR_UNREADABLE,
-                                  "hint": UNREADABLE_MESSAGE}
+                                  "hint": unreadable_message(state.path)}
     elif state.status == SIDECAR_UNSET:
         block["ai_coder_name"] = {"name": None, "source": SIDECAR_UNSET,
                                   "hint": UNSET_HINT}
@@ -3658,7 +3659,7 @@ def set_project_ai_coder_name(name: str, note: str = "",
     text; a model name such as "Qwen 3.8 6bit" lets codings by different
     models be compared later. Quick picks: "AI Coding Assistant" (this
     server's built-in default), "AI Agent" (QualCoder 4.0's own
-    assistant). The setting is stored with the project (qualcoder_mcp.json
+    assistant). The setting is stored with the project (exegete.json
     in the project folder), so it travels with backups and copies; it can
     be changed at any time, and earlier rows keep the name they were
     written under. Names are compared exactly, after trimming spaces, and
@@ -3712,7 +3713,11 @@ def set_project_ai_coder_name(name: str, note: str = "",
     # write_ai_coder_name itself still refuses (fix round 4).
     replaced_unreadable = state.status == SIDECAR_UNREADABLE
     if state.status == SIDECAR_NEWER_FORMAT:
-        return json.dumps({"error": NEWER_FORMAT_MESSAGE})
+        return json.dumps({"error": newer_format_message(state.path)})
+    # v0.14.1: a project with only the earlier file has its name carried
+    # into exegete.json by this write (project_settings).
+    moving = (state.path is not None and state.path.name == OLD_SIDECAR_NAME
+              and not replaced_unreadable)
 
     # Read-only database checks. None of them writes a row, so the tool
     # works while QualCoder has the project open.
@@ -3795,10 +3800,18 @@ def set_project_ai_coder_name(name: str, note: str = "",
         "next": (f"Retry the write that was refused; it will now be "
                  f"attributed to \"{name}\"."),
     }
+    if moving:
+        result["moved_from"] = OLD_SIDECAR_NAME
+        result["warnings"] = list(result["warnings"]) + [
+            f"This project's AI coder name and its history were carried "
+            f"from {OLD_SIDECAR_NAME} into {SIDECAR_NAME}, where they are "
+            f"kept from now on. {OLD_SIDECAR_NAME} stays in the project "
+            f"folder, marked so that qualcoder-mcp 0.12 to 0.14 refuse to "
+            f"write it rather than use an outdated name."]
     if kept_aside is not None:
         result["replaced_unreadable_file"] = str(kept_aside)
         result["warnings"] = list(result["warnings"]) + [
-            f"The previous qualcoder_mcp.json could not be read, so it was "
+            f"The previous {state.path.name} could not be read, so it was "
             f"renamed to {kept_aside.name} and a new one written. Nothing "
             f"was deleted: tell the user, in case that file held a history "
             f"they want back."]
@@ -3827,7 +3840,7 @@ def _keep_unreadable_sidecar_aside(folder: Path) -> Tuple[Optional[Path],
     except OSError as e:
         logger.error("Could not move the unreadable sidecar aside: %s",
                      error_label(e))
-        return None, UNREADABLE_MESSAGE
+        return None, unreadable_message(path)
     return target, None
 
 
@@ -10295,8 +10308,8 @@ def restore_backup(backup_path: str,
         result["report_incomplete"] = (
             "The restore completed and the paths above are correct. This "
             "server could not finish describing the restored project "
-            "(check qualcoder_mcp.json in the project folder); nothing "
-            "further was changed.")
+            f"(check {SIDECAR_NAME} or {OLD_SIDECAR_NAME} in the project "
+            "folder); nothing further was changed.")
         result.setdefault("safety_backup", str(safety_backup))
     return json.dumps(result, indent=2)
 

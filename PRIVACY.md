@@ -98,8 +98,10 @@ What stays local, always, unless a sync service copies the folder it is in:
   Nothing is ever selected automatically from it; only a path with the
   shape select_project itself records is ever echoed, and deleting the
   file clears it.
-- the project's AI coder name setting (`qualcoder_mcp.json` inside the
-  `.qda` project folder): the coder name or names you have chosen for
+- the project's AI coder name setting (`exegete.json` inside the
+  `.qda` project folder; until 0.14.0 `qualcoder_mcp.json`, which the
+  first change of name after the update carries into `exegete.json` and
+  then keeps, marked as moved, with the name it held): the coder name or names you have chosen for
   this project's AI writes, when each was set, an optional note you
   typed (for example the host and model version), and the name declared
   in the host's server configuration at the time. It travels with the
@@ -636,7 +638,7 @@ Two further rules touch files on your disk:
   with four empty subfolders and a new `data.qda`, and records the new
   project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
-  selects a project); nothing else: no backup, no `qualcoder_mcp.json`,
+  selects a project); nothing else: no backup, no `exegete.json`,
   no entry in QualCoder's recent-project list. The database holds the researcher's QualCoder coder name when
   they give it (and QualCoder's speaker coder), and an "about" line
   naming this server and its version. The coder name is asked for,

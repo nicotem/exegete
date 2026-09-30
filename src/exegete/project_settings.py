@@ -3,8 +3,9 @@
 
 One setting lives here so far: the AI coder name every row this server
 writes into a project is attributed to. It is stored in a small JSON
-sidecar, `qualcoder_mcp.json`, in the project folder next to `data.qda`,
-because the setting belongs to the PROJECT and must travel with it:
+sidecar, `exegete.json` (until 0.14.0, `qualcoder_mcp.json`), in the
+project folder next to `data.qda`, because the setting belongs to the
+PROJECT and must travel with it:
 backups, workspace copies, a synced folder and a second machine all carry
 it, and two hosts talking to one project agree on it without a shared
 machine-level store.
@@ -17,12 +18,33 @@ ignore set that does not match this name (`app.py:1619-1631`), and a
 project merge merges INTO the open project (`merge_projects.py:200`), so
 the destination keeps its sidecar.
 
+The file's new name (v0.14.1, the owner's ruling 41, decision 7):
+
+- A read takes `exegete.json` when it exists, in any state (an
+  unreadable one is reported as unreadable, never passed over), and
+  otherwise the earlier `qualcoder_mcp.json`.
+- The first write of the name in a project that has only the earlier
+  file copies its name, history and other keys into `exegete.json` (the
+  one atomic write below), and then rewrites the earlier file with
+  format_version 2 and `moved_to: "exegete.json"`. Versions 0.12 to 0.14
+  read only the earlier file and refuse to write one whose version is
+  above 1 ("written by a newer version"), so a second host still on
+  them stops rather than writing rows under a name the researcher has
+  since changed. The earlier file keeps the name it held at the move,
+  so their reads still recognise the rows it named.
+- A restore of a backup made before the move brings back the earlier
+  file alone: the read falls back to it and the next write moves it
+  again. Messages name the file in use.
+- An earlier file that cannot be read is never rewritten (its bytes may
+  be the only history), and neither is one of a version above 2.
+
 Restart resilience: nothing here is cached. Every read goes to disk, so a
 host that recycles the server process between turns sees the same answer,
 and so does a second host editing the same project.
 """
 
 import json
+import logging
 import os
 import stat
 import tempfile
@@ -35,10 +57,19 @@ from . import env_settings, names
 from .database import (KNOWN_AI_ASSISTANT_OWNER, validate_coder_name,
                        validate_coder_note)
 
-# The sidecar. Only this exact name is ever treated as one.
-SIDECAR_NAME = "qualcoder_mcp.json"
+logger = logging.getLogger(__name__)
+
+# The sidecar. Only these exact names are ever treated as one. The
+# format marker and version are shared by both files: every version since
+# 0.12 writes version 1.
+SIDECAR_NAME = "exegete.json"
+OLD_SIDECAR_NAME = "qualcoder_mcp.json"
 SIDECAR_FORMAT = "qualcoder-mcp-project"
 SIDECAR_FORMAT_VERSION = 1
+# The earlier file after the move: a version 0.12 to 0.14 refuse to write,
+# and the key naming the file that now holds the name.
+OLD_SIDECAR_MOVED_VERSION = 2
+MOVED_TO_KEY = "moved_to"
 # The payload is a few hundred bytes with a full history; anything past
 # this is not ours (the MRU reader's rationale, server.py:144-170).
 SIDECAR_READ_MAX_BYTES = 64 * 1024
@@ -80,27 +111,51 @@ SIDECAR_SET = "project"
 SIDECAR_UNREADABLE = "unreadable"
 SIDECAR_NEWER_FORMAT = "newer_format"
 
-UNREADABLE_MESSAGE = (
-    "The AI coder name file for this project (qualcoder_mcp.json in the "
+_UNREADABLE = (
+    "The AI coder name file for this project ({file} in the "
     "project folder) could not be read. Ask the user to repair or remove "
     "it; the next write will then ask for the name again. Nothing was "
     "written.")
 
-NEWER_FORMAT_MESSAGE = (
-    "The AI coder name file for this project (qualcoder_mcp.json in the "
+_NEWER_FORMAT = (
+    "The AI coder name file for this project ({file} in the "
     "project folder) was written by a newer version of this server "
     f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
     f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
     "user to move the file aside; the next write will then ask for the "
     "name again. Nothing was written.")
 
-OVERSIZED_MESSAGE = (
-    "The AI coder name file for this project (qualcoder_mcp.json in the "
+_OVERSIZED = (
+    "The AI coder name file for this project ({file} in the "
     "project folder) is too large to write: even with one history entry "
     "it would be bigger than this server can read back. Ask the user to "
     "remove the extra top-level keys in it, or to move the file aside; "
     "the next write will then ask for the name again. Nothing was "
     "written.")
+
+
+
+def _naming(template: str, path: Any = None) -> str:
+    """A message naming the file in use (`path`), or the new file."""
+    return template.format(file=Path(path).name if path else SIDECAR_NAME)
+
+
+def unreadable_message(path: Any = None) -> str:
+    return _naming(_UNREADABLE, path)
+
+
+def newer_format_message(path: Any = None) -> str:
+    return _naming(_NEWER_FORMAT, path)
+
+
+def oversized_message(path: Any = None) -> str:
+    return _naming(_OVERSIZED, path)
+
+
+# The messages naming the new file, for callers with no path at hand.
+UNREADABLE_MESSAGE = unreadable_message()
+NEWER_FORMAT_MESSAGE = newer_format_message()
+OVERSIZED_MESSAGE = oversized_message()
 
 READ_ONLY_FOLDER_MESSAGE = (
     "The project folder is not writable, so the AI coder name cannot be "
@@ -224,8 +279,20 @@ class SidecarState:
 
 
 def sidecar_path(project_folder: Any) -> Path:
-    """The sidecar's path inside a project folder."""
-    return Path(project_folder) / SIDECAR_NAME
+    """The sidecar in use in a project folder.
+
+    `exegete.json` when it exists in any form (an unreadable one
+    included: it is reported, never passed over), else the earlier
+    `qualcoder_mcp.json` when that exists, else `exegete.json`, where
+    the next write puts the name.
+    """
+    new = Path(project_folder) / SIDECAR_NAME
+    if os.path.lexists(new):
+        return new
+    old = Path(project_folder) / OLD_SIDECAR_NAME
+    if os.path.lexists(old):
+        return old
+    return new
 
 
 def _read_raw(path: Path) -> Optional[Dict[str, Any]]:
@@ -284,6 +351,10 @@ def read_sidecar(project_folder: Any) -> SidecarState:
     if data is None or data.get("format") != SIDECAR_FORMAT:
         return SidecarState(SIDECAR_UNREADABLE, path=path)
     version = data.get("format_version")
+    # The earlier file as the move left it reads as its version 1 did: a
+    # restore, or a removed exegete.json, falls back to it.
+    newest = (OLD_SIDECAR_MOVED_VERSION if path.name == OLD_SIDECAR_NAME
+              else SIDECAR_FORMAT_VERSION)
     if not isinstance(version, int) or isinstance(version, bool) or version < 1:
         return SidecarState(SIDECAR_UNREADABLE, path=path)
     entry = _validated_entry(data.get("ai_coder_name"))
@@ -303,7 +374,7 @@ def read_sidecar(project_folder: Any) -> SidecarState:
                 history = []
                 break
             history.append(validated)
-    if version > SIDECAR_FORMAT_VERSION:
+    if version > newest:
         return SidecarState(SIDECAR_NEWER_FORMAT, entry, history, path)
     if entry is None:
         return SidecarState(SIDECAR_UNSET, None, history, path)
@@ -358,32 +429,41 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
     reader sees the old file or the new one, never a partial one; a
     failure unlinks the temp and leaves the existing file byte-identical.
 
-    Temp litter from a crash (`qualcoder_mcp.json.<random>.tmp`) is never
+    Temp litter from a crash (`exegete.json.<random>.tmp`) is never
     reopened and never enumerated by this server; it is harmless and a
     user may delete it.
 
+    The name is always written to `exegete.json`. When the project still
+    has the earlier `qualcoder_mcp.json` (the first write after 0.14, or
+    a restore of an older backup), its name, history and other keys are
+    carried into the new file, and the earlier file is then marked as
+    moved (`_mark_earlier_file`), so that 0.12 to 0.14 refuse to write
+    it. A failure to mark it is logged and tried again at the next write;
+    the name itself is already stored.
+
     Raises:
         SidecarWriteError: With a message for the caller to return. The
-            file on disk is unchanged.
+            files on disk are unchanged.
     """
     folder = Path(project_folder)
     path = sidecar_path(folder)
+    target = folder / SIDECAR_NAME
     if os.path.lexists(path):
         try:
             st = os.lstat(path)
         except OSError as e:
-            raise SidecarWriteError(UNREADABLE_MESSAGE) from e
+            raise SidecarWriteError(unreadable_message(path)) from e
         if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
-            raise SidecarWriteError(UNREADABLE_MESSAGE)
+            raise SidecarWriteError(unreadable_message(path))
     existing = _read_raw(path) if os.path.lexists(path) else {}
     if existing is None:
-        raise SidecarWriteError(UNREADABLE_MESSAGE)
+        raise SidecarWriteError(unreadable_message(path))
 
     state = read_sidecar(folder)
     if state.status == SIDECAR_NEWER_FORMAT:
-        raise SidecarWriteError(NEWER_FORMAT_MESSAGE)
+        raise SidecarWriteError(newer_format_message(state.path))
     if state.status == SIDECAR_UNREADABLE:
-        raise SidecarWriteError(UNREADABLE_MESSAGE)
+        raise SidecarWriteError(unreadable_message(state.path))
 
     # Validated HERE as well as at the tool layer, because this writes
     # the string every later AI row is attributed to: one gate on the
@@ -402,6 +482,9 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
     # researcher's own annotation, survives a name change (the
     # "keeping other keys intact" pattern of view_av.py:1369-1376).
     payload: Dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
+    # Carried over from a marked earlier file, the pointer would point at
+    # the file itself.
+    payload.pop(MOVED_TO_KEY, None)
     payload["format"] = SIDECAR_FORMAT
     payload["format_version"] = SIDECAR_FORMAT_VERSION
     payload["written_by"] = f"{names.DISTRIBUTION} {_package_version()}"
@@ -423,12 +506,28 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
         # A one-entry history still does not fit, so the bulk is in the
         # unknown top-level keys this write preserves. Refuse rather than
         # write a file the reader will reject, and say where the size is.
-        raise SidecarWriteError(OVERSIZED_MESSAGE)
+        raise SidecarWriteError(oversized_message(path))
 
+    try:
+        _replace_atomically(folder, target, encoded)
+    except OSError as e:
+        raise SidecarWriteError(
+            f"The AI coder name could not be stored with the project "
+            f"({type(e).__name__}). Nothing was changed.") from e
+    _mark_earlier_file(folder)
+    return entry
+
+
+def _replace_atomically(folder: Path, target: Path, encoded: bytes) -> None:
+    """Write `encoded` at `target` in one `os.replace`, or not at all.
+
+    Raises OSError after removing its temp file; `target` is then
+    byte-identical to what it was.
+    """
     tmp: Optional[Path] = None
     try:
         fd, tmp_name = tempfile.mkstemp(dir=str(folder),
-                                        prefix=f"{SIDECAR_NAME}.",
+                                        prefix=f"{target.name}.",
                                         suffix=".tmp")
         tmp = Path(tmp_name)
         # The descriptor mkstemp returned belongs to nobody until
@@ -445,17 +544,49 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
             f.flush()
             os.fsync(f.fileno())
         _inherit_mode_bits(tmp, folder)
-        os.replace(str(tmp), str(path))
-    except OSError as e:
+        os.replace(str(tmp), str(target))
+    except OSError:
         if tmp is not None:
             try:
                 tmp.unlink()
             except OSError:
                 pass
-        raise SidecarWriteError(
-            f"The AI coder name could not be stored with the project "
-            f"({type(e).__name__}). Nothing was changed.") from e
-    return entry
+        raise
+
+
+def _mark_earlier_file(folder: Path) -> bool:
+    """Mark the earlier `qualcoder_mcp.json` as moved; True when marked.
+
+    Only a regular file this server can read, in the shared format, at
+    version 1 is rewritten: its keys are kept (the name it held at the
+    move included, so 0.12 to 0.14 still recognise the rows it named),
+    and it gains format_version 2 and `moved_to`, which those versions
+    refuse to write. A file already marked, an unreadable one (its bytes
+    may be the only history) and a newer one are left as they are.
+    """
+    old = folder / OLD_SIDECAR_NAME
+    try:
+        st = os.lstat(old)
+    except (OSError, ValueError):
+        return False
+    if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
+        return False
+    data = _read_raw(old)
+    if (data is None or data.get("format") != SIDECAR_FORMAT
+            or data.get("format_version") != SIDECAR_FORMAT_VERSION
+            or isinstance(data.get("format_version"), bool)):
+        return False
+    data["format_version"] = OLD_SIDECAR_MOVED_VERSION
+    data[MOVED_TO_KEY] = SIDECAR_NAME
+    data["written_by"] = f"{names.DISTRIBUTION} {_package_version()}"
+    try:
+        _replace_atomically(folder, old, _encoded_payload(data))
+    except OSError as e:
+        logger.warning("The earlier AI coder name file could not be marked "
+                       "as moved (%s); the next write tries again",
+                       type(e).__name__)
+        return False
+    return True
 
 
 def _package_version() -> str:

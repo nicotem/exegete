@@ -130,3 +130,77 @@ def test_the_published_0140_through_the_link(tmp_path):
     assert out["version"] == "0.14.0a0"
     assert Path(out["module"]).resolve().is_relative_to(venv.resolve())
     check_proof(home, out)
+
+
+# v0.14.1, the AI coder name file (ruling 41, decision 7): after Exegete
+# has moved a project's name into exegete.json, the real 0.14.0 finds its
+# qualcoder_mcp.json marked, reports it as written by a newer version and
+# refuses both to write it and to write any row under its name.
+REFUSAL = r'''
+import json, pathlib, sys
+folder = pathlib.Path(sys.argv[1])
+import qualcoder_mcp, qualcoder_mcp.server as server
+from qualcoder_mcp import project_settings as ps
+out = {"module": qualcoder_mcp.__file__, "version": qualcoder_mcp.__version__}
+state = ps.read_sidecar(folder)
+out["status"] = state.status
+out["name_read"] = state.name
+try:
+    ps.write_ai_coder_name(folder, "Written By 0.14")
+    out["write"] = "written"
+except ps.SidecarWriteError as e:
+    out["write"] = str(e)
+server.current_project_path = str(folder / "data.qda")
+owner, refusal = server._resolve_write_owner()
+out["owner"] = owner
+out["refusal"] = (refusal or {}).get("error")
+print(json.dumps(out))
+'''
+
+
+def test_the_published_0140_refuses_the_marked_file(tmp_path):
+    house = os.environ.get(rh.WHEELHOUSE)
+    if not house or not list(Path(house).glob("qualcoder_mcp-0.14.0a0-*")):
+        rh.skip_or_fail(f"{rh.WHEELHOUSE} does not hold the published "
+                        f"qualcoder_mcp 0.14.0a0 wheel")
+    from exegete import project_settings as ps
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("PIP_", "QUALCODER", "EXEGETE", "PYTHON"))}
+    venv = tmp_path / "v0140"
+    subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True,
+                   env=env, timeout=240)
+    python = venv / BIN / f"python{EXE}"
+    subprocess.run([str(python), "-m", "pip", "install", "--no-index",
+                    "--find-links", house, "qualcoder-mcp==0.14.0a0"],
+                   check=True, env=env, capture_output=True, timeout=240)
+    home = tmp_path / "home"
+    folder = home / "Study.qda"
+    folder.mkdir(parents=True)
+    (folder / "data.qda").write_bytes(b"")
+    # the project as 0.14.0 left it, then one name change by Exegete
+    old = folder / ps.OLD_SIDECAR_NAME
+    old.write_text(json.dumps({
+        "format": "qualcoder-mcp-project", "format_version": 1,
+        "ai_coder_name": {"name": "Before", "set_at": None, "note": "",
+                          "host_declaration": None},
+        "ai_coder_name_history": []}), encoding="utf-8")
+    ps.write_ai_coder_name(folder, "After")
+    before = {p.name: p.read_bytes() for p in folder.iterdir()}
+    script = tmp_path / "refusal.py"
+    script.write_text(REFUSAL, encoding="utf-8")
+    env.update(HOME=str(home), USERPROFILE=str(home),
+               PYTHONDONTWRITEBYTECODE="1")
+    proc = subprocess.run([str(python), "-B", str(script), str(folder)],
+                          capture_output=True, text=True, encoding="utf-8",
+                          env=env, cwd=str(tmp_path), timeout=240)
+    assert proc.returncode == 0, proc.stderr[-3000:]
+    out = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert out["version"] == "0.14.0a0"
+    assert Path(out["module"]).resolve().is_relative_to(venv.resolve())
+    assert out["status"] == "newer_format"
+    assert out["name_read"] == "Before"
+    assert "written by a newer version" in out["write"]
+    assert out["owner"] is None
+    assert "written by a newer version" in out["refusal"]
+    assert {p.name: p.read_bytes() for p in folder.iterdir()} == before
+    assert ps.read_sidecar(folder).name == "After"

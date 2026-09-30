@@ -986,7 +986,8 @@ class TestBackupsMadeConsistently:
             b"chat"
         assert not (backup / "ai_data" / "search.sqlite").exists()
         assert not (backup / "project_in_use.lock").exists()
-        assert (backup / "qualcoder_mcp.json").exists()
+        # the AI coder name file (exegete.json from v0.14.1)
+        assert (backup / "exegete.json").exists()
 
 
 def _plant_backup(folder: Path, suffix: str, side=()):

@@ -44,6 +44,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
@@ -119,9 +120,21 @@ def _place(path, home: Path) -> str:
     return quoted(text)
 
 
+def _utf8(char: str) -> bytes:
+    """A character's bytes: UTF-8, or the byte itself for one the file
+    system gave that was not UTF-8 (Python keeps it as a lone
+    surrogate)."""
+    try:
+        return char.encode("utf-8", "surrogateescape")
+    except UnicodeEncodeError:
+        return char.encode("utf-8", "surrogatepass")
+
+
 def _sh_word(word: str) -> str:
     """One word for sh, bash or zsh: shlex's quoting, or ANSI-C quoting
-    for a word with characters that cannot be shown as they are."""
+    for a word with characters that cannot be shown as they are, written
+    as their bytes (the Mac's bash 3.2 and sh read \\x, not \\u or
+    \\U)."""
     if word.isprintable():
         return shlex.quote(word)
     out = []
@@ -130,10 +143,8 @@ def _sh_word(word: str) -> str:
             out.append("\\" + c)
         elif c.isprintable():
             out.append(c)
-        elif ord(c) < 0x80:
-            out.append("\\x%02x" % ord(c))
         else:
-            out.append("\\U%08x" % ord(c))
+            out.extend("\\x%02x" % byte for byte in _utf8(c))
     return "$'" + "".join(out) + "'"
 
 
@@ -178,6 +189,11 @@ def _shell(windows: Optional[bool] = None) -> str:
     return "In PowerShell" if windows else "In a terminal"
 
 
+def _count(number: int, thing: str) -> str:
+    """"1 project", "2 projects"."""
+    return f"{number} {thing}" + ("" if number == 1 else "s")
+
+
 def _listed(items: List[str]) -> str:
     shown = ", ".join(quoted(item) for item in items[:SHOWN_MAX])
     more = len(items) - SHOWN_MAX
@@ -205,6 +221,17 @@ def host_config_files(home: Path) -> List[Tuple[str, Path]]:
         ("LM Studio", home / ".lmstudio" / "mcp.json"),
         ("Codex", home / ".codex" / "config.toml"),
     ]
+
+
+# The folder the desktop app unpacks its extensions into, one each.
+_EXTENSIONS = _APP_FOLDER + " Extensions"
+
+
+def extension_folders(home: Path) -> List[Path]:
+    return [home / "Library" / "Application Support" / _APP_FOLDER /
+            _EXTENSIONS,
+            home / "AppData" / "Roaming" / _APP_FOLDER / _EXTENSIONS,
+            home / ".config" / _APP_FOLDER / _EXTENSIONS]
 
 
 def claude_log_folders(home: Path) -> List[Path]:
@@ -288,6 +315,22 @@ def _command_at(path: Path) -> bool:
                               _is_file(path.with_name(path.name + ".exe")))
 
 
+def _url_folder(url) -> Optional[Path]:
+    """The folder a local file:// address names, when it is one."""
+    if not isinstance(url, str):
+        return None
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "file" or parsed.netloc not in ("", "localhost"):
+        return None
+    path = urllib.parse.unquote(parsed.path)
+    if os.name == "nt" and re.match(r"/[A-Za-z]:", path):
+        path = path[1:]                           # file:///C:/...
+    try:
+        return Path(path) if path and os.path.isdir(path) else None
+    except (OSError, ValueError):
+        return None
+
+
 def _inside(path: str, root: Path) -> bool:
     try:
         real = Path(os.path.realpath(path))
@@ -312,15 +355,26 @@ class OldInstall:
         except (OSError, ValueError):
             self.installer = "pip"
         self.editable = False
+        # an editable install's copy of the source: where pip says it
+        # installed from, or else the folder the environment is in
+        self.source: Optional[Path] = None
         try:
             direct = json.loads((info / "direct_url.json").read_text(
                 encoding="utf-8"))
             self.editable = bool(direct.get("dir_info", {}).get("editable"))
+            if self.editable:
+                self.source = _url_folder(direct.get("url"))
         except Exception:                        # a malformed file: no
             pass
+        if self.editable and self.source is None and \
+                _is_file(root.parent / "pyproject.toml"):
+            self.source = root.parent
         # folders where the old command is linked from this environment
         self.command_folders: List[Path] = []
         self.needs_exegete = False
+        # an exegete command that leads into this tool's environment
+        # (pipx's --include-deps, inject): installing Exegete replaces it
+        self.replace_command: Optional[str] = None
 
     def pip(self, *args: str) -> List[str]:
         if self.installer == "uv":
@@ -541,40 +595,72 @@ def old_installs(home: Path, prefix: Optional[Path] = None,
                 if _inside(c, root) and not _inside(str(Path(c).parent),
                                                     root)]
             folders = install.command_folders + [tool_command_folder(home)]
+            present = [str(f / names.COMMAND) for f in folders
+                       if _command_at(f / names.COMMAND)]
             install.needs_exegete = not (
                 any(_dist_info(tools / names.DISTRIBUTION, "exegete")
                     for _, tools in tool_folders(home)) or
-                any(_command_at(f / names.COMMAND) for f in folders))
+                any(_stays(command, [install]) for command in present))
+            if install.needs_exegete and present:
+                install.replace_command = present[0]
         else:
             install.needs_exegete = _dist_info(root, "exegete") is None
         installs.append(install)
     return installs
 
 
+def _stays(command: str, installs: Iterable[OldInstall]) -> bool:
+    """Whether a command is there and stays once the old package goes: not
+    one that leads into an old tool's own environment (pipx's
+    --include-deps and inject link exegete's command from there, and
+    removing the old package removes it)."""
+    return _command_at(Path(command)) and not any(
+        i.tool and _inside(command, i.root) for i in installs)
+
+
 def _install_finding(install: OldInstall, home: Path) -> Finding:
     place, version = _place(install.root, home), _word(install.version)
     if install.tool:
-        argv = (["uv", "tool", "install", names.DISTRIBUTION]
+        force = ["--force"] if install.replace_command else []
+        argv = (["uv", "tool", "install", *force, names.DISTRIBUTION]
                 if install.tool == "uv tool"
-                else ["pipx", "install", names.DISTRIBUTION])
+                else ["pipx", "install", *force, names.DISTRIBUTION])
+        why = (f"{install.tool} puts only a package's own commands on the "
+               f"PATH, so there is no exegete command yet"
+               if not force else
+               f"the exegete command at {quoted(install.replace_command)} "
+               f"leads into the old package's own environment, so "
+               f"removing the old package would take it too")
         return Finding(
             f"The old package, qualcoder-mcp {version}, is installed with "
-            f"{install.tool}, in {place}, and Exegete is not: "
-            f"{install.tool} puts only a package's own commands on the "
-            f"PATH, so there is no exegete command yet.",
+            f"{install.tool}, in {place}, and Exegete is not: {why}.",
             f"This comes first. {_shell()}:",
             commands=[command_line(argv)],
             after="It installs the exegete command that the steps below "
-                  "point your hosts at. Until it has, change nothing else: "
-                  "removing the old package first would leave no server.")
+                  "point your hosts at" + (
+                      " (--force lets it replace the one there now)"
+                      if force else "") +
+                  ". Until it has, change nothing else: removing the old "
+                  "package first would leave no server.")
     if install.editable:
+        quit_first = ("This comes first. Quit your AI host first, since a "
+                      "copy of the server left running fails when its files "
+                      "change; then update your copy of the source")
+        if install.source is None:
+            return Finding(
+                f"{place} has the old package, qualcoder-mcp {version}, "
+                f"installed from a copy of the source, and not Exegete.",
+                f"{quit_first}. {_shell()}, in its folder:",
+                commands=["git pull",
+                          command_line(install.pip("install", "-e", "."))])
+        source = str(install.source)
         return Finding(
             f"{place} has the old package, qualcoder-mcp {version}, "
-            f"installed from a copy of the source, and not Exegete.",
-            f"This comes first: update your copy of the source. "
-            f"{_shell()}, in its folder:",
-            commands=["git pull",
-                      command_line(install.pip("install", "-e", "."))])
+            f"installed from a copy of the source in "
+            f"{_place(source, home)}, and not Exegete.",
+            f"{quit_first} in {_place(source, home)}. {_shell()}:",
+            commands=[command_line(["git", "-C", source, "pull"]),
+                      command_line(install.pip("install", "-e", source))])
     return Finding(
         f"{place} has the old package, qualcoder-mcp {version}, and not "
         f"Exegete.",
@@ -595,9 +681,11 @@ def _removal_finding(install: OldInstall, home: Path) -> Finding:
         commands = [command_line(install.pip("uninstall",
                                              names.OLD_DISTRIBUTION))]
         if install.editable:
-            commands.append(command_line(install.pip("install", "-e", ".")))
+            commands.append(command_line(install.pip(
+                "install", "-e", str(install.source or "."))))
     where = (f"{_shell()}, in the folder of your copy of the source:"
-             if install.editable and not install.tool else f"{_shell()}:")
+             if install.editable and not install.tool and
+             install.source is None else f"{_shell()}:")
     return Finding(
         f"The old package, qualcoder-mcp {_word(install.version)}, is still "
         f"installed in {_place(install.root, home)}.",
@@ -633,8 +721,7 @@ def _readiness(entry: OldEntry, home: Path,
     """'' when the entry's new command is at hand (or cannot be judged
     from here), else what has to come first."""
     after_install = ("Make this change only after the step above that "
-                     "installs Exegete: until then "
-                     f"{quoted(entry.command)} does not exist.")
+                     "installs Exegete: until then ")
     keep = ("or leave this entry as it is for now (the old way of "
             "starting keeps working until v1.0).")
     if entry.command != entry.old_command:
@@ -642,14 +729,19 @@ def _readiness(entry: OldEntry, home: Path,
         old = _as_path(entry.old_command, home)
         if new is None:
             old = which(entry.old_command)
-            if which(entry.command) or (
-                    old and _command_at(Path(old).parent / entry.command)):
-                return ""
-        elif _command_at(Path(new)):
+            there = [which(entry.command) or ""] + (
+                [str(Path(old).parent / entry.command)] if old else [])
+        else:
+            there = [new]
+        there = [c for c in there if c and _command_at(Path(c))]
+        if any(_stays(c, installs) for c in there):
             return ""
         if old and any(i.needs_exegete and _provides(i, old, home)
                        for i in installs):
-            return after_install
+            return after_install + (
+                f"{quoted(there[0])} leads into the old package's "
+                f"environment, which goes when the old package is removed."
+                if there else f"{quoted(entry.command)} does not exist.")
         return (f"{quoted(entry.command)} does not exist yet: install "
                 f"Exegete where the old command is installed first, {keep}")
     if _NEW_MODULE in entry.args:
@@ -661,7 +753,8 @@ def _readiness(entry: OldEntry, home: Path,
             return ""
         if any(i.needs_exegete and _same_root(i.root, root)
                for i in installs):
-            return after_install
+            return after_install + (f"the Python it starts, {quoted(python)},"
+                                    f" has no Exegete yet.")
         install = command_line([python, "-m", "pip", "install",
                                 names.DISTRIBUTION])
         return (f"The Python it starts has no Exegete yet: install it "
@@ -710,6 +803,70 @@ def _new_spelling(old: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# The desktop extension, when it is older than the pointer
+# ---------------------------------------------------------------------------
+
+class OldExtension:
+    """A desktop extension that would still start the old code: its
+    manifest names qualcoder-mcp below 0.14.1, or it holds the old
+    package's server and not Exegete's (the published 0.14.0 package
+    lays out src/qualcoder_mcp/server.py; Exegete's has src/exegete)."""
+
+    def __init__(self, folder: Path, version: str):
+        self.folder, self.version = folder, version
+
+    def label(self, home: Path) -> str:
+        version = (f", qualcoder-mcp {_word(self.version)}," if self.version
+                   else "")
+        return f"the desktop extension{version} in {_place(self.folder, home)}"
+
+
+def _exists(path: Path) -> bool:
+    try:
+        return os.path.lexists(path)
+    except (OSError, ValueError):
+        return False
+
+
+def old_extensions(home: Path) -> List[OldExtension]:
+    found = []
+    for parent in extension_folders(home):
+        try:
+            folders = sorted(parent.iterdir())
+        except OSError:
+            continue
+        for folder in folders:
+            try:
+                if not folder.is_dir():
+                    continue
+            except OSError:
+                continue
+            manifest = _read_json(folder / "manifest.json") or {}
+            version = manifest.get("version")
+            version = version if isinstance(version, str) else ""
+            named = manifest.get("name") == names.OLD_DISTRIBUTION
+            old_code = (_is_file(folder / "src" / names.OLD_PACKAGE /
+                                 "server.py") and
+                        not _exists(folder / "src" / names.PACKAGE))
+            if (named and not is_pointer(version)) or old_code:
+                found.append(OldExtension(folder, version if named else ""))
+    return found
+
+
+def _extension_finding(extension: OldExtension, home: Path) -> Finding:
+    label = extension.label(home)
+    return Finding(
+        f"{label[0].upper()}{label[1:]} is older than Exegete: it still "
+        f"starts the earlier code, which uses "
+        f"{_place(state_folder.old_path(home), home)}.",
+        "Update it: open the Exegete extension's file "
+        "(exegete-<version>.mcpb) with Claude Desktop, which replaces this "
+        "one and keeps its settings (INSTALL.md, \"Coming from "
+        "qualcoder-mcp\"). If you no longer use it, remove it in Claude "
+        "Desktop's settings instead.")
+
+
+# ---------------------------------------------------------------------------
 # Programs still started as qualcoder-mcp
 # ---------------------------------------------------------------------------
 
@@ -735,16 +892,25 @@ def posix_ps() -> Optional[str]:
     return None
 
 
-def _process_table() -> Optional[List[Tuple[int, int, str]]]:
-    """(process id, parent's id, command line) for every process, or None
-    when it cannot be read (then nothing is removed)."""
-    if os.name == "nt":
+Row = Tuple[int, int, Optional[int], str]
+
+
+def _process_table() -> Optional[List[Row]]:
+    """(process id, parent's id, when it started, command line) for every
+    process, or None when it cannot be read (then nothing is removed).
+    When it started is read on Windows alone (None elsewhere), where a
+    dead parent's number stays on its child and can be taken by a later
+    program; on macOS and Linux an orphan is given a new parent."""
+    windows = os.name == "nt"
+    if windows:
         powershell = windows_powershell()
         if powershell is None:
             return None
         cmd = [powershell, "-NoProfile", "-Command",
                "Get-CimInstance Win32_Process | ForEach-Object "
                "{ \"$($_.ProcessId) $($_.ParentProcessId) "
+               "$(if ($_.CreationDate) "
+               "{ $_.CreationDate.ToFileTimeUtc() } else { 0 }) "
                "$($_.CommandLine)\" }"]
     else:
         ps = posix_ps()
@@ -758,12 +924,15 @@ def _process_table() -> Optional[List[Tuple[int, int, str]]]:
         return None
     if done.returncode != 0:
         return None
-    rows = []
+    rows: List[Row] = []
+    numbers = 3 if windows else 2
     for row in done.stdout.decode("utf-8", errors="replace").splitlines():
-        parts = row.strip().split(None, 2)
-        if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+        parts = row.strip().split(None, numbers)
+        if len(parts) >= numbers and all(p.isdigit()
+                                         for p in parts[:numbers]):
             rows.append((int(parts[0]), int(parts[1]),
-                         parts[2] if len(parts) > 2 else ""))
+                         (int(parts[2]) or None) if windows else None,
+                         parts[numbers] if len(parts) > numbers else ""))
     return rows
 
 
@@ -776,20 +945,25 @@ def _listing() -> Optional[List[str]]:
     """Every other process's command line, or None when it cannot be
     read. The check itself and the programs that started it (uvx, pip's
     launcher on Windows, the shell) are left out: they are not an older
-    copy of the server, whatever their command line says."""
+    copy of the server, whatever their command line says. Nothing else
+    is: a program naming --check-transition may be an older copy that
+    ignores its arguments (0.10 and 0.11 do)."""
     rows = _process_table()
     if rows is None:
         return None
-    parent = {pid: ppid for pid, ppid, _ in rows}
-    own, current = _own_ids()
-    mine = {own, current}
+    parent = {pid: ppid for pid, ppid, _, _ in rows}
+    started = {pid: when for pid, _, when, _ in rows}
+    child, current = _own_ids()
+    mine = {child}
     for _ in range(256):                         # a loop in the table ends
-        current = parent.get(current)
         if not current or current in mine:
             break
+        born, child_born = started.get(current), started.get(child)
+        if born and child_born and born > child_born:
+            break                        # the number is a later program's
         mine.add(current)
-    return [args for pid, _, args in rows
-            if pid not in mine and "--check-transition" not in args.split()]
+        child, current = current, parent.get(current)
+    return [args for pid, _, _, args in rows if pid not in mine]
 
 
 def started_as_old(lines: Iterable[str]) -> List[str]:
@@ -880,7 +1054,9 @@ def state_link(home: Path, busy: Optional[List[str]],
         f"{shown} is the link the move left, leading to {shown_new}, and "
         f"nothing started as qualcoder-mcp is running or left to start.",
         "`exegete --check-transition --tidy` removes the link (only the "
-        "link: the folder it leads to is untouched).",
+        "link: the folder it leads to is untouched). This check cannot see "
+        "an older copy started from a project's own .mcp.json file: keep "
+        "the link while one could still start.",
         tidy=lambda: _remove_link(old, home))]
 
 
@@ -961,10 +1137,10 @@ def old_projects_folder(home: Path) -> List[Finding]:
     others = [name for name in top if not name.lower().endswith(".qda")]
     held = []
     if projects:
-        held.append(f"{len(projects)} project(s), up to three folders "
-                    f"down: {_listed(projects)}")
+        held.append(f"{_count(len(projects), 'project')}, up to three "
+                    f"folders down: {_listed(projects)}")
     if backups:
-        held.append(f"{len(backups)} backup(s): {_listed(backups)}")
+        held.append(f"{_count(len(backups), 'backup')}: {_listed(backups)}")
     if others:
         held.append(("and at its top level " if held else "") +
                     f"{_listed(others)}")
@@ -1009,10 +1185,13 @@ def check(home: Optional[Path] = None, prefix: Optional[Path] = None,
     holders = [f"qualcoder-mcp {_word(i.version)} in {_place(i.root, home)}"
                for i in installs if not i.pointer]
     holders += [f"{e.label}'s entry {quoted(e.name)}" for e in entries]
+    extensions = old_extensions(home)
+    holders += [x.label(home) for x in extensions]
     return ([_install_finding(i, home) for i in installs
              if i.needs_exegete] +
             [_entry_finding(e, home, which, installs) for e in entries] +
             [_removal_finding(i, home) for i in installs] +
+            [_extension_finding(x, home) for x in extensions] +
             state_link(home, busy, holders) + old_logs(home, busy) +
             old_projects_folder(home))
 

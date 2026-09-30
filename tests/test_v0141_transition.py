@@ -102,15 +102,17 @@ def pasted(out):
 
 
 def env_with_old_package(root: Path, installer="pip", editable=False,
-                         version="0.14.0a0", exegete=False):
+                         version="0.14.0a0", exegete=False, url=None):
+    """`url`: the copy of the source an editable install came from, as
+    pip records it (a folder that does not exist by default)."""
     site = root / "lib" / "python3.13" / "site-packages"
     info = site / f"qualcoder_mcp-{version}.dist-info"
     info.mkdir(parents=True)
     (info / "INSTALLER").write_text(installer + "\n", encoding="utf-8")
     if editable:
         (info / "direct_url.json").write_text(json.dumps(
-            {"url": "file:///src", "dir_info": {"editable": True}}),
-            encoding="utf-8")
+            {"url": url or "file:///no-such-source",
+             "dir_info": {"editable": True}}), encoding="utf-8")
     if exegete:
         (site / f"exegete-{version}.dist-info").mkdir()
     (root / "bin").mkdir(exist_ok=True)
@@ -168,8 +170,11 @@ class TestTheOldPackage:
         remove = command_line([python, "-m", "pip", "uninstall",
                                "qualcoder-mcp"])
         if editable:
+            # where the copy is cannot be told here: "its folder"
             again = command_line([python, "-m", "pip", "install", "-e", "."])
             assert pasted(out) == ["git pull", again, remove, again]
+            assert "Quit your AI host first" in items(out)[0][1][0]
+            assert "in its folder" in items(out)[0][1][0]
         else:
             assert pasted(out) == [install, remove]
         assert "This comes first" in items(out)[0][1][0]
@@ -180,6 +185,67 @@ class TestTheOldPackage:
         code, out = run(tmp_path / "home", which=lambda name: str(command)
                         if name == "qualcoder-mcp" else None)
         assert code == 1 and quoted(str(env)) in out
+
+
+class TestACopyOfTheSource:
+    """INSTALL's git route (and the owner's own set-up): a clone with its
+    environment inside it, installed editable at 0.14.0, and a host entry
+    that starts that environment's Python with the old module."""
+
+    def _clone(self, tmp_path, url=True, pyproject=True, inside=True):
+        """`inside`: the environment is the clone's own `venv`, else one
+        elsewhere in the home folder."""
+        home = tmp_path / "home"
+        clone = home / "Documents" / ODD
+        if pyproject:
+            write(clone / "pyproject.toml", "[project]\n")
+        env = env_with_old_package(
+            clone / "venv" if inside else home / "venvs" / "qc",
+            editable=True, url=clone.as_uri() if url else None)
+        write(env / "bin" / "python", "")
+        return home, clone, env
+
+    @pytest.mark.parametrize("url,inside", [
+        (True, False),               # pip's record alone can tell
+        (True, True), (False, True)  # or else the environment's parent
+    ])
+    def test_quit_first_and_the_folder_named(self, tmp_path, url, inside):
+        home, clone, env = self._clone(tmp_path, url=url, inside=inside)
+        code, out = run(home, prefix=env)
+        what, lines = items(out)[0]
+        step = " ".join(" ".join(lines).split())
+        assert "installed from a copy of the source" in what
+        assert "Quit your AI host first" in step
+        assert quoted("~" + os.sep + os.path.join("Documents", ODD)) in step
+        python = str(env / "bin" / "python")
+        assert pasted(out)[:2] == [
+            command_line(["git", "-C", str(clone), "pull"]),
+            command_line([python, "-m", "pip", "install", "-e",
+                          str(clone)])]
+        assert pasted(out)[-1] == command_line(
+            [python, "-m", "pip", "install", "-e", str(clone)])
+        assert "git pull" not in pasted(out)
+        assert all(" -e ." not in line for line in pasted(out))
+
+    def test_a_parent_without_pyproject_is_not_taken(self, tmp_path):
+        home, clone, env = self._clone(tmp_path, url=False, pyproject=False)
+        code, out = run(home, prefix=env)
+        assert pasted(out)[0] == "git pull"
+        assert "in its folder" in items(out)[0][1][0]
+
+    def test_the_entry_waits_for_exegete_in_its_python(self, tmp_path):
+        home, clone, env = self._clone(tmp_path)
+        python = str(env / "bin" / "python")
+        desktop_file(home, {"qualcoder": {
+            "command": python, "args": ["-m", "qualcoder_mcp.server"]}})
+        code, out = run(home, prefix=env)
+        entry = [lines for what, lines in items(out)
+                 if "still starts the old command" in what][0]
+        step = " ".join(" ".join(entry).split())
+        assert "only after the step above that installs Exegete" in step
+        assert f"the Python it starts, {quoted(python)}, has no Exegete " \
+            "yet" in step
+        assert "does not exist" not in out
 
 
 class TestRealPaths:
@@ -302,6 +368,39 @@ class TestShells:
             "$'/v/a\\x0ab\\'c/python'"
         assert "\n" not in command_line(["/v/a\u2028b"], windows=False)
 
+    def test_invisible_characters_as_their_utf8_bytes(self):
+        # the Mac's bash 3.2 and sh know \x but not \u or \U
+        assert command_line(["/v/a\u00a0b/python"], windows=False) == \
+            "$'/v/a\\xc2\\xa0b/python'"
+        assert command_line(["/v/\u200fx"], windows=False) == \
+            "$'/v/\\xe2\\x80\\x8fx'"
+        assert command_line(["/v/\U000e0001"], windows=False) == \
+            "$'/v/\\xf3\\xa0\\x80\\x81'"
+        if os.name != "nt":
+            # a byte the file system gave that is not UTF-8 stays that byte
+            assert command_line([os.fsdecode(b"/v/\xff")],
+                                windows=False) == "$'/v/\\xff'"
+
+    @POSIX_ONLY
+    @pytest.mark.parametrize("name", ["a\u00a0b", "\u200fx", "o'b\u00a0\"c"])
+    def test_invisible_characters_paste_in_every_shell(self, tmp_path, name):
+        folder = tmp_path / name
+        folder.mkdir()
+        show = write(folder / "show", "#!/bin/sh\nprintf '%s' \"$0\" > "
+                     "\"$(dirname \"$0\")/ran.txt\"\n")
+        show.chmod(0o755)
+        line = command_line([str(show)], windows=False)
+        shells = [s for s in ("/bin/bash", "/bin/zsh", "/bin/sh")
+                  if os.path.exists(s) and "dash" not in
+                  os.path.realpath(s)]
+        for shell in shells:
+            (folder / "ran.txt").unlink(missing_ok=True)
+            done = subprocess.run([shell, "-c", line], capture_output=True,
+                                  timeout=30)
+            assert done.returncode == 0, (shell, line, done.stderr)
+            assert (folder / "ran.txt").read_bytes() == \
+                os.fsencode(str(show)), shell
+
     def test_quoted_is_json(self):
         for text in ("plain", "a\nb", "\x1b[2J", "\u202e", "a\"b\\c",
                      "\U000e0001"):
@@ -404,6 +503,41 @@ class TestInstallFirst:
         code, out = run(home)
         assert "This comes first" not in out and "does not exist" not in out
         assert "still starts the old command" in items(out)[0][0]
+
+    @POSIX_ONLY
+    @pytest.mark.parametrize("kind", ["uv tool", "pipx"])
+    @pytest.mark.parametrize("bare", [False, True])
+    def test_a_command_from_inside_the_old_tool_is_not_counted(
+            self, tmp_path, kind, bare):
+        # `pipx install --include-deps` and `pipx inject --include-apps`
+        # link exegete's command from the old package's own environment,
+        # which removing the old package takes with it
+        home = tmp_path / "home"
+        root = lay_out_tool(home, kind, "qualcoder-mcp", "0.14.1a0",
+                            inner_exegete=True)
+        folder = home / ".local" / "bin"
+        os.symlink(root / BIN / "exegete", folder / "exegete")
+        desktop_file(home, {"qualcoder": {
+            "command": "qualcoder-mcp" if bare else
+            str(folder / "qualcoder-mcp")}})
+
+        def which(name):
+            return str(folder / name) if (folder / name).exists() else None
+        code, out = run(home, which=which)
+        # the real pipx will not replace a command linked from another
+        # environment without --force (neither will uv)
+        install = command_line(TOOLS[kind][1] + ["install", "--force",
+                                                 "exegete"])
+        remove = command_line(TOOLS[kind][1] + ["uninstall",
+                                                "qualcoder-mcp"])
+        assert pasted(out)[0] == install and pasted(out)[-1] == remove
+        flat = " ".join(out.split())
+        assert "only after the step above that installs Exegete" in flat
+        assert (f"{quoted(str(folder / 'exegete'))} leads into the old "
+                f"package's environment") in flat
+        assert (f"the exegete command at {quoted(str(folder / 'exegete'))} "
+                f"leads into the old package's own environment") in flat
+        assert "does not exist" not in flat
 
     def test_an_entry_never_points_at_nothing(self, tmp_path):
         home = tmp_path / "home"
@@ -528,6 +662,28 @@ class TestTheHostsEntries:
             is None
 
 
+EXTENSION_ID = "local.mcpb.niccol-tempini.qualcoder-mcp"
+
+
+def extension(home, version="0.14.0-alpha", code=("qualcoder_mcp",),
+              windows=False, manifest=True, name="qualcoder-mcp",
+              folder=EXTENSION_ID):
+    """An extension unpacked where Claude Desktop keeps them (macOS, or
+    Windows with `windows`), as the published 0.14.0 package lays it
+    out: its manifest and the server's code under src/."""
+    base = (home / "AppData" / "Roaming" / "Claude" if windows else
+            home / "Library" / "Application Support" / "Claude")
+    folder = base / "Claude Extensions" / folder
+    if manifest:
+        write(folder / "manifest.json", json.dumps({
+            "manifest_version": "0.2", "name": name, "version": version,
+            "server": {"type": "uv",
+                       "entry_point": f"src/{code[-1]}/server.py"}}))
+    for package in code:
+        write(folder / "src" / package / "server.py", "")
+    return folder
+
+
 class TestTheLink:
 
     def _moved(self, home):
@@ -588,6 +744,65 @@ class TestTheLink:
         assert state_folder.is_link(tmp_path / ".qualcoder_mcp")
         assert "Done:" not in out
         assert "Claude Desktop's entry \"qualcoder\"." in out
+
+    @pytest.mark.parametrize("windows", [False, True])
+    def test_kept_while_an_older_desktop_extension_is_installed(
+            self, tmp_path, windows):
+        self._moved(tmp_path)
+        folder = extension(tmp_path, windows=windows)
+        code, out = run(tmp_path, tidy=True)
+        assert code == 1
+        assert state_folder.is_link(tmp_path / ".qualcoder_mcp")
+        assert "Done:" not in out
+        found = dict(items(out))
+        shown = quoted("~" + os.sep + str(folder.relative_to(tmp_path)))
+        older = [what for what in found if "desktop extension" in what and
+                 "the link" not in what]
+        assert len(older) == 1 and shown in older[0]
+        assert "0.14.0-alpha" in older[0]
+        assert "Update it" in found[older[0]][0]
+        link = [what for what in found if "the link" in what][0]
+        assert ("an older copy could still be started: the desktop "
+                "extension, qualcoder-mcp 0.14.0-alpha, in " + shown) in link
+
+    @pytest.mark.parametrize("layout", [
+        dict(manifest=False),                          # its code alone
+        dict(name="something-else"),                   # its code alone
+        dict(code=("exegete",)),                       # its manifest alone
+        dict(version="an unreadable version", code=("exegete",)),
+    ])
+    def test_its_code_or_its_manifest_is_enough(self, tmp_path, layout):
+        self._moved(tmp_path)
+        extension(tmp_path, **layout)
+        code, out = run(tmp_path, tidy=True)
+        assert state_folder.is_link(tmp_path / ".qualcoder_mcp")
+        assert "Done:" not in out and "desktop extension" in out
+
+    @pytest.mark.parametrize("layout", [
+        dict(version="0.14.1-alpha", code=("exegete",)),
+        # unpacked over the old folder, which kept the old code
+        dict(version="0.14.1-alpha", code=("qualcoder_mcp", "exegete")),
+        dict(version="0.15.0-alpha", code=("exegete",)),
+        dict(name="another-server", code=("another",),
+             folder="local.mcpb.someone.another-server"),
+    ])
+    def test_an_updated_or_another_extension_does_not(self, tmp_path,
+                                                      layout):
+        self._moved(tmp_path)
+        extension(tmp_path, **layout)
+        code, out = run(tmp_path, tidy=True)
+        assert "Done: Removed the link" in out, out
+        assert "desktop extension" not in out
+
+    def test_the_tidy_says_what_it_cannot_see(self, tmp_path):
+        self._moved(tmp_path)
+        code, out = run(tmp_path)
+        link = [lines for what, lines in items(out) if "the link" in what][0]
+        flat = " ".join(" ".join(link).split())
+        assert "--tidy` removes the link" in flat
+        assert ("This check cannot see an older copy started from a "
+                "project's own .mcp.json file: keep the link while one "
+                "could still start.") in flat
 
     def test_a_pointer_package_alone_does_not_hold_it(self, tmp_path):
         self._moved(tmp_path)
@@ -688,8 +903,19 @@ class TestTheEarlierProjectsFolder:
         project = self._project(tmp_path, "Study.qda")
         code, out = run(tmp_path, tidy=True, logs=True)
         assert code == 0
-        assert "holds 1 project(s)" in out and "Nothing to do" in out
+        assert "holds 1 project, up to" in out and "Nothing to do" in out
         assert (project / "data.qda").read_bytes() == b"x"
+
+    def test_counts_read_plainly(self, tmp_path):
+        self._project(tmp_path, "One.qda")
+        self._project(tmp_path, "Two.qda")
+        self._project(tmp_path, "old", "One_backup_20250101_1200.qda")
+        code, out = run(tmp_path)
+        assert "holds 2 projects, up to" in out
+        assert "1 backup: " in out
+        assert "(s)" not in out
+        self._project(tmp_path, "old", "Two_backup_20250101_1200.qda")
+        assert "2 backups: " in run(tmp_path)[1]
 
     @pytest.mark.parametrize("parts", [
         ("2025", "Interviews.qda"), ("2025", "spring", "Interviews.qda")])
@@ -697,7 +923,7 @@ class TestTheEarlierProjectsFolder:
         self._project(tmp_path, *parts)
         code, out = run(tmp_path, tidy=True, logs=True)
         assert code == 0
-        assert "holds 1 project(s)" in out
+        assert "holds 1 project, up to" in out
         assert quoted(os.path.join(*parts)) in out
         assert "may remove" not in out and "empty" not in out
 
@@ -723,7 +949,7 @@ class TestTheEarlierProjectsFolder:
         self._project(tmp_path, "Study.qda")
         self._project(tmp_path, "old", "Study_backup_20250101_1200.qda")
         code, out = run(tmp_path)
-        assert "1 backup(s): " + quoted(os.path.join(
+        assert "1 backup: " + quoted(os.path.join(
             "old", "Study_backup_20250101_1200.qda")) in out
 
     def test_empty_it_is_yours_to_remove(self, tmp_path):
@@ -745,13 +971,16 @@ class TestTheProcessList:
     The check itself and the programs that started it are left out."""
 
     OUT = b"1 0 uvx qualcoder-mcp\n"
+    # PowerShell's lines also say when each program started
+    OUT_WINDOWS = b"1 0 134000000000000000 uvx qualcoder-mcp\n"
 
     def _run(self, monkeypatch):
         calls = []
 
         def run(cmd, **kwargs):
             calls.append(list(cmd))
-            return subprocess.CompletedProcess(cmd, 0, self.OUT, b"")
+            out = self.OUT_WINDOWS if cmd[0].endswith(".exe") else self.OUT
+            return subprocess.CompletedProcess(cmd, 0, out, b"")
         monkeypatch.setattr(transition.subprocess, "run", run)
         monkeypatch.setattr(transition, "_own_ids", lambda: (1000, 999))
         return calls
@@ -784,6 +1013,7 @@ class TestTheProcessList:
         assert [call[0] for call in calls] == [str(exe)]
         assert calls[0][1:3] == ["-NoProfile", "-Command"]
         assert "ParentProcessId" in calls[0][3]
+        assert "CreationDate" in calls[0][3]
         assert lines == ["uvx qualcoder-mcp"]
 
     def test_without_it_nothing_is_read(self, tmp_path, monkeypatch):
@@ -836,19 +1066,65 @@ class TestTheProcessList:
         assert lines is not None and not (tmp_path / "ran").exists()
 
     def test_the_check_and_what_started_it_are_left_out(self, monkeypatch):
-        rows = [(1000, 999, "/v/bin/python -m exegete.server "
-                            "--check-transition"),
-                (999, 998, "/v/bin/uv tool uvx qualcoder-mcp"),
-                (998, 997, "C:\\v\\Scripts\\qualcoder-mcp.exe --tidy"),
-                (997, 1, "-zsh"),
-                (1, 0, "/sbin/launchd"),
-                (2000, 1, "/v/bin/python -m qualcoder_mcp.server"),
-                (3000, 1, "/w/bin/python /w/bin/qualcoder-mcp "
-                          "--check-transition --tidy")]
+        # (id, parent's id, when it started or None, command line)
+        rows = [(1000, 999, None, "/v/bin/python -m exegete.server "
+                                  "--check-transition"),
+                (999, 998, None, "/v/bin/uv tool uvx qualcoder-mcp"),
+                (998, 997, None, "C:\\v\\Scripts\\qualcoder-mcp.exe --tidy"),
+                (997, 1, None, "-zsh"),
+                (1, 0, None, "/sbin/launchd"),
+                (2000, 1, None, "/v/bin/python -m qualcoder_mcp.server")]
         monkeypatch.setattr(transition, "_process_table", lambda: rows)
         monkeypatch.setattr(transition, "_own_ids", lambda: (1000, 999))
         assert transition.started_as_old(transition._listing()) == \
             ["/v/bin/python -m qualcoder_mcp.server"]
+
+    def test_naming_the_switch_hides_nothing(self, monkeypatch):
+        # 0.10 and 0.11 ignore their arguments: `qualcoder-mcp
+        # --check-transition` there starts a real server
+        others = ["/w/bin/python /w/bin/qualcoder-mcp --check-transition",
+                  "/x/my --check-transition dir/bin/qualcoder-mcp"]
+        rows = [(1000, 999, None, "/v/bin/python -m exegete.server "
+                                  "--check-transition"),
+                (999, 1, None, "/v/bin/uvx qualcoder-mcp --check-transition"),
+                (3000, 1, None, others[0]), (3001, 1, None, others[1])]
+        monkeypatch.setattr(transition, "_process_table", lambda: rows)
+        monkeypatch.setattr(transition, "_own_ids", lambda: (1000, 999))
+        assert transition.started_as_old(transition._listing()) == others
+
+    def test_a_reused_number_is_no_ancestor(self, monkeypatch):
+        # Windows keeps a dead parent's number, which a later program can
+        # take: an ancestor started before its child, never after
+        rows = [(1000, 999, 500, "C:\\v\\python.exe -m exegete.server "
+                                 "--check-transition"),
+                (999, 998, 900, "C:\\w\\Scripts\\qualcoder-mcp.exe"),
+                (998, 4, 100, "C:\\v\\Scripts\\qualcoder-mcp.exe"),
+                (2000, 998, 400, "C:\\v\\Scripts\\uv.exe tool uvx "
+                                 "qualcoder-mcp")]
+        monkeypatch.setattr(transition, "_process_table", lambda: rows)
+        monkeypatch.setattr(transition, "_own_ids", lambda: (1000, 999))
+        assert transition.started_as_old(transition._listing()) == [
+            "C:\\w\\Scripts\\qualcoder-mcp.exe",
+            "C:\\v\\Scripts\\qualcoder-mcp.exe",
+            "C:\\v\\Scripts\\uv.exe tool uvx qualcoder-mcp"]
+        # started in the right order, the chain is the check's own
+        rows[1] = (999, 998, 300, rows[1][3])
+        assert transition.started_as_old(transition._listing()) == [
+            "C:\\v\\Scripts\\uv.exe tool uvx qualcoder-mcp"]
+
+    def test_the_real_process_list_holds_this_process(self):
+        # on Windows this runs the PowerShell command itself, so a mistake
+        # in it shows here rather than as "could not be read"
+        rows = transition._process_table()
+        assert rows is not None
+        mine = [row for row in rows if row[0] == os.getpid()]
+        assert len(mine) == 1 and mine[0][1] == os.getppid()
+        if os.name == "nt":
+            assert mine[0][2]                       # when it started
+            parent = [row for row in rows if row[0] == os.getppid()]
+            assert not parent or parent[0][2] <= mine[0][2]
+        else:
+            assert mine[0][2] is None
 
 
 class TestTheCommandLine:

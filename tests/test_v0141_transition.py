@@ -25,6 +25,40 @@ from exegete import env_settings, state_folder, transition
 REPO = Path(__file__).resolve().parents[1]
 POSIX_ONLY = pytest.mark.skipif(os.name == "nt", reason="POSIX links")
 
+# On Windows the check starts PowerShell to read the running programs,
+# and PowerShell writes its own cache (its start-up profile data, its
+# module analysis cache) under the profile folder it is given: in the
+# command-line tests below, the scratch home. That folder, and nothing
+# else, may appear there; Exegete itself writes nothing.
+POWERSHELL_CACHE = ("AppData", "Local", "Microsoft", "Windows", "PowerShell")
+
+
+def home_names(home: Path, windows=None):
+    """The names at the top of `home`, less AppData on Windows once every
+    path under it is shown to be PowerShell's cache or a folder on the
+    way to it."""
+    names = sorted(p.name for p in home.iterdir())
+    if not (os.name == "nt" if windows is None else windows) or \
+            "AppData" not in names:
+        return names
+    cache = home.joinpath(*POWERSHELL_CACHE)
+    on_the_way = {home.joinpath(*POWERSHELL_CACHE[:n])
+                  for n in range(2, len(POWERSHELL_CACHE))}
+    assert (home / "AppData").is_dir() and \
+        not (home / "AppData").is_symlink()
+    others = []                   # every one named, should any be found
+    for root, folders, files in os.walk(home / "AppData"):
+        for name in folders + files:
+            path = Path(root) / name
+            if path in on_the_way:
+                if not path.is_dir() or path.is_symlink():
+                    others.append(str(path))
+            elif path != cache and cache not in path.parents:
+                others.append(str(path))
+    assert others == []
+    names.remove("AppData")
+    return names
+
 
 def run(home, *, tidy=False, logs=False, lines=(), prefix=None,
         which=lambda name: None):
@@ -406,8 +440,8 @@ class TestTheCommandLine:
         assert "has not been moved to" in done.stdout
         assert not os.path.lexists(tmp_path / ".exegete")
         assert not state_folder.is_link(old)
-        assert sorted(p.name for p in tmp_path.iterdir()) == \
-            [".qualcoder_mcp"]
+        # PowerShell's own cache aside, on Windows (home_names)
+        assert home_names(tmp_path) == [".qualcoder_mcp"]
 
     def test_through_the_old_name(self, tmp_path):
         home = tmp_path / "home"
@@ -419,7 +453,8 @@ class TestTheCommandLine:
         assert done.returncode in (0, 1), done.stderr
         assert transition.HEADING in done.stdout
         assert "Traceback" not in done.stderr
-        assert sorted(p.name for p in home.iterdir()) == []
+        # PowerShell's own cache aside, on Windows (home_names)
+        assert home_names(home) == []
 
     @pytest.mark.parametrize("args", [["--tidy"], ["--tidy-old-logs"],
                                       ["--check-transition",
@@ -432,6 +467,53 @@ class TestTheCommandLine:
     def test_the_old_commands_line_names_the_check(self):
         assert "`exegete --check-transition`" in server.OLD_NAME_NOTE
         assert "\n" not in server.OLD_NAME_NOTE
+
+
+class TestTheHomeCheck:
+    """home_names allows PowerShell's cache folder on Windows and nothing
+    else, and nothing at all on macOS and Linux."""
+
+    CACHED = POWERSHELL_CACHE + ("StartupProfileData-NonInteractive",)
+
+    def _plant(self, home, parts, folder=False):
+        path = home.joinpath(*parts)
+        if folder:
+            path.mkdir(parents=True)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"x")
+
+    def test_powershells_cache_alone_on_windows(self, tmp_path):
+        home = tmp_path / "home"
+        self._plant(home, self.CACHED)
+        self._plant(home, POWERSHELL_CACHE + ("ModuleAnalysisCache",))
+        (home / ".qualcoder_mcp").mkdir()
+        assert home_names(home, windows=True) == [".qualcoder_mcp"]
+        assert home_names(home, windows=False) == [".qualcoder_mcp",
+                                                   "AppData"]
+
+    @pytest.mark.skipif(os.name == "nt", reason="macOS and Linux only")
+    def test_on_macos_and_linux_nothing_is_allowed(self, tmp_path):
+        home = tmp_path / "home"
+        self._plant(home, self.CACHED)
+        assert home_names(home) == ["AppData"]
+
+    @pytest.mark.parametrize("parts,folder", [
+        (("AppData", "Roaming", "Claude", "claude_desktop_config.json"),
+         False),
+        (("AppData", "Roaming"), True),
+        (("AppData", "Local", "x"), False),
+        (("AppData", "Local", "Microsoft", "Windows", "x"), False),
+        (("AppData", "Local", "Microsoft", "Windows", "PowerShellX"), True),
+        (("AppData", "x"), False),
+    ])
+    def test_anything_else_under_appdata_is_not(self, tmp_path, parts,
+                                                folder):
+        home = tmp_path / "home"
+        self._plant(home, self.CACHED)
+        self._plant(home, parts, folder)
+        with pytest.raises(AssertionError):
+            home_names(home, windows=True)
 
 
 class TestTheHelpTopic:

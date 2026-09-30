@@ -392,7 +392,9 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
     marker such as "SPAN STYLE"), or appended when the marker is absent.
     The text is inserted without the docstring's indentation so the
     registered description contains each constant verbatim and a test can
-    pin one source of wording.
+    pin one source of wording. Where a block goes decides whether it falls
+    within the first 2,048 characters, all Claude Code shows of a
+    description (v0.14.2, tests/test_v0142_description_cut.py).
     """
     text = "\n\n".join(blocks)
 
@@ -3452,9 +3454,6 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
 def select_project(project_path: str) -> str:
     """Switch to a different Qualcoder project.
 
-    Use this tool to change which project you're working with. You can get
-    a list of available projects using 'list_available_projects' first.
-
     The result may include a `warning`, for example that QualCoder
     currently has this project open. If so, RELAY it to the user: ask them
     to close the project in QualCoder before any coding they intend to
@@ -3483,6 +3482,9 @@ def select_project(project_path: str) -> str:
     nothing was selected and the host's configuration names a project
     (EXEGETE_PROJECT_PATH), that project is opened and named instead,
     since the next tool would use it.
+
+    Use this tool to change which project you're working with. You can get
+    a list of available projects using 'list_available_projects' first.
 
     A successful selection is recorded as this machine's most recently used
     project (~/.exegete/mru_project.json) so that a later "no project
@@ -6256,19 +6258,6 @@ def compare_coders(coder_a: Optional[str] = None,
     tool: how much of each file each coder coded with a code, how much
     they agreed, and two agreement coefficients.
 
-    UNIT OF ANALYSIS: one character of one text file. For each code, each
-    coder either coded that character or did not, and a character coded
-    twice by the same coder with the same code counts once. Text codings
-    only; image and audio/video comparison is not covered. A character a
-    coder did not code is not a decision: every text file is in scope
-    unless you narrow it, so a file one coder never coded counts against
-    whatever the other coded there. The result names those files
-    (files_coded_by_one_coder_only) and counts the files in scope neither
-    coder coded (files_coded_by_neither: their characters count as agreed
-    "not coded", which raises agreement_pct and kappa_cohen and says
-    nothing about the codes); narrow file_ids to the files both
-    worked on.
-
     COMPARING A PERSON WITH THE AI: this server's AI codings in the
     project are the suggestions the person approved (and perhaps edited),
     so their agreement partly counts the person's own judgement twice,
@@ -6289,6 +6278,19 @@ def compare_coders(coder_a: Optional[str] = None,
     every character in scope, which is the familiar statistic and is
     sensitive to how much of the text is uncoded. Report both, and say
     which you are quoting.
+
+    UNIT OF ANALYSIS: one character of one text file. For each code, each
+    coder either coded that character or did not, and a character coded
+    twice by the same coder with the same code counts once. Text codings
+    only; image and audio/video comparison is not covered. A character a
+    coder did not code is not a decision: every text file is in scope
+    unless you narrow it, so a file one coder never coded counts against
+    whatever the other coded there. The result names those files
+    (files_coded_by_one_coder_only) and counts the files in scope neither
+    coder coded (files_coded_by_neither: their characters count as agreed
+    "not coded", which raises agreement_pct and kappa_cohen and says
+    nothing about the codes); narrow file_ids to the files both
+    worked on.
 
     A value that is undefined is null with a kappa_note saying why,
     never a string in a number's place.
@@ -6903,7 +6905,11 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
-@_with_guidance(GROUNDING_RULES, METHODOLOGY_VOCABULARY, before="SPAN STYLE")
+# The judgement of requests sits inside the first 2,048 characters, where
+# Claude Code cuts a description (v0.14.2); the grounding rules do not fit
+# beside it and follow the workflow, as before
+@_with_guidance(GROUNDING_RULES, before="SPAN STYLE")
+@_with_guidance(METHODOLOGY_VOCABULARY, before="It reads no file")
 def analyze_for_coding(
     file_ids: List[int],
     code_names: Optional[List[str]] = None,
@@ -7599,7 +7605,8 @@ def _validate_proposal_evidence(ro_db, items, file_cache):
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 @_with_guidance(GROUNDING_RECORD, before="SPAN STYLE")
-@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
+@_with_guidance(MARKER_REFUSED_DESCRIPTION,
+                before="Every suggestion is validated")
 def record_suggestions(
     coding_session_id: str,
     suggestions: List[Dict[str, Any]],
@@ -7612,6 +7619,12 @@ def record_suggestions(
     by reading the files. Nothing is written to the QualCoder database: the
     suggestions are stored in the session for the user to review, approve, and
     apply.
+
+    SPAN STYLE: as the session's instruction says; whole sentences by
+    default. PAIRINGS: a second code on the same passage (one suggestion
+    per code) only where the researcher allowed more than one, its reason
+    saying why both apply; a pairing the researcher adds at review is
+    looked for elsewhere only after they say yes.
 
     Every suggestion is validated against the project before it is stored:
     - the file must exist and be a text source
@@ -7626,12 +7639,6 @@ def record_suggestions(
       automatically (flagged as positions_corrected); otherwise the suggestion
       is rejected with an explanation. start_pos/end_pos may be omitted when
       the excerpt is unique in the file.
-
-    SPAN STYLE: as the session's instruction says; whole sentences by
-    default. PAIRINGS: a second code on the same passage (one suggestion
-    per code) only where the researcher allowed more than one, its reason
-    saying why both apply; a pairing the researcher adds at review is
-    looked for elsewhere only after they say yes.
 
     Args:
         coding_session_id: The session ID from analyze_for_coding
@@ -8101,11 +8108,6 @@ def edit_suggestion(
       the excerpt is unique.
     The shorter/longer alternatives are recomputed for the new span.
 
-    Edits are not reversible via the alternatives: they recompute from
-    the CURRENT span (shorter after longer is the new paragraph's core
-    sentence, not the original span). To undo, use the previous span in
-    the result's changes.span.from.
-
     Only PENDING suggestions are editable. An approved or rejected one
     reflects a decision the user made: to change it, reopen it
     (update_suggestion_status reopen=[guid]), edit it, and ask the user to
@@ -8119,6 +8121,11 @@ def edit_suggestion(
     (not given; the memo then has the reason only), and the answer says
     so; pass reading with the code change to label the new pairing, or
     alone to relabel. The reason stays as recorded.
+
+    Edits are not reversible via the alternatives: they recompute from
+    the CURRENT span (shorter after longer is the new paragraph's core
+    sentence, not the original span). To undo, use the previous span in
+    the result's changes.span.from.
 
     Args:
         coding_session_id: The session ID from analyze_for_coding
@@ -8566,7 +8573,7 @@ Use `apply_codings` with session ID `{session_id}` to write approved suggestions
 @_tool_guard
 @_deprecated(DEPRECATED_OWNER, before="Args:",
              when=lambda a: a.get("owner") is not None)
-@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Safety guarantees:")
 def apply_codings(
     coding_session_id: str,
     create_backup: bool = True,
@@ -8589,6 +8596,9 @@ def apply_codings(
       then retry.
     - The session must belong to the CURRENTLY OPEN project; applying a
       session to a different project is refused.
+    - If the success output contains `position_safety_warning`, relay it
+      to the user: the written file is position-unsafe (emoji/CRLF) and
+      the codings may render shifted in QualCoder's editor.
     - Every approved suggestion is re-validated BEFORE the backup and the
       write: the file must exist and be a text source, the code must exist,
       and the segment text must match the file text at the stored positions.
@@ -8602,9 +8612,6 @@ def apply_codings(
       with its ctid, and the rest are written as one batch. When every
       approved suggestion already exists nothing is written and no
       backup is made.
-    - If the success output contains `position_safety_warning`, relay it
-      to the user: the written file is position-unsafe (emoji/CRLF) and
-      the codings may render shifted in QualCoder's editor.
 
     Args:
         coding_session_id: The session ID with approved suggestions
@@ -9356,14 +9363,6 @@ def delete_coding(coding_id: int, create_backup: bool = True,
     It removes ONE coding (the assignment of a code to a text span), never
     the code itself, the source file, or any other coding.
 
-    A backup is created first by default, so the deletion can be undone with
-    restore_backup if needed. When the coding came from an AI coding
-    session of this project (apply_codings), that suggestion is marked
-    removed in its session and the answer names the session
-    (sessions_updated): it can then be approved and applied again, or
-    reopened and edited, and the same passage can be recorded again. Not
-    for a hidden coder's row, whose answer stays ids only. Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
-
     Two guards, each with an explicit override the user must ask for:
     - Hidden coder (projects with the coder-visibility capability that hide
       coders): a coding
@@ -9380,6 +9379,14 @@ def delete_coding(coding_id: int, create_backup: bool = True,
       exists on the row (never its content); the owner accepts that.
     When both apply, both overrides are required and both refusals come
     back in one response.
+
+    Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open. A backup is created first by default, so the deletion can be undone with
+    restore_backup if needed. When the coding came from an AI coding
+    session of this project (apply_codings), that suggestion is marked
+    removed in its session and the answer names the session
+    (sessions_updated): it can then be approved and applied again, or
+    reopened and edited, and the same passage can be recorded again. Not
+    for a hidden coder's row, whose answer stays ids only.
 
     Args:
         coding_id: The ctid of the coding to delete. You can find ctids in
@@ -9733,14 +9740,6 @@ def prune_backups(keep_last: Optional[int] = None,
       (dated by its folder instead, list_backups says so) never takes
       its place.
 
-    A reason to prune beyond disk space: a backup taken before a
-    `pseudonymise_source` run holds the text as it was, real names
-    included, and so does any `pseudonyms.json` the project carries,
-    since a backup copies the whole tree. A project is not pseudonymised
-    while those copies sit beside it, so once a run is verified, pruning
-    is part of finishing it. Removing them also removes your recovery
-    point, which is the trade; keep at least one until you are sure.
-
     Two-step by design. Call without preview_token: nothing is removed and
     the result is a preview of exactly which folders would go and how much
     space is reclaimed, with a preview_token. Show the user the preview and
@@ -9750,6 +9749,14 @@ def prune_backups(keep_last: Optional[int] = None,
     changed in between, the execute is refused and you must preview again.
     No backup is taken here: this tool removes backup folders and never
     touches the project database.
+
+    A reason to prune beyond disk space: a backup taken before a
+    `pseudonymise_source` run holds the text as it was, real names
+    included, and so does any `pseudonyms.json` the project carries,
+    since a backup copies the whole tree. A project is not pseudonymised
+    while those copies sit beside it, so once a run is verified, pruning
+    is part of finishing it. Removing them also removes your recovery
+    point, which is the trade; keep at least one until you are sure.
 
     This does not touch the live project database, so it works even while
     QualCoder has the project open. Each backup is a whole project tree,
@@ -12111,7 +12118,7 @@ def add_journal_entry(name: str, entry: str,
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
-@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Colours are stored")
 def create_code(name: str, category: Optional[str] = None,
                 color: Optional[str] = None, memo: Optional[str] = None,
                 parent_code_id: Optional[int] = None,
@@ -12134,12 +12141,6 @@ def create_code(name: str, category: Optional[str] = None,
     that). Successful creates carry `created: true`. Whitespace runs in
     the name collapse to one space.
 
-    Colours are stored as the nearest QualCoder palette colour (120 fixed
-    colours, as the QualCoder colour picker offers); the result reports
-    the stored colour (`color`) and whether it was snapped
-    (`color_requested`, `color_snapped`). Greys may snap to a pale hue:
-    the palette has five greys and the matching rule is QualCoder's own.
-
     SUB-CODES (projects with schema v16 or newer only): pass
     parent_code_id to nest the new code under an existing CODE instead of
     a category. A code has either a parent code or a category, never
@@ -12148,6 +12149,12 @@ def create_code(name: str, category: Optional[str] = None,
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
     get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
+
+    Colours are stored as the nearest QualCoder palette colour (120 fixed
+    colours, as the QualCoder colour picker offers); the result reports
+    the stored colour (`color`) and whether it was snapped
+    (`color_requested`, `color_snapped`). Greys may snap to a pale hue:
+    the palette has five greys and the matching rule is QualCoder's own.
 
     Args:
         name: The code name (unique among codes, case-insensitively)
@@ -13181,6 +13188,19 @@ def merge_codes(from_code_id: int, into_code_id: int,
     codings are reassigned without de-duplication (as QualCoder does), which
     can create visual duplicates.
 
+    Two-step by design. Call without preview_token: nothing is written and the
+    result is a preview of exactly what would change, with a preview_token.
+    Show the user the preview (including the collateral breakdown and every
+    warning) and ask whether to proceed. Only if they agree, call again with
+    the same arguments and preview_token=<the token>. The token is valid for
+    60 minutes and only while the rows it covers are unchanged; if the project
+    changed in between, the execute is refused and you must preview again. A
+    backup is always created first.
+
+    Refused while QualCoder has the project open (heartbeat lock): ask
+    the user to close the project in QualCoder, re-check with
+    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
+
     The codebook changes too, as in QualCoder, and the preview names each
     change. On projects with sub-code support (v16+ schemas, QualCoder
     4.0) the source code's sub-codes move under the target with their own
@@ -13196,19 +13216,6 @@ def merge_codes(from_code_id: int, into_code_id: int,
     keeps a copy. source_memo_carried_to_target and source_memo_note say
     which applies; the result reports provenance_memo_added and
     subcodes_reparented_to_target.
-
-    Two-step by design. Call without preview_token: nothing is written and the
-    result is a preview of exactly what would change, with a preview_token.
-    Show the user the preview (including the collateral breakdown and every
-    warning) and ask whether to proceed. Only if they agree, call again with
-    the same arguments and preview_token=<the token>. The token is valid for
-    60 minutes and only while the rows it covers are unchanged; if the project
-    changed in between, the execute is refused and you must preview again. A
-    backup is always created first.
-
-    Refused while QualCoder has the project open (heartbeat lock): ask
-    the user to close the project in QualCoder, re-check with
-    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
     Args:
         from_code_id: The code to merge away (deleted afterwards)
@@ -13264,6 +13271,19 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     EVERY coded segment made with it (text, audio/video, and image codings).
     Categories, annotations, case links and other codes are not affected.
 
+    Two-step by design. Call without preview_token: nothing is written and the
+    result is a preview of exactly what would change, with a preview_token.
+    Show the user the preview (including the collateral breakdown and every
+    warning) and ask whether to proceed. Only if they agree, call again with
+    the same arguments and preview_token=<the token>. The token is valid for
+    60 minutes and only while the rows it covers are unchanged; if the project
+    changed in between, the execute is refused and you must preview again. A
+    backup is always created first.
+
+    Refused while QualCoder has the project open (heartbeat lock): ask
+    the user to close the project in QualCoder, re-check with
+    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
+
     SUB-CODES (projects with schema v16 or newer): deleting a code that
     has sub-codes deletes the whole branch (the code, every transitive
     sub-code, and all their codings) in one transaction, exactly as
@@ -13277,19 +13297,6 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     deleted codes' nodes and lines on QualCoder's saved graphs are
     removed too, as QualCoder 4.0's own delete removes them; the preview
     counts them (saved_graph_rows_removed).
-
-    Two-step by design. Call without preview_token: nothing is written and the
-    result is a preview of exactly what would change, with a preview_token.
-    Show the user the preview (including the collateral breakdown and every
-    warning) and ask whether to proceed. Only if they agree, call again with
-    the same arguments and preview_token=<the token>. The token is valid for
-    60 minutes and only while the rows it covers are unchanged; if the project
-    changed in between, the execute is refused and you must preview again. A
-    backup is always created first.
-
-    Refused while QualCoder has the project open (heartbeat lock): ask
-    the user to close the project in QualCoder, re-check with
-    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
     Args:
         code_id: The code's cid
@@ -13420,6 +13427,10 @@ def merge_category(from_category_id: int,
     changed in between, the execute is refused and you must preview again. A
     backup is always created first.
 
+    Refused while QualCoder has the project open (heartbeat lock): ask
+    the user to close the project in QualCoder, re-check with
+    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
+
     Source category memo: on projects with sub-code support (v16+
     schemas) a merge into a real target carries the source category's
     memo into the target's memo under a "[Merged from category: ...]"
@@ -13430,10 +13441,6 @@ def merge_category(from_category_id: int,
     the source memo with its row; the mandatory backup keeps a copy. The
     preview states which applies (source_memo_carried_to_target) and the
     result reports provenance_memo_added.
-
-    Refused while QualCoder has the project open (heartbeat lock): ask
-    the user to close the project in QualCoder, re-check with
-    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
     Args:
         from_category_id: The category to merge away (deleted afterwards)
@@ -15112,24 +15119,6 @@ def pseudonymise_source(
     link in the file it touches. It is the only tool in this server that
     changes the text those positions are measured against.
 
-    One file per call: file_id names the file, and a mapping that is
-    right for one participant is applied to that participant's file. To
-    pseudonymise a project, run it file by file; with
-    use_project_pseudonyms the mapping is read from the project's own
-    pseudonyms.json each time, and with a typed mapping the mapping is
-    repeated on each call. The notes and the report always cover the
-    whole project.
-
-    Two people who share a name: one file per call gives each their own
-    pseudonym in the file text only. With rewrite_memos on, whichever
-    run carries it rewrites that name in notes across the whole project,
-    the other person's notes included, and no order of runs avoids
-    this. Keep rewrite_memos off on every run of a shared name and
-    change the notes that name either person by hand; give the second
-    person a typed mapping with save_mapping_to_project off and
-    researcher_keeps_mapping on (pseudonyms.json holds one pseudonym
-    per name).
-
     Preview first, relay the counts, the collisions and the residue to
     the user, get an explicit yes, then execute with the token.
 
@@ -15157,6 +15146,24 @@ def pseudonymise_source(
     Pseudonymised data is still personal data and is often
     re-identifiable from context. This reduces risk; it does not
     anonymise (PRIVACY.md).
+
+    One file per call: file_id names the file, and a mapping that is
+    right for one participant is applied to that participant's file. To
+    pseudonymise a project, run it file by file; with
+    use_project_pseudonyms the mapping is read from the project's own
+    pseudonyms.json each time, and with a typed mapping the mapping is
+    repeated on each call. The notes and the report always cover the
+    whole project.
+
+    Two people who share a name: one file per call gives each their own
+    pseudonym in the file text only. With rewrite_memos on, whichever
+    run carries it rewrites that name in notes across the whole project,
+    the other person's notes included, and no order of runs avoids
+    this. Keep rewrite_memos off on every run of a shared name and
+    change the notes that name either person by hand; give the second
+    person a typed mapping with save_mapping_to_project off and
+    researcher_keeps_mapping on (pseudonyms.json holds one pseudonym
+    per name).
 
     What this does NOT rewrite, and where the names will remain: case
     names, file names, attribute values, PDFs, media files, an imported
@@ -16857,6 +16864,12 @@ def rename_file(file_id: int, new_name: str,
     written and no backup made; a name stored with spaces at its ends or
     in another Unicode form is rewritten in normal form when retyped.
 
+    QualCoder 4.0 writes no lock file, so this server cannot see a 4.0 window that has the project open: a Manage Files window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
+
+    Refused while QualCoder has the project open (heartbeat lock): ask
+    the user to close the project in QualCoder, re-check with
+    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
+
     Refused, each with its reason: an empty, spaces-only or dots-only
     name; control, line-separator or invisible formatting characters;
     '/', '\\', '..' or ':'; a name Windows cannot store (< > | ? * ",
@@ -16891,12 +16904,6 @@ def rename_file(file_id: int, new_name: str,
     `note`.
 
     Find a file id in exegete://files/list or search_files.
-
-    QualCoder 4.0 writes no lock file, so this server cannot see a 4.0 window that has the project open: a Manage Files window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
-
-    Refused while QualCoder has the project open (heartbeat lock): ask
-    the user to close the project in QualCoder, re-check with
-    get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
     Args:
         file_id: The file's id

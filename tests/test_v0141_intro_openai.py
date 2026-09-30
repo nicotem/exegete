@@ -1093,7 +1093,7 @@ class TestAssistantsOwnFileAccess:
         install = _install_openai_flat()
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
         changelog = _flat("CHANGELOG.md")
-        unreleased = changelog[changelog.index("## [Unreleased]"):
+        entry_0141 = changelog[changelog.index("## [0.14.1-alpha]"):
                                changelog.index("## [0.14.0-alpha]")]
         places = {
             "README, where your data goes": (
@@ -1122,7 +1122,7 @@ class TestAssistantsOwnFileAccess:
                 "without asking, and does not keep Codex from reading them, "
                 "or from searching other folders for them."),
             "CHANGELOG": (
-                unreleased, "can read files well beyond the folder it works "
+                entry_0141, "can read files well beyond the folder it works "
                 "in, without asking"),
         }
         for where, (text, words) in places.items():
@@ -1500,10 +1500,10 @@ class TestTheSmallerPoints:
                    "a few folders that hold keys")
         assert f"({windows})" in install
         changelog = _flat("CHANGELOG.md")
-        unreleased = changelog[changelog.index("## [Unreleased]"):
+        entry_0141 = changelog[changelog.index("## [0.14.1-alpha]"):
                                changelog.index("## [0.14.0-alpha]")]
         assert ("on Windows at least everything in the home folder but a "
-                "few folders that hold keys") in unreleased
+                "few folders that hold keys") in entry_0141
         for name in SHIPPED_TEXTS:
             text = _flat(name)
             for gone in ("at least the home folder)",

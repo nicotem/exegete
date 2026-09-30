@@ -70,7 +70,7 @@ SAYS_QUALCODERS_AI_KEEPS_IT = re.compile(
 
 # The one exception: this sentence in CHANGELOG.md's 0.11.0 entry, a dated
 # record of an old release, kept as that release published it. The
-# Unreleased entry records that the documents no longer speak for
+# 0.14.1 entry records that the documents no longer speak for
 # QualCoder's own AI features.
 DATED_RECORD_0_11_0 = ("QualCoder 4.0 never shows it to its AI, and now "
                        "neither does this server.")
@@ -130,14 +130,14 @@ def test_the_private_part_check_would_notice():
         assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(sentence), sentence
 
 
-def test_the_unreleased_entry_records_it_for_this_project_only():
+def test_the_0141_entry_records_it_for_this_project_only():
     changelog = _flat("CHANGELOG.md")
-    unreleased = changelog[changelog.index("## [Unreleased]"):
+    entry_0141 = changelog[changelog.index("## [0.14.1-alpha]"):
                            changelog.index("## [0.14.0-alpha]")]
     assert ("README and PRIVACY.md now say only what Exegete does "
             "with the part of a memo after `#####`; they no longer speak "
             "for QualCoder's own AI features. PRIVACY.md no longer says "
-            "QualCoder 4.0 introduced the mark: 3.8.2 has it.") in unreleased
+            "QualCoder 4.0 introduced the mark: 3.8.2 has it.") in entry_0141
 
 
 def _flat_quotes(name):
@@ -289,14 +289,14 @@ def test_the_three_questions_are_what_the_assistant_is_told():
         text = _flat(name)
         assert "Claude will: - Ask you three things first" not in text
         assert "(your answers are the session's `instruction`" not in text
-    # The released entry stands; the Unreleased entry records the review
+    # The 0.14.0 entry stands; the 0.14.1 entry records the review
     changelog = _read("CHANGELOG.md")
-    unreleased = " ".join(changelog[changelog.index("## [Unreleased]"):
+    entry_0141 = " ".join(changelog[changelog.index("## [0.14.1-alpha]"):
                                     changelog.index("## [0.14.0-alpha]")]
                           .split())
-    assert "TOOLS.md" in unreleased
+    assert "TOOLS.md" in entry_0141
     assert ("the server cannot tell whether the instruction holds the "
-            "researcher's answers") in unreleased
+            "researcher's answers") in entry_0141
     released = " ".join(changelog[changelog.index("## [0.14.0-alpha]"):]
                         .split())
     assert "a session started from three questions to the researcher" \

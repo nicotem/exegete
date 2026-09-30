@@ -494,7 +494,8 @@ class TestThePublishedSchemaBudget:
         (`_v013_entry`). v0.14.1 moves it once more (the rename: the
         resource addresses in the tools' texts), so the current entry is
         the Unreleased one alone and 0.14.0's figure is history
-        (`_v0140_entry`).
+        (`_v0140_entry`). From the release on, the current entry is
+        0.14.1's, under an Unreleased heading that says nothing yet.
         """
         return cls._read("CHANGELOG.md").split("## [0.14.0")[0]
 

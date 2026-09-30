@@ -368,9 +368,9 @@ class TestTheUpgradingList:
 
     def _entry(self):
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = changelog[changelog.index("## [Unreleased]"):
+        entry_0141 = changelog[changelog.index("## [0.14.1-alpha]"):
                                changelog.index("## [0.14.0-alpha]")]
-        return " ".join(_section(unreleased, "### Upgrading from 0.14.0",
+        return " ".join(_section(entry_0141, "### Upgrading from 0.14.0",
                                  "\n### ").split())
 
     def test_every_accepted_old_spelling_until_v1(self):
@@ -403,9 +403,9 @@ def test_the_changelog_entry_carries_no_internal_labels():
     # cannot look them up (the final round's CHANGELOG said "the owner's
     # rulings 42 and 43"). Past entries stay as written.
     changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = " ".join(changelog[changelog.index("## [Unreleased]"):
+    entry_0141 = " ".join(changelog[changelog.index("## [0.14.1-alpha]"):
                                     changelog.index("## [0.14.0-alpha]")]
                           .split())
     for label in (r"\brulings?\b", r"\bdecisions? \d", r"\bfix round",
                   r"\bgates?\b", r"\bthe lead\b", r"\bthe owner's\b"):
-        assert not re.search(label, unreleased, re.IGNORECASE), label
+        assert not re.search(label, entry_0141, re.IGNORECASE), label

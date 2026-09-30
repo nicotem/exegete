@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.14.1-alpha] - 2026-10-01
+
 v0.14.1: qualcoder-mcp is now called Exegete, and the README review,
 with a new introduction and a route for OpenAI's apps. The server's
 behaviour is unchanged; its names changed, with every earlier spelling

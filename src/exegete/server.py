@@ -10667,6 +10667,11 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                          "result, and judge whether the request is sound for this "
                          "study before acting (see grounding_rules and "
                          "methodology_vocabulary)",
+            "moving_from_qualcoder_mcp": "After the change of name, "
+                                         "explain_ai_coding_tools("
+                                         "'moving_from_qualcoder_mcp') says "
+                                         "how to guide the researcher "
+                                         "through the transition check.",
             "idempotent_writes": "A create that answers created: false, reason: "
                                  "already_exists is not an error: use the id it "
                                  "returns. A write that answers changed: false "
@@ -10878,6 +10883,49 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                       "suggestion, and it is never a reason to withhold project "
                       "data the researcher asks to see"
         },
+        # v0.14.1, the owner's rulings 42 and 43
+        "moving_from_qualcoder_mcp": {
+            "title": "Moving from qualcoder-mcp to Exegete",
+            "what_changed": "qualcoder-mcp is now called Exegete. The "
+                            "command is exegete; the old command, the old "
+                            "setting spellings and the old resource "
+                            "addresses still work until v1.0, so nothing "
+                            "the researcher set up stops working.",
+            "the_check": "In a terminal on the computer that runs the "
+                         "server, `exegete --check-transition` lists what "
+                         "the change left behind, each with the one step "
+                         "that tidies it, and changes nothing: the old "
+                         "qualcoder-mcp package still installed (with the "
+                         "command that removes it, by how it was "
+                         "installed), a host's entry still starting the old "
+                         "command (with the entry to use instead; it only "
+                         "reads the hosts' files), the link left at "
+                         "~/.qualcoder_mcp and whether it can go, the "
+                         "desktop extension's logs under its earlier name, "
+                         "and the "
+                         "earlier projects folder (its projects are still "
+                         "found, and it needs nothing). It ends with exit "
+                         "code 0 when nothing is left.",
+            "tidy": "`exegete --check-transition --tidy` also removes the "
+                    "link, only when it leads to ~/.exegete and nothing "
+                    "started as qualcoder-mcp is running; adding "
+                    "--tidy-old-logs also removes the old logs. It never "
+                    "touches projects, backups, the AI coder name files in "
+                    "projects or any host's configuration.",
+            "guiding_the_researcher": "You cannot run the check from the "
+                                      "conversation: ask the researcher to "
+                                      "run it in a terminal and to paste "
+                                      "what it prints, then go through it "
+                                      "one item at a time, in its order. "
+                                      "Change a host's entry before "
+                                      "removing the old package, and quit "
+                                      "the host before changing its file. "
+                                      "Never suggest deleting a folder: "
+                                      "the check says which ones hold "
+                                      "research data or another copy's "
+                                      "key. Running it again shows what is "
+                                      "left."
+        },
         "methods_notes": {
             "purpose": "Where to read more",
             "resource": "exegete://guidance/methods",
@@ -10906,7 +10954,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "coding_style_guidance",
                 "grounding_rules",
                 "methodology_vocabulary",
-                "methods_notes"
+                "methods_notes",
+                "moving_from_qualcoder_mcp"
             ],
             "tip": "Use explain_ai_coding_tools() with no arguments for an "
                    "overview of the coding loop. Only the topics listed above "
@@ -18569,7 +18618,8 @@ TTY_NOTICE = (
 # one line on standard error, where the host keeps its log; standard
 # output is the protocol's alone.
 OLD_NAME_NOTE = (f"{names.OLD_COMMAND} is now called Exegete; the command "
-                 f"is `{names.COMMAND}`")
+                 f"is `{names.COMMAND}`, and `{names.COMMAND} "
+                 f"--check-transition` lists what the change left behind")
 
 
 def _build_arg_parser(started_as: Optional[str] = None
@@ -18595,6 +18645,20 @@ def _build_arg_parser(started_as: Optional[str] = None
                     "MCP host over stdio; run it with --version to check the "
                     "installed version.")
     parser.add_argument("--version", action="version", version=version)
+    # v0.14.1, the owner's rulings 42 and 43: the transition check
+    parser.add_argument(
+        "--check-transition", action="store_true",
+        help="list what the move from qualcoder-mcp left on this computer, "
+             "and the step that tidies each, then exit (0 when nothing is "
+             "left); read-only")
+    parser.add_argument(
+        "--tidy", action="store_true",
+        help="with --check-transition: also remove the link left at "
+             "~/.qualcoder_mcp when nothing can still use it")
+    parser.add_argument(
+        "--tidy-old-logs", action="store_true",
+        help="with --tidy: also remove Claude Desktop's logs under the "
+             "extension's earlier name")
     return parser
 
 
@@ -18640,8 +18704,18 @@ def main(argv: Optional[List[str]] = None, *,
     # Parse before anything else speaks: --version and the usage error for
     # an unknown argument must answer on their own stream with no log line
     # above them (v0.12 fix round 1, F16).
-    _build_arg_parser(started_as).parse_args(
-        sys.argv[1:] if argv is None else argv)
+    parser = _build_arg_parser(started_as)
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+    if args.tidy and not args.check_transition:
+        parser.error("--tidy goes with --check-transition")
+    if args.tidy_old_logs and not args.tidy:
+        parser.error("--tidy-old-logs goes with --tidy")
+    if args.check_transition:
+        # Before anything else: it starts no server, reads no setting and
+        # never moves or makes the state folder
+        from . import transition
+        sys.exit(transition.run(tidy=args.tidy,
+                                tidy_old_logs=args.tidy_old_logs))
     if started_as:
         logger.warning(OLD_NAME_NOTE)
 

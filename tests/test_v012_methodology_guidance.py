@@ -32,7 +32,9 @@ CURLY = ("‘", "’", "“", "”")
 LABELS = ["allow", "allow_with_caveat", "reframe_and_ask", "refuse"]
 HELP_KEYS = ["analyze_for_coding", "apply_codings", "edit_suggestion",
              "coding_style_guidance", "grounding_rules",
-             "methodology_vocabulary", "methods_notes"]
+             "methodology_vocabulary", "methods_notes",
+             # v0.14.1, the transition check's topic
+             "moving_from_qualcoder_mcp"]
 
 
 def _desc(name):

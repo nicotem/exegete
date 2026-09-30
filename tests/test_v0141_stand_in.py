@@ -32,7 +32,9 @@ import exegete.server as server                   # noqa: E402
 import qualcoder_mcp                              # noqa: E402
 import qualcoder_mcp.server as stand_in           # noqa: E402
 
-NOTE = "qualcoder-mcp is now called Exegete; the command is `exegete`"
+NOTE = ("qualcoder-mcp is now called Exegete; the command is `exegete`, "
+        "and `exegete --check-transition` lists what the change left "
+        "behind")
 
 
 def _env(home):

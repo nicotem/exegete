@@ -165,6 +165,9 @@ SHIPPED_LEDGER = [
      "an entry made under the earlier name, which keeps its name"),
     (r"QUALCODER_MCP_|QUALCODER_PROJECT_PATH",
      "an earlier spelling of a setting, read until v1.0"),
+    (r"check-transition|--tidy|the old name.s package is released"
+     r"|reports the old `qualcoder-mcp` package",
+     "the transition check, which names what the earlier name left"),
     (r"\.qualcoder_mcp", "the state folder's earlier name, now a link"),
     (r"qualcoder_mcp\.server|qualcoder_mcp\.database"
      r"|`qualcoder-mcp` command|qualcoder-mcp --version",

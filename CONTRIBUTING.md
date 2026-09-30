@@ -271,7 +271,8 @@ earlier name working for people who already use it:
   `exegete`. It is built and uploaded with every release until v1.0, by
   the same workflow and in the same step (`publish.yml`), at the same
   version; tests keep its version, its floor on `exegete`, its licence
-  files and its stand-in equal to the main ones.
+  files and its stand-in equal to the main ones. At v1.0 its last
+  release says plainly that it is the last, and none follows.
 - `src/qualcoder_mcp/` is the same stand-in, kept in the source for
   copies of it; it hands over to `exegete.server:main`, which is
   therefore never removed or renamed. The `exegete` wheel never holds

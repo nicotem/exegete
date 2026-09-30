@@ -84,6 +84,25 @@ still accepted (the Upgrading list below).
 - The old name's package, `qualcoder-mcp`, is released beside every
   release until v1.0: it carries the `qualcoder-mcp` command and a
   two-file stand-in module, and asks for the matching Exegete.
+- The transition check, `exegete --check-transition` (the owner's
+  rulings 42 and 43): read-only, it prints what the move left behind and
+  the one step that tidies each, and exits 0 when nothing is left: the
+  old `qualcoder-mcp` package still installed, and the command that
+  removes it for the way it was installed (pip, uv, uv tool, pipx, a
+  copy of the source); an entry in Claude Desktop's, Claude Code's, LM
+  Studio's or Codex's configuration still starting the old command,
+  with the entry to use instead (the files are only read); the link at
+  `~/.qualcoder_mcp` and whether it can go (it leads to `~/.exegete`
+  and nothing started as qualcoder-mcp is running); Claude Desktop's
+  logs under the extension's earlier name; and the earlier projects
+  folder. `--tidy` removes only the link, never a folder, and
+  `--tidy-old-logs` with it the old logs; projects, backups, the AI
+  coder name files and hosts' configurations are never touched. A help
+  topic, `explain_ai_coding_tools('moving_from_qualcoder_mcp')`, tells
+  the assistant how to guide a researcher through it (no tool
+  description grew). The line the old command writes at a start now
+  names the check. At v1.0 the old name's last release will say so
+  plainly and be the last.
 - Publishing: a GitHub pre-release tagged with the coming release's
   version plus `.devN` (for example `v0.14.1-alpha.dev1`) builds and
   uploads an early build of `exegete` alone (0.14.1a0.dev1), to hold the
@@ -269,6 +288,14 @@ qualcoder-mcp" says what you may change on each route.
   0.12 to 0.14 refuse to write it (they say it was written by a newer
   version: update that copy). Until then, and after a restore of an
   older backup, the earlier file is read as before.
+- **Tidying up afterwards:** `exegete --check-transition` lists what
+  the change left behind on your computer (the old package still
+  installed, a host's entry still starting the old command, the link at
+  `~/.qualcoder_mcp`, Claude Desktop's logs under the earlier name, the
+  earlier projects folder), each with the one step that tidies it, and
+  changes nothing; `--tidy` removes the link when nothing can still use
+  it, and `--tidy-old-logs` with it the old logs. INSTALL.md's "Coming
+  from qualcoder-mcp" says more.
 - **Not kept:** code of your own that imported the server's inner
   modules under the old name (`qualcoder_mcp.database` and the others,
   or `qualcoder_mcp.__version__`); only the two ways of starting the

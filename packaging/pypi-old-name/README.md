@@ -27,5 +27,16 @@ What to change, if you want to, on each route:
   example `EXEGETE_TOOLSET`); the old `QUALCODER_MCP_...` spellings and
   `QUALCODER_PROJECT_PATH` still work until version 1.0.
 
+**Tidying up.** `exegete --check-transition` (or
+`qualcoder-mcp --check-transition`) lists what the change left on your
+computer, each with the one step that tidies it, and changes nothing;
+with `--tidy` it removes the link left at `~/.qualcoder_mcp` when
+nothing can still use it. Running this package's command writes one
+line saying so.
+
+**Until version 1.0.** At version 1.0 the last release of this package
+will say plainly that it is the last, and none will follow; change your
+settings to `exegete` before then.
+
 The installation guide's section "Coming from qualcoder-mcp" says more:
 https://github.com/nicotem/exegete/blob/main/INSTALL.md

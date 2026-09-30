@@ -1566,6 +1566,28 @@ yet, and the first start after the update moves the server's own folder
 - **Logs.** The server's own lines say Exegete. A hand-made entry keeps
   its log file, which is named after the entry.
 
+**Afterwards, the transition check.** In a terminal, run
+`exegete --check-transition` (or `qualcoder-mcp --check-transition`,
+or with `python -m exegete.server` in front of the switch). It changes
+nothing: it lists what the change left behind and the one step that
+tidies each, and ends with exit code 0 when nothing is left. It
+reports the old `qualcoder-mcp` package if it is still installed, with
+the command that removes it for the way it was installed (pip, uv, uv
+tool, pipx or a copy of the source); an entry in Claude Desktop's,
+Claude Code's, LM Studio's or Codex's configuration that still starts
+the old command, with the entry to use instead (it only reads those
+files: change them yourself, with the host quit); the link at
+`~/.qualcoder_mcp`, and whether it can go; Claude Desktop's logs under
+the extension's earlier name; and the earlier projects folder, whose
+projects are still found and which needs nothing. Adding `--tidy`
+removes the link, and only when it leads to `~/.exegete` and nothing
+started as `qualcoder-mcp` is still running; adding `--tidy-old-logs`
+as well removes those old logs. Projects, backups, the AI coder name
+files in projects and the hosts' configuration files are never
+touched. Change a host's entry before you remove the old package. The
+old name's package is released beside Exegete until version 1.0; that
+last release will say plainly that it is the last.
+
 ---
 
 ## Upgrading from an earlier (git) install

@@ -277,6 +277,15 @@ earlier name working for people who already use it:
   therefore never removed or renamed. The `exegete` wheel never holds
   it (`pyproject.toml` says why).
 
+An early build of a coming release, to hold the name on PyPI before the
+release is ready, is a GitHub pre-release tagged with the release's
+version from `pyproject.toml` plus `.devN` (for example
+`v0.14.1-alpha.dev1`, which uploads `exegete` 0.14.1a0.dev1). It builds
+and uploads `exegete` alone, never the old name's package, so an
+upgrade through the old name never brings unfinished work; any tag
+other than `v<version>` or `v<version>.devN` stops the workflow before
+it builds anything (`scripts/release_version.py`).
+
 ## Licence
 
 From v0.13, Exegete (then called qualcoder-mcp) is licensed under the GNU Lesser General

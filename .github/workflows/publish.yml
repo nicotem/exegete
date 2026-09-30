@@ -7,6 +7,14 @@ name: Publish to PyPI
 #      (workflow_dispatch) and it publishes to test.pypi.org.
 #   2. PyPI, the real thing: publishing happens automatically when a
 #      GitHub Release is PUBLISHED.
+#   3. PyPI, an early build of the coming release (v0.14.1, the owner's
+#      ruling 41, decision 10, to hold the name): a GitHub pre-release
+#      whose tag is the release's plus `.devN` (for example
+#      v0.14.1-alpha.dev1) builds `exegete` alone at that development
+#      version (0.14.1a0.dev1) and uploads it; the old name's package is
+#      never built for it, so nobody who has qualcoder-mcp 0.14.0 is
+#      moved onto unfinished work. Any other tag refuses to build
+#      (scripts/release_version.py).
 #
 # Two packages, built and uploaded together (v0.14.1, the rename):
 # `exegete`, the server, and `qualcoder-mcp`, the old name's package
@@ -61,6 +69,19 @@ jobs:
       - name: Install build tooling
         run: python -m pip install --upgrade pip build twine
 
+      # Releases only: what the tag asks for. `vV` (V being pyproject's
+      # version) is a release and builds both packages; `vV.devN` on a
+      # pre-release is an early build and builds `exegete` alone at that
+      # development version; any other tag stops the run here. The tag
+      # reaches the script through the environment, never the command.
+      - name: Version from the tag (releases only)
+        id: tag
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: python scripts/release_version.py "$TAG" "$PRERELEASE" >> "$GITHUB_OUTPUT"
+
       # Manual runs only (the TestPyPI rehearsal), never a release: both
       # packages take a practice version, the release's own plus
       # .dev<run number>, so each rehearsal uploads file names never used
@@ -70,9 +91,25 @@ jobs:
         run: python scripts/practice_version.py "${{ github.run_number }}"
 
       - name: Build distributions
+        env:
+          KIND: ${{ steps.tag.outputs.kind }}
         run: |
           python -m build
-          python -m build packaging/pypi-old-name --outdir dist/
+          # never for an early build: the old name's package stays at the
+          # last release until the coming release is out
+          if [ "$KIND" != "early" ]; then
+            python -m build packaging/pypi-old-name --outdir dist/
+          fi
+
+      - name: An early build holds exegete alone
+        if: steps.tag.outputs.kind == 'early'
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          ls dist/
+          test -f "dist/exegete-$VERSION.tar.gz"
+          test -f "dist/exegete-$VERSION-py3-none-any.whl"
+          test "$(ls dist/ | wc -l)" -eq 2
 
       - name: Check distributions
         run: python -m twine check --strict dist/*

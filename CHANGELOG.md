@@ -84,6 +84,12 @@ still accepted (the Upgrading list below).
 - The old name's package, `qualcoder-mcp`, is released beside every
   release until v1.0: it carries the `qualcoder-mcp` command and a
   two-file stand-in module, and asks for the matching Exegete.
+- Publishing: a GitHub pre-release tagged with the coming release's
+  version plus `.devN` (for example `v0.14.1-alpha.dev1`) builds and
+  uploads an early build of `exegete` alone (0.14.1a0.dev1), to hold the
+  name on PyPI, never the old name's package; a release tag must name
+  the version in `pyproject.toml`, and any other tag stops the workflow
+  before it builds anything.
 - Kept as they are: the AI coder name file's format, which every
   version since 0.12 shares; the internal label that keys the privacy run records' digests, so
   records written earlier stay checkable; the extension's projects

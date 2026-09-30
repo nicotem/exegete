@@ -227,7 +227,7 @@ jobs:
       - name: Update over the published 0.14.0 package, both ways
         shell: bash
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/old.mcpb" https://github.com/nicotem/qualcoder_mcp/releases/download/v0.14.0-alpha/qualcoder-mcp-0.14.0-alpha.mcpb
+          curl -fsSL -o "$RUNNER_TEMP/old.mcpb" https://github.com/nicotem/exegete/releases/download/v0.14.0-alpha/qualcoder-mcp-0.14.0-alpha.mcpb
           for way in kept emptied; do
             home="$RUNNER_TEMP/update-home-$way"
             mkdir -p "$home"

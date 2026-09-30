@@ -348,8 +348,7 @@ def test_the_folder_keeps_its_name_where_the_code_writes_it():
 
 DOCS = ("README.md", "TOOLS.md", "INSTALL.md", "CONTRIBUTING.md",
         "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
-# v0.14.1, the rename: the repository's new address (provisional,
-# decision 1). A link to the old one is reported: GitHub redirects it,
+# v0.14.1, the rename: the repository's address. A link to the old one is reported: GitHub redirects it,
 # but the documents name the new address, and a link this check skips
 # is a link nobody checks.
 BLOB = "https://github.com/nicotem/exegete/blob/main/"

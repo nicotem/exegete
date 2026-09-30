@@ -6,7 +6,7 @@ nowhere else (tests/test_v0141_compat.py forbids any other environment
 read in the package). Each has a new spelling, starting EXEGETE_, and
 the earlier one, which is still read until v1.0 (names.SETTINGS).
 
-The rule when both spellings are set (PROVISIONAL: decision 5):
+The rule when both spellings are set:
 
 - only the new one: used, silently;
 - only the earlier one: used, and the server's start-up log says once

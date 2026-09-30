@@ -57,8 +57,7 @@ REPO = Path(__file__).resolve().parents[1]
 TEMPLATE = "packaging/desktop-extension/manifest.in.json"
 # Where an icon the template names is read from (v0.14.1): the template's
 # `icon` is a file name in this folder, and the package carries the file
-# at that name. No icon is shipped until the owner confirms the mark
-# (PROVISIONAL: decision 11); the build works with and without one.
+# at that name; the build works with and without one.
 ICON_FOLDER = "packaging/desktop-extension"
 PACKAGE = "src/exegete"
 # The extension's identifier, the manifest's `name`: fixed for good (the
@@ -71,7 +70,6 @@ PACKAGE = "src/exegete"
 EXTENSION_NAME = "qualcoder-mcp"
 # The start of the package file's name, exegete-<version>.mcpb. The file
 # name is not part of the extension's identity (only its .mcpb ending is).
-# PROVISIONAL: follows decision 1 (the name in lower case).
 PACKAGE_FILE_STEM = "exegete"
 # The Python the package asks uv for. Without it uv takes the newest
 # Python it can find or fetch, which may be one no CI job has tested; a

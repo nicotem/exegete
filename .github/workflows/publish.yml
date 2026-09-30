@@ -31,10 +31,9 @@ name: Publish to PyPI
 # linked to it (warehouse: `reify` in oidc/models/github.py,
 # `caveats.ProjectID` in oidc/views.py).
 #
-# Protection (the rename study, decision 13; PROVISIONAL until the owner
-# confirms the protection he chose): the `pypi` environment is limited on
-# GitHub to tags matching `v*`, so nothing reaches PyPI except from a
-# release. `testpypi` stays open, since the rehearsal runs from a branch.
+# Protection: the `pypi` environment is limited on GitHub to tags
+# matching `v*`, so nothing reaches PyPI except from a release.
+# `testpypi` stays open, since the rehearsal runs from a branch.
 
 on:
   workflow_dispatch:

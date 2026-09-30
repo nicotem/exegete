@@ -4,7 +4,7 @@
 The state folder holds the preview-token key (which also seals every
 pseudonymisation run record), the AI coding sessions awaiting review,
 the last-project hint and the run records. It was ~/.qualcoder_mcp and
-is ~/.exegete from 0.14.1 (PROVISIONAL: decision 6).
+is ~/.exegete from 0.14.1.
 
 `move` runs once per real start, from `main()` only (never at import,
 never for --version), after every start-up refusal:

@@ -34,8 +34,7 @@ classifiers = [
 # A floor, never an exact pin, so that upgrading `exegete` on its own
 # never raises pip's conflict warning; the PEP 440 form of the version
 # above, which names a pre-release, so pip and uv accept a pre-release
-# of `exegete`. PROVISIONAL: decision 4 (a release beside every release
-# until v1.0).
+# of `exegete`. Released beside every release of `exegete` until v1.0.
 dependencies = ["exegete>=0.14.0a0"]
 
 [project.urls]

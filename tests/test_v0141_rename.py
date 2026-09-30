@@ -135,8 +135,7 @@ class TestTheExtensionKeepsItsIdentity:
 
 class TestTheExtensionsIcon:
     """The build places an `icon` the template names and carries the
-    file (v0.14.1); no icon ships until the owner confirms the mark
-    (decision 11), and the build works without one."""
+    file (v0.14.1), and the build works without one."""
 
     def _copy(self, tmp_path):
         copy = tmp_path / "tree"
@@ -184,8 +183,8 @@ class TestTheExtensionsIcon:
     def test_the_shown_name_is_exegete(self):
         template = json.loads((REPO / build.TEMPLATE).read_text(
             encoding="utf-8"))
-        # PROVISIONAL: decision 2 ("Exegete" rather than "Exegete for
-        # QualCoder"); the identifier stays qualcoder-mcp either way
+        # The name Claude Desktop shows; the identifier stays
+        # qualcoder-mcp
         assert template["display_name"] == "Exegete"
         assert template["long_description"].startswith(
             "Exegete (formerly qualcoder-mcp) is a qualitative analysis "

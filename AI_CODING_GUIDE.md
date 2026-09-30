@@ -199,8 +199,11 @@ approval of each suggestion.
   during its own writes; QualCoder 4.0 writes no lock file, so for it
   the server only warns on heuristics (`qualcoder_gui_signals`)
 - Memo text from the first `#####` marker onward (QualCoder 4.0's
-  private-note convention) is never shown to the AI and survives AI
-  memo writes; where the project has the coder-visibility capability
+  private-note convention) is never sent to the AI through Exegete (an
+  assistant that opens a project's files by itself reads every memo
+  whole: PRIVACY.md, "Assistants that open files by themselves") and
+  survives AI memo writes; where the project has the coder-visibility
+  capability
   reads follow the per-coder visibility
   setting (see "Working alongside QualCoder 4.0" in TOOLS.md)
 - Every write creates a timestamped backup first unless called with

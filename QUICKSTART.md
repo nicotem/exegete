@@ -12,7 +12,12 @@ README's one-click extension is the easier start.
 - [ ] Claude Desktop installed, or any other MCP client: Claude Code
       users can skip the Desktop config below and just run
       `claude mcp add exegete -- <venv-python> -m exegete.server`
-      (see "Alternative: Claude Code and other MCP clients" in INSTALL.md)
+      in an empty folder of its own (see "Alternative: Claude Code and
+      other MCP clients" in INSTALL.md). Claude Code opens files by
+      itself, outside Exegete: never start it in your home folder or a
+      folder that holds a study, and for participants' data use Claude
+      Desktop's chat instead (PRIVACY.md, "Assistants that open files by
+      themselves")
 - [ ] At least one QualCoder project (a `.qda` project folder): the
       setup below cannot create one; the one-click extension can
 

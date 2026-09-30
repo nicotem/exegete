@@ -249,10 +249,10 @@ still accepted (the Upgrading list below).
   is not read-only (by default it asks only before a tool that can
   replace or remove, and runs the tools that only add, and
   `read_pseudonym_list`, without asking); an empty folder of Codex's
-  own to work in, so that Codex does not change or look through a
-  study's files by itself (it can still read them, as the next
-  section says); the permission mode to keep; and what to do if it
-  does not start.
+  own to work in, which keeps a study's files out of the place Codex
+  works in and changes without asking (it can still read them, and
+  search other folders for them, as the next section says); the
+  permission mode to keep; and what to do if it does not start.
 - PRIVACY.md: a section on OpenAI's apps, quoting OpenAI's pages on
   training and its opt-out for services for individuals, the business
   plans and the API, Codex's sign-in, the session transcripts Codex
@@ -276,10 +276,11 @@ still accepted (the Upgrading list below).
 - Codex, in "Ask for approval" and in its read-only mode alike, can
   read files well beyond the folder it works in, without asking (on
   macOS and Linux any file the account can read, on Windows at least
-  the home folder), and Exegete's answers give it a project's path; a
-  folder of its own keeps it from changing or looking through a study's
-  files by itself, not from reading them (OpenAI's page on approvals
-  and Codex's source code, read 30 September 2026). README,
+  everything in the home folder but a few folders that hold keys), and
+  Exegete's answers give it a project's path; a folder of its own keeps
+  a study's files out of the place it works in and changes without
+  asking, not out of its reach (OpenAI's page on approvals and Codex's
+  source code, read 30 September 2026). README,
   INSTALL.md and PRIVACY.md now say so plainly, and suggest, for
   participants' data, an assistant with no file access of its own,
   such as Claude Desktop's chat with the extension; OpenAI's apps for
@@ -290,10 +291,38 @@ still accepted (the Upgrading list below).
   each can read a project's files directly, bypassing Exegete and the
   private part of memos, with each maker's page and the date it was
   read. Also in OpenAI's steps: Codex is chosen before its folder is
-  made, the folder can be made in Finder or File Explorer, Remote is
-  checked under Settings, Connections, another computer as well as a
-  phone can control the one Exegete runs on, and Codex's session files
-  keep what its own commands read too.
+  opened, the folder can be made in Finder or File Explorer (on
+  Windows, `%USERPROFILE%` in the address bar finds the home folder),
+  Remote is checked under Settings, Connections and any device paired
+  there removed, since signing out does not remove it, another computer
+  as well as a phone can control the one Exegete runs on, and Codex's
+  session files keep what its own commands read too. INSTALL.md's
+  OpenAI section says at its top that the route is for practice and
+  data that is not sensitive, and PRIVACY.md says at its start that an
+  assistant that opens files by itself can send more.
+- Claude Code's routes say the same: INSTALL.md's table of routes, its
+  Claude Code section and its recipe with an API key now say that
+  Claude Code opens files by itself, outside Exegete, whichever plan or
+  terms it runs under: it reads the folder it starts in without asking,
+  and its read-only commands, such as `cat`, read outside it
+  (Anthropic's pages, read 30 September 2026). The steps make an empty
+  folder for Claude Code, start it there and register Exegete there,
+  never in the home folder, where a new Terminal window opens, or a
+  folder that holds a study. The recipe's last step no longer calls
+  itself recommended for participant data; for participants' data under
+  commercial terms, the documents suggest Claude Desktop's chat with
+  Exegete on a Team or Enterprise account. README and QUICKSTART.md say
+  it where they send readers to Claude Code.
+- The advice for participants' data (Claude Desktop's chat with the
+  extension) now adds computer use off and no connected folder that
+  holds projects or transcripts, the home folder or a whole drive
+  included; PRIVACY.md names computer use as a third way the chat can
+  reach a file, with Anthropic's page. TOOLS.md and AI_CODING_GUIDE.md
+  say the private part of a memo is never sent to the AI through
+  Exegete, and point to PRIVACY.md for assistants that open files by
+  themselves. The opt-out and the session files in README and
+  PRIVACY.md no longer speak as if participants' data will be used with
+  OpenAI's apps.
 
 ### Measured
 

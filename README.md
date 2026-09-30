@@ -92,15 +92,22 @@ read; on Windows, at least everything in your home folder but a few
 folders that hold keys. Exegete's own answers tell it where your
 project is. (OpenAI's page on approvals and Codex's source code, read
 on 30 September 2026; PRIVACY.md quotes them.) A folder of its own
-("ChatGPT's desktop app and Codex", below) stops Codex changing your
-files, or looking through them, by itself; it does not stop it reading
-them.
+("ChatGPT's desktop app and Codex", below) keeps your study's files out
+of the place Codex works in, so it does not change them without asking;
+it does not stop Codex reading them, or searching other folders for
+them. Claude Code, as it comes, reads without asking in the folder it
+starts in, and its read-only commands, such as `cat`, read outside that
+folder without asking too (Anthropic's pages, which PRIVACY.md quotes).
 
 **For participants' data**, use an assistant that has no file access
-of its own, such as Claude Desktop's chat with the extension, with none
-of your study's folders connected to it. Keep OpenAI's route for
-practice and for data that is not sensitive until a setting that stops
-those reads has been tested with Exegete.
+of its own, such as Claude Desktop's chat with the extension, with
+computer use off (the setting that lets Claude use other apps on your
+computer: Settings, General) and no folder that holds your projects or
+transcripts connected to it (your home folder, Documents or a whole
+drive included); as far as Anthropic's pages say, that chat then opens
+no file by itself. Keep OpenAI's route for practice and for data that is
+not sensitive until a setting that stops those reads has been tested
+with Exegete.
 [PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)
 goes through the assistants one by one, with each maker's page.
 
@@ -131,10 +138,11 @@ you use our services for individuals, such as ChatGPT and Codex, we may
 use your content to train our models." It also says: "To opt out, turn
 off Improve the model for everyone under Settings > Data controls in
 ChatGPT, or select Do not train on my content in our Privacy Portal."
-Do one of the two before you use participant data; Codex's "Include
-environments" is a separate setting. (Read from the Internet Archive's
-copy of 28 September 2026: PRIVACY.md gives its address, the terms for
-business plans, and what OpenAI says about that setting.) On an
+Do one of the two before you use these apps with Exegete at all;
+Codex's "Include environments" is a separate setting. (Read from the
+Internet Archive's copy of 28 September 2026: PRIVACY.md gives its
+address, the terms for business plans, and what OpenAI says about that
+setting.) On an
 account your university or employer provides, ask whoever manages it
 which terms apply.
 [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)
@@ -231,8 +239,9 @@ September 2026). So a phone or computer paired with that computer can
 use the Exegete set up there, and show participants' words. This
 project has not tried it, and suggests leaving Remote off on a computer
 where Exegete works on participants' data. To check, look under
-Settings, Connections in the desktop app: a device paired earlier stays
-paired.
+Settings, Connections in the desktop app, and remove any device paired
+there: a pairing lasts, and signing out of ChatGPT does not remove
+it.
 
 These apps have no one-click extension, and until a safer setting has
 been tested, this route is for practice and for data that is not
@@ -250,12 +259,14 @@ sensitive ("Where your data goes", above). The steps:
    app's permissions on "Ask for approval".
 4. **Give Codex a folder of its own.** Make an empty folder for these
    chats (INSTALL.md suggests `exegete-chats` in your home folder; for
-   the desktop app, make it in Finder or File Explorer) and open it as
-   Codex's place to work; on the command line, start `codex` inside it.
-   Never give it your home folder, Documents, your projects folder or a
-   folder with transcripts. The folder stops Codex changing your files,
-   or looking through them, by itself; it does not stop it reading them
-   ("Where your data goes", above).
+   the desktop app, make it in Finder or File Explorer, where on
+   Windows typing `%USERPROFILE%` in the address bar opens your home
+   folder) and open it as Codex's place to work; on the command line,
+   start `codex` inside it. Never give it your home folder, Documents,
+   your projects folder or a folder with transcripts. The folder keeps
+   your study's files out of the place Codex works in; it does not stop
+   Codex reading them, or searching other folders for them ("Where your
+   data goes", above).
 
 [INSTALL.md, "ChatGPT's desktop app and Codex"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-app-and-codex-experimental)
 has each step, which OpenAI plans include these apps, and what to do if
@@ -312,7 +323,10 @@ changes only once the project is opened again.
 MCP hosts (assistants that can use MCP tools), and Claude Desktop set
 up by hand, take the Terminal route:
 [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)
-has each.
+has each. Claude Code opens files by itself, outside Exegete ("Where
+your data goes", above): never start it in your home folder or in a
+folder that holds a study, and for participants' data use Claude
+Desktop's chat with the extension instead.
 
 **Updating.** Updates are manual, and Exegete does not look for
 new versions itself: look at the Releases page now and then (with a

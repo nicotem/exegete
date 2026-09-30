@@ -683,12 +683,14 @@ class TestCodexWorksInAFolderOfItsOwn:
         step = ("4. **Give Codex a folder of its own.** Make an empty folder "
                 "for these chats (INSTALL.md suggests `exegete-chats` in your "
                 "home folder; for the desktop app, make it in Finder or File "
-                "Explorer) and open it as Codex's place to work; on the "
-                "command line, start `codex` inside it. Never give it your "
-                "home folder, Documents, your projects folder or a folder "
-                "with transcripts. The folder stops Codex changing your "
-                "files, or looking through them, by itself; it does not stop "
-                "it reading them")
+                "Explorer, where on Windows typing `%USERPROFILE%` in the "
+                "address bar opens your home folder) and open it as Codex's "
+                "place to work; on the command line, start `codex` inside "
+                "it. Never give it your home folder, Documents, your "
+                "projects folder or a folder with transcripts. The folder "
+                "keeps your study's files out of the place Codex works in; "
+                "it does not stop Codex reading them, or searching other "
+                "folders for them")
         assert step in section
         choose = ("3. **Restart the app**, select Codex from the ChatGPT "
                   "dropdown in the desktop app")
@@ -717,16 +719,24 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "start a new chat in your `exegete-chats` folder",
                 "With the desktop app alone, make the folder in Finder or "
                 "File Explorer instead (a new folder named `exegete-chats`, "
-                "in your home folder): the lines above end by starting "
-                "`codex`, the command line, which the desktop app does not "
-                "need.",
-                "A folder of its own keeps Codex from changing your study's "
-                "files, or looking through them, by itself. It does not keep "
-                "Codex from reading them."):
+                "in your home folder; on Windows, File Explorer opens your "
+                "home folder when you type `%USERPROFILE%` in its address "
+                "bar): the lines above end by starting `codex`, the command "
+                "line, which the desktop app does not need. You open the "
+                "folder in the app once Codex is chosen, below.",
+                "A folder of its own keeps your study's files out of the "
+                "place Codex works in, so it does not change them without "
+                "asking. It does not keep Codex from reading them, or from "
+                "searching other folders for them."):
             assert words in flat, words
-        # The folder is made before the chat that opens in it
+        # The folder is made before the chat that opens in it, and opened
+        # only once Codex is chosen (no earlier "open that folder")
         assert flat.index("make the folder in Finder or File Explorer") < \
             flat.index("start a new chat in your `exegete-chats` folder")
+        assert flat.index("Select Codex from the ChatGPT dropdown") < \
+            flat.index("start a new chat in your `exegete-chats` folder")
+        assert "Then open that folder in the app as the place to work" \
+            not in flat
         # The folder is none of the ones it must never be
         assert "exegete-chats" != Path(_entry()["env"]["EXEGETE_WORKSPACE"]
                                         ).name
@@ -780,8 +790,10 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "(OpenAI's page on approvals and Codex's source code, read "
                 "on 30 September 2026; PRIVACY.md quotes them.)",
                 "A folder of its own (\"ChatGPT's desktop app and Codex\", "
-                "below) stops Codex changing your files, or looking through "
-                "them, by itself; it does not stop it reading them."):
+                "below) keeps your study's files out of the place Codex "
+                "works in, so it does not change them without asking; it "
+                "does not stop Codex reading them, or searching other "
+                "folders for them."):
             assert words in data, words
         section = _privacy_openai()
         assert "**Codex's own file access.**" in section
@@ -818,8 +830,8 @@ class TestWhatCodexKeepsAndTheOptOut:
                       "every session is also written in full, tool results "
                       "included, under `~/.codex/sessions`, and later "
                       "`~/.codex/archived_sessions`",
-                      "So delete those session files after work on "
-                      "participant data, and keep `~/.codex` out of folders "
+                      "So delete those session files after any work on "
+                      "study data, and keep `~/.codex` out of folders "
                       "that a sync or backup service copies."):
             assert words in section, words
 
@@ -830,9 +842,9 @@ class TestWhatCodexKeepsAndTheOptOut:
                    "not train on my content in our Privacy Portal.")
         assert f"It also says: \"{opt_out}\"" in data
         assert opt_out in _privacy_openai()          # the same words
-        assert ("Do one of the two before you use participant data; "
-                "Codex's \"Include environments\" is a separate setting.") \
-            in data
+        assert ("Do one of the two before you use these apps with Exegete "
+                "at all; Codex's \"Include environments\" is a separate "
+                "setting.") in data
         assert "Read from the Internet Archive's copy of 28 September 2026" \
             in data
 
@@ -1052,8 +1064,13 @@ class TestAssistantsOwnFileAccess:
                 "\"Ask for approval\" does not ask before Codex changes a "
                 "file in its own folder, nor before it reads one, wherever "
                 "the file is.",
-                "The folder stops Codex changing your files, or looking "
-                "through them, by itself; it does not stop it reading them",
+                "The folder keeps your study's files out of the place Codex "
+                "works in; it does not stop Codex reading them, or searching "
+                "other folders for them",
+                "A folder of its own keeps your study's files out of the "
+                "place Codex works in, so it does not change them without "
+                "asking. It does not keep Codex from reading them, or from "
+                "searching other folders for them.",
                 AUTO_PRESET):
             assert not _limits_codexs_reading(new), new
 
@@ -1080,9 +1097,11 @@ class TestAssistantsOwnFileAccess:
                                changelog.index("## [0.14.0-alpha]")]
         places = {
             "README, where your data goes": (
-                _readme_data(), "it does not stop it reading them."),
+                _readme_data(), "it does not stop Codex reading them, or "
+                "searching other folders for them."),
             "README, the steps": (
-                steps, "it does not stop it reading them"),
+                steps, "it does not stop Codex reading them, or searching "
+                "other folders for them"),
             "README, a project you already have": (
                 own, "With an assistant that opens files by itself, such as "
                 "Codex, the path you give it lets it read the original too"),
@@ -1090,16 +1109,18 @@ class TestAssistantsOwnFileAccess:
                 table, "Codex can also read your projects' files by itself, "
                 "without asking"),
             "INSTALL, step 3": (
-                install, "It does not keep Codex from reading them."),
+                install, "It does not keep Codex from reading them, or from "
+                "searching other folders for them."),
             "INSTALL, step 4": (
                 install, "reaching beyond the boundary there means editing "
                 "outside the folder and going online, not reading."),
             "PRIVACY, the hosts": (
                 _privacy_hosts(), "**yes, without asking**"),
             "PRIVACY, OpenAI's apps": (
-                _privacy_openai(), "which keeps Codex from changing a "
-                "study's files, or looking through them, by itself, and does "
-                "not keep it from reading them."),
+                _privacy_openai(), "which keeps a study's files out of the "
+                "place Codex works in, so that it does not change them "
+                "without asking, and does not keep Codex from reading them, "
+                "or from searching other folders for them."),
             "CHANGELOG": (
                 unreleased, "can read files well beyond the folder it works "
                 "in, without asking"),
@@ -1119,16 +1140,25 @@ class TestAssistantsOwnFileAccess:
             assert chat in text, where
         assert ("**For participants' data**, use an assistant that has no "
                 "file access of its own, such as Claude Desktop's chat with "
-                "the extension, with none of your study's folders connected "
-                "to it. Keep OpenAI's route for practice and for data that "
-                "is not sensitive until a setting that stops those reads has "
-                "been tested with Exegete.") in _readme_data()
+                "the extension, with computer use off (the setting that lets "
+                "Claude use other apps on your computer: Settings, General) "
+                "and no folder that holds your projects or transcripts "
+                "connected to it (your home folder, Documents or a whole "
+                "drive included); as far as Anthropic's pages say, that chat "
+                "then opens no file by itself. Keep OpenAI's route for "
+                "practice and for data that is not sensitive until a setting "
+                "that stops those reads has been tested with Exegete.") \
+            in _readme_data()
         assert ("So, for participants' data, this project suggests an "
                 "assistant with no file access of its own: Claude Desktop's "
-                "chat with the extension, with none of your study's folders "
-                "connected to it, or LM Studio's chat with Exegete and no "
-                "other server or plugin that reads files.") \
-            in _privacy_hosts()
+                "chat with the extension, with computer use off and no "
+                "folder that holds your projects or transcripts connected to "
+                "it, or LM Studio's chat with Exegete and no other server or "
+                "plugin that reads files.") in _privacy_hosts()
+        # The older condition, which left out the folders that hold a study
+        for name in ("README.md", "PRIVACY.md", "INSTALL.md"):
+            assert "none of your study's folders connected" not in \
+                _flat(name), name
         # Said without alarm: no capitals, no exclamation marks
         for text in (_readme_data(), _privacy_hosts()):
             assert "!" not in text
@@ -1208,19 +1238,297 @@ class TestAssistantsOwnFileAccess:
                       "where OpenAI offers it, start and approve work that "
                       "the computer runs",
                       "To check, look under Settings, Connections in the "
-                      "desktop app: a device paired earlier stays paired."):
+                      "desktop app, and remove any device paired there: a "
+                      "pairing lasts, and signing out of ChatGPT does not "
+                      "remove it."):
             assert words in steps, words
         another = ("\"You can control a host from ChatGPT on iOS or Android, "
                    "or from another Mac or Windows device when Control other "
                    "devices is available.\"")
-        paired = ("\"Existing connections used since June 8, 2026, remain "
-                  "paired.\"")
+        # OpenAI's troubleshooting and set-up sections (read 30 September
+        # 2026): a sign-out keeps the pairing, and the host's Settings,
+        # Connections is where devices are managed
+        signed_out = ("\"Signing out of ChatGPT turns off **Remote Control**, "
+                      "but it doesn't remove your existing device "
+                      "pairings.\"")
+        manage = ("(\"In the app on the host, use **Settings** > "
+                  "**Connections** to manage connected devices.\", the same "
+                  "page), and remove any device paired there.")
         for text in (_install_openai_flat(), _privacy_openai()):
-            assert another in text and paired in text
+            assert another in text and signed_out in text
+            assert manage in text
             assert "look under Settings, Connections in the desktop app" in \
                 text
+            assert "June 8, 2026" not in text
         assert "or on another computer paired with it" in _privacy_openai()
         # INSTALL quotes some of OpenAI's words and paraphrases others
         assert "in OpenAI's words" not in _flat("PRIVACY.md")
         assert ("INSTALL.md lists what Remote needs, from OpenAI's pages"
                 in _privacy_openai())
+
+
+# ---------------------------------------------------------------------------
+# The disclosure's second round: Claude Code's routes say that it opens
+# files by itself, the chat's conditions include computer use, and the
+# private part of memos is described as Exegete's rule, not the AI's
+# ---------------------------------------------------------------------------
+
+# Anthropic's pages (code.claude.com/docs/en/permissions and
+# /permission-modes, read 30 September 2026): Claude Code reads the folder
+# it starts in without asking, and its read-only commands read outside it
+CLAUDE_CODE_READS = "Claude Code opens files by itself"
+HOSTS_SECTION = "Assistants that open files by themselves"
+FILE_ACCESS = re.compile(r"\bopens? files (?:on your computer )?by "
+                         r"(?:itself|themselves)\b")
+PARTICIPANT_DATA = re.compile(r"\bparticipants?'? data\b", re.IGNORECASE)
+
+
+def _route_units(text):
+    """What a reader takes in as one piece: each row of a table, and the
+    rest of each section between headings of level two or three."""
+    units = []
+    for section in re.split(r"\n(?=#{2,3} )", text):
+        lines = section.splitlines()
+        units.extend(line for line in lines if line.startswith("|"))
+        units.append("\n".join(line for line in lines
+                               if not line.startswith("|")))
+    return [" ".join(unit.replace("\n>", " ").split()) for unit in units]
+
+
+def _unwarned_claude_code_routes(text):
+    """Pieces that name Claude Code and speak of participants' data but
+    never say that it opens files by itself."""
+    return [unit for unit in _route_units(text)
+            if "Claude Code" in unit and PARTICIPANT_DATA.search(unit)
+            and not FILE_ACCESS.search(unit)]
+
+
+def _claude_code_section():
+    return _between(_read("INSTALL.md"),
+                    "## Alternative: Claude Code and other MCP clients",
+                    "## Environment variables the server reads")
+
+
+def _api_key_recipe():
+    return _between(_read("INSTALL.md"),
+                    "## Claude Code with an Anthropic API key (Experimental)",
+                    "## LM Studio (fully local) (Experimental)")
+
+
+def _claude_code_routes():
+    install = _read("INSTALL.md")
+    return {
+        "INSTALL, the table, consumer plans": _between(
+            install, "| **Claude consumer plans**", "\n"),
+        "INSTALL, the table, commercial terms": _between(
+            install, "| **Anthropic commercial-terms routes**", "\n"),
+        "INSTALL, Claude Code": " ".join(_claude_code_section().split()),
+        "INSTALL, the API-key recipe": " ".join(_api_key_recipe().split()),
+        "README, other assistants": _between(
+            _flat("README.md"), "**Other assistants.**", "**Updating.**"),
+        "QUICKSTART, what you need": _between(
+            _flat("QUICKSTART.md"), "## Prerequisites Checklist",
+            "## Installation Steps"),
+    }
+
+
+class TestClaudeCodesRoutes:
+
+    def test_every_claude_code_route_says_it_opens_files_by_itself(self):
+        for where, text in _claude_code_routes().items():
+            assert CLAUDE_CODE_READS in text, where
+            assert HOSTS_SECTION in text or "Where your data goes" in text, \
+                where
+            # and what to use for participants' data instead
+            assert "Claude Desktop's chat" in text, where
+
+    def test_no_claude_code_route_is_labelled_for_participant_data_without_it(
+            self):
+        for name in ("README.md", "INSTALL.md", "QUICKSTART.md"):
+            assert _unwarned_claude_code_routes(_read(name)) == [], name
+        recipe = _claude_code_routes()["INSTALL, the API-key recipe"]
+        assert "recommended for participant data" not in recipe
+        assert "**4. Strict posture (optional).**" in recipe
+        assert ("These settings close side channels; they do not change "
+                "what Claude Code reads by itself (step 2), so they do not "
+                "make this route one for participants' data.") in recipe
+        assert "The key changes the terms, not what Claude Code reads." \
+            in recipe
+
+    def test_the_route_check_would_notice(self):
+        # The recipe as it stood, and a route labelled for participants'
+        # data with no word on Claude Code's own reading
+        old_recipe = (
+            "## Claude Code with an Anthropic API key (Experimental)\n\n"
+            "**4. Strict posture (optional, recommended for participant "
+            "data).**\nClaude Code has side channels documented on its "
+            "data-usage page.\n")
+        assert _unwarned_claude_code_routes(old_recipe)
+        row = ("| **Anthropic commercial-terms routes** (Claude Code with a "
+               "Console API key) | Suited to participants' data. | "
+               "PRIVACY.md |")
+        assert _unwarned_claude_code_routes("## Routes\n\n" + row + "\n")
+        # The rows as they stand now are not caught
+        for where in ("INSTALL, the table, consumer plans",
+                      "INSTALL, the table, commercial terms"):
+            now = _claude_code_routes()[where]
+            assert not _unwarned_claude_code_routes("## Routes\n\n" + now
+                                                    + "\n"), where
+
+    def test_the_steps_start_claude_code_in_a_folder_of_its_own(self):
+        folder = "mkdir -p ~/claude-exegete && cd ~/claude-exegete"
+        section = _claude_code_section()
+        assert folder in [b.strip() for b in _blocks(section, "bash")]
+        # made before Exegete is registered in it
+        assert section.index(folder) < \
+            section.index("claude mcp add exegete -- exegete")
+        recipe = _api_key_recipe()
+        assert _blocks(recipe, "bash")[0].strip().splitlines() == [
+            folder, "export ANTHROPIC_API_KEY=sk-ant-...", "claude"]
+        routes = _claude_code_routes()
+        for where in ("INSTALL, Claude Code", "INSTALL, the API-key recipe"):
+            assert ("Claude Code offers a server added this way only in the "
+                    "folder where it was added") in routes[where], where
+        for words in (
+                "It reads the folder it starts in without asking, and its "
+                "read-only commands (such as `cat`, `grep` and `find`) read "
+                "outside that folder without asking too, in every mode, "
+                "unless a setting that blocks such reads is on.",
+                "So never start it in your home folder, Documents, your "
+                "projects folder or any folder that holds a study (a new "
+                "Terminal window opens in your home folder)",
+                "it does not stop its read-only commands reading them."):
+            assert words in routes["INSTALL, Claude Code"], words
+        assert ("never start Claude Code there, in Documents, in your "
+                "projects folder or in any folder that holds a study") in \
+            routes["INSTALL, the API-key recipe"]
+        assert "Never start it in your home folder, your projects folder " \
+               "or a study's folder;" not in routes["INSTALL, Claude Code"]
+
+    def test_privacy_says_the_terms_do_not_change_what_it_reads(self):
+        privacy = _flat("PRIVACY.md")
+        rung_two = _between(privacy, "### Rung 2:", "### Rung 3:")
+        for words in ("The terms change what Anthropic may do with what it "
+                      "receives, not what Claude Code reads: Claude Code "
+                      "opens files by itself, outside Exegete",
+                      "Claude Desktop's chat with Exegete on a Team or "
+                      "Enterprise account (rung 3)"):
+            assert words in rung_two, words
+        assert CLAUDE_CODE_READS in _between(privacy, "### Rung 1:",
+                                             "### Rung 2:")
+        cautions = _between(privacy, "### Cross-rung cautions",
+                            "## OpenAI's apps")
+        assert "Claude Code opens files by itself, outside Exegete, on " \
+               "every rung" in cautions
+        hosts = _privacy_hosts()
+        assert "With Claude Code or Cowork, keep your projects out of " \
+               "their folders, as above." not in hosts
+        assert ("starting it elsewhere keeps your projects out of the "
+                "folder it reads without asking, but does not stop its "
+                "read-only commands reading them") in hosts
+
+
+# Anthropic's article on computer use (read 30 September 2026)
+COMPUTER_USE = ("<https://support.claude.com/en/articles/14128542-let-claude-"
+                "use-your-computer-in-cowork>")
+# "never shown to the AI" said of the private part of a memo, without
+# saying that it is Exegete's rule
+UNQUALIFIED_PRIVATE_PART = re.compile(
+    r"\bnever (?:shown|sent|passed) to the AI\b(?! through Exegete)")
+
+
+class TestTheSmallerPoints:
+
+    def test_the_chats_conditions_name_computer_use(self):
+        chat = [bullet for bullet in re.split(r" - (?=\*\*)", _privacy_hosts())
+                if bullet.startswith("**Claude Desktop's chat")]
+        assert len(chat) == 1
+        for words in (
+                "Three exceptions.",
+                "(Settings, General, \"Enable computer use\")",
+                "\"It can work in your browser, open files, and run your dev "
+                "tools automatically\"",
+                "\"Claude asks for your permission before accessing each "
+                "application.\"",
+                COMPUTER_USE,
+                "\"Computer use: In beta on Pro and Max plans, Claude can use "
+                "apps on your computer directly by clicking, typing, and "
+                "navigating your screen.\"",
+                "With no other extension that reads files, computer use "
+                "off, and no folder that holds your projects or transcripts "
+                "connected (your home folder, Documents or a whole drive "
+                "included), the assistant reaches your project only through "
+                "Exegete."):
+            assert words in chat[0], words
+        mitigations = _between(_flat("PRIVACY.md"), "## Practical mitigations",
+                               "## Questions")
+        for where, text in {"README": _readme_data(),
+                            "INSTALL, step 3": _install_openai_flat(),
+                            "PRIVACY, mitigations": mitigations}.items():
+            assert "computer use off" in text, where
+
+    def test_the_private_part_is_described_as_exegetes_rule(self):
+        for name in _shipped_documents():
+            assert not UNQUALIFIED_PRIVATE_PART.search(_flat(name)), name
+        for name in ("TOOLS.md", "AI_CODING_GUIDE.md"):
+            text = _flat(name)
+            assert ("never sent to the AI through Exegete (an assistant that "
+                    "opens a project's files by itself reads every memo "
+                    "whole:") in text, name
+            assert HOSTS_SECTION in text, name
+
+    def test_the_private_part_check_would_notice(self):
+        # The two sentences as they stood
+        for old in ("`#####` private memo sections are never shown to the "
+                    "AI, reads follow QualCoder's per-coder visibility",
+                    "(QualCoder 4.0's private-note convention) is never "
+                    "shown to the AI and survives AI memo writes"):
+            assert UNQUALIFIED_PRIVATE_PART.search(old), old
+        assert not UNQUALIFIED_PRIVATE_PART.search(
+            "is never sent to the AI through Exegete (an assistant that "
+            "opens a project's files by itself reads every memo whole")
+
+    def test_openais_route_says_practice_first_and_windows_in_full(self):
+        install = _install_openai_flat()
+        box = ("Until a setting that stops Codex reading files by itself has "
+               "been tested, use this route for practice and for data that "
+               "is not sensitive; step 3 says why.")
+        assert box in install
+        assert install.index(box) < \
+            install.index("**Which OpenAI apps can use Exegete.**")
+        windows = ("on Windows, at least everything in your home folder but "
+                   "a few folders that hold keys")
+        assert f"({windows})" in install
+        changelog = _flat("CHANGELOG.md")
+        unreleased = changelog[changelog.index("## [Unreleased]"):
+                               changelog.index("## [0.14.0-alpha]")]
+        assert ("on Windows at least everything in the home folder but a "
+                "few folders that hold keys") in unreleased
+        for name in SHIPPED_TEXTS:
+            text = _flat(name)
+            for gone in ("at least the home folder)",
+                         "at least your home folder)", "looking through",
+                         "look through a study"):
+                assert gone not in text, (name, gone)
+
+    def test_privacy_opens_with_it_and_lm_studio_is_exact(self):
+        opening = _between(_flat("PRIVACY.md"), "## How your data flows",
+                           "What stays local, always")
+        assert ("An assistant that opens files by itself can send more, "
+                "outside Exegete: \"Assistants that open files by "
+                "themselves\", below, says which assistants do, and what to "
+                "use for participants' data.") in opening
+        hosts = _privacy_hosts()
+        assert "that comes with LM Studio" not in hosts
+        for words in ("LM Studio's JavaScript sandbox plugin, which LM Studio "
+                      "publishes and which is switched on chat by chat,",
+                      "LM Studio's pages do not say whether its commands "
+                      "stop at that folder: keep a study's folders, and the "
+                      "folders that hold them, out of it."):
+            assert words in hosts, words
+
+    def test_no_text_assumes_participants_data_goes_to_openai(self):
+        data = _readme_data()
+        assert "Do one of the two before you use participant data" not in data
+        assert "So delete those session files after work on participant " \
+               "data" not in _privacy_openai()

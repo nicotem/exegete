@@ -14,6 +14,7 @@ test_v0141_proof_0140.py.
 """
 
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -39,6 +40,18 @@ def old_file(folder, name="Earlier Name", history=None, version=1,
     path = Path(folder) / OLD
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return path
+
+
+def code_owner(folder, code):
+    """The owner of a code row, read straight from the database."""
+    con = sqlite3.connect(f"file:{Path(folder) / 'data.qda'}?mode=ro",
+                          uri=True)
+    try:
+        row = con.execute("SELECT owner FROM code_name WHERE name = ?",
+                          (code,)).fetchone()
+    finally:
+        con.close()
+    return row[0] if row else None
 
 
 def as_0140_reads(path):
@@ -146,16 +159,39 @@ def test_messages_name_the_file_in_use(folder):
     assert ps.unreadable_message(folder / OLD).count(OLD) == 1
 
 
-def test_a_marked_earlier_file_alone_is_read_and_moved_again(folder):
-    # exegete.json removed by hand, or a backup taken between the two
-    # writes of a move: the marked file is read as its version 1 was
-    old_file(folder, version=2, moved_to=NEW)
+@pytest.mark.parametrize("mark", [{"version": 2, "moved_to": NEW},
+                                  {"version": 2},
+                                  {"version": 1, "moved_to": NEW}],
+                         ids=["version-2-and-moved-to", "version-2",
+                              "moved-to"])
+def test_a_marked_earlier_file_alone_reads_as_unset(folder, mark):
+    # exegete.json removed or lost after the move: the marked file holds
+    # the name from before the move, and every change since lived in
+    # exegete.json only, so its name is never used again. Its names stay
+    # in the history (rows under them are still this project's AI work).
+    old_file(folder, name="Model A", **mark)
     state = ps.read_sidecar(folder)
-    assert state.is_set and state.name == "Earlier Name"
-    ps.write_ai_coder_name(folder, "Again")
-    assert ps.read_sidecar(folder).path == folder / NEW
-    assert json.loads((folder / OLD).read_text(
-        encoding="utf-8"))["format_version"] == 2
+    assert state.status == ps.SIDECAR_UNSET and state.name is None
+    assert state.earlier_marked and state.path == folder / OLD
+    assert [e["name"] for e in state.history] == ["Model A"]
+    assert "Model A" in ps.ai_coder_names_for_project(folder)
+    # the next set carries the history into exegete.json
+    ps.write_ai_coder_name(folder, "Model D")
+    new = json.loads((folder / NEW).read_text(encoding="utf-8"))
+    assert [e["name"] for e in new["ai_coder_name_history"]] == \
+        ["Model A", "Model D"]
+    assert ps.MOVED_TO_KEY not in new and new["format_version"] == 1
+    assert ps.read_sidecar(folder).name == "Model D"
+    assert as_0140_reads(folder / OLD) == "newer_format"
+
+
+def test_an_unmarked_earlier_file_alone_is_still_read(folder):
+    # a backup from before the move holds the earlier file unmarked, at
+    # version 1: it reads, and the next write moves it (the restore case)
+    old_file(folder, name="Before The Move")
+    state = ps.read_sidecar(folder)
+    assert state.is_set and state.name == "Before The Move"
+    assert not state.earlier_marked
 
 
 def test_an_unreadable_earlier_file_is_never_rewritten(folder):
@@ -231,6 +267,44 @@ class TestThroughTheServer:
         server.set_project_ai_coder_name("Moved Once More")
         assert ps.read_sidecar(folder).path == folder / NEW
         assert as_0140_reads(folder / OLD) == "newer_format"
+
+    def test_a_removed_new_file_asks_for_the_name_again(
+            self, setup_server, qualcoder_db_path):
+        # the move, a later change of name, then exegete.json damaged and
+        # removed as the refusal says: the next write asks, and nothing
+        # is written under the name from before the move
+        folder = Path(qualcoder_db_path)
+        (folder / NEW).unlink()
+        old_file(folder, name="Model A")
+        for name in ("Model B", "Model C"):
+            out = json.loads(server.set_project_ai_coder_name(name))
+            assert out["success"] is True, out
+        (folder / NEW).write_text("{damaged", encoding="utf-8")
+        out = json.loads(server.create_code("WhileDamaged",
+                                            create_backup=False))
+        assert f"({NEW} in the project folder) could not be read" in \
+            out["error"]
+        assert "the next write will then ask for the name again" in \
+            out["error"]
+        (folder / NEW).unlink()
+        out = json.loads(server.create_code("AfterRemoval",
+                                            create_backup=False))
+        assert out.get("action_required") == "set_project_ai_coder_name", out
+        assert out["ai_coder_name"] is None
+        assert "No AI coder name is set" in out["error"]
+        assert code_owner(folder, "AfterRemoval") is None
+        report = json.loads(server.get_current_project())["ai_coder_name"]
+        assert report["source"] == ps.SIDECAR_UNSET, report
+        assert report["hint"] == ps.EARLIER_MARKED_HINT
+        # the researcher's answer then moves the name once more
+        out = json.loads(server.set_project_ai_coder_name("Model D"))
+        assert out["success"] is True and out["previous_name"] is None
+        assert out["moved_from"] == OLD
+        assert any(f"{NEW} was missing" in w for w in out["warnings"])
+        out = json.loads(server.create_code("AfterTheAsk",
+                                            create_backup=False))
+        assert out.get("success") is True, out
+        assert code_owner(folder, "AfterTheAsk") == "Model D"
 
     def test_the_setters_description_names_the_new_file(self):
         doc = " ".join(server.set_project_ai_coder_name.__doc__.split())

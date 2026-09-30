@@ -33,8 +33,13 @@ The file's new name (v0.14.1, the owner's ruling 41, decision 7):
   since changed. The earlier file keeps the name it held at the move,
   so their reads still recognise the rows it named.
 - A restore of a backup made before the move brings back the earlier
-  file alone: the read falls back to it and the next write moves it
-  again. Messages name the file in use.
+  file alone, unmarked: the read falls back to it and the next write
+  moves it again. Messages name the file in use.
+- A MARKED earlier file alone (exegete.json removed or lost, as the
+  messages below invite for a damaged one) reads as "no name set",
+  keeping its history: the name it holds is the one from before the
+  move, and every change since lived in exegete.json only, so the next
+  write asks, as the messages promise, and never goes back to it.
 - An earlier file that cannot be read is never rewritten (its bytes may
   be the only history), and neither is one of a version above 2.
 
@@ -167,6 +172,12 @@ UNSET_HINT = (
     "The first write will ask which name to store AI rows under; you can "
     "set it now with set_project_ai_coder_name.")
 
+EARLIER_MARKED_HINT = (
+    f"{SIDECAR_NAME} is missing from the project folder, and "
+    f"{OLD_SIDECAR_NAME} beside it is marked as moved: it holds only the "
+    f"names used before the move, so none of them is used now. "
+    + UNSET_HINT)
+
 
 class SidecarWriteError(Exception):
     """The sidecar could not be written; nothing on disk was changed."""
@@ -249,18 +260,21 @@ class SidecarState:
     JSON, wrong format, oversized, a symlink, or a field that fails
     validation) and "newer_format" (a format_version we do not write).
     A "newer_format" file whose current entry validates still reports its
-    name, because reading it is safe; writing it is not.
+    name, because reading it is safe; writing it is not. `earlier_marked`
+    is True for a marked earlier file read with no exegete.json beside
+    it: "unset", with the names it holds in `history`.
     """
 
-    __slots__ = ("status", "entry", "history", "path")
+    __slots__ = ("status", "entry", "history", "path", "earlier_marked")
 
     def __init__(self, status: str, entry: Optional[Dict[str, Any]] = None,
                  history: Optional[List[Dict[str, Any]]] = None,
-                 path: Optional[Path] = None):
+                 path: Optional[Path] = None, earlier_marked: bool = False):
         self.status = status
         self.entry = entry
         self.history = list(history or [])
         self.path = path
+        self.earlier_marked = earlier_marked
 
     @property
     def name(self) -> Optional[str]:
@@ -351,8 +365,8 @@ def read_sidecar(project_folder: Any) -> SidecarState:
     if data is None or data.get("format") != SIDECAR_FORMAT:
         return SidecarState(SIDECAR_UNREADABLE, path=path)
     version = data.get("format_version")
-    # The earlier file as the move left it reads as its version 1 did: a
-    # restore, or a removed exegete.json, falls back to it.
+    # The earlier file may be at version 2, the move's mark; a newer one
+    # is refused as any newer file is.
     newest = (OLD_SIDECAR_MOVED_VERSION if path.name == OLD_SIDECAR_NAME
               else SIDECAR_FORMAT_VERSION)
     if not isinstance(version, int) or isinstance(version, bool) or version < 1:
@@ -376,9 +390,36 @@ def read_sidecar(project_folder: Any) -> SidecarState:
             history.append(validated)
     if version > newest:
         return SidecarState(SIDECAR_NEWER_FORMAT, entry, history, path)
+    if path.name == OLD_SIDECAR_NAME and _is_marked(data):
+        # A marked earlier file alone: exegete.json, which held every
+        # name since the move, was removed or lost. The name here is the
+        # one from before the move, so it is never used again; the
+        # project reads as unset, and the next write asks, as the
+        # messages for a damaged exegete.json promise. Its names stay in
+        # the history, so rows under them still count as this project's
+        # AI work, and the next set carries them into exegete.json.
+        return SidecarState(SIDECAR_UNSET, None, _held_entries(entry, history),
+                            path, earlier_marked=True)
     if entry is None:
         return SidecarState(SIDECAR_UNSET, None, history, path)
     return SidecarState(SIDECAR_SET, entry, history, path)
+
+
+def _is_marked(data: Dict[str, Any]) -> bool:
+    """Whether an earlier file carries the move's mark (version 2 or
+    `moved_to`)."""
+    return (data.get("format_version") == OLD_SIDECAR_MOVED_VERSION
+            or MOVED_TO_KEY in data)
+
+
+def _held_entries(entry: Optional[Dict[str, Any]],
+                  history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """A file's history with its current entry last, when the history
+    lacks it (a hand-edited file, or a malformed history read as empty)."""
+    held = list(history)
+    if entry is not None and entry not in held:
+        held.append(entry)
+    return held
 
 
 def _encoded_payload(payload: Dict[str, Any]) -> bytes:

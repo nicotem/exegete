@@ -126,7 +126,9 @@ set_project_ai_coder_name("Qwen 3.8 6bit", note="LM Studio 0.4.22")
 The answer is stored in `exegete.json` in the project folder,
 beside `data.qda` (until 0.14.0, `qualcoder_mcp.json`: it is still read
 in a project that has only that file, and the first change of name
-carries it into `exegete.json`), so it travels with backups, copies and a synced
+carries it into `exegete.json` and marks it as moved; a marked file on
+its own is not used for the name, so if `exegete.json` goes missing the
+next write asks again), so it travels with backups, copies and a synced
 folder, and two hosts talking to one project agree on it. Reads never
 ask. You can change the name at any time with the same tool; earlier
 rows keep the name they were written under, and the project remembers

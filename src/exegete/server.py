@@ -135,6 +135,7 @@ from .preview_tokens import (
 from .project_settings import (
     AI_CODER_NAME_ENV,
     DEFAULT_AI_CODER_NAME,
+    EARLIER_MARKED_HINT,
     HISTORY_ECHO,
     KNOWN_AI_ASSISTANT_OWNER,
     LEGACY_IMPORT_OWNER,
@@ -2340,7 +2341,9 @@ def _ai_coder_name_report() -> Dict[str, Any]:
                                   "hint": unreadable_message(state.path)}
     elif state.status == SIDECAR_UNSET:
         block["ai_coder_name"] = {"name": None, "source": SIDECAR_UNSET,
-                                  "hint": UNSET_HINT}
+                                  "hint": (EARLIER_MARKED_HINT
+                                           if state.earlier_marked
+                                           else UNSET_HINT)}
     else:
         entry = dict(state.entry or {})
         entry["source"] = ("project" if state.status == SIDECAR_SET
@@ -3824,7 +3827,15 @@ def set_project_ai_coder_name(name: str, note: str = "",
         "next": (f"Retry the write that was refused; it will now be "
                  f"attributed to \"{name}\"."),
     }
-    if moving:
+    if moving and state.earlier_marked:
+        # exegete.json had gone; the marked file gave only its history
+        result["moved_from"] = OLD_SIDECAR_NAME
+        result["warnings"] = list(result["warnings"]) + [
+            f"{SIDECAR_NAME} was missing from the project folder, so the "
+            f"names this project used before were carried from "
+            f"{OLD_SIDECAR_NAME}, already marked as moved, into "
+            f"{SIDECAR_NAME}, where the name is kept from now on."]
+    elif moving:
         result["moved_from"] = OLD_SIDECAR_NAME
         result["warnings"] = list(result["warnings"]) + [
             f"This project's AI coder name and its history were carried "

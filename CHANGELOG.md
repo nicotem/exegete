@@ -71,8 +71,13 @@ still accepted (the Upgrading list below).
   version, instead of writing rows under a name you have since changed
   (checked with the published 0.14.0). A restore of a backup made
   before the move brings back the earlier file alone; it is read, and
-  the next change of name moves it again. An earlier file that cannot
-  be read is never rewritten. Messages name the file in use.
+  the next change of name moves it again. If `exegete.json` is removed
+  or lost after the move, the marked earlier file is not used for the
+  name, since it holds the one from before the move: the project reads
+  as having no name, its earlier names stay in the history, and the
+  next AI write asks for the name again, as the messages say. An
+  earlier file that cannot be read is never rewritten. Messages name
+  the file in use.
 - The projects folder for installs from PyPI or from the source, when
   no workspace is set, is now `~/Documents/Exegete projects`: copies and
   new projects go there. The earlier `~/Documents/Qualcoder MCP
@@ -287,7 +292,9 @@ qualcoder-mcp" says what you may change on each route.
   `qualcoder_mcp.json` stays beside it, marked so that qualcoder-mcp
   0.12 to 0.14 refuse to write it (they say it was written by a newer
   version: update that copy). Until then, and after a restore of an
-  older backup, the earlier file is read as before.
+  older backup, the earlier file is read as before. If `exegete.json`
+  goes missing later, the next AI write asks for the name again rather
+  than use the one from before the move.
 - **Tidying up afterwards:** `exegete --check-transition` lists what
   the change left behind on your computer (the old package still
   installed, a host's entry still starting the old command, the link at

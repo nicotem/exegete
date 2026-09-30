@@ -154,7 +154,31 @@ def _naming(template: str, path: Any = None) -> str:
     return template.format(file=Path(path).name if path else SIDECAR_NAME)
 
 
+_UNREADABLE_BESIDE_EARLIER = (
+    "The AI coder name file for this project ({file} in the "
+    "project folder) could not be read. Ask the user to set the name "
+    "again with set_project_ai_coder_name, which puts the damaged file "
+    "aside, or to remove both {file} and {old}: {old} beside it is not "
+    "marked as moved and still holds \"{held}\", so removing {file} alone "
+    "would bring that name back without asking. Nothing was written.")
+
+
 def unreadable_message(path: Any = None) -> str:
+    """The message for an unreadable file, naming the file in use.
+
+    With an unreadable exegete.json beside an unmarked earlier file that
+    holds a name (a mark that failed, or a file an older copy wrote), the
+    usual advice to remove the file would bring that name back without a
+    word, since the earlier file alone is then read (a restored backup
+    from before the move looks the same on disk). The message says to
+    set the name again or to remove both files instead.
+    """
+    if path is not None and Path(path).name == SIDECAR_NAME:
+        data = _unmarked_earlier_file(Path(path).parent)
+        held = _held_name(data) if data is not None else None
+        if held:
+            return _UNREADABLE_BESIDE_EARLIER.format(
+                file=SIDECAR_NAME, old=OLD_SIDECAR_NAME, held=held)
     return _naming(_UNREADABLE, path)
 
 

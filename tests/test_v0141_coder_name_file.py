@@ -558,6 +558,54 @@ class TestThroughTheServer:
         assert out.get("success") is True, out
         assert code_owner(folder, "AfterTheAsk") == "Model D"
 
+    @pytest.mark.parametrize("route", ["set_again", "remove_both"])
+    def test_a_damaged_new_file_beside_an_unmarked_earlier_one(
+            self, setup_server, qualcoder_db_path, earlier_file_locked,
+            route):
+        # the mark failed (the file locked), then exegete.json was
+        # damaged. Removed alone, it would leave the unmarked earlier file,
+        # which reads as a restored backup does, bringing its name back
+        # without a word; so the answers say to set the name again or to
+        # remove both files, and the name from before never returns
+        folder = Path(qualcoder_db_path)
+        (folder / NEW).unlink()
+        path = old_file(folder, name="Before")
+        out = json.loads(server.set_project_ai_coder_name("After"))
+        assert out["earlier_file_not_marked"] == str(path), out
+        (folder / NEW).write_text("{damaged", encoding="utf-8")
+        refused = json.loads(server.create_code(
+            "WhileDamaged", create_backup=False))["error"]
+        hint = json.loads(server.get_current_project())[
+            "ai_coder_name"]["hint"]
+        for said in (refused, hint):
+            assert f"({NEW} in the project folder) could not be read" in said
+            assert ("Ask the user to set the name again with "
+                    "set_project_ai_coder_name, which puts the damaged file "
+                    f"aside, or to remove both {NEW} and {OLD}") in said
+            assert (f'still holds "Before", so removing {NEW} alone would '
+                    f"bring that name back without asking") in said
+            assert "the next write will then ask" not in said
+        assert code_owner(folder, "WhileDamaged") is None
+        if route == "set_again":
+            out = json.loads(server.set_project_ai_coder_name("After Again"))
+            assert out["success"] is True, out
+            assert Path(out["replaced_unreadable_file"]).exists()
+            chosen = "After Again"
+        else:
+            (folder / NEW).unlink()
+            path.unlink()
+            out = json.loads(server.create_code("Asked",
+                                                create_backup=False))
+            assert out.get("action_required") == \
+                "set_project_ai_coder_name", out
+            assert code_owner(folder, "Asked") is None
+            chosen = "Chosen"
+            out = json.loads(server.set_project_ai_coder_name(chosen))
+            assert out["success"] is True, out
+        out = json.loads(server.create_code("Next", create_backup=False))
+        assert out.get("success") is True, out
+        assert code_owner(folder, "Next") == chosen
+
     def test_a_removed_new_file_in_a_project_named_first(
             self, setup_server, qualcoder_db_path):
         # a project Exegete named first has a marker holding no name.

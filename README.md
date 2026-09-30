@@ -79,24 +79,39 @@ Text you bring in through the conversation (pasted or attached, then
 imported) goes to the provider in full; a file you import in QualCoder
 does not, only what the assistant later reads of it.
 
-Codex, OpenAI's route, also reads and changes files by itself, outside
-Exegete, in the folder you give it. OpenAI's page on Codex's sandbox
-says of the mode in which it may edit: "The agent can read files, edit
-within the workspace, and run routine local commands inside that
-boundary." Its page on approvals adds that even in the read-only mode
-"Codex can read files and run commands within the read-only sandbox."
-What Codex reads that way goes to OpenAI too, and Exegete's protections
-(the `#####` mark below, your approval before anything is written, the
-backups) do not apply to it. So give Codex a folder of its own, with no
-study files in it ("ChatGPT's desktop app and Codex", below, says how).
+Some assistants can also open files on your computer by themselves,
+with tools of their own and without Exegete: Codex (OpenAI's route),
+Claude Code, and Claude's Cowork (in the folders you connect to it).
+What they read that way goes to their provider too, and Exegete's
+protections (the `#####` mark below, your approval before anything is
+written, the backups) do not apply to it; Exegete cannot see such a
+read or stop it. Codex can read files well beyond the folder it works
+in, by itself and without asking, in its "Ask for approval" mode and in
+its read-only mode alike: on a Mac or Linux, any file your account can
+read; on Windows, at least everything in your home folder but a few
+folders that hold keys. Exegete's own answers tell it where your
+project is. (OpenAI's page on approvals and Codex's source code, read
+on 30 September 2026; PRIVACY.md quotes them.) A folder of its own
+("ChatGPT's desktop app and Codex", below) stops Codex changing your
+files, or looking through them, by itself; it does not stop it reading
+them.
+
+**For participants' data**, use an assistant that has no file access
+of its own, such as Claude Desktop's chat with the extension, with none
+of your study's folders connected to it. Keep OpenAI's route for
+practice and for data that is not sensitive until a setting that stops
+those reads has been tested with Exegete.
+[PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)
+goes through the assistants one by one, with each maker's page.
 
 Your project, its backups, your exports, the lists of suggestions
 waiting for your review, Claude Desktop's own log of the extension
 (which keeps a copy of every request and answer, names and quoted text
 included; INSTALL.md says where), and, with Codex, its session files in
-`~/.codex`, which keep what Exegete's tools returned (PRIVACY.md says
-more), stay on your computer, unless they are in a folder that iCloud,
-OneDrive or another sync service copies.
+`~/.codex`, which keep what Exegete's tools returned and what Codex
+read by itself (PRIVACY.md says more), stay on your computer, unless
+they are in a folder that iCloud, OneDrive or another sync service
+copies.
 Exegete never passes the part of a memo from a `#####` mark onward
 (QualCoder's mark for a private note) to the assistant, whichever
 QualCoder made the project. The mark works in memos, annotations and
@@ -207,16 +222,21 @@ like Exegete: INSTALL.md says more.)
 ChatGPT's phone app cannot start Exegete either, but by OpenAI's
 documentation it can use it through your computer. OpenAI's Remote,
 set up in the ChatGPT desktop app on a Mac or Windows computer, lets
-the phone start and approve work that the computer runs, and "MCP
-servers, skills, browser access, and Computer Use come from that host's
+the phone, or another Mac or Windows computer where OpenAI offers it,
+start and approve work that the computer runs, and "MCP servers,
+skills, browser access, and Computer Use come from that host's
 configuration" (OpenAI,
 <https://learn.chatgpt.com/docs/remote-connections>, read on 30
-September 2026). So a phone paired with that computer can use the
-Exegete set up there, and show participants' words. This project has
-not tried it, and suggests leaving Remote off on a computer where
-Exegete works on participants' data.
+September 2026). So a phone or computer paired with that computer can
+use the Exegete set up there, and show participants' words. This
+project has not tried it, and suggests leaving Remote off on a computer
+where Exegete works on participants' data. To check, look under
+Settings, Connections in the desktop app: a device paired earlier stays
+paired.
 
-These apps have no one-click extension. The steps:
+These apps have no one-click extension, and until a safer setting has
+been tested, this route is for practice and for data that is not
+sensitive ("Where your data goes", above). The steps:
 
 1. **Install Exegete** by the Terminal route (a few typed commands).
 2. **Add Exegete to the settings file**, with the lines that make the
@@ -225,16 +245,17 @@ These apps have no one-click extension. The steps:
    without asking the tools that add to your project (importing a
    text, applying approved codings) and the one that sends the real
    names in your pseudonym list to OpenAI.
-3. **Give Codex a folder of its own.** Make an empty folder for these
-   chats (INSTALL.md suggests `exegete-chats` in your home folder) and
-   open it as Codex's place to work; on the command line, start `codex`
-   inside it. Never give it your home folder, Documents, your projects
-   folder or a folder with transcripts: Codex reads and changes the
-   files there by itself, outside Exegete ("Where your data goes",
-   above).
-4. **Restart the app**, select Codex from the ChatGPT dropdown in the
+3. **Restart the app**, select Codex from the ChatGPT dropdown in the
    desktop app (OpenAI documents this kind of tool there), and keep the
    app's permissions on "Ask for approval".
+4. **Give Codex a folder of its own.** Make an empty folder for these
+   chats (INSTALL.md suggests `exegete-chats` in your home folder; for
+   the desktop app, make it in Finder or File Explorer) and open it as
+   Codex's place to work; on the command line, start `codex` inside it.
+   Never give it your home folder, Documents, your projects folder or a
+   folder with transcripts. The folder stops Codex changing your files,
+   or looking through them, by itself; it does not stop it reading them
+   ("Where your data goes", above).
 
 [INSTALL.md, "ChatGPT's desktop app and Codex"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-app-and-codex-experimental)
 has each step, which OpenAI plans include these apps, and what to do if
@@ -275,7 +296,9 @@ goes", above).
 **A project you already have.** Try the assistant on a practice
 project first. For a real study, ask the assistant to copy your project
 into its folder for projects and to work on the copy: your original is not
-touched, and QualCoder opens the copy like any other project.
+touched, and QualCoder opens the copy like any other project. With an
+assistant that opens files by itself, such as Codex, the path you give
+it lets it read the original too ("Where your data goes", above).
 
 **One program at a time.** Before the assistant changes a project, close
 that project in QualCoder. With QualCoder 3.8.2 an open project is

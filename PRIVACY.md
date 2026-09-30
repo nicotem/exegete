@@ -236,9 +236,133 @@ server has verified. It is bounded on the way in, so a tampered cursor
 cannot put an arbitrary number in front of you, and `returned` (this
 page) and `has_more` are computed here on every page.
 
-What leaves your machine: **only what tools return into the
-conversation**, but for qualitative research, that can be the most
-sensitive content you hold.
+What leaves your machine through this server: **only what tools return
+into the conversation**, but for qualitative research, that can be the
+most sensitive content you hold. An assistant that opens files by
+itself can send more, outside this server: the next section says which
+do.
+
+## Assistants that open files by themselves
+
+Everything above is about what passes through Exegete. Some AI
+assistants can also open files on your computer by themselves, with
+tools of their own: they can read a QualCoder project's files directly,
+its database (`data.qda`) included, without going through Exegete. What
+they read that way goes to their AI provider whole, the private part of
+every memo after `#####` included (the database holds each memo in
+full), and none of Exegete's protections applies to it; Exegete cannot
+see such a read or stop it. Exegete's own answers tell the assistant
+where a project is (`list_available_projects`, `select_project`,
+`get_current_project` and `create_project` answer with its path).
+
+What follows was checked on 30 September 2026 against each maker's
+documentation (and, for Codex, its source code), assistant by
+assistant. These pages change often, and the linked pages govern.
+
+- **Codex** (the ChatGPT desktop app, and Codex's command line and
+  editor extension): **yes, without asking**, in "Ask for approval" and
+  in the read-only mode alike: on macOS and Linux any file your account
+  can read, and on Windows at least everything in your home folder but
+  a few folders that hold keys. Giving Codex a folder of its own does
+  not change that. OpenAI's pages and Codex's source code, quoted and
+  dated: "Codex's own file access", in "OpenAI's apps" below.
+- **Claude Code** (the terminal app, and local sessions in Claude
+  Desktop's Code tab): **yes**. It has file tools of its own and runs
+  shell commands. <https://code.claude.com/docs/en/permissions> (read
+  30 September 2026): "By default, Claude has access to files in the
+  directory where you launched it." Reading there needs no approval
+  (the page's table: none "within the working directory and additional
+  directories"), and "Claude Code recognizes a built-in set of Bash
+  commands as read-only and runs them without a permission prompt in
+  every mode, except as `permissions.blockReadsOutsideWorkingDirectories`
+  changes for paths outside your working directories." (the set
+  includes `cat`, `grep` and `find`). Beyond that folder,
+  <https://code.claude.com/docs/en/permission-modes> (the same day):
+  "With Claude Code v2.1.283 or later, auto mode is the built-in
+  starting permission mode for interactive terminal and VS Code
+  sessions.", and, while `permissions.blockReadsOutsideWorkingDirectories`
+  is off, "file reads run without a prompt in auto mode, including reads
+  outside the working directories", apart from one question the first
+  time its Read, Grep or Glob tool goes outside them. In Manual mode, Claude Code "asks you
+  before reading paths outside this boundary with the Read, Grep, and
+  Glob tools" (<https://code.claude.com/docs/en/security>, the same
+  day); the read-only shell commands above are not in that list.
+  Anthropic documents settings that narrow this: `Read` deny rules for
+  your projects folder, `permissions.blockReadsOutsideWorkingDirectories`
+  (version 2.1.257 or later), and the sandbox (`sandbox.enabled`; off
+  by default, and not on native Windows). By the same pages, the deny
+  rules do not reach "a Python or Node script that opens files itself";
+  the sandbox does, but its default is "read access to the entire
+  computer, except certain denied directories"
+  (<https://code.claude.com/docs/en/sandboxing>, the same day), so it
+  protects a folder only together with a rule that denies it or the
+  setting that blocks reads outside the working folders. This project
+  has not tested these settings with Exegete. At the least, never start
+  Claude Code in your home folder, your projects folder or a study's
+  folder, and never add one of them as a working folder.
+- **Claude's Cowork** (in Claude Desktop): **yes, in the folders you
+  connect to it.**
+  <https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>
+  (read 30 September 2026): "Since Claude can read, write, and
+  permanently delete these files, be cautious about granting access to
+  sensitive information like financial documents, credentials, or
+  personal records." Anthropic's pages document no question before each
+  read in a connected folder: Cowork grants the folder "through allow
+  rules it supplies when it launches the session"
+  (<https://code.claude.com/docs/en/managed-settings>, the same day).
+  Since 4 September 2026 the home folder or a whole drive can be
+  connected (<https://claude.com/docs/cowork/changelog>, version
+  1.46388.3). In a Cowork session that runs in the cloud, "Claude
+  fetches a copy of just that file"
+  (<https://support.claude.com/en/articles/15520349-use-claude-cowork-on-web-desktop-and-mobile>,
+  the same day). In the newer experience Anthropic is rolling out to
+  Pro and Max plans, "everything Claude Cowork does is available from
+  any conversation", and "Folders you gave Cowork access to are listed
+  under Trusted folders."
+  (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
+  the same day). Keep QualCoder projects, transcripts and your projects
+  folder out of every folder connected to Claude.
+- **Claude Desktop's chat, with the extension**: **not by itself, as far
+  as Anthropic's pages say.** They document no way for the older,
+  separate chat to open a file on your computer other than one you
+  attach or one a tool, such as Exegete's, reads for it; no page says so
+  in one sentence, and this project has not tested it. Two exceptions:
+  in the newer experience above, a conversation can read a folder you
+  connect; and "Local MCP servers bundled with plugins and desktop
+  extensions run on your computer with the same permissions as any
+  other program you run."
+  (<https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>,
+  the same day), so another extension that reads files can read your
+  project. With no such extension, and none of your study's folders
+  connected, the assistant reaches your project only through Exegete.
+- **LM Studio** (0.4.25, its chat window): **not by itself.** Its
+  pages document no file tool of its own for the chat (its MCP page,
+  <https://lmstudio.ai/docs/app/mcp>, read 30 September 2026, lists
+  none, and its changelog, <https://lmstudio.ai/changelog/lmstudio>,
+  adds none up to 0.4.25): a file reaches the model when you attach one
+  (<https://lmstudio.ai/docs/app/basics/rag>, the same day) or through
+  a tool, and "When a model calls a tool, LM Studio
+  will show a confirmation dialog to the user."
+  (<https://lmstudio.ai/blog/lmstudio-v0.3.17>, the same day), unless
+  you chose to always allow that tool. Other servers and plugins can:
+  "Some MCP servers can run arbitrary code, access your local files, and
+  use your network connection." (its MCP page). The JavaScript sandbox
+  that comes with LM Studio, switched on chat by chat, reads and writes
+  only in that chat's own working folder, by the source LM Studio
+  publishes for it
+  (<https://lmstudio.ai/lmstudio/js-code-sandbox/files/src/toolsProvider.ts>,
+  the same day). LM Studio's separate agent app, Bionic, does read,
+  change and run commands on the files in the folder you give it
+  (<https://lmstudio.ai/docs/bionic/quick-start>, the same day): keep a
+  study's folders out of it.
+
+So, for participants' data, this project suggests an assistant with no
+file access of its own: Claude Desktop's chat with the extension, with
+none of your study's folders connected to it, or LM Studio's chat with
+Exegete and no other server or plugin that reads files. OpenAI's apps
+are for practice and for data that is not sensitive until a setting
+that stops Codex's reads has been tested with Exegete. With Claude Code
+or Cowork, keep your projects out of their folders, as above.
 
 ## Keeping notes private from the AI: the '#####' memo convention
 
@@ -304,7 +428,9 @@ convention, whichever QualCoder made the project:
   itself.
 
 The private zone stays in your project database on disk; this
-convention controls only what enters the AI conversation. The QualCoder
+convention controls only what enters the AI conversation through this
+server. An assistant that opens the database by itself reads every memo
+whole ("Assistants that open files by themselves", above). The QualCoder
 4.0 behaviour described in this section and the next two was verified
 against QualCoder master at commit 9bddf17 (pulled 2026-08-25, when 4.0
 was in beta); TOOLS.md and CHANGELOG.md carry the same pin. The coder
@@ -797,8 +923,9 @@ Cloud, perhaps through a computer connected to the account, which
 OpenAI does not document for servers like Exegete; INSTALL.md says
 why.)
 
-**Codex's own file access.** Codex reads and changes files by itself,
-outside Exegete, in the folder it works in.
+**Codex's own file access.** Besides calling Exegete's tools, Codex
+runs commands of its own, outside Exegete, which change files in the
+folder it works in and read files well beyond it.
 <https://learn.chatgpt.com/docs/sandboxing> (read 30 September 2026),
 on the mode in which it may edit (`workspace-write`):
 
@@ -817,14 +944,59 @@ The same page, on the read-only mode:
 
 > "Codex can read files and run commands within the read-only sandbox."
 
-What Codex reads that way goes to OpenAI without passing through
-Exegete, so none of Exegete's protections applies to it: not the
-`#####` mark, which Exegete never passes on, not the approval before
-anything is written, not the preview or the backup. A study's folder,
-the projects folder or the home folder should never be Codex's place to
-work; INSTALL.md's recipe gives it an empty folder of its own. A folder
-of its own does not stop Codex reading a file elsewhere that it is
-pointed to: OpenAI's pages do not say that its reading stops there.
+Neither row says whether Codex may read outside the workspace. The same
+page does, in its section "Migrate from the retired `untrusted`
+approval policy":
+
+> "With `on-request`, commands allowed by the sandbox can run without
+> approval, read accessible files, and use network access if enabled."
+
+`on-request` is the approval setting behind both "Ask for approval" and
+the read-only mode, and what is accessible reaches well beyond Codex's
+folder. In Codex's source code (release 0.159.2, 29 September 2026,
+read 30 September 2026, <https://github.com/openai/codex/tree/rust-v0.159.2/codex-rs>),
+the two modes' presets both use `on-request`
+(`utils/approval-presets/src/lib.rs`), and both of their sandboxes let
+Codex's commands read from the root of the disk
+(`protocol/src/permissions.rs`): on macOS and Linux, any file your
+account can read (`sandboxing/src/seatbelt.rs`,
+`linux-sandbox/src/bwrap.rs`); on Windows, with its preferred sandbox,
+the system's folders, the working folder and every folder at the top of
+your home folder except a short list that holds keys and credentials,
+such as `.ssh` and `.aws` (`windows-sandbox-rs/src/setup.rs`), and with
+its fallback sandbox, which limits only writing, any file your account
+can read. That takes in `~/QualCoder projects`, Documents and wherever
+else you keep projects and transcripts. OpenAI's page on permission
+modes (<https://learn.chatgpt.com/docs/permission-modes>, read 30
+September 2026) describes "Ask for approval" in words a reader may take
+to cover reading:
+
+> "It lets ChatGPT work within the current workspace and pauses before
+> reaching beyond that boundary."
+
+By the page on approvals and the source code, that boundary is for
+editing and the network, not for reading. In "Approve for me", actions
+the sandbox already allows are not reviewed
+(<https://learn.chatgpt.com/docs/sandboxing/auto-review>, the same
+day), reads among them; "Full access" has no sandbox at all.
+
+Exegete's own answers tell Codex where the project is ("Assistants
+that open files by themselves", above). What Codex reads by itself goes
+to OpenAI without passing through Exegete, so none of Exegete's
+protections applies to it: not the `#####` mark, which Exegete never
+passes on, not the approval before anything is written, not the preview
+or the backup. A study's folder, the projects folder or the home folder
+should never be Codex's place to work; INSTALL.md's recipe gives it an
+empty folder of its own, which keeps Codex from changing a study's
+files, or looking through them, by itself, and does not keep it from
+reading them. OpenAI documents a setting, in beta, that can refuse
+Codex's reads outside its folder, a "permission profile"
+(<https://learn.chatgpt.com/docs/permissions>, read 30 September 2026:
+"Beta. Permission profiles are under active development and may
+change."). This project has not yet tested it with Exegete, and gives
+no steps for it until it has. Until then it suggests OpenAI's apps for
+practice and for data that is not sensitive, and, for participants'
+data, an assistant with no file access of its own.
 
 **Phones, through a connected computer.** OpenAI's Remote,
 <https://learn.chatgpt.com/docs/remote> (read 30 September 2026):
@@ -833,7 +1005,7 @@ pointed to: OpenAI's pages do not say that its reading stops there.
 > phone. Codex runs each task on your connected computer."
 
 The connected computer runs the ChatGPT desktop app on macOS or Windows
-(INSTALL.md lists what Remote needs, in OpenAI's words).
+(INSTALL.md lists what Remote needs, from OpenAI's pages).
 <https://learn.chatgpt.com/docs/remote-connections> (read 30 September
 2026):
 
@@ -843,9 +1015,16 @@ The connected computer runs the ChatGPT desktop app on macOS or Windows
 > "The sandboxing settings, security controls, and action approvals
 > still apply to the connected session."
 
+> "You can control a host from ChatGPT on iOS or Android, or from
+> another Mac or Windows device when Control other devices is
+> available."
+
 So what Exegete's tools return on that computer can be shown on the
-phone. This project has not tried it, and suggests leaving Remote off on
-a computer where Exegete works on participants' data. For enterprise
+phone, or on another computer paired with it. This project has not
+tried it, and suggests leaving Remote off on a computer where Exegete
+works on participants' data; the same page says "Existing connections
+used since June 8, 2026, remain paired.", so to check, look under
+Settings, Connections in the desktop app. For enterprise
 workspaces with local computer access switched on,
 <https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read
 30 September 2026):
@@ -920,7 +1099,8 @@ ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>
 
 `CODEX_HOME` is, unless you set it, `~/.codex`, the folder that holds
 Codex's `config.toml`. A session's transcript can hold what Exegete's
-tools returned in it, participants' words included, as Claude Code's
+tools returned in it, and what Codex's own commands read, participants'
+words included, as Claude Code's
 local transcripts can ("Cross-rung cautions", above). The `history`
 settings are not enough to stop that (Codex's source code, `main` on
 30 September 2026: `history.persistence` governs only
@@ -1292,9 +1472,15 @@ will ask, and the summary above depends on them:
     of these can itself contain one of those names. The tool's
     description says so.
 - **Only open projects whose consent covers third-party processing.**
-- **Consider which files you let the AI read.** Tools read only what is
-  asked for: a session that never touches file 7 never transmits
-  file 7's text.
+- **Consider which files you let the AI read.** Exegete's tools read
+  only what is asked for: a session that never touches file 7 never
+  transmits file 7's text through them.
+- **For participants' data, use an assistant with no file access of
+  its own**, such as Claude Desktop's chat with the extension. An
+  assistant that opens files by itself (Codex, Claude Code, Cowork in
+  the folders you connect) can read a project whole, outside this
+  server; "Assistants that open files by themselves", above, says
+  which do and what narrows it.
 - **Consult your institution's DPO or ethics board** if you are unsure,
   before the analysis, not after.
 - Remember that the server's safety features (read-only default,

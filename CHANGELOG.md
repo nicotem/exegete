@@ -249,9 +249,10 @@ still accepted (the Upgrading list below).
   is not read-only (by default it asks only before a tool that can
   replace or remove, and runs the tools that only add, and
   `read_pseudonym_list`, without asking); an empty folder of Codex's
-  own to work in, because Codex reads and changes the files in its
-  folder by itself, outside Exegete and without asking; the permission
-  mode to keep; and what to do if it does not start.
+  own to work in, so that Codex does not change or look through a
+  study's files by itself (it can still read them, as the next
+  section says); the permission mode to keep; and what to do if it
+  does not start.
 - PRIVACY.md: a section on OpenAI's apps, quoting OpenAI's pages on
   training and its opt-out for services for individuals, the business
   plans and the API, Codex's sign-in, the session transcripts Codex
@@ -269,6 +270,30 @@ still accepted (the Upgrading list below).
 - Tests: the new claims pinned, the settings entry read as TOML and
   checked against the command and settings this branch has, and
   Codex's approval rule applied to every tool's marks.
+
+### Changed: what an assistant can read by itself, said plainly
+
+- Codex, in "Ask for approval" and in its read-only mode alike, can
+  read files well beyond the folder it works in, without asking (on
+  macOS and Linux any file the account can read, on Windows at least
+  the home folder), and Exegete's answers give it a project's path; a
+  folder of its own keeps it from changing or looking through a study's
+  files by itself, not from reading them (OpenAI's page on approvals
+  and Codex's source code, read 30 September 2026). README,
+  INSTALL.md and PRIVACY.md now say so plainly, and suggest, for
+  participants' data, an assistant with no file access of its own,
+  such as Claude Desktop's chat with the extension; OpenAI's apps for
+  practice and non-sensitive data until a setting that stops those
+  reads has been tested with Exegete.
+- PRIVACY.md, "Assistants that open files by themselves": for Codex,
+  Claude Code, Cowork, Claude Desktop's chat and LM Studio, whether
+  each can read a project's files directly, bypassing Exegete and the
+  private part of memos, with each maker's page and the date it was
+  read. Also in OpenAI's steps: Codex is chosen before its folder is
+  made, the folder can be made in Finder or File Explorer, Remote is
+  checked under Settings, Connections, another computer as well as a
+  phone can control the one Exegete runs on, and Codex's session files
+  keep what its own commands read too.
 
 ### Measured
 

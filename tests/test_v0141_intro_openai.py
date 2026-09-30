@@ -236,8 +236,11 @@ class TestTheReadmesRoute:
                       "**Add Exegete to the settings file**, with the lines "
                       "that make the app ask you before every change "
                       "Exegete makes.",
-                      "3. **Give Codex a folder of its own.**",
+                      "4. **Give Codex a folder of its own.**",
                       "keep the app's permissions on \"Ask for approval\"",
+                      "These apps have no one-click extension, and until a "
+                      "safer setting has been tested, this route is for "
+                      "practice and for data that is not sensitive",
                       "INSTALL.md#chatgpts-desktop-app-and-codex-experimental",
                       "This route is Experimental: it follows OpenAI's "
                       "documentation, read on 30 September 2026, and has not "
@@ -563,6 +566,13 @@ class TestServedTextsAreHostNeutral:
 
 SHIPPED_TEXTS = ("README.md", "INSTALL.md", "PRIVACY.md", "CHANGELOG.md")
 
+# OpenAI's page on approvals (learn.chatgpt.com/docs/agent-approvals-security,
+# read 30 September 2026), in its section on the retired `untrusted` policy:
+# the sentence that settles where Codex's reading stops
+ON_REQUEST_READS = ("\"With `on-request`, commands allowed by the sandbox "
+                    "can run without approval, read accessible files, and "
+                    "use network access if enabled.\"")
+
 
 def _privacy_openai():
     return _between(_flat("PRIVACY.md"), "## OpenAI's apps: the ChatGPT "
@@ -666,16 +676,24 @@ class TestCodexWorksInAFolderOfItsOwn:
     FOLDER_PS = ("mkdir -Force $HOME\\exegete-chats; cd $HOME\\exegete-chats; "
                  "codex")
 
-    def test_readme_step_gives_it_a_folder_before_the_restart(self):
+    def test_readme_step_gives_it_a_folder_after_codex_is_chosen(self):
+        # Codex is selected first, so that a literal reader does not look
+        # for "Codex's place to work" before Codex is on the screen
         section = _readme_openai()
-        step = ("3. **Give Codex a folder of its own.** Make an empty folder "
+        step = ("4. **Give Codex a folder of its own.** Make an empty folder "
                 "for these chats (INSTALL.md suggests `exegete-chats` in your "
-                "home folder) and open it as Codex's place to work; on the "
+                "home folder; for the desktop app, make it in Finder or File "
+                "Explorer) and open it as Codex's place to work; on the "
                 "command line, start `codex` inside it. Never give it your "
                 "home folder, Documents, your projects folder or a folder "
-                "with transcripts")
+                "with transcripts. The folder stops Codex changing your "
+                "files, or looking through them, by itself; it does not stop "
+                "it reading them")
         assert step in section
-        assert section.index(step) < section.index("4. **Restart the app**")
+        choose = ("3. **Restart the app**, select Codex from the ChatGPT "
+                  "dropdown in the desktop app")
+        assert choose in section
+        assert section.index(choose) < section.index(step)
 
     def test_install_step_three_has_the_folder_and_the_lines(self):
         section = _install_openai()
@@ -696,55 +714,92 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "Never give Codex your home folder, Documents, your projects "
                 "folder (`~/QualCoder projects`), or a folder with "
                 "transcripts or other study files",
-                "start a new chat in your `exegete-chats` folder"):
+                "start a new chat in your `exegete-chats` folder",
+                "With the desktop app alone, make the folder in Finder or "
+                "File Explorer instead (a new folder named `exegete-chats`, "
+                "in your home folder): the lines above end by starting "
+                "`codex`, the command line, which the desktop app does not "
+                "need.",
+                "A folder of its own keeps Codex from changing your study's "
+                "files, or looking through them, by itself. It does not keep "
+                "Codex from reading them."):
             assert words in flat, words
+        # The folder is made before the chat that opens in it
+        assert flat.index("make the folder in Finder or File Explorer") < \
+            flat.index("start a new chat in your `exegete-chats` folder")
         # The folder is none of the ones it must never be
         assert "exegete-chats" != Path(_entry()["env"]["EXEGETE_WORKSPACE"]
                                         ).name
 
-    def test_install_says_ask_for_approval_does_not_cover_its_folder(self):
+    def test_install_says_ask_for_approval_does_not_cover_reading(self):
         flat = _install_openai_flat()
         for words in (
-                "\"Ask for approval\" does not ask before Codex reads or "
-                "changes files in its own folder.",
+                "\"Ask for approval\" does not ask before Codex changes a "
+                "file in its own folder, nor before it reads one, wherever "
+                "the file is.",
+                "\"lets ChatGPT work within the current workspace and "
+                "pauses before reaching beyond that boundary\": reaching "
+                "beyond the boundary there means editing outside the folder "
+                "and going online, not reading.",
                 "row \"Auto (preset)\": \"Codex can read files, make edits, "
                 "and run commands in the workspace. Codex requires approval "
                 "to edit outside the workspace or to access network.\"",
                 "\"Codex can read files and run commands within the "
                 "read-only sandbox.\"",
+                ON_REQUEST_READS,
+                "`on-request` is the setting behind \"Ask for approval\" "
+                "and the read-only mode",
+                "That is why step 3 keeps study files out of Codex's "
+                "folder, and why this route is for practice and "
+                "non-sensitive data for now.",
                 "if Codex started in its read-only mode, you may keep it "
                 "there (Exegete's tools work the same); never choose Full "
                 "access."):
             assert words in flat, words
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("None of these marks covers what Codex reads and changes by "
-                "itself in its own folder") in marks
+        assert ("None of these marks covers the commands Codex runs by "
+                "itself, which change files in its own folder and read "
+                "files well beyond it") in marks
         assert "in any mode" not in marks
 
     def test_where_your_data_goes_says_what_codex_reads_by_itself(self):
         data = _readme_data()
         for words in (
-                "Codex, OpenAI's route, also reads and changes files by "
-                "itself, outside Exegete, in the folder you give it.",
-                "\"The agent can read files, edit within the workspace, and "
-                "run routine local commands inside that boundary.\"",
-                "\"Codex can read files and run commands within the "
-                "read-only sandbox.\"",
+                "Some assistants can also open files on your computer by "
+                "themselves, with tools of their own and without Exegete: "
+                "Codex (OpenAI's route), Claude Code, and Claude's Cowork "
+                "(in the folders you connect to it).",
                 "Exegete's protections (the `#####` mark below, your "
                 "approval before anything is written, the backups) do not "
-                "apply to it. So give Codex a folder of its own"):
+                "apply to it; Exegete cannot see such a read or stop it.",
+                "Codex can read files well beyond the folder it works in, "
+                "by itself and without asking, in its \"Ask for approval\" "
+                "mode and in its read-only mode alike",
+                "Exegete's own answers tell it where your project is.",
+                "(OpenAI's page on approvals and Codex's source code, read "
+                "on 30 September 2026; PRIVACY.md quotes them.)",
+                "A folder of its own (\"ChatGPT's desktop app and Codex\", "
+                "below) stops Codex changing your files, or looking through "
+                "them, by itself; it does not stop it reading them."):
             assert words in data, words
         section = _privacy_openai()
         assert "**Codex's own file access.**" in section
         for address in ("<https://learn.chatgpt.com/docs/sandboxing>",
                         "<https://learn.chatgpt.com/docs/"
-                        "agent-approvals-security>"):
+                        "agent-approvals-security>",
+                        "<https://learn.chatgpt.com/docs/permission-modes>",
+                        "<https://learn.chatgpt.com/docs/permissions>",
+                        "<https://github.com/openai/codex/tree/rust-v0.159.2/"
+                        "codex-rs>"):
             assert address in section, address
         assert ("A study's folder, the projects folder or the home folder "
                 "should never be Codex's place to work") in section
-        assert ("OpenAI's pages do not say that its reading stops there."
-                in section)
+        assert ON_REQUEST_READS in section
+        # The hedge that read as if the reading scope were unknown is gone
+        for name in SHIPPED_TEXTS:
+            assert "do not say that its reading stops" not in _flat(name), \
+                name
 
 
 class TestWhatCodexKeepsAndTheOptOut:
@@ -752,9 +807,12 @@ class TestWhatCodexKeepsAndTheOptOut:
     def test_codex_session_files_are_named_with_what_they_hold(self):
         data = _readme_data()
         assert ("and, with Codex, its session files in `~/.codex`, which "
-                "keep what Exegete's tools returned (PRIVACY.md says more), "
-                "stay on your computer") in data
+                "keep what Exegete's tools returned and what Codex read by "
+                "itself (PRIVACY.md says more), stay on your computer") in data
         section = _privacy_openai()
+        assert ("A session's transcript can hold what Exegete's tools "
+                "returned in it, and what Codex's own commands read, "
+                "participants' words included") in section
         for words in ("`history.persistence` governs only "
                       "`~/.codex/history.jsonl`",
                       "every session is also written in full, tool results "
@@ -905,3 +963,264 @@ class TestTheOtherFirstImpressions:
         assert ("- [ ] At least one QualCoder project (a `.qda` project "
                 "folder): the setup below cannot create one; the one-click "
                 "extension can") in _flat("QUICKSTART.md")
+
+
+# ---------------------------------------------------------------------------
+# Assistants' own file access, said plainly (the owner's choice of 30
+# September 2026: disclose it, host by host). Codex's commands read far
+# beyond its folder without asking, in "Ask for approval" and in the
+# read-only mode alike (OpenAI's page on approvals; Codex's source code at
+# release 0.159.2), and Exegete's answers give it the project's path.
+# ---------------------------------------------------------------------------
+
+# OpenAI's own row for the "Auto (preset)". It is incomplete on reading,
+# so it is quoted only where the approvals page's sentence on `on-request`
+# follows it, and it is set aside before the scan below.
+AUTO_PRESET = ("Codex can read files, make edits, and run commands in the "
+               "workspace.")
+
+# A read verb, not "read-only" and not "read 30 September" (a citation)
+_READ = r"\bread(?:s|ing)?\b(?!-only)(?! \d)"
+_SCOPE = (r"\b(?:in|within|inside|to)\s+(?:the|its|that|this|a|your|"
+          r"Codex's)\s+(?:own\s+)?(?:folder|workspace)\b")
+LIMITS_CODEXS_READING = (
+    # Codex, then reading, then a scope of its folder, in one clause
+    re.compile(r"\bCodex\b[^.;]*" + _READ + r"[^.;]*?" + _SCOPE),
+    # the hedge that left the scope of reading open ("its reading stops
+    # at that folder"); a coding's "reading" elsewhere is another word
+    re.compile(r"\b(?:its|Codex's) reading (?:stops|is limited|is "
+               r"confined|stays)\b"),
+    re.compile(r"\bread(?:s|ing)?\b[^.;]*\blimited to (?:its|the|that) "
+               r"(?:own )?(?:folder|workspace)\b"),
+    re.compile(r"\b(?:reads only|only reads)\b[^.;]*\b(?:folder|workspace)\b"),
+)
+
+
+def _limits_codexs_reading(text):
+    flat = " ".join(text.replace("\n>", " ").split()).replace(AUTO_PRESET,
+                                                             "")
+    return [m.group(0) for rule in LIMITS_CODEXS_READING
+            for m in rule.finditer(flat)]
+
+
+def _shipped_documents():
+    return sorted(p.name for p in REPO.glob("*.md"))
+
+
+def _privacy_hosts():
+    return _between(_flat("PRIVACY.md"),
+                    "## Assistants that open files by themselves",
+                    "## Keeping notes private from the AI")
+
+
+class TestAssistantsOwnFileAccess:
+
+    def test_no_shipped_text_says_codexs_reading_stays_in_its_folder(self):
+        for name in _shipped_documents():
+            assert _limits_codexs_reading(_read(name)) == [], name
+
+    def test_the_check_would_notice(self):
+        # The sentences this release replaced, word for word, and the
+        # claim in its plainest form
+        for old in (
+                "Codex, OpenAI's route, also reads and changes files by "
+                "itself, outside Exegete, in the folder you give it.",
+                "Codex is an agent: besides calling Exegete's tools, it "
+                "reads and changes files by itself in the folder it works "
+                "in, outside Exegete.",
+                "\"Ask for approval\" does not ask before Codex reads or "
+                "changes files in its own folder.",
+                "A folder of its own limits where Codex works and what it "
+                "changes without asking; OpenAI's pages do not say that its "
+                "reading stops at that folder, so never point it at study "
+                "files either.",
+                "None of these marks covers what Codex reads and changes by "
+                "itself in its own folder (the recipe's step 3).",
+                "an empty folder of Codex's own to work in, because Codex "
+                "reads and changes the files in its folder by itself",
+                "Codex's reading is limited to its folder.",
+                "Codex only reads files in the workspace."):
+            assert _limits_codexs_reading(old), old
+        # What the documents say now is not caught
+        for new in (
+                "Codex can read files well beyond the folder it works in, by "
+                "itself and without asking, in its \"Ask for approval\" mode "
+                "and in its read-only mode alike",
+                "it runs commands of its own, outside Exegete, that change "
+                "files in the folder it works in and read files well beyond "
+                "it",
+                "\"Ask for approval\" does not ask before Codex changes a "
+                "file in its own folder, nor before it reads one, wherever "
+                "the file is.",
+                "The folder stops Codex changing your files, or looking "
+                "through them, by itself; it does not stop it reading them",
+                AUTO_PRESET):
+            assert not _limits_codexs_reading(new), new
+
+    def test_openais_workspace_row_is_always_followed_by_the_read_rule(self):
+        seen = 0
+        for name in _shipped_documents():
+            text = " ".join(_read(name).replace("\n>", " ").split())
+            at = text.find(AUTO_PRESET)
+            while at != -1:
+                seen += 1
+                assert ON_REQUEST_READS in text[at:], name
+                at = text.find(AUTO_PRESET, at + 1)
+        assert seen == 2          # INSTALL.md step 4 and PRIVACY.md
+
+    def test_each_place_says_it_plainly(self):
+        readme = _flat("README.md")
+        steps = _readme_openai()
+        own = _between(readme, "**A project you already have.**",
+                       "**One program at a time.**")
+        install = _install_openai_flat()
+        table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
+        changelog = _flat("CHANGELOG.md")
+        unreleased = changelog[changelog.index("## [Unreleased]"):
+                               changelog.index("## [0.14.0-alpha]")]
+        places = {
+            "README, where your data goes": (
+                _readme_data(), "it does not stop it reading them."),
+            "README, the steps": (
+                steps, "it does not stop it reading them"),
+            "README, a project you already have": (
+                own, "With an assistant that opens files by itself, such as "
+                "Codex, the path you give it lets it read the original too"),
+            "INSTALL, the table": (
+                table, "Codex can also read your projects' files by itself, "
+                "without asking"),
+            "INSTALL, step 3": (
+                install, "It does not keep Codex from reading them."),
+            "INSTALL, step 4": (
+                install, "reaching beyond the boundary there means editing "
+                "outside the folder and going online, not reading."),
+            "PRIVACY, the hosts": (
+                _privacy_hosts(), "**yes, without asking**"),
+            "PRIVACY, OpenAI's apps": (
+                _privacy_openai(), "which keeps Codex from changing a "
+                "study's files, or looking through them, by itself, and does "
+                "not keep it from reading them."),
+            "CHANGELOG": (
+                unreleased, "can read files well beyond the folder it works "
+                "in, without asking"),
+        }
+        for where, (text, words) in places.items():
+            assert words in text, where
+
+    def test_participants_data_goes_to_an_assistant_without_file_access(self):
+        chat = "such as Claude Desktop's chat with the extension"
+        for where, text in {
+                "README": _readme_data(),
+                "INSTALL, step 3": _install_openai_flat(),
+                "PRIVACY, mitigations": _between(_flat("PRIVACY.md"),
+                                                 "## Practical mitigations",
+                                                 "## Questions"),
+                "CHANGELOG": _flat("CHANGELOG.md")}.items():
+            assert chat in text, where
+        assert ("**For participants' data**, use an assistant that has no "
+                "file access of its own, such as Claude Desktop's chat with "
+                "the extension, with none of your study's folders connected "
+                "to it. Keep OpenAI's route for practice and for data that "
+                "is not sensitive until a setting that stops those reads has "
+                "been tested with Exegete.") in _readme_data()
+        assert ("So, for participants' data, this project suggests an "
+                "assistant with no file access of its own: Claude Desktop's "
+                "chat with the extension, with none of your study's folders "
+                "connected to it, or LM Studio's chat with Exegete and no "
+                "other server or plugin that reads files.") \
+            in _privacy_hosts()
+        # Said without alarm: no capitals, no exclamation marks
+        for text in (_readme_data(), _privacy_hosts()):
+            assert "!" not in text
+            assert not re.search(r"\b(?:WARNING|NEVER|DANGER)\b", text)
+
+    def test_privacy_checks_each_assistant_with_its_source_and_date(self):
+        section = _privacy_hosts()
+        assert ("What follows was checked on 30 September 2026 against each "
+                "maker's documentation (and, for Codex, its source code), "
+                "assistant by assistant.") in section
+        bullets = re.split(r" - (?=\*\*)", section)[1:]
+        verdicts = {
+            "**Codex**": "**yes, without asking**",
+            "**Claude Code**": "**yes**",
+            "**Claude's Cowork**": "**yes, in the folders you connect to "
+                                   "it.**",
+            "**Claude Desktop's chat, with the extension**":
+                "**not by itself, as far as Anthropic's pages say.**",
+            "**LM Studio**": "**not by itself.**",
+        }
+        assert len(bullets) == len(verdicts)
+        makers = {"**Claude Code**": "<https://code.claude.com/docs/en/",
+                  "**Claude's Cowork**": "<https://support.claude.com/",
+                  "**Claude Desktop's chat, with the extension**":
+                      "<https://support.claude.com/",
+                  "**LM Studio**": "<https://lmstudio.ai/"}
+        for bullet, (host, verdict) in zip(bullets, verdicts.items()):
+            assert bullet.startswith(host), host
+            assert verdict in bullet, host
+            if host in makers:
+                assert makers[host] in bullet, host
+                assert ("30 September 2026" in bullet
+                        or "the same day" in bullet), host
+        # Codex's entry points to the part with OpenAI's words and the code
+        assert ("quoted and dated: \"Codex's own file access\", in "
+                "\"OpenAI's apps\" below.") in bullets[0]
+        openai = _privacy_openai()
+        for words in ("(release 0.159.2, 29 September 2026, read 30 "
+                      "September 2026,", "`protocol/src/permissions.rs`",
+                      "`windows-sandbox-rs/src/setup.rs`", ON_REQUEST_READS):
+            assert words in openai, words
+        # The private part of memos, named for what is bypassed
+        assert ("the private part of every memo after `#####` included "
+                "(the database holds each memo in full)") in section
+
+    def test_exegetes_answers_give_the_projects_path(self, setup_server,
+                                                     qualcoder_db_path):
+        # "Exegete's own answers tell the assistant where a project is"
+        section = _privacy_hosts()
+        assert ("(`list_available_projects`, `select_project`, "
+                "`get_current_project` and `create_project` answer with its "
+                "path)") in section
+        folder = Path(qualcoder_db_path).parent
+        current = json.loads(server.get_current_project())
+        assert str(folder) in current["current_project"]
+        listed = json.loads(server.list_available_projects(
+            [str(folder.parent)]))
+        # compared as strings, not as JSON text (Windows' backslashes)
+        assert any(str(folder) in str(value)
+                   for project in listed["projects"]
+                   for value in project.values())
+        for name in ("list_available_projects", "select_project",
+                     "get_current_project", "create_project"):
+            assert name in _lifecycle_tools(), name
+
+    def test_readme_links_to_the_hosts_section(self):
+        link = ("[PRIVACY.md, \"Assistants that open files by themselves\"]"
+                "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
+                "#assistants-that-open-files-by-themselves)")
+        assert link in _readme_data()
+        assert "\n## Assistants that open files by themselves\n" in \
+            _read("PRIVACY.md")
+
+    def test_remote_another_computer_and_where_to_check(self):
+        steps = _readme_openai()
+        for words in ("lets the phone, or another Mac or Windows computer "
+                      "where OpenAI offers it, start and approve work that "
+                      "the computer runs",
+                      "To check, look under Settings, Connections in the "
+                      "desktop app: a device paired earlier stays paired."):
+            assert words in steps, words
+        another = ("\"You can control a host from ChatGPT on iOS or Android, "
+                   "or from another Mac or Windows device when Control other "
+                   "devices is available.\"")
+        paired = ("\"Existing connections used since June 8, 2026, remain "
+                  "paired.\"")
+        for text in (_install_openai_flat(), _privacy_openai()):
+            assert another in text and paired in text
+            assert "look under Settings, Connections in the desktop app" in \
+                text
+        assert "or on another computer paired with it" in _privacy_openai()
+        # INSTALL quotes some of OpenAI's words and paraphrases others
+        assert "in OpenAI's words" not in _flat("PRIVACY.md")
+        assert ("INSTALL.md lists what Remote needs, from OpenAI's pages"
+                in _privacy_openai())

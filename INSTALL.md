@@ -96,7 +96,7 @@ from easiest to most private, and OpenAI's apps:
 | **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex also reads files itself: give it a folder of its own. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so this project suggests this route for practice and non-sensitive data until a safer setting is tested. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
@@ -413,6 +413,13 @@ claude mcp add exegete -e EXEGETE_PROJECT_PATH=/path/to/MyProject.qda -- ~/Docum
 The server behaves the same under any client; which tools are
 registered is decided by `EXEGETE_TOOLSET` (see "Environment
 variables the server reads" below), not by the client.
+
+Claude Code also opens files by itself, with its own file tools and
+shell commands, outside Exegete: what it reads that way goes to the
+AI provider whole, the private part of memos included. Never start it in
+your home folder, your projects folder or a study's folder;
+[PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves",
+says which of its settings narrow what it can read.
 
 ---
 
@@ -806,7 +813,13 @@ configuration for the same Codex host."
   project has not tried it, and suggests leaving Remote off on a
   computer where Exegete works on participants' data: a phone is easier
   to lose or share, and OpenAI's own advice is "Only connect devices
-  you own and trust."
+  you own and trust." Not only a phone: "You can control a host from
+  ChatGPT on iOS or Android, or from another Mac or Windows device when
+  Control other devices is available." (the remote-connections page),
+  so another computer paired with it can do the same. And
+  "Existing connections used since June 8, 2026, remain paired." (the
+  same page): to check whether Remote is on, look under Settings,
+  Connections in the desktop app.
 
 **Which plans.** OpenAI's Codex pricing page
 (<https://learn.chatgpt.com/docs/pricing>, read 30 September 2026) lists
@@ -937,12 +950,13 @@ screen had no place for them, the `[mcp_servers.exegete.env]` line with
 the two settings under it.
 
 **Step 3. Give Codex a folder of its own, restart, and check.** Codex
-is an agent: besides calling Exegete's tools, it reads and changes
-files by itself in the folder it works in, outside Exegete. OpenAI's
-page on the desktop app says: "Choose where to work. Start a chat,
-create a project, or open a folder. ChatGPT can use the files and
-context in the location you choose." (<https://learn.chatgpt.com/docs/app>,
-read 30 September 2026), and, for the command line: "Codex CLI treats
+is an agent: besides calling Exegete's tools, it runs commands of its
+own, outside Exegete, that change files in the folder it works in and
+read files well beyond it (step 4 says how far). OpenAI's page on the
+desktop app says: "Choose where to work. Start a chat, create a
+project, or open a folder. ChatGPT can use the files and context in
+the location you choose." (<https://learn.chatgpt.com/docs/app>, read
+30 September 2026), and, for the command line: "Codex CLI treats
 the directory where you start it as the project for the chat."
 (<https://learn.chatgpt.com/docs/projects>, the same day). So make an
 empty folder for these chats and work there. In the Terminal (macOS or
@@ -958,15 +972,30 @@ or in PowerShell on Windows:
 mkdir -Force $HOME\exegete-chats; cd $HOME\exegete-chats; codex
 ```
 
-In the desktop app, open that folder (`exegete-chats` in your home
-folder) as the place to work. Never give Codex your home folder,
-Documents, your projects folder (`~/QualCoder projects`), or a folder
-with transcripts or other study files: what Codex reads there goes to
-OpenAI without passing through Exegete, and what it changes there is
-changed without Exegete's approval step, preview or backup. A folder of
-its own limits where Codex works and what it changes without asking;
-OpenAI's pages do not say that its reading stops at that folder, so
-never point it at study files either.
+With the desktop app alone, make the folder in Finder or File Explorer
+instead (a new folder named `exegete-chats`, in your home folder): the
+lines above end by starting `codex`, the command line, which the
+desktop app does not need. Then open that folder in the app as the
+place to work. Never give Codex your home folder, Documents, your
+projects folder (`~/QualCoder projects`), or a folder with transcripts
+or other study files: what Codex reads there goes to OpenAI without
+passing through Exegete, and what it changes there is changed without
+Exegete's approval step, preview or backup.
+
+A folder of its own keeps Codex from changing your study's files, or
+looking through them, by itself. It does not keep Codex from reading
+them. In "Ask for approval" and in the read-only mode alike, the
+commands Codex runs can read, without asking, any file your account
+can read on a Mac or Linux, and on Windows at least everything in your
+home folder but a few folders that hold keys (step 4 gives OpenAI's
+words); and Exegete's own answers tell Codex where your project is.
+Whatever Codex opens that way, a project's database among it, goes to
+OpenAI whole, the private part of every memo after `#####` included.
+So, until a setting that stops those reads has been tested with
+Exegete, use this route for practice and for data that is not
+sensitive, and, for participants' data, an assistant that has no file
+access of its own, such as Claude Desktop's chat with the extension
+([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves").
 
 Then, in the desktop app, open Settings, MCP servers, where `exegete`
 is now listed, and select Restart (or quit the app and open it again).
@@ -993,21 +1022,32 @@ lets later calls run unasked. On the command line, if Codex started in
 its read-only mode, you may keep it there (Exegete's tools work the
 same); never choose Full access.
 
-"Ask for approval" does not ask before Codex reads or changes files in
-its own folder. OpenAI's page on permissions: it "lets ChatGPT work
-within the current workspace and pauses before reaching beyond that
-boundary"; and its page on approvals
+"Ask for approval" does not ask before Codex changes a file in its own
+folder, nor before it reads one, wherever the file is. OpenAI's page
+on permissions says it "lets ChatGPT work within the current workspace
+and pauses before reaching beyond that boundary": reaching beyond the
+boundary there means editing outside the folder and going online, not
+reading. OpenAI's page on approvals
 (<https://learn.chatgpt.com/docs/agent-approvals-security>, read
 30 September 2026), in the table "Common sandbox and approval
 combinations", row "Auto (preset)": "Codex can read files, make edits,
 and run commands in the workspace. Codex requires approval to edit
 outside the workspace or to access network." Even in the read-only
 mode, "Codex can read files and run commands within the read-only
-sandbox." That is why step 3 gives Codex a folder of its own. Codex's
-sandbox settings govern the commands the model runs, not Exegete,
-which reads and writes your projects whichever sandbox you choose
-(Codex's source code). What "Approving the AI's suggestions: your
-host's settings are the safeguard", below, says holds in Codex too.
+sandbox." Neither row says whether Codex may read outside the
+workspace; the same page does, in its section on the retired
+`untrusted` setting: "With `on-request`, commands allowed by the
+sandbox can run without approval, read accessible files, and use
+network access if enabled." `on-request` is the setting behind "Ask
+for approval" and the read-only mode, and in Codex's source code (its
+release of 29 September 2026) both let those commands read the whole
+disk (on Windows, at least your home folder). That is why step 3 keeps
+study files out of Codex's folder, and why this route is for practice
+and non-sensitive data for now. Codex's sandbox settings govern the
+commands the model runs, not Exegete, which reads and writes your
+projects whichever sandbox you choose (Codex's source code). What
+"Approving the AI's suggestions: your host's settings are the
+safeguard", below, says holds in Codex too.
 
 **If Exegete does not start, or its tools are missing:**
 
@@ -1136,9 +1176,9 @@ marked read-only; the recipe above sets it, and asks before
 `read_pseudonym_list` whichever of the server's approval modes is set.
 The desktop app's "Approve for me" sends what needs approval to an
 automatic reviewer instead of you, and "Full access" approves every
-call, `read_pseudonym_list` included. None of these marks covers what
-Codex reads and changes by itself in its own folder (the recipe's step
-3).
+call, `read_pseudonym_list` included. None of these marks covers the
+commands Codex runs by itself, which change files in its own folder and
+read files well beyond it (the recipe's steps 3 and 4).
 
 So, for work on real data, keep the host in its asking mode (Manual),
 with "allow once" for anything that writes. In an auto mode, a

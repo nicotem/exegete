@@ -20,9 +20,9 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp.database import QualcoderDatabase, QUALCODER_COLORS
+from exegete.database import QualcoderDatabase, QUALCODER_COLORS
 
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."

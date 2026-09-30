@@ -24,18 +24,18 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import (
+import exegete.server as server
+from exegete.database import (
     QualcoderDatabase,
     position_safe,
 )
-from qualcoder_mcp.server import _resolve_segment_positions
-import qualcoder_mcp.refi_export as refi_export
+from exegete.server import _resolve_segment_positions
+import exegete.refi_export as refi_export
 
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-SRC_DIR = Path(__file__).parent.parent / "src" / "qualcoder_mcp"
+SRC_DIR = Path(__file__).parent.parent / "src" / "exegete"
 
 
 def _data_qda(project_path) -> Path:
@@ -154,7 +154,7 @@ class TestWriteRowContracts:
 
     def test_w7_w8_add_code_contract(self, qualcoder_db_path):
         """W7: palette default + strict #RRGGBB; W8: catid check, dup names."""
-        from qualcoder_mcp.database import QUALCODER_COLORS
+        from exegete.database import QUALCODER_COLORS
         wdb = QualcoderDatabase(qualcoder_db_path, read_only=False)
         try:
             cid = wdb.add_code("Palette default", "qa")

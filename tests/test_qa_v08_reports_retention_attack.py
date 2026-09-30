@@ -22,7 +22,7 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
 
 
@@ -393,7 +393,7 @@ class TestPruneBackups:
                                                 qualcoder_db_path):
         """Pruning never touches data.qda — a live QualCoder lock must not
         block it (contract C.2)."""
-        from qualcoder_mcp.database import QUALCODER_LOCK_FILENAME
+        from exegete.database import QUALCODER_LOCK_FILENAME
         self._seed(qualcoder_db_path)
         lock = Path(qualcoder_db_path) / QUALCODER_LOCK_FILENAME
         lock.write_text(f"livecoder\n{time.time()}")

@@ -42,6 +42,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
 
+from . import names, state_folder
+
 logger = logging.getLogger(__name__)
 
 TOKEN_PREFIX = "qcp1"
@@ -77,9 +79,17 @@ SECRET_FILENAME = "preview_secret"
 SECRET_READ_MAX_BYTES = 4096
 SECRET_HEX_CHARS = 64
 
-# Where the secret lives. A module-level Path so the test suite can
-# isolate it exactly as it isolates the MRU file.
-STATE_HOME = Path.home() / ".qualcoder_mcp"
+# Where the secret lives (v0.14.1): chosen at CALL time, never fixed at
+# import. None means the state folder of this run, ~/.exegete (or
+# ~/.qualcoder_mcp for a run whose move could not be made, see
+# state_folder); the MRU hint and the AI coding sessions are derived from
+# the same choice, so the three can never end up in different folders.
+# The test suite sets it, and OLD_STATE_HOME, to folders of its own.
+STATE_HOME: Optional[Path] = None
+# The folder the state folder was moved from, which the guards refuse as
+# well, for good (an older copy of the server may recreate it). None
+# means ~/.qualcoder_mcp.
+OLD_STATE_HOME: Optional[Path] = None
 
 
 class PreviewSecretUnavailable(Exception):
@@ -88,17 +98,36 @@ class PreviewSecretUnavailable(Exception):
 
 SECRET_UNAVAILABLE_MESSAGE = (
     "Could not read or create the preview-token secret in "
-    "~/.qualcoder_mcp: check permissions; nothing was changed.")
+    f"~/{names.STATE_FOLDER}: check permissions; nothing was changed.")
+
+
+def secret_unavailable_message() -> str:
+    """SECRET_UNAVAILABLE_MESSAGE, naming the state folder this run uses
+    (~/.qualcoder_mcp in a run whose move could not be made)."""
+    return state_folder.in_this_run(SECRET_UNAVAILABLE_MESSAGE)
 
 
 def state_home() -> Path:
-    """The state folder, read through the module attribute.
+    """The state folder, chosen at call time.
 
-    A function rather than a direct import, so a test that isolates
-    STATE_HOME isolates it for every caller, including the export-path
-    guard in the server layer.
+    A function rather than a constant, so a test that isolates STATE_HOME
+    isolates it for every caller, including the export-path guard in the
+    server layer, and so a run whose move fell back to the old folder uses
+    it for everything.
     """
-    return STATE_HOME
+    if STATE_HOME is not None:
+        return Path(STATE_HOME)
+    return state_folder.current()
+
+
+def old_state_home() -> Path:
+    """The other of the two state folders, which the guards refuse as
+    well: the one the state folder was moved from (~/.qualcoder_mcp), or,
+    in a run whose move could not be made and which therefore uses that
+    one, ~/.exegete. So both are refused in every run."""
+    if OLD_STATE_HOME is not None:
+        return Path(OLD_STATE_HOME)
+    return state_folder.other()
 
 
 def _now() -> int:
@@ -120,7 +149,7 @@ def canonical(obj: Any) -> str:
 
 
 def _secret_path() -> Path:
-    return STATE_HOME / SECRET_FILENAME
+    return state_home() / SECRET_FILENAME
 
 
 def _valid_secret(raw: str) -> Optional[str]:
@@ -160,14 +189,15 @@ def ensure_state_dir(path: Path) -> None:
         try:
             os.chmod(str(path), mode & ~0o077)
         except OSError:
-            logger.warning("The qualcoder-mcp state folder is readable by "
-                           "other users on this machine and could not be "
-                           "narrowed.")
+            logger.warning(state_folder.in_this_run(
+                f"The server's state folder (~/{names.STATE_FOLDER}) is "
+                "readable by other users on this machine and could not be "
+                "narrowed."))
 
 
 def ensure_state_home() -> None:
     """`ensure_state_dir` for the token secret's own folder."""
-    ensure_state_dir(STATE_HOME)
+    ensure_state_dir(state_home())
 
 
 def _publish_exclusive(tmp_name: str, path: Path,
@@ -225,7 +255,7 @@ def _write_new_secret(path: Path, exclusive: bool) -> str:
     """
     value = secrets.token_hex(32)
     ensure_state_home()
-    fd, tmp_name = tempfile.mkstemp(dir=str(STATE_HOME),
+    fd, tmp_name = tempfile.mkstemp(dir=str(state_home()),
                                     prefix=f"{SECRET_FILENAME}.",
                                     suffix=".tmp")
     tmp: Optional[Path] = Path(tmp_name)
@@ -295,7 +325,7 @@ def load_secret() -> str:
                 pass                      # another server won the race
         st = os.lstat(path)
         if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
-            raise PreviewSecretUnavailable(SECRET_UNAVAILABLE_MESSAGE)
+            raise PreviewSecretUnavailable(secret_unavailable_message())
         # The mode was set at creation and never looked at again, so a
         # secret that had been widened since (by a restore, a copy, a
         # sync tool, or another local account) was used as though it
@@ -324,7 +354,7 @@ def load_secret() -> str:
         raise
     except OSError as e:
         logger.error("Preview secret unavailable: %s", type(e).__name__)
-        raise PreviewSecretUnavailable(SECRET_UNAVAILABLE_MESSAGE) from e
+        raise PreviewSecretUnavailable(secret_unavailable_message()) from e
 
 
 # ---------------------------------------------------------------------------

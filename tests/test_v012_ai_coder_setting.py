@@ -23,11 +23,11 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp import project_settings as ps
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.project_settings import (
+from exegete import project_settings as ps
+from exegete.database import QualcoderDatabase
+from exegete.project_settings import (
     AI_CODER_NAME_ENV,
     DEFAULT_AI_CODER_NAME,
     KNOWN_AI_ASSISTANT_OWNER,
@@ -131,7 +131,7 @@ READS_THAT_MUST_NEVER_ASK = {
     "search_memos": lambda s: s.search_memos("x"),
     "get_case_code_matrix": lambda s: s.get_case_code_matrix(),
     "list_available_projects": lambda s: s.list_available_projects(),
-    # resource handlers (qualcoder://...)
+    # resource handlers (exegete://...)
     "get_project_info": lambda s: s.get_project_info(),
     "list_all_codes": lambda s: s.list_all_codes(),
     "list_all_categories": lambda s: s.list_all_categories(),
@@ -172,7 +172,7 @@ def _house_rules(texts, labels=None):
 
 def _approved_session(server_mod, project_path):
     """A session with one approved suggestion, for apply_codings."""
-    from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
+    from exegete.sessions import AICodingSession, CodingSuggestion
     session = AICodingSession(project_path=project_path,
                               description="ask flow", file_ids=[1],
                               code_names=["Stress"], instruction="t")
@@ -405,7 +405,7 @@ class TestTheAsk:
 
     def test_create_proposed_codes_asks_and_keeps_the_proposals(
             self, setup_server_unset, qualcoder_db_path):
-        from qualcoder_mcp.sessions import AICodingSession, ProposedCode
+        from exegete.sessions import AICodingSession, ProposedCode
         session = AICodingSession(project_path=qualcoder_db_path,
                                   description="proposals")
         proposal = ProposedCode(name="Proposed One")
@@ -562,7 +562,7 @@ class TestMismatchRule:
         out = json.loads(server.create_code("Blocked", create_backup=False))
         assert out["error"] == (
             "This host declares the AI coder name \"B\" "
-            "(QUALCODER_MCP_AI_CODER_NAME), but this project's current AI "
+            f"({AI_CODER_NAME_ENV}), but this project's current AI "
             "coder name is \"A\". Nothing was written. Ask the user which "
             "name to use here, then call set_project_ai_coder_name with "
             "\"B\" to switch the project to it, or with \"A\" to keep it "
@@ -670,7 +670,7 @@ class TestSwitchingAndHistory:
         after = json.loads(path.read_text(encoding="utf-8"))
         assert after["researcher_note"] == "do not delete"
         assert "unknown_inside" not in after["ai_coder_name"]
-        assert after["written_by"].startswith("qualcoder-mcp ")
+        assert after["written_by"].startswith("exegete ")
         assert after["updated"] == after["ai_coder_name"]["set_at"]
 
     def test_get_current_project_echoes_twenty_entries_and_the_total(
@@ -1009,8 +1009,13 @@ class TestSidecarWriter:
         real = ps.os.fsync
         monkeypatch.setattr(ps.os, "fsync",
                             lambda fd: (calls.append(fd), real(fd))[1])
+        # v0.14.1: a project's first name also writes the marked
+        # qualcoder_mcp.json beside it, a file of its own with its own
+        # fsync; every later write is the name file's one fsync
         write_ai_coder_name(qualcoder_db_path, "Synced")
-        assert len(calls) == 1
+        assert len(calls) == 2
+        write_ai_coder_name(qualcoder_db_path, "Synced Again")
+        assert len(calls) == 3
 
     def test_temp_names_are_unique(self, setup_server_unset,
                                    qualcoder_db_path, monkeypatch):
@@ -1025,7 +1030,10 @@ class TestSidecarWriter:
         monkeypatch.setattr(ps.tempfile, "mkstemp", spy)
         for i in range(5):
             write_ai_coder_name(qualcoder_db_path, f"N{i}")
-        assert len(set(seen)) == 5
+        # five name writes, and the marked qualcoder_mcp.json the first
+        # one writes beside the name file (v0.14.1)
+        assert len(seen) == 6
+        assert len(set(seen)) == 6
 
     @POSIX_ONLY
     def test_a_symlinked_sidecar_is_refused_for_reading_and_writing(
@@ -1259,7 +1267,7 @@ class TestRestartResilience:
 
     def test_a_session_recorded_under_another_name_warns_on_apply(
             self, setup_server, qualcoder_db_path):
-        from qualcoder_mcp.sessions import AICodingSession, CodingSuggestion
+        from exegete.sessions import AICodingSession, CodingSuggestion
         session = AICodingSession(
             project_path=qualcoder_db_path, description="snapshot",
             file_ids=[1], code_names=["Stress"], instruction="t", ai_coder_name_at_record="Qwen 3.8 6bit")

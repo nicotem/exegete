@@ -21,8 +21,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.sessions import SessionManager
+import exegete.server as server
+from exegete.sessions import SessionManager
 
 from test_v17_support import make_project, add_subcode, FULLTEXT  # noqa: E402,F401
 
@@ -99,7 +99,7 @@ def _upstream_categories_of_code(folder, cid):
 class TestT11Listings:
 
     def test_code_details_show_parent_and_path(self, subcode_env):
-        # get_code_details feeds the qualcoder://codes/{id} resource and
+        # get_code_details feeds the exegete://codes/{id} resource and
         # export_code_report; asserted at the shared DB layer
         out = server.db.get_code_details(11)
         assert out["parent_code_id"] == 10

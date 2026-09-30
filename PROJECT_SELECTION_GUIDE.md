@@ -1,6 +1,6 @@
 # Project Selection Guide
 
-The Qualcoder MCP server now supports **two ways** to work with projects:
+Exegete (formerly qualcoder-mcp) supports **two ways** to work with projects:
 
 ## Option 1: Auto-Discovery (Recommended for Multiple Projects)
 
@@ -8,14 +8,14 @@ If you work with multiple Qualcoder projects, you can skip hardcoding the path a
 
 ### Setup
 
-In your `claude_desktop_config.json`, **don't set** the `QUALCODER_PROJECT_PATH`:
+In your `claude_desktop_config.json`, **don't set** the `EXEGETE_PROJECT_PATH`:
 
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"]
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"]
     }
   }
 }
@@ -102,11 +102,11 @@ In your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"],
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"],
       "env": {
-        "QUALCODER_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
       }
     }
   }
@@ -164,7 +164,7 @@ Select the first project
 When a project was selected before on this machine and still exists, the
 error also names it ("The last project used on this machine was
 <path>"), so one `select_project` call with that path recovers. The
-pointer lives in `~/.qualcoder_mcp/mru_project.json`; nothing is
+pointer lives in `~/.exegete/mru_project.json`; nothing is
 selected automatically.
 
 ### Can't find a specific project

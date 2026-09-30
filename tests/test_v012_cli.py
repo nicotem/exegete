@@ -2,7 +2,7 @@
 """v0.12 Batch A, item A5: `--version` and the terminal notice.
 
 `--version` prints the package version and exits 0 (console script and
-`python -m qualcoder_mcp.server`); a start with stdin on a TTY prints one
+`python -m exegete.server`); a start with stdin on a TTY prints one
 paragraph to stderr and keeps running (hosts never present a TTY, so the
 notice can only appear when a person starts the server by hand). The TTY
 tests monkeypatch isatty so CI stays deterministic (no pty).
@@ -19,8 +19,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp
-import qualcoder_mcp.server as server
+import exegete
+import exegete.server as server
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -49,8 +49,8 @@ class TestVersionFlag:
             server.main(["--version"])
         assert exc.value.code == 0
         out = capsys.readouterr()
-        assert out.out.strip() == f"qualcoder-mcp {qualcoder_mcp.__version__}"
-        assert qualcoder_mcp.__version__ in out.out
+        assert out.out.strip() == f"exegete {exegete.__version__}"
+        assert exegete.__version__ in out.out
         assert "0.0.0+unknown" not in out.out
 
     def test_module_invocation_reports_version(self):
@@ -58,20 +58,20 @@ class TestVersionFlag:
         env["PYTHONPATH"] = str(REPO / "src")
         env.pop("QUALCODER_PROJECT_PATH", None)
         proc = subprocess.run(
-            [sys.executable, "-m", "qualcoder_mcp.server", "--version"],
+            [sys.executable, "-m", "exegete.server", "--version"],
             capture_output=True, text=True, encoding="utf-8", env=env,
             timeout=60)
         assert proc.returncode == 0, proc.stderr
-        assert qualcoder_mcp.__version__ in proc.stdout
+        assert exegete.__version__ in proc.stdout
 
     def test_console_script_reports_version(self):
-        script = shutil.which("qualcoder-mcp", path=str(Path(sys.executable).parent))
+        script = shutil.which("exegete", path=str(Path(sys.executable).parent))
         if script is None:
-            pytest.skip("qualcoder-mcp console script not installed beside this interpreter")
+            pytest.skip("exegete console script not installed beside this interpreter")
         proc = subprocess.run([script, "--version"], capture_output=True,
                               text=True, encoding="utf-8", timeout=60)
         assert proc.returncode == 0, proc.stderr
-        assert qualcoder_mcp.__version__ in proc.stdout
+        assert exegete.__version__ in proc.stdout
 
     def test_version_says_nothing_on_stderr_and_creates_no_state(self, tmp_path):
         """Fix round 1, F16. Importing the module used to call
@@ -88,14 +88,15 @@ class TestVersionFlag:
         env["USERPROFILE"] = str(home)          # Path.home() on Windows
 
         proc = subprocess.run(
-            [sys.executable, "-m", "qualcoder_mcp.server", "--version"],
+            [sys.executable, "-m", "exegete.server", "--version"],
             capture_output=True, text=True, encoding="utf-8", env=env,
             timeout=120)
 
         assert proc.returncode == 0, proc.stderr
-        assert proc.stdout.strip() == f"qualcoder-mcp {qualcoder_mcp.__version__}"
+        assert proc.stdout.strip() == f"exegete {exegete.__version__}"
         assert proc.stderr == ""
         assert not (home / ".qualcoder_mcp").exists()
+        assert not (home / ".exegete").exists()
 
     def test_importing_the_module_writes_nothing_and_touches_nothing(self, tmp_path):
         """The module may configure logging at import (the plain stderr
@@ -109,7 +110,7 @@ class TestVersionFlag:
         env["HOME"] = str(home)
         env["USERPROFILE"] = str(home)
         proc = subprocess.run(
-            [sys.executable, "-c", "import qualcoder_mcp.server"],
+            [sys.executable, "-c", "import exegete.server"],
             capture_output=True, text=True, encoding="utf-8", env=env,
             timeout=120)
         assert proc.returncode == 0, proc.stderr
@@ -167,8 +168,9 @@ class TestTtyNotice:
 
     def test_notice_text_house_rules(self):
         assert "—" not in server.TTY_NOTICE
-        assert "qualcoder-mcp --version" in server.TTY_NOTICE
-        assert "python -m qualcoder_mcp.server --version" in server.TTY_NOTICE
+        assert "exegete --version" in server.TTY_NOTICE
+        assert "python -m exegete.server --version" in server.TTY_NOTICE
+        assert server.TTY_NOTICE.startswith("Exegete is an MCP server.")
         assert "\n" not in server.TTY_NOTICE   # one paragraph
 
     def test_registry_intact_after_main_in_process(self, monkeypatch, capsys, stub_run):

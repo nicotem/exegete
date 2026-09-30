@@ -1,6 +1,11 @@
-# Installation Guide for Qualcoder MCP Server
+# Installation Guide for Exegete
 
-This guide will walk you through installing the Qualcoder MCP server step-by-step. No prior technical knowledge required!
+This guide will walk you through installing Exegete step-by-step. No prior technical knowledge required!
+
+Exegete was called qualcoder-mcp until version 0.14.0. If you set it up
+under that name, nothing you set up stops working: ["Coming from
+qualcoder-mcp"](#coming-from-qualcoder-mcp), below, says what changed
+and what you may change.
 
 ## Claude Desktop: the one-click extension (recommended)
 
@@ -14,16 +19,16 @@ arrives with v0.14; earlier releases have none.
 
 1. **Get Claude Desktop**, the latest version, from
    https://claude.ai/download, and sign in.
-2. **Download the extension**, `qualcoder-mcp-<version>.mcpb`, from
+2. **Download the extension**, `exegete-<version>.mcpb`, from
    the Assets of the latest release on GitHub:
-   https://github.com/nicotem/qualcoder_mcp/releases
+   https://github.com/nicotem/exegete/releases
 3. **Install it**: double-click the file. (Or drag it onto the Claude
    window, or in Claude go to Settings, Extensions, Advanced settings,
    Install Extension..., and choose it.) Claude shows the extension,
    with its usual warning to install only extensions whose developer you
    trust; click Install, and Install again when Claude says it needs to
    fetch a few dependencies. The first install takes a minute or two.
-4. **Look at its two settings** (Settings, Extensions, qualcoder-mcp).
+4. **Look at its two settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
    - **Tool set**: `lifecycle` (the default) gives every tool, creating
      a new project included; `full` every tool except creating a
@@ -39,8 +44,8 @@ arrives with v0.14; earlier releases have none.
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
 5. **Check it works**: in a new conversation, the "+" button, then
-   Connectors, lists qualcoder-mcp with its tools switched on. Ask
-   "Using the qualcoder-mcp tools, is a project open?" and allow the
+   Connectors, lists Exegete with its tools switched on. Ask
+   "Using the Exegete tools, is a project open?" and allow the
    tool when Claude asks. The answer is that no project is open.
 
 **Approvals.** In a Cowork or Code session, whether Claude asks before
@@ -62,39 +67,75 @@ developer MCP servers are disabled on this device..."), and your IT
 team decides.
 
 **Updating**: download the newer `.mcpb` and install it the same way.
-**Removing**: Settings, Extensions, qualcoder-mcp, Uninstall. Neither
+**Removing**: Settings, Extensions, Exegete, Uninstall. Neither
 touches your projects; what else stays is under "Uninstalling" below.
-**The log** is `mcp-server-qualcoder-mcp.log` in `~/Library/Logs/Claude`
-(macOS) or `%APPDATA%\Claude\logs` (Windows); see "Reading the server
-log" below before sharing it.
+**The log** is `mcp-server-Exegete.log` in `~/Library/Logs/Claude`
+(macOS) or `%APPDATA%\Claude\logs` (Windows); before 0.14.1 it was
+`mcp-server-qualcoder-mcp.log`, which stays where it was. See "Reading
+the server log" below before sharing it.
 
 **If you also configured the server by hand** (the route below), remove
-the `qualcoder` entry from the configuration, or switch one of the two
+that entry from the configuration (`exegete`, or `qualcoder` if you
+followed an earlier version of this guide), or switch one of the two
 off under "+", Connectors; otherwise Claude sees every tool twice.
 
-Everything below is **the Terminal route**: for Claude Code, LM Studio
-and other MCP hosts, for Claude Desktop configured by hand, and for
-contributors who want the source.
+Everything below, after the choice of AI host, is **the Terminal
+route**: for Claude Code, LM Studio and other MCP hosts, for Claude
+Desktop configured by hand, and for contributors who want the source.
+
+## Choosing your AI host: data-governance options (Experimental)
+
+This server is host-agnostic stdio MCP. Which AI processes your data,
+and under which terms, is decided by the host you run and the account
+you sign into, not by this server. The terms attach to the account and
+product line, not to the client application. Three routes with Claude,
+from easiest to most private, and OpenAI's apps:
+
+| Route | What it means | Where to read more |
+|---|---|---|
+| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so this project suggests this route for practice and non-sensitive data until a safer setting is tested. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+
+The multi-host support (the core toolset and the recipes below) is
+**Experimental**: written from official documentation, functionally
+tested at the server level, but not yet exercised end to end on every
+host and not capability-evaluated on local models. The recipe for
+OpenAI's apps goes step by step; guides of that kind for Claude Code
+and LM Studio are considered on request: ask in
+[GitHub Issues](https://github.com/nicotem/exegete/issues).
 
 ## What You'll Need
 
 Before starting, make sure you have:
 
-- ✅ **A Mac computer** (or Linux or Windows; paths will be slightly different)
-- ✅ **Qualcoder installed** with at least one project created
-  - Download from: https://github.com/ccbogel/QualCoder
-  - Make sure you know where your `.qda` project folder is located
-    (QualCoder projects are folders ending in `.qda`, with a `data.qda`
-    database file inside)
-  - Supported: projects from QualCoder 3.8.x and from the QualCoder
-    4.0-Beta pre-release (project schemas v14 through v17); see
-    "Supported QualCoder versions" in the README
-- ✅ **An MCP host**: the step-by-step guide below uses Claude Desktop
-  (download from: https://claude.ai/download); recipes for Claude Code
-  and LM Studio follow further down
-- ✅ **Python 3.10 or newer**
+- ✅ **A computer** with macOS, Windows or Linux (paths differ
+  slightly), and **Python 3.10 or newer**
   - Check by opening Terminal and typing: `python3 --version`
   - If not installed, get it from: https://www.python.org/downloads/
+- ✅ **An MCP host**: the step-by-step guide below uses Claude Desktop
+  configured by hand (download from: https://claude.ai/download);
+  recipes for Claude Code, LM Studio, and OpenAI's ChatGPT desktop app
+  and Codex follow further down
+- ✅ **A QualCoder project, or the `lifecycle` tool set.** On this
+  route the default tool set, `full`, has no tool that creates a
+  project, so you need a project made in QualCoder (a folder ending in
+  `.qda`, with a `data.qda` database file inside; know where it is),
+  unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
+  variables the server reads", below), which lets the assistant create
+  one in the conversation. Projects from QualCoder 3.8.x and from the
+  QualCoder 4.0-Beta pre-release work (project schemas v14 through
+  v17); see "Supported QualCoder versions" in
+  [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
+- ✅ **QualCoder itself**, recommended, and needed to bring in
+  documents (Word, PDF, images, audio, video) and any text you would
+  rather not pass through the conversation (this server imports only
+  text the assistant hands it), to see the coding in the text, to code
+  images, audio, video or an area of a PDF page, and for graphs:
+  https://github.com/ccbogel/QualCoder/releases (3.8.2 is the release
+  marked "Latest"; the 4.0-Beta at the top of the page is a test
+  version)
 
 ---
 
@@ -105,16 +146,16 @@ git or this repository at all:
 
 ```bash
 # Plain pip, in its own virtual environment:
-python3 -m venv ~/qualcoder-mcp-venv
-~/qualcoder-mcp-venv/bin/pip install qualcoder-mcp
+python3 -m venv ~/exegete-venv
+~/exegete-venv/bin/pip install exegete
 
 # Or one command with pipx / uv:
-pipx install qualcoder-mcp
-uv tool install qualcoder-mcp
+pipx install exegete
+uv tool install exegete
 ```
 
-This gives you a `qualcoder-mcp` command; get its absolute path with
-`which qualcoder-mcp` and use THAT as the `command` in the Claude
+This gives you an `exegete` command; get its absolute path with
+`which exegete` and use THAT as the `command` in the Claude
 configuration of Step 6 (no `args` needed). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
 
@@ -131,7 +172,7 @@ On Mac:
 1. Press `Cmd + Space` to open Spotlight
 2. Type "Terminal" and press Enter
 
-### Step 2: Download the Qualcoder MCP Server
+### Step 2: Download Exegete
 
 Copy and paste these commands into Terminal, one at a time:
 
@@ -140,16 +181,16 @@ Copy and paste these commands into Terminal, one at a time:
 cd ~/Documents
 
 # Download the repository
-git clone https://github.com/nicotem/qualcoder_mcp.git
+git clone https://github.com/nicotem/exegete.git
 
 # Go into the folder
-cd qualcoder_mcp
+cd exegete
 ```
 
 **Don't have git?** You can also:
 - Download the ZIP file from GitHub
 - Unzip it to your Documents folder
-- Rename the folder to `qualcoder_mcp`
+- Rename the folder to `exegete`
 
 ### Step 3: Create a Virtual Environment
 
@@ -179,7 +220,7 @@ venv\Scripts\activate
 ### Step 5: Install the Package
 
 ```bash
-# Install the Qualcoder MCP server
+# Install Exegete
 pip install -e .
 ```
 
@@ -201,7 +242,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 ### Option A: Dynamic Project Selection (Recommended)
 
-**Best for**: People with multiple Qualcoder projects
+**Best for**: People with multiple QualCoder projects
 
 1. **Find your username**:
    - In Terminal, type: `whoami` and press Enter
@@ -211,7 +252,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
    ```bash
    pwd
    ```
-   This shows where you installed it (usually `/Users/YOUR_USERNAME/Documents/qualcoder_mcp`)
+   This shows where you installed it (usually `/Users/YOUR_USERNAME/Documents/exegete`)
 
 3. **Open Claude Desktop Configuration**:
    - Open Claude Desktop
@@ -224,26 +265,46 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"]
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"]
     }
   }
 }
 ```
 
-**Important**: If you already have other MCP servers configured, add the "qualcoder" section inside the existing `mcpServers` block, separated by a comma.
+With a **PyPI install** (pip, pipx or uv), point the client straight at
+the installed `exegete` command instead, using the absolute path
+from `which exegete` (Claude Desktop does not inherit your shell's
+PATH), and leave out `args`:
+
+```json
+{
+  "mcpServers": {
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/exegete-venv/bin/exegete"
+    }
+  }
+}
+```
+
+**Important**: If you already have other MCP servers configured, add the "exegete" section inside the existing `mcpServers` block, separated by a comma. If one of them is this server under the earlier name (a "qualcoder" section), keep it and do not add an "exegete" section beside it: see ["Coming from qualcoder-mcp"](#coming-from-qualcoder-mcp).
 
 5. **Save and Close** the configuration file
 
+After the restart (Step 7), ask Claude to list your projects and select
+one; you can switch projects at any time.
+[PROJECT_SELECTION_GUIDE.md](PROJECT_SELECTION_GUIDE.md) has the
+details.
+
 ### Option B: Fixed Project Path (Simpler)
 
-**Best for**: People with one main Qualcoder project
+**Best for**: People with one main QualCoder project
 
 1. **Find your .qda project folder**:
-   - Open Qualcoder
+   - Open QualCoder
    - Look at your project and note its location
-   - **Important**: Qualcoder projects are **folders** with `.qda` extension, not single files
+   - **Important**: QualCoder projects are **folders** with `.qda` extension, not single files
    - Each project folder contains a `data.qda` database file inside
    - Common locations:
      - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/` (folder)
@@ -262,11 +323,11 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"],
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"],
       "env": {
-        "QUALCODER_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
       }
     }
   }
@@ -275,14 +336,14 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 **Replace**:
 - `YOUR_USERNAME` with your Mac username
-- The path in `QUALCODER_PROJECT_PATH` with your actual `.qda` project
+- The path in `EXEGETE_PROJECT_PATH` with your actual `.qda` project
   folder (the path to the `data.qda` file inside it is accepted too).
   If the path does not exist the server refuses to start and prints
-  "Error: the project set in QUALCODER_PROJECT_PATH was not found; check
+  "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to the host's log (the path
   itself is not printed). If the path exists but is not a QualCoder
   project, or its database will not open, the server starts and every
-  tool answers that the project set in QUALCODER_PROJECT_PATH could not
+  tool answers that the project set in EXEGETE_PROJECT_PATH could not
   be opened.
 
 4. **Save and Close** the configuration file
@@ -299,9 +360,9 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 3. **Verify it's working**:
    - Open a new conversation
-   - Type: "List my available Qualcoder projects" (Option A) or "Give
-     me a summary of my Qualcoder project" (Option B)
-   - If configured correctly, Claude calls the qualcoder tools and
+   - Type: "List my available QualCoder projects" (Option A) or "Give
+     me a summary of my QualCoder project" (Option B)
+   - If configured correctly, Claude calls the Exegete tools and
      answers from your project. If it says it has no such tool, the
      server is not connected: see Troubleshooting below
 
@@ -313,36 +374,68 @@ Claude Desktop is not required: the server speaks standard MCP over
 stdio, so **any MCP client can host it** (researchers run it under
 Claude Code, including in editor side panels such as Obsidian's).
 
-**Claude Code**: register it with one command (use the venv Python
-path from Step 5):
+**Claude Code**: first, where to start it. Claude Code opens files by
+itself, with its own file tools and shell commands, outside Exegete:
+what it reads that way goes to the AI provider whole, the private part
+of memos included. It reads the folder it starts in without asking, and
+its read-only commands (such as `cat`, `grep` and `find`) read outside
+that folder without asking too, in every mode, unless a setting that
+blocks such reads is on. [PRIVACY.md](PRIVACY.md), "Assistants that
+open files by themselves", quotes Anthropic's pages and names those
+settings. So never start it in your home folder, Documents, your
+projects folder or any folder that holds a study (a new Terminal window
+opens in your home folder), and for participants' data use an assistant
+without file access of its own, such as Claude Desktop's chat with the
+extension. Make an empty folder for it, and do the rest there:
 
 ```bash
-claude mcp add qualcoder -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
+mkdir -p ~/claude-exegete && cd ~/claude-exegete
 ```
 
-Or add a `.mcp.json` to the folder you run Claude Code from:
+Starting Claude Code in that folder keeps your studies out of the
+folder it reads without asking; it does not stop its read-only commands
+reading them.
+
+In that folder, register Exegete with one command; Claude Code offers a
+server added this way only in the folder where it was added, so start
+`claude` there afterwards. With a PyPI install:
+
+```bash
+claude mcp add exegete -- exegete
+```
+
+(Claude Code resolves commands on your shell PATH; if in doubt, use the
+absolute path from `which exegete`.) With a source install, use
+the venv Python path from Step 5:
+
+```bash
+claude mcp add exegete -- ~/Documents/exegete/venv/bin/python -m exegete.server
+```
+
+Or add a `.mcp.json` to the folder you start Claude Code in (with a
+PyPI install, `"command": "exegete"` and no `args`):
 
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"]
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"]
     }
   }
 }
 ```
 
-The optional `env` block with `QUALCODER_PROJECT_PATH` (Option B above)
+The optional `env` block with `EXEGETE_PROJECT_PATH` (Option B above)
 works the same way in `.mcp.json`; on the command line pass it with
 `-e`:
 
 ```bash
-claude mcp add qualcoder -e QUALCODER_PROJECT_PATH=/path/to/MyProject.qda -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
+claude mcp add exegete -e EXEGETE_PROJECT_PATH=/path/to/MyProject.qda -- ~/Documents/exegete/venv/bin/python -m exegete.server
 ```
 
 The server behaves the same under any client; which tools are
-registered is decided by `QUALCODER_MCP_TOOLSET` (see "Environment
+registered is decided by `EXEGETE_TOOLSET` (see "Environment
 variables the server reads" below), not by the client.
 
 ---
@@ -350,58 +443,76 @@ variables the server reads" below), not by the client.
 ## Environment variables the server reads
 
 All configuration is by environment variables in the `env` block of the
-server entry (Claude Desktop config, `.mcp.json`, LM Studio's mcp.json),
-or with `claude mcp add -e NAME=value ...` for Claude Code. Every
+server entry (Claude Desktop config, `.mcp.json`, LM Studio's mcp.json,
+the `[mcp_servers.exegete.env]` table of Codex's `config.toml`), or with
+`claude mcp add -e NAME=value ...` for Claude Code. Every
 variable is optional.
 
-- `QUALCODER_PROJECT_PATH`: a project to open at start-up (Option B
+**Earlier spellings, read until v1.0.** Before 0.14.1 each of these
+started `QUALCODER_MCP_` (and the first was `QUALCODER_PROJECT_PATH`):
+`QUALCODER_MCP_TOOLSET`, `QUALCODER_MCP_WORKSPACE`,
+`QUALCODER_MCP_WORKSPACE_REQUIRED`, `QUALCODER_MCP_AI_CODER_NAME`,
+`QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`. The
+server still reads them until v1.0, and its log says once per start
+which new spelling to use instead. If a setting is given under both
+spellings with different values (after the usual tidying: spaces, the
+tool set's letter case and a leading `~` do not count), the server
+does not start, and says which two disagree; if either spelling of
+`EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
+desktop extension sets both spellings of its three settings itself,
+always to the same value.
+
+- `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
   If the path does not exist the server refuses to start and prints
-  "Error: the project set in QUALCODER_PROJECT_PATH was not found; check
+  "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to stderr. The project is
   opened by whichever tool comes first (since v0.14; before, the backup
   tools and a few others answered "No Qualcoder project selected" until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `QUALCODER_MCP_TOOLSET`: `full` (default) registers 73 tools;
+- `EXEGETE_TOOLSET`: `full` (default) registers 73 tools;
   `core` registers the 21-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
   registers the full set plus `create_project`, 74 tools, so that a
-  study can be started from the conversation (README.md, "Starting a
+  study can be started from the conversation (TOOLS.md, "Starting a
   project from the conversation"). Configured by hand, creating
   projects stays out of the default set, so that researchers opt in to
   a tool that makes folders on their disk; the desktop extension sets
   this variable from its "Tool set" setting, whose default is
   `lifecycle`. Any other value stops the server at start-up with an error
   naming the valid values. Resources and prompts are not affected.
-  In Claude Desktop, add `"QUALCODER_MCP_TOOLSET": "lifecycle"` to the
+  In Claude Desktop, add `"EXEGETE_TOOLSET": "lifecycle"` to the
   server's `env` block; for Claude Code:
 
   ```bash
-  claude mcp add qualcoder -e QUALCODER_MCP_TOOLSET=lifecycle -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
+  claude mcp add exegete -e EXEGETE_TOOLSET=lifecycle -- ~/Documents/exegete/venv/bin/python -m exegete.server
   ```
-- `QUALCODER_MCP_WORKSPACE` (v0.14): the workspace, the folder where
+- `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
   also searches its top level. A full path, or one starting with `~`.
-  Unset or blank, it is `~/Documents/Qualcoder MCP Projects`. The
-  desktop extension sets it from its "Folder for projects" setting,
+  Unset or blank, it is `~/Documents/Exegete projects` (until 0.14.0,
+  `~/Documents/Qualcoder MCP Projects`, which is never moved or emptied,
+  and whose projects the listing still finds). The desktop extension
+  sets it from its "Folder for projects" setting,
   whose default is `~/QualCoder projects`, because iCloud (Desktop and
   Documents) and OneDrive may sync `~/Documents`. A relative path, or a
-  folder inside `~/.qualcoder_mcp`, QualCoder's settings folder
+  folder inside `~/.exegete` (or `~/.qualcoder_mcp`, its earlier
+  name), QualCoder's settings folder
   `~/.qualcoder`, a `.qda` project or the folder the server itself is
   installed in, or a path holding `|`, stops the server at start-up
-  with "Error: QUALCODER_MCP_WORKSPACE ..." on stderr (naming no path).
-- `QUALCODER_MCP_WORKSPACE_REQUIRED` (v0.14): `1` makes a blank or
-  missing `QUALCODER_MCP_WORKSPACE` stop the server at start-up instead
-  of falling back to `~/Documents/Qualcoder MCP Projects`. The desktop
+  with "Error: EXEGETE_WORKSPACE ..." on stderr (naming no path).
+- `EXEGETE_WORKSPACE_REQUIRED` (v0.14): `1` makes a blank or
+  missing `EXEGETE_WORKSPACE` stop the server at start-up instead
+  of falling back to `~/Documents/Exegete projects`. The desktop
   extension sets it, so an emptied "Folder for projects" never sends
   projects into a synced Documents folder.
-- `QUALCODER_MCP_AI_CODER_NAME`: this HOST's DECLARATION of the AI
+- `EXEGETE_AI_CODER_NAME`: this HOST's DECLARATION of the AI
   coder name it would like to write under. Since v0.12 the name that
   rows actually carry is the PROJECT's setting, which the researcher
   chooses through `set_project_ai_coder_name` the first time a write
-  needs it (see the attribution section of README.md); the declaration
+  needs it (see "Choosing the AI coder name" in TOOLS.md); the declaration
   is offered as the first quick pick in that question, and if it differs
   from a name the project already has, the next write asks which to use
   rather than re-attributing anything. Declare the model this host runs
@@ -416,14 +527,14 @@ variable is optional.
   ZWJ, which spell words in Persian and Indic scripts, are the two
   exceptions) and must not contain `#####`,
   the QualCoder 4.0 private-memo marker. An invalid value stops the
-  server at start-up with "Error: QUALCODER_MCP_AI_CODER_NAME ..." on
+  server at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
   stderr. Do not declare your own QualCoder coder name: AI rows would
   then be indistinguishable from yours in QualCoder, and the setter
   refuses that name anyway.
 
   ```json
   "env": {
-    "QUALCODER_MCP_AI_CODER_NAME": "Qwen 3.8 6bit"
+    "EXEGETE_AI_CODER_NAME": "Qwen 3.8 6bit"
   }
   ```
 
@@ -432,7 +543,7 @@ variable is optional.
   host proposes that name first, so codings by different models can be
   told apart and compared later.
 
-- `QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
+- `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release
   is verified against (v14 through v17, QualCoder master commit
   `9bddf17`) are refused to protect the data, and the refusal names this
@@ -454,16 +565,35 @@ terms. What that means for research data is laid out in
 [PRIVACY.md](PRIVACY.md) (see "Your governance options"); this section
 is only the mechanics.
 
-**1. Install qualcoder-mcp** as described above (PyPI install
+The key changes the terms, not what Claude Code reads. Claude Code opens
+files by itself, outside Exegete, whichever way you sign in: it reads
+the folder it starts in without asking, and its read-only commands read
+outside it too ("Alternative: Claude Code and other MCP clients",
+above; [PRIVACY.md](PRIVACY.md), "Assistants that open files by
+themselves", with Anthropic's pages). What it reads that way goes to
+Anthropic whole, the private part of memos included. For participants'
+data, this project suggests an assistant without file access of its
+own, such as Claude Desktop's chat with Exegete on a Team or Enterprise
+account, which has the same commercial terms (PRIVACY.md, rung 3).
+
+**1. Install Exegete** as described above (PyPI install
 recommended).
 
-**2. Authenticate with the API key.** Get a key from the Console at
-<https://platform.claude.com/settings/keys>, then:
+**2. Authenticate with the API key, in a folder of its own.** Get a key
+from the Console at <https://platform.claude.com/settings/keys>, then
+make an empty folder for Claude Code and start it there:
 
 ```bash
+mkdir -p ~/claude-exegete && cd ~/claude-exegete
 export ANTHROPIC_API_KEY=sk-ant-...
 claude
 ```
+
+A new Terminal window opens in your home folder, which holds your
+projects; never start Claude Code there, in Documents, in your projects
+folder or in any folder that holds a study. The empty folder keeps your
+studies out of the folder it reads without asking; it does not stop its
+read-only commands reading them.
 
 Approve the key when prompted (Claude Code asks once and remembers the
 choice). If you ALSO have a Pro/Max subscription login, the
@@ -473,16 +603,19 @@ ANTHROPIC_API_KEY` to switch back to the subscription. Verify which
 credential is active with `/status`: an "API key" row appears when an
 API key is in use.
 
-**3. Register the server** (same as any Claude Code setup):
+**3. Register the server** in the same folder (in a second Terminal
+window, after `cd ~/claude-exegete`): Claude Code offers a server added
+this way only in the folder where it was added.
 
 ```bash
-claude mcp add qualcoder -- qualcoder-mcp
+claude mcp add exegete -- exegete
 ```
 
-Verify with `claude mcp list` (the server should show as Connected) and
-`/mcp` inside a session. See <https://code.claude.com/docs/en/mcp>.
+Verify with `claude mcp list` (the server should show as Connected) and,
+after starting `claude` again in that folder, `/mcp` inside a session.
+See <https://code.claude.com/docs/en/mcp>.
 
-**4. Strict posture (optional, recommended for participant data).**
+**4. Strict posture (optional).**
 Claude Code has side channels documented on its
 [data-usage page](https://code.claude.com/docs/en/data-usage): error
 reporting, session surveys, `/feedback` retention, and local plaintext
@@ -494,7 +627,9 @@ export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 
 and set `cleanupPeriodDays` in your Claude Code settings to shorten the
 local transcript cache. Never use feedback features (thumbs, /feedback,
-/bug) in sessions containing participant data.
+/bug) in sessions containing participant data. These settings close
+side channels; they do not change what Claude Code reads by itself
+(step 2), so they do not make this route one for participants' data.
 
 **5. Governance note.** For unambiguous commercial-terms coverage, use
 an organisational Console account rather than a personal one;
@@ -531,14 +666,14 @@ depends on it.
 Requirements: a machine that can run a mid-size local model (16 GB RAM
 is a realistic minimum), LM Studio installed, Python 3.10+.
 
-**Step 1. Install qualcoder-mcp** (same as for any host):
+**Step 1. Install Exegete** (same as for any host):
 
 ```bash
-pipx install qualcoder-mcp
-# or: python3 -m venv ~/qualcoder-mcp-venv && ~/qualcoder-mcp-venv/bin/pip install qualcoder-mcp
+pipx install exegete
+# or: python3 -m venv ~/exegete-venv && ~/exegete-venv/bin/pip install exegete
 ```
 
-Find the absolute path of the command (`which qualcoder-mcp`). LM
+Find the absolute path of the command (`which exegete`). LM
 Studio launches MCP servers itself and may not see your shell's PATH,
 so the config below must use the absolute path.
 
@@ -569,7 +704,7 @@ indentation that 3.13 strips, so on those interpreters the same
 definitions measure about five per cent more).
 That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
-small-model tool selection degrades. Set `QUALCODER_MCP_TOOLSET=core`
+small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
 (in the config of Step 5) to register only the 21-tool supervised
 coding set, measured at about 65,000 characters, roughly 16k tokens.
 
@@ -590,11 +725,11 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/qualcoder-mcp-venv/bin/qualcoder-mcp",
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/exegete-venv/bin/exegete",
       "env": {
-        "QUALCODER_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda",
-        "QUALCODER_MCP_TOOLSET": "core"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda",
+        "EXEGETE_TOOLSET": "core"
       }
     }
   }
@@ -602,10 +737,10 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
 ```
 
 With a source (git) install, use `"command":
-"/path/to/qualcoder_mcp/venv/bin/python"` with `"args": ["-m",
-"qualcoder_mcp.server"]` and the same `env` block. Replace the paths
+"/path/to/exegete/venv/bin/python"` with `"args": ["-m",
+"exegete.server"]` and the same `env` block. Replace the paths
 with your own; if the file already has other entries under
-`mcpServers`, add only the `"qualcoder"` block. LM Studio loads the
+`mcpServers`, add only the `"exegete"` block. LM Studio loads the
 server when you save.
 
 **Step 6. Keep tool confirmations on.** When the model calls a tool, LM
@@ -619,7 +754,7 @@ will be updated when it has been verified).
 
 **Step 7. Verify offline (recommended for data-governance records).**
 Disconnect from the network and work. Model inference, chats, and all
-qualcoder-mcp operations are local; LM Studio states it needs the
+Exegete's operations are local; LM Studio states it needs the
 internet only for model search/downloads, runtime downloads, and update
 checks (<https://lmstudio.ai/docs/app/offline>). A note that you
 verified this yourself is good evidence for a data-management plan.
@@ -645,11 +780,360 @@ between turns (observed with 0.4.12), which drops the in-memory
 project selection. Since 0.11 every "no project selected" error names
 the last project used on this machine, so recovery is one
 `select_project` call. If you work on a single project, set
-`QUALCODER_PROJECT_PATH` in the LM Studio entry (as in Step 5) so that
+`EXEGETE_PROJECT_PATH` in the LM Studio entry (as in Step 5) so that
 project is selected at every start. The quality consequences of
 different local models for coding work have not yet been evaluated
 (that evaluation is planned work), so treat local-model results with
 corresponding care.
+
+---
+
+## ChatGPT's desktop app and Codex (Experimental)
+
+> **Status: Experimental.** Written from OpenAI's documentation, read on
+> 30 September 2026 (its pages show no date), and, where it is silent,
+> from Codex's source code as it stood that day. This project has not
+> yet run Exegete in any OpenAI app; the steps may change after that
+> check. Until a setting that stops Codex reading files by itself has
+> been tested, use this route for practice and for data that is not
+> sensitive; step 3 says why.
+
+**Which OpenAI apps can use Exegete.** OpenAI's page on MCP
+(<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
+app, Codex CLI, and IDE extension support MCP servers and share MCP
+configuration for the same Codex host."
+
+- **The ChatGPT desktop app** (macOS, Windows, or Linux, where OpenAI
+  says "The ChatGPT desktop app for Linux is available in preview.":
+  <https://chatgpt.com/download/>): yes, by OpenAI's documentation. It
+  starts Exegete on your computer, from the settings file below.
+  OpenAI documents this for Codex, which you select from the ChatGPT
+  dropdown (OpenAI also calls it the product selector); whether the
+  app's ChatGPT side (Chat and Work) offers Exegete's tools too is not
+  documented, and not yet checked.
+- **Codex's command line, and its extension for VS Code and similar
+  editors**: yes, by the same documentation, from the same settings
+  file.
+- **ChatGPT in a web browser**: not directly. It runs on OpenAI's
+  computers and connects to servers on the internet. OpenAI's Secure
+  MCP Tunnel can connect it to a program on your computer, but it is
+  made for developers and IT teams (it needs an OpenAI API Platform
+  organisation, an API key, a helper program left running and ChatGPT's
+  developer mode), and it makes every Exegete tool callable from the
+  OpenAI workspaces the tunnel is linked to. This project does not
+  recommend it for a project with participants' data, and gives no
+  steps for it. One more case, for enterprise workspaces only. OpenAI
+  (<https://learn.chatgpt.com/docs/remote-connections>, read
+  30 September 2026): "When your workspace enables Local computer
+  access with Work Cloud, eligible ChatGPT Work conversations can
+  continue across desktop, mobile, and web." Whether such a
+  conversation can use Exegete on the connected computer is not
+  documented, and this project gives no steps for it. OpenAI's page on
+  that feature
+  (<https://learn.chatgpt.com/docs/enterprise/cloud-local-access>, the
+  same day) says: "Conversations, tool results, and other task context
+  do not stay exclusively on the connected computer."
+- **ChatGPT on a phone**: it cannot start Exegete, but it can use it
+  through OpenAI's Remote. OpenAI
+  (<https://learn.chatgpt.com/docs/remote>, read 30 September 2026):
+  "Follow progress, approve actions, and send instructions from your
+  phone. Codex runs each task on your connected computer." And
+  (<https://learn.chatgpt.com/docs/remote-connections>, the same day):
+  "MCP servers, skills, browser access, and Computer Use come from that
+  host's configuration." and "The sandboxing settings, security
+  controls, and action approvals still apply to the connected
+  session." So a phone paired with a computer whose settings file
+  holds the entry below can start work that calls Exegete's tools,
+  see what they return, participants' words included, and give the
+  approvals. By the same pages, the computer must run the ChatGPT
+  desktop app on macOS or Windows ("you can't set it up from the Codex
+  CLI or IDE extension"); the phone runs ChatGPT on iOS or Android; you
+  sign in to both with the same ChatGPT account (the pricing page lists
+  "Mobile remote control" for Plus, Pro, Business and Enterprise, not
+  for an API key); Remote is off until you set it up in the desktop
+  app (Settings, Connections, Control this Mac or PC); and
+  "Availability depends on rollout and your workspace settings." This
+  project has not tried it, and suggests leaving Remote off on a
+  computer where Exegete works on participants' data: a phone is easier
+  to lose or share, and OpenAI's own advice is "Only connect devices
+  you own and trust." Not only a phone: "You can control a host from
+  ChatGPT on iOS or Android, or from another Mac or Windows device when
+  Control other devices is available." (the remote-connections page),
+  so another computer paired with it can do the same. A pairing lasts:
+  "Signing out of ChatGPT turns off **Remote Control**, but it doesn't
+  remove your existing device pairings." (the same page). To check, look
+  under Settings, Connections in the desktop app ("In the app on the
+  host, use **Settings** > **Connections** to manage connected
+  devices.", the same page), and remove any device paired there.
+
+**Which plans.** OpenAI's Codex pricing page
+(<https://learn.chatgpt.com/docs/pricing>, read 30 September 2026) lists
+"ChatGPT desktop app for local chats", "Codex CLI" and "IDE extension"
+for the Plus, Pro, Business, Enterprise / Education and API Key plans;
+for Free and Go it mentions only the desktop app, "subject to rollout".
+You sign in to Codex with a ChatGPT account or with an API key, and
+which of the two decides which of OpenAI's data policies apply
+([PRIVACY.md](PRIVACY.md), "OpenAI's apps: the ChatGPT desktop app and
+Codex").
+
+**Step 1. Install Exegete.** It needs Python 3.10 or newer ("What
+You'll Need", above). In the Terminal (macOS or Linux):
+
+```bash
+python3 -m venv ~/exegete-venv
+~/exegete-venv/bin/pip install exegete
+```
+
+or in PowerShell on Windows:
+
+```powershell
+py -m venv $HOME\exegete-venv
+$HOME\exegete-venv\Scripts\pip install exegete
+```
+
+(`pipx install exegete` or `uv tool install exegete` also work.) The
+settings in step 2 need the full path of the `exegete` program, because
+an app started from the Dock or the Start menu may not look in the
+folders your Terminal does. After the lines above it is
+`/Users/YOUR_USERNAME/exegete-venv/bin/exegete` on a Mac,
+`/home/YOUR_USERNAME/exegete-venv/bin/exegete` on Linux and
+`C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe` on Windows,
+where `YOUR_USERNAME` is your account's short name (the name of your
+home folder, which may differ from the name you see when you log in).
+To print the full path: `echo ~/exegete-venv/bin/exegete` in the
+Terminal, or `echo "$HOME\exegete-venv\Scripts\exegete.exe"` in
+PowerShell; with pipx or uv, `which exegete` (on Windows,
+`where.exe exegete`).
+
+**Step 2. Add Exegete to Codex's settings file.** The desktop app, the
+command line and the editor extension all read one file, `config.toml`,
+in a folder called `.codex` in your home folder (OpenAI's page: "By
+default this is `~/.codex/config.toml`"). On a Mac, this line opens it
+in TextEdit, creating it first if it is not there:
+
+```bash
+mkdir -p ~/.codex && touch ~/.codex/config.toml && open -e ~/.codex/config.toml
+```
+
+On Windows, in PowerShell: `mkdir -Force $HOME\.codex` and then
+`notepad $HOME\.codex\config.toml` (Notepad offers to create the file).
+Paste these lines at the end of the file. On a Mac or Linux, change
+only `YOUR_USERNAME` in the `command` line to your own (the full path
+from step 1), typing no quote marks: TextEdit can turn a typed quote
+mark into a curly one, which Codex cannot read. On Windows, replace the
+whole value after `command =`, its double quotes included, with your
+path between single quotes, as "What the lines do" shows below: a
+Windows path between double quotes makes the whole file unreadable.
+Then save:
+
+```toml
+[mcp_servers.exegete]
+command = "/Users/YOUR_USERNAME/exegete-venv/bin/exegete"
+startup_timeout_sec = 30
+tool_timeout_sec = 300
+default_tools_approval_mode = "writes"
+
+[mcp_servers.exegete.env]
+EXEGETE_TOOLSET = "lifecycle"
+EXEGETE_WORKSPACE = "~/QualCoder projects"
+
+[mcp_servers.exegete.tools.read_pseudonym_list]
+approval_mode = "prompt"
+```
+
+What the lines do:
+
+- `command`: the full path of the `exegete` program. On Windows, write
+  it between single quotes, which keep its backslashes as they are:
+  `command = 'C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe'`.
+- `default_tools_approval_mode = "writes"`: Codex asks you before every
+  Exegete tool that is not marked read-only (OpenAI's page: "The
+  `writes` mode prompts for tools that aren't marked read-only."). Keep
+  it. Without it, Codex's default for a server, `auto`, runs without
+  asking the tools that only add to a project, among them
+  `import_text_file`, `apply_codings` and `create_proposed_codes`
+  ("What hosts do with the tools' read and write marks", below).
+- `approval_mode = "prompt"` for `read_pseudonym_list`: Codex asks
+  before that tool whatever the line above says. It sends every real
+  name in the project's pseudonyms file to OpenAI.
+- `EXEGETE_TOOLSET = "lifecycle"`: every tool, creating a project
+  included, as in the Claude Desktop extension.
+- `EXEGETE_WORKSPACE`: where new projects and working copies go; here,
+  as in the extension, a folder called "QualCoder projects" in your
+  home folder, outside Documents, which iCloud or OneDrive may sync.
+  Codex passes Exegete only the settings its entry names ("Environment
+  variables the server reads", above, lists them all), so a setting
+  exported in a shell profile does not reach it (Codex's source code).
+- `startup_timeout_sec` and `tool_timeout_sec`: how many seconds Codex
+  waits for Exegete to start, and for one tool to finish. OpenAI's
+  defaults are 10 and 60; the first start after an install or update
+  can be slower, and replacing names or exporting a large project can
+  take more than a minute. These two values are suggestions, not yet
+  measured with Codex.
+
+If the file already has an entry named `exegete` (because you added it
+in the app's settings screen or with `codex mcp add`, below), do not
+paste a second one: a second `[mcp_servers.exegete]` line makes the
+whole file unreadable. Add the lines it lacks to the entry that is
+there instead.
+
+**Other ways to add it.** The desktop app has a settings screen for
+this (Settings, MCP servers, Add server: the name `exegete`, STDIO, and
+the full path from step 1 as the command; then Save), and the command
+line has one command:
+
+```bash
+codex mcp add exegete --env EXEGETE_TOOLSET=lifecycle --env "EXEGETE_WORKSPACE=~/QualCoder projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
+```
+
+OpenAI does not document that either writes the approval lines, so
+after either one, open the file as above and add what it lacks:
+`default_tools_approval_mode = "writes"` on the line straight after
+`[mcp_servers.exegete]`; at the end of the file, the last two lines of
+the block above (the `read_pseudonym_list` table); and, if the settings
+screen had no place for them, the `[mcp_servers.exegete.env]` line with
+the two settings under it.
+
+**Step 3. Give Codex a folder of its own, restart, and check.** Codex
+is an agent: besides calling Exegete's tools, it runs commands of its
+own, outside Exegete, that change files in the folder it works in and
+read files well beyond it (step 4 says how far). OpenAI's page on the
+desktop app says: "Choose where to work. Start a chat, create a
+project, or open a folder. ChatGPT can use the files and context in
+the location you choose." (<https://learn.chatgpt.com/docs/app>, read
+30 September 2026), and, for the command line: "Codex CLI treats
+the directory where you start it as the project for the chat."
+(<https://learn.chatgpt.com/docs/projects>, the same day). So make an
+empty folder for these chats and work there. In the Terminal (macOS or
+Linux):
+
+```bash
+mkdir -p ~/exegete-chats && cd ~/exegete-chats && codex
+```
+
+or in PowerShell on Windows:
+
+```powershell
+mkdir -Force $HOME\exegete-chats; cd $HOME\exegete-chats; codex
+```
+
+With the desktop app alone, make the folder in Finder or File Explorer
+instead (a new folder named `exegete-chats`, in your home folder; on
+Windows, File Explorer opens your home folder when you type
+`%USERPROFILE%` in its address bar): the lines above end by starting
+`codex`, the command line, which the desktop app does not need. You
+open the folder in the app once Codex is chosen, below. Never give
+Codex your home folder, Documents, your projects folder
+(`~/QualCoder projects`), or a folder with transcripts
+or other study files: what Codex reads there goes to OpenAI without
+passing through Exegete, and what it changes there is changed without
+Exegete's approval step, preview or backup.
+
+A folder of its own keeps your study's files out of the place Codex
+works in, so it does not change them without asking. It does not keep
+Codex from reading them, or from searching other folders for them. In
+"Ask for approval" and in the read-only mode alike, the commands Codex
+runs can read, without asking, any file your account
+can read on a Mac or Linux, and on Windows at least everything in your
+home folder but a few folders that hold keys (step 4 gives OpenAI's
+words); and Exegete's own answers tell Codex where your project is.
+Whatever Codex opens that way, a project's database among it, goes to
+OpenAI whole, the private part of every memo after `#####` included.
+So, until a setting that stops those reads has been tested with
+Exegete, use this route for practice and for data that is not
+sensitive, and, for participants' data, an assistant that has no file
+access of its own, such as Claude Desktop's chat with the extension,
+with computer use off and no folder that holds your projects connected
+to it ([PRIVACY.md](PRIVACY.md), "Assistants that open files by
+themselves").
+
+Then, in the desktop app, open Settings, MCP servers, where `exegete`
+is now listed, and select Restart (or quit the app and open it again).
+Select Codex from the ChatGPT dropdown (OpenAI's quickstart: "select
+**Codex** from the ChatGPT dropdown"), start a new chat in your
+`exegete-chats` folder, and type `/mcp` in the message box: Exegete is
+among the connected servers. Then ask "Using the Exegete tools, is a
+project open?": the answer is that no project is open (a tool that only
+reads runs without asking). On the command line, `codex mcp list` lists
+Exegete, and `/mcp` inside `codex`, started as above, shows it.
+
+**Step 4. Keep it asking.** In the desktop app, keep the permissions
+control below the message box on **Ask for approval**, as OpenAI
+advises ("For most work, start with **Ask for approval**.",
+<https://learn.chatgpt.com/docs/permission-modes>); on the command line
+it is `/permissions`. The other two modes take the decision from you:
+**Approve for me** (called Auto-review in settings) sends each request
+that needs approval to an automatic reviewer, an AI, instead of you,
+and **Full access** runs every tool call without asking (Codex's source
+code). When Codex asks before an Exegete tool, it may offer to remember
+your answer for the session or for good; for the tools that write, and
+for `read_pseudonym_list`, answer each time, since a remembered answer
+lets later calls run unasked. On the command line, if Codex started in
+its read-only mode, you may keep it there (Exegete's tools work the
+same); never choose Full access.
+
+"Ask for approval" does not ask before Codex changes a file in its own
+folder, nor before it reads one, wherever the file is. OpenAI's page
+on permissions says it "lets ChatGPT work within the current workspace
+and pauses before reaching beyond that boundary": reaching beyond the
+boundary there means editing outside the folder and going online, not
+reading. OpenAI's page on approvals
+(<https://learn.chatgpt.com/docs/agent-approvals-security>, read
+30 September 2026), in the table "Common sandbox and approval
+combinations", row "Auto (preset)": "Codex can read files, make edits,
+and run commands in the workspace. Codex requires approval to edit
+outside the workspace or to access network." Even in the read-only
+mode, "Codex can read files and run commands within the read-only
+sandbox." Neither row says whether Codex may read outside the
+workspace; the same page does, in its section on the retired
+`untrusted` setting: "With `on-request`, commands allowed by the
+sandbox can run without approval, read accessible files, and use
+network access if enabled." `on-request` is the setting behind "Ask
+for approval" and the read-only mode, and in Codex's source code (its
+release of 29 September 2026) both let those commands read the whole
+disk (on Windows, at least everything in your home folder but a few
+folders that hold keys). That is why step 3 keeps
+study files out of Codex's folder, and why this route is for practice
+and non-sensitive data for now. Codex's sandbox settings govern the
+commands the model runs, not Exegete, which reads and writes your
+projects whichever sandbox you choose (Codex's source code). What
+"Approving the AI's suggestions: your host's settings are the
+safeguard", below, says holds in Codex too.
+
+**If Exegete does not start, or its tools are missing:**
+
+- Check the full path: in a Terminal, the path from step 1 followed by
+  `--version` answers `exegete <version>`. If it does not, install again
+  (step 1).
+- Codex cannot read a settings file with a mistake in it, such as a
+  missing quote mark, a curly quote mark (“ or ” instead of ") typed in
+  TextEdit, or a second `[mcp_servers.exegete]` line; compare yours with
+  the block above. In TextEdit, Edit, Substitutions, Smart Quotes
+  switches the curly ones off. On Windows, a path between double quotes
+  needs every backslash doubled; single quotes avoid that.
+- If the desktop app offers no local work at all: OpenAI
+  (<https://learn.chatgpt.com/docs/use-chatgpt>, read 30 September
+  2026) says "Local work is available in the desktop app when enabled
+  for your account or workspace." On an account your university or
+  employer manages, ask whoever manages it.
+- If Codex reports that the server timed out while starting, raise
+  `startup_timeout_sec`. If a tool stopped with a timeout, raise
+  `tool_timeout_sec`, and before asking again check whether the change
+  was made (ask for the project summary, or the list of backups): the
+  server may have finished it.
+- An `EXEGETE_TOOLSET` other than `full`, `core` or `lifecycle` stops
+  the server at start-up, and so does a relative path in
+  `EXEGETE_WORKSPACE`; the error names the setting.
+- To switch Exegete off without removing it, add `enabled = false` on
+  the line after `[mcp_servers.exegete]` (and delete it to switch it
+  back on). OpenAI's pricing page: "Every MCP server adds more context
+  to your messages and uses more of your limit. Disable MCP servers
+  when you don’t need them." Exegete's tool descriptions are long
+  (about 198,000 characters with `lifecycle`; TOOLS.md says how that
+  was measured), so switch it off in chats that do not need it.
+- Problems and results, good or bad, go to
+  [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
+  app and which version, and never put participant data in an issue.
 
 ---
 
@@ -725,6 +1209,28 @@ its Code sessions and Cowork on a Claude Code of its own (2.1.281),
 whose program reads `anthropic/requiresUserInteraction` and then asks,
 with no option to always allow.
 
+**Codex** (the ChatGPT desktop app, and Codex's command line and editor
+extension), from OpenAI's pages and Codex's source code as read on 30
+September 2026 (OpenAI's page, <https://learn.chatgpt.com/docs/agent-approvals-security>:
+"Destructive app/MCP tool calls always require approval when the tool
+advertises a destructive annotation (unless the tool advertises a read
+annotation, which takes priority)."). Under a server's default,
+`auto`, Codex asks before a tool that can replace or remove, runs a
+read-only tool without asking, and also runs without asking a tool that
+is neither but is marked as reaching nothing beyond this computer. Here
+that is the 14 tools that only add (`import_text_file`,
+`apply_codings`, `create_proposed_codes`, `create_code` and the rest)
+and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
+mark Codex does not read. With `default_tools_approval_mode =
+"writes"` in the server's entry, Codex asks before every tool not
+marked read-only; the recipe above sets it, and asks before
+`read_pseudonym_list` whichever of the server's approval modes is set.
+The desktop app's "Approve for me" sends what needs approval to an
+automatic reviewer instead of you, and "Full access" approves every
+call, `read_pseudonym_list` included. None of these marks covers the
+commands Codex runs by itself, which change files in its own folder and
+read files well beyond it (the recipe's steps 3 and 4).
+
 So, for work on real data, keep the host in its asking mode (Manual),
 with "allow once" for anything that writes. In an auto mode, a
 classifier, not you, decides on the writing tools, and on
@@ -736,7 +1242,7 @@ in Claude Code 2.1.199 and later, `read_pseudonym_list`.
 
 ## Other MCP hosts
 
-Any MCP host that can run local stdio servers can host qualcoder-mcp
+Any MCP host that can run local stdio servers can host Exegete
 with the same command/env pattern shown above. Recipes for other
 open-source hosts are planned once they have been tested hands-on;
 technically comfortable users can adapt the pattern today.
@@ -748,12 +1254,12 @@ technically comfortable users can adapt the pattern today.
 ### From the terminal (no client needed)
 
 ```bash
-~/qualcoder-mcp-venv/bin/qualcoder-mcp --version
-# pipx / uv tool installs put the command on your PATH: qualcoder-mcp --version
-# git install:  ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server --version
+~/exegete-venv/bin/exegete --version
+# pipx / uv tool installs put the command on your PATH: exegete --version
+# git install:  ~/Documents/exegete/venv/bin/python -m exegete.server --version
 ```
 
-It prints `qualcoder-mcp` and the installed version, then exits. If you
+It prints `exegete` and the installed version, then exits. If you
 start the server itself by hand (the same command without `--version`),
 it prints three start-up lines and one paragraph saying that it
 expects an MCP host on its standard input and output, and then waits; that is the expected
@@ -763,7 +1269,7 @@ behaviour, not an error. Press Ctrl+C to stop it.
 
 In Claude Desktop, try:
 ```
-List my available Qualcoder projects
+List my available QualCoder projects
 ```
 
 Claude should show you the `.qda` project folders it found. Then:
@@ -775,7 +1281,7 @@ Select the "MyProject" project
 
 In Claude Desktop, try:
 ```
-Give me a summary of my Qualcoder project
+Give me a summary of my QualCoder project
 ```
 
 Claude should respond with information about your project!
@@ -799,16 +1305,19 @@ Analyse the transcript for file 1 with all its coding
 ### "The server isn't responding"
 
 0. **Check the installation from the terminal**: run
-   `~/qualcoder-mcp-venv/bin/qualcoder-mcp --version` (or the command
+   `~/exegete-venv/bin/exegete --version` (or the command
    your install uses, see "Testing Your Installation"). If it prints the
    version, the package is installed and the interpreter works, and the
    problem is in the client configuration below. If it fails, reinstall
    (see "Updating the MCP Server").
 
 1. **Check your paths**:
-   - Make sure the Python path is correct in your config
-   - In Terminal with venv activated, type: `which python`
+   - Make sure the command path is correct in your config
+   - With a PyPI install, type `which exegete` in Terminal; with
+     a source install, activate the venv and type `which python`
    - Use that full path in your Claude config
+   - After any change to the configuration, fully quit and reopen
+     Claude Desktop (Step 7)
 
 2. **Check your .qda project path** (Option B only):
    - Make sure the folder exists: `ls -ld /path/to/your/project.qda`
@@ -817,12 +1326,12 @@ Analyse the transcript for file 1 with all its coding
 
 3. **Check Claude Desktop logs**:
    - Settings > Developer > Show Logs
-   - Look for errors related to "qualcoder"
+   - Look for errors related to "exegete"
 
 ### "No Qualcoder projects found" (Option A)
 
 The server searches these locations by default:
-- the folder `QUALCODER_MCP_WORKSPACE` names, when it is set (with the
+- the folder `EXEGETE_WORKSPACE` names, when it is set (with the
   desktop extension, its "Folder for projects", by default
   `~/QualCoder projects`), at its top level only
 - `~/Documents/QualCoder_projects`
@@ -841,25 +1350,33 @@ With dynamic project selection this is normal at the start of a
 session: the server has no project open until one is selected. The
 error reads "No Qualcoder project selected. Use 'list_available_projects'
 to discover projects, then 'select_project' to choose one. Or set
-QUALCODER_PROJECT_PATH environment variable." (`get_current_project`
+EXEGETE_PROJECT_PATH environment variable." (`get_current_project`
 says "No project currently open" instead.) Just select a project:
 ```
-List my available Qualcoder projects
+List my available QualCoder projects
 Select the "ProjectName" project
 ```
 
 When a project was selected before on this machine and still exists,
 the same error ends with "The last project used on this machine was
 <path>. Use select_project with that path to continue with it." That
-pointer is read from `~/.qualcoder_mcp/mru_project.json`, which
+pointer is read from `~/.exegete/mru_project.json`, which
 `select_project` writes on every successful selection and
 `create_project` on every project it creates; the selection is
 never restored automatically, so one `select_project` call is still
 needed. If the error comes back in the middle of a conversation, the
 host has restarted the server process between turns and the in-memory
 selection was lost; the hint gets you back with one call. For
-single-project work, pinning `QUALCODER_PROJECT_PATH` in the server's
+single-project work, pinning `EXEGETE_PROJECT_PATH` in the server's
 `env` block (Option B) avoids that round trip.
+
+With Option B, make sure the `env` section in your configuration
+includes the `EXEGETE_PROJECT_PATH` variable with the full path to
+your `.qda` project folder (or its `data.qda` file); since 0.14 a
+configured project is used by whichever tool comes first (before, the
+backup tools and a few others gave this error until another tool had
+run), and a configured path that cannot be opened is answered with the
+reason.
 
 ### Python Not Found
 
@@ -889,12 +1406,24 @@ ls -ld /path/to/your/project.qda
 ### Tools missing or unchanged after an upgrade
 
 The client starts the server once per session and reads the tool list
-at that moment. After `pip install --upgrade` (or `git pull` and
-reinstall), fully quit the client and reopen it (Claude Desktop: Cmd+Q,
-not just closing the window; Claude Code: end the session and start a
-new one; LM Studio: toggle the server off and on in mcp.json, or
-restart LM Studio). Until then the old process, with the old tool list,
-keeps running.
+at that moment. Fully quit the client BEFORE `pip install --upgrade`
+(or before `git pull` and the reinstall), and reopen it afterwards
+(Claude Desktop: Cmd+Q, not just closing the window; Claude Code: end
+the session and start a new one; LM Studio: toggle the server off and
+on in mcp.json, or restart LM Studio). A copy of the server left
+running while its files change fails the first time it needs a part it
+has not loaded yet (the REFI-QDA export is one), and until the client
+restarts, the old process, with the old tool list, keeps running.
+
+### "Both ~/.exegete and ~/.qualcoder_mcp are folders"
+
+A copy of the server older than 0.14.1, or a restore from a backup,
+made a new `~/.qualcoder_mcp` after Exegete had moved it to
+`~/.exegete`, with a secret of its own there, which Exegete never uses
+(Exegete takes only the session files it lacks, and says this once in
+its log, not at every start). Quit or update that older copy; then
+keeping the old folder changes nothing for Exegete, and removing it
+removes that copy's secret, sessions and run records with it.
 
 ### Reading the server log
 
@@ -902,7 +1431,7 @@ The server writes its log lines (INFO and above) to standard error; the
 host decides where that goes. Claude Desktop shows it under Settings >
 Developer > Show Logs. LM Studio on macOS persists it into
 `~/Library/Logs/LM Studio/main.log`; search that file for
-`qualcoder_mcp` to find the server's start-up lines (which report the
+`exegete` to find the server's start-up lines (which report the
 toolset mode and the number of tools registered) and any errors. The
 lines this server writes carry no memo text, and since v0.14 no SQLite
 message: a database error is logged by its kind and SQLite's short name
@@ -932,7 +1461,7 @@ Before sharing such a file, read it as you would the conversation.
 
 ### Learn What You Can Do
 
-Check out the main README.md for:
+[TOOLS.md](TOOLS.md) has:
 - Example queries and prompts
 - Full list of available tools
 - Advanced features (co-occurrence analysis, demographics, etc.)
@@ -978,19 +1507,31 @@ Updates are manual (a new release does not install itself).
 **Desktop extension**: download the newer `.mcpb` and install it as
 before; Claude replaces the old one.
 
-**PyPI install**, one command:
+**PyPI install**, one command, with your MCP client fully quit first
+(see "Tools missing or unchanged after an upgrade"; the ChatGPT desktop
+app: quit it; Codex on the command line: end the session):
 
 ```bash
-~/qualcoder-mcp-venv/bin/pip install --upgrade qualcoder-mcp
-# pipx:  pipx upgrade qualcoder-mcp
-# uv:    uv tool upgrade qualcoder-mcp
+~/exegete-venv/bin/pip install --upgrade exegete
+# pipx:  pipx upgrade exegete
+# uv:    uv tool upgrade exegete
 ```
 
-**Git (contributor) install**, when new versions are released:
+or in PowerShell on Windows:
+
+```powershell
+$HOME\exegete-venv\Scripts\pip install --upgrade exegete
+```
+
+**Git (contributor) install**, when new versions are released. First
+**fully quit your MCP client** (Claude Desktop: Cmd+Q; Claude Code: end
+the session; LM Studio: toggle the server off in mcp.json), so that no
+copy of the server is running while its files change. Then:
 
 ```bash
-# Go to the installation folder
-cd ~/Documents/qualcoder_mcp
+# Go to the installation folder (a clone made before 0.14.1 may be
+# called qualcoder_mcp; the folder's name does not matter)
+cd ~/Documents/exegete
 
 # Activate the virtual environment
 source venv/bin/activate
@@ -1002,28 +1543,164 @@ git pull
 pip install -e .
 ```
 
-Then **fully quit and relaunch your MCP client** (Claude Desktop:
-Cmd+Q, then reopen; Claude Code: restart the session; LM Studio: toggle
-the server off and on in mcp.json, or restart LM Studio). New tools
-only appear after the restart; the client launches the server once per
-session and reads its tool list then.
+Then **reopen your MCP client** (Claude Desktop: reopen it; Claude
+Code: start a new session; LM Studio: toggle the server on again, or
+restart LM Studio). New tools only appear after the restart; the client
+launches the server once per session and reads its tool list then.
 
 To confirm the update took, check the installed version from the
 terminal:
 
 ```bash
-~/qualcoder-mcp-venv/bin/qualcoder-mcp --version          # PyPI venv
-# pipx / uv tool:  qualcoder-mcp --version
-# git:   ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server --version
+~/exegete-venv/bin/exegete --version          # PyPI venv
+# pipx / uv tool:  exegete --version
+# git:   ~/Documents/exegete/venv/bin/python -m exegete.server --version
 ```
 
-The server also reports its version to the host in the MCP handshake
+It prints `exegete` followed by the version and exits; version
+`0.14.1-alpha` shows as `0.14.1a0`, its normalised form. The server
+also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a
-convenience, not proof.
+convenience, not proof. The
+[Releases page](https://github.com/nicotem/exegete/releases) and
+[CHANGELOG.md](CHANGELOG.md) say what each release changed.
 
 Updating never touches your data: the server is code-only, and your
 QualCoder projects and backups stay exactly where they are.
+
+---
+
+## Coming from qualcoder-mcp
+
+Exegete was called qualcoder-mcp until version 0.14.0. The program is
+the same; only names changed. **Nothing you set up stops working**:
+the steps below are optional unless your route says otherwise.
+
+**Before you update anything, fully quit every AI host that uses the
+server** (Claude Desktop: Cmd+Q; Claude Code: end the session; LM
+Studio: toggle the server off). A copy of the server left running while
+its files change fails the first time it needs a part it has not loaded
+yet, and the first start after the update moves the server's own folder
+(below), which is best done with no older copy running.
+
+- **The Claude Desktop extension.** Download `exegete-<version>.mcpb`
+  and open it: it updates the extension you have, with its two
+  settings, rather than adding a second one. Claude Desktop then lists
+  it as Exegete, and its log becomes `mcp-server-Exegete.log` (the
+  earlier `mcp-server-qualcoder-mcp.log` stays where it was). The first
+  start after the update may take longer and needs the internet, since
+  Claude may fetch the server's libraries again. Claude may ask again
+  before it uses each tool. Your projects folder does not change.
+- **Installed with pip.** `pip install --upgrade qualcoder-mcp` now
+  brings Exegete and keeps the `qualcoder-mcp` command working. To move
+  to the new name: `pip install exegete`, change the command in your
+  host's configuration to the `exegete` command, and only then
+  `pip uninstall qualcoder-mcp` (which removes the old command).
+- **Installed with pipx or uv.** `pipx upgrade qualcoder-mcp`,
+  `uv tool upgrade qualcoder-mcp` and `uvx qualcoder-mcp` keep working.
+  These tools put only the named package's commands on your PATH, so
+  you get the `exegete` command there only by installing `exegete`
+  itself (`pipx install exegete`, `uv tool install exegete`,
+  `uvx exegete`). To move to the new name, in this order: install
+  `exegete` first, then change the command in your host's
+  configuration to the new `exegete` command, and only then
+  `pipx uninstall qualcoder-mcp` or `uv tool uninstall qualcoder-mcp`
+  (the other way round leaves your host with no server, since the
+  copy of Exegete the old package brought goes with it).
+- **A copy of the source (git).** Quit your host, then `git pull` and
+  `pip install -e .` as always (the second step makes the version read
+  right; it is already part of updating a git install, so this adds no
+  step). `python -m qualcoder_mcp.server` and the `qualcoder-mcp`
+  command still start the server, through a small stand-in kept for
+  them, so your host's configuration keeps working. Your environment
+  will list the old `qualcoder-mcp` beside `exegete` in `pip list`,
+  which does no harm. Only those two ways of starting survive: code of
+  your own that imported the server's inner modules under the old name
+  (`qualcoder_mcp.database` and the like) does not. The new forms are
+  `-m exegete.server` and the `exegete` command. To point the copy at
+  the new address: `git remote set-url origin
+  https://github.com/nicotem/exegete.git` (the old address redirects,
+  so this is optional); the folder's own name does not matter.
+- **Keep your entry.** If a host's configuration already has an entry
+  for this server under the name `qualcoder`, keep it, and do not add
+  an `exegete` entry beside it: that would start two servers, show
+  every tool twice and need a second set of "always allow" rules. If
+  you do rename the entry, Claude Code names the tools after it
+  (`mcp__exegete__...`), and permissions you gave under the old name
+  must be given again.
+- **The settings.** The variables now start `EXEGETE_` (for example
+  `EXEGETE_TOOLSET`); the earlier `QUALCODER_MCP_...` spellings and
+  `QUALCODER_PROJECT_PATH` are still read until v1.0, and the log says
+  so at each start. If both spellings of one setting are set with
+  different values, the server does not start and says which two
+  disagree ("Environment variables the server reads" has the rules).
+- **The server's own folder** moves by itself, at the first start, from
+  `~/.qualcoder_mcp` to `~/.exegete`, whole, with everything in it (the
+  secret key, sessions, the last-project hint and the privacy run
+  records). A link is left under the old name (a junction on Windows),
+  so an older copy of the server on the same computer keeps using the
+  same folder and key. If a backup or sync rule of yours names the old
+  folder, change it. PRIVACY.md says more.
+- **The projects folder** for installs from PyPI or from the source,
+  when no workspace is set, is now `~/Documents/Exegete projects`: new
+  copies and new projects go there. `~/Documents/Qualcoder MCP Projects`
+  is never moved or emptied, and `list_available_projects` still finds
+  the projects in it; the first answer that names the workspace says so
+  once. The extension's folder, `~/QualCoder projects`, is unchanged.
+- **Your projects** are unchanged, except for one small file. Exegete
+  keeps the AI coder name in `exegete.json` in the project folder. A
+  project from before still has `qualcoder_mcp.json`, which is read as
+  before; the first time the name is stored again, it is carried into
+  `exegete.json`, and `qualcoder_mcp.json` stays, marked so that an
+  older copy of the server (0.12 to 0.14) refuses to write it rather
+  than use an outdated name: if one says the file "was written by a
+  newer version", update that copy. A project Exegete names first gets
+  a small `qualcoder_mcp.json` too, holding no name, for the same
+  reason: an older copy then refuses rather than asks for a name of its
+  own. Both stay until v1.0; PRIVACY.md says what they hold. Projects created
+  earlier still name qualcoder-mcp as their creator; new ones name
+  Exegete. The resource addresses are now `exegete://...`; the old
+  `qualcoder://...` ones are still answered until v1.0.
+- **Logs.** The server's own lines say Exegete. A hand-made entry keeps
+  its log file, which is named after the entry.
+
+**Afterwards, the transition check.** In a terminal, run
+`exegete --check-transition` (or `qualcoder-mcp --check-transition`,
+or with `python -m exegete.server` in front of the switch). It changes
+nothing: it lists what the change left behind, numbered in the order
+to take the steps, and ends with exit code 0 when nothing is left.
+First, where the old package was installed with uv tool or pipx (or is
+0.14.0 or earlier) and there is no `exegete` command yet, the command
+that installs Exegete; then each entry in Claude Desktop's, Claude
+Code's, LM Studio's or Codex's configuration that still starts the old
+command, with the entry to use instead (it only reads those files:
+change them yourself, with the host quit); then the command that
+removes the old package, for the way it was installed (pip, uv, uv
+tool, pipx or a copy of the source); a desktop extension older than
+Exegete, to update; the link at `~/.qualcoder_mcp`, and whether it can
+go; Claude Desktop's logs under the extension's earlier name; and the
+earlier projects folder, with what is in it (it is searched three
+folders down, like the project list, and never offered for removal
+while anything is in it). For a copy of the source, it names the
+folder and says to quit your host before updating it. Commands and
+entry lines are printed on lines of their own, with full paths, ready
+to paste. Adding `--tidy` removes the link, and only when nothing
+started as `qualcoder-mcp` is still running, the link leads to
+`~/.exegete`, and nothing is left that could start an older copy (a
+package older than 0.14.1, a host entry starting the old command, or a
+desktop extension older than Exegete; the check says which). It cannot
+see an older copy started from a project's own `.mcp.json` file (Claude
+Code's project entries): while one could still start, keep the link.
+Adding `--tidy-old-logs` as well removes those old logs. Projects,
+backups, the AI coder name files in projects and the hosts'
+configuration files are never touched. If you use the desktop
+extension, there is no `exegete` command: type
+`uvx exegete --check-transition` instead. It needs uv in your
+terminal; if `uvx` is not found, what the extension can leave (the
+link and one old log file) is harmless and can stay. The old name's
+package is released beside Exegete until version 1.0; that last
+release will say plainly that it is the last.
 
 ---
 
@@ -1031,11 +1708,14 @@ QualCoder projects and backups stay exactly where they are.
 
 *For everyone who installed a pre-0.9 version with `git clone` +
 `pip install -e .` and configured their Claude client with
-`venv/bin/python` + `"args": ["-m", "qualcoder_mcp.server"]`.*
+`venv/bin/python` + `"args": ["-m", "qualcoder_mcp.server"]` (the
+program was then called qualcoder-mcp; "Coming from qualcoder-mcp",
+above, says what the rename changes).*
 
 **First, the reassurance: upgrading only replaces the SERVER code.**
 It never touches your QualCoder projects (the `.qda` folders) or your
-files under `~/.qualcoder_mcp/` (the AI-coding session files in
+files under `~/.qualcoder_mcp/` (moved whole to `~/.exegete/` at the
+first start of 0.14.1 or later: the AI-coding session files in
 `sessions/`, the last-used project pointer `mru_project.json`, the
 preview-token secret `preview_secret` and the run manifests
 `pseudonymise_source` writes under `pseudonymisation/`); all
@@ -1050,46 +1730,54 @@ You have two paths. Both work; pick one.
 
 ### Path A: stay on the git install (simplest, no config change)
 
+First fully quit your Claude client (Claude Desktop: Cmd+Q, not just
+closing the window), so that no copy of the server is running while its
+files change. Then:
+
 ```bash
-cd ~/Documents/qualcoder_mcp   # your clone
+cd ~/Documents/qualcoder_mcp   # your clone, whatever its folder is called
 git pull
 venv/bin/pip install -e .
 ```
 
-Then fully quit and relaunch your Claude client. Your existing
-configuration keeps working unchanged, forever. Good if you don't want
-to touch your setup.
+Then reopen your Claude client. Your existing configuration keeps
+working unchanged, forever: `-m qualcoder_mcp.server` starts Exegete
+through a small stand-in kept for it. Good if you don't want to touch
+your setup.
 
 ### Path B: switch to the PyPI install (recommended going forward)
 
 *Available from v0.9.0 (the first release published to PyPI).*
 
 **Use a FRESH environment. Do not install into the old clone's venv.**
-(If you run `pip install qualcoder-mcp` inside the old venv, pip sees
-the editable install, reports "Requirement already satisfied", and
-silently does nothing, so you would still be running the old code.
-Verified behaviour, and the reason these instructions exist.)
+(If you run `pip install exegete` inside the old venv, pip installs
+Exegete beside the clone's own package rather than in its place, and
+an entry that still runs `-m qualcoder_mcp.server` keeps running the
+clone's code, the program as it was, until the clone itself is updated:
+one environment then holds two copies of the server, from two places.
+A fresh environment keeps them apart.)
 
 **1. Install into a fresh venv (or pipx/uv):**
 
 ```bash
-python3 -m venv ~/qualcoder-mcp-venv
-~/qualcoder-mcp-venv/bin/pip install qualcoder-mcp
-# or:  pipx install qualcoder-mcp
-# or:  uv tool install qualcoder-mcp
+python3 -m venv ~/exegete-venv
+~/exegete-venv/bin/pip install exegete
+# or:  pipx install exegete
+# or:  uv tool install exegete
 ```
 
 **2. Find the command path:**
 
 ```bash
-ls ~/qualcoder-mcp-venv/bin/qualcoder-mcp   # plain venv
-which qualcoder-mcp                          # pipx / uv
+ls ~/exegete-venv/bin/exegete   # plain venv
+which exegete                    # pipx / uv
 ```
 
 **3. Update your Claude client config**: change `command` to that
 path and REMOVE the `args` line.
 
-Claude Desktop, before:
+Claude Desktop, before (keep the entry's name, `qualcoder` here, so
+the tools and the permissions you gave them keep their names):
 
 ```json
 {
@@ -1108,27 +1796,28 @@ Claude Desktop, after:
 {
   "mcpServers": {
     "qualcoder": {
-      "command": "/Users/YOU/qualcoder-mcp-venv/bin/qualcoder-mcp"
+      "command": "/Users/YOU/exegete-venv/bin/exegete"
     }
   }
 }
 ```
 
-(Keep your `env` block with `QUALCODER_PROJECT_PATH`, if you had one;
-it works the same.)
+(Keep your `env` block, if you had one; it works the same, and
+`QUALCODER_PROJECT_PATH` is read until v1.0 as the earlier spelling of
+`EXEGETE_PROJECT_PATH`.)
 
-Claude Code: re-register once:
+Claude Code: re-register once, under the same name:
 
 ```bash
 claude mcp remove qualcoder
-claude mcp add qualcoder -- ~/qualcoder-mcp-venv/bin/qualcoder-mcp
+claude mcp add qualcoder -- ~/exegete-venv/bin/exegete
 ```
 
 (or edit `.mcp.json` the same way as the Desktop config above).
 
 **4. Fully quit and relaunch the client**, then confirm the installed
-version with `~/qualcoder-mcp-venv/bin/qualcoder-mcp --version` (or
-`qualcoder-mcp --version` after a `pipx` or `uv tool` install). Whether the assistant can also tell you
+version with `~/exegete-venv/bin/exegete --version` (or
+`exegete --version` after a `pipx` or `uv tool` install). Whether the assistant can also tell you
 the running version depends on the host (see "Updating the MCP
 Server" above).
 
@@ -1142,18 +1831,18 @@ The plain install silently no-ops (above), so you must either upgrade
 explicitly:
 
 ```bash
-~/Documents/qualcoder_mcp/venv/bin/pip install --upgrade qualcoder-mcp
+~/Documents/exegete/venv/bin/pip install --upgrade exegete
 ```
 
 or uninstall the editable first:
 
 ```bash
-~/Documents/qualcoder_mcp/venv/bin/pip uninstall qualcoder-mcp
-~/Documents/qualcoder_mcp/venv/bin/pip install qualcoder-mcp
+~/Documents/exegete/venv/bin/pip uninstall exegete
+~/Documents/exegete/venv/bin/pip install exegete
 ```
 
 Both verified: pip cleanly removes the editable hooks and the wheel
-takes over (your existing `venv/bin/python -m qualcoder_mcp.server`
+takes over (your existing `venv/bin/python -m exegete.server`
 config even keeps working). The catch, and why the fresh venv is
 recommended instead: from that moment `git pull` in the clone no
 longer affects what runs, which is a confusing state to leave lying
@@ -1165,8 +1854,8 @@ around.
 ## Getting Help
 
 - **Problems with this server**: check the Troubleshooting section
-  above and the README's troubleshooting section, then open an issue on
-  [GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues).
+  above, then open an issue on
+  [GitHub Issues](https://github.com/nicotem/exegete/issues).
   That is the only support channel (email requests receive no reply);
   see [SUPPORT.md](SUPPORT.md). Never paste research data into an
   issue; a redacted or synthetic example is enough. Include your
@@ -1174,7 +1863,7 @@ around.
   Claude Code, LM Studio) and the toolset mode (full, core or
   lifecycle).
 - **MCP Documentation**: https://modelcontextprotocol.io/
-- **Qualcoder Help**: https://github.com/ccbogel/QualCoder/wiki
+- **QualCoder Help**: https://github.com/ccbogel/QualCoder/wiki
 - **Claude Desktop**: https://claude.ai/help
 
 ---
@@ -1185,29 +1874,33 @@ If you want to remove the MCP server:
 
 1. **Remove it from your client**:
    - Claude Desktop with the extension: Settings > Extensions,
-     qualcoder-mcp, Uninstall (Claude removes its own copy of the
+     Exegete, Uninstall (Claude removes its own copy of the
      server; skip step 2). Two things stay: the Python and the download
      cache uv keeps for every program that uses it (about 80 MB; on
      macOS `~/.local/share/uv` and `~/.cache/uv`, on Windows
      `%APPDATA%\uv` and `%LOCALAPPDATA%\uv\cache`; `uv cache clean`
      empties the cache, if uv is on your computer), and the server's
-     own state in `~/.qualcoder_mcp` (step 3)
+     own state in `~/.exegete` (step 3)
    - Claude Desktop configured by hand: Settings > Developer > Edit Config, delete the
-     "qualcoder" section, save, then fully quit and reopen Claude Desktop
-   - Claude Code: `claude mcp remove qualcoder`
-   - LM Studio: delete the "qualcoder" block from mcp.json
+     "exegete" section (or "qualcoder", from an earlier version of this
+     guide), save, then fully quit and reopen Claude Desktop
+   - Claude Code: `claude mcp remove exegete` (or `qualcoder`)
+   - LM Studio: delete the "exegete" (or "qualcoder") block from mcp.json
 
 2. **Remove the package**:
    ```bash
    # PyPI install in its own venv: delete the venv
-   rm -rf ~/qualcoder-mcp-venv
-   # pipx:  pipx uninstall qualcoder-mcp
-   # uv:    uv tool uninstall qualcoder-mcp
+   rm -rf ~/exegete-venv
+   # pipx:  pipx uninstall exegete
+   # uv:    uv tool uninstall exegete
+   # installed under the earlier name: pipx uninstall qualcoder-mcp,
+   #   or uv tool uninstall qualcoder-mcp
    # Git (contributor) install: delete the clone (its venv is inside it)
-   rm -rf ~/Documents/qualcoder_mcp
+   rm -rf ~/Documents/exegete
    ```
 
-3. **Optionally remove the server's own state**: `~/.qualcoder_mcp/`
+3. **Optionally remove the server's own state**: `~/.exegete/`
+   (and `~/.qualcoder_mcp`, the link to it left under its earlier name)
    holds the AI-coding session files (`sessions/`), the last-used
    project pointer (`mru_project.json`), the preview-token secret
    (`preview_secret`, which signs the tokens that authorise a destructive
@@ -1219,7 +1912,9 @@ If you want to remove the MCP server:
    JSON file per run: the pseudonyms applied, the replacement spans, the
    row ids and offsets of the rows the run moved and, since v0.13, where
    each pseudonym now sits in the notes it rewrote; never an original
-   name). Nothing else is stored there.
+   name). Nothing else is stored there, except, if an older copy of the
+   server ever made a folder of its own under the earlier name,
+   `old_folder_noted`, one line that lets the log say so only once.
 
 Uninstalling does not touch your QualCoder projects. Note that the
 server does write to projects when you use its coding tools (after
@@ -1229,8 +1924,9 @@ backup folders it created next to each project
 (`<project>_backup_<timestamp>.qda`), stay where they are. Remove
 backups you no longer need with the `prune_backups` tool before
 uninstalling, or by hand afterwards. Workspace copies made with
-`copy_project_to_workspace` live in `~/Documents/Qualcoder MCP
-Projects/`, or in the folder `QUALCODER_MCP_WORKSPACE` names (with the
+`copy_project_to_workspace` live in `~/Documents/Exegete projects/`
+(those made before 0.14.1, in `~/Documents/Qualcoder MCP Projects/`),
+or in the folder `EXEGETE_WORKSPACE` names (with the
 desktop extension, its "Folder for projects", by default
 `~/QualCoder projects/`).
 
@@ -1240,7 +1936,7 @@ desktop extension, its "Folder for projects", by default
 
 Now that you're installed, you can:
 
-1. ✅ Explore your Qualcoder data with natural language queries
+1. ✅ Explore your QualCoder data with natural language queries
 2. ✅ Get AI-assisted thematic analysis
 3. ✅ Discover patterns and relationships in your coding
 4. ✅ Query by demographics and attributes

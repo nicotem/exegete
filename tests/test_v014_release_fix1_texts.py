@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """v0.14 release, fix round 1 (texts only): each text the round changed,
-pinned where it is served or published.
+pinned where it is served or published. (v0.14.1: the
+prerequisites test follows the README review's text by stage.)
 
 The release gates at ea3c618 found no major; the round fixes what is
 cheap and true now. One served text: the span hint after a first manual
@@ -19,7 +20,7 @@ import inspect
 import json
 from pathlib import Path
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -57,22 +58,48 @@ def test_the_span_hint_offers_the_shortcut_only_where_one_was_computed(
 
 
 def test_the_prerequisites_line_says_when_qualcoder_is_needed():
+    """v0.14.1, the README review (ruling 29): QualCoder as a prerequisite
+    by stage, in README's "What you need, at each stage" and INSTALL's
+    "What You'll Need", each fact read from the code it rests on. The
+    v0.14 line this test first pinned is gone with the section it sat
+    in."""
     readme = _doc("README.md")
     assert "**Qualcoder** with at least one project created" not in readme
-    assert ("**QualCoder** ([download here](https://github.com/ccbogel/"
-            "QualCoder)), recommended, and needed to import documents "
-            "(Word, PDF, audio, video; this server imports only text given "
-            "in the conversation) and to see the coding in the text. With "
-            "the Claude Desktop extension, or the `lifecycle` tool set, a "
-            "new project can be started in the conversation; otherwise at "
-            "least one project made in QualCoder is needed") in readme
+    assert "otherwise at least one project made in QualCoder is needed" \
+        not in readme
+    stages = readme[readme.index("### What you need, at each stage"):
+                    readme.index("### Claude Desktop, with one click")]
+    assert "QualCoder is not needed to start." in stages
+    assert ("Leave the extension's \"Tool set\" setting as it comes "
+            "(`lifecycle`): with it you can create a project") in stages
+    assert ("The other two choices, `full` and `core`, cannot create a "
+            "project") in stages
+    assert ("**QualCoder is recommended from the start, and needed** to "
+            "bring in documents (Word, PDF, images, audio, video)") in stages
+    assert "Exegete imports only text the assistant hands it" \
+        in stages
+    assert "Its standard tool set, `full`, cannot create a project" \
+        in stages
+    install = _doc("INSTALL.md")
+    assert "**Qualcoder installed** with at least one project created" \
+        not in install
+    needs = install[install.index("## What You'll Need"):
+                    install.index("## Recommended: Install from PyPI")]
+    assert ("On this route the default tool set, `full`, has no tool that "
+            "creates a project") in needs
+    assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
+    assert ("**QualCoder itself**, recommended, and needed to bring in "
+            "documents") in needs
     # The facts it rests on: the extension's tool set defaults to
-    # lifecycle, which alone has create_project, and a file is imported
-    # from text passed in the call
+    # lifecycle, which alone has create_project (not full, the default
+    # configured by hand, and not core), and a file is imported from text
+    # passed in the call
     manifest = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
     assert manifest["user_config"]["toolset"]["default"] == "lifecycle"
     assert "create_project" in server.LIFECYCLE_TOOLS
+    assert "create_project" not in server.CORE_TOOLSET
+    assert "create_project" not in server.mcp._tool_manager._tools
     params = inspect.signature(server.import_text_file).parameters
     assert "content" in params and "path" not in params
 
@@ -87,7 +114,7 @@ def test_privacy_says_the_export_guard_compares_the_spelling(monkeypatch):
             "spelled. On Windows the guard's comparison ignores letter "
             "case, so a spelling in another letter case is refused there "
             "too. On macOS, whose file system usually ignores letter case, "
-            "such a spelling (`~/.QUALCODER_MCP`) is not yet caught (the "
+            "such a spelling (`~/.EXEGETE`) is not yet caught (the "
             "guard is fixed in v0.15).") in privacy
 
     # Both halves, from the guard itself, on any platform: its own
@@ -200,7 +227,7 @@ def test_the_workflow_decides_each_item():
             "Professional Development suggestions.") in workflow
     assert "Show me 1, 3, 4 and 5 too" in workflow
     assert ("The server keeps the session in a file of its own "
-            "(`~/.qualcoder_mcp/sessions/`), not in the chat") in workflow
+            "(`~/.exegete/sessions/`), not in the chat") in workflow
     assert "there is no default instruction." in workflow
     assert ("The server refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in workflow

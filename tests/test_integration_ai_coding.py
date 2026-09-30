@@ -20,9 +20,9 @@ from pathlib import Path
 import tempfile
 import shutil
 
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.sessions import CodingSuggestion, AICodingSession, SessionManager
-from qualcoder_mcp.refi_export import RefiQdaExporter, NAMESPACE
+from exegete.database import QualcoderDatabase
+from exegete.sessions import CodingSuggestion, AICodingSession, SessionManager
+from exegete.refi_export import RefiQdaExporter, NAMESPACE
 
 
 @pytest.fixture

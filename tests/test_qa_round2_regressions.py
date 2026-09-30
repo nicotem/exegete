@@ -21,14 +21,14 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import (
+import exegete.server as server
+from exegete.database import (
     QualcoderDatabase,
     DatabaseLockedError,
     UnsupportedSchemaError,
     validate_qda_path,
 )
-from qualcoder_mcp.sessions import SessionManager
+from exegete.sessions import SessionManager
 
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."

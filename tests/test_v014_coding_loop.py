@@ -24,8 +24,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.sessions import (AICodingSession, CodingSuggestion,
+import exegete.server as server
+from exegete.sessions import (AICodingSession, CodingSuggestion,
                                     SessionManager)
 
 # The fixture project's file 1 (conftest.qualcoder_db_path)
@@ -620,7 +620,8 @@ class TestApprovalIsDescribedHonestly:
             assert "approves each item" not in text
         assert "never bypassed" not in server.METHODS_GUIDANCE
 
-    @pytest.mark.parametrize("doc", ["README.md", "PRIVACY.md", "INSTALL.md"])
+    @pytest.mark.parametrize("doc", ["README.md", "TOOLS.md", "PRIVACY.md",
+                                     "INSTALL.md"])
     def test_the_researcher_facing_documents(self, doc):
         text = " ".join((Path(__file__).parent.parent / doc)
                         .read_text(encoding="utf-8").split())
@@ -1317,7 +1318,7 @@ class TestFixRoundTextsTrue:
         assert "files_coded_by_neither" in cc
         assert "is told to read each file" in cc
         assert "saw every" not in cc
-        readme = " ".join((Path(__file__).parent.parent / "README.md")
+        readme = " ".join((Path(__file__).parent.parent / "TOOLS.md")
                           .read_text(encoding="utf-8").split())
         assert ("an approved target returns to pending when it gains "
                 "evidence") in readme
@@ -1369,7 +1370,7 @@ class TestFixRound2TheReading:
     explained once at the first review."""
 
     def test_the_two_glosses(self):
-        from qualcoder_mcp.sessions import READING_LABELS
+        from exegete.sessions import READING_LABELS
         assert READING_LABELS == {
             "explicit": "the passage states what the code names",
             "interpretive": ("the code rests on what the passage implies "
@@ -2122,7 +2123,7 @@ class TestFixRound2TheMinors:
         "deadbeef"])
     def test_merged_into_keeps_only_a_whole_guid(self, setup_server,
                                                  crafted):
-        from qualcoder_mcp.sessions import ProposedCode
+        from exegete.sessions import ProposedCode
         kept = ProposedCode(name="A", status="merged",
                             merged_into="0f0f0f0f-0000-4000-8000-00000000abcd")
         assert kept.merged_into == "0f0f0f0f-0000-4000-8000-00000000abcd"
@@ -2150,7 +2151,7 @@ class TestFixRound2TheMinors:
         assert "Every write operation creates a timestamped backup" \
             not in workflow
         assert "unless it is called with `create_backup=false`" in workflow
-        readme = (root / "README.md").read_text(encoding="utf-8")
+        readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()
                     if l.startswith("- `analyze_for_coding("))
         assert "`ambiguous_code_names`" in line

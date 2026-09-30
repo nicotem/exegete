@@ -7,8 +7,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from unittest.mock import Mock, MagicMock
 
-from qualcoder_mcp.refi_export import RefiQdaExporter, NAMESPACE
-from qualcoder_mcp.sessions import CodingSuggestion
+from exegete.refi_export import RefiQdaExporter, NAMESPACE
+from exegete.sessions import CodingSuggestion
 
 
 class MockQualcoderDatabase:

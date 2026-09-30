@@ -184,7 +184,7 @@ jobs:
         run: |
           node --version
           npm ci --ignore-scripts --no-audit --no-fund
-          npx --no-install mcpb validate ../../../dist/mcpb/qualcoder-mcp-*/manifest.json
+          npx --no-install mcpb validate ../../../dist/mcpb/exegete-*/manifest.json
           npx --no-install mcpb info ../../../dist/mcpb/*.mcpb
 
       # The uv Claude Desktop 2.9939.2 downloads when a computer has none.
@@ -200,7 +200,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          cd dist/mcpb/qualcoder-mcp-*/
+          cd dist/mcpb/exegete-*/
           for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             echo "== $target"
             uv sync --frozen --dry-run --no-install-project --no-build --python "$(cat .python-version)" --python-platform "$target"
@@ -218,6 +218,22 @@ jobs:
           home="$RUNNER_TEMP/extension-home"
           mkdir -p "$home"
           HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/extension-app" --expect-tools manifest --create "Pilot study" --offline-restart
+
+      # v0.14.1, the rename: the update from the published 0.14.0 package,
+      # both ways the app may make it: over the old folder with its
+      # environment in place, and into the folder emptied first. The
+      # script checks both land in the same folder (the identifier) and
+      # that the server lists the manifest's tools.
+      - name: Update over the published 0.14.0 package, both ways
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/old.mcpb" https://github.com/nicotem/exegete/releases/download/v0.14.0-alpha/qualcoder-mcp-0.14.0-alpha.mcpb
+          for way in kept emptied; do
+            home="$RUNNER_TEMP/update-home-$way"
+            mkdir -p "$home"
+            flag=""; [ "$way" = emptied ] && flag="--emptied"
+            HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/update-app-$way" --over "$RUNNER_TEMP/old.mcpb" $flag --expect-tools manifest
+          done
 
   desktop-extension-same:
     name: desktop extension, the same bytes on every platform
@@ -239,3 +255,70 @@ jobs:
           sha256sum builds/*/*.mcpb
           test "$(ls builds/*/*.mcpb | wc -l)" -eq 3
           test "$(sha256sum builds/*/*.mcpb | cut -d' ' -f1 | sort -u | wc -l)" -eq 1
+
+  # v0.14.1, the rename: the old name's package, built on every push, the
+  # upgrade paths through the old name, offline, and the published 0.14.0
+  # working through the state folder's link. The wheelhouse is fetched
+  # once; the tests then install only from it (--no-index), so the real
+  # PyPI's qualcoder-mcp can never make them pass. Linux runs them all
+  # (the upgrade paths are pip's and uv's, not the platform's), and the
+  # transition check's steps followed with the real uv tool and pipx;
+  # Windows runs the 0.14.0 proof, through a junction.
+  rename-upgrade:
+    name: the rename (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # Two wheels, a handful of scratch environments and offline installs
+    # take a few minutes; twenty ends a hang well before the suite's.
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            tests: tests/test_v0141_upgrade.py tests/test_v0141_old_name_package.py tests/test_v0141_stand_in.py tests/test_v0141_proof_0140.py tests/test_v0141_transition_installers.py
+          - os: windows-latest
+            tests: tests/test_v0141_proof_0140.py
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # setuptools for the tests' builds without isolation (the version
+      # the extension's build is pinned to); uv at the version the app
+      # downloads.
+      - name: Install the package, the build backend and uv
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" "setuptools==84.0.0" "uv==0.9.7"
+
+      - name: Build the old name's package
+        run: python -m build packaging/pypi-old-name --outdir dist/old-name
+
+      # The published qualcoder-mcp 0.14.0a0 comes too, for the proof
+      # that it works through the link (or junction) the move leaves;
+      # and pipx, with the pip it asks for (26.1 or later), for the
+      # transition check's installers test, which installs pipx from here
+      # rather than use the runner's own.
+      - name: Fetch the wheelhouse for the offline tests
+        shell: bash
+        run: |
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --no-deps --only-binary=:all: "qualcoder-mcp==0.14.0a0"
+
+      # RENAME_TESTS_MUST_RUN turns a skip into a failure, so this job
+      # can never pass by running nothing.
+      - name: The rename's tests, the slow ones included
+        env:
+          RENAME_TEST_WHEELHOUSE: ${{ runner.temp }}/wheelhouse
+          RENAME_TESTS_MUST_RUN: "1"
+        shell: bash
+        run: python -m pytest -ra ${{ matrix.tests }}

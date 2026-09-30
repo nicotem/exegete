@@ -25,6 +25,7 @@ from datetime import datetime
 from contextlib import closing, contextmanager
 import glob
 
+from . import env_settings, names
 from .memo_privacy import (
     PERSONAL_NOTE_MARK,
     extract_ai_memo,
@@ -53,8 +54,9 @@ SUPPORTED_DB_VERSIONS = ['v14', 'v15', 'v16', 'v17']
 MAX_VERIFIED_SCHEMA = 17
 VERIFIED_MASTER_COMMIT = "9bddf17"
 _VERSION_STRING_RE = re.compile(r"^v(\d+)$")
-# Environment override for the forward guard (v18+/unparseable versions)
-ALLOW_UNKNOWN_SCHEMA_ENV = "QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA"
+# Environment override for the forward guard (v18+/unparseable versions);
+# the earlier spelling is read too, until v1.0 (env_settings).
+ALLOW_UNKNOWN_SCHEMA_ENV = names.SETTINGS["allow_unknown_schema"][0]
 
 
 class SchemaCapabilities:
@@ -687,7 +689,11 @@ def _mtime_age_seconds(path: Path) -> Optional[float]:
 # false "APPEARS to be open in QualCoder". The rule reads the program's
 # name, not its arguments; fix round 1 of brief C widened it from the
 # exact name `qualcoder`, which missed the release downloads.
-_OWN_NAMES = ("qualcoder-mcp", "qualcoder_mcp")
+# v0.14.1: `exegete` as well as both old spellings, which 0.14 copies and
+# the old name's command still run under. Only the program's own file
+# name is read, never its folder or arguments, so the extension's folder
+# (local.mcpb.niccol-tempini.qualcoder-mcp) cannot count either way.
+_OWN_NAMES = (names.COMMAND, names.OLD_COMMAND, names.OLD_PACKAGE)
 _QUALCODER_MODULES = ("qualcoder", "qualcoder.__main__")
 _QUALCODER_SCRIPTS = ("qualcoder", "qualcoder.py", "qualcoder-script.py")
 _PYTHON_OPTIONS_WITH_A_VALUE = ("-W", "-X", "-Q")
@@ -754,8 +760,8 @@ def _process_is_qualcoder(line: str) -> bool:
 def _filter_qualcoder_processes(lines) -> List[str]:
     """Pure filter: the process lines that are a running QualCoder.
 
-    This server's own names ("qualcoder_mcp", "qualcoder-mcp") never
-    match, because the program or module must be QualCoder's own.
+    This server's own names ("exegete", "qualcoder_mcp", "qualcoder-mcp")
+    never match, because the program or module must be QualCoder's own.
     """
     hits = []
     for line in lines:
@@ -1065,30 +1071,54 @@ def _raise_query_error(e: sqlite3.Error, where: str, message: str) -> None:
 # OneDrive (Known Folder Move) on many researchers' computers, and a
 # project folder that a sync service rewrites under the server is a
 # risk to the data. Blank means not set.
-WORKSPACE_ENV = "QUALCODER_MCP_WORKSPACE"
+WORKSPACE_ENV = names.SETTINGS["workspace"][0]
 # Set to 1 by a host whose form always fills the workspace (the desktop
 # extension, fix round 1): a blank value then stops the server instead
 # of falling back to the standard workspace inside ~/Documents, the
 # synced folder the setting exists to avoid.
-WORKSPACE_REQUIRED_ENV = "QUALCODER_MCP_WORKSPACE_REQUIRED"
+WORKSPACE_REQUIRED_ENV = names.SETTINGS["workspace_required"][0]
+# Both are read under either spelling (v0.14.1), through env_settings;
+# a message names the spelling the host's configuration used.
 
 
 def standard_workspace() -> Path:
-    """`~/Documents/Qualcoder MCP Projects`: the workspace when
-    QUALCODER_MCP_WORKSPACE is not set, resolved at call time."""
-    return Path.home() / "Documents" / "Qualcoder MCP Projects"
+    """`~/Documents/Exegete projects`: the workspace when
+    EXEGETE_WORKSPACE is not set, resolved at call time (v0.14.1; until
+    0.14.0, `earlier_standard_workspace()`)."""
+    return Path.home() / "Documents" / names.WORKSPACE_FOLDER
+
+
+def earlier_standard_workspace() -> Path:
+    """`~/Documents/Qualcoder MCP Projects`, the workspace until 0.14.0.
+    Never moved or emptied; the project listing still finds its projects,
+    since it walks ~/Documents."""
+    return Path.home() / "Documents" / names.OLD_WORKSPACE_FOLDER
+
+
+def earlier_workspace_holds_projects() -> bool:
+    """Whether the earlier workspace holds a project (a `*.qda` entry at
+    its top level, where copies and new projects were made). Never
+    raises: a folder that cannot be read counts as holding none."""
+    try:
+        with os.scandir(earlier_standard_workspace()) as entries:
+            return any(entry.name.lower().endswith(".qda")
+                       for entry in entries)
+    except OSError:
+        return False
 
 
 def workspace_setting_problem() -> Optional[str]:
-    """Why QUALCODER_MCP_WORKSPACE cannot be used, or None (also when it
+    """Why EXEGETE_WORKSPACE cannot be used, or None (also when it
     is not set). Checked at start-up, where a bad value stops the server,
     and again by `default_workspace`; the text names no path, as the
     other start-up errors do not."""
-    raw = os.environ.get(WORKSPACE_ENV)
+    workspace = env_settings.read("workspace")
+    raw, name = workspace.value, workspace.name
     if raw is None or not raw.strip():
-        if os.environ.get(WORKSPACE_REQUIRED_ENV, "").strip() == "1":
-            return (f"{WORKSPACE_ENV} is empty, and this host requires a "
-                    f"folder for projects ({WORKSPACE_REQUIRED_ENV}=1): "
+        required = env_settings.read("workspace_required")
+        if (required.value or "").strip() == "1":
+            return (f"{name} is empty, and this host requires a "
+                    f"folder for projects ({required.name}=1): "
                     f"choose one in the host's settings (in Claude Desktop, "
                     f"the extension's Folder for projects). The server does "
                     f"not fall back to ~/Documents, which iCloud or OneDrive "
@@ -1097,10 +1127,10 @@ def workspace_setting_problem() -> Optional[str]:
     try:
         given = Path(raw).expanduser()
     except (RuntimeError, ValueError):
-        return (f"{WORKSPACE_ENV} is not a folder path this server can "
+        return (f"{name} is not a folder path this server can "
                 f"use; check the folder in the host's configuration.")
     if not given.is_absolute():
-        return (f"{WORKSPACE_ENV} must be a full path or one starting "
+        return (f"{name} must be a full path or one starting "
                 f"with ~ (the home folder); a relative path would be read "
                 f"from the server's own working folder. Check the folder "
                 f"in the host's configuration.")
@@ -1111,7 +1141,7 @@ def default_workspace() -> Path:
     """The folder `copy_project_to_workspace` copies into and
     `create_project` creates in when none is given.
 
-    The folder QUALCODER_MCP_WORKSPACE names, `~` expanded, when it is
+    The folder EXEGETE_WORKSPACE names, `~` expanded, when it is
     set and not blank; otherwise `standard_workspace()`. Either way it is
     resolved at CALL time. Until 0.12 this was a module constant computed
     once at import, so a process that redirected HOME afterwards, which
@@ -1127,7 +1157,7 @@ def default_workspace() -> Path:
     problem = workspace_setting_problem()
     if problem is not None:
         raise ValueError(problem)
-    raw = os.environ.get(WORKSPACE_ENV)
+    raw = env_settings.value("workspace")
     if raw is None or not raw.strip():
         return standard_workspace()
     return Path(raw).expanduser()
@@ -1879,7 +1909,7 @@ def file_ending_problem(old: str, new: str, mediapath: Optional[str],
 def validate_coder_name(value: Any, param_name: str = "owner") -> str:
     """The one rule set for every coder name this server writes (P1-2).
 
-    Shared by the QUALCODER_MCP_AI_CODER_NAME configuration and the
+    Shared by the EXEGETE_AI_CODER_NAME configuration and the
     tool-supplied owner arguments (apply_codings, import_text_file), so
     no owner column can receive what the configured name may not be
     (S-H3): the name is stripped, must be non-empty, at most
@@ -3164,7 +3194,7 @@ class QualcoderDatabase:
         exists (upstream's own v14 trigger); anything at or above the
         floor is writable through the verified ceiling. Versions beyond
         the ceiling (or unparseable version strings) are refused unless
-        the QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA=1 environment override is
+        the EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 environment override is
         set, in which case writes proceed but carry a prominent warning.
         """
         caps = getattr(self, "capabilities", None)
@@ -3175,7 +3205,7 @@ class QualcoderDatabase:
                     False)
         if self._unknown_future_schema():
             version = self.db_version or "unknown"
-            if os.environ.get(ALLOW_UNKNOWN_SCHEMA_ENV, "") == "1":
+            if env_settings.value("allow_unknown_schema") == "1":
                 return (True, self._unknown_schema_warning(), True)
             return (False,
                     f"This project reports database schema '{version}', "
@@ -3193,7 +3223,8 @@ class QualcoderDatabase:
                 f"'{self.db_version or 'unknown'}', newer than the verified "
                 f"ceiling (v{MAX_VERIFIED_SCHEMA}, QualCoder master commit "
                 f"{VERIFIED_MASTER_COMMIT}); writes proceeded only because "
-                f"{ALLOW_UNKNOWN_SCHEMA_ENV}=1 is set. Verify results in "
+                f"{env_settings.read('allow_unknown_schema').name}=1 is "
+                f"set. Verify results in "
                 f"QualCoder and keep backups.")
 
     def schema_write_warning(self):
@@ -6957,7 +6988,7 @@ class QualcoderDatabase:
     # WRITE OPERATIONS
     # ============================================================================
     # These methods modify the database. Users should work on project copies
-    # in the MCP workspace (~/Documents/Qualcoder MCP Projects/)
+    # in the workspace (~/Documents/Exegete projects/)
 
     def _require_write_access(self) -> None:
         """Check that database was opened with write access on a v14 schema.

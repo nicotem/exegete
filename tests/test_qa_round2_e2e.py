@@ -23,8 +23,8 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import (
+import exegete.server as server
+from exegete.database import (
     QualcoderDatabase,
     QUALCODER_LOCK_FILENAME,
     validate_qda_path,

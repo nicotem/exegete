@@ -32,8 +32,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import build_desktop_extension as build           # noqa: E402
 import smoke_desktop_extension as smoke           # noqa: E402
-import qualcoder_mcp.server as server             # noqa: E402
-from qualcoder_mcp import database                # noqa: E402
+import exegete.server as server             # noqa: E402
+from exegete import database                # noqa: E402
 
 try:
     import tomllib
@@ -79,7 +79,11 @@ class TestTypedOnce:
     def test_the_rest_of_pyprojects_fields(self, built):
         manifest, _, _ = built
         meta = PYPROJECT["project"]
-        assert manifest["name"] == meta["name"]
+        # v0.14.1, the rename: the identifier is NOT pyproject's name any
+        # more, which became `exegete`; it stays `qualcoder-mcp` for good
+        # (tests/test_v0141_rename.py pins it against a renamed copy).
+        assert manifest["name"] == build.EXTENSION_NAME == "qualcoder-mcp"
+        assert manifest["name"] != meta["name"]
         assert manifest["license"] == meta["license"]
         assert manifest["keywords"] == meta["keywords"]
         assert manifest["author"]["name"] == meta["authors"][0]["name"]
@@ -108,8 +112,9 @@ class TestTypedOnce:
                                  PYPROJECT, [])
 
     def test_an_unplaced_field_is_refused(self):
-        with pytest.raises(build.BuildError, match="icon"):
-            build.build_manifest(dict(TEMPLATE, icon="icon.png"),
+        # v0.14.1: `icon` is placed now (tests/test_v0141_rename.py)
+        with pytest.raises(build.BuildError, match="screenshots"):
+            build.build_manifest(dict(TEMPLATE, screenshots=["a.png"]),
                                  PYPROJECT, [])
 
 
@@ -205,16 +210,22 @@ class TestTheSettings:
         assert "Documents" not in default and "Desktop" not in default
 
     def test_each_setting_reaches_a_variable_the_server_reads(self):
+        """v0.14.1: each of the three under both spellings, always the
+        same value, until v1.0 (tests/test_v0141_compat.py says why)."""
+        from exegete import names
         env = TEMPLATE["server"]["mcp_config"]["env"]
-        assert env == {
-            "QUALCODER_MCP_TOOLSET": "${user_config.toolset}",
-            database.WORKSPACE_ENV: "${user_config.projects_folder}",
-            database.WORKSPACE_REQUIRED_ENV: "1",
-        }
-        source = (REPO / "src" / "qualcoder_mcp" / "server.py").read_text(
+        expected = {}
+        for key, value in (("toolset", "${user_config.toolset}"),
+                           ("workspace", "${user_config.projects_folder}"),
+                           ("workspace_required", "1")):
+            for name in names.SETTINGS[key]:
+                expected[name] = value
+        assert env == expected
+        source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
-        assert 'os.environ.get("QUALCODER_MCP_TOOLSET"' in source
-        assert database.WORKSPACE_ENV == "QUALCODER_MCP_WORKSPACE"
+        assert 'env_settings.read("toolset")' in source
+        assert database.WORKSPACE_ENV == "EXEGETE_WORKSPACE"
+        assert database.WORKSPACE_REQUIRED_ENV == "EXEGETE_WORKSPACE_REQUIRED"
 
     def test_the_default_folder_is_accepted_by_the_server(self, monkeypatch):
         monkeypatch.setenv(database.WORKSPACE_ENV,
@@ -234,7 +245,7 @@ class TestTheSettings:
         # never re-resolving it against a tester's own uv settings
         assert config["args"] == ["run", "--frozen", "--directory",
                                   "${__dirname}", *scripts]
-        assert scripts["qualcoder-mcp"] == "qualcoder_mcp.server:main"
+        assert scripts == {"exegete": "exegete.server:main"}
         assert (REPO / server_block["entry_point"]).is_file()
 
 
@@ -302,14 +313,18 @@ class TestThePackage:
             for p in (REPO / build.PACKAGE).rglob("*")
             if p.is_file() and "__pycache__" not in p.parts
             and p.suffix != ".pyc")
+        # v0.14.1: and the icon the manifest names (test_v0141_mark.py)
         expected = {"manifest.json", ".python-version", "pyproject.toml",
                     "uv.lock", meta["readme"], *meta["license-files"],
-                    *package}
+                    *package, "icon.png"}
         assert set(files) == expected
         with zipfile.ZipFile(target) as z:
             assert sorted(z.namelist()) == sorted(expected)
-            for name in expected - {"manifest.json", ".python-version"}:
+            for name in expected - {"manifest.json", ".python-version",
+                                    "icon.png"}:
                 assert z.read(name) == (REPO / name).read_bytes(), name
+            assert z.read("icon.png") == (
+                REPO / build.ICON_FOLDER / "icon.png").read_bytes()
 
     def test_it_asks_uv_for_a_python_ci_tests(self, built):
         _, files, _ = built
@@ -695,7 +710,7 @@ class TestCiBuildsIt:
         assert "working-directory: packaging/desktop-extension/validator" \
             in job
         assert "npx --no-install mcpb validate " \
-               "../../../dist/mcpb/qualcoder-mcp-*/manifest.json" in job
+               "../../../dist/mcpb/exegete-*/manifest.json" in job
 
     def test_it_is_installed_and_started_as_the_app_does(self):
         job = self._job("desktop-extension")
@@ -753,27 +768,38 @@ class TestTheDocuments:
         assert "the Terminal route" in section
 
     def test_install_documents_every_variable_the_server_reads(self):
-        source = "".join(p.read_text(encoding="utf-8") for p in
-                         (REPO / "src" / "qualcoder_mcp").glob("*.py"))
-        read = set(re.findall(r'"(QUALCODER_[A-Z_]+)"', source))
-        assert database.WORKSPACE_ENV in read
+        # v0.14.1: every setting is read through one table, under both
+        # spellings (names.SETTINGS)
+        from exegete import names
+        read = {new for new, old in names.SETTINGS.values()}
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = _section(text, "## Environment variables the server reads")
-        documented = set(re.findall(r"^- `(QUALCODER_[A-Z_]+)`", section,
+        documented = set(re.findall(r"^- `(EXEGETE_[A-Z_]+)`", section,
                                     flags=re.M))
         assert documented == read
+        # and every earlier spelling the server still reads, named there
+        for new, old in names.SETTINGS.values():
+            assert f"`{old}`" in section, old
 
     def test_readmes_install_line_points_to_it(self):
+        """v0.14.1: README's "Start here" gives the one-click route before
+        the Terminal route, and links INSTALL.md's section for it."""
         text = (REPO / "README.md").read_text(encoding="utf-8")
-        install = _section(text, "## Installation")
-        assert install.index("### Claude Desktop: the one-click extension") \
-            < install.index("### The Terminal route: install from PyPI")
-        assert "INSTALL.md" in _section(
-            install, "### Claude Desktop: the one-click extension")
+        start = _section(text, "## Start here")
+        one_click = _section(start, "### Claude Desktop, with one click")
+        one_click = one_click[:one_click.index("**A first project.**")]
+        assert start.index("### Claude Desktop, with one click") \
+            < start.index("**Other assistants.**")
+        assert ("INSTALL.md#claude-desktop-the-one-click-extension-"
+                "recommended") in one_click
+        assert "double-click the file" in " ".join(one_click.split()).lower()
 
     def test_the_workspace_setting_is_named_where_the_folder_is(self):
-        for name in ("README.md", "PRIVACY.md", "INSTALL.md"):
-            assert "QUALCODER_MCP_WORKSPACE" in _flat(name), name
+        # v0.14.1: README names only the extension's folder, which
+        # needs no qualifier; the workspace paragraphs moved to TOOLS.md
+        for name in ("TOOLS.md", "PRIVACY.md", "INSTALL.md"):
+            assert "EXEGETE_WORKSPACE" in _flat(name), name
+        assert "Qualcoder MCP Projects" not in _flat("README.md")
         assert "QUALCODER_MCP_WORKSPACE" in _flat("CHANGELOG.md").split(
             "## [0.13")[0]
 
@@ -785,8 +811,8 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
     section, not per file: README named the setting elsewhere, which a
     per-file check would have taken as enough."""
 
-    QUALIFIERS = ("QUALCODER_MCP_WORKSPACE", "QualCoder projects",
-                  "unless the host")
+    QUALIFIERS = ("EXEGETE_WORKSPACE", "QUALCODER_MCP_WORKSPACE",
+                  "QualCoder projects", "unless the host")
 
     @staticmethod
     def _sections(text):
@@ -796,16 +822,18 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
         found = []
         for section in self._sections(text):
             flat = " ".join(section.split())
-            if "Qualcoder MCP Projects" in flat and not any(
-                    q in flat for q in self.QUALIFIERS):
+            # v0.14.1: the Terminal workspace's new name too
+            if any(folder in flat for folder in (
+                    "Qualcoder MCP Projects", "Documents/Exegete projects")) \
+                    and not any(q in flat for q in self.QUALIFIERS):
                 found.append(f"{name}: {flat[:60]}")
         return found
 
     def test_every_shipped_document(self):
         documents = sorted(p for p in REPO.glob("*.md")
                            if p.name != "CHANGELOG.md")
-        assert {"README.md", "AI_CODING_WORKFLOW.md", "INSTALL.md",
-                "PRIVACY.md"} <= {p.name for p in documents}
+        assert {"README.md", "TOOLS.md", "AI_CODING_WORKFLOW.md",
+                "INSTALL.md", "PRIVACY.md"} <= {p.name for p in documents}
         offenders = []
         for path in documents:
             offenders += self._offenders(
@@ -817,3 +845,5 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
                 "MCP\nProjects/`.\n\n## Other\n\nSet "
                 "QUALCODER_MCP_WORKSPACE.\n")
         assert len(self._offenders("x", text)) == 1
+        assert len(self._offenders("x", text.replace(
+            "Qualcoder MCP\nProjects", "Exegete\nprojects"))) == 1

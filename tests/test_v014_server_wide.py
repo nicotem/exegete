@@ -16,8 +16,8 @@ from pathlib import Path
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import read_project_pseudonyms
+import exegete.server as server
+from exegete.database import read_project_pseudonyms
 
 
 def host_session(drive):
@@ -330,7 +330,7 @@ class TestPseudonymsFileAdvice:
         payload = '[{"original": "André", "pseudonym": "Alex"}]'
         (tmp_path / "pseudonyms.json").write_bytes(payload.encode("cp1252"))
         monkeypatch.setattr(
-            "qualcoder_mcp.database.locale.getpreferredencoding",
+            "exegete.database.locale.getpreferredencoding",
             lambda do_setlocale=True: "UTF-8")
         with pytest.raises(ValueError) as excinfo:
             read_project_pseudonyms(tmp_path)
@@ -371,7 +371,7 @@ class TestPseudonymsFileAdvice:
 import ast
 import re
 
-import qualcoder_mcp
+import exegete
 
 # A snake_case word in running text; a path segment or an address part
 # (after / . : or -) is not a name.
@@ -465,7 +465,7 @@ def _served_texts_now():
                 prompt.description or ""
         for res in (await client.list_resources()).resources:
             texts[f"description of {res.uri}"] = res.description or ""
-            if str(res.uri).startswith("qualcoder://guidance/"):
+            if str(res.uri).startswith("exegete://guidance/"):
                 got = await client.read_resource(res.uri)
                 texts[f"resource {res.uri}"] = "\n".join(
                     c.text for c in got.contents)
@@ -507,9 +507,9 @@ class TestEveryNamedToolIsThere:
                     "get_case_info"):
             assert not any(old in text for text in texts.values()), old
         assert "get_case_code_matrix" in texts["prompt explore_case"]
-        assert "qualcoder://cases/list" in texts["prompt explore_case"]
+        assert "exegete://cases/list" in texts["prompt explore_case"]
         assert "get_coding_frequencies" in texts["prompt analyze_theme"]
-        assert "qualcoder://files/list" in texts["prompt summarize_project"]
+        assert "exegete://files/list" in texts["prompt summarize_project"]
 
     def test_core_marks_what_it_lacks_and_full_does_not(self):
         core, _ = served_texts("core")
@@ -518,7 +518,7 @@ class TestEveryNamedToolIsThere:
         assert ("explain_ai_coding_tools('methodology_vocabulary')"
                 + server.NOT_IN_THIS_TOOL_SET) in core["instructions"]
         assert ("propose_codes" + server.NOT_IN_THIS_TOOL_SET
-                in core["resource qualcoder://guidance/methods"])
+                in core["resource exegete://guidance/methods"])
         full, _ = served_texts("full")
         assert not any(server.NOT_IN_THIS_TOOL_SET in text
                        for text in full.values())
@@ -537,7 +537,7 @@ def _sendable_literals():
     can reach an answer: not a docstring, not a dictionary key or index,
     not an argument of a log call, and not the label
     `_raise_query_error` logs."""
-    package = Path(qualcoder_mcp.__file__).parent
+    package = Path(exegete.__file__).parent
     for path in sorted(package.glob("*.py")):
         tree_ = ast.parse(path.read_text(encoding="utf-8"))
         skip = set()
@@ -993,10 +993,13 @@ class TestTextsThatSentTheAssistantNowhere:
                 "public part (project_memo)") in text
 
     def test_readme_no_longer_says_a_journal_entry_is_updated(self):
-        readme = (Path(__file__).parent.parent / "README.md").read_text(
-            encoding="utf-8")
-        assert "Add or update a research journal entry" not in readme
-        assert "a name already in use is refused" in readme
+        # v0.14.1: the tool list moved from README.md to TOOLS.md
+        root = Path(__file__).parent.parent
+        for name in ("README.md", "TOOLS.md"):
+            text = (root / name).read_text(encoding="utf-8")
+            assert "Add or update a research journal entry" not in text
+        tools = (root / "TOOLS.md").read_text(encoding="utf-8")
+        assert "a name already in use is refused" in tools
 
 
 # ---------------------------------------------------------------------------
@@ -1225,7 +1228,7 @@ import os
 import time
 from datetime import datetime, timedelta
 
-from qualcoder_mcp.database import backup_time_from_name
+from exegete.database import backup_time_from_name
 
 
 def _backup_folder(parent, name, mtime):
@@ -1605,7 +1608,7 @@ class TestSessionFilesAfterPseudonymising:
             [suggesting, proposing, finished["reject"], finished["create"]])
         assert done["stale_sessions_with_work_to_apply"] == [proposing]
         note = [n for n in done["notes"] if "coding session file" in n]
-        assert len(note) == 1 and "~/.qualcoder_mcp/sessions/" in note[0]
+        assert len(note) == 1 and "~/.exegete/sessions/" in note[0]
         for session_id in (suggesting, proposing):
             stored = (server.session_manager.storage_dir
                       / f"session_{session_id}.json").read_text(
@@ -1627,7 +1630,7 @@ class TestSessionFilesAfterPseudonymising:
             in privacy
 
     def test_the_session_list_matches_every_form_of_the_path(self, tmp_path):
-        from qualcoder_mcp.sessions import SessionManager
+        from exegete.sessions import SessionManager
         folder = tmp_path / "P.qda"
         folder.mkdir()
         (folder / "data.qda").write_bytes(b"")
@@ -1694,9 +1697,9 @@ class TestHiddenCodersOnTheCodebook:
         self._project(tmp_path)
 
         async def drive(client):
-            codes = await client.read_resource("qualcoder://codes/list")
+            codes = await client.read_resource("exegete://codes/list")
             cats = await client.read_resource(
-                "qualcoder://categories/list")
+                "exegete://categories/list")
             code_id = [c for c in json.loads(codes.contents[0].text)
                        if c["name"] == "Alices code"][0]["id"]
             preview = json.loads(text_of(await client.call_tool(
@@ -1706,7 +1709,7 @@ class TestHiddenCodersOnTheCodebook:
                 "merge_codes", {"from_code_id": code_id, "into_code_id": 1,
                                 "preview_token":
                                     preview["preview_token"]})))
-            target = await client.read_resource("qualcoder://codes/1")
+            target = await client.read_resource("exegete://codes/1")
             return (json.loads(codes.contents[0].text),
                     json.loads(cats.contents[0].text), preview, done,
                     json.loads(target.contents[0].text))
@@ -1727,7 +1730,7 @@ class TestHiddenCodersOnTheCodebook:
                            .read_text(encoding="utf-8").split())
         assert ("That mask is a courtesy of the preview, not a guarantee"
                 in privacy)
-        assert "qualcoder://codes/list" in privacy
+        assert "exegete://codes/list" in privacy
         assert "[Merged from code: ..., Coder: ..., Merger date: ...]" in \
             privacy
         # fix rounds 1 and 2: the whole list, and the file view qualified
@@ -1763,8 +1766,8 @@ class TestHiddenCodersOnTheCodebook:
             view = json.loads(text_of(await client.call_tool(
                 "analyze_file_with_coding", {"file_id": 1})))
             found = {}
-            for uri in ("qualcoder://files/list", "qualcoder://cases/list",
-                        "qualcoder://journal"):
+            for uri in ("exegete://files/list", "exegete://cases/list",
+                        "exegete://journal"):
                 got = await client.read_resource(uri)
                 found[uri] = json.loads(got.contents[0].text)
             return view, found
@@ -1908,8 +1911,8 @@ class TestPromisesKeptOverEveryTool:
             for res in (await client.list_resources()).resources:
                 got = await client.read_resource(res.uri)
                 texts.extend(c.text for c in got.contents)
-            for uri in ("qualcoder://codes/1", "qualcoder://files/1",
-                        "qualcoder://cases/1"):
+            for uri in ("exegete://codes/1", "exegete://files/1",
+                        "exegete://cases/1"):
                 got = await client.read_resource(uri)
                 texts.extend(c.text for c in got.contents)
             return texts
@@ -2004,7 +2007,7 @@ class TestCoreAnswersAreMarked:
                     "segment_text": passage, "reasoning": "r"}]})
             search = await call("search_coded_text",
                                 {"query": "merge_codes"})
-            codes = await client.read_resource("qualcoder://codes/list")
+            codes = await client.read_resource("exegete://codes/list")
             return view, recorded, search, codes.contents[0].text
 
         view, recorded, search, codes = host_session(read)
@@ -2023,8 +2026,8 @@ def _core_reachable_texts():
     through the package), that names a tool core lacks, and that is not
     marked where it is written: passed to `_mark_unregistered`, or a
     constant every use of which is."""
-    import qualcoder_mcp
-    package = Path(qualcoder_mcp.__file__).parent
+    import exegete
+    package = Path(exegete.__file__).parent
     missing = set(server.ALL_TOOL_NAMES) - set(server.CORE_TOOLSET)
     word = re.compile(r"(?<![A-Za-z0-9_])(" + "|".join(
         sorted(missing, key=len, reverse=True)) + r")(?![A-Za-z0-9_])")
@@ -2270,7 +2273,7 @@ class TestOneProjectUnderTwoSpellings:
 
     def test_a_project_no_longer_on_disk_is_compared_by_its_path(
             self, tmp_path):
-        from qualcoder_mcp.sessions import SessionManager
+        from exegete.sessions import SessionManager
         gone = tmp_path / "Gone.qda"
         assert SessionManager.same_project(gone, gone / "data.qda")
         assert not SessionManager.same_project(gone,

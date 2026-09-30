@@ -6,6 +6,7 @@ it for its tools, without Claude Desktop.
     python scripts/smoke_desktop_extension.py PACKAGE.mcpb --into DIR
         [--uv PATH] [--set KEY=VALUE ...] [--expect-tools N|manifest]
         [--create NAME] [--offline-restart]
+        [--over OLD.mcpb [--emptied]]
 
 The steps are the ones Claude Desktop 2.9939.2 takes for an extension of
 the `uv` type, read from its own code: unpack the package into a folder
@@ -24,6 +25,14 @@ them. The caller chooses the home folder (set HOME, and USERPROFILE on
 Windows, before running this); uv, Python and the packages are fetched
 there as they would be on a tester's computer. It prints what it saw as
 JSON and exits 1 when an expectation fails.
+
+--over OLD.mcpb (v0.14.1, the rename) installs an earlier package first
+and then this one over it, into the same folder, its environment left
+in place, as an update that does not empty the folder would; without
+it, or with --emptied after it, the folder is made afresh, which is what
+the app most probably does on an update (it logs "preserving settings
+and removing old version"). Either way the two must share the folder,
+that is the identifier.
 """
 
 import argparse
@@ -133,14 +142,16 @@ async def ask(uv: str, config: dict, folder: Path, create: str = None,
     return seen
 
 
-def install(package: Path, into: Path, uv: str) -> tuple:
-    """Unpack and `uv sync --quiet`, as the app does; (manifest, folder)."""
+def install(package: Path, into: Path, uv: str, keep: bool = False) -> tuple:
+    """Unpack and `uv sync --quiet`, as the app does; (manifest, folder).
+    With `keep`, the folder and its environment are left as they are and
+    the package is unpacked over them."""
     with zipfile.ZipFile(package) as z:
         manifest = json.loads(z.read("manifest.json"))
         folder = into / "Claude Extensions" / extension_id(manifest)
-        if folder.exists():
+        if folder.exists() and not keep:
             shutil.rmtree(folder)
-        folder.mkdir(parents=True)
+        folder.mkdir(parents=True, exist_ok=keep)
         for name in z.namelist():
             target = (folder / name).resolve()
             if not target.is_relative_to(folder.resolve()):
@@ -165,11 +176,22 @@ def main(argv=None) -> int:
                         help="create a project with the default folder")
     parser.add_argument("--offline-restart", action="store_true",
                         help="start it a second time with uv offline")
+    parser.add_argument("--over", type=Path, metavar="OLD.mcpb",
+                        help="install this earlier package first, then the "
+                             "package over it, keeping its environment")
+    parser.add_argument("--emptied", action="store_true",
+                        help="with --over: empty the folder before the "
+                             "update, environment and all")
     args = parser.parse_args(argv)
     settings = dict(item.split("=", 1) for item in args.set)
 
+    earlier = None
+    if args.over is not None:
+        earlier, _ = install(args.over.resolve(), args.into.resolve(),
+                             args.uv)
     manifest, folder = install(args.package.resolve(), args.into.resolve(),
-                               args.uv)
+                               args.uv,
+                               keep=args.over is not None and not args.emptied)
     config = launch_config(manifest, folder, settings)
     seen = {"extension_folder": folder.name, "command_args": config["args"],
             "env": config.get("env", {}),
@@ -177,6 +199,12 @@ def main(argv=None) -> int:
             .read_text().strip()}
     seen.update(asyncio.run(ask(args.uv, config, folder, args.create)))
     failures = []
+    if earlier is not None:
+        seen["updated_from"] = earlier.get("version")
+        if extension_id(earlier) != extension_id(manifest):
+            failures.append(
+                f"the update is another extension: "
+                f"{extension_id(earlier)} then {extension_id(manifest)}")
     if args.expect_tools == "manifest":
         listed = sorted(t["name"] for t in manifest.get("tools", []))
         if seen["tool_names"] != listed:

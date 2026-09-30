@@ -17,9 +17,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp.sessions import SessionManager
+from exegete.sessions import SessionManager
 from test_v17_support import make_project
 
 REPO = Path(__file__).resolve().parent.parent
@@ -184,7 +184,7 @@ class TestSavedGraphsAfterACategoryGoes:
 # 2. PDF guard rails
 # ===========================================================================
 
-from qualcoder_mcp import database as dbmod  # noqa: E402
+from exegete import database as dbmod  # noqa: E402
 
 ARTICLE = ("The things in themselves are what first appear to reason. "
            "Hume tells us that reason is the slave of the passions.")
@@ -455,13 +455,13 @@ def _case_with_links(folder: Path) -> None:
 
 
 class TestTheCaseRead:
-    """Fix round 1, the first major: `qualcoder://cases/{id}` returned
+    """Fix round 1, the first major: `exegete://cases/{id}` returned
     a stored PDF file's bytes up to its first NUL, or whole without one."""
 
     def _read(self, case_id=1):
         import asyncio
         contents = asyncio.run(server.mcp.read_resource(
-            f"qualcoder://cases/{case_id}"))
+            f"exegete://cases/{case_id}"))
         return "".join(item.content for item in contents)
 
     def test_a_stored_pdf_file_gives_no_text_and_is_named(self, pdf_project):
@@ -531,7 +531,7 @@ class TestTheCaseRead:
         assert "Participant" not in text
 
     def test_the_database_refuses_the_link_too(self, pdf_project):
-        from qualcoder_mcp.database import QualcoderDatabase
+        from exegete.database import QualcoderDatabase
         _case_with_links(pdf_project)
         wdb = QualcoderDatabase(str(pdf_project), read_only=False)
         try:
@@ -650,7 +650,7 @@ class TestRegionCodingsDisclosed:
     def test_a_hidden_coders_areas_are_not_counted(self, tmp_path):
         """On a project that hides a coder, the count is the visible
         coders' own, as the read's is."""
-        from qualcoder_mcp import new_project
+        from exegete import new_project
         folder = tmp_path / "Hidden.qda"
         new_project.write_project(folder, new_project.creation_statements(
             "carol", new_project.about_line("0.14.0"),
@@ -768,7 +768,7 @@ class TestAConfiguredProjectAtFirstUse:
         env["QUALCODER_PROJECT_PATH"] = str(folder)
         env.pop("QUALCODER_MCP_TOOLSET", None)
         params = StdioServerParameters(
-            command=sys.executable, args=["-m", "qualcoder_mcp.server"],
+            command=sys.executable, args=["-m", "exegete.server"],
             env=env)
 
         async def drive():
@@ -789,7 +789,7 @@ class TestAConfiguredProjectAtFirstUse:
 # ===========================================================================
 
 import subprocess  # noqa: E402
-from qualcoder_mcp.database import (backup_project,  # noqa: E402
+from exegete.database import (backup_project,  # noqa: E402
                                     copy_project_to_workspace,
                                     DatabaseLockedError)
 
@@ -875,7 +875,7 @@ class TestBackupsMadeConsistently:
     def test_a_database_kept_locked_refuses_the_write(self, opened,
                                                       monkeypatch):
         """Past the wait, no backup and so no write: said as a lock."""
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         monkeypatch.setattr(database, "BACKUP_BUSY_SECONDS", 0.2)
         folder = opened("v17")
         server.select_project(str(folder))
@@ -986,7 +986,8 @@ class TestBackupsMadeConsistently:
             b"chat"
         assert not (backup / "ai_data" / "search.sqlite").exists()
         assert not (backup / "project_in_use.lock").exists()
-        assert (backup / "qualcoder_mcp.json").exists()
+        # the AI coder name file (exegete.json from v0.14.1)
+        assert (backup / "exegete.json").exists()
 
 
 def _plant_backup(folder: Path, suffix: str, side=()):
@@ -1057,7 +1058,8 @@ class TestTheSharedNameCaveat:
         return _flat(next(t.description for t in tools
                           if t.name == "pseudonymise_source"))
 
-    @pytest.mark.parametrize("where", ["description", "README.md",
+    # v0.14.1: README's tool list moved to TOOLS.md
+    @pytest.mark.parametrize("where", ["description", "TOOLS.md",
                                        "PRIVACY.md", "CHANGELOG.md"])
     def test_the_caveat_and_the_safe_route(self, where):
         text = (self._description() if where == "description" else
@@ -1100,15 +1102,18 @@ class TestTheDocumentsSayIt:
             assert phrase in section, phrase
 
     def test_the_readme(self):
-        readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
+        """v0.14.1: README's tool list and conventions moved to TOOLS.md,
+        and its troubleshooting paragraph to INSTALL.md."""
+        readme = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         for phrase in ("the category's own node in QualCoder's saved graphs",
                        "files_refused", "codings_not_shown",
                        "codings_not_counted", "marked unclean",
                        "an unclean backup is refused",
-                       "copied with SQLite's own online backup",
-                       "a configured project is used by whichever tool "
-                       "comes first"):
+                       "copied with SQLite's own online backup"):
             assert phrase in readme, phrase
+        install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
+        assert ("a configured project is used by whichever tool comes "
+                "first") in install
 
     def test_privacy_and_install(self, tmp_path, monkeypatch, capsys):
         privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
@@ -1119,16 +1124,17 @@ class TestTheDocumentsSayIt:
         install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
         assert "The project is opened by whichever tool comes first" in \
             install
-        assert "Error: the project set in QUALCODER_PROJECT_PATH was not " \
+        assert "Error: the project set in EXEGETE_PROJECT_PATH was not " \
                "found" in install
-        # and that is what the server prints
-        monkeypatch.setenv("QUALCODER_PROJECT_PATH",
+        # and that is what the server prints (v0.14.1: naming the
+        # spelling the configuration used)
+        monkeypatch.setenv("EXEGETE_PROJECT_PATH",
                            str(tmp_path / "gone.qda"))
         monkeypatch.delenv("QUALCODER_MCP_TOOLSET", raising=False)
         with pytest.raises(SystemExit):
             server.main([])
         printed = " ".join(capsys.readouterr().err.split())
-        assert "Error: the project set in QUALCODER_PROJECT_PATH was not " \
+        assert "Error: the project set in EXEGETE_PROJECT_PATH was not " \
                "found; check the path in the host's configuration." in \
             printed
 
@@ -1216,7 +1222,7 @@ class TestALinkedDatabase:
         file. A byte copy took them (a state never committed, restored
         silently); the online backup waits for the lock and, past the
         wait, takes no backup at all."""
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         monkeypatch.setattr(database, "BACKUP_BUSY_SECONDS", 0.3)
         folder = opened("v17")
         target = _link_database(folder)
@@ -1295,7 +1301,7 @@ class TestTheSmallerFixes:
 
     def test_the_database_copied_as_a_file_is_said(self, opened, tmp_path,
                                                    monkeypatch):
-        import qualcoder_mcp.database as database
+        import exegete.database as database
         real = database._copy_database
 
         def as_file(source, dest, report=None):
@@ -1416,7 +1422,7 @@ class TestTheFixRoundDocuments:
                           if t.name == "copy_project_to_workspace"))
         assert "QualCoder's own saves wait while it runs" in copy
         for name, phrase in (
-                ("README.md", "QualCoder's own saves wait for it"),
+                ("TOOLS.md", "QualCoder's own saves wait for it"),
                 ("PRIVACY.md", "QualCoder's own saves wait for it"),
                 ("CHANGELOG.md", "QualCoder's own saves wait")):
             text = _flat((REPO / name).read_text(encoding="utf-8"))
@@ -1430,7 +1436,7 @@ class TestTheFixRoundDocuments:
         assert "and by link_file_to_case" in changelog
         assert "a real text layer that quotes a PDF header there is " \
                "taken for one" in changelog
-        readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
+        readme = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         assert "QualCoder's own count when no coder is hidden" in readme
         privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
         assert "Copy the whole project folder by hand, with QualCoder " \

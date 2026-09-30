@@ -38,10 +38,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import preview_tokens as pt
-from qualcoder_mcp import database as dbmod
-from qualcoder_mcp.database import QualcoderDatabase
+import exegete.server as server
+from exegete import preview_tokens as pt
+from exegete import database as dbmod
+from exegete.database import QualcoderDatabase
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     TEXT, add_coding, execute_from, preview_of, project, query)
 
@@ -499,7 +499,7 @@ class TestTheQueryHelperAndTheRoutesWithNoTrigger:
         _ddl(project, _not_utf8("code_name", "memo", "cid = 1"))
         caplog.set_level(logging.DEBUG)
         contents = asyncio.run(server.mcp.read_resource(
-            "qualcoder://codes/list"))
+            "exegete://codes/list"))
         text = "".join(item.content for item in contents)
         _assert_no_leak(caplog, text)
         assert json.loads(text) == {"error": server.DB_UNAVAILABLE_ERROR}
@@ -648,7 +648,7 @@ SAFE_CALLS = {"sqlite_error_label", "error_label", "error_text",
 SAFE_ATTRIBUTES = {"sqlite_errorname", "sqlite_errorcode", "errno",
                    "__class__"}
 SQLITE_CAPABLE = ("sqlite3.", "Exception", "BaseException")
-SOURCE = Path(__file__).resolve().parent.parent / "src" / "qualcoder_mcp"
+SOURCE = Path(__file__).resolve().parent.parent / "src" / "exegete"
 
 
 def _unsafe_uses(tree, capable=SQLITE_CAPABLE):
@@ -726,7 +726,7 @@ class TestTheDocumentsSayTheRule:
         assert ("Since v0.14 neither carries SQLite's message: an error "
                 "from the database is reported by its kind and SQLite's "
                 "short name for it") in privacy
-        assert ("The same rule holds for the resources (the `qualcoder://` "
+        assert ("The same rule holds for the resources (the `exegete://` "
                 "addresses)") in privacy
 
     def test_install_no_longer_says_the_log_quotes_a_note(self):
@@ -836,7 +836,7 @@ class TestNoNamesOrPathsInTheLog:
         assert MARK not in printed.err + printed.out
         assert "QUALCODER_PROJECT_PATH was not found" in printed.err
         assert _log_names(caplog) == []
-        assert ("Starting Qualcoder MCP server with the project set in "
+        assert ("Starting Exegete with the project set in "
                 "QUALCODER_PROJECT_PATH") in _logged(caplog)
 
     def _backups(self, marked):
@@ -1213,12 +1213,12 @@ class TestAnArrivalInQualCodersOwnOrder:
 # for in every line (QA F1, Security secB-1, and their refuters' scenarios).
 
 CONCRETE_RESOURCES = [
-    "qualcoder://project/info", "qualcoder://codes/list",
-    "qualcoder://categories/list", "qualcoder://files/list",
-    "qualcoder://cases/list", "qualcoder://journal",
-    "qualcoder://guidance/methods"]
-TEMPLATE_RESOURCES = ["qualcoder://codes/1", "qualcoder://files/1",
-                      "qualcoder://cases/1"]
+    "exegete://project/info", "exegete://codes/list",
+    "exegete://categories/list", "exegete://files/list",
+    "exegete://cases/list", "exegete://journal",
+    "exegete://guidance/methods"]
+TEMPLATE_RESOURCES = ["exegete://codes/1", "exegete://files/1",
+                      "exegete://cases/1"]
 
 
 class _Wire:
@@ -1240,8 +1240,11 @@ class _Wire:
         import os
         env = {k: v for k, v in os.environ.items()
                if k != "QUALCODER_PROJECT_PATH"}
+        # The home alone keeps the child's state folder here: the server
+        # finds it through HOME (USERPROFILE on Windows) and reads no
+        # variable naming it (v0.14.1: QUALCODER_MCP_STATE_HOME, once set
+        # here, was never read by anything).
         env.update(HOME=str(self.home), USERPROFILE=str(self.home),
-                   QUALCODER_MCP_STATE_HOME=str(self.home / ".qualcoder_mcp"),
                    PYTHONPATH=str(Path(server.__file__).parents[1]),
                    PYTHONDONTWRITEBYTECODE="1")
         if configured is not None:
@@ -1259,7 +1262,7 @@ class _Wire:
         self.sessions += 1
         errfile = self.root / f"stderr-{self.sessions}.log"
         params = StdioServerParameters(
-            command=sys.executable, args=["-B", "-m", "qualcoder_mcp.server"],
+            command=sys.executable, args=["-B", "-m", "exegete.server"],
             env=self.env(configured))
 
         async def session():
@@ -1358,7 +1361,7 @@ class TestResourcesLogNothingOverTheWire:
                  ("tool", "select_project",
                   {"project_path": str(wire.project.parent
                                        / f"{MARK} typo.qda")}),
-                 ("read", "qualcoder://codes/list", None)]
+                 ("read", "exegete://codes/list", None)]
         answers, stderr = wire.run(
             steps, during=lambda i: held() if i == 2
             else contextlib.nullcontext())
@@ -1437,7 +1440,7 @@ class TestTheSchemaVersionInTheLog:
 class TestPseudonymsJsonErrorsAreAnsweredByKind:
 
     def _unreadable(self, project, monkeypatch, error):
-        from qualcoder_mcp import database as database_module
+        from exegete import database as database_module
         (project / "pseudonyms.json").write_text(
             '[{"original": "Thomas", "pseudonym": "Alex"}]',
             encoding="utf-8")

@@ -35,7 +35,7 @@ from hypothesis import HealthCheck, Phase, given, settings, strategies as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from qualcoder_mcp import pseudonymise as P
+from exegete import pseudonymise as P
 
 
 # =============================================================================
@@ -2288,7 +2288,7 @@ class TestTheCharacterSweepIsTheGeneratorByteForByte:
         probe = (
             "import sys\n"
             f"sys.path.insert(0, {str(src)!r})\n"
-            "import qualcoder_mcp.pseudonymise as P\n"
+            "import exegete.pseudonymise as P\n"
             "print(P._UNSEEN_TABLE is None)\n"
             "P._reader_sees('Thomas_interview.txt, plain ASCII')\n"
             "P._strip_unseen('Mary Ann')\n"
@@ -3701,8 +3701,8 @@ class TestTheFileTextCountStaysCheap:
         """`size` characters of the repository's documents, curly-quoted
         (the lanes' corpus); the fixture's names taken out."""
         base = ""
-        for name in ("README.md", "PRIVACY.md", "CHANGELOG.md",
-                     "INSTALL.md"):
+        for name in ("README.md", "TOOLS.md", "PRIVACY.md",
+                     "CHANGELOG.md", "INSTALL.md"):
             base += (Path(__file__).resolve().parents[1] / name).read_text(
                 encoding="utf-8")
         base = base.encode("ascii", "ignore").decode("ascii")

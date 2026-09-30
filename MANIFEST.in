@@ -2,7 +2,7 @@
 # `tests/test*.py` by its optional glob, but NOT tests/conftest.py or
 # tests/track5_helpers.py, which every one of those modules needs:
 # conftest holds the sandbox fixtures that keep a run out of
-# ~/.qualcoder_mcp and the real workspace, and track5_helpers holds the
+# ~/.exegete and the real workspace, and track5_helpers holds the
 # project builders and the REAL_WORKSPACE / REAL_STATE_HOME guards. The
 # result was an sdist carrying a suite that cannot run, and whose test
 # bodies are exactly the ones whose isolation is missing.
@@ -16,3 +16,10 @@
 # MANIFEST.in directives are applied AFTER add_defaults, so this removes
 # what the default glob added (fix round 4).
 prune tests
+
+# v0.14.1, the rename: the old name's stand-in (src/qualcoder_mcp) ships
+# only in the old name's own package (packaging/pypi-old-name), never in
+# the exegete sdist or wheel (pyproject.toml says why), and that package's
+# folder is not part of this sdist either.
+prune src/qualcoder_mcp
+prune packaging/pypi-old-name

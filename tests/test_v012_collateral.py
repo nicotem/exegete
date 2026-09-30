@@ -21,10 +21,10 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.project_settings import (DEFAULT_AI_CODER_NAME,
+from exegete.database import QualcoderDatabase
+from exegete.project_settings import (DEFAULT_AI_CODER_NAME,
                                             KNOWN_AI_ASSISTANT_OWNER)
 
 

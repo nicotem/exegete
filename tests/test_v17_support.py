@@ -20,12 +20,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
 from track5_helpers import write_fixture_sidecar
-from qualcoder_mcp.database import (QualcoderDatabase, UnsupportedSchemaError,
+from exegete.database import (QualcoderDatabase, UnsupportedSchemaError,
                                     VERIFIED_MASTER_COMMIT)
-from qualcoder_mcp.sessions import SessionManager
+from exegete.sessions import SessionManager
 
 FULLTEXT = ("This is interview text. I feel stressed about deadlines. "
             "I cope by exercising.")
@@ -211,7 +211,7 @@ class TestT1ProbeGateMatrix:
         out = json.loads(server.set_memo("code", 1, "x", create_backup=False))
         assert "v18" in out["error"]
         assert VERIFIED_MASTER_COMMIT in out["error"]
-        assert "QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA" in out["error"]
+        assert "EXEGETE_ALLOW_UNKNOWN_SCHEMA" in out["error"]
 
     def test_v18_allowed_with_override_and_warned(self, v17_env,
                                                   monkeypatch):

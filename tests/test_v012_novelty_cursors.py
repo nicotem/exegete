@@ -25,10 +25,10 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp import cursors
-from qualcoder_mcp.database import QualcoderDatabase
+from exegete import cursors
+from exegete.database import QualcoderDatabase
 
 
 def _con(project_path):
@@ -346,7 +346,7 @@ class TestValidationTexts:
         assert out["error"] == (
             "exclude_code_ids contains unknown code id(s): 41, 42. Use "
             "get_coding_frequencies, which lists every code with its id, "
-            "or the qualcoder://codes/list resource.")
+            "or the exegete://codes/list resource.")
 
     @pytest.mark.parametrize("bad", [["1"], [1.5], [True], [[1]], [0], [-3],
                                      "1,2"])
@@ -384,7 +384,7 @@ class TestValidationTexts:
         # pattern, so the resource first and a name search after it
         assert out["error"] == (
             "file_ids contains unknown file id(s): 9. The "
-            "qualcoder://files/list resource lists every file with its id; "
+            "exegete://files/list resource lists every file with its id; "
             "without it, search_files with part of the file's name as the "
             "pattern finds it (it searches names by default).")
 
@@ -726,7 +726,7 @@ class TestRestartResilience:
 
         script = (
             "import json, sys\n"
-            "import qualcoder_mcp.server as server\n"
+            "import exegete.server as server\n"
             "server.select_project(sys.argv[1])\n"
             "page = json.loads(server.get_coded_segments("
             "1, limit=3, strategy='sequential', cursor=sys.argv[2]))\n"
@@ -1052,7 +1052,7 @@ class TestImplementationDiscipline:
         """D4 3.2.6: keyset predicates are expanded lexicographic form, so
         no SQLite version floor is introduced and no build can order
         differently."""
-        from qualcoder_mcp import database
+        from exegete import database
         text = Path(database.__file__).read_text(encoding="utf-8")
         assert "ROW_NUMBER" not in text.upper()
         assert "OVER (" not in text.upper()

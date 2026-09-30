@@ -1,13 +1,13 @@
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
       "args": [
         "-m",
-        "qualcoder_mcp.server"
+        "exegete.server"
       ],
       "env": {
-        "QUALCODER_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
       }
     }
   }

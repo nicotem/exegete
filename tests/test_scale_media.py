@@ -64,10 +64,10 @@ def _gen_dir():
 
 import track6_build as tb  # noqa: E402
 
-import qualcoder_mcp.server as server  # noqa: E402
+import exegete.server as server  # noqa: E402
 import track5_helpers as H
-from qualcoder_mcp.database import QualcoderDatabase  # noqa: E402
-from qualcoder_mcp.sessions import SessionManager, AICodingSession, CodingSuggestion  # noqa: E402
+from exegete.database import QualcoderDatabase  # noqa: E402
+from exegete.sessions import SessionManager, AICodingSession, CodingSuggestion  # noqa: E402
 
 GIANT = bool(os.environ.get("TRACK6_GIANT"))
 SLOW_THRESHOLD_MS = 1000.0  # mission: flag anything > ~1s

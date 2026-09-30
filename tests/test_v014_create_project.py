@@ -22,9 +22,9 @@ from hypothesis import given, settings, strategies as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import database, new_project
-from qualcoder_mcp.database import file_name_problem
+import exegete.server as server
+from exegete import database, new_project
+from exegete.database import file_name_problem
 
 
 @pytest.fixture(autouse=True)
@@ -180,7 +180,7 @@ class TestWhere:
         assert "`directory` is empty" in refused(create("X", "  "))
 
     def test_not_inside_the_state_folder(self):
-        from qualcoder_mcp import preview_tokens
+        from exegete import preview_tokens
         state = Path(preview_tokens.STATE_HOME)
         state.mkdir(parents=True, exist_ok=True)
         text = refused(create("X", state))
@@ -361,7 +361,7 @@ class TestPathLength:
         answer = create("Long", target)
         assert answer["created"] is True
         assert any("travel better" in w for w in answer["warnings"])
-        typical = Path("/Users/researcher/Documents/Qualcoder MCP Projects"
+        typical = Path("/Users/researcher/Documents/Exegete projects"
                        "/Interview study.qda")
         assert new_project.long_path_warning(typical) is None
         assert new_project.file_name_room(typical) >= \
@@ -515,8 +515,8 @@ class TestTheAiCoderNameSetter:
             server.SPEAKER_SYSTEM_CODER))
         assert "speaker coder" in answer["error"]
         assert "Nothing was changed" in answer["error"]
-        assert not (Path(server.current_project_path) /
-                    "qualcoder_mcp.json").exists()
+        for name in ("exegete.json", "qualcoder_mcp.json"):
+            assert not (Path(server.current_project_path) / name).exists()
 
 
 # ---------------------------------------------------------------------------
@@ -755,7 +755,7 @@ class TestFailures:
 _SPILL = """
 import os, sqlite3, sys
 sys.path.insert(0, {src!r})
-from qualcoder_mcp import new_project as n
+from exegete import new_project as n
 target = sys.argv[1]
 os.mkdir(target)
 for name in n.SUBFOLDERS:
@@ -1310,7 +1310,7 @@ class TestTheFolderGuardsInFixRound1:
 
     def test_the_state_folder_in_another_letter_case(self):
         """Security 3: compared by identity, not spelling."""
-        from qualcoder_mcp import preview_tokens
+        from exegete import preview_tokens
         state = Path(preview_tokens.STATE_HOME)
         (state / "sessions").mkdir(parents=True, exist_ok=True)
         variant = state.parent / state.name.upper()

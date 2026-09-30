@@ -18,9 +18,9 @@ import warnings
 import pytest
 
 import track5_helpers as H
-from qualcoder_mcp import database
+from exegete import database
 
-PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "src" / "qualcoder_mcp"
+PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "src" / "exegete"
 
 
 class TestNothingIsWrittenOutsideTheSandbox:
@@ -123,12 +123,12 @@ class TestNothingIsWrittenOutsideTheSandbox:
         resolved = database.default_workspace().resolve()
         assert resolved.is_relative_to(tmp_path.resolve())
         assert not resolved.is_relative_to(H.REAL_WORKSPACE)
-        import qualcoder_mcp.server as _server
-        assert not pathlib.Path(
-            _server.session_manager.storage_dir).is_relative_to(
-                H.REAL_STATE_HOME)
-        assert not pathlib.Path(_server._MRU_FILE).is_relative_to(
-            H.REAL_STATE_HOME)
+        import exegete.server as _server
+        for real in (H.REAL_STATE_HOME, H.REAL_OLD_STATE_HOME):
+            assert not pathlib.Path(
+                _server.session_manager.storage_dir).is_relative_to(real)
+            assert not pathlib.Path(_server._mru_file()).is_relative_to(
+                real)
 
 
 class TestTheDefaultWorkspaceIsResolvedWhenAsked:
@@ -158,13 +158,13 @@ class TestTheDefaultWorkspaceIsResolvedWhenAsked:
         elsewhere.mkdir()
         monkeypatch.setenv("HOME", str(elsewhere))
         monkeypatch.setenv("USERPROFILE", str(elsewhere))
-        expected = elsewhere / "Documents" / "Qualcoder MCP Projects"
+        expected = elsewhere / "Documents" / "Exegete projects"
         assert database.default_workspace().resolve() == expected.resolve()
         # And it follows the environment back: an answer cached on the
         # first call would fail here, as the import-time constant did.
         monkeypatch.undo()
         sandbox_home = tmp_path / "qc_sandbox_home" / "Documents" / \
-            "Qualcoder MCP Projects"
+            "Exegete projects"
         assert database.default_workspace().resolve() == \
             sandbox_home.resolve()
 
@@ -178,7 +178,7 @@ class TestTheDefaultWorkspaceIsResolvedWhenAsked:
         # Through the registered tool as well, which is the route the
         # suite's whole-registry sweeps take with production defaults.
         import json
-        import qualcoder_mcp.server as _server
+        import exegete.server as _server
         out = json.loads(_server.copy_project_to_workspace(qualcoder_db_path))
         assert out["success"] is True
         assert pathlib.Path(out["workspace_copy"]).resolve().is_relative_to(
@@ -193,19 +193,27 @@ class TestTheDefaultWorkspaceIsResolvedWhenAsked:
         so a constant redirected somewhere that is neither the sandbox
         nor the real folder is reported too.
         """
-        import qualcoder_mcp.server as _server
-        from qualcoder_mcp import preview_tokens
+        import exegete.server as _server
+        from exegete import preview_tokens, state_folder
         sandbox = tmp_path.resolve()
         bindings = {
             "Path.home()": pathlib.Path.home(),
             "database.default_workspace()": database.default_workspace(),
             "server._MRU_FILE": _server._MRU_FILE,
+            "server._mru_file()": _server._mru_file(),
             "preview_tokens.STATE_HOME": preview_tokens.STATE_HOME,
             "preview_tokens.state_home()": preview_tokens.state_home(),
+            # v0.14.1: the folder the state folder was moved from, which
+            # the guards refuse, and the two the move works on
+            "preview_tokens.OLD_STATE_HOME": preview_tokens.OLD_STATE_HOME,
+            "preview_tokens.old_state_home()":
+                preview_tokens.old_state_home(),
+            "state_folder.new_path()": state_folder.new_path(),
+            "state_folder.old_path()": state_folder.old_path(),
             "server.session_manager.storage_dir":
                 _server.session_manager.storage_dir,
         }
-        assert len(bindings) >= 6          # the walk is not empty
+        assert len(bindings) >= 11         # the walk is not empty
         outside = {name: str(path) for name, path in bindings.items()
                    if not pathlib.Path(path).resolve().is_relative_to(
                        sandbox)}
@@ -360,13 +368,13 @@ class TestTheSourceCompilesWithoutWarnings:
             # which arrives as a DeprecationWarning the import machinery
             # owns rather than our module.
             "warnings.simplefilter('ignore')\n"
-            "warnings.filterwarnings('error', module=r'qualcoder_mcp.*')\n"
+            "warnings.filterwarnings('error', module=r'exegete.*')\n"
             "warnings.filterwarnings('error', category=SyntaxWarning)\n"
             "warnings.filterwarnings('error', "
             "message='invalid escape sequence')\n"
-            "import qualcoder_mcp\n"
-            "for info in pkgutil.iter_modules(qualcoder_mcp.__path__):\n"
-            "    importlib.import_module('qualcoder_mcp.' + info.name)\n"
+            "import exegete\n"
+            "for info in pkgutil.iter_modules(exegete.__path__):\n"
+            "    importlib.import_module('exegete.' + info.name)\n"
         )
         env = dict(os.environ)
         env["PYTHONPYCACHEPREFIX"] = str(tmp_path / "pycache")
@@ -821,7 +829,7 @@ class TestNoFixtureBuildsAProjectQualCoderCannotMake:
     ALLOWED = {"test_qc40_visibility.py", "test_v012_ai_coder_setting.py"}
 
     def test_the_stock_fixture_declares_nothing(self, setup_server):
-        import qualcoder_mcp.server as server_module
+        import exegete.server as server_module
         caps = server_module.db.capabilities
         assert caps.visibility_declared() is False
         assert caps.visibility_incomplete is False

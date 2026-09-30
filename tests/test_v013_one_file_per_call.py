@@ -24,8 +24,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import QualcoderDatabase
+import exegete.server as server
+from exegete.database import QualcoderDatabase
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     MAPPING, TEXT, _house_rules, backups, call, execute_from, preview_of,
     project, query)
@@ -205,7 +205,7 @@ REFUSALS = [
      "there is nothing to rewrite."),
     (999, "unknown_file_id",
      "file_id 999 is not a file in this project. The "
-     "qualcoder://files/list resource lists every file with its id; "
+     "exegete://files/list resource lists every file with its id; "
      "without it, search_files with part of the file's name as the "
      "pattern finds it (it searches names by default)."),
 ]

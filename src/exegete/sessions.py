@@ -764,15 +764,33 @@ class SessionManager:
         r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     )
 
-    def __init__(self, storage_dir: str = "~/.qualcoder_mcp/sessions"):
+    def __init__(self, storage_dir: Optional[str] = None):
         # Constructing a manager must not touch the disk: the server
-        # builds one at import time, and `qualcoder-mcp --version` would
+        # builds one at import time, and `exegete --version` would
         # otherwise create the storage directory before it had even read
         # its own command line (v0.12 fix round 1, F16). The directory is
         # created on the first save; every read path copes with its
         # absence (a glob over a missing directory yields nothing).
-        self.storage_dir = Path(storage_dir).expanduser()
+        #
+        # With no folder given (the server's own manager), the folder is
+        # `sessions` in the state folder, chosen at CALL time (v0.14.1):
+        # the state folder moves from ~/.qualcoder_mcp to ~/.exegete at
+        # the first real start, after this manager was built, and a run
+        # whose move could not be made uses the old one for everything.
+        self._storage_dir = (None if storage_dir is None
+                             else Path(storage_dir).expanduser())
         logger.debug("SessionManager storage ready")
+
+    @property
+    def storage_dir(self) -> Path:
+        if self._storage_dir is not None:
+            return self._storage_dir
+        from .preview_tokens import state_home       # no import cycle
+        return state_home() / "sessions"
+
+    @storage_dir.setter
+    def storage_dir(self, value) -> None:
+        self._storage_dir = None if value is None else Path(value)
 
     def _ensure_storage_dir(self) -> None:
         """Create the storage directory; called before every write."""

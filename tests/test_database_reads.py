@@ -16,7 +16,7 @@ from datetime import datetime
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from qualcoder_mcp.database import (
+from exegete.database import (
     QualcoderDatabase,
     validate_qda_path,
     validate_limit,

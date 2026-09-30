@@ -21,9 +21,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import new_project
-from qualcoder_mcp.database import (NO_PROJECT_ROW_MESSAGE,
+import exegete.server as server
+from exegete import new_project
+from exegete.database import (NO_PROJECT_ROW_MESSAGE,
                                     QualcoderDatabase,
                                     UnsupportedSchemaError)
 from track5_helpers import write_fixture_sidecar
@@ -289,8 +289,8 @@ class TestTheDocumentsInFixRound1:
     def test_the_chat_history_sentence(self, tmp_path):
         """Both builds CREATE the file on a first open and change it when
         the chat is used; a later open leaves it (QA m1)."""
-        from qualcoder_mcp.database import qualcoder_gui_signals
-        import qualcoder_mcp.database as database
+        from exegete.database import qualcoder_gui_signals
+        import exegete.database as database
         folder = tmp_path / "p.qda"
         (folder / "ai_data").mkdir(parents=True)
         (folder / "ai_data" / "chat_history.sqlite").write_bytes(b"c")
@@ -315,9 +315,11 @@ class TestTheDocumentsInFixRound1:
         assert "records the new project as the last-used one" in privacy
 
     def test_the_readme_says_what_a_failure_leaves(self):
-        """QA m3, Security 6: nothing committed, and the leftover named."""
-        readme = _read_flat("README.md")
-        assert "nothing half-made is left" not in readme
+        """QA m3, Security 6: nothing committed, and the leftover named.
+        (v0.14.1: the section moved to TOOLS.md.)"""
+        readme = _read_flat("TOOLS.md")
+        for name in ("README.md", "TOOLS.md"):
+            assert "nothing half-made is left" not in _read_flat(name)
         assert "nothing committed is left" in readme
         assert "is recognised as such next time" in readme
         assert "iCloud's \"Desktop & Documents Folders\" switched on" in \

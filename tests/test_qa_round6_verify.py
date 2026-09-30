@@ -20,9 +20,9 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp.database import QualcoderDatabase, validate_qda_path
+from exegete.database import QualcoderDatabase, validate_qda_path
 
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."
@@ -423,20 +423,20 @@ class TestGuidanceEnvelope:
 class TestVersionHandshake:
 
     def test_version_matches_package_metadata(self):
-        import qualcoder_mcp
+        import exegete
         from importlib import metadata
-        pkg = metadata.version("qualcoder-mcp")
-        assert qualcoder_mcp.__version__ == pkg
-        # 0.14.0-alpha family (canary for a stale editable install; the
+        pkg = metadata.version("exegete")
+        assert exegete.__version__ == pkg
+        # 0.14.1-alpha family (canary for a stale editable install; the
         # release-prep rule: check it against a FRESH clone and venv, since
         # stale editable-install metadata passed a wrong canary in Batch A)
-        assert pkg.startswith("0.14.0")
+        assert pkg.startswith("0.14.1")
 
     def test_stdio_initialize_advertises_version(self):
         """A real MCP initialize handshake over the server advertises the
         package version (not the SDK/framework default)."""
         import asyncio
-        import qualcoder_mcp
+        import exegete
         from mcp.server.lowlevel.server import NotificationOptions
 
         async def _probe():
@@ -447,5 +447,5 @@ class TestVersionHandshake:
             return init.server_version
 
         version = asyncio.run(_probe())
-        assert version == qualcoder_mcp.__version__, (
-            version, qualcoder_mcp.__version__)
+        assert version == exegete.__version__, (
+            version, exegete.__version__)

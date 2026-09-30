@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Set
 from datetime import datetime, timezone
 
+from . import names
 from .database import QualcoderDatabase, error_label, error_text
 from .sessions import CodingSuggestion, memo_with_reading
 
@@ -98,7 +99,7 @@ class RefiQdaExporter:
         self,
         suggestions: List[CodingSuggestion],
         project_name: str = "AI Coding Suggestions",
-        origin: str = "Qualcoder MCP AI Assistant"
+        origin: str = names.SERVER_NAME
     ) -> ET.Element:
         """Create the main REFI-QDA project XML structure.
 

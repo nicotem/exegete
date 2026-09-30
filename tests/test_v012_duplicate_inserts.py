@@ -29,9 +29,9 @@ from pathlib import Path
 
 import pytest
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import database
-from qualcoder_mcp.project_settings import DEFAULT_AI_CODER_NAME
+import exegete.server as server
+from exegete import database
+from exegete.project_settings import DEFAULT_AI_CODER_NAME
 
 # Bound at import, before any test can route sqlite3.connect through the
 # blinding factory below: the helpers here must read the truth.

@@ -19,8 +19,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import database
+import exegete.server as server
+from exegete import database
 
 ENV = "QUALCODER_MCP_WORKSPACE"
 REPO = Path(__file__).resolve().parent.parent
@@ -59,7 +59,7 @@ def _start(env_value, tmp_path):
                  "QUALCODER_MCP_AI_CODER_NAME"):
         env.pop(name, None)
     return subprocess.run(
-        [sys.executable, "-m", "qualcoder_mcp.server"], env=env,
+        [sys.executable, "-m", "exegete.server"], env=env,
         input="", capture_output=True, text=True, timeout=60,
         cwd=str(tmp_path))
 
@@ -70,7 +70,7 @@ class TestWhereTheWorkspaceIs:
         assert os.environ.get(ENV) is None      # the sandbox cleared it
         standard = database.standard_workspace()
         assert standard.relative_to(Path.home()).parts == (
-            "Documents", "Qualcoder MCP Projects")
+            "Documents", "Exegete projects")
         assert database.default_workspace() == standard
 
     @pytest.mark.parametrize("blank", ["", "   ", "\t"])
@@ -166,7 +166,7 @@ class TestTheServerChecksItAtStart:
         for name in ("QUALCODER_PROJECT_PATH", "QUALCODER_MCP_TOOLSET"):
             env.pop(name, None)
         result = subprocess.run(
-            [sys.executable, "-m", "qualcoder_mcp.server"], env=env,
+            [sys.executable, "-m", "exegete.server"], env=env,
             input="", capture_output=True, text=True, timeout=60,
             cwd=str(tmp_path))
         assert result.returncode == 1
@@ -288,7 +288,8 @@ class TestTheListingFindsIt:
 
 
 class TestTheDescriptionsSayIt:
-    """The three tools that named `~/Documents/Qualcoder MCP Projects` as
+    """The three tools that name the Terminal workspace
+    (`~/Documents/Exegete projects` from v0.14.1) as
     the workspace now say that the host can set another, and the listing
     names the workspace among the places it searches."""
 
@@ -296,7 +297,7 @@ class TestTheDescriptionsSayIt:
         "copy_project_to_workspace", "import_text_file", "create_project"])
     def test_the_workspace_is_not_promised(self, tool):
         text = " ".join(getattr(server, tool).__doc__.split())
-        assert "~/Documents/Qualcoder MCP Projects" in text
+        assert "~/Documents/Exegete projects" in text
         assert "unless the host set another" in text
 
     def test_the_tool_set_error_is_neutral(self, monkeypatch):
@@ -321,7 +322,7 @@ def test_an_ambient_setting_does_not_reach_the_suite(tmp_path):
     probe = tmp_path / "test_probe_ambient.py"
     probe.write_text(
         "import os\n"
-        "from qualcoder_mcp import database\n"
+        "from exegete import database\n"
         "def test_probe(tmp_path):\n"
         "    assert os.environ.get('QUALCODER_MCP_WORKSPACE') is None\n"
         "    assert database.default_workspace().resolve()"

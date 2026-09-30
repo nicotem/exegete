@@ -39,15 +39,15 @@ default:
 ~/QualCoder projects/
 ```
 
-Otherwise it is `~/Documents/Qualcoder MCP Projects/`, unless the host
-sets another folder with `QUALCODER_MCP_WORKSPACE`. Either way, the
+Otherwise it is `~/Documents/Exegete projects/`, unless the host
+sets another folder with `EXEGETE_WORKSPACE`. Either way, the
 answer to `copy_project_to_workspace` (and to `create_project`) gives
 the full path: use that one.
 
 **Before ANY AI coding:**
 1. Copy your project to the workspace
 2. Work only on the workspace copy
-3. Verify results in Qualcoder before replacing original
+3. Verify results in QualCoder before replacing original
 
 ### Close QualCoder First
 
@@ -96,7 +96,7 @@ Copy my project "Interview Study.qda" to the workspace for AI coding
 Claude will:
 - Copy the entire project folder to the workspace (with the Claude
   Desktop extension `~/QualCoder projects/` by default, otherwise
-  `~/Documents/Qualcoder MCP Projects/`, unless the host set another)
+  `~/Documents/Exegete projects/`, unless the host set another)
 - Create unique name if one already exists
 - Report the workspace path
 
@@ -294,7 +294,7 @@ Apply the approved codings to the project
    memo, then the reasoning
 5. Records the PROJECT's AI coder name as owner, which the researcher
    chooses the first time a write needs it (`set_project_ai_coder_name`;
-   see "Choosing the AI coder name" in README.md). Before that choice is
+   see "Choosing the AI coder name" in TOOLS.md). Before that choice is
    made the write stops and asks rather than guessing.
 6. Reports success with coding IDs (ctids)
 
@@ -320,17 +320,17 @@ Applying 6 approved codings...
 ✓ Successfully applied 6 codings to database
   Backup: Interview Study_backup_20251029_143045.qda
 
-  You can now open this project in Qualcoder to see the results!
+  You can now open this project in QualCoder to see the results!
 ```
 
-### Step 6: Verify in Qualcoder
+### Step 6: Verify in QualCoder
 
-1. Open Qualcoder (a QualCoder 4.0 window that already had the project
+1. Open QualCoder (a QualCoder 4.0 window that already had the project
    open must close and reopen it to show the new codings)
 2. Open the workspace project, at the path the copy's answer gave (with
    the Claude Desktop extension's default,
    `~/QualCoder projects/Interview Study.qda`; otherwise
-   `~/Documents/Qualcoder MCP Projects/Interview Study.qda`, unless the
+   `~/Documents/Exegete projects/Interview Study.qda`, unless the
    host set another folder)
 3. Go to **Coding > Code Text**
 4. Select the files you analysed
@@ -443,7 +443,7 @@ Apply the codings
 ✓ Backup created: Focus Group Study_backup_20251029_143512.qda
 ✓ Applied 4 codings successfully (ctid 112-115)
 
-Open the project in Qualcoder to see your AI-generated codings!
+Open the project in QualCoder to see your AI-generated codings!
 ```
 
 ### Example 2: Large File with Review
@@ -620,7 +620,7 @@ Load session abc123 and show me the suggestions
 ```
 
 The server keeps the session in a file of its own
-(`~/.qualcoder_mcp/sessions/`), not in the chat:
+(`~/.exegete/sessions/`), not in the chat:
 - All suggestions
 - Your approvals/rejections
 - Session details
@@ -646,7 +646,7 @@ names.
 **6. Work Iteratively**
 
 1. Do a small test run
-2. Check results in Qualcoder
+2. Check results in QualCoder
 3. Adjust your instructions based on what you see
 4. Continue with more files
 
@@ -686,8 +686,8 @@ Copy the project at <path> to the workspace   (copy_project_to_workspace;
 **Find backups:**
 Backups are in the same folder as your workspace projects (the
 workspace: with the Claude Desktop extension `~/QualCoder projects/` by
-default, otherwise `~/Documents/Qualcoder MCP Projects/`, unless the
-host set another with `QUALCODER_MCP_WORKSPACE`):
+default, otherwise `~/Documents/Exegete projects/`, unless the
+host set another with `EXEGETE_WORKSPACE`):
 ```
 ~/QualCoder projects/ProjectName_backup_TIMESTAMP.qda
 ```
@@ -762,30 +762,30 @@ made.
    - Unrealistic expectations
    ```
 
-### Can't find workspace project in Qualcoder
+### Can't find workspace project in QualCoder
 
 **Problem:** Looking in wrong location.
 
 **Solution:**
 The workspace is the folder the answer to `copy_project_to_workspace`
 named. With the Claude Desktop extension it is the extension's "Folder
-for projects" (Settings, Extensions, qualcoder-mcp), by default:
+for projects" (Settings, Extensions, Exegete), by default:
 ```
 /Users/YOUR_NAME/QualCoder projects/
 ```
-Otherwise it is `/Users/YOUR_NAME/Documents/Qualcoder MCP Projects/`,
-unless the host sets another folder with `QUALCODER_MCP_WORKSPACE`. A
+Otherwise it is `/Users/YOUR_NAME/Documents/Exegete projects/`,
+unless the host sets another folder with `EXEGETE_WORKSPACE`. A
 project of the same name in the other folder is an older copy (from an
 earlier install, say): open the one in the workspace.
 
-In Qualcoder:
+In QualCoder:
 - File > Open Project
 - Navigate to the workspace folder
 - Select the `.qda` folder
 
-### Claude doesn't see new changes in Qualcoder
+### Claude doesn't see new changes in QualCoder
 
-**Problem:** Made changes in Qualcoder GUI, Claude doesn't see them.
+**Problem:** Made changes in QualCoder GUI, Claude doesn't see them.
 
 **Solution:**
 The server reads the project database live, so anything QualCoder has
@@ -807,7 +807,7 @@ this server until the project is closed and reopened there.
 - Whole batch: `restore_backup` with the backup created by the apply
   (see `list_backups`); it previews first and keeps a safety backup
 
-Or manually in Qualcoder:
+Or manually in QualCoder:
 - Open project
 - Find codings by the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
 - Delete unwanted codings
@@ -819,7 +819,7 @@ Or manually in Qualcoder:
 **Solution:**
 Session files are stored at:
 ```
-~/.qualcoder_mcp/sessions/session_ID.json
+~/.exegete/sessions/session_ID.json
 ```
 
 - Check if file exists
@@ -886,7 +886,7 @@ not [what it should not]
 Check your AI coding quality:
 
 ```
-In Qualcoder:
+In QualCoder:
 1. Open Code Text view
 2. Filter by the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
 3. Review random sample
@@ -912,7 +912,7 @@ During coding:
 
 After applying:
 - [ ] Backup was created (check path)
-- [ ] Open project in Qualcoder
+- [ ] Open project in QualCoder
 - [ ] Verify codings look correct
 - [ ] Owner shows the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
 - [ ] Memos say explicit or interpretive, then the reasoning

@@ -24,9 +24,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp import pseudonymise as P
-from qualcoder_mcp.database import QualcoderDatabase
+import exegete.server as server
+from exegete import pseudonymise as P
+from exegete.database import QualcoderDatabase
 import test_v012_pseudonymise_tool as flagship
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     MAPPING, _house_rules, backups, build_project, call, execute_from,
@@ -2460,7 +2460,8 @@ def _documents_prose(size):
     with the fixture's names taken out: the second re-verification's
     corpus for its B2-2 shapes."""
     base = ""
-    for name in ("README.md", "PRIVACY.md", "CHANGELOG.md", "INSTALL.md"):
+    for name in ("README.md", "TOOLS.md", "PRIVACY.md", "CHANGELOG.md",
+                 "INSTALL.md"):
         base += (Path(__file__).resolve().parents[1] / name).read_text(
             encoding="utf-8")
     base = base.encode("ascii", "ignore").decode("ascii")

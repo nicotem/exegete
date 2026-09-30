@@ -16,7 +16,7 @@ from datetime import datetime
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from qualcoder_mcp.database import (
+from exegete.database import (
     QualcoderDatabase,
     backup_project,
     copy_project_to_workspace,
@@ -550,7 +550,7 @@ class TestAddCode:
 
     def test_add_code_default_color(self, write_db):
         """Default color is a random pick from QualCoder's own palette."""
-        from qualcoder_mcp.database import QUALCODER_COLORS
+        from exegete.database import QUALCODER_COLORS
 
         cid = write_db.add_code(
             name="Default Color Code",

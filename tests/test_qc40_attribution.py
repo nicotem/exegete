@@ -22,8 +22,8 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.server import (
+import exegete.server as server
+from exegete.server import (
     AI_CODER_NAME_ENV,
     DEFAULT_AI_CODER_NAME,
     MAX_AI_CODER_NAME_LENGTH,
@@ -335,7 +335,7 @@ class TestConfiguredAttribution:
         # display name follows the config, so re-exports of one project
         # keep a stable User guid across a rename (dev report deviation
         # 10; QA round 1, F9)
-        from qualcoder_mcp.refi_export import NAMESPACE
+        from exegete.refi_export import NAMESPACE
         seen = []
         for name, fname in ((DEFAULT_AI_CODER_NAME, "a.qdpx"),
                             ("AI Agent", "b.qdpx")):
@@ -398,7 +398,7 @@ class TestToolSuppliedOwnerValidated:
 
     def test_db_layer_repeats_the_check(self, setup_server):
         # Defense in depth: validate_text_file_import refuses on its own
-        from qualcoder_mcp.database import validate_coder_name
+        from exegete.database import validate_coder_name
         with pytest.raises(ValueError, match="owner"):
             server.db.validate_text_file_import(
                 name="x.txt", content="Body.", owner="Bad\nOwner")
@@ -464,7 +464,7 @@ class TestFormatCharactersAreRefusedAsAClass:
     PERSIAN = "می‌خواهم"
 
     def test_every_format_character_is_refused(self):
-        from qualcoder_mcp.database import validate_coder_name
+        from exegete.database import validate_coder_name
         for ch in self.INVISIBLE:
             with pytest.raises(ValueError) as e:
                 validate_coder_name("AI" + ch + "Agent")
@@ -474,7 +474,7 @@ class TestFormatCharactersAreRefusedAsAClass:
         """Every Cf character in the BMP except the two, swept rather
         than listed, so a Unicode release that adds one is covered."""
         import unicodedata
-        from qualcoder_mcp.database import (validate_coder_name,
+        from exegete.database import (validate_coder_name,
                                             forbidden_display_char)
         allowed, refused = [], 0
         for cp in range(0x10000):
@@ -497,7 +497,7 @@ class TestFormatCharactersAreRefusedAsAClass:
             assert AI_CODER_NAME_ENV in str(e.value), repr(ch)
 
     def test_the_note_beside_the_name_refuses_them_too(self):
-        from qualcoder_mcp.database import validate_coder_note
+        from exegete.database import validate_coder_note
         with pytest.raises(ValueError):
             validate_coder_note("qwen﻿ 3")
         assert validate_coder_note("qwen 3") == "qwen 3"
@@ -507,7 +507,7 @@ class TestFormatCharactersAreRefusedAsAClass:
         nor a hand-edited file can put an invisible name in an owner
         column."""
         import json as _json
-        from qualcoder_mcp import project_settings as ps
+        from exegete import project_settings as ps
         folder = tmp_path / "p.qda"
         folder.mkdir()
         with pytest.raises(ValueError):
@@ -521,7 +521,7 @@ class TestFormatCharactersAreRefusedAsAClass:
         assert ps.read_sidecar(folder).status == ps.SIDECAR_UNREADABLE
 
     def test_ordinary_names_are_still_accepted(self):
-        from qualcoder_mcp.database import validate_coder_name
+        from exegete.database import validate_coder_name
         for good in ("AI Agent", "研究助手", self.PERSIAN,
                      "\U0001F469‍\U0001F4BB coder", "Zoë O'Brien"):
             assert validate_coder_name(good) == good, repr(good)
@@ -538,13 +538,13 @@ class TestFormatCharactersAreRefusedAsAClass:
     def test_the_two_documents_say_what_the_code_does(self):
         """The shipped docstring and the README sentence both used to
         promise that bidi characters were refused while three of them
-        were accepted."""
-        from qualcoder_mcp.database import validate_coder_name
+        were accepted. (v0.14.1: the sentence moved to TOOLS.md.)"""
+        from exegete.database import validate_coder_name
         doc = validate_coder_name.__doc__
         assert "category Cf" in doc
         assert "ZWNJ and ZWJ" in doc
         root = Path(__file__).resolve().parents[1]
-        readme = (root / "README.md").read_text(encoding="utf-8")
+        readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         paragraphs = [" ".join(p.split()) for p in readme.split("\n\n")]
         sentence = [p for p in paragraphs
                     if "stop the server at startup" in p]

@@ -16,16 +16,19 @@ entries carry SOURCE_DATE_EPOCH, or 1980-01-01 when that is not set.
 
 What the package holds: the release's pyproject.toml, uv.lock, README.md
 (the readme pyproject names), the licence files pyproject names, the
-package under src/qualcoder_mcp, a .python-version asking uv for Python
+package under src/exegete, a .python-version asking uv for Python
 3.13 (a version CI tests), and manifest.json. The manifest is
 packaging/desktop-extension/manifest.in.json with the fields that are
-typed once elsewhere filled in: the name, version, author, licence,
-keywords, links and Python requirement from pyproject.toml, and the
-tools from the server itself, started from the same files with the
-`lifecycle` tool set (the widest: `full` and `core` are subsets).
+typed once elsewhere filled in: the version, author, licence,
+keywords, links and Python requirement from pyproject.toml, the
+extension's identifier from EXTENSION_NAME below (never from
+pyproject's name), and the tools from the server itself, started from
+the same files with the `lifecycle` tool set (the widest: `full` and
+`core` are subsets).
 
-It writes DIR/qualcoder-mcp-<version>.mcpb and the same files unpacked
-in DIR/qualcoder-mcp-<version>/, and prints the package's SHA-256.
+It writes DIR/exegete-<version>.mcpb and the same files unpacked
+in DIR/exegete-<version>/, and prints the package's SHA-256 and the
+extension's identifier.
 Listing the tools needs the `mcp` library in this interpreter
 (`pip install -e .` in a clone gives it). Signing is not done here.
 """
@@ -52,7 +55,22 @@ except ModuleNotFoundError:  # Python 3.10, where pytest brings tomli
 
 REPO = Path(__file__).resolve().parents[1]
 TEMPLATE = "packaging/desktop-extension/manifest.in.json"
-PACKAGE = "src/qualcoder_mcp"
+# Where an icon the template names is read from (v0.14.1): the template's
+# `icon` is a file name in this folder, and the package carries the file
+# at that name; the build works with and without one.
+ICON_FOLDER = "packaging/desktop-extension"
+PACKAGE = "src/exegete"
+# The extension's identifier, the manifest's `name`: fixed for good (the
+# owner's ruling of 26 September 2026). Claude Desktop knows an extension
+# by its author's name and this identifier together
+# (local.mcpb.niccol-tempini.qualcoder-mcp) and keeps its settings under
+# them, so a change would give every tester a second extension instead
+# of an update. It is deliberately NOT pyproject's name, which became
+# `exegete` with the rename.
+EXTENSION_NAME = "qualcoder-mcp"
+# The start of the package file's name, exegete-<version>.mcpb. The file
+# name is not part of the extension's identity (only its .mcpb ending is).
+PACKAGE_FILE_STEM = "exegete"
 # The Python the package asks uv for. Without it uv takes the newest
 # Python it can find or fetch, which may be one no CI job has tested; a
 # test pins this to a version in ci.yml's matrix.
@@ -158,18 +176,18 @@ def package_files(source, project: dict) -> Dict[str, bytes]:
 # ---------------------------------------------------------------------------
 
 # Run in a child interpreter: put the package's own src first, refuse to
-# go on if another copy of qualcoder_mcp answers the import, and start
-# the server as a host does.
+# go on if another copy of exegete answers the import, and start the
+# server as a host does.
 _LAUNCH = (
     "import sys\n"
     "from pathlib import Path\n"
     "src = Path(sys.argv[1]).resolve()\n"
     "sys.path.insert(0, str(src))\n"
-    "import qualcoder_mcp\n"
-    "if not Path(qualcoder_mcp.__file__).resolve().is_relative_to(src):\n"
-    "    sys.exit('another qualcoder_mcp was imported: '\n"
-    "             + qualcoder_mcp.__file__)\n"
-    "from qualcoder_mcp.server import main\n"
+    "import exegete\n"
+    "if not Path(exegete.__file__).resolve().is_relative_to(src):\n"
+    "    sys.exit('another exegete was imported: '\n"
+    "             + exegete.__file__)\n"
+    "from exegete.server import main\n"
     "main([])\n"
 )
 
@@ -185,7 +203,7 @@ def list_tools(files: Dict[str, bytes],
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
 
-    with tempfile.TemporaryDirectory(prefix="qcmcp-mcpb-") as scratch:
+    with tempfile.TemporaryDirectory(prefix="exegete-mcpb-") as scratch:
         scratch_path = Path(scratch)
         for name, data in files.items():
             target = scratch_path / "tree" / name
@@ -193,10 +211,12 @@ def list_tools(files: Dict[str, bytes],
             target.write_bytes(data)
         home = scratch_path / "home"
         home.mkdir()
+        # Neither spelling of the server's settings leaks in from the
+        # builder's own environment.
         env = {k: v for k, v in os.environ.items()
-               if not k.startswith("QUALCODER")}
+               if not k.startswith(("QUALCODER", "EXEGETE"))}
         env.update({"HOME": str(home), "USERPROFILE": str(home),
-                    "QUALCODER_MCP_TOOLSET": toolset,
+                    "EXEGETE_TOOLSET": toolset,
                     "PYTHONDONTWRITEBYTECODE": "1"})
         params = StdioServerParameters(
             command=sys.executable,
@@ -270,8 +290,8 @@ def build_manifest(template: dict, project: dict,
     compatibility["runtimes"] = runtimes
     manifest = {
         "manifest_version": template["manifest_version"],
-        "name": meta["name"],
-        "display_name": template.get("display_name", meta["name"]),
+        "name": EXTENSION_NAME,
+        "display_name": template.get("display_name", EXTENSION_NAME),
         "version": meta["version"],
         "description": template["description"],
         "long_description": template.get("long_description"),
@@ -280,6 +300,7 @@ def build_manifest(template: dict, project: dict,
                        if urls.get("Repository") else None),
         "homepage": urls.get("Homepage"),
         "documentation": template.get("documentation"),
+        "icon": template.get("icon"),
         "support": urls.get("Issues"),
         "server": template["server"],
         "tools": [{"name": n, "description": summary(d)} for n, d in tools],
@@ -312,6 +333,12 @@ def bundle(source) -> Tuple[dict, Dict[str, bytes]]:
     files = package_files(source, project)
     template = json.loads(source.read(TEMPLATE).decode("utf-8"))
     manifest = build_manifest(template, project, list_tools(files))
+    icon = manifest.get("icon")
+    if icon is not None:
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+\.png", icon):
+            raise BuildError(f"{TEMPLATE}'s icon {icon!r} must be a PNG "
+                             f"file name in {ICON_FOLDER}")
+        files[icon] = source.read(f"{ICON_FOLDER}/{icon}")
     files[".python-version"] = f"{PYTHON_VERSION}\n".encode("ascii")
     files["manifest.json"] = manifest_bytes(manifest)
     return manifest, files
@@ -345,7 +372,7 @@ def write_unpacked(files: Dict[str, bytes], folder: Path) -> None:
         mark = folder / "manifest.json"
         try:
             ours = json.loads(mark.read_text(encoding="utf-8"))["name"] \
-                == "qualcoder-mcp"
+                == EXTENSION_NAME
         except (OSError, ValueError, KeyError, TypeError):
             ours = False
         if not ours:
@@ -361,11 +388,12 @@ def write_unpacked(files: Dict[str, bytes], folder: Path) -> None:
 def build(source, out: Path) -> dict:
     """Build from `source` into `out`; what was built, for the caller."""
     manifest, files = bundle(source)
-    stem = f"{manifest['name']}-{manifest['version']}"
+    stem = f"{PACKAGE_FILE_STEM}-{manifest['version']}"
     mcpb = out / f"{stem}.mcpb"
     digest = write_mcpb(files, mcpb, source.epoch)
     write_unpacked(files, out / stem)
     return {"source": source.describe(), "version": manifest["version"],
+            "identifier": manifest["name"],
             "tools": len(manifest["tools"]), "files": len(files),
             "mcpb": mcpb, "unpacked": out / stem, "sha256": digest,
             "size": mcpb.stat().st_size}
@@ -388,9 +416,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     except BuildError as error:
         print(f"build_desktop_extension: {error}", file=sys.stderr)
         return 1
-    print(f"Built from {result['source']}: qualcoder-mcp "
+    print(f"Built from {result['source']}: {PACKAGE_FILE_STEM} "
           f"{result['version']}, {result['tools']} tools, "
           f"{result['files']} files")
+    print(f"Identifier: {result['identifier']}")
     print(f"Package:  {result['mcpb']} ({result['size']:,} bytes)")
     print(f"Unpacked: {result['unpacked']}")
     print(f"SHA-256:  {result['sha256']}")

@@ -1,7 +1,8 @@
 # AI-Assisted Coding Guide
 
-Guide to coding qualitative data with Claude through the QualCoder MCP
-server (the conversational workflow, v0.6.0 and later).
+Guide to coding qualitative data with Claude through Exegete (formerly
+qualcoder-mcp)
+(the conversational workflow, v0.6.0 and later).
 
 > **This guide replaces the v0.3.0 export/import guide.** The old
 > `suggest_coding_for_files` / `export_coding_suggestions` /
@@ -64,8 +65,8 @@ reports against what you said.
   from the conversation
 - A project schema from v14 (QualCoder 3.8.x) through v17 (the
   QualCoder 4.0-Beta pre-release); see "Supported QualCoder versions"
-  in the README. Older projects: open and save them in QualCoder 3.8
-  once to upgrade
+  in TOOLS.md. Older projects: open them once in QualCoder 3.8 or
+  newer, which updates them as they open
 
 ## Quick Start
 
@@ -97,7 +98,7 @@ before acting (in the four-way vocabulary allow, allow_with_caveat,
 reframe_and_ask, refuse, explained to you in plain words). Ask for
 `explain_ai_coding_tools("grounding_rules")` or
 `explain_ai_coding_tools("methodology_vocabulary")`, or read the
-`qualcoder://guidance/methods` resource, which also cites the method
+`exegete://guidance/methods` resource, which also cites the method
 literature QualCoder 4.0 ships prompts for. None of this replaces your
 approval of each suggestion.
 
@@ -198,10 +199,13 @@ approval of each suggestion.
   during its own writes; QualCoder 4.0 writes no lock file, so for it
   the server only warns on heuristics (`qualcoder_gui_signals`)
 - Memo text from the first `#####` marker onward (QualCoder 4.0's
-  private-note convention) is never shown to the AI and survives AI
-  memo writes; where the project has the coder-visibility capability
+  private-note convention) is never sent to the AI through Exegete (an
+  assistant that opens a project's files by itself reads every memo
+  whole: PRIVACY.md, "Assistants that open files by themselves") and
+  survives AI memo writes; where the project has the coder-visibility
+  capability
   reads follow the per-coder visibility
-  setting (see "Working alongside QualCoder 4.0" in the README)
+  setting (see "Working alongside QualCoder 4.0" in TOOLS.md)
 - Every write creates a timestamped backup first unless called with
   `create_backup=false` (`list_backups` shows them, including QualCoder's own `_BKUP_` snapshots)
 - Sessions only apply to the project they were created in
@@ -213,8 +217,8 @@ approval of each suggestion.
 Claude itself does the analysis through the conversation, and the
 server only stores and applies what is marked approved (it cannot see
 who approved it; see above). (An API-key route and
-a fully local route exist too; see "Choosing your AI host" in the
-README.)
+a fully local route exist too; see "Choosing your AI host" in
+INSTALL.md.)
 
 **Can the AI create new codes?** Yes, with your approval: `propose_codes`
 records code proposals discovered in the data, you review and refine
@@ -231,9 +235,9 @@ decide like any suggestion. The codebook tools (`create_code`,
 which you choose the first time a write needs it: the write stops and
 asks, and your answer is stored with the project
 (`set_project_ai_coder_name`; `AI Coding Assistant` is the built-in
-quick pick, and `QUALCODER_MCP_AI_CODER_NAME` in the host's
+quick pick, and `EXEGETE_AI_CODER_NAME` in the host's
 configuration only declares a name to offer first). See "Choosing the
-AI coder name" in README.md. AI work stays distinguishable from yours in
+AI coder name" in TOOLS.md. AI work stays distinguishable from yours in
 QualCoder, and rows written under an earlier name keep it.
 
 **Can I pseudonymise transcripts that are already coded?** Yes:
@@ -261,7 +265,7 @@ data: read PRIVACY.md before sending it anywhere.
 workspace workflow: copy first, work on the copy, and compare in
 QualCoder before adopting changes.
 
-**Where are sessions stored?** `~/.qualcoder_mcp/sessions/` as JSON, one
+**Where are sessions stored?** `~/.exegete/sessions/` as JSON, one
 file per session. `delete_coding_session` removes one;
 `cleanup_old_sessions` (deprecated, removed in v0.15) deletes every
 project's old sessions with no preview.

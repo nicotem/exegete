@@ -21,8 +21,8 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import DB_LOCKED_MESSAGE, QualcoderDatabase
+import exegete.server as server
+from exegete.database import DB_LOCKED_MESSAGE, QualcoderDatabase
 
 HIDDEN = "Hidden Coder"
 
@@ -1032,8 +1032,8 @@ class TestTheCapabilityIsNotAVersion:
     grep the gate runs by hand is written down here instead.
     """
 
-    DOCS = ("README.md", "PRIVACY.md", "INSTALL.md", "AI_CODING_GUIDE.md",
-            "AI_CODING_WORKFLOW.md")
+    DOCS = ("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
+            "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
 
     # Sentences where 4.0 is genuinely about 4.0 and not a stand-in for
     # the capability: its own assistant, its own rebuilds, its own lock
@@ -1359,7 +1359,7 @@ class TestTheClassCannotComeBack:
     goes permissive again, whatever spelling the query is written in.
     """
 
-    PACKAGE = Path(__file__).resolve().parents[1] / "src" / "qualcoder_mcp"
+    PACKAGE = Path(__file__).resolve().parents[1] / "src" / "exegete"
     PATTERN = re.compile(r"FROM\s+coder_names", re.IGNORECASE)
 
     # Every SQL read of the table in the package, with the reason each
@@ -1487,7 +1487,7 @@ class TestTheClassCannotComeBack:
         """The table answered, but not with the integer its own schema
         declares. `int()` would raise ValueError straight past every
         caller's `except CoderVisibilityUnreadable`."""
-        from qualcoder_mcp.database import CoderVisibilityUnreadable
+        from exegete.database import CoderVisibilityUnreadable
         _apply_visibility_schema(qualcoder_db_path)
         con = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
         con.execute("PRAGMA writable_schema = ON")
@@ -1623,7 +1623,7 @@ def _visibility_rule_spellings(module):
 def _predicate_line():
     """The line number of coder_is_hidden's own return, so the sweep can
     demand that it is the ONLY place the rule is spelled out."""
-    from qualcoder_mcp import database as db_module
+    from exegete import database as db_module
     lines = Path(db_module.__file__).read_text(encoding="utf-8").splitlines()
     for number, line in enumerate(lines, 1):
         if line.strip() == "return visibility.get(name, 1) == 0":
@@ -1659,7 +1659,7 @@ class TestPartialViewSetIsNotACapability:
         assert caps.visibility_declared() is True, view
 
     def test_the_constant_names_exactly_the_four(self):
-        from qualcoder_mcp.database import VISIBILITY_VIEWS
+        from exegete.database import VISIBILITY_VIEWS
         assert VISIBILITY_VIEWS == {
             "code_text_visible", "code_image_visible",
             "code_av_visible", "annotation_visible"}
@@ -1812,7 +1812,7 @@ class TestPartialViewSetIsNotACapability:
         is the exhaustive drive below, and this pin is kept for what it
         does say: the helper still mentions the three things a reader
         expects to find in it, so a rewrite that drops one is visible."""
-        from qualcoder_mcp import database as db_module
+        from exegete import database as db_module
         source = Path(db_module.__file__).read_text(encoding="utf-8")
         helper = source.split("def _visible_source", 1)[1].split(
             "\n    def ", 1)[0]
@@ -1831,7 +1831,7 @@ class TestPartialViewSetIsNotACapability:
         base table. That is the property the fallback broke, and a
         restored fallback fails here on the first subset it reaches."""
         from itertools import combinations
-        from qualcoder_mcp.database import (VISIBILITY_VIEWS,
+        from exegete.database import (VISIBILITY_VIEWS,
                                             CoderVisibilityUnreadable)
         pairs = (("code_text", "code_text_visible"),
                  ("code_image", "code_image_visible"),
@@ -1868,8 +1868,8 @@ class TestPartialViewSetIsNotACapability:
         visible" used to be spelled out at ten call sites; each was a
         place a future consumer could get it wrong, which is how this
         class recurred. It is written once now, beside the map."""
-        from qualcoder_mcp import database as db_module
-        import qualcoder_mcp.server as server_module
+        from exegete import database as db_module
+        import exegete.server as server_module
         # Read as syntax rather than line by line (fix round 5): the
         # regex this used could be walked past by wrapping the call, and
         # it also had to skip prose that merely described the rule. A
@@ -1906,8 +1906,8 @@ class TestPartialViewSetIsNotACapability:
         however it is spelled, and the unit the filter must appear in is
         the enclosing function rather than a window of characters.
         """
-        from qualcoder_mcp import database as db_module
-        import qualcoder_mcp.server as server_module
+        from exegete import database as db_module
+        import exegete.server as server_module
         assert _functions_named(db_module, "coders_with_text_codings") == []
         assert _reads_of(server_module, "coders_with_text_codings") == []
         reads = _reads_of(server_module,
@@ -1928,7 +1928,7 @@ class TestPartialViewSetIsNotACapability:
     def test_the_predicate_is_what_the_views_do(self, visibility_db):
         """Driven against the views themselves rather than against its
         own docstring."""
-        from qualcoder_mcp.database import coder_is_hidden
+        from exegete.database import coder_is_hidden
         visibility = server.db.coder_visibility_map()
         con = sqlite3.connect(str(Path(visibility_db) / "data.qda"))
         try:
@@ -1967,7 +1967,7 @@ class TestZeroViewsIsRefusedEverywhereThreeViewsAreRefused:
 
     @pytest.fixture
     def zero_views(self, visibility_db):
-        from qualcoder_mcp.database import VISIBILITY_VIEWS
+        from exegete.database import VISIBILITY_VIEWS
         for view in sorted(VISIBILITY_VIEWS):
             _drop_view(visibility_db, view)
         _reopen(visibility_db)
@@ -1990,7 +1990,7 @@ class TestZeroViewsIsRefusedEverywhereThreeViewsAreRefused:
         assert server.db.hidden_coder_count() == 1
 
     def test_the_source_chooser_refuses_for_all_four(self, zero_views):
-        from qualcoder_mcp.database import CoderVisibilityUnreadable
+        from exegete.database import CoderVisibilityUnreadable
         for base, view in (("code_text", "code_text_visible"),
                            ("code_image", "code_image_visible"),
                            ("code_av", "code_av_visible"),
@@ -2272,7 +2272,7 @@ class TestDuplicateRowsFoldTheWayTheViewsDo:
     def test_a_wrong_typed_row_still_fails_closed(self, visibility_db):
         """The fold must not swallow the unreadable case: a row whose
         visibility is not an integer still raises."""
-        from qualcoder_mcp.database import CoderVisibilityUnreadable
+        from exegete.database import CoderVisibilityUnreadable
         con = sqlite3.connect(str(Path(visibility_db) / "data.qda"))
         con.execute("PRAGMA writable_schema = ON")
         con.execute("UPDATE sqlite_master SET sql = replace(sql, "

@@ -24,7 +24,7 @@ from track5_helpers import write_fixture_sidecar
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -220,7 +220,7 @@ class TestStartupFailsLoudly:
         home.mkdir()
         env = _server_env(home, project, toolset="banana")
         proc = subprocess.run(
-            [str(VENV_PY), "-m", "qualcoder_mcp.server"],
+            [str(VENV_PY), "-m", "exegete.server"],
             env=env, capture_output=True, timeout=60,
             cwd=str(tmp_path),
             # decode captured output as UTF-8 explicitly: Windows would
@@ -246,7 +246,7 @@ class TestCoreModeEndToEnd:
         home.mkdir()
         params = StdioServerParameters(
             command=str(VENV_PY),
-            args=["-m", "qualcoder_mcp.server"],
+            args=["-m", "exegete.server"],
             env=_server_env(home, project, toolset="core"),
         )
 
@@ -339,10 +339,11 @@ class TestCoreModeEndToEnd:
 class TestTheReadmeToolList:
     """The tool counts, the measured size and the README's tool list are
     updated together (v0.14 brief C): every tool the widest set
-    registers has an entry, named as it is called."""
+    registers has an entry, named as it is called. (v0.14.1: the tool
+    list moved from README.md to TOOLS.md.)"""
 
     def test_every_tool_has_an_entry(self):
-        readme = (REPO / "README.md").read_text(encoding="utf-8")
+        readme = (REPO / "TOOLS.md").read_text(encoding="utf-8")
         section = readme[readme.index("## Available Tools"):]
         section = section[:section.index("\n## ", 5)]
         server._apply_toolset("lifecycle")
@@ -351,7 +352,7 @@ class TestTheReadmeToolList:
         missing = [n for n in names if f"`{n}(" not in section]
         assert missing == []
         assert f"registers {EXPECTED_FULL} tools" in section
-        assert f"`QUALCODER_MCP_TOOLSET=lifecycle`" in section
+        assert f"`EXEGETE_TOOLSET=lifecycle`" in section
         assert f"plus `create_project`, {EXPECTED_LIFECYCLE} tools" in \
             " ".join(section.replace("\n>", " ").split())
 
@@ -367,7 +368,7 @@ class TestLifecycleModeEndToEnd:
         home.mkdir()
         params = StdioServerParameters(
             command=str(VENV_PY),
-            args=["-m", "qualcoder_mcp.server"],
+            args=["-m", "exegete.server"],
             env=_server_env(home, project, toolset="lifecycle"),
         )
 
@@ -388,7 +389,7 @@ class TestLifecycleModeEndToEnd:
                     return out, current
 
         out, current = asyncio.run(drive())
-        folder = home / "Documents" / "Qualcoder MCP Projects" / \
+        folder = home / "Documents" / "Exegete projects" / \
             "Stdio study.qda"
         assert Path(out["project_path"]).resolve() == folder.resolve()
         assert (folder / "data.qda").is_file()
@@ -428,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 195_325          # 73 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 64_835           # 21 tools, same environment
-    FULL_MEASURED_310 = 205_033      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 68_127
+    FULL_MEASURED = 195_266          # 73 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 64_804           # 21 tools, same environment
+    FULL_MEASURED_310 = 204_974      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 68_096
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 197_910     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 207_758
+    LIFECYCLE_MEASURED = 197_845     # 74 tools, same environment
+    LIFECYCLE_MEASURED_310 = 207_693
 
     # Why two per cent, away from the reference environment.
     #
@@ -461,8 +462,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "195,325"
-    CORE_CHARS = "64,835"
+    FULL_CHARS = "195,266"
+    CORE_CHARS = "64,804"
     FULL_ROUNDED = "195,000"
     CORE_ROUNDED = "65,000"
     FULL_TOKENS = "49k"
@@ -490,9 +491,19 @@ class TestThePublishedSchemaBudget:
         description, `set_memo`'s project target and `select_project`'s
         signals), so the release being written
         is the Unreleased entry, and the 0.13 figure is history
-        (`_v013_entry`).
+        (`_v013_entry`). v0.14.1 moves it once more (the rename: the
+        resource addresses in the tools' texts), so the current entry is
+        the Unreleased one alone and 0.14.0's figure is history
+        (`_v0140_entry`). From the release on, the current entry is
+        0.14.1's, under an Unreleased heading that says nothing yet.
         """
-        return cls._read("CHANGELOG.md").split("## [0.13")[0]
+        return cls._read("CHANGELOG.md").split("## [0.14.0")[0]
+
+    @classmethod
+    def _v0140_entry(cls):
+        """The 0.14.0 entry, whose figure is history and stays put."""
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [0.14.0"):text.index("## [0.13")]
 
     @classmethod
     def _v013_entry(cls):
@@ -550,7 +561,7 @@ class TestThePublishedSchemaBudget:
                 f"and the documents say {expected:,}. This is the "
                 f"environment they name, so the figure has rotted: "
                 f"re-measure both toolsets and update CHANGELOG.md, "
-                f"README.md, INSTALL.md and this class together. If the "
+                f"TOOLS.md, INSTALL.md and this class together. If the "
                 f"installed mcp is no longer {self.REFERENCE_MCP}, the "
                 f"version those documents name is stale as well.")
             return
@@ -619,6 +630,10 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0140 = self._v0140_entry()
+        assert v0140.count("Serialised tool") == 1
+        assert "full = 195,325 characters" in v0140
+        assert self.FULL_CHARS not in v0140
         v013 = self._v013_entry()
         assert v013.count("Serialised tool") == 1
         assert "full = 171,040 characters" in v013
@@ -642,7 +657,8 @@ class TestThePublishedSchemaBudget:
     LIFECYCLE_TOKENS = "49k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
-        readme = self._read("README.md")
+        # v0.14.1: the README's measurement block moved to TOOLS.md
+        readme = self._read("TOOLS.md")
         assert (f"the `lifecycle` definitions run to about "
                 f"{self.LIFECYCLE_ROUNDED} characters, roughly "
                 f"{self.LIFECYCLE_TOKENS} tokens") in readme
@@ -652,7 +668,7 @@ class TestThePublishedSchemaBudget:
             self.LIFECYCLE_TOKENS[:-1])
 
     def test_the_readme_quotes_the_same_measurement(self):
-        readme = self._read("README.md")
+        readme = self._read("TOOLS.md")
         assert f"about {self.FULL_ROUNDED} characters for `full`" in readme
         assert f"about {self.CORE_ROUNDED} characters for" in readme
         assert f"roughly {self.FULL_TOKENS} tokens" in readme
@@ -753,7 +769,7 @@ class TestTheDeclaredMcpFloorSupportsCoreMode:
         the gate makes. If `_apply_toolset` stops using the public
         helper, this pin says so and the floor can be revisited."""
         assert hasattr(server.mcp, "remove_tool")
-        source = (REPO / "src" / "qualcoder_mcp" / "server.py").read_text(
+        source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
         assert "mcp.remove_tool(name)" in source
 

@@ -17,10 +17,10 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 import track5_helpers as H
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.memo_privacy import (
+from exegete.database import QualcoderDatabase
+from exegete.memo_privacy import (
     PERSONAL_NOTE_MARK,
     extract_ai_memo,
     merge_public_memo,
@@ -1285,8 +1285,8 @@ class TestCascadePreviewsCountPrivateNotes:
 
 from hypothesis import given, settings, strategies as st  # noqa: E402
 
-from qualcoder_mcp import pseudonymise as P  # noqa: E402
-from qualcoder_mcp.memo_privacy import rewrite_public_memo  # noqa: E402
+from exegete import pseudonymise as P  # noqa: E402
+from exegete.memo_privacy import rewrite_public_memo  # noqa: E402
 
 
 def _engine_rewrite(mapping):
@@ -1387,7 +1387,7 @@ class TestRewritePublicMemo:
         docstring promises. Since the licence change (v0.13) the
         docstring says why: the function is QualCoder's own, copied, and
         the new helper is this project's."""
-        import qualcoder_mcp.memo_privacy as memo_privacy
+        import exegete.memo_privacy as memo_privacy
         doc = " ".join(memo_privacy.__doc__.split())
         assert ("from ai_memo.py:28-59 at 9bddf17 (author Kai Dröge) "
                 "statement for statement, with local names changed, so that "

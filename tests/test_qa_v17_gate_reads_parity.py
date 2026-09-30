@@ -17,9 +17,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-import qualcoder_mcp.server as server
-from qualcoder_mcp.database import QualcoderDatabase
-from qualcoder_mcp.sessions import SessionManager
+import exegete.server as server
+from exegete.database import QualcoderDatabase
+from exegete.sessions import SessionManager
 
 import test_v17_support as v17fix
 from test_qa_v17_gate_core import _add_subcode_forest, _attach, _db, _exec, _one

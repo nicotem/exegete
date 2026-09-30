@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Qualcoder MCP Server will be documented in this file.
+All notable changes to Exegete (formerly qualcoder-mcp) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,6 +8,417 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 Nothing yet.
+
+## [0.14.1-alpha] - 2026-10-01
+
+v0.14.1: qualcoder-mcp is now called Exegete, and the README review,
+with a new introduction and a route for OpenAI's apps. The server's
+behaviour is unchanged; its names changed, with every earlier spelling
+still accepted (the Upgrading list below).
+
+### Changed: qualcoder-mcp is now Exegete
+
+- The program's name, and its PyPI package, command and Python module:
+  `exegete` (`pip install exegete`; `exegete --version` answers
+  `exegete <version>`). The server calls itself Exegete in the MCP
+  handshake, in the instructions it sends the assistant ("Exegete
+  exposes a QualCoder project to this conversation"), in its start-up
+  log lines, the methods notes' heading and its messages. A project it
+  creates says `Exegete <version> (QualCoder schema v17)` in its
+  `about`, which keeps the word QualCoder checks for; a REFI-QDA export
+  names Exegete as its origin; the AI coder name file's `written_by`
+  says `exegete <version>`.
+- The GitHub address is https://github.com/nicotem/exegete; the old
+  address redirects.
+- The Claude Desktop extension keeps its identifier, `qualcoder-mcp`
+  with the author's name, so opening the new file updates the extension
+  you have, with its two settings, rather than adding a second one. It
+  is shown as Exegete, its file is `exegete-<version>.mcpb`, and its
+  log becomes `mcp-server-Exegete.log`. Its manifest sets both
+  spellings of its three settings, always to the same value.
+- The mark: the README opens with the braided ring beside the name,
+  on a light tile of its own so that it reads on a dark page too, and
+  the extension shows the ring with the E as its icon (a 512 px PNG,
+  the one file its package gains). The files are in `docs/brand/`.
+- The server's settings start `EXEGETE_`: `EXEGETE_TOOLSET`,
+  `EXEGETE_AI_CODER_NAME`, `EXEGETE_WORKSPACE`,
+  `EXEGETE_WORKSPACE_REQUIRED`, `EXEGETE_ALLOW_UNKNOWN_SCHEMA` and
+  `EXEGETE_PROJECT_PATH`, all read through one reader. If a setting is
+  given under both spellings with different values, the server does not
+  start, and says which two disagree, as it already does for a mistyped
+  tool set.
+- The server's own folder is `~/.exegete`. At the first start, an
+  existing `~/.qualcoder_mcp` is renamed to it whole (the same disk, so
+  the move never copies or duplicates the secret key), and a link is
+  left under the old name (a junction on Windows) for older copies of
+  the server on the same computer; the published 0.14.0 was checked to
+  work through it. If the link cannot be made, the folder is put back,
+  unless an older copy of the server has already written at the old
+  path in that instant, when both folders are kept. An older copy that
+  makes a folder of its own under the old name has a secret key of its
+  own there, which Exegete does not use; Exegete takes only the session
+  files it lacks and says so once in its log (INSTALL.md's
+  troubleshooting says what to do). A link left under the old name
+  after `~/.exegete` was removed by hand is left as it is, and a fresh
+  `~/.exegete` is made. The export guard, `create_project` and the
+  workspace setting refuse both names in every run.
+- The resources' addresses are `exegete://...`.
+- The AI coder name file inside a project is now `exegete.json`, in the
+  same format. Exegete reads it when it exists, and otherwise the
+  earlier `qualcoder_mcp.json`. The first time it stores the name in a
+  project that has only the earlier file, it carries the name, its
+  history and any keys of your own into `exegete.json`, and then marks
+  the earlier file as moved (format version 2, with `moved_to`), which
+  stays in the folder with the name it held. qualcoder-mcp 0.12 to 0.14
+  read only the earlier file and refuse to write one of a newer format,
+  so a copy still on them stops, saying the file was written by a newer
+  version, instead of writing rows under a name you have since changed
+  (checked with the published 0.14.0). If the earlier file cannot be
+  rewritten at that moment (locked, read-only, or held by a sync
+  program), the answer says so plainly, naming the file and the name an
+  older copy would go on writing under, and never claims the mark; every
+  later AI write tries again, and the project's reads say so until the
+  mark is made. A project Exegete names first gets a small
+  `qualcoder_mcp.json` too, written already marked and holding no name,
+  so that a copy still on 0.12 to 0.14 refuses and says to upgrade
+  rather than ask for a name of its own and write rows under it beside
+  Exegete (checked with the published 0.14.0); it is never written over
+  a file that appeared meanwhile, and the next AI write puts it back if
+  it is removed. Until v1.0, like the other support for the old name.
+  A name an older copy stores in an unmarked
+  `qualcoder_mcp.json` beside `exegete.json` joins the history in the
+  same write that marks the file, and counts as this project's AI work
+  even before then (in `compare_coders`' roles, the delete previews and
+  pseudonymisation); so does the name the earlier file held at the
+  move, even where its own history lacked it. A restore of a backup made
+  before the move brings back the earlier file alone; it is read, and
+  the next change of name moves it again. If `exegete.json` is removed
+  or lost after the move, the marked earlier file is not used for the
+  name, since it holds the one from before the move: the project reads
+  as having no name, its earlier names stay in the history, and the
+  next AI write asks for the name again, as the messages say. An
+  earlier file that cannot be read is never rewritten. Messages name
+  the file in use.
+- The projects folder for installs from PyPI or from the source, when
+  no workspace is set, is now `~/Documents/Exegete projects`: copies and
+  new projects go there. The earlier `~/Documents/Qualcoder MCP
+  Projects` is never moved or emptied, and `list_available_projects`
+  still finds its projects; when it holds any, the first answer of a run
+  that names the workspace (a copy's, or a project's created there)
+  says so once. The extension's folder, `~/QualCoder projects`, is
+  unchanged.
+- The old name's package, `qualcoder-mcp`, is released beside every
+  release until v1.0: it carries the `qualcoder-mcp` command and a
+  two-file stand-in module, and asks for the matching Exegete.
+- The transition check, `exegete --check-transition`: read-only, it
+  prints what the move left behind as numbered steps, in the order to
+  take them, and exits 0 when nothing is left. First, where the old
+  `qualcoder-mcp` package was installed with uv tool or pipx (or is
+  0.14.0 or earlier) and there is no `exegete` command yet, the command
+  that installs Exegete (with `--force` where an `exegete` command
+  linked from the old package's own environment, which would go with
+  it, has to be replaced); for a copy of the source, it names the
+  folder and says to quit the host before updating it. Then each entry
+  in Claude Desktop's, Claude Code's, LM Studio's or Codex's
+  configuration still starting the old command (pinned forms such as
+  `qualcoder-mcp==0.14.0` included), with the entry to use instead (the
+  files are only read); then the command that removes the old package
+  for the way it was installed (pip, uv, uv tool, pipx, a copy of the
+  source); a desktop extension older than Exegete, to update; the link
+  at `~/.qualcoder_mcp` and whether it can go; Claude Desktop's logs
+  under the extension's earlier name; and the earlier projects folder,
+  searched three folders down like the project list, with what is in
+  it (never offered for removal while anything is in it). Commands and
+  entry lines carry full paths, quoted for the shell they go into
+  (PowerShell on Windows; elsewhere, characters that cannot be shown are
+  written as bytes, which the Mac's older bash reads too), ready to
+  paste. `--tidy` removes only the link, never a folder, and only when
+  it leads to `~/.exegete`, nothing started as qualcoder-mcp is running
+  (whatever its arguments, unless it is the check or a program that
+  started it), and nothing is left that could start an older copy (a
+  package older than 0.14.1, a host entry starting the old command, or
+  a desktop extension older than Exegete; the check says which). It
+  cannot see an older copy started from a project's own `.mcp.json`
+  file: while one could still start, keep the link. `--tidy-old-logs`
+  with it removes the old logs. Projects, backups, the AI coder name
+  files and hosts' configurations are never touched. With the desktop extension there is no `exegete`
+  command: `uvx exegete --check-transition` runs the check. A help
+  topic, `explain_ai_coding_tools('moving_from_qualcoder_mcp')`, tells
+  the assistant how to guide a researcher through it (no tool
+  description grew). The line the old command writes at a start now
+  names the check. At v1.0 the old name's last release will say so
+  plainly and be the last.
+- Publishing: a GitHub pre-release tagged with the coming release's
+  version plus `.devN` (for example `v0.14.1-alpha.dev1`) builds and
+  uploads an early build of `exegete` alone (0.14.1a0.dev1), to hold the
+  name on PyPI, never the old name's package; a release tag must name
+  the version in `pyproject.toml`, and any other tag stops the workflow
+  before it builds anything.
+- Kept as they are: the AI coder name file's format, which every
+  version since 0.12 shares; the internal label that keys the privacy run records' digests, so
+  records written earlier stay checkable; the extension's projects
+  folder; and past entries in this file.
+
+### Changed: the README is a front page, and its reference moves out
+
+- README.md now says what the program is and is not (its own software
+  on QualCoder's project format, not made or endorsed by QualCoder's
+  developers, with the provenance wording and NOTICE), where
+  participants' words go, and how to start: the one-click extension
+  first, what you need at each stage, a first project, working on a
+  copy, and one program at a time. Then what it adds, and three
+  commitments: compatibility with QualCoder, symmetry as a commitment
+  with a dated table of what each side does, and interoperability.
+- QualCoder as a prerequisite, by stage (README, and INSTALL.md's "What
+  You'll Need"): not needed to start with the extension's default tool
+  set, `lifecycle`; recommended, and needed to bring in documents, to
+  see the coding in the text, to code images, audio and video, and for
+  graphs; the Terminal route's default set, `full`, cannot create a
+  project.
+- New file, TOOLS.md: the reference, moved from the README with its
+  headings and words: every tool, the resources and prompts, the AI
+  coder name, starting a project, supported QualCoder versions, working
+  alongside QualCoder 4.0 (QualCoder 3.8.2's edit-mode caution under a
+  heading of its own), AI-assisted coding, data safety and the example
+  requests.
+- INSTALL.md takes "Choosing your AI host", the PyPI forms of the
+  Claude Desktop and Claude Code configuration, and the README's
+  troubleshooting and updating sentences; CONTRIBUTING.md takes the
+  architecture, the project structure and the MCP Inspector. The
+  README's "Completed in" lists are cut: this file is the record of
+  each release.
+- The three questions: the coding walk-through now says the assistant
+  is told to ask them and to pass the answers as the session's
+  `instruction`, and that the server cannot tell whether the
+  instruction holds the researcher's answers (`get_coding_session_info`
+  shows it).
+- QualCoder's own MCP server, stated as dated fact: QualCoder's pull
+  request #1571, merged on 10 September 2026, adds a setting, off by
+  default, that opens it to MCP hosts on the same computer while
+  QualCoder runs; it is in no release yet (checked 29 September 2026).
+  The sentence that it has no way in from outside is gone. After the
+  facts, the README says that this project welcomes that server and is
+  ready to cooperate with QualCoder's developers; that its own aim is
+  that you can run a whole project from the conversation, with
+  QualCoder as a companion that opens the same project at any time, a
+  direction and not yet a fact; and that the commitments hold on the
+  way.
+- TOOLS.md, on a project started from the conversation: keep it in one
+  QualCoder, since moving it between 3.8.2 and 4.0 is what changes it
+  (it said to work on such a project in QualCoder 4.0; the README still
+  recommends 3.8.2).
+- "Qualcoder" is spelt "QualCoder" in the prose of README, INSTALL,
+  TOOLS and the workflow guide; the folder `~/Documents/Qualcoder MCP
+  Projects` and the server's own messages keep their spelling.
+- README and PRIVACY.md now say only what Exegete does with the
+  part of a memo after `#####`; they no longer speak for QualCoder's
+  own AI features. PRIVACY.md no longer says QualCoder 4.0 introduced
+  the mark: 3.8.2 has it.
+- Tests: every pin on README text follows its text; new pins for the
+  opening, the commitments, the dated upstream facts, the three
+  questions, the spelling, and every link and anchor in the documents
+  the review touched. The pin on the README's "Completed in v0.13.0"
+  list is retired with the list.
+
+### Changed: the introduction, and OpenAI's apps
+
+- The README's opening presents Exegete as a qualitative analysis
+  application in its own right, used through a conversation with an AI
+  assistant, that creates and works on QualCoder projects and stays
+  compatible with QualCoder, so a project opens there whenever you like,
+  one program at a time; no longer as a suite of tools that works on
+  QualCoder projects. It says what Exegete covers today (creating a
+  project, Experimental; cases and attributes; bringing in text; coding
+  with suggestions the researcher decides; the codebook; memos,
+  annotations and a journal; searching; reports and exports; comparing
+  coders; replacing names; backups and restore), what still needs
+  QualCoder (documents other than text, seeing the coding highlighted in
+  the text, coding images, audio, video or an area of a PDF page,
+  graphs), and the whole life of a project as the aim. The independence
+  statement, the three commitments and the paragraph on QualCoder's own
+  server stand. The extension's description, PyPI's summary, the
+  citation's abstract and QUICKSTART.md say the same in a sentence.
+- A route for OpenAI's apps (Experimental, written from OpenAI's
+  documentation of 30 September 2026 and not yet tried by this
+  project): the ChatGPT desktop app, and Codex's command line and
+  editor extension, which share one settings file, start Exegete on
+  your computer; ChatGPT in a web browser does not, and OpenAI's Secure
+  MCP Tunnel, which could connect the web to it, is not recommended for
+  participants' data. ChatGPT's phone app does not start Exegete, but
+  by OpenAI's documentation its Remote feature lets a phone start and
+  approve work that a paired Mac or Windows computer runs, with the
+  Exegete set up there; this project suggests leaving Remote off for
+  participants' data. README has the short version, INSTALL.md the
+  steps: a settings entry that makes Codex ask before every tool that
+  is not read-only (by default it asks only before a tool that can
+  replace or remove, and runs the tools that only add, and
+  `read_pseudonym_list`, without asking); an empty folder of Codex's
+  own to work in, which keeps a study's files out of the place Codex
+  works in and changes without asking (it can still read them, and
+  search other folders for them, as the next section says); the
+  permission mode to keep; and what to do if it does not start.
+- PRIVACY.md: a section on OpenAI's apps, quoting OpenAI's pages on
+  training and its opt-out for services for individuals, the business
+  plans and the API, Codex's sign-in, the session transcripts Codex
+  keeps under `~/.codex`, and the terms for the UK, the EEA and
+  Switzerland; Codex's own file access, and its session files, which
+  keep what Exegete's tools returned whatever its `history` settings
+  say. README's "Where your data goes" names OpenAI, quotes the Help
+  Center's training sentence and its opt-out, and says what Codex reads
+  by itself and keeps in `~/.codex`.
+- The served texts no longer address the assistant as Claude:
+  `analyze_for_coding`'s next steps, `record_suggestions`' and
+  `propose_codes`' descriptions, and `explain_ai_coding_tools`'
+  description and overview (which also spells QualCoder so), now say
+  "the assistant" or "you". No description grew.
+- Tests: the new claims pinned, the settings entry read as TOML and
+  checked against the command and settings this branch has, and
+  Codex's approval rule applied to every tool's marks.
+
+### Changed: what an assistant can read by itself, said plainly
+
+- Codex, in "Ask for approval" and in its read-only mode alike, can
+  read files well beyond the folder it works in, without asking (on
+  macOS and Linux any file the account can read, on Windows at least
+  everything in the home folder but a few folders that hold keys), and
+  Exegete's answers give it a project's path; a folder of its own keeps
+  a study's files out of the place it works in and changes without
+  asking, not out of its reach (OpenAI's page on approvals and Codex's
+  source code, read 30 September 2026). README,
+  INSTALL.md and PRIVACY.md now say so plainly, and suggest, for
+  participants' data, an assistant with no file access of its own,
+  such as Claude Desktop's chat with the extension; OpenAI's apps for
+  practice and non-sensitive data until a setting that stops those
+  reads has been tested with Exegete.
+- PRIVACY.md, "Assistants that open files by themselves": for Codex,
+  Claude Code, Cowork, Claude Desktop's chat and LM Studio, whether
+  each can read a project's files directly, bypassing Exegete and the
+  private part of memos, with each maker's page and the date it was
+  read. Also in OpenAI's steps: Codex is chosen before its folder is
+  opened, the folder can be made in Finder or File Explorer (on
+  Windows, `%USERPROFILE%` in the address bar finds the home folder),
+  Remote is checked under Settings, Connections and any device paired
+  there removed, since signing out does not remove it, another computer
+  as well as a phone can control the one Exegete runs on, and Codex's
+  session files keep what its own commands read too. INSTALL.md's
+  OpenAI section says at its top that the route is for practice and
+  data that is not sensitive, and PRIVACY.md says at its start that an
+  assistant that opens files by itself can send more.
+- Claude Code's routes say the same: INSTALL.md's table of routes, its
+  Claude Code section and its recipe with an API key now say that
+  Claude Code opens files by itself, outside Exegete, whichever plan or
+  terms it runs under: it reads the folder it starts in without asking,
+  and its read-only commands, such as `cat`, read outside it
+  (Anthropic's pages, read 30 September 2026). The steps make an empty
+  folder for Claude Code, start it there and register Exegete there,
+  never in the home folder, where a new Terminal window opens, or a
+  folder that holds a study. The recipe's last step no longer calls
+  itself recommended for participant data; for participants' data under
+  commercial terms, the documents suggest Claude Desktop's chat with
+  Exegete on a Team or Enterprise account. README and QUICKSTART.md say
+  it where they send readers to Claude Code.
+- The advice for participants' data (Claude Desktop's chat with the
+  extension) now adds computer use off and no connected folder that
+  holds projects or transcripts, the home folder or a whole drive
+  included; PRIVACY.md names computer use as a third way the chat can
+  reach a file, with Anthropic's page. TOOLS.md and AI_CODING_GUIDE.md
+  say the private part of a memo is never sent to the AI through
+  Exegete, and point to PRIVACY.md for assistants that open files by
+  themselves. The opt-out and the session files in README and
+  PRIVACY.md no longer speak as if participants' data will be used with
+  OpenAI's apps.
+
+### Measured
+
+- Serialised tool JSON as it stands after the rename's changes to the
+  tools' texts: full = 195,266 characters (about 48.8k tokens at
+  chars/4) over 73 tools, core = 64,804 (about 16.2k) over 21, and the
+  opt-in lifecycle set = 197,845 (about 49.5k) over 74, measured on
+  Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
+  Python 3.11.13 (the `.venv/`), 204,974, 68,096 and 207,693. Moved by
+  the resource addresses the texts name (`exegete://` for
+  `qualcoder://`), the settings they name (`EXEGETE_PROJECT_PATH`
+  and `EXEGETE_AI_CODER_NAME` in `select_project` and
+  `export_refi_qda`), three descriptions that no longer address the
+  assistant as Claude, the AI coder name file's new name in
+  `set_project_ai_coder_name`, and the projects folder's new name in
+  `copy_project_to_workspace`, `import_text_file` and `create_project`,
+  each a few characters shorter.
+
+### Upgrading from 0.14.0
+
+Nothing you set up stops working. INSTALL.md's "Coming from
+qualcoder-mcp" says what you may change on each route.
+
+- **Quit before updating.** Fully quit every AI host that uses the
+  server before you update it: a copy of the server left running while
+  its files change fails the first time it needs a part it has not
+  loaded yet (the REFI-QDA export is one), and the first start after
+  the update moves the server's folder, which is best done with no
+  older copy running. INSTALL.md now says to quit before `git pull`,
+  not after.
+- **Still accepted until v1.0**, each named once in the start-up log
+  where it is used: `QUALCODER_MCP_TOOLSET`,
+  `QUALCODER_MCP_AI_CODER_NAME`, `QUALCODER_MCP_WORKSPACE`,
+  `QUALCODER_MCP_WORKSPACE_REQUIRED`,
+  `QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`;
+  the resource addresses `qualcoder://...`, still answered but no
+  longer listed; and the state folder's earlier name,
+  `~/.qualcoder_mcp`, as a link (a junction on Windows) to
+  `~/.exegete`.
+- **Still working:** the `qualcoder-mcp` command and
+  `python -m qualcoder_mcp.server`, which start Exegete and say so in
+  one line of the log; `pip install --upgrade qualcoder-mcp`,
+  `pipx upgrade qualcoder-mcp`, `uv tool upgrade qualcoder-mcp` and
+  `uvx qualcoder-mcp`, which bring the current Exegete while the old
+  name's package is released beside it, until v1.0 (pipx and uv put
+  only the named package's commands on your PATH, so `exegete` itself
+  comes from installing `exegete`); and an entry in a host's
+  configuration named `qualcoder` (keep it, and do not add an `exegete`
+  entry beside it).
+- **The projects folder** on the Terminal routes, with no workspace
+  set, becomes `~/Documents/Exegete projects`. Your projects in
+  `~/Documents/Qualcoder MCP Projects` are never moved or emptied and
+  are still found; set `EXEGETE_WORKSPACE` to that folder to keep
+  using it.
+- **The AI coder name file** becomes `exegete.json` the first time a
+  project's name is stored after the update; the earlier
+  `qualcoder_mcp.json` stays beside it, marked so that qualcoder-mcp
+  0.12 to 0.14 refuse to write it (they say it was written by a newer
+  version: update that copy). A project Exegete names first gets a
+  marked `qualcoder_mcp.json` holding no name, for the same reason,
+  until v1.0. Until then, and after a restore of an
+  older backup, the earlier file is read as before. If `exegete.json`
+  goes missing later, the next AI write asks for the name again rather
+  than use the one from before the move.
+- **Tidying up afterwards:** `exegete --check-transition` (with the
+  desktop extension, `uvx exegete --check-transition`) lists what the
+  change left behind on your computer as numbered steps, in the order
+  to take them: installing Exegete first where uv tool or pipx holds
+  the old package (for a copy of the source, it names the folder and
+  says to quit your host before updating it), then a host's entry
+  still starting the old command, then removing the old package, and
+  updating a desktop extension older than Exegete; then the link at
+  `~/.qualcoder_mcp`, Claude Desktop's logs under the earlier name and
+  the earlier projects folder. Commands carry full paths, ready to
+  paste, and the check changes nothing; `--tidy` removes the link when
+  nothing it can find could still use it or start an older copy (it
+  cannot see a project's own `.mcp.json` file: while an older copy
+  could still start from one, keep the link), and `--tidy-old-logs`
+  with it the old logs. INSTALL.md's "Coming from qualcoder-mcp" says
+  more.
+- **Not kept:** code of your own that imported the server's inner
+  modules under the old name (`qualcoder_mcp.database` and the others,
+  or `qualcoder_mcp.__version__`); only the two ways of starting the
+  server survive.
+- **The extension:** opening the new file updates the one you have. It
+  is then listed as Exegete; the earlier log stays where it was; the
+  first start may take longer and needs the internet; Claude may ask
+  again before it uses each tool.
+- **A departure from QualCoder, named:** the resource addresses leave
+  `qualcoder://`, the scheme QualCoder's own MCP server also uses (pull
+  request #1571), so that with both servers connected to one assistant
+  an address is answered by the program it names.
 
 ## [0.14.0-alpha] - 2026-09-28
 

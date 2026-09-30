@@ -18,7 +18,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import qualcoder_mcp.server as server
+import exegete.server as server
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -76,7 +76,7 @@ def _session_lists(tmp_path, toolset_value):
     if toolset_value is not None:
         env["QUALCODER_MCP_TOOLSET"] = toolset_value
     params = StdioServerParameters(command=str(VENV_PY),
-                                   args=["-m", "qualcoder_mcp.server"],
+                                   args=["-m", "exegete.server"],
                                    env=env)
 
     async def drive():

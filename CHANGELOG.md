@@ -106,8 +106,8 @@ still accepted (the Upgrading list below).
 - The old name's package, `qualcoder-mcp`, is released beside every
   release until v1.0: it carries the `qualcoder-mcp` command and a
   two-file stand-in module, and asks for the matching Exegete.
-- The transition check, `exegete --check-transition` (the owner's
-  rulings 42 and 43): read-only, it prints what the move left behind and
+- The transition check, `exegete --check-transition`:
+  read-only, it prints what the move left behind and
   the one step that tidies each, and exits 0 when nothing is left: the
   old `qualcoder-mcp` package still installed, and the command that
   removes it for the way it was installed (pip, uv, uv tool, pipx, a

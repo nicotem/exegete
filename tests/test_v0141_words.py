@@ -396,3 +396,16 @@ class TestTheUpgradingList:
         entry = self._entry()
         assert "**A departure from QualCoder, named:**" in entry
         assert "the scheme QualCoder's own MCP server also uses" in entry
+
+
+def test_the_changelog_entry_carries_no_internal_labels():
+    # Public prose names no ruling, decision, round or gate: a reader
+    # cannot look them up (the final round's CHANGELOG said "the owner's
+    # rulings 42 and 43"). Past entries stay as written.
+    changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased = " ".join(changelog[changelog.index("## [Unreleased]"):
+                                    changelog.index("## [0.14.0-alpha]")]
+                          .split())
+    for label in (r"\brulings?\b", r"\bdecisions? \d", r"\bfix round",
+                  r"\bgates?\b", r"\bthe lead\b", r"\bthe owner's\b"):
+        assert not re.search(label, unreleased, re.IGNORECASE), label

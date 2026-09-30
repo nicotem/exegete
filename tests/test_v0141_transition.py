@@ -174,7 +174,9 @@ class TestTheOldPackage:
             # where the copy is cannot be told here: "its folder"
             again = command_line([python, "-m", "pip", "install", "-e", "."])
             assert pasted(out) == ["git pull", again, remove, again]
-            assert "Quit your AI host first" in items(out)[0][1][0]
+            assert "This comes first. Quit your AI host, since" in \
+                items(out)[0][1][0]
+            assert "Quit your AI host first" not in out
             assert "in its folder" in items(out)[0][1][0]
         else:
             assert pasted(out) == [install, remove]
@@ -216,7 +218,8 @@ class TestACopyOfTheSource:
         what, lines = items(out)[0]
         step = " ".join(" ".join(lines).split())
         assert "installed from a copy of the source" in what
-        assert "Quit your AI host first" in step
+        assert "This comes first. Quit your AI host, since" in step
+        assert "Quit your AI host first" not in step
         assert quoted("~" + os.sep + os.path.join("Documents", ODD)) in step
         python = str(env / "bin" / "python")
         assert pasted(out)[:2] == [
@@ -1268,7 +1271,8 @@ class TestTheHelpTopic:
         topic = json.loads(server.explain_ai_coding_tools(
             "moving_from_qualcoder_mcp"))
         extension = " ".join(topic["desktop_extension"].split())
-        assert "`uvx exegete --check-transition`" in extension
+        assert "`uvx exegete@latest --check-transition`" in extension
+        assert "uvx exegete --check-transition" not in extension
         assert "installs no command" in extension
         assert "~/.qualcoder_mcp" in extension
 
@@ -1340,3 +1344,340 @@ def test_the_documents_say_what_holds_the_link():
         assert "own `.mcp.json` file" in text
     for text in (install, unreleased):
         assert "names the folder and says to quit" in text
+
+
+# ---------------------------------------------------------------------------
+# 0.14.2: what the checks after 0.14.1 found
+# ---------------------------------------------------------------------------
+
+# Where Claude Desktop for Windows keeps its files when installed from its
+# current installer, a Windows app package (MSIX): Windows keeps what the
+# app writes under AppData\Roaming in the package's own folder.
+PACKAGE = "Claude_pzs8sxrjxfjjc"
+
+
+def packaged(home, package=PACKAGE):
+    return home.joinpath("AppData", "Local", "Packages", package,
+                         "LocalCache", "Roaming", "Claude")
+
+
+class TestTheWindowsAppPackage:
+
+    def test_an_older_extension_there_holds_the_link(self, tmp_path):
+        TestTheLink()._moved(tmp_path)
+        folder = packaged(tmp_path) / "Claude Extensions" / EXTENSION_ID
+        write(folder / "manifest.json", json.dumps(
+            {"name": "qualcoder-mcp", "version": "0.14.0-alpha"}))
+        write(folder / "src" / "qualcoder_mcp" / "server.py", "")
+        code, out = run(tmp_path, tidy=True)
+        assert code == 1
+        assert state_folder.is_link(tmp_path / ".qualcoder_mcp")
+        assert "Done:" not in out
+        shown = quoted("~" + os.sep + str(folder.relative_to(tmp_path)))
+        assert (f"The desktop extension, qualcoder-mcp 0.14.0-alpha, in "
+                f"{shown} is older than Exegete") in out
+
+    def test_its_settings_file_is_read(self, tmp_path):
+        config = write(packaged(tmp_path) / "claude_desktop_config.json",
+                       json.dumps({"mcpServers": {"qualcoder": {
+                           "command": "/v/bin/qualcoder-mcp"}}}))
+        code, out = run(tmp_path)
+        assert code == 1
+        assert ("Claude Desktop's entry \"qualcoder\" still starts the old "
+                "command.") in out
+        assert quoted("~" + os.sep + str(config.relative_to(tmp_path))) \
+            in out
+
+    def test_its_old_logs_are_found(self, tmp_path):
+        log = write(packaged(tmp_path) / "logs" /
+                    "mcp-server-qualcoder-mcp.log", "log\n")
+        code, out = run(tmp_path)
+        assert code == 1 and "mcp-server-qualcoder-mcp.log" in out
+        code, out = run(tmp_path, tidy=True, logs=True)
+        assert code == 0, out
+        assert not log.exists()
+
+    def test_only_claudes_package_is_searched(self, tmp_path):
+        for package in ("ClaudeHelper_x", "Other_x"):
+            write(packaged(tmp_path, package) / "claude_desktop_config.json",
+                  json.dumps({"mcpServers": {"qualcoder": {
+                      "command": "/v/bin/qualcoder-mcp"}}}))
+        code, out = run(tmp_path)
+        assert code == 0, out
+        assert transition.packaged_app_folders(tmp_path) == []
+        write(packaged(tmp_path) / "x", "")
+        assert transition.packaged_app_folders(tmp_path) == \
+            [packaged(tmp_path)]
+
+
+def uv_receipt(root, commands, inline=False):
+    """The receipt uv tool writes beside a tool's environment: its
+    requirements (none with an install path) and the commands it linked."""
+    points = [f'{{ name = "{c}", install-path = "/h/.local/bin/{c}", '
+              f'from = "{c}" }}' for c in commands]
+    listed = ("entrypoints = [" + ", ".join(points) + "]" if inline else
+              "entrypoints = [\n" + "".join(f"    {p},\n" for p in points) +
+              "]")
+    return write(root / "uv-receipt.toml",
+                 '[tool]\nrequirements = [\n    { name = "qualcoder-mcp" },\n'
+                 '    { name = "exegete" },\n]\n' + listed +
+                 '\n\n[tool.options]\n')
+
+
+class TestUvsExecutablesFrom:
+    """`uv tool install qualcoder-mcp --with-executables-from exegete`
+    links exegete's command from the old tool's environment and records
+    it in that tool's receipt; `uv tool uninstall qualcoder-mcp` then
+    removes it wherever it leads by then, Exegete's own install included
+    (test_v0141_transition_installers.py runs the real uv)."""
+
+    @pytest.mark.parametrize("py310", [False, True])
+    @pytest.mark.parametrize("inline", [False, True])
+    def test_what_the_receipt_says(self, tmp_path, monkeypatch, py310,
+                                   inline):
+        if py310:
+            monkeypatch.setattr(transition, "tomllib", None)
+        uv_receipt(tmp_path, ["exegete.exe", "qualcoder-mcp"], inline)
+        assert transition.uv_tool_commands(tmp_path) == \
+            ["exegete", "qualcoder-mcp"]
+        uv_receipt(tmp_path, ["qualcoder-mcp"], inline)
+        assert transition.uv_tool_commands(tmp_path) == ["qualcoder-mcp"]
+        for text in ("[tool\n", "[" * 100000, ""):
+            write(tmp_path / "uv-receipt.toml", text)
+            assert transition.uv_tool_commands(tmp_path) == []
+        (tmp_path / "uv-receipt.toml").unlink()
+        assert transition.uv_tool_commands(tmp_path) == []
+
+    @POSIX_ONLY
+    def test_the_command_is_put_back_after_the_removal(self, tmp_path):
+        home = tmp_path / "home"
+        root = lay_out_tool(home, "uv tool", "qualcoder-mcp", "0.14.1a0",
+                            inner_exegete=True)
+        folder = home / ".local" / "bin"
+        os.symlink(root / BIN / "exegete", folder / "exegete")
+        uv_receipt(root, ["exegete", "qualcoder-mcp"])
+        config = desktop_file(home, {"qualcoder": {
+            "command": str(folder / "qualcoder-mcp")}})
+        install = command_line(["uv", "tool", "install", "--force",
+                                "exegete"])
+        remove = command_line(["uv", "tool", "uninstall", "qualcoder-mcp"])
+        code, out = run(home)
+        assert pasted(out)[0] == install
+        assert pasted(out)[-2:] == [remove, install]
+        removal = items(out)[-1]
+        flat = " ".join((removal[0] + " " + " ".join(removal[1])).split())
+        assert "uv recorded the exegete command as one of its own" in flat
+        assert "uv's uninstall removes the exegete command too" in flat
+        # 1. Exegete installed, as uv does: a tool of its own, the command
+        # linked into it
+        (folder / "exegete").unlink()
+        lay_out_tool(home, "uv tool", "exegete", "0.14.1a0")
+        # 2. the entry, as printed
+        code, out = run(home)
+        entry = json.loads("{" + " ".join(
+            line for line in pasted(out) if line.startswith('"')) + "}")
+        config.write_text(json.dumps({"mcpServers": {"qualcoder": entry}}),
+                          encoding="utf-8")
+        code, out = run(home)
+        assert pasted(out) == [remove, install]
+        # 3. uv's uninstall: the old tool, and every command its receipt
+        # names, although exegete's now leads into Exegete's own tool
+        import shutil
+        shutil.rmtree(root)
+        for name in ("qualcoder-mcp", "exegete"):
+            (folder / name).unlink()
+        code, out = run(home)
+        assert code == 1 and pasted(out) == [install]
+        # then the step's second command, as uv does it
+        os.symlink(home / TOOLS["uv tool"][0] / "exegete" / BIN / "exegete",
+                   folder / "exegete")
+        code, out = run(home)
+        assert code == 0 and transition.NOTHING_LEFT in out
+
+    def test_without_it_the_removal_is_as_before(self, tmp_path):
+        home = tmp_path / "home"
+        root = lay_out_tool(home, "uv tool", "qualcoder-mcp", "0.14.1a0",
+                            inner_exegete=True)
+        lay_out_tool(home, "uv tool", "exegete", "0.14.1a0")
+        uv_receipt(root, ["qualcoder-mcp"])
+        code, out = run(home)
+        assert pasted(out) == [command_line(["uv", "tool", "uninstall",
+                                             "qualcoder-mcp"])]
+
+
+class TestAnEntryWhoseCommandIsGone:
+    """A host's entry that starts the exegete command by a path where
+    there is none: the host cannot start the server, so the check says
+    so, rather than that nothing is left."""
+
+    @pytest.mark.parametrize("kind", ["uv tool", "pipx"])
+    def test_put_back_by_the_tool_that_installed_it(self, tmp_path, kind):
+        home = tmp_path / "home"
+        lay_out_tool(home, kind, "exegete", "0.14.1a0")
+        command = home / ".local" / "bin" / "exegete"
+        command.unlink()
+        desktop_file(home, {"qualcoder": {"command": str(command)}})
+        code, out = run(home)
+        assert code == 1 and transition.NOTHING_LEFT not in out
+        what, lines = items(out)[0]
+        assert what == (f"Claude Desktop's entry \"qualcoder\" starts "
+                        f"{quoted(str(command))}, which does not exist, so "
+                        f"Claude Desktop cannot start Exegete.")
+        assert "This comes first" in lines[0]
+        assert pasted(out) == [command_line(
+            TOOLS[kind][1] + ["install", "--force", "exegete"])]
+        write(command, "#!/bin/sh\n")
+        code, out = run(home)
+        assert code == 0 and transition.NOTHING_LEFT in out
+
+    def test_elsewhere_it_says_what_to_do(self, tmp_path):
+        home = tmp_path / "home"
+        command = home / "custom" / "exegete"
+        write(home / ".codex" / "config.toml",
+              f"[mcp_servers.qualcoder]\ncommand = {quoted(str(command))}\n")
+        code, out = run(home)
+        assert code == 1
+        flat = " ".join(out.split())
+        assert (f"Codex's entry \"qualcoder\" starts {quoted(str(command))}, "
+                f"which does not exist") in flat
+        assert ("Install Exegete so that this command exists (INSTALL.md), "
+                "or change the entry \"qualcoder\"") in flat
+        assert pasted(out) == []
+
+    @pytest.mark.parametrize("entry", [
+        {"command": "exegete"},                    # the host's own PATH
+        {"command": "uvx", "args": ["exegete"]},
+        {"command": "/v/bin/python", "args": ["-m", "exegete.server"]},
+        {"command": "/v/bin/exegete-helper"},
+    ])
+    def test_only_a_path_to_the_command_is_judged(self, tmp_path, entry):
+        desktop_file(tmp_path, {"qualcoder": entry})
+        code, out = run(tmp_path)
+        assert code == 0, out
+
+    def test_a_home_relative_path_is_read_in_full(self, tmp_path):
+        desktop_file(tmp_path, {"qualcoder": {
+            "command": "~/.local/bin/exegete"}})
+        code, out = run(tmp_path)
+        assert quoted(str(tmp_path / ".local" / "bin" / "exegete")) in out
+        write(tmp_path / ".local" / "bin" / "exegete", "")
+        assert run(tmp_path)[0] == 0
+
+    def test_said_once_while_exegete_is_to_be_installed(self, tmp_path):
+        # the step that installs Exegete puts the command there
+        home = tmp_path / "home"
+        lay_out_tool(home, "uv tool", "qualcoder-mcp", "0.14.0a0")
+        desktop_file(home, {"qualcoder": {
+            "command": str(home / ".local" / "bin" / "exegete")}})
+        code, out = run(home)
+        assert "cannot start Exegete" not in out
+        assert pasted(out)[0] == command_line(["uv", "tool", "install",
+                                               "exegete"])
+
+
+class TestPuttingTheLinkBack:
+    """The tidy cannot see an older copy started from a project's own
+    .mcp.json file, and says so in the step it carries out: once the link
+    is removed, it also says how to put it back."""
+
+    def test_the_tidy_says_how(self, tmp_path):
+        TestTheLink()._moved(tmp_path)
+        code, out = run(tmp_path, tidy=True)
+        assert code == 0, out
+        flat = " ".join(out.split())
+        old, new = (quoted("~" + os.sep + name)
+                    for name in (".qualcoder_mcp", ".exegete"))
+        assert (f"Done: Removed the link {old}; {new} is untouched. Should "
+                f"an older copy still start from a project's own .mcp.json "
+                f"file, put the link back before it does.") in flat
+        assert pasted(out) == [transition.put_back_link(tmp_path)]
+
+    def test_not_said_while_the_link_stays(self, tmp_path):
+        TestTheLink()._moved(tmp_path)
+        code, out = run(tmp_path, tidy=True, lines=["uvx qualcoder-mcp"])
+        assert "put the link back" not in out and pasted(out) == []
+        code, out = run(tmp_path)
+        assert "put the link back" not in out and pasted(out) == []
+
+    @POSIX_ONLY
+    def test_the_command_makes_the_link_the_move_made(self, tmp_path):
+        new = TestTheLink()._moved(tmp_path)
+        code, out = run(tmp_path, tidy=True)
+        assert pasted(out) == [command_line(
+            ["ln", "-s", ".exegete", str(tmp_path / ".qualcoder_mcp")])]
+        done = subprocess.run(["/bin/sh", "-c", pasted(out)[0]],
+                              capture_output=True, timeout=30)
+        assert done.returncode == 0, done.stderr
+        old = tmp_path / ".qualcoder_mcp"
+        assert state_folder.is_link(old) and os.readlink(old) == ".exegete"
+        assert state_folder.same_folder(old, new)
+        assert "the link the move left" in run(tmp_path)[1]
+
+    def test_on_windows_a_junction(self, tmp_path):
+        assert transition.put_back_link(tmp_path, windows=True) == \
+            command_line(["New-Item", "-ItemType", "Junction", "-Path",
+                          str(tmp_path / ".qualcoder_mcp"), "-Target",
+                          str(tmp_path / ".exegete")], windows=True)
+
+    @pytest.mark.skipif(os.name != "nt", reason="Windows PowerShell")
+    def test_on_windows_the_command_makes_a_junction(self, tmp_path):
+        new = TestTheLink()._moved(tmp_path)
+        code, out = run(tmp_path, tidy=True)
+        done = subprocess.run([transition.windows_powershell(), "-NoProfile",
+                               "-Command", pasted(out)[0]],
+                              capture_output=True, timeout=60)
+        assert done.returncode == 0, done.stderr
+        old = tmp_path / ".qualcoder_mcp"
+        assert state_folder.is_link(old)
+        assert state_folder.same_folder(old, new)
+
+
+class TestBashOrZsh:
+    """A command with a word written as $'...' (for characters that cannot
+    be shown) is read by bash, zsh and the Mac's sh, and not by dash, the
+    sh of Debian and Ubuntu: the check says where to paste it."""
+
+    def test_what_counts(self):
+        assert transition.needs_bash_or_zsh(
+            [command_line(["/a b/python", "-m", "pip"], windows=False)])
+        assert transition.needs_bash_or_zsh(
+            ["git pull", command_line(["git", "-C", "/x​y", "pull"],
+                                      windows=False)])
+        assert not transition.needs_bash_or_zsh(
+            [command_line(["/a b/it's $x", "-m", "pip"], windows=False),
+             '"command": "/a $\'b",', "command = \"a $'b\""])
+
+    @POSIX_ONLY
+    def test_said_beside_such_a_command_alone(self, tmp_path):
+        home = tmp_path / "home"
+        env = env_with_old_package(home / "a venv")
+        code, out = run(home, prefix=env)
+        assert any(line.startswith("$'") for line in pasted(out))
+        assert f"\n   {transition.BASH_OR_ZSH}\n" in out
+        env = env_with_old_package(home / ODD)
+        code, out = run(home, prefix=env)
+        assert transition.BASH_OR_ZSH not in out
+
+    @pytest.mark.skipif(not os.path.exists("/bin/dash"), reason="no dash")
+    def test_dash_cannot_read_it(self):
+        line = "printf %s " + command_line(["a b"], windows=False)
+        got = {shell: subprocess.run([shell, "-c", line], capture_output=True,
+                                     timeout=30).stdout
+               for shell in ("/bin/bash", "/bin/dash")}
+        assert got["/bin/bash"] == "a b".encode("utf-8")
+        assert got["/bin/dash"] != "a b".encode("utf-8")
+
+
+def test_the_help_topic_says_what_0_14_2_added():
+    topic = json.loads(server.explain_ai_coding_tools(
+        "moving_from_qualcoder_mcp"))
+    check = " ".join(topic["the_check"].split())
+    tidy = " ".join(topic["tidy"].split())
+    extension = " ".join(topic["desktop_extension"].split())
+    assert ("(or, where a host's entry starts an exegete command that is no "
+            "longer there, the command that puts it back)") in check
+    assert ("(once it has removed the link, it prints the command that puts "
+            "it back)") in tidy
+    assert ("(@latest makes uv fetch the newest release, rather than run "
+            "one it fetched before, whose check may not know the "
+            "extension)") in extension

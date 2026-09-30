@@ -111,24 +111,33 @@ still accepted (the Upgrading list below).
   take them, and exits 0 when nothing is left. First, where the old
   `qualcoder-mcp` package was installed with uv tool or pipx (or is
   0.14.0 or earlier) and there is no `exegete` command yet, the command
-  that installs Exegete; then each entry in Claude Desktop's, Claude
-  Code's, LM Studio's or Codex's configuration still starting the old
-  command (pinned forms such as `qualcoder-mcp==0.14.0` included), with
-  the entry to use instead (the files are only read); then the command
-  that removes the old package for the way it was installed (pip, uv,
-  uv tool, pipx, a copy of the source); the link at `~/.qualcoder_mcp`
-  and whether it can go; Claude Desktop's logs under the extension's
-  earlier name; and the earlier projects folder, searched three folders
-  down like the project list, with what is in it (never offered for
-  removal while anything is in it). Commands and entry lines carry full
-  paths, quoted for the shell they go into (PowerShell on Windows),
-  ready to paste. `--tidy` removes only the link, never a folder, and
-  only when it leads to `~/.exegete`, nothing started as qualcoder-mcp
-  is running, and nothing is left that could start an older copy (a
-  package older than 0.14.1, or a host entry starting the old command;
-  the check says which); `--tidy-old-logs` with it removes the old logs.
-  Projects, backups, the AI coder name files and hosts' configurations
-  are never touched. With the desktop extension there is no `exegete`
+  that installs Exegete (with `--force` where an `exegete` command
+  linked from the old package's own environment, which would go with
+  it, has to be replaced); for a copy of the source, it names the
+  folder and says to quit the host before updating it. Then each entry
+  in Claude Desktop's, Claude Code's, LM Studio's or Codex's
+  configuration still starting the old command (pinned forms such as
+  `qualcoder-mcp==0.14.0` included), with the entry to use instead (the
+  files are only read); then the command that removes the old package
+  for the way it was installed (pip, uv, uv tool, pipx, a copy of the
+  source); a desktop extension older than Exegete, to update; the link
+  at `~/.qualcoder_mcp` and whether it can go; Claude Desktop's logs
+  under the extension's earlier name; and the earlier projects folder,
+  searched three folders down like the project list, with what is in
+  it (never offered for removal while anything is in it). Commands and
+  entry lines carry full paths, quoted for the shell they go into
+  (PowerShell on Windows; elsewhere, characters that cannot be shown are
+  written as bytes, which the Mac's older bash reads too), ready to
+  paste. `--tidy` removes only the link, never a folder, and only when
+  it leads to `~/.exegete`, nothing started as qualcoder-mcp is running
+  (whatever its arguments, unless it is the check or a program that
+  started it), and nothing is left that could start an older copy (a
+  package older than 0.14.1, a host entry starting the old command, or
+  a desktop extension older than Exegete; the check says which). It
+  cannot see an older copy started from a project's own `.mcp.json`
+  file: while one could still start, keep the link. `--tidy-old-logs`
+  with it removes the old logs. Projects, backups, the AI coder name
+  files and hosts' configurations are never touched. With the desktop extension there is no `exegete`
   command: `uvx exegete --check-transition` runs the check. A help
   topic, `explain_ai_coding_tools('moving_from_qualcoder_mcp')`, tells
   the assistant how to guide a researcher through it (no tool
@@ -328,13 +337,18 @@ qualcoder-mcp" says what you may change on each route.
   desktop extension, `uvx exegete --check-transition`) lists what the
   change left behind on your computer as numbered steps, in the order
   to take them: installing Exegete first where uv tool or pipx holds
-  the old package, then a host's entry still starting the old command,
-  then removing the old package; then the link at `~/.qualcoder_mcp`,
-  Claude Desktop's logs under the earlier name and the earlier projects
-  folder. Commands carry full paths, ready to paste, and the check
-  changes nothing; `--tidy` removes the link when nothing can still use
-  it or start an older copy, and `--tidy-old-logs` with it the old
-  logs. INSTALL.md's "Coming from qualcoder-mcp" says more.
+  the old package (for a copy of the source, it names the folder and
+  says to quit your host before updating it), then a host's entry
+  still starting the old command, then removing the old package, and
+  updating a desktop extension older than Exegete; then the link at
+  `~/.qualcoder_mcp`, Claude Desktop's logs under the earlier name and
+  the earlier projects folder. Commands carry full paths, ready to
+  paste, and the check changes nothing; `--tidy` removes the link when
+  nothing it can find could still use it or start an older copy (it
+  cannot see a project's own `.mcp.json` file: while an older copy
+  could still start from one, keep the link), and `--tidy-old-logs`
+  with it the old logs. INSTALL.md's "Coming from qualcoder-mcp" says
+  more.
 - **Not kept:** code of your own that imported the server's inner
   modules under the old name (`qualcoder_mcp.database` and the others,
   or `qualcoder_mcp.__version__`); only the two ways of starting the

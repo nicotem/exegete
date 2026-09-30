@@ -1252,6 +1252,18 @@ class TestTheHelpTopic:
         unknown = json.loads(server.explain_ai_coding_tools("nope"))
         assert "moving_from_qualcoder_mcp" in unknown["available_tools"]
 
+    def test_it_says_what_holds_the_link(self):
+        topic = json.loads(server.explain_ai_coding_tools(
+            "moving_from_qualcoder_mcp"))
+        check = " ".join(topic["the_check"].split())
+        tidy = " ".join(topic["tidy"].split())
+        assert "a desktop extension older than Exegete, to update" in check
+        assert ("For a copy of the source it names the folder and says to "
+                "quit the AI host before updating it") in check
+        assert "or a desktop extension older than Exegete" in tidy
+        assert ("cannot see an older copy started from a project's own "
+                ".mcp.json file") in tidy
+
     def test_it_tells_desktop_extension_users_how_to_run_it(self):
         topic = json.loads(server.explain_ai_coding_tools(
             "moving_from_qualcoder_mcp"))
@@ -1312,3 +1324,19 @@ def test_the_documents_give_the_order_and_the_extensions_way():
         "**Afterwards, the transition check.**")[1]
     assert "older than 0.14.1" in install
     assert "full paths" in install
+
+
+def test_the_documents_say_what_holds_the_link():
+    install = " ".join(section(
+        (REPO / "INSTALL.md").read_text(encoding="utf-8"),
+        "**Afterwards, the transition check.**",
+        "## Upgrading from an earlier").split())
+    unreleased = " ".join((REPO / "CHANGELOG.md").read_text(
+        encoding="utf-8").split("## [0.14.0")[0].split())
+    old = " ".join((REPO / "packaging" / "pypi-old-name" / "README.md")
+                   .read_text(encoding="utf-8").split())
+    for text in (install, unreleased, old):
+        assert "desktop extension older than Exegete" in text
+        assert "own `.mcp.json` file" in text
+    for text in (install, unreleased):
+        assert "names the folder and says to quit" in text

@@ -35,8 +35,12 @@ What to change, if you want to, on each route:
 `qualcoder-mcp --check-transition`) lists what the change left on your
 computer, numbered in the order to take the steps, with full paths
 ready to paste, and changes nothing; with `--tidy` it removes the link
-left at `~/.qualcoder_mcp` once nothing can still use it. Running this package's command writes one
-line saying so.
+left at `~/.qualcoder_mcp` once nothing it can find could still start
+an older copy (an older package, a host's entry, or a desktop
+extension older than Exegete). It cannot see a project's own
+`.mcp.json` file: while an older copy could still start from one,
+keep the link. Running this package's command writes one line saying
+so.
 
 **Until version 1.0.** At version 1.0 the last release of this package
 will say plainly that it is the last, and none will follow; change your

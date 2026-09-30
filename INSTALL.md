@@ -1586,20 +1586,25 @@ Code's, LM Studio's or Codex's configuration that still starts the old
 command, with the entry to use instead (it only reads those files:
 change them yourself, with the host quit); then the command that
 removes the old package, for the way it was installed (pip, uv, uv
-tool, pipx or a copy of the source); the link at `~/.qualcoder_mcp`,
-and whether it can go; Claude Desktop's logs under
-the extension's earlier name; and the earlier projects folder, with
-what is in it (it is searched three folders down, like the project
-list, and never offered for removal while anything is in it).
-Commands and entry lines are printed on lines of their own, with full
-paths, ready to paste. Adding `--tidy` removes the link, and only
-when nothing started as `qualcoder-mcp` is still running, the link
-leads to `~/.exegete`, and nothing is left that could start an older
-copy (a package older than 0.14.1, or a host entry starting the old
-command; the check says which); adding `--tidy-old-logs` as well
-removes those old logs. Projects, backups, the AI coder name files in
-projects and the hosts' configuration files are never touched. If you
-use the desktop extension, there is no `exegete` command: type
+tool, pipx or a copy of the source); a desktop extension older than
+Exegete, to update; the link at `~/.qualcoder_mcp`, and whether it can
+go; Claude Desktop's logs under the extension's earlier name; and the
+earlier projects folder, with what is in it (it is searched three
+folders down, like the project list, and never offered for removal
+while anything is in it). For a copy of the source, it names the
+folder and says to quit your host before updating it. Commands and
+entry lines are printed on lines of their own, with full paths, ready
+to paste. Adding `--tidy` removes the link, and only when nothing
+started as `qualcoder-mcp` is still running, the link leads to
+`~/.exegete`, and nothing is left that could start an older copy (a
+package older than 0.14.1, a host entry starting the old command, or a
+desktop extension older than Exegete; the check says which). It cannot
+see an older copy started from a project's own `.mcp.json` file (Claude
+Code's project entries): while one could still start, keep the link.
+Adding `--tidy-old-logs` as well removes those old logs. Projects,
+backups, the AI coder name files in projects and the hosts'
+configuration files are never touched. If you use the desktop
+extension, there is no `exegete` command: type
 `uvx exegete --check-transition` instead. It needs uv in your
 terminal; if `uvx` is not found, what the extension can leave (the
 link and one old log file) is harmless and can stay. The old name's

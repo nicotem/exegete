@@ -40,12 +40,19 @@ earlier spelling still accepted (the Upgrading list below).
   tool set.
 - The server's own folder is `~/.exegete`. At the first start, an
   existing `~/.qualcoder_mcp` is renamed to it whole (the same disk, so
-  nothing is copied and there is never a second secret key), and a link
-  is left under the old name (a junction on Windows) for older copies
-  of the server on the same computer; the published 0.14.0 was checked
-  to work through it. If the link cannot be made, the folder is not
-  moved. The export guard, `create_project` and the workspace setting
-  refuse both names.
+  the move never copies or duplicates the secret key), and a link is
+  left under the old name (a junction on Windows) for older copies of
+  the server on the same computer; the published 0.14.0 was checked to
+  work through it. If the link cannot be made, the folder is put back,
+  unless an older copy of the server has already written at the old
+  path in that instant, when both folders are kept. An older copy that
+  makes a folder of its own under the old name has a secret key of its
+  own there, which Exegete does not use; Exegete takes only the session
+  files it lacks and says so once in its log (INSTALL.md's
+  troubleshooting says what to do). A link left under the old name
+  after `~/.exegete` was removed by hand is left as it is, and a fresh
+  `~/.exegete` is made. The export guard, `create_project` and the
+  workspace setting refuse both names in every run.
 - The resources' addresses are `exegete://...`.
 - The old name's package, `qualcoder-mcp`, is released beside every
   release until v1.0: it carries the `qualcoder-mcp` command and a

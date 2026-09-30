@@ -311,3 +311,32 @@ class TestACopyOfTheSource:
         proc = run([python, "-m", "qualcoder_mcp.server", "--version"], env)
         assert proc.stdout.strip().endswith("(started as qualcoder-mcp)")
         assert not (venv / BIN / f"qualcoder-mcp{EXE}").exists()
+
+    def test_path_b_into_the_old_clones_environment(self, houses, tmp_path):
+        """INSTALL's Path B warning, as it now reads (fix round 1): `pip
+        install exegete` in an old clone's environment installs Exegete
+        beside the clone's own package rather than in its place, and
+        `-m qualcoder_mcp.server` keeps running the clone's code until the
+        clone itself is updated."""
+        env = _env(tmp_path)
+        tree = rh.copy_tree(tmp_path / "clone")
+        _old_clone(tree)
+        venv = _venv(tmp_path, "venv", env)
+        python = venv / BIN / f"python{EXE}"
+        run([python, "-m", "pip", "install", *offline(houses["old"]),
+             "-e", tree], env)
+        proc = run([python, "-m", "pip", "install", *offline(houses["new"]),
+                    "exegete"], env)
+        assert f"Successfully installed exegete-{TEST_VERSION}" in \
+            proc.stdout, proc.stdout
+        listed = json.loads(run([python, "-m", "pip", "list",
+                                 "--format=json"], env).stdout)
+        assert {"exegete", "qualcoder-mcp"} <= {
+            p["name"].lower() for p in listed}
+        where = run([python, "-c",
+                     "import qualcoder_mcp.server as s, qualcoder_mcp."
+                     "database; print(s.__file__)"], env).stdout.strip()
+        assert Path(where).resolve().is_relative_to(tree.resolve()), where
+        _pull(tree)                      # the clone itself is updated
+        proc = run([python, "-m", "qualcoder_mcp.server", "--version"], env)
+        assert proc.stdout.strip().endswith("(started as qualcoder-mcp)")

@@ -11,26 +11,35 @@ never for --version), after every start-up refusal:
 
 - ~/.exegete absent and ~/.qualcoder_mcp a folder: ONE `os.rename` of
   the whole folder (the same volume, so it is atomic, modes are kept and
-  nothing is copied: there is never a second key), then a link under the
-  old name so that a copy still on 0.14 on the same computer uses the
-  same folder: a relative symbolic link on macOS and Linux (it survives
-  a home folder carried to another computer or user name), a directory
-  junction on Windows (which needs neither Developer Mode nor
-  administrator rights, as a symbolic link would).
+  nothing is copied: the move never copies or duplicates the key), then
+  a link under the old name so that a copy still on 0.14 on the same
+  computer uses the same folder: a relative symbolic link on macOS and
+  Linux (it survives a home folder carried to another computer or user
+  name), a directory junction on Windows (which needs neither Developer
+  Mode nor administrator rights, as a symbolic link would).
 - The link cannot be made: if something now exists at the old path (an
   older copy wrote there between the rename and the link, or another
-  start made the link), both are left as they are; otherwise the folder
-  is renamed straight back, and the next start tries again. So the
-  folder never stays moved without a link.
+  start made the link), both are left as they are, and the folder stays
+  moved (that older copy's new folder has a key of its own, which this
+  server never uses); otherwise the folder is renamed straight back, and
+  the next start tries again.
 - The rename fails (a file held open on Windows, permissions): this run
   uses ~/.qualcoder_mcp, nothing is copied, the next start tries again.
 - Both exist and the old one is a real folder: only session files the
   new folder lacks are moved (never overwriting); the old key, hint and
-  records stay where they are.
-- The old path is already a link to the new folder: nothing to do. Any
-  other link there is moved as it is.
+  records stay where they are. The log says so once for that folder, not
+  at every start (a small note in the new folder remembers it), and
+  again only when a later start moves a session file.
+- The old path is already a link to the new folder: nothing to do. A
+  link there that leads to no folder (most often the one this server
+  left, after ~/.exegete was removed by hand) is left as it is, and a
+  fresh, empty ~/.exegete is made, which such a link reaches again:
+  renamed, it would have become a ~/.exegete that is a link to itself,
+  where no key could ever be made. Any other link there is moved as it
+  is.
 """
 
+import hashlib
 import os
 import subprocess
 from pathlib import Path
@@ -70,6 +79,81 @@ def current() -> Path:
 def use_for_this_run(path: Optional[Path]) -> None:
     global _this_run
     _this_run = None if path is None else Path(path)
+
+
+def other() -> Path:
+    """The one of the two folders this run does not use: ~/.qualcoder_mcp,
+    or ~/.exegete in a run whose move could not be made. The guards
+    refuse it as well as this run's own, so both are refused in every
+    run."""
+    return old_path() if _this_run is None else new_path()
+
+
+def shown() -> str:
+    """This run's state folder as a message names it: `~/.exegete`, or
+    `~/.qualcoder_mcp` in a run whose move could not be made."""
+    return f"~/{current().name}"
+
+
+def in_this_run(text: str) -> str:
+    """A message that points at the state folder, naming the one this
+    run uses (it is written naming ~/.exegete)."""
+    here = shown()
+    usual = f"~/{names.STATE_FOLDER}"
+    return text if here == usual else text.replace(usual, here)
+
+
+# A small note in the new folder that the log has already said the old
+# path is a folder of its own (or a link elsewhere), so that the warning
+# is not repeated at every start. It holds a digest of what identifies
+# that old path (the folder's device and inode, or the link's target),
+# never a path or a name; a different old folder is said again.
+NOTE_FILE = "old_folder_noted"
+
+
+def _identity(old: Path) -> Optional[str]:
+    try:
+        if is_link(old):
+            what = "link " + os.readlink(old)
+        else:
+            st = os.stat(old)
+            what = f"folder {st.st_dev} {st.st_ino}"
+    except (OSError, ValueError):
+        return None
+    return hashlib.sha256(
+        what.encode("utf-8", "surrogateescape")).hexdigest()
+
+
+def _already_said(new: Path, old: Path) -> bool:
+    identity = _identity(old)
+    note = new / NOTE_FILE
+    if identity is None or is_link(note):
+        return False
+    try:
+        with open(note, "r", encoding="ascii") as f:
+            return f.read(200).strip() == identity
+    except (OSError, ValueError):
+        return False
+
+
+def _note_said(new: Path, old: Path) -> bool:
+    """Remember that the log has said it; False when it could not be
+    written (the next start then says it again)."""
+    identity = _identity(old)
+    if identity is None:
+        return False
+    flags = (os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+             | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        descriptor = os.open(new / NOTE_FILE, flags, 0o600)
+        with os.fdopen(descriptor, "w", encoding="ascii") as f:
+            f.write(identity + "\n")
+    except OSError:
+        return False
+    return True
+
+
+ONCE = " Later starts do not repeat this."
 
 
 def is_link(path: Path) -> bool:
@@ -159,14 +243,41 @@ def _names(home: Optional[Path]):
     return (f"~/{names.STATE_FOLDER}", f"~/{names.OLD_STATE_FOLDER}")
 
 
+def _leave_a_link_to_nothing(new: Path, old: Path, new_name: str,
+                             old_name: str) -> MoveResult:
+    """~/.exegete absent and ~/.qualcoder_mcp a link that leads to no
+    folder: most often the link this server left, after ~/.exegete was
+    removed by hand. Renamed, it would become a ~/.exegete that is a
+    link to itself (or to nothing), where no key could ever be made. So
+    it is left as it is, and a fresh, empty ~/.exegete is made, owner-only,
+    which a link naming it then reaches again. Nothing is moved."""
+    try:
+        os.mkdir(new, 0o700)
+    except OSError:
+        pass              # made by another start, or left to the first write
+    if os.path.isdir(new) and not is_link(new) and same_folder(old, new):
+        return MoveResult(new, "old link led nowhere", (
+            f"{old_name} was a link to {new_name}, which did not exist "
+            f"(removed by hand?); the link was left as it is, and a fresh, "
+            f"empty {new_name} was made, which it reaches again. Nothing "
+            f"was moved."))
+    said = os.path.isdir(new) and _note_said(new, old)
+    return MoveResult(new, "old link led nowhere", (
+        f"{old_name} is a link that leads to no folder; it was left as it "
+        f"is, nothing was moved, and this server uses a fresh {new_name}."
+        + (ONCE if said else "")))
+
+
 def move(home: Optional[Path] = None,
          windows: Optional[bool] = None) -> MoveResult:
     """Move the old state folder to the new one, once (module docstring).
 
-    Nothing here removes, copies or rewrites a file: a folder is renamed
-    (or renamed back), a link is made, or session files the new folder
-    lacks are moved one by one. The log lines name no path beyond the two
-    folders' names in the home folder.
+    Nothing here removes, copies or rewrites a file of the state: a
+    folder is renamed (or renamed back), a link is made, an empty folder
+    is made, session files the new folder lacks are moved one by one, or
+    the small note that a warning was given is written (NOTE_FILE). The
+    log lines name no path beyond the two folders' names in the home
+    folder.
     """
     new, old = new_path(home), old_path(home)
     new_name, old_name = _names(home)
@@ -176,22 +287,35 @@ def move(home: Optional[Path] = None,
         if is_link(old):
             if same_folder(old, new):
                 return MoveResult(new, "linked", None)
+            if _already_said(new, old):
+                return MoveResult(new, "old path is another link", None)
             return MoveResult(new, "old path is another link", (
-                f"{old_name} is a link to another folder, not to "
-                f"{new_name}; it was left as it is, and this server uses "
-                f"{new_name}."))
+                f"{old_name} is a link, but not to {new_name} (to another "
+                f"folder, or to none); it was left as it is, and this "
+                f"server uses {new_name}."
+                + (ONCE if _note_said(new, old) else "")))
         if os.path.isdir(old):
             count = move_missing_sessions(old, new, windows)
+            moved = (f"{count} session file(s) {new_name} lacked were moved "
+                     f"from {old_name}")
+            if _already_said(new, old):
+                return MoveResult(new, "both", None if not count else (
+                    f"{moved}, where an older copy of the server may still "
+                    f"be writing; nothing else there was touched."))
             return MoveResult(new, "both", (
-                f"Both {new_name} and {old_name} exist (an older copy of the "
-                f"server may have made the second one). This server uses "
-                f"{new_name}; {count} session file(s) it lacked were moved "
-                f"from {old_name}, and nothing else there was touched or "
-                f"overwritten."))
+                f"Both {new_name} and {old_name} are folders: an older copy "
+                f"of the server, or a restore, may have made the second one, "
+                f"and any secret in it is that copy's own, which this server "
+                f"does not use. This server uses {new_name}; {moved}, and "
+                f"nothing else there was touched or overwritten. INSTALL.md's "
+                f"troubleshooting says what to do."
+                + (ONCE if _note_said(new, old) else "")))
         return MoveResult(new, "old path is not a folder", None)
     if not os.path.lexists(old):
         return MoveResult(new, "fresh", None)
-    if not (os.path.isdir(old) or is_link(old)):
+    if is_link(old) and not os.path.isdir(old):
+        return _leave_a_link_to_nothing(new, old, new_name, old_name)
+    if not os.path.isdir(old):
         return MoveResult(new, "old path is not a folder", None)
     try:
         os.rename(old, new)

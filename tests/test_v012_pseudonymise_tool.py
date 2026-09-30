@@ -1635,6 +1635,18 @@ class TestManifest:
         assert result["manifest_path"] is None
         assert "could not be written" in result["manifest_note"]
 
+    def test_the_note_names_the_folder_this_run_uses(
+            self, project, tmp_path, monkeypatch):
+        """v0.14.1 fix round 1: in a run whose state folder move could not
+        be made, the note names ~/.qualcoder_mcp, the folder in use."""
+        from exegete import state_folder
+        monkeypatch.setattr(state_folder, "_this_run",
+                            tmp_path / ".qualcoder_mcp")
+        monkeypatch.setattr(server, "_write_run_manifest",
+                            lambda payload, name: None)
+        note = execute_from(preview_of())["manifest_note"]
+        assert "~/.qualcoder_mcp" in note and "~/.exegete" not in note
+
     def test_the_temp_file_is_cleaned_up_when_the_write_faults(
             self, project, monkeypatch):
         """The Windows rule the suite emulates: a leaked descriptor makes
@@ -1867,6 +1879,19 @@ class TestJournal:
                 in warning[0]
         _house_rules(warning + [ask["message"]], ["warning", "ask"])
 
+    def test_the_alternative_names_the_folder_this_run_uses(
+            self, project, tmp_path, monkeypatch):
+        """v0.14.1 fix round 1: in a run whose state folder move could not
+        be made, the alternative names ~/.qualcoder_mcp."""
+        from exegete import state_folder
+        self._unset(project)
+        out = preview_of()
+        monkeypatch.setattr(state_folder, "_this_run",
+                            tmp_path / ".qualcoder_mcp")
+        refused = execute_from(out)
+        assert "The run manifest in ~/.qualcoder_mcp still records it" in \
+            refused["alternative"]
+
     def test_the_ask_comes_after_the_token_and_before_the_write(
             self, project):
         """D1 3.8's order: a malformed token is answered as malformed,
@@ -1881,6 +1906,7 @@ class TestJournal:
         refused = execute_from(out)
         assert refused["action_required"] == "set_project_ai_coder_name"
         assert "record_in_journal=false" in refused["alternative"]
+        assert "The run manifest in ~/.exegete" in refused["alternative"]
         assert backups(project) == []
         assert query(project, "SELECT fulltext FROM source WHERE id=1"
                      )[0]["fulltext"] == TEXT

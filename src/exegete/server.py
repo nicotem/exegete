@@ -635,7 +635,18 @@ class _ExegeteMCP(FastMCP):
     async def read_resource(self, uri):
         # The earlier scheme is rewritten before matching, templates
         # included; only exegete:// is registered, so only it is listed
-        return await super().read_resource(current_resource_address(uri))
+        address = current_resource_address(uri)
+        if address is uri:
+            return await super().read_resource(uri)
+        try:
+            return await super().read_resource(address)
+        except ValueError as error:
+            # An unknown address is refused under the address asked for,
+            # not its twin under the new scheme (the library's own words;
+            # any other error passes as it is)
+            if str(error) == f"Unknown resource: {address}":
+                raise ValueError(f"Unknown resource: {uri}") from None
+            raise
 
     async def list_tools(self):
         tools = await super().list_tools()
@@ -12671,7 +12682,8 @@ def _token_error(reason: str, tool: str) -> Dict[str, Any]:
            else reason)
     text = TOKEN_ERROR_TEXTS_BY_TOOL.get((tool, key),
                                          TOKEN_ERROR_TEXTS[key])
-    return {"error": text.format(tool=tool),
+    # A text naming the state folder names the one this run uses
+    return {"error": state_folder.in_this_run(text.format(tool=tool)),
             "reason": reason, "nothing_changed": True}
 
 
@@ -14498,8 +14510,8 @@ def _sessions_note(holding: List[str], to_apply: List[str]) -> List[str]:
             f"text, real names included: a suggestion's passage (and, in a "
             f"file written before v0.14, the text around it) or a proposed "
             f"code's evidence. They are in "
-            f"this server's sessions folder (~/.exegete/sessions/, "
-            f"one file per session). ")
+            f"this server's sessions folder ({state_folder.shown()}/"
+            f"sessions/, one file per session). ")
     if to_apply:
         note += (f"{len(to_apply)} of them have work still to apply "
                  f"(stale_sessions_with_work_to_apply), which will be "
@@ -15431,8 +15443,8 @@ def pseudonymise_source(
                 "Or call pseudonymise_source again with "
                 "record_in_journal=false and the same preview_token: the "
                 "rewrite itself writes no owner, so it needs no coder "
-                "name. The run manifest in ~/.exegete still records "
-                "it.")
+                f"name. The run manifest in {state_folder.shown()} still "
+                f"records it.")
 
     captured: Dict[str, Any] = {}
     retention = _pseudonymise_retention(typed, save, keeps)
@@ -15704,9 +15716,9 @@ def pseudonymise_source(
     if written_to is None:
         result["manifest_path"] = None
         result["manifest_note"] = (
-            "The run manifest could not be written to ~/.exegete; "
-            "the rewrite itself committed and is unaffected. Check the "
-            "permissions on that folder.")
+            f"The run manifest could not be written to "
+            f"{state_folder.shown()}; the rewrite itself committed and is "
+            f"unaffected. Check the permissions on that folder.")
     else:
         result["manifest_path"] = str(written_to)
     holding, to_apply = _sessions_holding_old_text(

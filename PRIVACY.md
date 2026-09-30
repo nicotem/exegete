@@ -48,13 +48,23 @@ What stays local, always, unless a sync service copies the folder it is in:
   the session files, the secret, the pointer and the run manifests
   below. At the first start of 0.14.1 or later an existing
   `~/.qualcoder_mcp` is renamed to `~/.exegete` whole, in one step on
-  the same disk: nothing is copied, the files keep their owner-only
-  modes, and there is never a second secret. A link named
+  the same disk: the move never copies or duplicates the secret, and
+  the files keep their owner-only modes. A link named
   `~/.qualcoder_mcp` (on Windows, a junction) is left pointing at it, so
   an older copy of the server on the same computer keeps using the same
-  folder and secret; where no link can be made, the folder is not moved.
+  folder and secret. When no link can be made, the folder is put back
+  where it was, unless an older copy of the server has already written
+  at the old path in that instant; then both folders are kept. An older
+  copy that makes a folder of its own under the old name (then, or
+  after the link was removed) has a secret of its own there, which this
+  server does not use: it takes from that folder only the session files
+  it lacks, says so once in its log, and keeps in `~/.exegete` a
+  one-line note (`old_folder_noted`, a digest that names no path) so as
+  not to repeat it at every start. INSTALL.md's troubleshooting says
+  what to do. A link left under the old name after `~/.exegete` was
+  removed by hand is left as it is, and a fresh `~/.exegete` is made.
   The export tools, `create_project` and the workspace setting refuse
-  both names, whether or not the old one exists.
+  both names, whether or not the old one exists, in every run.
 - AI-coding session files (`~/.exegete/sessions/`), written
   atomically and created owner-only on POSIX systems (mode 0600)
 - the preview-token secret (`~/.exegete/preview_secret`): 64

@@ -38,7 +38,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    # >=1.17.0 floor: QUALCODER_MCP_TOOLSET=core calls FastMCP.remove_tool,
+    # >=1.17.0 floor: EXEGETE_TOOLSET=core calls FastMCP.remove_tool,
     # which does not exist before mcp 1.17.0. The floor used to read
     # >=1.2.0, so a user installing at or near it got a server that could
     # not honour its own documented setting: core mode raised

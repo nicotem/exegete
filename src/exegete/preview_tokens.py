@@ -101,6 +101,12 @@ SECRET_UNAVAILABLE_MESSAGE = (
     f"~/{names.STATE_FOLDER}: check permissions; nothing was changed.")
 
 
+def secret_unavailable_message() -> str:
+    """SECRET_UNAVAILABLE_MESSAGE, naming the state folder this run uses
+    (~/.qualcoder_mcp in a run whose move could not be made)."""
+    return state_folder.in_this_run(SECRET_UNAVAILABLE_MESSAGE)
+
+
 def state_home() -> Path:
     """The state folder, chosen at call time.
 
@@ -115,11 +121,13 @@ def state_home() -> Path:
 
 
 def old_state_home() -> Path:
-    """The folder the state folder was moved from (~/.qualcoder_mcp),
-    which the guards refuse as well."""
+    """The other of the two state folders, which the guards refuse as
+    well: the one the state folder was moved from (~/.qualcoder_mcp), or,
+    in a run whose move could not be made and which therefore uses that
+    one, ~/.exegete. So both are refused in every run."""
     if OLD_STATE_HOME is not None:
         return Path(OLD_STATE_HOME)
-    return state_folder.old_path()
+    return state_folder.other()
 
 
 def _now() -> int:
@@ -181,10 +189,10 @@ def ensure_state_dir(path: Path) -> None:
         try:
             os.chmod(str(path), mode & ~0o077)
         except OSError:
-            logger.warning(f"The server's state folder "
-                           f"(~/{names.STATE_FOLDER}) is readable by "
-                           "other users on this machine and could not be "
-                           "narrowed.")
+            logger.warning(state_folder.in_this_run(
+                f"The server's state folder (~/{names.STATE_FOLDER}) is "
+                "readable by other users on this machine and could not be "
+                "narrowed."))
 
 
 def ensure_state_home() -> None:
@@ -317,7 +325,7 @@ def load_secret() -> str:
                 pass                      # another server won the race
         st = os.lstat(path)
         if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
-            raise PreviewSecretUnavailable(SECRET_UNAVAILABLE_MESSAGE)
+            raise PreviewSecretUnavailable(secret_unavailable_message())
         # The mode was set at creation and never looked at again, so a
         # secret that had been widened since (by a restore, a copy, a
         # sync tool, or another local account) was used as though it
@@ -346,7 +354,7 @@ def load_secret() -> str:
         raise
     except OSError as e:
         logger.error("Preview secret unavailable: %s", type(e).__name__)
-        raise PreviewSecretUnavailable(SECRET_UNAVAILABLE_MESSAGE) from e
+        raise PreviewSecretUnavailable(secret_unavailable_message()) from e
 
 
 # ---------------------------------------------------------------------------

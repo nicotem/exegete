@@ -283,6 +283,84 @@ class TestInstallSaysHowToMove:
         assert re.search(r"[Qq]uit", passage[:pull]), heading
 
 
+class TestFixRoundOneWords:
+    """The gates' round 1: sentences that promised more than the code
+    does, or described what pip did under the old name."""
+
+    def test_path_b_says_what_happens_now(self):
+        text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        passage = " ".join(_section(
+            text, "### Path B: switch to the PyPI install", "\n### ")
+            .split())
+        for words in ("**Use a FRESH environment. Do not install into the "
+                      "old clone's venv.**",
+                      "pip installs Exegete beside the clone's own package "
+                      "rather than in its place",
+                      "an entry that still runs `-m qualcoder_mcp.server` "
+                      "keeps running the clone's code, the program as it "
+                      "was, until the clone itself is updated",
+                      "A fresh environment keeps them apart."):
+            assert words in passage, words
+        for gone in ("Requirement already satisfied", "Verified behaviour",
+                     "silently does nothing"):
+            assert gone not in passage, gone
+
+    def _state_folder_passage(self, name, start, end):
+        text = " ".join((REPO / name).read_text(encoding="utf-8").split())
+        first = text.index(start)
+        return text[first:text.index(end, first)]
+
+    @pytest.mark.parametrize("name, start, end", [
+        ("PRIVACY.md", "the server's own folder, `~/.exegete`",
+         "- AI-coding session files"),
+        ("CHANGELOG.md", "The server's own folder is `~/.exegete`",
+         "- The resources' addresses")])
+    def test_the_move_promises_what_the_code_does(self, name, start, end):
+        passage = self._state_folder_passage(name, start, end)
+        for words in ("the move never copies or duplicates the secret",
+                      "the folder is put back",
+                      "unless an older copy of the server has already "
+                      "written at the old path in that instant",
+                      "of its own there, which",
+                      "does not use",
+                      "says so once in its log",
+                      "A link left under the old name after `~/.exegete` "
+                      "was removed by hand is left as it is, and a fresh "
+                      "`~/.exegete` is made"):
+            assert words in passage, (name, words)
+        for gone in ("never a second secret", "the folder is not moved",
+                     "folder is not moved"):
+            assert gone not in passage, (name, gone)
+
+    def test_both_folders_what_to_do(self, tmp_path, monkeypatch):
+        """INSTALL's troubleshooting heading quotes the log line the
+        server writes, and says what to do."""
+        from exegete import state_folder
+        home = tmp_path / "h"
+        for folder in (".exegete", ".qualcoder_mcp"):
+            (home / folder).mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(home))
+        monkeypatch.setenv("USERPROFILE", str(home))
+        line = state_folder.move().message
+        heading = '### "Both ~/.exegete and ~/.qualcoder_mcp are folders"'
+        assert line.startswith(heading[5:-1])
+        text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        section = " ".join(_section(text, heading, "\n### ").split())
+        for words in ("with a secret of its own there, which Exegete never "
+                      "uses", "says this once in its log, not at every "
+                      "start", "Quit or update that older copy",
+                      "keeping the old folder changes nothing for Exegete",
+                      "removing it removes that copy's secret, sessions "
+                      "and run records with it"):
+            assert words in section, words
+        assert "INSTALL.md's troubleshooting" in line
+
+    def test_pyprojects_comments_name_the_new_spelling(self):
+        text = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+        assert "QUALCODER_MCP_" not in text
+        assert "EXEGETE_TOOLSET=core calls FastMCP.remove_tool" in text
+
+
 class TestTheUpgradingList:
 
     def _entry(self):

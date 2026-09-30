@@ -350,6 +350,21 @@ class TestTheResourceAddresses:
             assert read("QUALCODER://" + address.split("://", 1)[1]) == \
                 read(address)
 
+    @pytest.mark.parametrize("address", ["qualcoder://nonexistent/x",
+                                         "QUALCODER://nonexistent/x",
+                                         "exegete://nonexistent/x"])
+    def test_an_unknown_address_is_refused_under_its_own_name(
+            self, address):
+        """Fix round 1 (quality gate, note 5): an unknown old address was
+        refused under its new twin's name."""
+        import asyncio
+        with pytest.raises(Exception) as caught:
+            asyncio.run(server.mcp.read_resource(address))
+        text = str(caught.value)
+        assert address in text
+        if not address.startswith("exegete"):
+            assert "exegete://" not in text
+
     def test_the_served_texts_name_only_the_new_scheme(self):
         """Every address a served text gives is under the scheme names.py
         holds (a change there must reach the texts too)."""

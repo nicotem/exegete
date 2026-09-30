@@ -12,6 +12,7 @@ test here works in a home folder of its own under tmp_path.
 import json
 import logging
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -416,3 +417,218 @@ class TestTheSuitesOwnGuard:
         if POSIX:
             os.symlink(".exegete", folder)
             assert H.state_folder_snapshot(folder)["link"] is True
+
+
+def _start(home: Path):
+    """A real start of the server in `home` (stdin closed, so it stops
+    at once), as TestTheMoveRunsOnlyAtARealStart does."""
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("QUALCODER", "EXEGETE"))}
+    env.update(HOME=str(home), USERPROFILE=str(home),
+               PYTHONPATH=str(REPO / "src"), PYTHONDONTWRITEBYTECODE="1")
+    proc = subprocess.run([sys.executable, "-B", "-m", "exegete.server"],
+                          stdin=subprocess.DEVNULL, capture_output=True,
+                          text=True, encoding="utf-8", env=env, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    return proc.stderr
+
+
+class TestALinkThatLeadsNowhere:
+    """Fix round 1 (security gate, finding 1). A ~/.qualcoder_mcp that is
+    a link to no folder, which is what removing ~/.exegete by hand leaves,
+    was renamed to ~/.exegete, making a link to itself where no key could
+    ever be made. It is now left as it is, and a fresh ~/.exegete made."""
+
+    def _removed_by_hand(self, home):
+        make_old(home)
+        assert state_folder.move().outcome == "moved"
+        shutil.rmtree(home / ".exegete")
+        old = home / ".qualcoder_mcp"
+        assert state_folder.is_link(old) and not os.path.isdir(old)
+        return old, home / ".exegete"
+
+    def test_the_link_left_after_the_folder_was_removed(self, home):
+        old, new = self._removed_by_hand(home)
+        link = os.readlink(old)
+        result = state_folder.move()
+        assert result.outcome == "old link led nowhere"
+        assert result.state_home == new
+        assert "was left as it is" in result.message
+        assert "Nothing was moved" in result.message
+        assert new.is_dir() and not state_folder.is_link(new)
+        if POSIX:
+            assert stat.S_IMODE(new.stat().st_mode) == 0o700
+        assert state_folder.is_link(old) and os.readlink(old) == link
+        assert state_folder.same_folder(old, new)
+        # a key can be made again, and the next start has nothing to say
+        secret = preview_tokens.load_secret()
+        assert (new / "preview_secret").read_text().strip() == secret
+        again = state_folder.move()
+        assert again.outcome == "linked" and again.message is None
+
+    def test_through_a_real_start(self, home):
+        old, new = self._removed_by_hand(home)
+        first = _start(home)
+        assert "was left as it is" in first
+        assert "was moved from" not in first
+        assert new.is_dir() and not state_folder.is_link(new)
+        assert state_folder.same_folder(old, new)
+        second = _start(home)
+        assert "~/.qualcoder_mcp" not in second
+        assert preview_tokens.load_secret()
+
+    @pytest.mark.skipif(not POSIX, reason="a symbolic link to another "
+                        "folder needs rights Windows does not give")
+    def test_a_link_to_a_folder_that_is_gone(self, home, tmp_path):
+        old, new = home / ".qualcoder_mcp", home / ".exegete"
+        os.symlink(tmp_path / "gone", old)
+        result = state_folder.move()
+        assert result.outcome == "old link led nowhere"
+        assert result.message.endswith(state_folder.ONCE)
+        assert os.readlink(old) == str(tmp_path / "gone")
+        assert new.is_dir() and not state_folder.is_link(new)
+        assert preview_tokens.load_secret()
+        again = state_folder.move()
+        assert again.outcome == "old path is another link"
+        assert again.message is None
+
+
+class TestBothFoldersSaidOnce:
+    """Fix round 1 (quality gate, note 4): when an older copy has made a
+    folder of its own under the old name, the log says so once for that
+    folder, not at every start, and again only when a start moves a
+    session file or finds a different old folder."""
+
+    def _both(self, home):
+        old, new = home / ".qualcoder_mcp", home / ".exegete"
+        _write(new / "preview_secret", (KEY + "\n").encode())
+        _write(old / "preview_secret", ("cd" * 32 + "\n").encode())
+        return old, new
+
+    def test_said_once_then_only_what_moves(self, home):
+        old, new = self._both(home)
+        first = state_folder.move()
+        assert first.outcome == "both"
+        assert first.message.startswith(
+            "Both ~/.exegete and ~/.qualcoder_mcp are folders")
+        assert "0 session file(s)" in first.message
+        assert "that copy's own, which this server does not use" in \
+            first.message
+        assert first.message.endswith(state_folder.ONCE)
+        note = new / state_folder.NOTE_FILE
+        text = note.read_text(encoding="ascii").strip()
+        assert len(text) == 64 and int(text, 16) >= 0   # a digest only
+        if POSIX:
+            assert stat.S_IMODE(note.stat().st_mode) == 0o600
+        second = state_folder.move()
+        assert second.outcome == "both" and second.message is None
+        late = f"sessions/session_{uuid.uuid4()}.json"
+        _write(old / late, b"late")
+        third = state_folder.move()
+        assert third.message.startswith(
+            "1 session file(s) ~/.exegete lacked were moved from "
+            "~/.qualcoder_mcp")
+        assert (new / late).read_bytes() == b"late"
+        assert state_folder.move().message is None
+        assert preview_tokens.load_secret() == KEY
+
+    def test_a_different_old_folder_is_said_again(self, home, tmp_path):
+        old, new = self._both(home)
+        state_folder.move()
+        os.rename(old, tmp_path / "kept")          # its inode stays in use
+        _write(old / "preview_secret", ("ef" * 32 + "\n").encode())
+        assert state_folder.move().message.startswith("Both ")
+
+    @pytest.mark.skipif(not POSIX, reason="needs a folder the owner "
+                        "cannot write to")
+    def test_said_again_while_the_note_cannot_be_written(self, home):
+        old, new = self._both(home)
+        os.chmod(new, 0o500)
+        try:
+            first = state_folder.move()
+            second = state_folder.move()
+        finally:
+            os.chmod(new, 0o700)
+        assert not first.message.endswith(state_folder.ONCE)
+        assert second.message == first.message
+
+    @pytest.mark.skipif(not POSIX, reason="a symbolic link to another "
+                        "folder needs rights Windows does not give")
+    def test_another_link_said_once(self, home, tmp_path):
+        (home / ".exegete").mkdir()
+        elsewhere = tmp_path / "synced"
+        elsewhere.mkdir()
+        os.symlink(elsewhere, home / ".qualcoder_mcp")
+        first = state_folder.move()
+        assert first.outcome == "old path is another link"
+        assert first.message.endswith(state_folder.ONCE)
+        assert state_folder.move().message is None
+
+
+class TestARunThatCouldNotMoveTheFolder:
+    """Fix round 1 (security gate, note 4). A run whose move could not be
+    made uses ~/.qualcoder_mcp; its guards still refuse ~/.exegete (an
+    export there would otherwise make a second folder with a fresh key),
+    and its messages name the folder it uses."""
+
+    @pytest.fixture
+    def old_run(self, home):
+        make_old(home)
+        state_folder.use_for_this_run(home / ".qualcoder_mcp")
+        assert preview_tokens.state_home() == home / ".qualcoder_mcp"
+        return home
+
+    @pytest.mark.parametrize("folder", [".exegete", ".qualcoder_mcp"])
+    def test_the_guards_refuse_both(self, old_run, folder, monkeypatch):
+        home = old_run
+        assert server._inside_state_home(home / folder / "a.csv")
+        (home / folder / "projects").mkdir(parents=True, exist_ok=True)
+        refusal = server._create_project_place_refusal(
+            "Study", str(home / folder / "projects"))
+        assert isinstance(refusal, str)
+        assert "inside this server's state folder" in refusal
+        monkeypatch.setenv(names.SETTINGS["workspace"][0],
+                           f"~/{folder}/projects")
+        problem = server._workspace_start_problem()
+        assert problem is not None
+        assert "inside this server's state folder" in problem
+
+    def test_the_messages_name_the_folder_in_use(self, old_run):
+        home = old_run
+        texts = [preview_tokens.secret_unavailable_message(),
+                 server._token_error("preview_secret_unavailable",
+                                     "delete_code")["error"],
+                 server._sessions_note(["session_x.json"], [])[0]]
+        (home / ".qualcoder_mcp" / "preview_secret").unlink()
+        (home / ".qualcoder_mcp" / "preview_secret").mkdir()
+        with pytest.raises(preview_tokens.PreviewSecretUnavailable) as caught:
+            preview_tokens.load_secret()
+        texts.append(str(caught.value))
+        for text in texts:
+            assert "~/.qualcoder_mcp" in text, text
+            assert "~/.exegete" not in text, text
+        assert "~/.qualcoder_mcp/sessions/" in texts[2]
+
+    @pytest.mark.skipif(not POSIX, reason="modes are a POSIX matter")
+    def test_the_permission_warning_names_it_too(self, old_run, caplog,
+                                                 monkeypatch):
+        folder = old_run / ".qualcoder_mcp"
+        os.chmod(folder, 0o755)
+
+        def refuse(path, mode):
+            raise PermissionError("not here")
+        caplog.set_level(logging.WARNING)
+        with monkeypatch.context() as patch:
+            patch.setattr(preview_tokens.os, "chmod", refuse)
+            preview_tokens.ensure_state_home()
+        os.chmod(folder, 0o700)
+        (line,) = [r.getMessage() for r in caplog.records
+                   if "could not be narrowed" in r.getMessage()]
+        assert "~/.qualcoder_mcp" in line and "~/.exegete" not in line
+
+    def test_and_name_the_new_one_in_an_ordinary_run(self, home):
+        assert preview_tokens.secret_unavailable_message() == \
+            preview_tokens.SECRET_UNAVAILABLE_MESSAGE
+        assert "~/.exegete/sessions/" in server._sessions_note(["x"], [])[0]
+        assert "~/.exegete" in server._token_error(
+            "preview_secret_unavailable", "delete_code")["error"]

@@ -991,6 +991,16 @@ running while its files change fails the first time it needs a part it
 has not loaded yet (the REFI-QDA export is one), and until the client
 restarts, the old process, with the old tool list, keeps running.
 
+### "Both ~/.exegete and ~/.qualcoder_mcp are folders"
+
+A copy of the server older than 0.14.1, or a restore from a backup,
+made a new `~/.qualcoder_mcp` after Exegete had moved it to
+`~/.exegete`, with a secret of its own there, which Exegete never uses
+(Exegete takes only the session files it lacks, and says this once in
+its log, not at every start). Quit or update that older copy; then
+keeping the old folder changes nothing for Exegete, and removing it
+removes that copy's secret, sessions and run records with it.
+
 ### Reading the server log
 
 The server writes its log lines (INFO and above) to standard error; the
@@ -1253,10 +1263,12 @@ your setup.
 *Available from v0.9.0 (the first release published to PyPI).*
 
 **Use a FRESH environment. Do not install into the old clone's venv.**
-(If you run `pip install exegete` inside the old venv, pip sees
-the editable install, reports "Requirement already satisfied", and
-silently does nothing, so you would still be running the old code.
-Verified behaviour, and the reason these instructions exist.)
+(If you run `pip install exegete` inside the old venv, pip installs
+Exegete beside the clone's own package rather than in its place, and
+an entry that still runs `-m qualcoder_mcp.server` keeps running the
+clone's code, the program as it was, until the clone itself is updated:
+one environment then holds two copies of the server, from two places.
+A fresh environment keeps them apart.)
 
 **1. Install into a fresh venv (or pipx/uv):**
 
@@ -1413,7 +1425,9 @@ If you want to remove the MCP server:
    JSON file per run: the pseudonyms applied, the replacement spans, the
    row ids and offsets of the rows the run moved and, since v0.13, where
    each pseudonym now sits in the notes it rewrote; never an original
-   name). Nothing else is stored there.
+   name). Nothing else is stored there, except, if an older copy of the
+   server ever made a folder of its own under the earlier name,
+   `old_folder_noted`, one line that lets the log say so only once.
 
 Uninstalling does not touch your QualCoder projects. Note that the
 server does write to projects when you use its coding tools (after

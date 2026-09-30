@@ -28,8 +28,9 @@ POSIX_ONLY = pytest.mark.skipif(os.name == "nt", reason="POSIX links")
 # On Windows the check starts PowerShell to read the running programs,
 # and PowerShell writes its own cache (its start-up profile data, its
 # module analysis cache) under the profile folder it is given: in the
-# command-line tests below, the scratch home. That folder, and nothing
-# else, may appear there; Exegete itself writes nothing.
+# command-line tests below, the scratch home. It also leaves an empty
+# AppData\Roaming there (CI, 30 September). Those, and nothing else, may
+# appear; Exegete itself writes nothing.
 POWERSHELL_CACHE = ("AppData", "Local", "Microsoft", "Windows", "PowerShell")
 
 
@@ -44,6 +45,7 @@ def home_names(home: Path, windows=None):
     cache = home.joinpath(*POWERSHELL_CACHE)
     on_the_way = {home.joinpath(*POWERSHELL_CACHE[:n])
                   for n in range(2, len(POWERSHELL_CACHE))}
+    on_the_way.add(home / "AppData" / "Roaming")     # empty: see above
     assert (home / "AppData").is_dir() and \
         not (home / "AppData").is_symlink()
     others = []                   # every one named, should any be found
@@ -492,6 +494,15 @@ class TestTheHomeCheck:
         assert home_names(home, windows=False) == [".qualcoder_mcp",
                                                    "AppData"]
 
+    def test_an_empty_roaming_folder_too(self, tmp_path):
+        home = tmp_path / "home"
+        self._plant(home, self.CACHED)
+        self._plant(home, ("AppData", "Roaming"), folder=True)
+        assert home_names(home, windows=True) == []
+        self._plant(home, ("AppData", "Roaming", "x"))
+        with pytest.raises(AssertionError):
+            home_names(home, windows=True)
+
     @pytest.mark.skipif(os.name == "nt", reason="macOS and Linux only")
     def test_on_macos_and_linux_nothing_is_allowed(self, tmp_path):
         home = tmp_path / "home"
@@ -501,7 +512,6 @@ class TestTheHomeCheck:
     @pytest.mark.parametrize("parts,folder", [
         (("AppData", "Roaming", "Claude", "claude_desktop_config.json"),
          False),
-        (("AppData", "Roaming"), True),
         (("AppData", "Local", "x"), False),
         (("AppData", "Local", "Microsoft", "Windows", "x"), False),
         (("AppData", "Local", "Microsoft", "Windows", "PowerShellX"), True),

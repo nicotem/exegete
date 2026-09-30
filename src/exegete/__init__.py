@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Exegete: AI-assisted qualitative analysis of QualCoder projects, from
-the conversation. An MCP server, formerly qualcoder-mcp."""
+"""Exegete: a qualitative analysis application you use in conversation
+with an AI assistant, compatible with QualCoder. An MCP server, formerly
+qualcoder-mcp."""
 
 from importlib.metadata import PackageNotFoundError, version
 

@@ -775,15 +775,76 @@ those pages were read on 30 September 2026 from the Internet Archive's
 captures of them, named with each quote: open the live page before you
 rely on it. (The recipe itself is Experimental, and not yet tried by
 this project. This project gives no steps for ChatGPT in a web browser,
-which could reach Exegete only through OpenAI's Secure MCP Tunnel;
-INSTALL.md says why.)
+which could reach Exegete through OpenAI's Secure MCP Tunnel, or, in an
+enterprise workspace that switches on local computer access with Work
+Cloud, perhaps through a computer connected to the account, which
+OpenAI does not document for servers like Exegete; INSTALL.md says
+why.)
+
+**Codex's own file access.** Codex reads and changes files by itself,
+outside Exegete, in the folder it works in.
+<https://learn.chatgpt.com/docs/sandboxing> (read 30 September 2026),
+on the mode in which it may edit (`workspace-write`):
+
+> "The agent can read files, edit within the workspace, and run
+> routine local commands inside that boundary."
+
+<https://learn.chatgpt.com/docs/agent-approvals-security> (read
+30 September 2026), the table "Common sandbox and approval
+combinations", row "Auto (preset)":
+
+> "Codex can read files, make edits, and run commands in the workspace.
+> Codex requires approval to edit outside the workspace or to access
+> network."
+
+The same page, on the read-only mode:
+
+> "Codex can read files and run commands within the read-only sandbox."
+
+What Codex reads that way goes to OpenAI without passing through
+Exegete, so none of Exegete's protections applies to it: not the
+`#####` mark, which Exegete never passes on, not the approval before
+anything is written, not the preview or the backup. A study's folder,
+the projects folder or the home folder should never be Codex's place to
+work; INSTALL.md's recipe gives it an empty folder of its own. A folder
+of its own does not stop Codex reading a file elsewhere that it is
+pointed to: OpenAI's pages do not say that its reading stops there.
+
+**Phones, through a connected computer.** OpenAI's Remote,
+<https://learn.chatgpt.com/docs/remote> (read 30 September 2026):
+
+> "Follow progress, approve actions, and send instructions from your
+> phone. Codex runs each task on your connected computer."
+
+The connected computer runs the ChatGPT desktop app on macOS or Windows
+(INSTALL.md lists what Remote needs, in OpenAI's words).
+<https://learn.chatgpt.com/docs/remote-connections> (read 30 September
+2026):
+
+> "MCP servers, skills, browser access, and Computer Use come from that
+> host's configuration."
+
+> "The sandboxing settings, security controls, and action approvals
+> still apply to the connected session."
+
+So what Exegete's tools return on that computer can be shown on the
+phone. This project has not tried it, and suggests leaving Remote off on
+a computer where Exegete works on participants' data. For enterprise
+workspaces with local computer access switched on,
+<https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read
+30 September 2026):
+
+> "Conversations, tool results, and other task context do not stay
+> exclusively on the connected computer."
 
 **Services for individuals** (OpenAI's phrase; the page names the
 business plans separately, below). Help Center, "How your data is used
 to improve model performance",
 <https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>
-(Archive capture of 28 September 2026, which shows "Updated: 4 hours
-ago"):
+(Archive capture of 28 September 2026,
+<https://web.archive.org/web/20260928102458/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
+it shows "Updated: 4 hours ago", which the capture's own data dates to
+28 September 2026):
 
 > "When you use our services for individuals, such as ChatGPT and
 > Codex, we may use your content to train our models. You can choose
@@ -818,7 +879,8 @@ The Privacy Portal is <https://privacy.openai.com/>.
 
 "Enterprise privacy at OpenAI", <https://openai.com/enterprise-privacy/>
 (the page shows "Updated: January 8, 2026"; Archive capture of
-29 September 2026):
+29 September 2026,
+<https://web.archive.org/web/20260929211725/https://openai.com/enterprise-privacy/>):
 
 > "Yes, we are able to execute a Data Processing Addendum (DPA) with
 > customers for their use of ChatGPT Business, ChatGPT Enterprise, and
@@ -843,11 +905,20 @@ ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>
 `CODEX_HOME` is, unless you set it, `~/.codex`, the folder that holds
 Codex's `config.toml`. A session's transcript can hold what Exegete's
 tools returned in it, participants' words included, as Claude Code's
-local transcripts can ("Cross-rung cautions", above).
+local transcripts can ("Cross-rung cautions", above). The `history`
+settings are not enough to stop that (Codex's source code, `main` on
+30 September 2026: `history.persistence` governs only
+`~/.codex/history.jsonl`, the text you typed, while every session is
+also written in full, tool results included, under `~/.codex/sessions`,
+and later `~/.codex/archived_sessions`, whichever `history` setting you
+choose). So delete those session files after work on participant data,
+and keep `~/.codex` out of folders that a sync or backup service
+copies.
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
-January 16, 2026"; Archive capture of 26 September 2026):
+January 16, 2026"; Archive capture of 26 September 2026,
+<https://web.archive.org/web/20260926195745/https://openai.com/policies/eu-terms-of-use/>):
 
 > "These Terms of Use apply if you reside in the European Economic Area
 > (EEA), Switzerland, or UK."
@@ -857,6 +928,9 @@ January 16, 2026"; Archive capture of 26 September 2026):
 > settings. Further information can be found in this article. Please
 > note that in some cases this may limit the ability of our Services to
 > better address your specific use case."
+
+In the page, "this article" links to
+<https://openai.com/policies/how-your-data-is-used-to-improve-model-performance/>.
 
 OpenAI's privacy policy for the EEA and the UK is a separate page,
 <https://openai.com/policies/eu-privacy-policy/>, which this project has

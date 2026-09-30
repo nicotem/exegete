@@ -96,7 +96,7 @@ from easiest to most private, and OpenAI's apps:
 | **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser or on a phone. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex also reads files itself: give it a folder of its own. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
@@ -751,10 +751,12 @@ corresponding care.
 app, Codex CLI, and IDE extension support MCP servers and share MCP
 configuration for the same Codex host."
 
-- **The ChatGPT desktop app** (macOS, Windows or Linux:
+- **The ChatGPT desktop app** (macOS, Windows, or Linux, where OpenAI
+  says "The ChatGPT desktop app for Linux is available in preview.":
   <https://chatgpt.com/download/>): yes, by OpenAI's documentation. It
-  starts Exegete on your computer, from the settings file below. OpenAI documents this for
-  Codex, which you choose in the app's product selector; whether the
+  starts Exegete on your computer, from the settings file below.
+  OpenAI documents this for Codex, which you select from the ChatGPT
+  dropdown (OpenAI also calls it the product selector); whether the
   app's ChatGPT side (Chat and Work) offers Exegete's tools too is not
   documented, and not yet checked.
 - **Codex's command line, and its extension for VS Code and similar
@@ -768,8 +770,41 @@ configuration for the same Codex host."
   developer mode), and it makes every Exegete tool callable from the
   OpenAI workspaces the tunnel is linked to. This project does not
   recommend it for a project with participants' data, and gives no
-  steps for it.
-- **ChatGPT on a phone**: no.
+  steps for it. One more case, for enterprise workspaces only. OpenAI
+  (<https://learn.chatgpt.com/docs/remote-connections>, read
+  30 September 2026): "When your workspace enables Local computer
+  access with Work Cloud, eligible ChatGPT Work conversations can
+  continue across desktop, mobile, and web." Whether such a
+  conversation can use Exegete on the connected computer is not
+  documented, and this project gives no steps for it. OpenAI's page on
+  that feature
+  (<https://learn.chatgpt.com/docs/enterprise/cloud-local-access>, the
+  same day) says: "Conversations, tool results, and other task context
+  do not stay exclusively on the connected computer."
+- **ChatGPT on a phone**: it cannot start Exegete, but it can use it
+  through OpenAI's Remote. OpenAI
+  (<https://learn.chatgpt.com/docs/remote>, read 30 September 2026):
+  "Follow progress, approve actions, and send instructions from your
+  phone. Codex runs each task on your connected computer." And
+  (<https://learn.chatgpt.com/docs/remote-connections>, the same day):
+  "MCP servers, skills, browser access, and Computer Use come from that
+  host's configuration." and "The sandboxing settings, security
+  controls, and action approvals still apply to the connected
+  session." So a phone paired with a computer whose settings file
+  holds the entry below can start work that calls Exegete's tools,
+  see what they return, participants' words included, and give the
+  approvals. By the same pages, the computer must run the ChatGPT
+  desktop app on macOS or Windows ("you can't set it up from the Codex
+  CLI or IDE extension"); the phone runs ChatGPT on iOS or Android; you
+  sign in to both with the same ChatGPT account (the pricing page lists
+  "Mobile remote control" for Plus, Pro, Business and Enterprise, not
+  for an API key); Remote is off until you set it up in the desktop
+  app (Settings, Connections, Control this Mac or PC); and
+  "Availability depends on rollout and your workspace settings." This
+  project has not tried it, and suggests leaving Remote off on a
+  computer where Exegete works on participants' data: a phone is easier
+  to lose or share, and OpenAI's own advice is "Only connect devices
+  you own and trust."
 
 **Which plans.** OpenAI's Codex pricing page
 (<https://learn.chatgpt.com/docs/pricing>, read 30 September 2026) lists
@@ -802,9 +837,13 @@ an app started from the Dock or the Start menu may not look in the
 folders your Terminal does. After the lines above it is
 `/Users/YOUR_USERNAME/exegete-venv/bin/exegete` on a Mac,
 `/home/YOUR_USERNAME/exegete-venv/bin/exegete` on Linux and
-`C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe` on Windows;
-with pipx or uv, `which exegete` (on Windows, `where.exe exegete`)
-prints it.
+`C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe` on Windows,
+where `YOUR_USERNAME` is your account's short name (the name of your
+home folder, which may differ from the name you see when you log in).
+To print the full path: `echo ~/exegete-venv/bin/exegete` in the
+Terminal, or `echo "$HOME\exegete-venv\Scripts\exegete.exe"` in
+PowerShell; with pipx or uv, `which exegete` (on Windows,
+`where.exe exegete`).
 
 **Step 2. Add Exegete to Codex's settings file.** The desktop app, the
 command line and the editor extension all read one file, `config.toml`,
@@ -818,8 +857,14 @@ mkdir -p ~/.codex && touch ~/.codex/config.toml && open -e ~/.codex/config.toml
 
 On Windows, in PowerShell: `mkdir -Force $HOME\.codex` and then
 `notepad $HOME\.codex\config.toml` (Notepad offers to create the file).
-Paste these lines at the end of the file, write your own full path from
-step 1 after `command =`, and save:
+Paste these lines at the end of the file. On a Mac or Linux, change
+only `YOUR_USERNAME` in the `command` line to your own (the full path
+from step 1), typing no quote marks: TextEdit can turn a typed quote
+mark into a curly one, which Codex cannot read. On Windows, replace the
+whole value after `command =`, its double quotes included, with your
+path between single quotes, as "What the lines do" shows below: a
+Windows path between double quotes makes the whole file unreadable.
+Then save:
 
 ```toml
 [mcp_servers.exegete]
@@ -889,14 +934,47 @@ the block above (the `read_pseudonym_list` table); and, if the settings
 screen had no place for them, the `[mcp_servers.exegete.env]` line with
 the two settings under it.
 
-**Step 3. Restart, and check.** In the desktop app, open Settings, MCP
-servers, where `exegete` is now listed, and select Restart (or quit the
-app and open it again). Choose Codex in the product selector, start a
-new chat, and type `/mcp` in the message box: Exegete is among the
-connected servers. Then ask "Using the Exegete tools, is a project
-open?": the answer is that no project is open (a tool that only reads
-runs without asking). On the command line, `codex mcp list` lists
-Exegete, and `/mcp` inside `codex` shows it.
+**Step 3. Give Codex a folder of its own, restart, and check.** Codex
+is an agent: besides calling Exegete's tools, it reads and changes
+files by itself in the folder it works in, outside Exegete. OpenAI's
+page on the desktop app says: "Choose where to work. Start a chat,
+create a project, or open a folder. ChatGPT can use the files and
+context in the location you choose." (<https://learn.chatgpt.com/docs/app>,
+read 30 September 2026), and, for the command line: "Codex CLI treats
+the directory where you start it as the project for the chat."
+(<https://learn.chatgpt.com/docs/projects>, the same day). So make an
+empty folder for these chats and work there. In the Terminal (macOS or
+Linux):
+
+```bash
+mkdir -p ~/exegete-chats && cd ~/exegete-chats && codex
+```
+
+or in PowerShell on Windows:
+
+```powershell
+mkdir -Force $HOME\exegete-chats; cd $HOME\exegete-chats; codex
+```
+
+In the desktop app, open that folder (`exegete-chats` in your home
+folder) as the place to work. Never give Codex your home folder,
+Documents, your projects folder (`~/QualCoder projects`), or a folder
+with transcripts or other study files: what Codex reads there goes to
+OpenAI without passing through Exegete, and what it changes there is
+changed without Exegete's approval step, preview or backup. A folder of
+its own limits where Codex works and what it changes without asking;
+OpenAI's pages do not say that its reading stops at that folder, so
+never point it at study files either.
+
+Then, in the desktop app, open Settings, MCP servers, where `exegete`
+is now listed, and select Restart (or quit the app and open it again).
+Select Codex from the ChatGPT dropdown (OpenAI's quickstart: "select
+**Codex** from the ChatGPT dropdown"), start a new chat in your
+`exegete-chats` folder, and type `/mcp` in the message box: Exegete is
+among the connected servers. Then ask "Using the Exegete tools, is a
+project open?": the answer is that no project is open (a tool that only
+reads runs without asking). On the command line, `codex mcp list` lists
+Exegete, and `/mcp` inside `codex`, started as above, shows it.
 
 **Step 4. Keep it asking.** In the desktop app, keep the permissions
 control below the message box on **Ask for approval**, as OpenAI
@@ -909,11 +987,25 @@ and **Full access** runs every tool call without asking (Codex's source
 code). When Codex asks before an Exegete tool, it may offer to remember
 your answer for the session or for good; for the tools that write, and
 for `read_pseudonym_list`, answer each time, since a remembered answer
-lets later calls run unasked. Codex's sandbox settings govern the
-commands the model runs, not Exegete, which reads and writes your
-projects whichever sandbox you choose (Codex's source code). What "Approving the AI's
-suggestions: your host's settings are the safeguard", below, says
-holds in Codex too.
+lets later calls run unasked. On the command line, if Codex started in
+its read-only mode, you may keep it there (Exegete's tools work the
+same); never choose Full access.
+
+"Ask for approval" does not ask before Codex reads or changes files in
+its own folder. OpenAI's page on permissions: it "lets ChatGPT work
+within the current workspace and pauses before reaching beyond that
+boundary"; and its page on approvals
+(<https://learn.chatgpt.com/docs/agent-approvals-security>, read
+30 September 2026), in the table "Common sandbox and approval
+combinations", row "Auto (preset)": "Codex can read files, make edits,
+and run commands in the workspace. Codex requires approval to edit
+outside the workspace or to access network." Even in the read-only
+mode, "Codex can read files and run commands within the read-only
+sandbox." That is why step 3 gives Codex a folder of its own. Codex's
+sandbox settings govern the commands the model runs, not Exegete,
+which reads and writes your projects whichever sandbox you choose
+(Codex's source code). What "Approving the AI's suggestions: your
+host's settings are the safeguard", below, says holds in Codex too.
 
 **If Exegete does not start, or its tools are missing:**
 
@@ -921,9 +1013,16 @@ holds in Codex too.
   `--version` answers `exegete <version>`. If it does not, install again
   (step 1).
 - Codex cannot read a settings file with a mistake in it, such as a
-  missing quote mark or a second `[mcp_servers.exegete]` line; compare
-  yours with the block above. On Windows, a path between double quotes
+  missing quote mark, a curly quote mark (“ or ” instead of ") typed in
+  TextEdit, or a second `[mcp_servers.exegete]` line; compare yours with
+  the block above. In TextEdit, Edit, Substitutions, Smart Quotes
+  switches the curly ones off. On Windows, a path between double quotes
   needs every backslash doubled; single quotes avoid that.
+- If the desktop app offers no local work at all: OpenAI
+  (<https://learn.chatgpt.com/docs/use-chatgpt>, read 30 September
+  2026) says "Local work is available in the desktop app when enabled
+  for your account or workspace." On an account your university or
+  employer manages, ask whoever manages it.
 - If Codex reports that the server timed out while starting, raise
   `startup_timeout_sec`. If a tool stopped with a timeout, raise
   `tool_timeout_sec`, and before asking again check whether the change
@@ -1032,9 +1131,12 @@ and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
 mark Codex does not read. With `default_tools_approval_mode =
 "writes"` in the server's entry, Codex asks before every tool not
 marked read-only; the recipe above sets it, and asks before
-`read_pseudonym_list` in any mode. The desktop app's "Approve for me"
-sends what needs approval to an automatic reviewer instead of you, and
-"Full access" approves every call.
+`read_pseudonym_list` whichever of the server's approval modes is set.
+The desktop app's "Approve for me" sends what needs approval to an
+automatic reviewer instead of you, and "Full access" approves every
+call, `read_pseudonym_list` included. None of these marks covers what
+Codex reads and changes by itself in its own folder (the recipe's step
+3).
 
 So, for work on real data, keep the host in its asking mode (Manual),
 with "allow once" for anything that writes. In an auto mode, a
@@ -1313,12 +1415,19 @@ Updates are manual (a new release does not install itself).
 before; Claude replaces the old one.
 
 **PyPI install**, one command, with your MCP client fully quit first
-(see "Tools missing or unchanged after an upgrade"):
+(see "Tools missing or unchanged after an upgrade"; the ChatGPT desktop
+app: quit it; Codex on the command line: end the session):
 
 ```bash
 ~/exegete-venv/bin/pip install --upgrade exegete
 # pipx:  pipx upgrade exegete
 # uv:    uv tool upgrade exegete
+```
+
+or in PowerShell on Windows:
+
+```powershell
+$HOME\exegete-venv\Scripts\pip install --upgrade exegete
 ```
 
 **Git (contributor) install**, when new versions are released. First

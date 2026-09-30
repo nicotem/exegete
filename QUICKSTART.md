@@ -1,7 +1,10 @@
 # Quick Start Guide
 
 This guide will get you up and running with Exegete (formerly
-qualcoder-mcp), the MCP server for QualCoder projects, in 10 minutes.
+qualcoder-mcp), a qualitative analysis application you use in
+conversation with an AI assistant, compatible with QualCoder, in 10
+minutes. It sets Exegete up by hand, in Claude Desktop's settings file;
+README's one-click extension is the easier start.
 
 ## Prerequisites Checklist
 
@@ -10,7 +13,8 @@ qualcoder-mcp), the MCP server for QualCoder projects, in 10 minutes.
       users can skip the Desktop config below and just run
       `claude mcp add exegete -- <venv-python> -m exegete.server`
       (see "Alternative: Claude Code and other MCP clients" in INSTALL.md)
-- [ ] At least one Qualcoder project created (a `.qda` project folder)
+- [ ] At least one QualCoder project (a `.qda` project folder): the
+      setup below cannot create one; the one-click extension can
 
 > Choosing between Claude plans, an API key, or a fully local model?
 > See "Choosing your AI host: data-governance options" in INSTALL.md

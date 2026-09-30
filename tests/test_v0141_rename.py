@@ -188,7 +188,8 @@ class TestTheExtensionsIcon:
         # QualCoder"); the identifier stays qualcoder-mcp either way
         assert template["display_name"] == "Exegete"
         assert template["long_description"].startswith(
-            "Exegete (formerly qualcoder-mcp) lets Claude open")
+            "Exegete (formerly qualcoder-mcp) is a qualitative analysis "
+            "application you use in conversation with Claude")
         assert "github.com/nicotem/exegete/" in template["documentation"]
 
 

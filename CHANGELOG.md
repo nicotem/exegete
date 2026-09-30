@@ -130,34 +130,46 @@ still accepted (the Upgrading list below).
 - The README's opening presents Exegete as a qualitative analysis
   application in its own right, used through a conversation with an AI
   assistant, that creates and works on QualCoder projects and stays
-  compatible with QualCoder, so a project opens there at any time; no
-  longer as a suite of tools that works on QualCoder projects. It says
-  what Exegete covers today (creating a project, Experimental; cases
-  and attributes; bringing in text; coding with suggestions the
-  researcher decides; the codebook; memos, annotations and a journal;
-  searching; reports and exports; comparing coders; replacing names;
-  backups and restore), what still needs QualCoder (documents other
-  than text, coding images, audio and video, graphs), and the whole
-  life of a project as the aim. The independence statement, the three
-  commitments and the paragraph on QualCoder's own server stand.
+  compatible with QualCoder, so a project opens there whenever you like,
+  one program at a time; no longer as a suite of tools that works on
+  QualCoder projects. It says what Exegete covers today (creating a
+  project, Experimental; cases and attributes; bringing in text; coding
+  with suggestions the researcher decides; the codebook; memos,
+  annotations and a journal; searching; reports and exports; comparing
+  coders; replacing names; backups and restore), what still needs
+  QualCoder (documents other than text, seeing the coding highlighted in
+  the text, coding images, audio, video or an area of a PDF page,
+  graphs), and the whole life of a project as the aim. The independence
+  statement, the three commitments and the paragraph on QualCoder's own
+  server stand. The extension's description, PyPI's summary, the
+  citation's abstract and QUICKSTART.md say the same in a sentence.
 - A route for OpenAI's apps (Experimental, written from OpenAI's
   documentation of 30 September 2026 and not yet tried by this
   project): the ChatGPT desktop app, and Codex's command line and
   editor extension, which share one settings file, start Exegete on
-  your computer; ChatGPT in a web browser or on a phone does not, and
-  OpenAI's Secure MCP Tunnel, which could connect the web to it, is not
-  recommended for participants' data. README has the short version,
-  INSTALL.md the steps: a settings entry that makes Codex ask before
-  every tool that is not read-only (by default it asks only before a
-  tool that can replace or remove, and runs the tools that only add,
-  and `read_pseudonym_list`, without asking), the permission mode to
-  keep, and what to do if it does not start.
+  your computer; ChatGPT in a web browser does not, and OpenAI's Secure
+  MCP Tunnel, which could connect the web to it, is not recommended for
+  participants' data. ChatGPT's phone app does not start Exegete, but
+  by OpenAI's documentation its Remote feature lets a phone start and
+  approve work that a paired Mac or Windows computer runs, with the
+  Exegete set up there; this project suggests leaving Remote off for
+  participants' data. README has the short version, INSTALL.md the
+  steps: a settings entry that makes Codex ask before every tool that
+  is not read-only (by default it asks only before a tool that can
+  replace or remove, and runs the tools that only add, and
+  `read_pseudonym_list`, without asking); an empty folder of Codex's
+  own to work in, because Codex reads and changes the files in its
+  folder by itself, outside Exegete and without asking; the permission
+  mode to keep; and what to do if it does not start.
 - PRIVACY.md: a section on OpenAI's apps, quoting OpenAI's pages on
   training and its opt-out for services for individuals, the business
   plans and the API, Codex's sign-in, the session transcripts Codex
   keeps under `~/.codex`, and the terms for the UK, the EEA and
-  Switzerland; README's "Where your data goes" names OpenAI and quotes
-  the Help Center once.
+  Switzerland; Codex's own file access, and its session files, which
+  keep what Exegete's tools returned whatever its `history` settings
+  say. README's "Where your data goes" names OpenAI, quotes the Help
+  Center's training sentence and its opt-out, and says what Codex reads
+  by itself and keeps in `~/.codex`.
 - The served texts no longer address the assistant as Claude:
   `analyze_for_coding`'s next steps, `record_suggestions`' and
   `propose_codes`' descriptions, and `explain_ai_coding_tools`'

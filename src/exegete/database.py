@@ -1082,9 +1082,29 @@ WORKSPACE_REQUIRED_ENV = names.SETTINGS["workspace_required"][0]
 
 
 def standard_workspace() -> Path:
-    """`~/Documents/Qualcoder MCP Projects`: the workspace when
-    EXEGETE_WORKSPACE is not set, resolved at call time."""
-    return Path.home() / "Documents" / "Qualcoder MCP Projects"
+    """`~/Documents/Exegete projects`: the workspace when
+    EXEGETE_WORKSPACE is not set, resolved at call time (v0.14.1; until
+    0.14.0, `earlier_standard_workspace()`)."""
+    return Path.home() / "Documents" / names.WORKSPACE_FOLDER
+
+
+def earlier_standard_workspace() -> Path:
+    """`~/Documents/Qualcoder MCP Projects`, the workspace until 0.14.0.
+    Never moved or emptied; the project listing still finds its projects,
+    since it walks ~/Documents."""
+    return Path.home() / "Documents" / names.OLD_WORKSPACE_FOLDER
+
+
+def earlier_workspace_holds_projects() -> bool:
+    """Whether the earlier workspace holds a project (a `*.qda` entry at
+    its top level, where copies and new projects were made). Never
+    raises: a folder that cannot be read counts as holding none."""
+    try:
+        with os.scandir(earlier_standard_workspace()) as entries:
+            return any(entry.name.lower().endswith(".qda")
+                       for entry in entries)
+    except OSError:
+        return False
 
 
 def workspace_setting_problem() -> Optional[str]:
@@ -6968,7 +6988,7 @@ class QualcoderDatabase:
     # WRITE OPERATIONS
     # ============================================================================
     # These methods modify the database. Users should work on project copies
-    # in the MCP workspace (~/Documents/Qualcoder MCP Projects/)
+    # in the workspace (~/Documents/Exegete projects/)
 
     def _require_write_access(self) -> None:
         """Check that database was opened with write access on a v14 schema.

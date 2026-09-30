@@ -67,6 +67,7 @@ from .database import (
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
     default_workspace,
+    earlier_workspace_holds_projects,
     workspace_setting_problem,
     WORKSPACE_ENV,
     qualcoder_lock_state,
@@ -979,6 +980,29 @@ def _host_set_workspace() -> Optional[str]:
             or workspace_setting_problem() is not None:
         return None
     return str(default_workspace())
+
+
+# The workspace until 0.14.0 (v0.14.1): when no workspace is set and the
+# earlier one holds projects, the first answer of this run that names the
+# workspace (a copy's, or a created project's in the workspace) says once
+# that they remain there and are still found. Never moved or emptied.
+EARLIER_WORKSPACE_NOTE = (
+    f"Projects made before the rename remain in ~/Documents/"
+    f"{names.OLD_WORKSPACE_FOLDER}, the earlier projects folder: nothing "
+    f"there was moved, and list_available_projects still finds them. New "
+    f"copies and projects go to ~/Documents/{names.WORKSPACE_FOLDER}.")
+_earlier_workspace_said = False
+
+
+def _earlier_workspace_note(used_the_workspace: bool) -> Optional[str]:
+    """EARLIER_WORKSPACE_NOTE, the first time it applies in this run."""
+    global _earlier_workspace_said
+    if (_earlier_workspace_said or not used_the_workspace
+            or (env_settings.value("workspace") or "").strip()
+            or not earlier_workspace_holds_projects()):
+        return None
+    _earlier_workspace_said = True
+    return EARLIER_WORKSPACE_NOTE
 
 
 # The usual places the listing walks, as its answer names them.
@@ -4144,7 +4168,7 @@ def copy_project_to_workspace(
     """Copy a QualCoder project to the MCP workspace for safe modification.
 
     This is the recommended first step before any AI coding: work on a copy
-    in the workspace folder (~/Documents/Qualcoder MCP Projects/ unless the
+    in the workspace folder (~/Documents/Exegete projects/ unless the
     host set another; the answer gives the path) so your
     original project is never touched. If a project with the same name
     already exists in the workspace, the copy gets a timestamped name.
@@ -4195,6 +4219,9 @@ def copy_project_to_workspace(
         "hint": f"Use select_project(\"{dest}\") to open the copy and work on it."
     }
     _attach_skipped_symlinks(result, report, always=True)
+    note = _earlier_workspace_note(True)
+    if note:
+        result["earlier_projects"] = note
     return json.dumps(result, indent=2)
 
 
@@ -8852,7 +8879,7 @@ def import_text_file(
     with link_file_to_case.
 
     IMPORTANT: Make sure you're working on a copy of your project in the
-    MCP workspace (~/Documents/Qualcoder MCP Projects/ unless the host set
+    MCP workspace (~/Documents/Exegete projects/ unless the host set
     another)
 
     Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
@@ -18202,9 +18229,9 @@ def create_project(name: str, directory: Optional[str] = None,
               dropped)
         directory: An existing folder to create the project in, as a
                    full path or one starting with ~; leave it out to use
-                   this server's workspace, ~/Documents/Qualcoder MCP
-                   Projects unless the host set another (the answer
-                   gives the path)
+                   this server's workspace, ~/Documents/Exegete projects
+                   unless the host set another (the answer gives the
+                   path)
         coder_name: The coder name the researcher uses in QualCoder
                     (Settings, Coder name), exactly as they give it
         coder_name_not_known: True when the researcher does not know it;
@@ -18298,6 +18325,9 @@ def create_project(name: str, directory: Optional[str] = None,
         "previous_project": previous,
         "warnings": warnings,
     }
+    note = _earlier_workspace_note(is_default)
+    if note:
+        result["earlier_projects"] = note
     # Selected as select_project would, without the machine-wide process
     # scan: a project made seconds ago by this server cannot be open in
     # QualCoder, and "APPEARS to be open in QualCoder" would be false.

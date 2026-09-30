@@ -38,7 +38,8 @@ What stays local, always, unless a sync service copies the folder it is in:
   ends `_prerestore.qda`) placed next to the project folder
 - exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
 - project copies made by copy_project_to_workspace, in
-  `~/Documents/Qualcoder MCP Projects/` by default, or in the folder
+  `~/Documents/Exegete projects/` by default (before 0.14.1,
+  `~/Documents/Qualcoder MCP Projects/`, left as it was), or in the folder
   `EXEGETE_WORKSPACE` names, which the desktop extension sets
   from its "Folder for projects", by default `~/QualCoder projects/`
   (each carries the

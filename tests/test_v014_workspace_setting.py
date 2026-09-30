@@ -70,7 +70,7 @@ class TestWhereTheWorkspaceIs:
         assert os.environ.get(ENV) is None      # the sandbox cleared it
         standard = database.standard_workspace()
         assert standard.relative_to(Path.home()).parts == (
-            "Documents", "Qualcoder MCP Projects")
+            "Documents", "Exegete projects")
         assert database.default_workspace() == standard
 
     @pytest.mark.parametrize("blank", ["", "   ", "\t"])
@@ -288,7 +288,8 @@ class TestTheListingFindsIt:
 
 
 class TestTheDescriptionsSayIt:
-    """The three tools that named `~/Documents/Qualcoder MCP Projects` as
+    """The three tools that name the Terminal workspace
+    (`~/Documents/Exegete projects` from v0.14.1) as
     the workspace now say that the host can set another, and the listing
     names the workspace among the places it searches."""
 
@@ -296,7 +297,7 @@ class TestTheDescriptionsSayIt:
         "copy_project_to_workspace", "import_text_file", "create_project"])
     def test_the_workspace_is_not_promised(self, tool):
         text = " ".join(getattr(server, tool).__doc__.split())
-        assert "~/Documents/Qualcoder MCP Projects" in text
+        assert "~/Documents/Exegete projects" in text
         assert "unless the host set another" in text
 
     def test_the_tool_set_error_is_neutral(self, monkeypatch):

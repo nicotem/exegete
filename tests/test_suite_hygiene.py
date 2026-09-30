@@ -158,13 +158,13 @@ class TestTheDefaultWorkspaceIsResolvedWhenAsked:
         elsewhere.mkdir()
         monkeypatch.setenv("HOME", str(elsewhere))
         monkeypatch.setenv("USERPROFILE", str(elsewhere))
-        expected = elsewhere / "Documents" / "Qualcoder MCP Projects"
+        expected = elsewhere / "Documents" / "Exegete projects"
         assert database.default_workspace().resolve() == expected.resolve()
         # And it follows the environment back: an answer cached on the
         # first call would fail here, as the import-time constant did.
         monkeypatch.undo()
         sandbox_home = tmp_path / "qc_sandbox_home" / "Documents" / \
-            "Qualcoder MCP Projects"
+            "Exegete projects"
         assert database.default_workspace().resolve() == \
             sandbox_home.resolve()
 

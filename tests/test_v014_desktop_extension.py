@@ -818,8 +818,10 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
         found = []
         for section in self._sections(text):
             flat = " ".join(section.split())
-            if "Qualcoder MCP Projects" in flat and not any(
-                    q in flat for q in self.QUALIFIERS):
+            # v0.14.1: the Terminal workspace's new name too
+            if any(folder in flat for folder in (
+                    "Qualcoder MCP Projects", "Documents/Exegete projects")) \
+                    and not any(q in flat for q in self.QUALIFIERS):
                 found.append(f"{name}: {flat[:60]}")
         return found
 
@@ -839,3 +841,5 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
                 "MCP\nProjects/`.\n\n## Other\n\nSet "
                 "QUALCODER_MCP_WORKSPACE.\n")
         assert len(self._offenders("x", text)) == 1
+        assert len(self._offenders("x", text.replace(
+            "Qualcoder MCP\nProjects", "Exegete\nprojects"))) == 1

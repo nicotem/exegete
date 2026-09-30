@@ -468,8 +468,10 @@ always to the same value.
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
   also searches its top level. A full path, or one starting with `~`.
-  Unset or blank, it is `~/Documents/Qualcoder MCP Projects`. The
-  desktop extension sets it from its "Folder for projects" setting,
+  Unset or blank, it is `~/Documents/Exegete projects` (until 0.14.0,
+  `~/Documents/Qualcoder MCP Projects`, which is never moved or emptied,
+  and whose projects the listing still finds). The desktop extension
+  sets it from its "Folder for projects" setting,
   whose default is `~/QualCoder projects`, because iCloud (Desktop and
   Documents) and OneDrive may sync `~/Documents`. A relative path, or a
   folder inside `~/.exegete` (or `~/.qualcoder_mcp`, its earlier
@@ -479,7 +481,7 @@ always to the same value.
   with "Error: EXEGETE_WORKSPACE ..." on stderr (naming no path).
 - `EXEGETE_WORKSPACE_REQUIRED` (v0.14): `1` makes a blank or
   missing `EXEGETE_WORKSPACE` stop the server at start-up instead
-  of falling back to `~/Documents/Qualcoder MCP Projects`. The desktop
+  of falling back to `~/Documents/Exegete projects`. The desktop
   extension sets it, so an emptied "Folder for projects" never sends
   projects into a synced Documents folder.
 - `EXEGETE_AI_CODER_NAME`: this HOST's DECLARATION of the AI
@@ -1544,6 +1546,12 @@ yet, and the first start after the update moves the server's own folder
   so an older copy of the server on the same computer keeps using the
   same folder and key. If a backup or sync rule of yours names the old
   folder, change it. PRIVACY.md says more.
+- **The projects folder** for installs from PyPI or from the source,
+  when no workspace is set, is now `~/Documents/Exegete projects`: new
+  copies and new projects go there. `~/Documents/Qualcoder MCP Projects`
+  is never moved or emptied, and `list_available_projects` still finds
+  the projects in it; the first answer that names the workspace says so
+  once. The extension's folder, `~/QualCoder projects`, is unchanged.
 - **Your projects** are unchanged, except for one small file. Exegete
   keeps the AI coder name in `exegete.json` in the project folder. A
   project from before still has `qualcoder_mcp.json`, which is read as
@@ -1780,8 +1788,9 @@ backup folders it created next to each project
 (`<project>_backup_<timestamp>.qda`), stay where they are. Remove
 backups you no longer need with the `prune_backups` tool before
 uninstalling, or by hand afterwards. Workspace copies made with
-`copy_project_to_workspace` live in `~/Documents/Qualcoder MCP
-Projects/`, or in the folder `EXEGETE_WORKSPACE` names (with the
+`copy_project_to_workspace` live in `~/Documents/Exegete projects/`
+(those made before 0.14.1, in `~/Documents/Qualcoder MCP Projects/`),
+or in the folder `EXEGETE_WORKSPACE` names (with the
 desktop extension, its "Folder for projects", by default
 `~/QualCoder projects/`).
 

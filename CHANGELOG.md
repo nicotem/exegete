@@ -69,13 +69,21 @@ still accepted (the Upgrading list below).
   before the move brings back the earlier file alone; it is read, and
   the next change of name moves it again. An earlier file that cannot
   be read is never rewritten. Messages name the file in use.
+- The projects folder for installs from PyPI or from the source, when
+  no workspace is set, is now `~/Documents/Exegete projects`: copies and
+  new projects go there. The earlier `~/Documents/Qualcoder MCP
+  Projects` is never moved or emptied, and `list_available_projects`
+  still finds its projects; when it holds any, the first answer of a run
+  that names the workspace (a copy's, or a project's created there)
+  says so once. The extension's folder, `~/QualCoder projects`, is
+  unchanged.
 - The old name's package, `qualcoder-mcp`, is released beside every
   release until v1.0: it carries the `qualcoder-mcp` command and a
   two-file stand-in module, and asks for the matching Exegete.
 - Kept as they are: the AI coder name file's format, which every
   version since 0.12 shares; the internal label that keys the privacy run records' digests, so
-  records written earlier stay checkable; the default projects folders;
-  and past entries in this file.
+  records written earlier stay checkable; the extension's projects
+  folder; and past entries in this file.
 
 ### Changed: the README is a front page, and its reference moves out
 
@@ -195,17 +203,19 @@ still accepted (the Upgrading list below).
 ### Measured
 
 - Serialised tool JSON as it stands after the rename's changes to the
-  tools' texts: full = 195,278 characters (about 48.8k tokens at
-  chars/4) over 73 tools, core = 64,810 (about 16.2k) over 21, and the
-  opt-in lifecycle set = 197,863 (about 49.5k) over 74, measured on
+  tools' texts: full = 195,266 characters (about 48.8k tokens at
+  chars/4) over 73 tools, core = 64,804 (about 16.2k) over 21, and the
+  opt-in lifecycle set = 197,845 (about 49.5k) over 74, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 204,986, 68,102 and 207,711. Moved by
+  Python 3.11.13 (the `.venv/`), 204,974, 68,096 and 207,693. Moved by
   the resource addresses the texts name (`exegete://` for
   `qualcoder://`), the settings they name (`EXEGETE_PROJECT_PATH`
   and `EXEGETE_AI_CODER_NAME` in `select_project` and
   `export_refi_qda`), three descriptions that no longer address the
-  assistant as Claude, and the AI coder name file's new name in
-  `set_project_ai_coder_name`, each a few characters shorter.
+  assistant as Claude, the AI coder name file's new name in
+  `set_project_ai_coder_name`, and the projects folder's new name in
+  `copy_project_to_workspace`, `import_text_file` and `create_project`,
+  each a few characters shorter.
 
 ### Upgrading from 0.14.0
 
@@ -238,6 +248,11 @@ qualcoder-mcp" says what you may change on each route.
   comes from installing `exegete`); and an entry in a host's
   configuration named `qualcoder` (keep it, and do not add an `exegete`
   entry beside it).
+- **The projects folder** on the Terminal routes, with no workspace
+  set, becomes `~/Documents/Exegete projects`. Your projects in
+  `~/Documents/Qualcoder MCP Projects` are never moved or emptied and
+  are still found; set `EXEGETE_WORKSPACE` to that folder to keep
+  using it.
 - **The AI coder name file** becomes `exegete.json` the first time a
   project's name is stored after the update; the earlier
   `qualcoder_mcp.json` stays beside it, marked so that qualcoder-mcp

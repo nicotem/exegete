@@ -48,6 +48,14 @@ OLD_SPELLINGS_UNTIL = "v1.0"
 STATE_FOLDER = ".exegete"
 OLD_STATE_FOLDER = ".qualcoder_mcp"
 
+# The workspace inside the Documents folder: where copies and new projects
+# go when no workspace is set (installs from PyPI or from the source; the
+# desktop extension always sets one, `~/QualCoder projects`). The earlier
+# one is never moved or emptied, and the project listing still finds its
+# projects (it walks ~/Documents).
+WORKSPACE_FOLDER = "Exegete projects"
+OLD_WORKSPACE_FOLDER = "Qualcoder MCP Projects"
+
 # The resources' address scheme; the earlier one is still answered, and
 # no longer listed, until v1.0. (QualCoder's own
 # MCP server uses `qualcoder://`, hence the departure.)

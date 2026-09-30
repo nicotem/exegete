@@ -361,7 +361,7 @@ class TestPathLength:
         answer = create("Long", target)
         assert answer["created"] is True
         assert any("travel better" in w for w in answer["warnings"])
-        typical = Path("/Users/researcher/Documents/Qualcoder MCP Projects"
+        typical = Path("/Users/researcher/Documents/Exegete projects"
                        "/Interview study.qda")
         assert new_project.long_path_warning(typical) is None
         assert new_project.file_name_room(typical) >= \

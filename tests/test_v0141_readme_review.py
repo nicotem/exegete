@@ -337,9 +337,14 @@ def test_the_spelling_check_would_notice():
 
 
 def test_the_folder_keeps_its_name_where_the_code_writes_it():
-    assert database.standard_workspace().name == "Qualcoder MCP Projects"
-    assert "`~/Documents/Qualcoder MCP Projects`" in _flat("INSTALL.md")
-    assert "`~/Documents/Qualcoder MCP Projects`" in _flat("TOOLS.md")
+    # v0.14.1: the Terminal workspace is `~/Documents/Exegete projects`;
+    # the earlier folder keeps its spelling wherever it is named
+    assert database.standard_workspace().name == "Exegete projects"
+    assert database.earlier_standard_workspace().name == \
+        "Qualcoder MCP Projects"
+    for name in ("INSTALL.md", "TOOLS.md"):
+        assert "`~/Documents/Exegete projects`" in _flat(name)
+        assert "`~/Documents/Qualcoder MCP Projects`" in _flat(name)
 
 
 # ---------------------------------------------------------------------------

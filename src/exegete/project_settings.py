@@ -163,31 +163,87 @@ _UNREADABLE_BESIDE_EARLIER = (
     "would bring that name back without asking. Nothing was written.")
 
 
+_NEWER_FORMAT_BESIDE_EARLIER = (
+    "The AI coder name file for this project ({file} in the "
+    "project folder) was written by a newer version of this server "
+    f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
+    f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
+    "user to move both {file} and {old} aside: {old} beside it is not "
+    "marked as moved and still holds \"{held}\", so moving {file} aside "
+    "alone would bring that name back without asking. Nothing was "
+    "written.")
+
+_OVERSIZED_BESIDE_EARLIER = (
+    "The AI coder name file for this project ({file} in the "
+    "project folder) is too large to write: even with one history entry "
+    "it would be bigger than this server can read back. Ask the user to "
+    "remove the extra top-level keys in it, or to move both {file} and "
+    "{old} aside: {old} beside it is not marked as moved and still holds "
+    "\"{held}\", so moving {file} aside alone would bring that name back "
+    "without asking. Nothing was written.")
+
+
+def _held_beside(path: Any) -> Optional[str]:
+    """The name an unmarked earlier file beside exegete.json holds, when
+    `path` is exegete.json and there is one (a mark that failed, or a
+    file an older copy wrote): the name that removing exegete.json, or
+    moving it aside, would bring back without a word, since the earlier
+    file alone is then read (a restored backup from before the move
+    looks the same on disk)."""
+    if path is None or Path(path).name != SIDECAR_NAME:
+        return None
+    data = _unmarked_earlier_file(Path(path).parent)
+    return _held_name(data) if data is not None else None
+
+
+def _beside_or_alone(beside: str, alone: str, path: Any) -> str:
+    """`beside` when an unmarked earlier file holding a name sits beside
+    exegete.json, so that the usual advice (remove the file, or move it
+    aside, and the next write asks) would not hold; else `alone`."""
+    held = _held_beside(path)
+    if held:
+        return beside.format(file=SIDECAR_NAME, old=OLD_SIDECAR_NAME,
+                             held=held)
+    return _naming(alone, path)
+
+
 def unreadable_message(path: Any = None) -> str:
     """The message for an unreadable file, naming the file in use.
 
-    With an unreadable exegete.json beside an unmarked earlier file that
-    holds a name (a mark that failed, or a file an older copy wrote), the
-    usual advice to remove the file would bring that name back without a
-    word, since the earlier file alone is then read (a restored backup
-    from before the move looks the same on disk). The message says to
-    set the name again or to remove both files instead.
+    Beside an unmarked earlier file that holds a name, it says to set
+    the name again or to remove both files (`_held_beside`).
     """
-    if path is not None and Path(path).name == SIDECAR_NAME:
-        data = _unmarked_earlier_file(Path(path).parent)
-        held = _held_name(data) if data is not None else None
-        if held:
-            return _UNREADABLE_BESIDE_EARLIER.format(
-                file=SIDECAR_NAME, old=OLD_SIDECAR_NAME, held=held)
-    return _naming(_UNREADABLE, path)
+    return _beside_or_alone(_UNREADABLE_BESIDE_EARLIER, _UNREADABLE, path)
 
 
 def newer_format_message(path: Any = None) -> str:
-    return _naming(_NEWER_FORMAT, path)
+    """The message for a file a newer version wrote. Beside an unmarked
+    earlier file that holds a name, it says to move both files aside
+    (`_held_beside`)."""
+    return _beside_or_alone(_NEWER_FORMAT_BESIDE_EARLIER, _NEWER_FORMAT,
+                            path)
 
 
 def oversized_message(path: Any = None) -> str:
-    return _naming(_OVERSIZED, path)
+    """The message for a file too large to write. Beside an unmarked
+    earlier file that holds a name, it says to move both files aside
+    (`_held_beside`)."""
+    return _beside_or_alone(_OVERSIZED_BESIDE_EARLIER, _OVERSIZED, path)
+
+
+def removing_alone_warning(held: Optional[str]) -> str:
+    """For an unmarked earlier file beside exegete.json that holds a
+    name: removing exegete.json alone, as a researcher does to have the
+    name asked for again, would bring that name back without a word
+    (`_held_beside`). Empty when it holds none: removing exegete.json
+    then leaves no name, and the next write asks."""
+    if not held:
+        return ""
+    return (f"While it is unmarked, removing {SIDECAR_NAME} alone (to have "
+            f"the name asked for again) would make \"{held}\" this "
+            f"project's name again without asking, since "
+            f"{OLD_SIDECAR_NAME} is then read in its place: remove both "
+            f"files instead.")
 
 
 # The messages naming the new file, for callers with no path at hand.

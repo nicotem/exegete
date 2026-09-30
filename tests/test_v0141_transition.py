@@ -14,6 +14,7 @@ the hosts' files as fixtures; nothing reads the real ones.
 import io
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -1258,6 +1259,22 @@ class TestTheHelpTopic:
         assert "`uvx exegete --check-transition`" in extension
         assert "installs no command" in extension
         assert "~/.qualcoder_mcp" in extension
+
+
+def test_ci_follows_the_steps_with_the_real_installers():
+    """The rename job's Linux entry runs the real uv tool and pipx through
+    the check's steps, with pipx and a pip it accepts in the wheelhouse
+    (pipx 1.17 asks for pip 26.1 or later)."""
+    from test_v012_workflow_pins import WORKFLOWS, _jobs
+    job = {j["name"]: "\n".join(j["lines"])
+           for j in _jobs(WORKFLOWS / "ci.yml")}["rename-upgrade"]
+    ubuntu = re.search(r"- os: ubuntu-latest\n\s+tests: (.+)", job)
+    assert "tests/test_v0141_transition_installers.py" in \
+        ubuntu.group(1).split()
+    download = re.search(r'pip download --dest "\$RUNNER_TEMP/wheelhouse" '
+                         r'--only-binary=:all: (.+)', job).group(1)
+    assert re.search(r'"pipx(==[\d.]+)?"', download)
+    assert '"pip>=26.1"' in download
 
 
 def section(text, start, end):

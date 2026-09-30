@@ -3,9 +3,9 @@
 
 Slow, like test_v0141_upgrade.py: run when RENAME_TEST_WHEELHOUSE names a
 folder of wheels (`mcp` and what it needs, plus setuptools; for pipx,
-pipx and what it needs as well, unless a pipx is on the PATH), and
-skipped elsewhere. Everything is installed offline from that folder, at
-a test version no index holds.
+pipx and what it needs as well, else a pipx on the PATH is used), and
+skipped elsewhere. CI's rename job runs it on Linux. Everything is
+installed offline from that folder, at a test version no index holds.
 
 For an install made with uv tool and one made with pipx, each first at
 the published 0.14.0a0 (a stand-in with its file list) and then upgraded
@@ -15,7 +15,8 @@ exactly as printed (each command through the shell, each entry's lines
 pasted into Claude Desktop's file in a scratch home). After every step
 the host's entry starts a command that answers; at the end it starts a
 server that answers MCP's `initialize` as Exegete, and the check finds
-nothing left.
+nothing left. And once more for pipx with `--include-deps`, which links
+exegete's command from the old package's own environment.
 """
 
 import json
@@ -61,13 +62,13 @@ def houses(tmp_path_factory):
 
 
 def _pipx(tmp: Path, source: Path):
-    """The folder of a pipx command: the one on the PATH, or one
-    installed from the wheelhouse into an environment of its own."""
-    found = shutil.which("pipx")
-    if found:
-        return Path(found).parent
+    """The folder of a pipx command: one installed from the wheelhouse
+    into an environment of its own when the wheelhouse holds pipx (CI's
+    does, so a runner's own pipx, whatever its version, is not used), or
+    else the one on the PATH."""
     if not list(source.glob("pipx-*.whl")):
-        return None
+        found = shutil.which("pipx")
+        return Path(found).parent if found else None
     env = tmp / "pipx-env"
     subprocess.run([sys.executable, "-m", "venv", str(env)], check=True,
                    timeout=120)
@@ -154,14 +155,20 @@ def follow(out: str, config: Path, env) -> list:
     return done
 
 
-def follow_the_check(houses, env, install, remove):
+def follow_the_check(houses, env, install, remove, linked=False):
+    """`linked`: the exegete command is already there, linked from the
+    old package's own environment."""
     home = Path(env["HOME"])
     old = home / ".local" / "bin" / "qualcoder-mcp"
     assert "(started as qualcoder-mcp)" in answers({"command": str(old)},
                                                    env)
     # as INSTALL says: these tools put only the named package's commands
-    # on the PATH
-    assert not (home / ".local" / "bin" / "exegete").exists()
+    # on the PATH, unless asked for its dependencies' commands too
+    exegete = home / ".local" / "bin" / "exegete"
+    assert exegete.exists() == linked
+    if linked:
+        assert Path(os.path.realpath(exegete)).parent == \
+            Path(os.path.realpath(old)).parent
     config = home / "Library" / "Application Support" / "Claude" / \
         "claude_desktop_config.json"
     config.parent.mkdir(parents=True)
@@ -197,17 +204,33 @@ class TestFollowingTheSteps:
         follow_the_check(houses, env, ["uv", "tool", "install", "exegete"],
                          ["uv", "tool", "uninstall", "qualcoder-mcp"])
 
-    def test_pipx(self, houses, tmp_path):
+    @staticmethod
+    def _pipx_env(houses, tmp_path):
         if houses["pipx"] is None:
-            rh.skip_or_fail("pipx is needed: on the PATH, or its wheels in "
-                            "the wheelhouse")
+            rh.skip_or_fail("pipx is needed: its wheels in the wheelhouse, "
+                            "or on the PATH")
         env = _env(tmp_path, [houses["pipx"]])
         # pip, as pipx has always used; recent pipx would use uv when it
         # finds a new enough one, which reads PIP_FIND_LINKS not at all
         env["PIPX_DEFAULT_BACKEND"] = "pip"
+        return env
+
+    def test_pipx(self, houses, tmp_path):
+        env = self._pipx_env(houses, tmp_path)
         run(["pipx", "install", "qualcoder-mcp"],
             dict(env, PIP_FIND_LINKS=str(houses["old"])))
         run(["pipx", "upgrade", "qualcoder-mcp"],
             dict(env, PIP_FIND_LINKS=str(houses["new"])))
         follow_the_check(houses, env, ["pipx", "install", "exegete"],
                          ["pipx", "uninstall", "qualcoder-mcp"])
+
+    def test_pipx_with_its_dependencies_commands(self, houses, tmp_path):
+        # pipx will not replace a command linked from another environment
+        # without --force, and removing the old package would take it
+        env = self._pipx_env(houses, tmp_path)
+        run(["pipx", "install", "--include-deps", "qualcoder-mcp"],
+            dict(env, PIP_FIND_LINKS=str(houses["new"])))
+        follow_the_check(houses, env,
+                         ["pipx", "install", "--force", "exegete"],
+                         ["pipx", "uninstall", "qualcoder-mcp"],
+                         linked=True)

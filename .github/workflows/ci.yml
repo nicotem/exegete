@@ -261,8 +261,9 @@ jobs:
   # working through the state folder's link. The wheelhouse is fetched
   # once; the tests then install only from it (--no-index), so the real
   # PyPI's qualcoder-mcp can never make them pass. Linux runs them all
-  # (the upgrade paths are pip's and uv's, not the platform's); Windows
-  # runs the 0.14.0 proof, through a junction.
+  # (the upgrade paths are pip's and uv's, not the platform's), and the
+  # transition check's steps followed with the real uv tool and pipx;
+  # Windows runs the 0.14.0 proof, through a junction.
   rename-upgrade:
     name: the rename (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -276,7 +277,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            tests: tests/test_v0141_upgrade.py tests/test_v0141_old_name_package.py tests/test_v0141_stand_in.py tests/test_v0141_proof_0140.py
+            tests: tests/test_v0141_upgrade.py tests/test_v0141_old_name_package.py tests/test_v0141_stand_in.py tests/test_v0141_proof_0140.py tests/test_v0141_transition_installers.py
           - os: windows-latest
             tests: tests/test_v0141_proof_0140.py
 
@@ -303,11 +304,14 @@ jobs:
         run: python -m build packaging/pypi-old-name --outdir dist/old-name
 
       # The published qualcoder-mcp 0.14.0a0 comes too, for the proof
-      # that it works through the link (or junction) the move leaves.
+      # that it works through the link (or junction) the move leaves;
+      # and pipx, with the pip it asks for (26.1 or later), for the
+      # transition check's installers test, which installs pipx from here
+      # rather than use the runner's own.
       - name: Fetch the wheelhouse for the offline tests
         shell: bash
         run: |
-          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "setuptools==84.0.0"
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
           pip download --dest "$RUNNER_TEMP/wheelhouse" --no-deps --only-binary=:all: "qualcoder-mcp==0.14.0a0"
 
       # RENAME_TESTS_MUST_RUN turns a skip into a failure, so this job

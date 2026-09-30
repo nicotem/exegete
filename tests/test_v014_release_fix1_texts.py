@@ -76,7 +76,7 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             "project") in stages
     assert ("**QualCoder is recommended from the start, and needed** to "
             "bring in documents (Word, PDF, images, audio, video)") in stages
-    assert "qualcoder-mcp imports only text the assistant hands it" \
+    assert "Exegete imports only text the assistant hands it" \
         in stages
     assert "Its standard tool set, `full`, cannot create a project" \
         in stages
@@ -87,7 +87,7 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
                     install.index("## Recommended: Install from PyPI")]
     assert ("On this route the default tool set, `full`, has no tool that "
             "creates a project") in needs
-    assert "unless you add `QUALCODER_MCP_TOOLSET=lifecycle`" in needs
+    assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
     assert ("**QualCoder itself**, recommended, and needed to bring in "
             "documents") in needs
     # The facts it rests on: the extension's tool set defaults to
@@ -114,7 +114,7 @@ def test_privacy_says_the_export_guard_compares_the_spelling(monkeypatch):
             "spelled. On Windows the guard's comparison ignores letter "
             "case, so a spelling in another letter case is refused there "
             "too. On macOS, whose file system usually ignores letter case, "
-            "such a spelling (`~/.QUALCODER_MCP`) is not yet caught (the "
+            "such a spelling (`~/.EXEGETE`) is not yet caught (the "
             "guard is fixed in v0.15).") in privacy
 
     # Both halves, from the guard itself, on any platform: its own
@@ -227,7 +227,7 @@ def test_the_workflow_decides_each_item():
             "Professional Development suggestions.") in workflow
     assert "Show me 1, 3, 4 and 5 too" in workflow
     assert ("The server keeps the session in a file of its own "
-            "(`~/.qualcoder_mcp/sessions/`), not in the chat") in workflow
+            "(`~/.exegete/sessions/`), not in the chat") in workflow
     assert "there is no default instruction." in workflow
     assert ("The server refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in workflow

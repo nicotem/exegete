@@ -1,6 +1,6 @@
-# Contributing to qualcoder-mcp
+# Contributing to Exegete
 
-qualcoder-mcp is experimental alpha software maintained by one
+Exegete (formerly qualcoder-mcp) is experimental alpha software maintained by one
 researcher. Bug reports, questions, feature ideas and code changes are
 all welcome. This file says how to send each, and which rules a change
 has to meet before it is merged.
@@ -8,7 +8,7 @@ has to meet before it is merged.
 ## Reporting issues
 
 Everything goes through
-[GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues): bug
+[GitHub Issues](https://github.com/nicotem/exegete/issues): bug
 reports, questions and feature ideas alike. There is no email support.
 The author's email address in the package metadata is an authorship
 signature, not a support channel, and support requests sent there will
@@ -17,10 +17,10 @@ helps the next researcher who hits the same thing. [SUPPORT.md](SUPPORT.md)
 has the full policy.
 
 When you report a bug, use the issue template. It asks for the
-qualcoder-mcp version, the QualCoder version, the project's schema
+Exegete version, the QualCoder version, the project's schema
 version (the `databaseversion` value in the `schema` block that
 `get_current_project` returns), your MCP host (Claude Desktop, Claude
-Code, LM Studio, other), the toolset (`QUALCODER_MCP_TOOLSET`: `core`,
+Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`,
 `lifecycle`, or `full` when the variable is not set) and your operating
 system.
 Never paste participant data, interview text or anything sensitive into
@@ -41,8 +41,8 @@ is looked at first.
 3. **Install for development** (Python 3.10 or newer):
 
    ```bash
-   git clone https://github.com/<you>/qualcoder_mcp.git
-   cd qualcoder_mcp
+   git clone https://github.com/<you>/exegete.git
+   cd exegete
    python3 -m venv venv
    source venv/bin/activate   # Windows: venv\Scripts\activate
    pip install -e ".[dev]"
@@ -175,8 +175,8 @@ rather than fewer.
                │ MCP protocol (stdio)
                │
 ┌──────────────▼───────────────┐
-│  qualcoder-mcp               │  (this package)
-│  qualcoder_mcp               │
+│  Exegete                     │  (this package)
+│  exegete                     │
 └──────────────┬───────────────┘
                │ SQLite connection (read-only by default;
                │  guarded writes with backup, lock and
@@ -192,27 +192,32 @@ rather than fewer.
 ### Project structure
 
 ```
-qualcoder_mcp/
+exegete/                     # the clone (its folder's name does not matter)
 ├── src/
-│   └── qualcoder_mcp/
-│       ├── __init__.py
-│       ├── server.py            # Main MCP server with resources, tools, prompts
-│       ├── database.py          # SQLite database interface
-│       ├── memo_privacy.py      # QualCoder's '#####' private-memo convention
-│       ├── new_project.py       # create_project: the folder and its schema v17 database
-│       ├── sessions.py          # AI coding session management
-│       ├── project_settings.py  # The project's AI coder name (qualcoder_mcp.json)
-│       ├── preview_tokens.py    # Preview tokens for the destructive tools
-│       ├── cursors.py           # Paging cursors for the search and segment tools
-│       ├── coder_comparison.py  # compare_coders: agreement and the two kappas
-│       ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
-│       └── refi_export.py       # REFI-QDA XML export
+│   ├── exegete/                 # the package (its module is `exegete`)
+│   │   ├── __init__.py
+│   │   ├── names.py             # Every name the program goes by, typed once
+│   │   ├── env_settings.py      # The settings, read under both spellings
+│   │   ├── state_folder.py      # The state folder and its one move
+│   │   ├── server.py            # Main MCP server with resources, tools, prompts
+│   │   ├── database.py          # SQLite database interface
+│   │   ├── memo_privacy.py      # QualCoder's '#####' private-memo convention
+│   │   ├── new_project.py       # create_project: the folder and its schema v17 database
+│   │   ├── sessions.py          # AI coding session management
+│   │   ├── project_settings.py  # The project's AI coder name (qualcoder_mcp.json)
+│   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
+│   │   ├── cursors.py           # Paging cursors for the search and segment tools
+│   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
+│   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
+│   │   └── refi_export.py       # REFI-QDA XML export
+│   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   └── create_test_project.py  # Test project generator
 ├── packaging/
-│   └── desktop-extension/      # The extension's manifest template and its validator
+│   ├── desktop-extension/      # The extension's manifest template and its validator
+│   └── pypi-old-name/          # The old name's package, qualcoder-mcp, released until v1.0
 ├── legal/
 │   └── GPL-3.0.txt         # The GNU GPL, version 3, which the LGPL incorporates
 ├── pyproject.toml           # Package configuration
@@ -237,8 +242,8 @@ For development and debugging, you can use the MCP Inspector:
 pip install uv
 
 # Run the inspector
-export QUALCODER_PROJECT_PATH="/path/to/your/project.qda"
-uv run --with "mcp[cli]" mcp dev src/qualcoder_mcp/server.py
+export EXEGETE_PROJECT_PATH="/path/to/your/project.qda"
+uv run --with "mcp[cli]" mcp dev src/exegete/server.py
 ```
 
 This will open a web interface where you can test resources and tools.
@@ -254,9 +259,27 @@ special cases. Requests that fit only one research project, one
 researcher's habits or one MCP host are usually declined or generalised
 first. The same rule applies to the maintainer's own projects.
 
+## The earlier name
+
+The program was called qualcoder-mcp until 0.14.0. Its Python module
+is now `exegete` (every runtime name is in `src/exegete/names.py`), and
+a local clone's folder name does not matter. Two things keep the
+earlier name working for people who already use it:
+
+- `packaging/pypi-old-name/` is the old name's package on PyPI: the
+  `qualcoder-mcp` command and a two-file stand-in module, depending on
+  `exegete`. It is built and uploaded with every release until v1.0, by
+  the same workflow and in the same step (`publish.yml`), at the same
+  version; tests keep its version, its floor on `exegete`, its licence
+  files and its stand-in equal to the main ones.
+- `src/qualcoder_mcp/` is the same stand-in, kept in the source for
+  copies of it; it hands over to `exegete.server:main`, which is
+  therefore never removed or renamed. The `exegete` wheel never holds
+  it (`pyproject.toml` says why).
+
 ## Licence
 
-From v0.13, qualcoder-mcp is licensed under the GNU Lesser General
+From v0.13, Exegete (then called qualcoder-mcp) is licensed under the GNU Lesser General
 Public License, version 3 or (at your option) any later version
 (LGPL-3.0-or-later): see [COPYING.LESSER](COPYING.LESSER) and
 [legal/GPL-3.0.txt](legal/GPL-3.0.txt), the GNU General Public

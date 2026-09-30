@@ -1123,16 +1123,17 @@ class TestTheDocumentsSayIt:
         install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
         assert "The project is opened by whichever tool comes first" in \
             install
-        assert "Error: the project set in QUALCODER_PROJECT_PATH was not " \
+        assert "Error: the project set in EXEGETE_PROJECT_PATH was not " \
                "found" in install
-        # and that is what the server prints
-        monkeypatch.setenv("QUALCODER_PROJECT_PATH",
+        # and that is what the server prints (v0.14.1: naming the
+        # spelling the configuration used)
+        monkeypatch.setenv("EXEGETE_PROJECT_PATH",
                            str(tmp_path / "gone.qda"))
         monkeypatch.delenv("QUALCODER_MCP_TOOLSET", raising=False)
         with pytest.raises(SystemExit):
             server.main([])
         printed = " ".join(capsys.readouterr().err.split())
-        assert "Error: the project set in QUALCODER_PROJECT_PATH was not " \
+        assert "Error: the project set in EXEGETE_PROJECT_PATH was not " \
                "found; check the path in the host's configuration." in \
             printed
 

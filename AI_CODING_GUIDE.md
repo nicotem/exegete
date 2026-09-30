@@ -1,6 +1,7 @@
 # AI-Assisted Coding Guide
 
-Guide to coding qualitative data with Claude through qualcoder-mcp
+Guide to coding qualitative data with Claude through Exegete (formerly
+qualcoder-mcp)
 (the conversational workflow, v0.6.0 and later).
 
 > **This guide replaces the v0.3.0 export/import guide.** The old
@@ -97,7 +98,7 @@ before acting (in the four-way vocabulary allow, allow_with_caveat,
 reframe_and_ask, refuse, explained to you in plain words). Ask for
 `explain_ai_coding_tools("grounding_rules")` or
 `explain_ai_coding_tools("methodology_vocabulary")`, or read the
-`qualcoder://guidance/methods` resource, which also cites the method
+`exegete://guidance/methods` resource, which also cites the method
 literature QualCoder 4.0 ships prompts for. None of this replaces your
 approval of each suggestion.
 
@@ -231,7 +232,7 @@ decide like any suggestion. The codebook tools (`create_code`,
 which you choose the first time a write needs it: the write stops and
 asks, and your answer is stored with the project
 (`set_project_ai_coder_name`; `AI Coding Assistant` is the built-in
-quick pick, and `QUALCODER_MCP_AI_CODER_NAME` in the host's
+quick pick, and `EXEGETE_AI_CODER_NAME` in the host's
 configuration only declares a name to offer first). See "Choosing the
 AI coder name" in TOOLS.md. AI work stays distinguishable from yours in
 QualCoder, and rows written under an earlier name keep it.
@@ -261,7 +262,7 @@ data: read PRIVACY.md before sending it anywhere.
 workspace workflow: copy first, work on the copy, and compare in
 QualCoder before adopting changes.
 
-**Where are sessions stored?** `~/.qualcoder_mcp/sessions/` as JSON, one
+**Where are sessions stored?** `~/.exegete/sessions/` as JSON, one
 file per session. `delete_coding_session` removes one;
 `cleanup_old_sessions` (deprecated, removed in v0.15) deletes every
 project's old sessions with no preview.

@@ -760,8 +760,8 @@ def _process_is_qualcoder(line: str) -> bool:
 def _filter_qualcoder_processes(lines) -> List[str]:
     """Pure filter: the process lines that are a running QualCoder.
 
-    This server's own names ("qualcoder_mcp", "qualcoder-mcp") never
-    match, because the program or module must be QualCoder's own.
+    This server's own names ("exegete", "qualcoder_mcp", "qualcoder-mcp")
+    never match, because the program or module must be QualCoder's own.
     """
     hits = []
     for line in lines:
@@ -1083,12 +1083,12 @@ WORKSPACE_REQUIRED_ENV = names.SETTINGS["workspace_required"][0]
 
 def standard_workspace() -> Path:
     """`~/Documents/Qualcoder MCP Projects`: the workspace when
-    QUALCODER_MCP_WORKSPACE is not set, resolved at call time."""
+    EXEGETE_WORKSPACE is not set, resolved at call time."""
     return Path.home() / "Documents" / "Qualcoder MCP Projects"
 
 
 def workspace_setting_problem() -> Optional[str]:
-    """Why QUALCODER_MCP_WORKSPACE cannot be used, or None (also when it
+    """Why EXEGETE_WORKSPACE cannot be used, or None (also when it
     is not set). Checked at start-up, where a bad value stops the server,
     and again by `default_workspace`; the text names no path, as the
     other start-up errors do not."""
@@ -1121,7 +1121,7 @@ def default_workspace() -> Path:
     """The folder `copy_project_to_workspace` copies into and
     `create_project` creates in when none is given.
 
-    The folder QUALCODER_MCP_WORKSPACE names, `~` expanded, when it is
+    The folder EXEGETE_WORKSPACE names, `~` expanded, when it is
     set and not blank; otherwise `standard_workspace()`. Either way it is
     resolved at CALL time. Until 0.12 this was a module constant computed
     once at import, so a process that redirected HOME afterwards, which
@@ -1889,7 +1889,7 @@ def file_ending_problem(old: str, new: str, mediapath: Optional[str],
 def validate_coder_name(value: Any, param_name: str = "owner") -> str:
     """The one rule set for every coder name this server writes (P1-2).
 
-    Shared by the QUALCODER_MCP_AI_CODER_NAME configuration and the
+    Shared by the EXEGETE_AI_CODER_NAME configuration and the
     tool-supplied owner arguments (apply_codings, import_text_file), so
     no owner column can receive what the configured name may not be
     (S-H3): the name is stripped, must be non-empty, at most
@@ -3174,7 +3174,7 @@ class QualcoderDatabase:
         exists (upstream's own v14 trigger); anything at or above the
         floor is writable through the verified ceiling. Versions beyond
         the ceiling (or unparseable version strings) are refused unless
-        the QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA=1 environment override is
+        the EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 environment override is
         set, in which case writes proceed but carry a prominent warning.
         """
         caps = getattr(self, "capabilities", None)

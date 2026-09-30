@@ -1,6 +1,11 @@
-# Installation Guide for qualcoder-mcp
+# Installation Guide for Exegete
 
-This guide will walk you through installing qualcoder-mcp step-by-step. No prior technical knowledge required!
+This guide will walk you through installing Exegete step-by-step. No prior technical knowledge required!
+
+Exegete was called qualcoder-mcp until version 0.14.0. If you set it up
+under that name, nothing you set up stops working: ["Coming from
+qualcoder-mcp"](#coming-from-qualcoder-mcp), below, says what changed
+and what you may change.
 
 ## Claude Desktop: the one-click extension (recommended)
 
@@ -14,16 +19,16 @@ arrives with v0.14; earlier releases have none.
 
 1. **Get Claude Desktop**, the latest version, from
    https://claude.ai/download, and sign in.
-2. **Download the extension**, `qualcoder-mcp-<version>.mcpb`, from
+2. **Download the extension**, `exegete-<version>.mcpb`, from
    the Assets of the latest release on GitHub:
-   https://github.com/nicotem/qualcoder_mcp/releases
+   https://github.com/nicotem/exegete/releases
 3. **Install it**: double-click the file. (Or drag it onto the Claude
    window, or in Claude go to Settings, Extensions, Advanced settings,
    Install Extension..., and choose it.) Claude shows the extension,
    with its usual warning to install only extensions whose developer you
    trust; click Install, and Install again when Claude says it needs to
    fetch a few dependencies. The first install takes a minute or two.
-4. **Look at its two settings** (Settings, Extensions, qualcoder-mcp).
+4. **Look at its two settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
    - **Tool set**: `lifecycle` (the default) gives every tool, creating
      a new project included; `full` every tool except creating a
@@ -39,8 +44,8 @@ arrives with v0.14; earlier releases have none.
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
 5. **Check it works**: in a new conversation, the "+" button, then
-   Connectors, lists qualcoder-mcp with its tools switched on. Ask
-   "Using the qualcoder-mcp tools, is a project open?" and allow the
+   Connectors, lists Exegete with its tools switched on. Ask
+   "Using the Exegete tools, is a project open?" and allow the
    tool when Claude asks. The answer is that no project is open.
 
 **Approvals.** In a Cowork or Code session, whether Claude asks before
@@ -62,14 +67,16 @@ developer MCP servers are disabled on this device..."), and your IT
 team decides.
 
 **Updating**: download the newer `.mcpb` and install it the same way.
-**Removing**: Settings, Extensions, qualcoder-mcp, Uninstall. Neither
+**Removing**: Settings, Extensions, Exegete, Uninstall. Neither
 touches your projects; what else stays is under "Uninstalling" below.
-**The log** is `mcp-server-qualcoder-mcp.log` in `~/Library/Logs/Claude`
-(macOS) or `%APPDATA%\Claude\logs` (Windows); see "Reading the server
-log" below before sharing it.
+**The log** is `mcp-server-Exegete.log` in `~/Library/Logs/Claude`
+(macOS) or `%APPDATA%\Claude\logs` (Windows); before 0.14.1 it was
+`mcp-server-qualcoder-mcp.log`, which stays where it was. See "Reading
+the server log" below before sharing it.
 
 **If you also configured the server by hand** (the route below), remove
-the `qualcoder` entry from the configuration, or switch one of the two
+that entry from the configuration (`exegete`, or `qualcoder` if you
+followed an earlier version of this guide), or switch one of the two
 off under "+", Connectors; otherwise Claude sees every tool twice.
 
 Everything below, after the choice of AI host, is **the Terminal
@@ -96,7 +103,7 @@ tested at the server level, but not yet exercised end to end on every
 host and not capability-evaluated on local models. Step-by-step guides
 for Claude Code and LM Studio, written for researchers rather than
 programmers, are considered on request: ask in
-[GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues).
+[GitHub Issues](https://github.com/nicotem/exegete/issues).
 
 ## What You'll Need
 
@@ -113,7 +120,7 @@ Before starting, make sure you have:
   route the default tool set, `full`, has no tool that creates a
   project, so you need a project made in QualCoder (a folder ending in
   `.qda`, with a `data.qda` database file inside; know where it is),
-  unless you add `QUALCODER_MCP_TOOLSET=lifecycle` ("Environment
+  unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
   variables the server reads", below), which lets the assistant create
   one in the conversation. Projects from QualCoder 3.8.x and from the
   QualCoder 4.0-Beta pre-release work (project schemas v14 through
@@ -137,16 +144,16 @@ git or this repository at all:
 
 ```bash
 # Plain pip, in its own virtual environment:
-python3 -m venv ~/qualcoder-mcp-venv
-~/qualcoder-mcp-venv/bin/pip install qualcoder-mcp
+python3 -m venv ~/exegete-venv
+~/exegete-venv/bin/pip install exegete
 
 # Or one command with pipx / uv:
-pipx install qualcoder-mcp
-uv tool install qualcoder-mcp
+pipx install exegete
+uv tool install exegete
 ```
 
-This gives you a `qualcoder-mcp` command; get its absolute path with
-`which qualcoder-mcp` and use THAT as the `command` in the Claude
+This gives you an `exegete` command; get its absolute path with
+`which exegete` and use THAT as the `command` in the Claude
 configuration of Step 6 (no `args` needed). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
 
@@ -163,7 +170,7 @@ On Mac:
 1. Press `Cmd + Space` to open Spotlight
 2. Type "Terminal" and press Enter
 
-### Step 2: Download qualcoder-mcp
+### Step 2: Download Exegete
 
 Copy and paste these commands into Terminal, one at a time:
 
@@ -172,16 +179,16 @@ Copy and paste these commands into Terminal, one at a time:
 cd ~/Documents
 
 # Download the repository
-git clone https://github.com/nicotem/qualcoder_mcp.git
+git clone https://github.com/nicotem/exegete.git
 
 # Go into the folder
-cd qualcoder_mcp
+cd exegete
 ```
 
 **Don't have git?** You can also:
 - Download the ZIP file from GitHub
 - Unzip it to your Documents folder
-- Rename the folder to `qualcoder_mcp`
+- Rename the folder to `exegete`
 
 ### Step 3: Create a Virtual Environment
 
@@ -211,7 +218,7 @@ venv\Scripts\activate
 ### Step 5: Install the Package
 
 ```bash
-# Install qualcoder-mcp
+# Install Exegete
 pip install -e .
 ```
 
@@ -243,7 +250,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
    ```bash
    pwd
    ```
-   This shows where you installed it (usually `/Users/YOUR_USERNAME/Documents/qualcoder_mcp`)
+   This shows where you installed it (usually `/Users/YOUR_USERNAME/Documents/exegete`)
 
 3. **Open Claude Desktop Configuration**:
    - Open Claude Desktop
@@ -256,30 +263,30 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"]
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"]
     }
   }
 }
 ```
 
 With a **PyPI install** (pip, pipx or uv), point the client straight at
-the installed `qualcoder-mcp` command instead, using the absolute path
-from `which qualcoder-mcp` (Claude Desktop does not inherit your shell's
+the installed `exegete` command instead, using the absolute path
+from `which exegete` (Claude Desktop does not inherit your shell's
 PATH), and leave out `args`:
 
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/qualcoder-mcp-venv/bin/qualcoder-mcp"
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/exegete-venv/bin/exegete"
     }
   }
 }
 ```
 
-**Important**: If you already have other MCP servers configured, add the "qualcoder" section inside the existing `mcpServers` block, separated by a comma.
+**Important**: If you already have other MCP servers configured, add the "exegete" section inside the existing `mcpServers` block, separated by a comma. If one of them is this server under the earlier name (a "qualcoder" section), keep it and do not add an "exegete" section beside it: see ["Coming from qualcoder-mcp"](#coming-from-qualcoder-mcp).
 
 5. **Save and Close** the configuration file
 
@@ -314,11 +321,11 @@ details.
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"],
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"],
       "env": {
-        "QUALCODER_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
       }
     }
   }
@@ -327,14 +334,14 @@ details.
 
 **Replace**:
 - `YOUR_USERNAME` with your Mac username
-- The path in `QUALCODER_PROJECT_PATH` with your actual `.qda` project
+- The path in `EXEGETE_PROJECT_PATH` with your actual `.qda` project
   folder (the path to the `data.qda` file inside it is accepted too).
   If the path does not exist the server refuses to start and prints
-  "Error: the project set in QUALCODER_PROJECT_PATH was not found; check
+  "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to the host's log (the path
   itself is not printed). If the path exists but is not a QualCoder
   project, or its database will not open, the server starts and every
-  tool answers that the project set in QUALCODER_PROJECT_PATH could not
+  tool answers that the project set in EXEGETE_PROJECT_PATH could not
   be opened.
 
 4. **Save and Close** the configuration file
@@ -353,7 +360,7 @@ details.
    - Open a new conversation
    - Type: "List my available QualCoder projects" (Option A) or "Give
      me a summary of my QualCoder project" (Option B)
-   - If configured correctly, Claude calls the qualcoder tools and
+   - If configured correctly, Claude calls the Exegete tools and
      answers from your project. If it says it has no such tool, the
      server is not connected: see Troubleshooting below
 
@@ -368,41 +375,41 @@ Claude Code, including in editor side panels such as Obsidian's).
 **Claude Code**: register it with one command. With a PyPI install:
 
 ```bash
-claude mcp add qualcoder -- qualcoder-mcp
+claude mcp add exegete -- exegete
 ```
 
 (Claude Code resolves commands on your shell PATH; if in doubt, use the
-absolute path from `which qualcoder-mcp`.) With a source install, use
+absolute path from `which exegete`.) With a source install, use
 the venv Python path from Step 5:
 
 ```bash
-claude mcp add qualcoder -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
+claude mcp add exegete -- ~/Documents/exegete/venv/bin/python -m exegete.server
 ```
 
 Or add a `.mcp.json` to the folder you run Claude Code from (with a
-PyPI install, `"command": "qualcoder-mcp"` and no `args`):
+PyPI install, `"command": "exegete"` and no `args`):
 
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"]
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"]
     }
   }
 }
 ```
 
-The optional `env` block with `QUALCODER_PROJECT_PATH` (Option B above)
+The optional `env` block with `EXEGETE_PROJECT_PATH` (Option B above)
 works the same way in `.mcp.json`; on the command line pass it with
 `-e`:
 
 ```bash
-claude mcp add qualcoder -e QUALCODER_PROJECT_PATH=/path/to/MyProject.qda -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
+claude mcp add exegete -e EXEGETE_PROJECT_PATH=/path/to/MyProject.qda -- ~/Documents/exegete/venv/bin/python -m exegete.server
 ```
 
 The server behaves the same under any client; which tools are
-registered is decided by `QUALCODER_MCP_TOOLSET` (see "Environment
+registered is decided by `EXEGETE_TOOLSET` (see "Environment
 variables the server reads" below), not by the client.
 
 ---
@@ -414,16 +421,30 @@ server entry (Claude Desktop config, `.mcp.json`, LM Studio's mcp.json),
 or with `claude mcp add -e NAME=value ...` for Claude Code. Every
 variable is optional.
 
-- `QUALCODER_PROJECT_PATH`: a project to open at start-up (Option B
+**Earlier spellings, read until v1.0.** Before 0.14.1 each of these
+started `QUALCODER_MCP_` (and the first was `QUALCODER_PROJECT_PATH`):
+`QUALCODER_MCP_TOOLSET`, `QUALCODER_MCP_WORKSPACE`,
+`QUALCODER_MCP_WORKSPACE_REQUIRED`, `QUALCODER_MCP_AI_CODER_NAME`,
+`QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`. The
+server still reads them until v1.0, and its log says once per start
+which new spelling to use instead. If a setting is given under both
+spellings with different values (after the usual tidying: spaces, the
+tool set's letter case and a leading `~` do not count), the server
+does not start, and says which two disagree; if either spelling of
+`EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
+desktop extension sets both spellings of its three settings itself,
+always to the same value.
+
+- `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
   If the path does not exist the server refuses to start and prints
-  "Error: the project set in QUALCODER_PROJECT_PATH was not found; check
+  "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to stderr. The project is
   opened by whichever tool comes first (since v0.14; before, the backup
   tools and a few others answered "No Qualcoder project selected" until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `QUALCODER_MCP_TOOLSET`: `full` (default) registers 73 tools;
+- `EXEGETE_TOOLSET`: `full` (default) registers 73 tools;
   `core` registers the 21-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
   registers the full set plus `create_project`, 74 tools, so that a
@@ -434,13 +455,13 @@ variable is optional.
   this variable from its "Tool set" setting, whose default is
   `lifecycle`. Any other value stops the server at start-up with an error
   naming the valid values. Resources and prompts are not affected.
-  In Claude Desktop, add `"QUALCODER_MCP_TOOLSET": "lifecycle"` to the
+  In Claude Desktop, add `"EXEGETE_TOOLSET": "lifecycle"` to the
   server's `env` block; for Claude Code:
 
   ```bash
-  claude mcp add qualcoder -e QUALCODER_MCP_TOOLSET=lifecycle -- ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server
+  claude mcp add exegete -e EXEGETE_TOOLSET=lifecycle -- ~/Documents/exegete/venv/bin/python -m exegete.server
   ```
-- `QUALCODER_MCP_WORKSPACE` (v0.14): the workspace, the folder where
+- `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
   also searches its top level. A full path, or one starting with `~`.
@@ -448,16 +469,17 @@ variable is optional.
   desktop extension sets it from its "Folder for projects" setting,
   whose default is `~/QualCoder projects`, because iCloud (Desktop and
   Documents) and OneDrive may sync `~/Documents`. A relative path, or a
-  folder inside `~/.qualcoder_mcp`, QualCoder's settings folder
+  folder inside `~/.exegete` (or `~/.qualcoder_mcp`, its earlier
+  name), QualCoder's settings folder
   `~/.qualcoder`, a `.qda` project or the folder the server itself is
   installed in, or a path holding `|`, stops the server at start-up
-  with "Error: QUALCODER_MCP_WORKSPACE ..." on stderr (naming no path).
-- `QUALCODER_MCP_WORKSPACE_REQUIRED` (v0.14): `1` makes a blank or
-  missing `QUALCODER_MCP_WORKSPACE` stop the server at start-up instead
+  with "Error: EXEGETE_WORKSPACE ..." on stderr (naming no path).
+- `EXEGETE_WORKSPACE_REQUIRED` (v0.14): `1` makes a blank or
+  missing `EXEGETE_WORKSPACE` stop the server at start-up instead
   of falling back to `~/Documents/Qualcoder MCP Projects`. The desktop
   extension sets it, so an emptied "Folder for projects" never sends
   projects into a synced Documents folder.
-- `QUALCODER_MCP_AI_CODER_NAME`: this HOST's DECLARATION of the AI
+- `EXEGETE_AI_CODER_NAME`: this HOST's DECLARATION of the AI
   coder name it would like to write under. Since v0.12 the name that
   rows actually carry is the PROJECT's setting, which the researcher
   chooses through `set_project_ai_coder_name` the first time a write
@@ -476,14 +498,14 @@ variable is optional.
   ZWJ, which spell words in Persian and Indic scripts, are the two
   exceptions) and must not contain `#####`,
   the QualCoder 4.0 private-memo marker. An invalid value stops the
-  server at start-up with "Error: QUALCODER_MCP_AI_CODER_NAME ..." on
+  server at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
   stderr. Do not declare your own QualCoder coder name: AI rows would
   then be indistinguishable from yours in QualCoder, and the setter
   refuses that name anyway.
 
   ```json
   "env": {
-    "QUALCODER_MCP_AI_CODER_NAME": "Qwen 3.8 6bit"
+    "EXEGETE_AI_CODER_NAME": "Qwen 3.8 6bit"
   }
   ```
 
@@ -492,7 +514,7 @@ variable is optional.
   host proposes that name first, so codings by different models can be
   told apart and compared later.
 
-- `QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
+- `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release
   is verified against (v14 through v17, QualCoder master commit
   `9bddf17`) are refused to protect the data, and the refusal names this
@@ -514,7 +536,7 @@ terms. What that means for research data is laid out in
 [PRIVACY.md](PRIVACY.md) (see "Your governance options"); this section
 is only the mechanics.
 
-**1. Install qualcoder-mcp** as described above (PyPI install
+**1. Install Exegete** as described above (PyPI install
 recommended).
 
 **2. Authenticate with the API key.** Get a key from the Console at
@@ -536,7 +558,7 @@ API key is in use.
 **3. Register the server** (same as any Claude Code setup):
 
 ```bash
-claude mcp add qualcoder -- qualcoder-mcp
+claude mcp add exegete -- exegete
 ```
 
 Verify with `claude mcp list` (the server should show as Connected) and
@@ -591,14 +613,14 @@ depends on it.
 Requirements: a machine that can run a mid-size local model (16 GB RAM
 is a realistic minimum), LM Studio installed, Python 3.10+.
 
-**Step 1. Install qualcoder-mcp** (same as for any host):
+**Step 1. Install Exegete** (same as for any host):
 
 ```bash
-pipx install qualcoder-mcp
-# or: python3 -m venv ~/qualcoder-mcp-venv && ~/qualcoder-mcp-venv/bin/pip install qualcoder-mcp
+pipx install exegete
+# or: python3 -m venv ~/exegete-venv && ~/exegete-venv/bin/pip install exegete
 ```
 
-Find the absolute path of the command (`which qualcoder-mcp`). LM
+Find the absolute path of the command (`which exegete`). LM
 Studio launches MCP servers itself and may not see your shell's PATH,
 so the config below must use the absolute path.
 
@@ -629,7 +651,7 @@ indentation that 3.13 strips, so on those interpreters the same
 definitions measure about five per cent more).
 That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
-small-model tool selection degrades. Set `QUALCODER_MCP_TOOLSET=core`
+small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
 (in the config of Step 5) to register only the 21-tool supervised
 coding set, measured at about 65,000 characters, roughly 16k tokens.
 
@@ -650,11 +672,11 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/YOUR_USERNAME/qualcoder-mcp-venv/bin/qualcoder-mcp",
+    "exegete": {
+      "command": "/Users/YOUR_USERNAME/exegete-venv/bin/exegete",
       "env": {
-        "QUALCODER_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda",
-        "QUALCODER_MCP_TOOLSET": "core"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda",
+        "EXEGETE_TOOLSET": "core"
       }
     }
   }
@@ -662,10 +684,10 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
 ```
 
 With a source (git) install, use `"command":
-"/path/to/qualcoder_mcp/venv/bin/python"` with `"args": ["-m",
-"qualcoder_mcp.server"]` and the same `env` block. Replace the paths
+"/path/to/exegete/venv/bin/python"` with `"args": ["-m",
+"exegete.server"]` and the same `env` block. Replace the paths
 with your own; if the file already has other entries under
-`mcpServers`, add only the `"qualcoder"` block. LM Studio loads the
+`mcpServers`, add only the `"exegete"` block. LM Studio loads the
 server when you save.
 
 **Step 6. Keep tool confirmations on.** When the model calls a tool, LM
@@ -679,7 +701,7 @@ will be updated when it has been verified).
 
 **Step 7. Verify offline (recommended for data-governance records).**
 Disconnect from the network and work. Model inference, chats, and all
-qualcoder-mcp operations are local; LM Studio states it needs the
+Exegete's operations are local; LM Studio states it needs the
 internet only for model search/downloads, runtime downloads, and update
 checks (<https://lmstudio.ai/docs/app/offline>). A note that you
 verified this yourself is good evidence for a data-management plan.
@@ -705,7 +727,7 @@ between turns (observed with 0.4.12), which drops the in-memory
 project selection. Since 0.11 every "no project selected" error names
 the last project used on this machine, so recovery is one
 `select_project` call. If you work on a single project, set
-`QUALCODER_PROJECT_PATH` in the LM Studio entry (as in Step 5) so that
+`EXEGETE_PROJECT_PATH` in the LM Studio entry (as in Step 5) so that
 project is selected at every start. The quality consequences of
 different local models for coding work have not yet been evaluated
 (that evaluation is planned work), so treat local-model results with
@@ -796,7 +818,7 @@ in Claude Code 2.1.199 and later, `read_pseudonym_list`.
 
 ## Other MCP hosts
 
-Any MCP host that can run local stdio servers can host qualcoder-mcp
+Any MCP host that can run local stdio servers can host Exegete
 with the same command/env pattern shown above. Recipes for other
 open-source hosts are planned once they have been tested hands-on;
 technically comfortable users can adapt the pattern today.
@@ -808,12 +830,12 @@ technically comfortable users can adapt the pattern today.
 ### From the terminal (no client needed)
 
 ```bash
-~/qualcoder-mcp-venv/bin/qualcoder-mcp --version
-# pipx / uv tool installs put the command on your PATH: qualcoder-mcp --version
-# git install:  ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server --version
+~/exegete-venv/bin/exegete --version
+# pipx / uv tool installs put the command on your PATH: exegete --version
+# git install:  ~/Documents/exegete/venv/bin/python -m exegete.server --version
 ```
 
-It prints `qualcoder-mcp` and the installed version, then exits. If you
+It prints `exegete` and the installed version, then exits. If you
 start the server itself by hand (the same command without `--version`),
 it prints three start-up lines and one paragraph saying that it
 expects an MCP host on its standard input and output, and then waits; that is the expected
@@ -859,7 +881,7 @@ Analyse the transcript for file 1 with all its coding
 ### "The server isn't responding"
 
 0. **Check the installation from the terminal**: run
-   `~/qualcoder-mcp-venv/bin/qualcoder-mcp --version` (or the command
+   `~/exegete-venv/bin/exegete --version` (or the command
    your install uses, see "Testing Your Installation"). If it prints the
    version, the package is installed and the interpreter works, and the
    problem is in the client configuration below. If it fails, reinstall
@@ -867,7 +889,7 @@ Analyse the transcript for file 1 with all its coding
 
 1. **Check your paths**:
    - Make sure the command path is correct in your config
-   - With a PyPI install, type `which qualcoder-mcp` in Terminal; with
+   - With a PyPI install, type `which exegete` in Terminal; with
      a source install, activate the venv and type `which python`
    - Use that full path in your Claude config
    - After any change to the configuration, fully quit and reopen
@@ -880,12 +902,12 @@ Analyse the transcript for file 1 with all its coding
 
 3. **Check Claude Desktop logs**:
    - Settings > Developer > Show Logs
-   - Look for errors related to "qualcoder"
+   - Look for errors related to "exegete"
 
 ### "No Qualcoder projects found" (Option A)
 
 The server searches these locations by default:
-- the folder `QUALCODER_MCP_WORKSPACE` names, when it is set (with the
+- the folder `EXEGETE_WORKSPACE` names, when it is set (with the
   desktop extension, its "Folder for projects", by default
   `~/QualCoder projects`), at its top level only
 - `~/Documents/QualCoder_projects`
@@ -904,7 +926,7 @@ With dynamic project selection this is normal at the start of a
 session: the server has no project open until one is selected. The
 error reads "No Qualcoder project selected. Use 'list_available_projects'
 to discover projects, then 'select_project' to choose one. Or set
-QUALCODER_PROJECT_PATH environment variable." (`get_current_project`
+EXEGETE_PROJECT_PATH environment variable." (`get_current_project`
 says "No project currently open" instead.) Just select a project:
 ```
 List my available QualCoder projects
@@ -914,18 +936,18 @@ Select the "ProjectName" project
 When a project was selected before on this machine and still exists,
 the same error ends with "The last project used on this machine was
 <path>. Use select_project with that path to continue with it." That
-pointer is read from `~/.qualcoder_mcp/mru_project.json`, which
+pointer is read from `~/.exegete/mru_project.json`, which
 `select_project` writes on every successful selection and
 `create_project` on every project it creates; the selection is
 never restored automatically, so one `select_project` call is still
 needed. If the error comes back in the middle of a conversation, the
 host has restarted the server process between turns and the in-memory
 selection was lost; the hint gets you back with one call. For
-single-project work, pinning `QUALCODER_PROJECT_PATH` in the server's
+single-project work, pinning `EXEGETE_PROJECT_PATH` in the server's
 `env` block (Option B) avoids that round trip.
 
 With Option B, make sure the `env` section in your configuration
-includes the `QUALCODER_PROJECT_PATH` variable with the full path to
+includes the `EXEGETE_PROJECT_PATH` variable with the full path to
 your `.qda` project folder (or its `data.qda` file); since 0.14 a
 configured project is used by whichever tool comes first (before, the
 backup tools and a few others gave this error until another tool had
@@ -960,12 +982,14 @@ ls -ld /path/to/your/project.qda
 ### Tools missing or unchanged after an upgrade
 
 The client starts the server once per session and reads the tool list
-at that moment. After `pip install --upgrade` (or `git pull` and
-reinstall), fully quit the client and reopen it (Claude Desktop: Cmd+Q,
-not just closing the window; Claude Code: end the session and start a
-new one; LM Studio: toggle the server off and on in mcp.json, or
-restart LM Studio). Until then the old process, with the old tool list,
-keeps running.
+at that moment. Fully quit the client BEFORE `pip install --upgrade`
+(or before `git pull` and the reinstall), and reopen it afterwards
+(Claude Desktop: Cmd+Q, not just closing the window; Claude Code: end
+the session and start a new one; LM Studio: toggle the server off and
+on in mcp.json, or restart LM Studio). A copy of the server left
+running while its files change fails the first time it needs a part it
+has not loaded yet (the REFI-QDA export is one), and until the client
+restarts, the old process, with the old tool list, keeps running.
 
 ### Reading the server log
 
@@ -973,7 +997,7 @@ The server writes its log lines (INFO and above) to standard error; the
 host decides where that goes. Claude Desktop shows it under Settings >
 Developer > Show Logs. LM Studio on macOS persists it into
 `~/Library/Logs/LM Studio/main.log`; search that file for
-`qualcoder_mcp` to find the server's start-up lines (which report the
+`exegete` to find the server's start-up lines (which report the
 toolset mode and the number of tools registered) and any errors. The
 lines this server writes carry no memo text, and since v0.14 no SQLite
 message: a database error is logged by its kind and SQLite's short name
@@ -1049,19 +1073,24 @@ Updates are manual (a new release does not install itself).
 **Desktop extension**: download the newer `.mcpb` and install it as
 before; Claude replaces the old one.
 
-**PyPI install**, one command:
+**PyPI install**, one command, with your MCP client fully quit first
+(see "Tools missing or unchanged after an upgrade"):
 
 ```bash
-~/qualcoder-mcp-venv/bin/pip install --upgrade qualcoder-mcp
-# pipx:  pipx upgrade qualcoder-mcp
-# uv:    uv tool upgrade qualcoder-mcp
+~/exegete-venv/bin/pip install --upgrade exegete
+# pipx:  pipx upgrade exegete
+# uv:    uv tool upgrade exegete
 ```
 
-**Git (contributor) install**, when new versions are released:
+**Git (contributor) install**, when new versions are released. First
+**fully quit your MCP client** (Claude Desktop: Cmd+Q; Claude Code: end
+the session; LM Studio: toggle the server off in mcp.json), so that no
+copy of the server is running while its files change. Then:
 
 ```bash
-# Go to the installation folder
-cd ~/Documents/qualcoder_mcp
+# Go to the installation folder (a clone made before 0.14.1 may be
+# called qualcoder_mcp; the folder's name does not matter)
+cd ~/Documents/exegete
 
 # Activate the virtual environment
 source venv/bin/activate
@@ -1073,28 +1102,27 @@ git pull
 pip install -e .
 ```
 
-Then **fully quit and relaunch your MCP client** (Claude Desktop:
-Cmd+Q, then reopen; Claude Code: restart the session; LM Studio: toggle
-the server off and on in mcp.json, or restart LM Studio). New tools
-only appear after the restart; the client launches the server once per
-session and reads its tool list then.
+Then **reopen your MCP client** (Claude Desktop: reopen it; Claude
+Code: start a new session; LM Studio: toggle the server on again, or
+restart LM Studio). New tools only appear after the restart; the client
+launches the server once per session and reads its tool list then.
 
 To confirm the update took, check the installed version from the
 terminal:
 
 ```bash
-~/qualcoder-mcp-venv/bin/qualcoder-mcp --version          # PyPI venv
-# pipx / uv tool:  qualcoder-mcp --version
-# git:   ~/Documents/qualcoder_mcp/venv/bin/python -m qualcoder_mcp.server --version
+~/exegete-venv/bin/exegete --version          # PyPI venv
+# pipx / uv tool:  exegete --version
+# git:   ~/Documents/exegete/venv/bin/python -m exegete.server --version
 ```
 
-It prints `qualcoder-mcp` followed by the version and exits; version
-`0.14.0-alpha` shows as `0.14.0a0`, its normalised form. The server
+It prints `exegete` followed by the version and exits; version
+`0.14.1-alpha` shows as `0.14.1a0`, its normalised form. The server
 also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a
 convenience, not proof. The
-[Releases page](https://github.com/nicotem/qualcoder_mcp/releases) and
+[Releases page](https://github.com/nicotem/exegete/releases) and
 [CHANGELOG.md](CHANGELOG.md) say what each release changed.
 
 Updating never touches your data: the server is code-only, and your
@@ -1102,15 +1130,95 @@ QualCoder projects and backups stay exactly where they are.
 
 ---
 
+## Coming from qualcoder-mcp
+
+Exegete was called qualcoder-mcp until version 0.14.0. The program is
+the same; only names changed. **Nothing you set up stops working**:
+the steps below are optional unless your route says otherwise.
+
+**Before you update anything, fully quit every AI host that uses the
+server** (Claude Desktop: Cmd+Q; Claude Code: end the session; LM
+Studio: toggle the server off). A copy of the server left running while
+its files change fails the first time it needs a part it has not loaded
+yet, and the first start after the update moves the server's own folder
+(below), which is best done with no older copy running.
+
+- **The Claude Desktop extension.** Download `exegete-<version>.mcpb`
+  and open it: it updates the extension you have, with its two
+  settings, rather than adding a second one. Claude Desktop then lists
+  it as Exegete, and its log becomes `mcp-server-Exegete.log` (the
+  earlier `mcp-server-qualcoder-mcp.log` stays where it was). The first
+  start after the update may take longer and needs the internet, since
+  Claude may fetch the server's libraries again. Claude may ask again
+  before it uses each tool. Your projects folder does not change.
+- **Installed with pip.** `pip install --upgrade qualcoder-mcp` now
+  brings Exegete and keeps the `qualcoder-mcp` command working. To move
+  to the new name: `pip install exegete`, change the command in your
+  host's configuration to the `exegete` command, and only then
+  `pip uninstall qualcoder-mcp` (which removes the old command).
+- **Installed with pipx or uv.** `pipx upgrade qualcoder-mcp`,
+  `uv tool upgrade qualcoder-mcp` and `uvx qualcoder-mcp` keep working.
+  These tools put only the named package's commands on your PATH, so
+  you get the `exegete` command there only by installing `exegete`
+  itself (`pipx install exegete`, `uv tool install exegete`,
+  `uvx exegete`).
+- **A copy of the source (git).** Quit your host, then `git pull` and
+  `pip install -e .` as always (the second step makes the version read
+  right; it is already part of updating a git install, so this adds no
+  step). `python -m qualcoder_mcp.server` and the `qualcoder-mcp`
+  command still start the server, through a small stand-in kept for
+  them, so your host's configuration keeps working. Your environment
+  will list the old `qualcoder-mcp` beside `exegete` in `pip list`,
+  which does no harm. Only those two ways of starting survive: code of
+  your own that imported the server's inner modules under the old name
+  (`qualcoder_mcp.database` and the like) does not. The new forms are
+  `-m exegete.server` and the `exegete` command. To point the copy at
+  the new address: `git remote set-url origin
+  https://github.com/nicotem/exegete.git` (the old address redirects,
+  so this is optional); the folder's own name does not matter.
+- **Keep your entry.** If a host's configuration already has an entry
+  for this server under the name `qualcoder`, keep it, and do not add
+  an `exegete` entry beside it: that would start two servers, show
+  every tool twice and need a second set of "always allow" rules. If
+  you do rename the entry, Claude Code names the tools after it
+  (`mcp__exegete__...`), and permissions you gave under the old name
+  must be given again.
+- **The settings.** The variables now start `EXEGETE_` (for example
+  `EXEGETE_TOOLSET`); the earlier `QUALCODER_MCP_...` spellings and
+  `QUALCODER_PROJECT_PATH` are still read until v1.0, and the log says
+  so at each start. If both spellings of one setting are set with
+  different values, the server does not start and says which two
+  disagree ("Environment variables the server reads" has the rules).
+- **The server's own folder** moves by itself, at the first start, from
+  `~/.qualcoder_mcp` to `~/.exegete`, whole, with everything in it (the
+  secret key, sessions, the last-project hint and the privacy run
+  records). A link is left under the old name (a junction on Windows),
+  so an older copy of the server on the same computer keeps using the
+  same folder and key. If a backup or sync rule of yours names the old
+  folder, change it. PRIVACY.md says more.
+- **Your projects** are unchanged. The small file Exegete keeps in a
+  project folder for the AI coder name keeps its name,
+  `qualcoder_mcp.json`, so every version agrees on it. Projects created
+  earlier still name qualcoder-mcp as their creator; new ones name
+  Exegete. The resource addresses are now `exegete://...`; the old
+  `qualcoder://...` ones are still answered until v1.0.
+- **Logs.** The server's own lines say Exegete. A hand-made entry keeps
+  its log file, which is named after the entry.
+
+---
+
 ## Upgrading from an earlier (git) install
 
 *For everyone who installed a pre-0.9 version with `git clone` +
 `pip install -e .` and configured their Claude client with
-`venv/bin/python` + `"args": ["-m", "qualcoder_mcp.server"]`.*
+`venv/bin/python` + `"args": ["-m", "qualcoder_mcp.server"]` (the
+program was then called qualcoder-mcp; "Coming from qualcoder-mcp",
+above, says what the rename changes).*
 
 **First, the reassurance: upgrading only replaces the SERVER code.**
 It never touches your QualCoder projects (the `.qda` folders) or your
-files under `~/.qualcoder_mcp/` (the AI-coding session files in
+files under `~/.qualcoder_mcp/` (moved whole to `~/.exegete/` at the
+first start of 0.14.1 or later: the AI-coding session files in
 `sessions/`, the last-used project pointer `mru_project.json`, the
 preview-token secret `preview_secret` and the run manifests
 `pseudonymise_source` writes under `pseudonymisation/`); all
@@ -1125,22 +1233,27 @@ You have two paths. Both work; pick one.
 
 ### Path A: stay on the git install (simplest, no config change)
 
+First fully quit your Claude client (Claude Desktop: Cmd+Q, not just
+closing the window), so that no copy of the server is running while its
+files change. Then:
+
 ```bash
-cd ~/Documents/qualcoder_mcp   # your clone
+cd ~/Documents/qualcoder_mcp   # your clone, whatever its folder is called
 git pull
 venv/bin/pip install -e .
 ```
 
-Then fully quit and relaunch your Claude client. Your existing
-configuration keeps working unchanged, forever. Good if you don't want
-to touch your setup.
+Then reopen your Claude client. Your existing configuration keeps
+working unchanged, forever: `-m qualcoder_mcp.server` starts Exegete
+through a small stand-in kept for it. Good if you don't want to touch
+your setup.
 
 ### Path B: switch to the PyPI install (recommended going forward)
 
 *Available from v0.9.0 (the first release published to PyPI).*
 
 **Use a FRESH environment. Do not install into the old clone's venv.**
-(If you run `pip install qualcoder-mcp` inside the old venv, pip sees
+(If you run `pip install exegete` inside the old venv, pip sees
 the editable install, reports "Requirement already satisfied", and
 silently does nothing, so you would still be running the old code.
 Verified behaviour, and the reason these instructions exist.)
@@ -1148,23 +1261,24 @@ Verified behaviour, and the reason these instructions exist.)
 **1. Install into a fresh venv (or pipx/uv):**
 
 ```bash
-python3 -m venv ~/qualcoder-mcp-venv
-~/qualcoder-mcp-venv/bin/pip install qualcoder-mcp
-# or:  pipx install qualcoder-mcp
-# or:  uv tool install qualcoder-mcp
+python3 -m venv ~/exegete-venv
+~/exegete-venv/bin/pip install exegete
+# or:  pipx install exegete
+# or:  uv tool install exegete
 ```
 
 **2. Find the command path:**
 
 ```bash
-ls ~/qualcoder-mcp-venv/bin/qualcoder-mcp   # plain venv
-which qualcoder-mcp                          # pipx / uv
+ls ~/exegete-venv/bin/exegete   # plain venv
+which exegete                    # pipx / uv
 ```
 
 **3. Update your Claude client config**: change `command` to that
 path and REMOVE the `args` line.
 
-Claude Desktop, before:
+Claude Desktop, before (keep the entry's name, `qualcoder` here, so
+the tools and the permissions you gave them keep their names):
 
 ```json
 {
@@ -1183,27 +1297,28 @@ Claude Desktop, after:
 {
   "mcpServers": {
     "qualcoder": {
-      "command": "/Users/YOU/qualcoder-mcp-venv/bin/qualcoder-mcp"
+      "command": "/Users/YOU/exegete-venv/bin/exegete"
     }
   }
 }
 ```
 
-(Keep your `env` block with `QUALCODER_PROJECT_PATH`, if you had one;
-it works the same.)
+(Keep your `env` block, if you had one; it works the same, and
+`QUALCODER_PROJECT_PATH` is read until v1.0 as the earlier spelling of
+`EXEGETE_PROJECT_PATH`.)
 
-Claude Code: re-register once:
+Claude Code: re-register once, under the same name:
 
 ```bash
 claude mcp remove qualcoder
-claude mcp add qualcoder -- ~/qualcoder-mcp-venv/bin/qualcoder-mcp
+claude mcp add qualcoder -- ~/exegete-venv/bin/exegete
 ```
 
 (or edit `.mcp.json` the same way as the Desktop config above).
 
 **4. Fully quit and relaunch the client**, then confirm the installed
-version with `~/qualcoder-mcp-venv/bin/qualcoder-mcp --version` (or
-`qualcoder-mcp --version` after a `pipx` or `uv tool` install). Whether the assistant can also tell you
+version with `~/exegete-venv/bin/exegete --version` (or
+`exegete --version` after a `pipx` or `uv tool` install). Whether the assistant can also tell you
 the running version depends on the host (see "Updating the MCP
 Server" above).
 
@@ -1217,18 +1332,18 @@ The plain install silently no-ops (above), so you must either upgrade
 explicitly:
 
 ```bash
-~/Documents/qualcoder_mcp/venv/bin/pip install --upgrade qualcoder-mcp
+~/Documents/exegete/venv/bin/pip install --upgrade exegete
 ```
 
 or uninstall the editable first:
 
 ```bash
-~/Documents/qualcoder_mcp/venv/bin/pip uninstall qualcoder-mcp
-~/Documents/qualcoder_mcp/venv/bin/pip install qualcoder-mcp
+~/Documents/exegete/venv/bin/pip uninstall exegete
+~/Documents/exegete/venv/bin/pip install exegete
 ```
 
 Both verified: pip cleanly removes the editable hooks and the wheel
-takes over (your existing `venv/bin/python -m qualcoder_mcp.server`
+takes over (your existing `venv/bin/python -m exegete.server`
 config even keeps working). The catch, and why the fresh venv is
 recommended instead: from that moment `git pull` in the clone no
 longer affects what runs, which is a confusing state to leave lying
@@ -1241,7 +1356,7 @@ around.
 
 - **Problems with this server**: check the Troubleshooting section
   above, then open an issue on
-  [GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues).
+  [GitHub Issues](https://github.com/nicotem/exegete/issues).
   That is the only support channel (email requests receive no reply);
   see [SUPPORT.md](SUPPORT.md). Never paste research data into an
   issue; a redacted or synthetic example is enough. Include your
@@ -1260,29 +1375,33 @@ If you want to remove the MCP server:
 
 1. **Remove it from your client**:
    - Claude Desktop with the extension: Settings > Extensions,
-     qualcoder-mcp, Uninstall (Claude removes its own copy of the
+     Exegete, Uninstall (Claude removes its own copy of the
      server; skip step 2). Two things stay: the Python and the download
      cache uv keeps for every program that uses it (about 80 MB; on
      macOS `~/.local/share/uv` and `~/.cache/uv`, on Windows
      `%APPDATA%\uv` and `%LOCALAPPDATA%\uv\cache`; `uv cache clean`
      empties the cache, if uv is on your computer), and the server's
-     own state in `~/.qualcoder_mcp` (step 3)
+     own state in `~/.exegete` (step 3)
    - Claude Desktop configured by hand: Settings > Developer > Edit Config, delete the
-     "qualcoder" section, save, then fully quit and reopen Claude Desktop
-   - Claude Code: `claude mcp remove qualcoder`
-   - LM Studio: delete the "qualcoder" block from mcp.json
+     "exegete" section (or "qualcoder", from an earlier version of this
+     guide), save, then fully quit and reopen Claude Desktop
+   - Claude Code: `claude mcp remove exegete` (or `qualcoder`)
+   - LM Studio: delete the "exegete" (or "qualcoder") block from mcp.json
 
 2. **Remove the package**:
    ```bash
    # PyPI install in its own venv: delete the venv
-   rm -rf ~/qualcoder-mcp-venv
-   # pipx:  pipx uninstall qualcoder-mcp
-   # uv:    uv tool uninstall qualcoder-mcp
+   rm -rf ~/exegete-venv
+   # pipx:  pipx uninstall exegete
+   # uv:    uv tool uninstall exegete
+   # installed under the earlier name: pipx uninstall qualcoder-mcp,
+   #   or uv tool uninstall qualcoder-mcp
    # Git (contributor) install: delete the clone (its venv is inside it)
-   rm -rf ~/Documents/qualcoder_mcp
+   rm -rf ~/Documents/exegete
    ```
 
-3. **Optionally remove the server's own state**: `~/.qualcoder_mcp/`
+3. **Optionally remove the server's own state**: `~/.exegete/`
+   (and `~/.qualcoder_mcp`, the link to it left under its earlier name)
    holds the AI-coding session files (`sessions/`), the last-used
    project pointer (`mru_project.json`), the preview-token secret
    (`preview_secret`, which signs the tokens that authorise a destructive
@@ -1305,7 +1424,7 @@ backup folders it created next to each project
 backups you no longer need with the `prune_backups` tool before
 uninstalling, or by hand afterwards. Workspace copies made with
 `copy_project_to_workspace` live in `~/Documents/Qualcoder MCP
-Projects/`, or in the folder `QUALCODER_MCP_WORKSPACE` names (with the
+Projects/`, or in the folder `EXEGETE_WORKSPACE` names (with the
 desktop extension, its "Folder for projects", by default
 `~/QualCoder projects/`).
 

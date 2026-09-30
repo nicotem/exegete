@@ -49,7 +49,7 @@ class TestVersionFlag:
             server.main(["--version"])
         assert exc.value.code == 0
         out = capsys.readouterr()
-        assert out.out.strip() == f"qualcoder-mcp {exegete.__version__}"
+        assert out.out.strip() == f"exegete {exegete.__version__}"
         assert exegete.__version__ in out.out
         assert "0.0.0+unknown" not in out.out
 
@@ -93,7 +93,7 @@ class TestVersionFlag:
             timeout=120)
 
         assert proc.returncode == 0, proc.stderr
-        assert proc.stdout.strip() == f"qualcoder-mcp {exegete.__version__}"
+        assert proc.stdout.strip() == f"exegete {exegete.__version__}"
         assert proc.stderr == ""
         assert not (home / ".qualcoder_mcp").exists()
         assert not (home / ".exegete").exists()
@@ -168,8 +168,9 @@ class TestTtyNotice:
 
     def test_notice_text_house_rules(self):
         assert "—" not in server.TTY_NOTICE
-        assert "qualcoder-mcp --version" in server.TTY_NOTICE
-        assert "python -m qualcoder_mcp.server --version" in server.TTY_NOTICE
+        assert "exegete --version" in server.TTY_NOTICE
+        assert "python -m exegete.server --version" in server.TTY_NOTICE
+        assert server.TTY_NOTICE.startswith("Exegete is an MCP server.")
         assert "\n" not in server.TTY_NOTICE   # one paragraph
 
     def test_registry_intact_after_main_in_process(self, monkeypatch, capsys, stub_run):

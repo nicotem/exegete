@@ -1,9 +1,9 @@
-# qualcoder-mcp: the tools in full
+# Exegete: the tools in full
 
-The reference for qualcoder-mcp: every tool, what it reads and writes,
+The reference for Exegete: every tool, what it reads and writes,
 how the tools follow QualCoder's conventions, and how they keep a
-project safe. The [README](https://github.com/nicotem/qualcoder_mcp/blob/main/README.md)
-says what qualcoder-mcp is and how to start; [INSTALL.md](INSTALL.md)
+project safe. The [README](https://github.com/nicotem/exegete/blob/main/README.md)
+says what Exegete is and how to start; [INSTALL.md](INSTALL.md)
 covers installing and setting up; [AI_CODING_GUIDE.md](AI_CODING_GUIDE.md)
 and [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md) walk through the
 coding loop with example conversations.
@@ -51,7 +51,7 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 
 ## Supported QualCoder versions
 
-> qualcoder-mcp is ground-truthed against QualCoder 3.8.2, the latest stable
+> Exegete is ground-truthed against QualCoder 3.8.2, the latest stable
 > release (project schema v14), and additionally verified against the QualCoder
 > 4.0-Beta pre-release (version string "QualCoder 4.0 Beta", built from the
 > QualCoder development tree) at commit `9bddf17`, whose projects use schema v17. Project schemas v14 through v17 are
@@ -63,8 +63,8 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > final release. Claims about 4.0 compatibility are valid as of commit `9bddf17`
 > (2026-08-25) and will be re-verified against the final release. One known
 > limitation: released
-> QualCoder versions signal "project open" through a lock file, which qualcoder-mcp
-> honours; the 4.0-Beta pre-release builds no longer use a lock file, so qualcoder-mcp
+> QualCoder versions signal "project open" through a lock file, which Exegete
+> honours; the 4.0-Beta pre-release builds no longer use a lock file, so Exegete
 > falls back to best-effort heuristics there (reported as
 > `qualcoder_gui_signals` by `select_project`, `get_current_project`,
 > `analyze_for_coding` and the `restore_backup` preview:
@@ -75,7 +75,7 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > look like QualCoder, never their names or command lines). The file-based signals are traces of recent
 > activity, never proof of an open window (an idle 4.0 window with no recent AI
 > activity leaves no file trace at all), so heuristics can miss an open window:
-> do not run qualcoder-mcp writes while any QualCoder window has the same
+> do not run Exegete writes while any QualCoder window has the same
 > project open.
 >
 > Two facts about how the tools relate (checked 29 September 2026).
@@ -103,7 +103,7 @@ Nesting an existing code under another code is done in QualCoder, and
 moving a sub-code, into a category or to none, detaches it from its
 parent code, as in QualCoder; the result names the parent it left. Projects newer than schema v17 refuse
 writes until this server has been verified against them; setting
-`QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA=1` in the server environment lets
+`EXEGETE_ALLOW_UNKNOWN_SCHEMA=1` in the server environment lets
 writes proceed at your own risk, and every write result then carries a
 warning.
 
@@ -139,12 +139,12 @@ built-in assistant writes under, which groups this server's work and
 the built-in assistant's under one coder in QualCoder's per-coder
 visibility toggle, undo and reports.
 
-`QUALCODER_MCP_AI_CODER_NAME` in the server's `env` block is now a
+`EXEGETE_AI_CODER_NAME` in the server's `env` block is now a
 DECLARATION by this host, not an attribution:
 
 ```json
 "env": {
-  "QUALCODER_MCP_AI_CODER_NAME": "Qwen 3.8 6bit"
+  "EXEGETE_AI_CODER_NAME": "Qwen 3.8 6bit"
 }
 ```
 
@@ -203,7 +203,7 @@ than through this server.
 The server can create a new, empty QualCoder project, so a study can
 begin in the conversation. The Claude Desktop extension turns it on
 (its tool set setting defaults to `lifecycle`); the Terminal route does
-not: there, add `QUALCODER_MCP_TOOLSET=lifecycle` to the server's
+not: there, add `EXEGETE_TOOLSET=lifecycle` to the server's
 environment (INSTALL.md shows where), which registers the full set of
 tools plus `create_project`.
 
@@ -214,13 +214,15 @@ tools plus `create_project`.
   removed; if the process is killed part way, the folder it leaves (empty
   subfolders, an empty database and its journal) is recognised as such
   next time, and the name refused. Its "about" line reads
-  `qualcoder-mcp <version> (QualCoder schema v17)`.
+  `Exegete <version> (QualCoder schema v17)` (projects created before
+  0.14.1 keep `Exegete <version> ...`, the program's earlier name;
+  nothing rewrites it).
 - **Where.** In the server's workspace, unless you name an existing
   folder (give its full path, or one starting with `~`). With the Claude
   Desktop extension the workspace is its "Folder for projects", by
   default `~/QualCoder projects`, outside Documents; otherwise it is
   `~/Documents/Qualcoder MCP Projects`, unless the host sets another
-  folder with `QUALCODER_MCP_WORKSPACE`. The answer gives the full path.
+  folder with `EXEGETE_WORKSPACE`. The answer gives the full path.
   Keep projects on a local disk that is not synced (iCloud, OneDrive,
   Dropbox): sync services can copy the database and its journal
   separately. On a Mac with iCloud's "Desktop & Documents Folders"
@@ -374,9 +376,9 @@ reopened there.
 (observed with LM Studio), every "no project selected" error names the
 last project used on this machine when it still exists, so one
 `select_project` call recovers. The selection is never restored
-automatically. The pointer lives in `~/.qualcoder_mcp/mru_project.json`.
+automatically. The pointer lives in `~/.exegete/mru_project.json`.
 
-[PRIVACY.md](https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md)
+[PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)
 describes these conventions in full, including what they disclose.
 
 ## QualCoder 3.8.2 and edit mode: a caution
@@ -404,7 +406,7 @@ Claude can help you code your qualitative data with a conversational approval wo
 
 ### Conversational Workflow
 
-**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/QualCoder projects/`), otherwise `~/Documents/Qualcoder MCP Projects/` unless the host sets another with `QUALCODER_MCP_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while a released QualCoder (3.x) has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them the server can only warn on heuristics: make sure no QualCoder window has the project open before any write.
+**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/QualCoder projects/`), otherwise `~/Documents/Qualcoder MCP Projects/` unless the host sets another with `EXEGETE_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while a released QualCoder (3.x) has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them the server can only warn on heuristics: make sure no QualCoder window has the project open before any write.
 
 ### Quick Start Example
 
@@ -534,7 +536,7 @@ The AI coding workflow uses a workspace directory for safe modifications:
 ~/Documents/Qualcoder MCP Projects/
 ```
 
-A host can name another folder with `QUALCODER_MCP_WORKSPACE`; the
+A host can name another folder with `EXEGETE_WORKSPACE`; the
 Claude Desktop extension does, from its "Folder for projects" setting
 (by default `~/QualCoder projects/`, outside Documents, which iCloud or
 OneDrive may sync).
@@ -545,34 +547,37 @@ Never work on your original projects with AI coding! Always:
 3. Review results in QualCoder
 4. If good, replace original OR keep both versions
 
-For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://github.com/nicotem/qualcoder_mcp/blob/main/AI_CODING_WORKFLOW.md).
+For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md).
 
 ## Available Resources
 
-The MCP server exposes these resources (read-only data):
+The MCP server exposes these resources (read-only data). Their
+addresses began `qualcoder://` before 0.14.1 (QualCoder's own MCP
+server uses that scheme too); the earlier addresses are still answered,
+no longer listed, until v1.0.
 
-- `qualcoder://project/info` - Project metadata
-- `qualcoder://codes/list` - All codes
-- `qualcoder://categories/list` - Code categories
-- `qualcoder://codes/{code_id}` - Specific code details
-- `qualcoder://files/list` - All source files
-- `qualcoder://files/{file_id}` - File content
-- `qualcoder://cases/list` - All cases
-- `qualcoder://cases/{case_id}` - Case details
-- `qualcoder://journal` - Journal entries
-- `qualcoder://guidance/methods` - Static methods notes: the grounding rules, the four-way methodological vocabulary (allow, allow_with_caveat, reframe_and_ask, refuse) and citations to the method literature QualCoder 4.0 ships prompts for; needs no project
+- `exegete://project/info` - Project metadata
+- `exegete://codes/list` - All codes
+- `exegete://categories/list` - Code categories
+- `exegete://codes/{code_id}` - Specific code details
+- `exegete://files/list` - All source files
+- `exegete://files/{file_id}` - File content
+- `exegete://cases/list` - All cases
+- `exegete://cases/{case_id}` - Case details
+- `exegete://journal` - Journal entries
+- `exegete://guidance/methods` - Static methods notes: the grounding rules, the four-way methodological vocabulary (allow, allow_with_caveat, reframe_and_ask, refuse) and citations to the method literature QualCoder 4.0 ships prompts for; needs no project
 
 ## Available Tools
 
 Claude can use these tools to analyse your data. The full toolset
 (the default when you configure the server yourself,
-`QUALCODER_MCP_TOOLSET=full`; the Claude Desktop extension defaults to
+`EXEGETE_TOOLSET=full`; the Claude Desktop extension defaults to
 `lifecycle`) registers 73 tools; the argument lists below name every
 argument each tool declares, and each tool's own description says what
 each one does.
 
 > **Creating projects (Experimental):** with
-> `QUALCODER_MCP_TOOLSET=lifecycle` the server registers the full set
+> `EXEGETE_TOOLSET=lifecycle` the server registers the full set
 > plus `create_project`, 74 tools. The Claude Desktop extension's tool
 > set setting defaults to `lifecycle`, so creating projects is on there;
 > configured by hand, the server defaults to `full`, so that researchers
@@ -582,7 +587,7 @@ each one does.
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
-> `QUALCODER_MCP_TOOLSET=core` in the server's environment, only the
+> `EXEGETE_TOOLSET=core` in the server's environment, only the
 > 21-tool supervised coding set is registered: list_available_projects,
 > select_project, get_current_project, get_project_summary,
 > search_files, analyze_file_with_coding, search_coded_text,
@@ -716,7 +721,7 @@ still answers empty, and that answer is a finding.
 - `move_category(category_id, parent_category, create_backup)` - **WRITES TO DATABASE** - Reparent a category (refuses moves that would create a cycle; `changed: false` when it is already under that parent). The result names the new parent (`new_parent`)
 
 **Source Text, Destructive (preview, then token, then safety backup):**
-- `pseudonymise_source(mapping, file_id, use_project_pseudonyms, case_mode, overlap_policy, rewrite_memos, save_mapping_to_project, researcher_keeps_mapping, preview_token, allow_hidden_coder, record_in_journal, include_context, context_chars, scan_residue, residue_detail, max_spans_per_entry)` - **WRITES TO DATABASE** - Replace names with pseudonyms in the stored text of one text source per call, moving every coding, annotation and case link with the text. `file_id` is required; to pseudonymise a project, run it file by file, so two people who share a name can be given two pseudonyms in the file text. Not in notes: with `rewrite_memos` on, whichever run carries it rewrites that name in notes across the whole project, the other person's notes included, whatever the order of the runs; so for a shared name keep `rewrite_memos` off on every run and change the notes that name either person by hand, and give the second person a typed mapping with `save_mapping_to_project` off and `researcher_keeps_mapping` on (`pseudonyms.json` holds one pseudonym per name). A PDF, a media file or a source with no stored text is refused with the reason (`pdf_source`, `no_fulltext`, `unknown_file_id`). The only tool here that rewrites the text positions are measured against. Deterministic and rule-based: only the names in `mapping` are replaced, as whole words, case-sensitively unless `case_mode` says otherwise; no name detection. `overlap_policy` decides what happens to a coding that cut into a name: `snap_to_pseudonym` (default) grows it to contain the whole pseudonym and never deletes anything, `qualcoder_edit_parity` reproduces the walk QualCoder's coding-view editor applies, fed this tool's exact edit list (the editor's own diff may factor a shared prefix or suffix out of a replacement and keep a coding this policy deletes), which deletes a coding sitting on a name. Notes and journal entries are scanned and counted, and are rewritten, in their public part only and across the whole project, only when `rewrite_memos` is on; case, file, code, category and attribute-type names, journal entry names and attribute values are scanned and counted, never rewritten; and the preview's `residue` block says where names remain, with a third count, `wide_after_rewrite`, on each note field when the notes are rewritten, which does not reach zero because the wide reading is wider than the rewrite. A note's private part is carried across unread, so a name in it is still there and cannot be reported. `rewrite_memos` and `save_mapping_to_project` are bound into the token, six bound arguments in all. On a mapping you type, the execute is refused unless `save_mapping_to_project` (given on the preview, because the token binds it) writes the mapping into the project's own `pseudonyms.json` in QualCoder's own format, merged by QualCoder's rules, with alternative spellings as separate entries and the new entries longest name first (QualCoder's text and transcript imports (not PDFs) apply the file one entry at a time, case-sensitively; the preview warns when an entry already in the file would pre-empt a new one, or when an insensitive case mode means QualCoder will replace only the spellings saved), or `researcher_keeps_mapping` (not bound, and allowed on the execute) attests that the researcher keeps their own record; PDFs are never rewritten, and their stored text is counted with every other file's (not a PDF that QualCoder 3.8.2 stored as the file itself, which holds no text); media files and `ai_data/` are out of scope and are neither rewritten nor scanned. Writes a run manifest to `~/.qualcoder_mcp/pseudonymisation/`, an audit record of which rows the run changed and not a way back (the backup is), and, by default, a journal entry in the project; neither ever contains an original name, and a file name, folder name or path that carries one is withheld from both in favour of the file id. Every `residue` count is two readings, `{"wide": N, "whole_word": M}`: the wide one reads wider than the rewrite does, any occurrence a person would see, including inside a longer word and in any case, and every whole word the rewrite itself matches, and is a heuristic; the whole-word one is what this run's own rule matches. Notes, labels and attribute values are counted as fields; the `file_text` block counts, as occurrences, the names left in the text of every file with stored text after the run, the one this call rewrites, the files it does not touch and the PDF sources, each split by kind (inside a longer word, case only, joined differently, an invisible character or another normalisation, put back by a pseudonym, whole words in a file this run did not rewrite). A name inside a longer word is reported and never substituted; on a typed mapping the block lists the longer words themselves, so an exact entry can be added. A longer word is listed only when it extends the name by at most eight characters and is not in a script written without spaces (Chinese, Japanese, Thai, Lao, Khmer, Myanmar), and all lists in one preview share 4,000 characters. By default the block gives full detail for the file this call names and one short row (id, name, the two counts) for up to 1,000 other files that still show a name, and their ids past that; `residue_detail="project"` gives full detail for up to 200 files and the short row for up to 1,000 more, and the totals and the warnings are the same either way. The count has fixed budgets for its work and for the number of matches, and everything it spends is charged to them; past them a file is only asked whether a name shows, and past a budget for that question it is not checked, is listed in `files_not_checked` and is never reported clean. The file this call names is read first, with the first claim on the budgets. A count that stops part-way has found a name and is listed in `files_counted_in_part` with a lower bound, a file too large to count with this many names, decided before counting, is listed in `files_too_large_for_this_mapping`, where fewer names is the remedy, one too large for any mapping in `files_too_large_for_any_mapping`, where there is none, and a PDF source, which cannot be named for a preview, is never told to be previewed on its own. With `use_project_pseudonyms` the mapping is the researcher's own `pseudonyms.json`, which the caller never supplied, so no diagnostic and no refusal quotes a name from it, `include_context` returns nothing, no longer word is listed, and a pseudonym that carries one of its names is withheld by entry number (it is withheld from the run manifest and the journal entry on both paths); file names, including every file the residue names, and the project path are still returned as they stand. The mandatory backup does contain the real names. On a project that hides coders, the preview reports what the run would do to their rows as counts (`shifted`, `substituted`, `resized`, `snapped`, `deleted`, `clamped`), never names, and `allow_hidden_coder` is required when `snapped`, `deleted` or `clamped` is non-zero: a pure shift, a substitution and a resize change no coding decision, whatever the two lengths. `overlap_policy` `qualcoder_edit_parity` is deprecated, removed in v0.15: it deletes codings on names and is not exact parity
+- `pseudonymise_source(mapping, file_id, use_project_pseudonyms, case_mode, overlap_policy, rewrite_memos, save_mapping_to_project, researcher_keeps_mapping, preview_token, allow_hidden_coder, record_in_journal, include_context, context_chars, scan_residue, residue_detail, max_spans_per_entry)` - **WRITES TO DATABASE** - Replace names with pseudonyms in the stored text of one text source per call, moving every coding, annotation and case link with the text. `file_id` is required; to pseudonymise a project, run it file by file, so two people who share a name can be given two pseudonyms in the file text. Not in notes: with `rewrite_memos` on, whichever run carries it rewrites that name in notes across the whole project, the other person's notes included, whatever the order of the runs; so for a shared name keep `rewrite_memos` off on every run and change the notes that name either person by hand, and give the second person a typed mapping with `save_mapping_to_project` off and `researcher_keeps_mapping` on (`pseudonyms.json` holds one pseudonym per name). A PDF, a media file or a source with no stored text is refused with the reason (`pdf_source`, `no_fulltext`, `unknown_file_id`). The only tool here that rewrites the text positions are measured against. Deterministic and rule-based: only the names in `mapping` are replaced, as whole words, case-sensitively unless `case_mode` says otherwise; no name detection. `overlap_policy` decides what happens to a coding that cut into a name: `snap_to_pseudonym` (default) grows it to contain the whole pseudonym and never deletes anything, `qualcoder_edit_parity` reproduces the walk QualCoder's coding-view editor applies, fed this tool's exact edit list (the editor's own diff may factor a shared prefix or suffix out of a replacement and keep a coding this policy deletes), which deletes a coding sitting on a name. Notes and journal entries are scanned and counted, and are rewritten, in their public part only and across the whole project, only when `rewrite_memos` is on; case, file, code, category and attribute-type names, journal entry names and attribute values are scanned and counted, never rewritten; and the preview's `residue` block says where names remain, with a third count, `wide_after_rewrite`, on each note field when the notes are rewritten, which does not reach zero because the wide reading is wider than the rewrite. A note's private part is carried across unread, so a name in it is still there and cannot be reported. `rewrite_memos` and `save_mapping_to_project` are bound into the token, six bound arguments in all. On a mapping you type, the execute is refused unless `save_mapping_to_project` (given on the preview, because the token binds it) writes the mapping into the project's own `pseudonyms.json` in QualCoder's own format, merged by QualCoder's rules, with alternative spellings as separate entries and the new entries longest name first (QualCoder's text and transcript imports (not PDFs) apply the file one entry at a time, case-sensitively; the preview warns when an entry already in the file would pre-empt a new one, or when an insensitive case mode means QualCoder will replace only the spellings saved), or `researcher_keeps_mapping` (not bound, and allowed on the execute) attests that the researcher keeps their own record; PDFs are never rewritten, and their stored text is counted with every other file's (not a PDF that QualCoder 3.8.2 stored as the file itself, which holds no text); media files and `ai_data/` are out of scope and are neither rewritten nor scanned. Writes a run manifest to `~/.exegete/pseudonymisation/`, an audit record of which rows the run changed and not a way back (the backup is), and, by default, a journal entry in the project; neither ever contains an original name, and a file name, folder name or path that carries one is withheld from both in favour of the file id. Every `residue` count is two readings, `{"wide": N, "whole_word": M}`: the wide one reads wider than the rewrite does, any occurrence a person would see, including inside a longer word and in any case, and every whole word the rewrite itself matches, and is a heuristic; the whole-word one is what this run's own rule matches. Notes, labels and attribute values are counted as fields; the `file_text` block counts, as occurrences, the names left in the text of every file with stored text after the run, the one this call rewrites, the files it does not touch and the PDF sources, each split by kind (inside a longer word, case only, joined differently, an invisible character or another normalisation, put back by a pseudonym, whole words in a file this run did not rewrite). A name inside a longer word is reported and never substituted; on a typed mapping the block lists the longer words themselves, so an exact entry can be added. A longer word is listed only when it extends the name by at most eight characters and is not in a script written without spaces (Chinese, Japanese, Thai, Lao, Khmer, Myanmar), and all lists in one preview share 4,000 characters. By default the block gives full detail for the file this call names and one short row (id, name, the two counts) for up to 1,000 other files that still show a name, and their ids past that; `residue_detail="project"` gives full detail for up to 200 files and the short row for up to 1,000 more, and the totals and the warnings are the same either way. The count has fixed budgets for its work and for the number of matches, and everything it spends is charged to them; past them a file is only asked whether a name shows, and past a budget for that question it is not checked, is listed in `files_not_checked` and is never reported clean. The file this call names is read first, with the first claim on the budgets. A count that stops part-way has found a name and is listed in `files_counted_in_part` with a lower bound, a file too large to count with this many names, decided before counting, is listed in `files_too_large_for_this_mapping`, where fewer names is the remedy, one too large for any mapping in `files_too_large_for_any_mapping`, where there is none, and a PDF source, which cannot be named for a preview, is never told to be previewed on its own. With `use_project_pseudonyms` the mapping is the researcher's own `pseudonyms.json`, which the caller never supplied, so no diagnostic and no refusal quotes a name from it, `include_context` returns nothing, no longer word is listed, and a pseudonym that carries one of its names is withheld by entry number (it is withheld from the run manifest and the journal entry on both paths); file names, including every file the residue names, and the project path are still returned as they stand. The mandatory backup does contain the real names. On a project that hides coders, the preview reports what the run would do to their rows as counts (`shifted`, `substituted`, `resized`, `snapped`, `deleted`, `clamped`), never names, and `allow_hidden_coder` is required when `snapped`, `deleted` or `clamped` is non-zero: a pure shift, a substitution and a resize change no coding decision, whatever the two lengths. `overlap_policy` `qualcoder_edit_parity` is deprecated, removed in v0.15: it deletes codings on names and is not exact parity
 
 **Codebook, Destructive (preview, then token, then safety backup):**
 - `merge_codes(from_code_id, into_code_id, preview_token, allow_hidden_coder)` - **WRITES TO DATABASE** - Merge one code into another (lossy on overlaps, exactly matching QualCoder). The codebook changes too, as in QualCoder, and the preview names each change: on projects QualCoder 4.0 has opened (schema v16 and later) the source code's sub-codes move under the target, the source code's memo is added to the target's memo under a "[Merged from code: ...]" line, and the source code's nodes and lines on saved graphs are removed; on a 3.8.2 project the source code's memo is deleted with it (the backup keeps a copy)
@@ -772,7 +777,7 @@ For AI-assisted coding with direct database writes:
 - ✅ **Automatic backups** created before every write
 - ✅ **Workspace isolation** - Work on copies only
 - ✅ **Conversational approval** - You control what gets written
-- ✅ **Session files** - AI coding sessions (suggestions, proposals and their statuses) are saved in `~/.qualcoder_mcp/sessions/`
+- ✅ **Session files** - AI coding sessions (suggestions, proposals and their statuses) are saved in `~/.exegete/sessions/`
 - ✅ **Rollback capability** - Backups allow full restoration
 
 **Best Practices for AI Coding:**
@@ -786,7 +791,7 @@ For AI-assisted coding with direct database writes:
 - 🔒 The server runs locally and adds no cloud path of its own, but
   tool results enter the conversation and are transmitted to whichever
   AI provider your host uses (none, with a fully local host). **See
-  [PRIVACY.md](https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md)** for what this means for research data.
+  [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)** for what this means for research data.
 - 🔒 Regular QualCoder backups recommended
 - 🔒 Automatic backups: `<project>_backup_<timestamp>.qda` folders next to
   the project, one per write (the whole project tree, `ai_data/`
@@ -794,13 +799,13 @@ For AI-assisted coding with direct database writes:
   database copied by SQLite's own online backup and its journal or WAL
   file never copied; prune them with `prune_backups`)
 - 🔒 Workspace directory: `~/Documents/Qualcoder MCP Projects/`, or the
-  folder `QUALCODER_MCP_WORKSPACE` names (the desktop extension's default
+  folder `EXEGETE_WORKSPACE` names (the desktop extension's default
   is `~/QualCoder projects/`)
-- 🔒 Session files: `~/.qualcoder_mcp/sessions/`
-- 🔒 Last-used project pointer: `~/.qualcoder_mcp/mru_project.json` (one
+- 🔒 Session files: `~/.exegete/sessions/`
+- 🔒 Last-used project pointer: `~/.exegete/mru_project.json` (one
   project path and a timestamp, echoed only into the "no project selected"
-  error as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md))
-- 🔒 Preview-token secret: `~/.qualcoder_mcp/preview_secret` (signs the tokens of the seven preview tools; never shown in a result, an error or the log)
+  error as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md))
+- 🔒 Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the seven preview tools; never shown in a result, an error or the log)
 
 ## Example requests
 

@@ -112,8 +112,9 @@ class TestTypedOnce:
                                  PYPROJECT, [])
 
     def test_an_unplaced_field_is_refused(self):
-        with pytest.raises(build.BuildError, match="icon"):
-            build.build_manifest(dict(TEMPLATE, icon="icon.png"),
+        # v0.14.1: `icon` is placed now (tests/test_v0141_rename.py)
+        with pytest.raises(build.BuildError, match="screenshots"):
+            build.build_manifest(dict(TEMPLATE, screenshots=["a.png"]),
                                  PYPROJECT, [])
 
 
@@ -766,12 +767,15 @@ class TestTheDocuments:
         # v0.14.1: every setting is read through one table, under both
         # spellings (names.SETTINGS)
         from exegete import names
-        read = {old for new, old in names.SETTINGS.values()}
+        read = {new for new, old in names.SETTINGS.values()}
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = _section(text, "## Environment variables the server reads")
-        documented = set(re.findall(r"^- `(QUALCODER_[A-Z_]+)`", section,
+        documented = set(re.findall(r"^- `(EXEGETE_[A-Z_]+)`", section,
                                     flags=re.M))
         assert documented == read
+        # and every earlier spelling the server still reads, named there
+        for new, old in names.SETTINGS.values():
+            assert f"`{old}`" in section, old
 
     def test_readmes_install_line_points_to_it(self):
         """v0.14.1: README's "Start here" gives the one-click route before
@@ -790,7 +794,7 @@ class TestTheDocuments:
         # v0.14.1: README names only the extension's folder, which
         # needs no qualifier; the workspace paragraphs moved to TOOLS.md
         for name in ("TOOLS.md", "PRIVACY.md", "INSTALL.md"):
-            assert "QUALCODER_MCP_WORKSPACE" in _flat(name), name
+            assert "EXEGETE_WORKSPACE" in _flat(name), name
         assert "Qualcoder MCP Projects" not in _flat("README.md")
         assert "QUALCODER_MCP_WORKSPACE" in _flat("CHANGELOG.md").split(
             "## [0.13")[0]
@@ -803,8 +807,8 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
     section, not per file: README named the setting elsewhere, which a
     per-file check would have taken as enough."""
 
-    QUALIFIERS = ("QUALCODER_MCP_WORKSPACE", "QualCoder projects",
-                  "unless the host")
+    QUALIFIERS = ("EXEGETE_WORKSPACE", "QUALCODER_MCP_WORKSPACE",
+                  "QualCoder projects", "unless the host")
 
     @staticmethod
     def _sections(text):

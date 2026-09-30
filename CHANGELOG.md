@@ -1,18 +1,64 @@
 # Changelog
 
-All notable changes to the Qualcoder MCP Server will be documented in this file.
+All notable changes to Exegete (formerly qualcoder-mcp) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-v0.14.1, the README review: documentation only, no change to the
-server.
+v0.14.1: qualcoder-mcp is now called Exegete, and the README review.
+The server's behaviour is unchanged; its names changed, with every
+earlier spelling still accepted (the Upgrading list below).
+
+### Changed: qualcoder-mcp is now Exegete
+
+- The program's name, and its PyPI package, command and Python module:
+  `exegete` (`pip install exegete`; `exegete --version` answers
+  `exegete <version>`). The server calls itself Exegete in the MCP
+  handshake, in the instructions it sends the assistant ("Exegete
+  exposes a QualCoder project to this conversation"), in its start-up
+  log lines, the methods notes' heading and its messages. A project it
+  creates says `Exegete <version> (QualCoder schema v17)` in its
+  `about`, which keeps the word QualCoder checks for; a REFI-QDA export
+  names Exegete as its origin; the AI coder name file's `written_by`
+  says `exegete <version>`.
+- The GitHub address is https://github.com/nicotem/exegete; the old
+  address redirects.
+- The Claude Desktop extension keeps its identifier, `qualcoder-mcp`
+  with the author's name, so opening the new file updates the extension
+  you have, with its two settings, rather than adding a second one. It
+  is shown as Exegete, its file is `exegete-<version>.mcpb`, and its
+  log becomes `mcp-server-Exegete.log`. Its manifest sets both
+  spellings of its three settings, always to the same value.
+- The server's settings start `EXEGETE_`: `EXEGETE_TOOLSET`,
+  `EXEGETE_AI_CODER_NAME`, `EXEGETE_WORKSPACE`,
+  `EXEGETE_WORKSPACE_REQUIRED`, `EXEGETE_ALLOW_UNKNOWN_SCHEMA` and
+  `EXEGETE_PROJECT_PATH`, all read through one reader. If a setting is
+  given under both spellings with different values, the server does not
+  start, and says which two disagree, as it already does for a mistyped
+  tool set.
+- The server's own folder is `~/.exegete`. At the first start, an
+  existing `~/.qualcoder_mcp` is renamed to it whole (the same disk, so
+  nothing is copied and there is never a second secret key), and a link
+  is left under the old name (a junction on Windows) for older copies
+  of the server on the same computer; the published 0.14.0 was checked
+  to work through it. If the link cannot be made, the folder is not
+  moved. The export guard, `create_project` and the workspace setting
+  refuse both names.
+- The resources' addresses are `exegete://...`.
+- The old name's package, `qualcoder-mcp`, is released beside every
+  release until v1.0: it carries the `qualcoder-mcp` command and a
+  two-file stand-in module, and asks for the matching Exegete.
+- Kept as they are: the AI coder name file inside projects,
+  `qualcoder_mcp.json`, and its format, so every version agrees on it;
+  the internal label that keys the privacy run records' digests, so
+  records written earlier stay checkable; the default projects folders;
+  and past entries in this file.
 
 ### Changed: the README is a front page, and its reference moves out
 
-- README.md now says what qualcoder-mcp is and is not (its own software
+- README.md now says what the program is and is not (its own software
   on QualCoder's project format, not made or endorsed by QualCoder's
   developers, with the provenance wording and NOTICE), where
   participants' words go, and how to start: the one-click extension
@@ -49,10 +95,11 @@ server.
   QualCoder runs; it is in no release yet (checked 29 September 2026).
   The sentence that it has no way in from outside is gone. After the
   facts, the README says that this project welcomes that server and is
-  ready to cooperate with QualCoder's developers; that its own aim is a
-  whole project run from the conversation, with QualCoder as a
-  companion that opens the same project at any time, a direction and
-  not yet a fact; and that the commitments hold on the way.
+  ready to cooperate with QualCoder's developers; that its own aim is
+  that you can run a whole project from the conversation, with
+  QualCoder as a companion that opens the same project at any time, a
+  direction and not yet a fact; and that the commitments hold on the
+  way.
 - TOOLS.md, on a project started from the conversation: keep it in one
   QualCoder, since moving it between 3.8.2 and 4.0 is what changes it
   (it said to work on such a project in QualCoder 4.0; the README still
@@ -60,7 +107,7 @@ server.
 - "Qualcoder" is spelt "QualCoder" in the prose of README, INSTALL,
   TOOLS and the workflow guide; the folder `~/Documents/Qualcoder MCP
   Projects` and the server's own messages keep their spelling.
-- README and PRIVACY.md now say only what qualcoder-mcp does with the
+- README and PRIVACY.md now say only what Exegete does with the
   part of a memo after `#####`; they no longer speak for QualCoder's
   own AI features. PRIVACY.md no longer says QualCoder 4.0 introduced
   the mark: 3.8.2 has it.
@@ -73,13 +120,59 @@ server.
 ### Measured
 
 - Serialised tool JSON as it stands after the rename's changes to the
-  tools' texts: full = 195,313 characters (about 48.8k tokens at
-  chars/4) over 73 tools, core = 64,827 (about 16.2k) over 21, and the
-  opt-in lifecycle set = 197,898 (about 49.5k) over 74, measured on
+  tools' texts: full = 195,305 characters (about 48.8k tokens at
+  chars/4) over 73 tools, core = 64,825 (about 16.2k) over 21, and the
+  opt-in lifecycle set = 197,890 (about 49.5k) over 74, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 205,021, 68,119 and 207,746. The
-  resource addresses the texts name moved from `qualcoder://` to
-  `exegete://`, two characters shorter each time.
+  Python 3.11.13 (the `.venv/`), 205,013, 68,117 and 207,738. Moved by
+  the resource addresses the texts name (`exegete://` for
+  `qualcoder://`) and the settings they name (`EXEGETE_PROJECT_PATH`
+  and `EXEGETE_AI_CODER_NAME` in `select_project` and
+  `export_refi_qda`).
+
+### Upgrading from 0.14.0
+
+Nothing you set up stops working. INSTALL.md's "Coming from
+qualcoder-mcp" says what you may change on each route.
+
+- **Quit before updating.** Fully quit every AI host that uses the
+  server before you update it: a copy of the server left running while
+  its files change fails the first time it needs a part it has not
+  loaded yet (the REFI-QDA export is one), and the first start after
+  the update moves the server's folder, which is best done with no
+  older copy running. INSTALL.md now says to quit before `git pull`,
+  not after.
+- **Still accepted until v1.0**, each named once in the start-up log
+  where it is used: `QUALCODER_MCP_TOOLSET`,
+  `QUALCODER_MCP_AI_CODER_NAME`, `QUALCODER_MCP_WORKSPACE`,
+  `QUALCODER_MCP_WORKSPACE_REQUIRED`,
+  `QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`;
+  the resource addresses `qualcoder://...`, still answered but no
+  longer listed; and the state folder's earlier name,
+  `~/.qualcoder_mcp`, as a link (a junction on Windows) to
+  `~/.exegete`.
+- **Still working:** the `qualcoder-mcp` command and
+  `python -m qualcoder_mcp.server`, which start Exegete and say so in
+  one line of the log; `pip install --upgrade qualcoder-mcp`,
+  `pipx upgrade qualcoder-mcp`, `uv tool upgrade qualcoder-mcp` and
+  `uvx qualcoder-mcp`, which bring the current Exegete while the old
+  name's package is released beside it, until v1.0 (pipx and uv put
+  only the named package's commands on your PATH, so `exegete` itself
+  comes from installing `exegete`); and an entry in a host's
+  configuration named `qualcoder` (keep it, and do not add an `exegete`
+  entry beside it).
+- **Not kept:** code of your own that imported the server's inner
+  modules under the old name (`qualcoder_mcp.database` and the others,
+  or `qualcoder_mcp.__version__`); only the two ways of starting the
+  server survive.
+- **The extension:** opening the new file updates the one you have. It
+  is then listed as Exegete; the earlier log stays where it was; the
+  first start may take longer and needs the internet; Claude may ask
+  again before it uses each tool.
+- **A departure from QualCoder, named:** the resource addresses leave
+  `qualcoder://`, the scheme QualCoder's own MCP server also uses (pull
+  request #1571), so that with both servers connected to one assistant
+  an address is answered by the program it names.
 
 ## [0.14.0-alpha] - 2026-09-28
 

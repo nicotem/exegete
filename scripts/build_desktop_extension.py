@@ -55,6 +55,11 @@ except ModuleNotFoundError:  # Python 3.10, where pytest brings tomli
 
 REPO = Path(__file__).resolve().parents[1]
 TEMPLATE = "packaging/desktop-extension/manifest.in.json"
+# Where an icon the template names is read from (v0.14.1): the template's
+# `icon` is a file name in this folder, and the package carries the file
+# at that name. No icon is shipped until the owner confirms the mark
+# (PROVISIONAL: decision 11); the build works with and without one.
+ICON_FOLDER = "packaging/desktop-extension"
 PACKAGE = "src/exegete"
 # The extension's identifier, the manifest's `name`: fixed for good (the
 # owner's ruling of 26 September 2026). Claude Desktop knows an extension
@@ -297,6 +302,7 @@ def build_manifest(template: dict, project: dict,
                        if urls.get("Repository") else None),
         "homepage": urls.get("Homepage"),
         "documentation": template.get("documentation"),
+        "icon": template.get("icon"),
         "support": urls.get("Issues"),
         "server": template["server"],
         "tools": [{"name": n, "description": summary(d)} for n, d in tools],
@@ -329,6 +335,12 @@ def bundle(source) -> Tuple[dict, Dict[str, bytes]]:
     files = package_files(source, project)
     template = json.loads(source.read(TEMPLATE).decode("utf-8"))
     manifest = build_manifest(template, project, list_tools(files))
+    icon = manifest.get("icon")
+    if icon is not None:
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+\.png", icon):
+            raise BuildError(f"{TEMPLATE}'s icon {icon!r} must be a PNG "
+                             f"file name in {ICON_FOLDER}")
+        files[icon] = source.read(f"{ICON_FOLDER}/{icon}")
     files[".python-version"] = f"{PYTHON_VERSION}\n".encode("ascii")
     files["manifest.json"] = manifest_bytes(manifest)
     return manifest, files

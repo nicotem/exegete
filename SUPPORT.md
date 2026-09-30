@@ -1,12 +1,12 @@
 # Support
 
-Thanks for using qualcoder-mcp. This is an **experimental
+Thanks for using Exegete (formerly qualcoder-mcp). This is an **experimental
 alpha** built by one researcher. Feedback, bug reports, and feature
 ideas are genuinely wanted: they directly shape what gets built next.
 
 ## Where to get help
 
-**Everything goes through [GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues):**
+**Everything goes through [GitHub Issues](https://github.com/nicotem/exegete/issues):**
 
 - **Bug reports**: please include what you did (the tool calls or the
   conversation step), what you expected, and what happened instead.
@@ -33,7 +33,7 @@ It is **not a support channel**, and support requests sent by email will
 not receive a reply. This isn't unfriendliness: answers buried in a
 private inbox help exactly one person once, while answers on GitHub
 Issues help everyone, permanently. Please use
-[GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues) instead.
+[GitHub Issues](https://github.com/nicotem/exegete/issues) instead.
 
 ## Before you report
 
@@ -57,11 +57,12 @@ Issues help everyone, permanently. Please use
   TOOLS.md for the supported project schemas),
   the project's schema version (the `databaseversion` value in the
   `schema` block that `get_current_project` returns), the server version
-  (`qualcoder-mcp --version` in the environment you installed into, or
-  `python -m qualcoder_mcp.server --version` for a git install; `pip
-  show qualcoder-mcp`, `pipx list` and `uv tool list` still work and
-  spell `0.14.0-alpha` as `0.14.0a0`), your MCP host (Claude Desktop, Claude
-  Code, LM Studio, other), and the toolset (`QUALCODER_MCP_TOOLSET`:
+  (`exegete --version` in the environment you installed into, or
+  `python -m exegete.server --version` for a git install; `pip
+  show exegete`, `pipx list` and `uv tool list` still work and
+  spell `0.14.1-alpha` as `0.14.1a0`; an install made under the
+  earlier name answers `qualcoder-mcp --version` too), your MCP host (Claude Desktop, Claude
+  Code, LM Studio, other), and the toolset (`EXEGETE_TOOLSET`:
   `core`, `lifecycle`, or `full` when the variable is not set). With the
   Claude Desktop extension, the version is in the name of the `.mcpb`
   file you installed, and the toolset is its Tool set setting

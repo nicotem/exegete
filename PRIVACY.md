@@ -1,7 +1,7 @@
 # Data Flow & Privacy
 
 This document explains exactly what happens to your research data when
-you use qualcoder-mcp. It is factual and deliberately
+you use Exegete (formerly qualcoder-mcp). It is factual and deliberately
 sober: this tool makes the data flow explicit precisely so you can make
 an informed decision, which many AI integrations do not. It is not legal
 advice.
@@ -38,14 +38,26 @@ What stays local, always, unless a sync service copies the folder it is in:
 - exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
 - project copies made by copy_project_to_workspace, in
   `~/Documents/Qualcoder MCP Projects/` by default, or in the folder
-  `QUALCODER_MCP_WORKSPACE` names, which the desktop extension sets
+  `EXEGETE_WORKSPACE` names, which the desktop extension sets
   from its "Folder for projects", by default `~/QualCoder projects/`
   (each carries the
   same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
-- AI-coding session files (`~/.qualcoder_mcp/sessions/`), written
+- the server's own folder, `~/.exegete` (before 0.14.1,
+  `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
+  the session files, the secret, the pointer and the run manifests
+  below. At the first start of 0.14.1 or later an existing
+  `~/.qualcoder_mcp` is renamed to `~/.exegete` whole, in one step on
+  the same disk: nothing is copied, the files keep their owner-only
+  modes, and there is never a second secret. A link named
+  `~/.qualcoder_mcp` (on Windows, a junction) is left pointing at it, so
+  an older copy of the server on the same computer keeps using the same
+  folder and secret; where no link can be made, the folder is not moved.
+  The export tools, `create_project` and the workspace setting refuse
+  both names, whether or not the old one exists.
+- AI-coding session files (`~/.exegete/sessions/`), written
   atomically and created owner-only on POSIX systems (mode 0600)
-- the preview-token secret (`~/.qualcoder_mcp/preview_secret`): 64
+- the preview-token secret (`~/.exegete/preview_secret`): 64
   random hex characters, created owner-only on POSIX systems, used to
   sign the tokens that authorise a destructive operation and to key the
   digests in the pseudonymisation run manifests. It never leaves your
@@ -60,9 +72,9 @@ What stays local, always, unless a sync service copies the folder it is in:
   export tools refuse paths inside this folder as it is spelled. On
   Windows the guard's comparison ignores letter case, so a spelling in
   another letter case is refused there too. On macOS, whose file system
-  usually ignores letter case, such a spelling (`~/.QUALCODER_MCP`) is
+  usually ignores letter case, such a spelling (`~/.EXEGETE`) is
   not yet caught (the guard is fixed in v0.15).
-- the last-used project pointer (`~/.qualcoder_mcp/mru_project.json`:
+- the last-used project pointer (`~/.exegete/mru_project.json`:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful
   select_project and create_project). It has one outward flow: when a tool is called, or
@@ -87,7 +99,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   result; treat the note like any other project text the model can read.
   QualCoder never reads or writes this file. Deleting it makes the next
   AI write ask for the name again.
-- the pseudonymisation run manifests (`~/.qualcoder_mcp/pseudonymisation/`,
+- the pseudonymisation run manifests (`~/.exegete/pseudonymisation/`,
   one JSON file per `pseudonymise_source` run, created owner-only on
   POSIX systems): the pseudonyms applied, the replacement spans, the
   row ids and the old and new offsets of every row the run moved, the
@@ -139,10 +151,10 @@ note, private part included: a project built to do it can give a
 trigger's error whatever it reads from a row, and a note or a name
 stored as bytes that are not UTF-8 makes Python's sqlite3 quote the
 whole value in the error it raises. The same rule holds for the
-resources (the `qualcoder://` addresses), which answer an error as a
+resources (the `exegete://` addresses), which answer an error as a
 tool does, as their content, so the MCP library, which logs with its
 traceback every error a fixed-address resource raises (one with an id
-in its address, such as `qualcoder://codes/{code_id}`, it answers
+in its address, such as `exegete://codes/{code_id}`, it answers
 without a line), has none to log; and for an error
 of a kind this server does not expect, which is reported by its kind
 alone. This server's own error texts, which it writes, are answered as
@@ -282,7 +294,7 @@ the row's earlier owner). AI rows are never written under
 a name the model chose by itself: the name is set per project by you,
 and the model can only ask. The first write that needs a name stops and
 asks; your answer is stored with the project and reported back by the
-project reads. The host's `QUALCODER_MCP_AI_CODER_NAME` setting declares
+project reads. The host's `EXEGETE_AI_CODER_NAME` setting declares
 a name, which is offered as a quick pick and checked for conflicts; it
 never attributes a row on its own. A name that belongs to a person (the
 project's own coder name) is refused, and the `owner` argument of
@@ -369,8 +381,8 @@ project has the coder-visibility capability:
   category row being removed is reported as "(hidden coder)" when that
   coder is hidden. That mask is a courtesy of the preview, not a
   guarantee: elsewhere, memo searches aside (below), a code's or a
-  category's owner is shown as QualCoder shows it, hidden or not. The `qualcoder://codes/list` and
-  `qualcoder://categories/list` resources name each row's owner, as
+  category's owner is shown as QualCoder shows it, hidden or not. The `exegete://codes/list` and
+  `exegete://categories/list` resources name each row's owner, as
   QualCoder's code tree does, and on a QualCoder 4.0 project
   merge_codes and merge_category write the merged row's owner into the
   target's memo, in the provenance line QualCoder's own merge writes
@@ -582,7 +594,7 @@ Two further rules touch files on your disk:
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for
   processes that are QualCoder itself: a program whose own name holds
-  "qualcoder" once this server's names (`qualcoder-mcp`,
+  "qualcoder" once this server's names (`exegete`, `qualcoder-mcp`,
   `qualcoder_mcp`) are taken out, which covers QualCoder's installers,
   its app and the portable and Linux downloads it publishes, or a Python
   running QualCoder's package (`-m qualcoder`, its `__main__.py`, its
@@ -608,7 +620,7 @@ Two further rules touch files on your disk:
   `create_project` runs no process scan for the project it has just
   made.
 - **Creating a project** (`create_project`, only with
-  `QUALCODER_MCP_TOOLSET=lifecycle`, which the desktop extension sets
+  `EXEGETE_TOOLSET=lifecycle`, which the desktop extension sets
   by default, v0.14). It writes a new folder
   with four empty subfolders and a new `data.qda`, and records the new
   project as the last-used one (the pointer above, whose path is then
@@ -707,7 +719,7 @@ is already commercial-terms coverage; no API key is needed.
 ### Rung 4: fully local models (Experimental)
 
 The rung where the third-party-processor question disappears: model
-inference and every qualcoder-mcp operation happen on your machine. LM
+inference and every operation of Exegete happen on your machine. LM
 Studio's documentation states (quoted 2026-08-17,
 <https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
 entirely offline" and that "Nothing you enter into LM Studio when
@@ -716,7 +728,7 @@ not our certification: verify offline operation yourself (disconnect
 and work) and record it as a data-management-plan evidence point.
 
 The trade is stated plainly: a narrower workflow with more supervision,
-the reduced core toolset required (`QUALCODER_MCP_TOOLSET=core`), and,
+the reduced core toolset required (`EXEGETE_TOOLSET=core`), and,
 importantly, **we have not yet evaluated how well any local model
 performs with this server**. That evaluation is pending; until then
 local-model behaviour is unverified, which is why this rung is marked
@@ -999,7 +1011,7 @@ will ask, and the summary above depends on them:
     previous text and its search index still holds it until QualCoder
     reopens the project and re-indexes. This server never reads or
     writes anything in there.
-  - **This server's own session files** in `~/.qualcoder_mcp/sessions/`.
+  - **This server's own session files** in `~/.exegete/sessions/`.
     A coding session records the excerpt each suggestion refers to,
     with the file's name and the reason given for it (which may quote
     the passage), and each proposed code with its definition and
@@ -1020,7 +1032,7 @@ will ask, and the summary above depends on them:
     runs them without asking. (Before v0.14 the list named only sessions with suggestions
     still to apply, never read proposals, and was empty for a project
     selected by its folder, as `create_project` leaves it.)
-  - The run manifest in `~/.qualcoder_mcp/pseudonymisation/` (the
+  - The run manifest in `~/.exegete/pseudonymisation/` (the
     pseudonyms, the replacement spans, the row ids and offsets) and the
     journal entry inside the project (the pseudonyms and counts) never
     carry an original name. When a run rewrites notes, the
@@ -1094,6 +1106,6 @@ will ask, and the summary above depends on them:
 ## Questions
 
 Questions about this document belong in
-[GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues) like
+[GitHub Issues](https://github.com/nicotem/exegete/issues) like
 everything else (see [SUPPORT.md](SUPPORT.md)), and please do not paste
 participant data into an issue either.

@@ -510,7 +510,7 @@ If you encounter issues:
 
 - Exports: `~/Desktop/*.qdpx` (or wherever you specified)
 - Qualcoder projects: `~/Documents/QualCoder_projects/`
-- MCP sessions: `~/.qualcoder_mcp/sessions/`
+- MCP sessions: `~/.exegete/sessions/`
 
 ---
 

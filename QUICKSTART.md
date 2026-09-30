@@ -1,13 +1,14 @@
 # Quick Start Guide
 
-This guide will get you up and running with the Qualcoder MCP server in 10 minutes.
+This guide will get you up and running with Exegete (formerly
+qualcoder-mcp), the MCP server for QualCoder projects, in 10 minutes.
 
 ## Prerequisites Checklist
 
 - [ ] Python 3.10 or higher installed
 - [ ] Claude Desktop installed, or any other MCP client: Claude Code
       users can skip the Desktop config below and just run
-      `claude mcp add qualcoder -- <venv-python> -m qualcoder_mcp.server`
+      `claude mcp add exegete -- <venv-python> -m exegete.server`
       (see "Alternative: Claude Code and other MCP clients" in INSTALL.md)
 - [ ] At least one Qualcoder project created (a `.qda` project folder)
 
@@ -19,18 +20,18 @@ This guide will get you up and running with the Qualcoder MCP server in 10 minut
 
 ### 1. Install the MCP Server
 
-The quickest install is from PyPI (`pip install qualcoder-mcp` in a
-virtual environment, or `pipx install qualcoder-mcp`; see "Recommended:
+The quickest install is from PyPI (`pip install exegete` in a
+virtual environment, or `pipx install exegete`; see "Recommended:
 Install from PyPI" in INSTALL.md, whose config examples use the
-resulting `qualcoder-mcp` command). The steps below use the source install:
+resulting `exegete` command). The steps below use the source install:
 
 ```bash
 # Navigate to where you want to install (e.g., Documents)
 cd ~/Documents
 
 # Clone or download this repository
-git clone https://github.com/nicotem/qualcoder_mcp.git
-cd qualcoder_mcp
+git clone https://github.com/nicotem/exegete.git
+cd exegete
 
 # Create virtual environment
 python3 -m venv venv
@@ -59,7 +60,7 @@ You can find it by:
 ```bash
 # Get Python path (while virtual environment is active)
 which python
-# Example output: /Users/yourname/Documents/qualcoder_mcp/venv/bin/python
+# Example output: /Users/yourname/Documents/exegete/venv/bin/python
 
 # Get your username
 whoami
@@ -80,11 +81,11 @@ Or via Claude Desktop: Settings > Developer > Edit Config
 ```json
 {
   "mcpServers": {
-    "qualcoder": {
-      "command": "/Users/yourname/Documents/qualcoder_mcp/venv/bin/python",
-      "args": ["-m", "qualcoder_mcp.server"],
+    "exegete": {
+      "command": "/Users/yourname/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"],
       "env": {
-        "QUALCODER_PROJECT_PATH": "/Users/yourname/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/yourname/Documents/QualCoder_projects/MyProject/MyProject.qda"
       }
     }
   }
@@ -123,8 +124,8 @@ When a new version is released: `cd` into the cloned folder, run
 `git pull`, then `venv/bin/pip install -e .`, and **fully quit and
 relaunch your Claude client**; new tools only appear after the
 restart. Confirm the installed version with `venv/bin/python -m
-qualcoder_mcp.server --version`, which prints the version and exits
-(`venv/bin/pip show qualcoder-mcp` still works and spells
+exegete.server --version`, which prints the version and exits
+(`venv/bin/pip show exegete` still works and spells
 `0.14.0-alpha` as `0.14.0a0`). Updates never touch your projects or
 backups (the server is code-only).
 
@@ -143,10 +144,10 @@ If Claude can't connect:
 ### Test the Server Manually
 
 ```bash
-cd ~/Documents/qualcoder_mcp
+cd ~/Documents/exegete
 source venv/bin/activate
-export QUALCODER_PROJECT_PATH="/path/to/your/project.qda"
-python -m qualcoder_mcp.server
+export EXEGETE_PROJECT_PATH="/path/to/your/project.qda"
+python -m exegete.server
 ```
 
 You should see it start without errors. Press Ctrl+C to stop.
@@ -155,7 +156,7 @@ You should see it start without errors. Press Ctrl+C to stop.
 
 **"No Qualcoder project selected"**
 - The server has no project open. With the fixed-project config above,
-  make sure the `env` section has `QUALCODER_PROJECT_PATH` and check
+  make sure the `env` section has `EXEGETE_PROJECT_PATH` and check
   for typos in the variable name; otherwise ask Claude to list and
   select a project (the error also names the last project used on this
   machine when it still exists, so one `select_project` call recovers)
@@ -183,7 +184,7 @@ Once it's working:
 - Check the [troubleshooting section of INSTALL.md](INSTALL.md#troubleshooting)
 - Review [MCP documentation](https://modelcontextprotocol.io/)
 - Check [Qualcoder documentation](https://github.com/ccbogel/QualCoder/wiki)
-- Bug reports, questions and feature ideas: [GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues)
+- Bug reports, questions and feature ideas: [GitHub Issues](https://github.com/nicotem/exegete/issues)
   (the only support channel; support requests by email will not receive a reply; see [SUPPORT.md](SUPPORT.md))
 
 Happy analysing! 🎉

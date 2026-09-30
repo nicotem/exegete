@@ -726,7 +726,7 @@ class TestTheDocumentsSayTheRule:
         assert ("Since v0.14 neither carries SQLite's message: an error "
                 "from the database is reported by its kind and SQLite's "
                 "short name for it") in privacy
-        assert ("The same rule holds for the resources (the `qualcoder://` "
+        assert ("The same rule holds for the resources (the `exegete://` "
                 "addresses)") in privacy
 
     def test_install_no_longer_says_the_log_quotes_a_note(self):
@@ -836,7 +836,7 @@ class TestNoNamesOrPathsInTheLog:
         assert MARK not in printed.err + printed.out
         assert "QUALCODER_PROJECT_PATH was not found" in printed.err
         assert _log_names(caplog) == []
-        assert ("Starting Qualcoder MCP server with the project set in "
+        assert ("Starting Exegete with the project set in "
                 "QUALCODER_PROJECT_PATH") in _logged(caplog)
 
     def _backups(self, marked):

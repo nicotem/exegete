@@ -670,7 +670,7 @@ class TestSwitchingAndHistory:
         after = json.loads(path.read_text(encoding="utf-8"))
         assert after["researcher_note"] == "do not delete"
         assert "unknown_inside" not in after["ai_coder_name"]
-        assert after["written_by"].startswith("qualcoder-mcp ")
+        assert after["written_by"].startswith("exegete ")
         assert after["updated"] == after["ai_coder_name"]["set_at"]
 
     def test_get_current_project_echoes_twenty_entries_and_the_total(

@@ -88,8 +88,9 @@ UNREADABLE_MESSAGE = (
 
 NEWER_FORMAT_MESSAGE = (
     "The AI coder name file for this project (qualcoder_mcp.json in the "
-    "project folder) was written by a newer version of qualcoder-mcp and "
-    "this one cannot write it safely. Upgrade qualcoder-mcp, or ask the "
+    "project folder) was written by a newer version of this server "
+    f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
+    f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
     "user to move the file aside; the next write will then ask for the "
     "name again. Nothing was written.")
 
@@ -403,7 +404,7 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
     payload: Dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
     payload["format"] = SIDECAR_FORMAT
     payload["format_version"] = SIDECAR_FORMAT_VERSION
-    payload["written_by"] = f"qualcoder-mcp {_package_version()}"
+    payload["written_by"] = f"{names.DISTRIBUTION} {_package_version()}"
     payload["updated"] = entry["set_at"]
     payload["ai_coder_name"] = entry
     payload["ai_coder_name_history"] = history

@@ -182,7 +182,8 @@ class TestTheFilesShip:
         grant, heading, _ = notice.partition("Code derived from QualCoder")
         assert heading, "NOTICE lacks its 'Code derived from QualCoder' part"
         grant = " ".join(grant.split())
-        assert "qualcoder-mcp is free software" in grant
+        # v0.14.1: the program's new name, and the earlier one beside it
+        assert "Exegete (formerly qualcoder-mcp) is free software" in grant
         assert f"(SPDX: {EXPRESSION})" in grant
 
     # The owner's wording of 2026-09-24 on the releases already

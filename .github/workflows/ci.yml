@@ -219,6 +219,22 @@ jobs:
           mkdir -p "$home"
           HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/extension-app" --expect-tools manifest --create "Pilot study" --offline-restart
 
+      # v0.14.1, the rename: the update from the published 0.14.0 package,
+      # both ways the app may make it: over the old folder with its
+      # environment in place, and into the folder emptied first. The
+      # script checks both land in the same folder (the identifier) and
+      # that the server lists the manifest's tools.
+      - name: Update over the published 0.14.0 package, both ways
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/old.mcpb" https://github.com/nicotem/qualcoder_mcp/releases/download/v0.14.0-alpha/qualcoder-mcp-0.14.0-alpha.mcpb
+          for way in kept emptied; do
+            home="$RUNNER_TEMP/update-home-$way"
+            mkdir -p "$home"
+            flag=""; [ "$way" = emptied ] && flag="--emptied"
+            HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/update-app-$way" --over "$RUNNER_TEMP/old.mcpb" $flag --expect-tools manifest
+          done
+
   desktop-extension-same:
     name: desktop extension, the same bytes on every platform
     needs: desktop-extension

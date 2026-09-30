@@ -40,7 +40,7 @@ default:
 ```
 
 Otherwise it is `~/Documents/Qualcoder MCP Projects/`, unless the host
-sets another folder with `QUALCODER_MCP_WORKSPACE`. Either way, the
+sets another folder with `EXEGETE_WORKSPACE`. Either way, the
 answer to `copy_project_to_workspace` (and to `create_project`) gives
 the full path: use that one.
 
@@ -620,7 +620,7 @@ Load session abc123 and show me the suggestions
 ```
 
 The server keeps the session in a file of its own
-(`~/.qualcoder_mcp/sessions/`), not in the chat:
+(`~/.exegete/sessions/`), not in the chat:
 - All suggestions
 - Your approvals/rejections
 - Session details
@@ -687,7 +687,7 @@ Copy the project at <path> to the workspace   (copy_project_to_workspace;
 Backups are in the same folder as your workspace projects (the
 workspace: with the Claude Desktop extension `~/QualCoder projects/` by
 default, otherwise `~/Documents/Qualcoder MCP Projects/`, unless the
-host set another with `QUALCODER_MCP_WORKSPACE`):
+host set another with `EXEGETE_WORKSPACE`):
 ```
 ~/QualCoder projects/ProjectName_backup_TIMESTAMP.qda
 ```
@@ -769,12 +769,12 @@ made.
 **Solution:**
 The workspace is the folder the answer to `copy_project_to_workspace`
 named. With the Claude Desktop extension it is the extension's "Folder
-for projects" (Settings, Extensions, qualcoder-mcp), by default:
+for projects" (Settings, Extensions, Exegete), by default:
 ```
 /Users/YOUR_NAME/QualCoder projects/
 ```
 Otherwise it is `/Users/YOUR_NAME/Documents/Qualcoder MCP Projects/`,
-unless the host sets another folder with `QUALCODER_MCP_WORKSPACE`. A
+unless the host sets another folder with `EXEGETE_WORKSPACE`. A
 project of the same name in the other folder is an older copy (from an
 earlier install, say): open the one in the workspace.
 
@@ -819,7 +819,7 @@ Or manually in QualCoder:
 **Solution:**
 Session files are stored at:
 ```
-~/.qualcoder_mcp/sessions/session_ID.json
+~/.exegete/sessions/session_ID.json
 ```
 
 - Check if file exists

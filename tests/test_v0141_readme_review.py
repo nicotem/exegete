@@ -47,7 +47,7 @@ def test_the_readme_says_what_it_is_not():
             "project files; it contains a small number of routines and "
             "values taken from QualCoder so that its results match "
             "QualCoder's exactly, and [NOTICE](https://github.com/nicotem/"
-            "qualcoder_mcp/blob/main/NOTICE) lists them") in readme
+            "exegete/blob/main/NOTICE) lists them") in readme
     assert "QualCoder need not be running while you work" in readme
     # The opening no longer describes a connector
     assert "A Model Context Protocol (MCP) server that connects" \
@@ -100,7 +100,7 @@ def test_the_private_part_is_stated_for_this_server_only():
     readme = _flat("README.md")
     data = readme[readme.index("## Where your data goes"):
                   readme.index("## Start here")]
-    assert ("qualcoder-mcp never passes the part of a memo from a `#####` "
+    assert ("Exegete never passes the part of a memo from a `#####` "
             "mark onward (QualCoder's mark for a private note) to the "
             "assistant, whichever QualCoder made the project.") in data
     assert ("exported files keep the whole memo, private part "
@@ -134,7 +134,7 @@ def test_the_unreleased_entry_records_it_for_this_project_only():
     changelog = _flat("CHANGELOG.md")
     unreleased = changelog[changelog.index("## [Unreleased]"):
                            changelog.index("## [0.14.0-alpha]")]
-    assert ("README and PRIVACY.md now say only what qualcoder-mcp does "
+    assert ("README and PRIVACY.md now say only what Exegete does "
             "with the part of a memo after `#####`; they no longer speak "
             "for QualCoder's own AI features. PRIVACY.md no longer says "
             "QualCoder 4.0 introduced the mark: 3.8.2 has it.") in unreleased
@@ -174,11 +174,11 @@ def test_the_three_commitments():
         assert heading in section, heading
     assert ("It is not yet a fact: today the two differ in both "
             "directions") in section
-    dated = section.index("Checked on 29 September 2026, qualcoder-mcp "
-                          "0.14.0 against QualCoder 3.8.2 and the 4.0-Beta "
-                          "pre-release:")
+    dated = section.index("Checked on 29 September 2026, this program's "
+                          "0.14.0 (then called qualcoder-mcp) against "
+                          "QualCoder 3.8.2 and the 4.0-Beta pre-release:")
     table = section.index("| | In QualCoder | From the conversation, with "
-                          "qualcoder-mcp |")
+                          "Exegete |")
     assert dated < table
     # The table's agreement row keeps the server's own caveat
     assert ("set against the AI coder name it is not agreement between "
@@ -233,10 +233,12 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
     stance = _stance(readme)
     assert ("This project welcomes QualCoder's own server, and is ready "
             "to cooperate with QualCoder's developers.") in stance
-    assert ("qualcoder-mcp has an aim of its own: that a whole project, "
-            "from its creation to the finished analysis, can be run from "
-            "the conversation, with QualCoder as a companion that opens "
-            "the same project at any time.") in stance
+    # The tone check of 29 September: the aim has a person in it
+    assert ("Exegete has an aim of its own: that you can run a whole "
+            "project, from its creation to the finished analysis, from the "
+            "conversation, with QualCoder as a companion that opens the "
+            "same project at any time.") in stance
+    assert "can be run from the conversation" not in stance
     # The aim is a direction, and the paragraph says what still needs
     # QualCoder today, pointing to the section that lists it
     assert ("That is a direction, not yet a fact: today QualCoder is "
@@ -246,7 +248,7 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
             "bring in documents") in readme
     # The interoperability commitments, restated
     assert ("the commitments above hold: every project stays a QualCoder "
-            "project, in QualCoder's format; qualcoder-mcp follows "
+            "project, in QualCoder's format; Exegete follows "
             "QualCoder's rules and names any departure with its reason; "
             "and you work on a project in one program at a time.") \
         in stance
@@ -346,7 +348,12 @@ def test_the_folder_keeps_its_name_where_the_code_writes_it():
 
 DOCS = ("README.md", "TOOLS.md", "INSTALL.md", "CONTRIBUTING.md",
         "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
-BLOB = "https://github.com/nicotem/qualcoder_mcp/blob/main/"
+# v0.14.1, the rename: the repository's new address (provisional,
+# decision 1). A link to the old one is reported: GitHub redirects it,
+# but the documents name the new address, and a link this check skips
+# is a link nobody checks.
+BLOB = "https://github.com/nicotem/exegete/blob/main/"
+OLD_ADDRESS = "https://github.com/nicotem/qualcoder_mcp"
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 
 
@@ -377,6 +384,9 @@ def _anchors(name):
 def _broken(text, name):
     broken = []
     for target in LINK.findall(_prose(text)):
+        if target.startswith(OLD_ADDRESS):
+            broken.append(target)
+            continue
         if target.startswith(BLOB):
             target = target[len(BLOB):]
         elif target.startswith(("http://", "https://", "mailto:")):
@@ -417,5 +427,9 @@ def test_the_link_check_would_notice():
     assert _broken("[a](#troubleshooting)", "TOOLS.md")
     assert not _broken("[a](#troubleshooting)", "INSTALL.md")
     assert not _broken(f"[a]({BLOB}TOOLS.md#available-tools)", "README.md")
-    assert not _broken("[a](https://github.com/nicotem/qualcoder_mcp/"
+    assert not _broken("[a](https://github.com/nicotem/exegete/"
                        "releases)", "README.md")
+    assert _broken("[a](https://github.com/nicotem/qualcoder_mcp/"
+                   "releases)", "README.md")
+    assert not _broken(f"[a]({BLOB}INSTALL.md#coming-from-qualcoder-mcp)",
+                       "README.md")

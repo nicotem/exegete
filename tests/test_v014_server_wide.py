@@ -1730,7 +1730,7 @@ class TestHiddenCodersOnTheCodebook:
                            .read_text(encoding="utf-8").split())
         assert ("That mask is a courtesy of the preview, not a guarantee"
                 in privacy)
-        assert "qualcoder://codes/list" in privacy
+        assert "exegete://codes/list" in privacy
         assert "[Merged from code: ..., Coder: ..., Merger date: ...]" in \
             privacy
         # fix rounds 1 and 2: the whole list, and the file view qualified

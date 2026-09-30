@@ -32,6 +32,7 @@ import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
+from . import names
 from .database import (
     MAX_FILE_NAME_BYTES,
     VERIFIED_MASTER_COMMIT,
@@ -206,7 +207,8 @@ def about_line(version: str) -> str:
     word QualCoder's open check looks for ("QualCoder", with that
     capitalisation: both builds refuse a project whose `about` lacks
     it). QualCoder shows it and tests it, and reads nothing else in it."""
-    return f"qualcoder-mcp {version} (QualCoder schema {SCHEMA_VERSION})"
+    return (f"{names.SERVER_NAME} {version} "
+            f"(QualCoder schema {SCHEMA_VERSION})")
 
 
 def creation_date(now: Optional[datetime.datetime] = None) -> str:

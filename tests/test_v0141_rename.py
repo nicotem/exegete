@@ -131,3 +131,106 @@ class TestTheExtensionKeepsItsIdentity:
     def test_the_build_names_its_files_from_the_stem(self):
         assert build.PACKAGE_FILE_STEM == names.DISTRIBUTION
         assert build.PACKAGE == f"src/{names.PACKAGE}"
+
+
+class TestTheExtensionsIcon:
+    """The build places an `icon` the template names and carries the
+    file (v0.14.1); no icon ships until the owner confirms the mark
+    (decision 11), and the build works without one."""
+
+    def _copy(self, tmp_path):
+        copy = tmp_path / "tree"
+        for name in ("pyproject.toml", "uv.lock", "README.md", "NOTICE",
+                     "COPYING.LESSER", "legal/GPL-3.0.txt", build.TEMPLATE):
+            (copy / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, copy / name)
+        shutil.copytree(REPO / build.PACKAGE, copy / build.PACKAGE,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+        return copy
+
+    def test_without_an_icon_there_is_none(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(build, "list_tools", lambda files: [])
+        manifest, files = build.bundle(build.TreeSource(self._copy(tmp_path)))
+        assert "icon" not in manifest
+        assert not [n for n in files if n.endswith(".png")]
+
+    def test_an_icon_the_template_names_is_placed_and_carried(
+            self, tmp_path, monkeypatch):
+        copy = self._copy(tmp_path)
+        template = json.loads((copy / build.TEMPLATE).read_text(
+            encoding="utf-8"))
+        template["icon"] = "icon.png"
+        (copy / build.TEMPLATE).write_text(json.dumps(template),
+                                           encoding="utf-8")
+        png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+        (copy / build.ICON_FOLDER / "icon.png").write_bytes(png)
+        monkeypatch.setattr(build, "list_tools", lambda files: [])
+        manifest, files = build.bundle(build.TreeSource(copy))
+        assert manifest["icon"] == "icon.png"
+        assert files["icon.png"] == png
+
+    def test_an_icon_that_is_not_a_png_name_is_refused(self, tmp_path,
+                                                       monkeypatch):
+        copy = self._copy(tmp_path)
+        template = json.loads((copy / build.TEMPLATE).read_text(
+            encoding="utf-8"))
+        template["icon"] = "../secret.txt"
+        (copy / build.TEMPLATE).write_text(json.dumps(template),
+                                           encoding="utf-8")
+        monkeypatch.setattr(build, "list_tools", lambda files: [])
+        with pytest.raises(build.BuildError, match="PNG"):
+            build.bundle(build.TreeSource(copy))
+
+    def test_the_shown_name_is_exegete(self):
+        template = json.loads((REPO / build.TEMPLATE).read_text(
+            encoding="utf-8"))
+        # PROVISIONAL: decision 2 ("Exegete" rather than "Exegete for
+        # QualCoder"); the identifier stays qualcoder-mcp either way
+        assert template["display_name"] == "Exegete"
+        assert template["long_description"].startswith(
+            "Exegete (formerly qualcoder-mcp) lets Claude open")
+        assert "github.com/nicotem/exegete/" in template["documentation"]
+
+
+class TestTheSmokeScriptUpdatesAsTheAppMay:
+    """scripts/smoke_desktop_extension.py --over installs an earlier
+    package and then this one into the same folder: with its environment
+    in place, or with the folder emptied first (--emptied). CI runs both
+    over the published 0.14.0 package."""
+
+    @staticmethod
+    def _package(path, version, extra):
+        import zipfile
+        manifest = {"name": "qualcoder-mcp", "version": version,
+                    "author": {"name": "Niccolò Tempini"}}
+        with zipfile.ZipFile(path, "w") as z:
+            z.writestr("manifest.json", json.dumps(manifest))
+            z.writestr(extra, "x")
+        return path
+
+    def _install_both(self, tmp_path, monkeypatch, keep):
+        monkeypatch.setattr(smoke.subprocess, "run",
+                            lambda *a, **k: None)          # no uv sync
+        old = self._package(tmp_path / "old.mcpb", "0.14.0-alpha",
+                            "src/qualcoder_mcp/server.py")
+        new = self._package(tmp_path / "new.mcpb", "0.14.1-alpha",
+                            "src/exegete/server.py")
+        into = tmp_path / "app"
+        _, folder = smoke.install(old, into, "uv")
+        (folder / ".venv").mkdir()                 # the environment
+        manifest, again = smoke.install(new, into, "uv", keep=keep)
+        return folder, again
+
+    def test_kept_the_environment_stays(self, tmp_path, monkeypatch):
+        folder, again = self._install_both(tmp_path, monkeypatch, True)
+        assert again == folder
+        assert folder.name == "local.mcpb.niccol-tempini.qualcoder-mcp"
+        assert (folder / ".venv").is_dir()
+        assert (folder / "src" / "exegete" / "server.py").is_file()
+
+    def test_emptied_nothing_of_the_old_is_left(self, tmp_path,
+                                                 monkeypatch):
+        folder, again = self._install_both(tmp_path, monkeypatch, False)
+        assert again == folder
+        assert not (folder / ".venv").exists()
+        assert not (folder / "src" / "qualcoder_mcp").exists()

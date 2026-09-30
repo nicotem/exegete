@@ -149,7 +149,7 @@ def test_the_documents_count_the_tools_the_server_registers():
     # v0.14's release preparation: the default when configured by hand;
     # the desktop extension's own default is `lifecycle`
     assert f"(the default when you configure the server yourself, " \
-           f"`QUALCODER_MCP_TOOLSET=full`; the Claude Desktop extension " \
+           f"`EXEGETE_TOOLSET=full`; the Claude Desktop extension " \
            f"defaults to `lifecycle`) registers {count} tools" \
         in _flat("TOOLS.md")
     install = _flat("INSTALL.md")

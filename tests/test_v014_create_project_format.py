@@ -124,8 +124,11 @@ class TestFirstRows:
     def test_the_about_line_passes_qualcoders_check(self):
         """QualCoder's open check: 'QualCoder' in about, case-sensitive."""
         assert "QualCoder" in ABOUT
-        assert ABOUT == "qualcoder-mcp 0.14.0 (QualCoder schema v17)"
-        assert "QualCoder" not in "qualcoder-mcp 0.14.0"
+        # v0.14.1: the program's new name, and the word QualCoder checks
+        # still there (projects created earlier keep their own line)
+        assert ABOUT.startswith("Exegete ")
+        assert ABOUT == "Exegete 0.14.0 (QualCoder schema v17)"
+        assert "QualCoder" not in "Exegete 0.14.0"
 
     def test_the_date_is_local_time_to_the_second(self):
         assert DATE_RE.match(new_project.creation_date())

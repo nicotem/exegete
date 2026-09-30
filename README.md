@@ -1,18 +1,19 @@
-# qualcoder-mcp
+# Exegete
 
 **A qualitative analysis session, run as a conversation, on a QualCoder
 project.**
 
-qualcoder-mcp is a growing suite of tools for qualitative analysis that
-works directly on [QualCoder](https://github.com/ccbogel/QualCoder)
-projects (QualCoder is a free program for qualitative data analysis).
+Exegete (formerly qualcoder-mcp) is a growing suite of tools for
+qualitative analysis that works directly on
+[QualCoder](https://github.com/ccbogel/QualCoder) projects (QualCoder
+is a free program for qualitative data analysis).
 It is its own software: it runs on your computer, reads and writes
 QualCoder's project format, follows QualCoder's rules wherever the two
 must agree, and adds tools of its own for working with an AI assistant.
 Your project stays a QualCoder project, and QualCoder opens it. You use
-qualcoder-mcp from an AI assistant such as Claude Desktop; the Model
-Context Protocol (MCP) in its name is only the standard way an
-assistant reaches tools on your computer. You ask in your own words,
+Exegete from an AI assistant such as Claude Desktop; it is an MCP
+server, and the Model Context Protocol (MCP) is only the standard way
+an assistant reaches tools on your computer. You ask in your own words,
 and the assistant uses the tools to do it: start a project, bring in
 transcripts, suggest codings for the files you choose, compare two
 coders, replace participants' names and export reports. The assistant
@@ -26,18 +27,18 @@ or endorsed by QualCoder's developers (QualCoder is free software by
 Colin Curtain and contributors). It is a separate program that reads
 and writes QualCoder project files; it contains a small number of
 routines and values taken from QualCoder so that its results match
-QualCoder's exactly, and [NOTICE](https://github.com/nicotem/qualcoder_mcp/blob/main/NOTICE)
+QualCoder's exactly, and [NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE)
 lists them, with where each comes from.
 
 It is an experimental early version (an alpha), built by one
 researcher. Questions, problems and ideas go to
-[GitHub Issues](https://github.com/nicotem/qualcoder_mcp/issues) (a
+[GitHub Issues](https://github.com/nicotem/exegete/issues) (a
 free GitHub account is needed), not email. Never put participant data
 in an issue.
 
 ## Where your data goes
 
-qualcoder-mcp runs on your computer, has no online service of its own
+Exegete runs on your computer, has no online service of its own
 and sends nothing anywhere itself. What the assistant reads through it
 (passages, codes, memos, names) becomes part of the conversation and
 goes to the AI provider behind your assistant: Anthropic for Claude
@@ -45,7 +46,7 @@ Desktop and Claude's other apps, and no outside provider at all with a
 fully local model, which needs another assistant, such as LM Studio,
 set up by the Terminal route (installing by typing commands, as
 INSTALL.md shows; Experimental: no local model has yet been evaluated
-with qualcoder-mcp). Text you bring in through the conversation (pasted
+with Exegete). Text you bring in through the conversation (pasted
 or attached, then imported) goes to the provider in full; a file you
 import in QualCoder does not, only what the assistant later reads of
 it.
@@ -55,7 +56,7 @@ waiting for your review, and Claude Desktop's own log of the extension
 (which keeps a copy of every request and answer, names and quoted text
 included; INSTALL.md says where) stay on your computer, unless they are
 in a folder that iCloud, OneDrive or another sync service copies.
-qualcoder-mcp never passes the part of a memo from a `#####` mark
+Exegete never passes the part of a memo from a `#####` mark
 onward (QualCoder's mark for a private note) to the assistant,
 whichever QualCoder made the project. The mark works in memos,
 annotations and journal entries, not in the text of a transcript, and
@@ -63,7 +64,7 @@ exported files keep the whole memo, private part included. Replacing
 names reduces the risk; it does not make anyone anonymous.
 
 Which provider, and under which terms, is decided by your assistant and
-your account, not by qualcoder-mcp. On a personal Claude plan (Free,
+your account, not by Exegete. On a personal Claude plan (Free,
 Pro or Max), open https://claude.ai/settings/data-privacy-controls and
 check the Model Improvement setting yourself (Anthropic's consumer
 terms allow training on your conversations "unless you opt out of
@@ -71,7 +72,7 @@ training through your account settings"; PRIVACY.md quotes them, with
 the exceptions) before you use participant data. On an account your
 university or employer provides, ask whoever manages it which terms
 apply.
-[PRIVACY.md](https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md)
+[PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)
 quotes the terms, and covers consent, institutional accounts and fully
 local models: read it before you use participant data.
 
@@ -89,7 +90,7 @@ local models: read it before you use participant data.
   exist.
 - **QualCoder is recommended from the start, and needed** to bring in
   documents (Word, PDF, images, audio, video) and any text you would
-  rather not pass through the conversation (qualcoder-mcp imports only
+  rather not pass through the conversation (Exegete imports only
   text the assistant hands it); to see the coding highlighted in the
   text; to code images, audio, video or an area of a PDF page; for
   graphs; and for the reports in its Reports menu.
@@ -98,17 +99,17 @@ local models: read it before you use participant data.
   Windows or a Mac with Apple Silicon (M1 or later; QualCoder offers no
   download for older Intel Macs). Its notes on that page say how to
   open it the first time. The "4.0-Beta" at the top also works, but it
-  is a test version, and qualcoder-mcp cannot tell when it has your
+  is a test version, and Exegete cannot tell when it has your
   project open (see "One program at a time" below).
 - **The Terminal route**
-  ([INSTALL.md](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md))
+  ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md))
   needs Python 3.10 or newer. Its standard tool set, `full`, cannot
   create a project: use a project made in QualCoder, or switch project
   creation on as INSTALL.md shows.
 - **Projects** from QualCoder 3.8.2 and the 4.0 beta work (see "Three
   commitments" below). A project from a QualCoder older than 3.8 must
   be opened once in QualCoder 3.8 or newer, which updates it as it
-  opens, and closed again before qualcoder-mcp can change it (the
+  opens, and closed again before Exegete can change it (the
   oldest formats cannot even be read before that).
 
 ### Claude Desktop, with one click
@@ -117,10 +118,10 @@ local models: read it before you use participant data.
    (macOS or Windows), not Claude in a web browser or on a phone:
    https://claude.ai/download. Sign in.
 2. **Download the extension.** Open the
-   [Releases page](https://github.com/nicotem/qualcoder_mcp/releases)
+   [Releases page](https://github.com/nicotem/exegete/releases)
    and take the release at the top (every release of this alpha is
    marked Pre-release). Under its Assets, download the file whose name
-   ends in `.mcpb` (for example `qualcoder-mcp-0.14.0-alpha.mcpb`), not
+   ends in `.mcpb` (for example `exegete-0.14.1-alpha.mcpb`), not
    "Source code".
 3. **Install it.** Double-click the file (if Claude does not open, drag
    the file onto Claude's window). Claude Desktop shows its usual
@@ -129,12 +130,12 @@ local models: read it before you use participant data.
    needs (a minute or two, online). No Terminal, no configuration file.
 
 To check: start a new conversation, click "+", then Connectors:
-qualcoder-mcp is listed. Claude asks before it uses a tool; "Allow
+Exegete is listed. Claude asks before it uses a tool; "Allow
 once" keeps it asking ("What it does", below, says why that matters).
 
 The extension is not signed by its developer; a computer or Claude
 account managed by your university or employer may refuse it.
-[INSTALL.md, "Claude Desktop: the one-click extension"](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md#claude-desktop-the-one-click-extension-recommended)
+[INSTALL.md, "Claude Desktop: the one-click extension"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#claude-desktop-the-one-click-extension-recommended)
 says what you will see then, and what the extension's two settings do.
 
 ### A first session
@@ -148,13 +149,13 @@ in your home folder (the one named after you), not in Documents, which
 iCloud or OneDrive may sync. QualCoder 3.8.2 opens it too, but shows a
 code made under another code as an ordinary code; before you move such
 a project between 3.8.2 and 4.0, read
-["Opening it in QualCoder" in TOOLS.md](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental).
+["Opening it in QualCoder" in TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental).
 Claude asks for the coder name you use in QualCoder (in QualCoder's
 Project menu, Settings, where it says "Current coder"; on a Mac it may
 be under the QualCoder menu instead), so that what is coded through the
 conversation is kept apart from what you code in QualCoder; if you do
 not use QualCoder yet, say so, and the project is still created.
-[TOOLS.md, "Starting a project from the conversation"](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental)
+[TOOLS.md, "Starting a project from the conversation"](https://github.com/nicotem/exegete/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental)
 has the rules.
 
 To see it in QualCoder: Project, Open Project, and choose
@@ -180,25 +181,28 @@ once the project is opened again.
 **Other assistants.** Claude Code, LM Studio (fully local) and other
 MCP hosts (assistants that can use MCP tools), and Claude Desktop set
 up by hand, take the Terminal route:
-[INSTALL.md](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md)
+[INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)
 has each.
 
-**Updating.** Updates are manual, and qualcoder-mcp does not look for
+**Updating.** Updates are manual, and Exegete does not look for
 new versions itself: look at the Releases page now and then (with a
 GitHub account, Watch, then Custom, then Releases, sends you a notice
 of each). Install the newer `.mcpb` the same way. An update never
-touches your projects.
+touches your projects. If you used this program as qualcoder-mcp,
+nothing you set up stops working:
+[INSTALL.md, "Coming from qualcoder-mcp"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp)
+says what changed and what you may change.
 
 ## What it does that QualCoder does not
 
 QualCoder has AI features of its own: in 3.8.2 an AI chat, and an AI
 search that finds passages for you to code; in the 4.0 beta, an
 assistant that changes the project from inside QualCoder's window,
-within the AI permission you set there. qualcoder-mcp is built so that
+within the AI permission you set there. Exegete is built so that
 a whole session can happen in the conversation; today much of it can,
 with QualCoder closed ("What you need" above says what still needs
 QualCoder), and QualCoder opens the same project at any time.
-qualcoder-mcp adds:
+Exegete adds:
 
 - **Suggestions that wait for your decision.** Each suggested coding is
   checked to quote the file's text word for word and recorded with the
@@ -207,7 +211,7 @@ qualcoder-mcp adds:
   reason. Suggested codings, and proposed codes, wait in a review list
   outside the project and are written only once approved in the
   conversation. The assistant passes your decisions on:
-  qualcoder-mcp records the approval the assistant reports and cannot
+  Exegete records the approval the assistant reports and cannot
   tell whether you gave it. So keep your assistant asking before each
   change ("allow once" for the tools that decide and write:
   `update_suggestion_status`, `update_proposal_status`, `apply_codings`
@@ -233,25 +237,25 @@ qualcoder-mcp adds:
 
 ## Three commitments
 
-**Compatibility with QualCoder.** qualcoder-mcp reads and writes
+**Compatibility with QualCoder.** Exegete reads and writes
 projects from QualCoder 3.8.2, the current release (project format v14),
 from the QualCoder 4.0 beta (format v17), and in the formats between
 (QualCoder's own format numbers; you need not know them). What a
 project supports is read from the project itself, not from a version
 number, and a project in a newer format is not written to until
-qualcoder-mcp has been checked against it. Where QualCoder has a rule,
-qualcoder-mcp follows it, and any departure is named with its reason.
-[TOOLS.md, "Supported QualCoder versions"](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#supported-qualcoder-versions)
+Exegete has been checked against it. Where QualCoder has a rule,
+Exegete follows it, and any departure is named with its reason.
+[TOOLS.md, "Supported QualCoder versions"](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)
 has the detail, including what differs with the 4.0 beta.
 
 **Symmetry: the same work in either place, as a commitment.** The aim
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
 directions, and each release moves rows. Checked on 29 September 2026,
-qualcoder-mcp 0.14.0 against QualCoder 3.8.2 and the 4.0-Beta
-pre-release:
+this program's 0.14.0 (then called qualcoder-mcp) against QualCoder
+3.8.2 and the 4.0-Beta pre-release:
 
-| | In QualCoder | From the conversation, with qualcoder-mcp |
+| | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
 | Create a project | Yes | Yes, in the extension's default tool set (Experimental; from 0.14) |
 | Import sources | Text, documents, PDFs, images, audio, video | Text the assistant hands over |
@@ -268,16 +272,16 @@ pre-release:
 
 **Interoperability.** Work on a project in QualCoder and from the
 conversation, one at a time: close the project in QualCoder before the
-assistant changes it. qualcoder-mcp refuses to write while a released
+assistant changes it. Exegete refuses to write while a released
 QualCoder (3.8.2) has the project open; the 4.0 beta leaves no reliable
 sign, so there it can only warn, and an open 4.0 window shows
-qualcoder-mcp's changes only after the project is opened again.
+Exegete's changes only after the project is opened again.
 QualCoder's own export (Project, Export, REFI-QDA Project export)
 writes the exchange file other analysis packages read. If you edit
 transcripts in QualCoder 3.8.2's coding view, read
-[its edit-mode caution](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution)
+[its edit-mode caution](https://github.com/nicotem/exegete/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution)
 first: in that version, leaving edit mode after changing a text can
-delete codings near its new end, whether or not qualcoder-mcp is used.
+delete codings near its new end, whether or not Exegete is used.
 
 **QualCoder's own MCP server** (checked 29 September 2026). QualCoder
 4.0's assistant works through an MCP server built into QualCoder. In
@@ -289,43 +293,43 @@ it to MCP hosts on the same computer while QualCoder runs, for the
 project open in QualCoder. It is on QualCoder's development version and
 in no release yet; its author, kaixxx, proposes that QualCoder release
 an official MCP server with QualCoder 4.0's final release.
-[TOOLS.md, "Supported QualCoder versions"](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md#supported-qualcoder-versions)
+[TOOLS.md, "Supported QualCoder versions"](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)
 gives the commits these facts were read at.
 
 This project welcomes QualCoder's own server, and is ready to
-cooperate with QualCoder's developers. qualcoder-mcp has an aim of its
-own: that a whole project, from its creation to the finished analysis,
-can be run from the conversation, with QualCoder as a companion that
+cooperate with QualCoder's developers. Exegete has an aim of its own:
+that you can run a whole project, from its creation to the finished
+analysis, from the conversation, with QualCoder as a companion that
 opens the same project at any time. That is a direction, not yet a
 fact: today QualCoder is still needed for several things, among them
 bringing in documents, coding images, audio and video, and graphs
 ("What you need, at each stage", above, lists them). On the way there,
 the commitments above hold: every project stays a QualCoder project,
-in QualCoder's format; qualcoder-mcp follows QualCoder's rules and
+in QualCoder's format; Exegete follows QualCoder's rules and
 names any departure with its reason; and you work on a project in one
 program at a time.
 
 ## Read next
 
-- [INSTALL.md](https://github.com/nicotem/qualcoder_mcp/blob/main/INSTALL.md):
+- [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md):
   every way to install and set up, choosing your AI host, updating, and
   what to do when it does not start.
-- [TOOLS.md](https://github.com/nicotem/qualcoder_mcp/blob/main/TOOLS.md):
+- [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md):
   every tool, what it reads and writes, how the tools follow QualCoder's
   conventions, and example requests.
-- [AI_CODING_GUIDE.md](https://github.com/nicotem/qualcoder_mcp/blob/main/AI_CODING_GUIDE.md)
-  and [AI_CODING_WORKFLOW.md](https://github.com/nicotem/qualcoder_mcp/blob/main/AI_CODING_WORKFLOW.md):
+- [AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md)
+  and [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md):
   the coding loop, with example conversations.
-- [PRIVACY.md](https://github.com/nicotem/qualcoder_mcp/blob/main/PRIVACY.md):
+- [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md):
   where your data goes, in full.
-- [CHANGELOG.md](https://github.com/nicotem/qualcoder_mcp/blob/main/CHANGELOG.md):
+- [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md):
   what changed in each release.
-- [CONTRIBUTING.md](https://github.com/nicotem/qualcoder_mcp/blob/main/CONTRIBUTING.md):
+- [CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md):
   reporting problems, proposing changes, and how the project is built
   and tested.
-- [SUPPORT.md](https://github.com/nicotem/qualcoder_mcp/blob/main/SUPPORT.md):
+- [SUPPORT.md](https://github.com/nicotem/exegete/blob/main/SUPPORT.md):
   GitHub Issues only.
-- [NOTICE](https://github.com/nicotem/qualcoder_mcp/blob/main/NOTICE):
+- [NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE):
   every routine, value and fact of the file format taken from QualCoder.
 
 ## What comes next
@@ -342,7 +346,7 @@ program at a time.
   by position
 - Later: coding images, audio, video and areas of PDF pages; more work
   alongside QualCoder 4.0; and changes testers ask for
-  ([file yours](https://github.com/nicotem/qualcoder_mcp/issues))
+  ([file yours](https://github.com/nicotem/exegete/issues))
 
 ## Disclaimer
 
@@ -350,11 +354,11 @@ This software is provided "as is", without warranty of any kind, express or impl
 
 ## Licence
 
-From v0.13, qualcoder-mcp is licensed under the GNU Lesser General Public License, version 3 or (at your option) any later version (`LGPL-3.0-or-later`), which is QualCoder's own licence. The licence texts are [COPYING.LESSER](https://github.com/nicotem/qualcoder_mcp/blob/main/COPYING.LESSER) and the GNU General Public License, version 3, which the Lesser licence incorporates: [legal/GPL-3.0.txt](https://github.com/nicotem/qualcoder_mcp/blob/main/legal/GPL-3.0.txt) in this repository, and the same text at [https://www.gnu.org/licenses/gpl-3.0.txt](https://www.gnu.org/licenses/gpl-3.0.txt).
+From v0.13, Exegete is licensed under the GNU Lesser General Public License, version 3 or (at your option) any later version (`LGPL-3.0-or-later`), which is QualCoder's own licence. The licence texts are [COPYING.LESSER](https://github.com/nicotem/exegete/blob/main/COPYING.LESSER) and the GNU General Public License, version 3, which the Lesser licence incorporates: [legal/GPL-3.0.txt](https://github.com/nicotem/exegete/blob/main/legal/GPL-3.0.txt) in this repository, and the same text at [https://www.gnu.org/licenses/gpl-3.0.txt](https://www.gnu.org/licenses/gpl-3.0.txt).
 
 Every release up to and including 0.12.1 was published under the MIT License, and this project's own code in those releases remains available under those terms. Those releases also contained some of the QualCoder-derived items NOTICE lists; those items were always under QualCoder's licence, LGPL-3.0-or-later, whatever those releases declared.
 
-qualcoder-mcp is a separate program that reads and writes QualCoder project files. It does not include QualCoder, but it contains code derived from QualCoder: a small number of routines and values taken from QualCoder so that its results match QualCoder's exactly. [NOTICE](https://github.com/nicotem/qualcoder_mcp/blob/main/NOTICE) lists them, with the QualCoder file and lines each comes from.
+Exegete is a separate program that reads and writes QualCoder project files. It does not include QualCoder, but it contains code derived from QualCoder: a small number of routines and values taken from QualCoder so that its results match QualCoder's exactly. [NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE) lists them, with the QualCoder file and lines each comes from.
 
 Nothing changes for anyone who installs and runs the server. The licence's conditions apply only to someone who distributes it, and in practice they matter for a modified version: whoever distributes one must make its source available under the same licence.
 

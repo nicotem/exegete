@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Qualcoder MCP Server - Expose Qualcoder data via Model Context Protocol."""
+"""Exegete (formerly qualcoder-mcp): a QualCoder project exposed to the
+conversation through the Model Context Protocol."""
 
 import errno
 import os
@@ -164,7 +165,7 @@ from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
 # Set up logging. The handler is installed at import, before FastMCP is
 # constructed, so the server's own plain stderr format wins over the rich
 # one FastMCP would otherwise install. Nothing may LOG at import time,
-# though: `qualcoder-mcp --version` and the usage error for an unknown
+# though: `exegete --version` and the usage error for an unknown
 # argument have to answer on their own stream with nothing above them
 # (v0.12 fix round 1, F16), and argument parsing necessarily happens
 # after the module is imported.
@@ -359,7 +360,8 @@ instruction."""
 # The MCP initialize handshake carries an `instructions` string that hosts
 # may show the model (best effort; host behaviour varies). Three sentences.
 SERVER_INSTRUCTIONS = (
-    "qualcoder-mcp exposes a QualCoder project to this conversation. Analysis "
+    f"{names.SERVER_NAME} exposes a QualCoder project to this conversation. "
+    "Analysis "
     "tools expect evidence discipline: base claims on text read through the "
     "tools, quote it verbatim, treat a null result as a valid result, and "
     "judge whether a request is methodologically sound for the study before "
@@ -645,7 +647,7 @@ class _ExegeteMCP(FastMCP):
 
 
 # Initialize MCP server
-mcp = _ExegeteMCP("Qualcoder", instructions=SERVER_INSTRUCTIONS)
+mcp = _ExegeteMCP(names.SERVER_NAME, instructions=SERVER_INSTRUCTIONS)
 # Advertise OUR version in the MCP handshake (serverInfo.version) instead of
 # the mcp SDK's own version, which FastMCP falls back to (track3 L-1). The
 # FastMCP constructor has no version parameter in this SDK line, so set it on
@@ -959,7 +961,7 @@ def _resource_guard(fn):
 
 
 def _host_set_workspace() -> Optional[str]:
-    """The workspace QUALCODER_MCP_WORKSPACE names, as text, or None when
+    """The workspace EXEGETE_WORKSPACE names, as text, or None when
     it is not set (or not usable, which stops the server at start-up)."""
     if not (env_settings.value("workspace") or "").strip() \
             or workspace_setting_problem() is not None:
@@ -1001,7 +1003,7 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
             str(home / "QualCoder"),
             str(home / "Documents"),
         ]
-        # A workspace the host set (QUALCODER_MCP_WORKSPACE, v0.14) is
+        # A workspace the host set (EXEGETE_WORKSPACE, v0.14) is
         # searched first, at its top level only: create_project and
         # copy_project_to_workspace put projects there, and the folder is
         # the researcher's own choice, which may be as wide as the home
@@ -1258,7 +1260,7 @@ def _adopt_configured_project() -> None:
     at its first use, whichever tool comes first (v0.14).
 
     `current_project_path` is set by `select_project`, or by `get_db`
-    when it first connects to the project in `QUALCODER_PROJECT_PATH`.
+    when it first connects to the project in `EXEGETE_PROJECT_PATH`.
     The tools that ask "is a project selected?" before they read
     anything (the three backup tools, `get_current_project`, the AI
     coder name setter, the pseudonym tools, every write's owner check
@@ -2021,7 +2023,7 @@ MAX_AI_CODER_NAME_LENGTH = MAX_CODER_NAME_LENGTH
 def _ai_coder_name() -> str:
     """The configured coder name for rows this server writes.
 
-    Reads QUALCODER_MCP_AI_CODER_NAME; unset means the default. A set
+    Reads EXEGETE_AI_CODER_NAME; unset means the default. A set
     value goes through validate_coder_name, the rule set shared with the
     tool-supplied owner arguments (non-empty after trimming, at most 80
     characters, no control, line-separator or bidirectional formatting
@@ -2088,7 +2090,7 @@ def _ai_user_name_source() -> str:
 # The project's AI coder name: ask once, never guess (v0.12, D7)
 # ---------------------------------------------------------------------------
 # Until v0.12 every row this server wrote carried a MACHINE-wide name, the
-# built-in default or whatever QUALCODER_MCP_AI_CODER_NAME said. That name
+# built-in default or whatever EXEGETE_AI_CODER_NAME said. That name
 # is a research artefact: it is what the researcher will later compare
 # models by, and what tells their own coding from the AI's in QualCoder's
 # coder lists, visibility toggle and reports. So it is the PROJECT's
@@ -2290,7 +2292,8 @@ def _ai_coder_name_report() -> Dict[str, Any]:
     Reads never ask and never refuse: an unset project reports
     `source: "unset"` with a hint, an unreadable one reports
     `source: "unreadable"` with the repair guidance, and a project
-    written by a newer qualcoder-mcp reports `source: "newer_format"`
+    written by a newer version of this server reports
+    `source: "newer_format"`
     with the name when the name itself validates.
     """
     state = read_sidecar(_current_project_folder())
@@ -3105,7 +3108,7 @@ def get_journal_entries() -> str:
 # TOOLS - Operations and queries
 # ============================================================================
 
-METHODS_GUIDANCE = f"""# Methods notes for AI-assisted coding with qualcoder-mcp
+METHODS_GUIDANCE = f"""# Methods notes for AI-assisted coding with {names.SERVER_NAME}
 
 These notes are static guidance. They read nothing from the project.
 
@@ -3415,7 +3418,7 @@ def select_project(project_path: str) -> str:
     selected.") or saying that no project is selected, with the name
     under `selected_project`; a write you make next lands there. When
     nothing was selected and the host's configuration names a project
-    (QUALCODER_PROJECT_PATH), that project is opened and named instead,
+    (EXEGETE_PROJECT_PATH), that project is opened and named instead,
     since the next tool would use it.
 
     A successful selection is recorded as this machine's most recently used
@@ -5360,7 +5363,7 @@ def export_refi_qda(
 
     The categories above the exported codes are included, as non-codable
     parent codes. The one export user is named after the project's AI
-    coder name, else this host's declaration (QUALCODER_MCP_AI_CODER_NAME)
+    coder name, else this host's declaration (EXEGETE_AI_CODER_NAME)
     or the built-in default; the result says which (ai_user_name_source).
 
     Args:
@@ -18301,12 +18304,12 @@ def create_project(name: str, directory: Optional[str] = None,
 # ============================================================================
 
 # ============================================================================
-# Toolset modes (EXPERIMENTAL): QUALCODER_MCP_TOOLSET=full|core|lifecycle
+# Toolset modes (EXPERIMENTAL): EXEGETE_TOOLSET=full|core|lifecycle
 # ============================================================================
 # Local models break on large tool surfaces long before frontier models do:
 # tool-selection accuracy collapses as the menu grows, and the full tool
 # schema payload alone exceeds default local context windows (see the
-# multi-host research dossiers). QUALCODER_MCP_TOOLSET=core registers only
+# multi-host research dossiers). EXEGETE_TOOLSET=core registers only
 # the supervised-coding-loop subset below; the default remains the full
 # surface (backward compatible). Required for local models, optional
 # elsewhere. Resources and prompts are unaffected.
@@ -18349,7 +18352,7 @@ _VALID_TOOLSET_MODES = ("full", "core", "lifecycle")
 
 
 def _workspace_start_problem() -> Optional[str]:
-    """Why the server must not start with QUALCODER_MCP_WORKSPACE as it
+    """Why the server must not start with EXEGETE_WORKSPACE as it
     is, or None: not a full path, or a folder create_project would refuse
     as its workspace (checked by the same function it uses)."""
     problem = workspace_setting_problem()
@@ -18410,7 +18413,7 @@ def _install_folder() -> Optional[Path]:
 
 
 def _resolve_toolset_mode() -> str:
-    """Read QUALCODER_MCP_TOOLSET (default full); unknown values raise."""
+    """Read EXEGETE_TOOLSET (default full); unknown values raise."""
     reading = env_settings.read("toolset")
     raw = ("full" if reading.value is None else reading.value).strip().lower()
     if raw not in _VALID_TOOLSET_MODES:
@@ -18491,13 +18494,15 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
 # ever appears in that situation; it goes to stderr (stdout is the MCP
 # transport) and the server keeps waiting as before.
 TTY_NOTICE = (
-    "qualcoder-mcp is an MCP server. It is normally started by an MCP host "
+    f"{names.SERVER_NAME} is an MCP server. It is normally started by an MCP "
+    "host "
     "(Claude Desktop, Claude Code, LM Studio or another MCP client) and speaks "
     "JSON-RPC over standard input and output, so when it is started by hand in "
     "a terminal it prints its start-up lines and this note, then waits for a "
     "host that is not there. To "
-    "check that the installation works, run 'qualcoder-mcp --version' (or "
-    "'python -m qualcoder_mcp.server --version'); to use the server, add it to "
+    f"check that the installation works, run '{names.COMMAND} --version' (or "
+    f"'python -m {names.PACKAGE}.server --version'); to use the server, add "
+    "it to "
     "your host's MCP configuration as described in INSTALL.md. Press Ctrl+C to "
     "stop this process."
 )
@@ -18526,8 +18531,8 @@ def _build_arg_parser(started_as: Optional[str] = None
         version = (f"{names.COMMAND} {_package_version} "
                    f"(started as {started_as})")
     else:
-        prog = "qualcoder-mcp"
-        version = f"qualcoder-mcp {_package_version}"
+        prog = names.COMMAND
+        version = f"{names.COMMAND} {_package_version}"
     parser = argparse.ArgumentParser(
         prog=prog,
         description="MCP server for QualCoder projects. It is started by an "
@@ -18633,11 +18638,12 @@ def main(argv: Optional[List[str]] = None, *,
                   f"not found; check the path in the host's configuration.",
                   file=sys.stderr)
             sys.exit(1)
-        logger.info("Starting Qualcoder MCP server with the project set in "
-                    "%s", project_setting.name)
+        logger.info("Starting %s with the project set in %s",
+                    names.SERVER_NAME, project_setting.name)
     else:
         # Option A: Dynamic project selection
-        logger.info("Starting Qualcoder MCP server in dynamic mode (no project pre-configured)")
+        logger.info("Starting %s in dynamic mode (no project "
+                    "pre-configured)", names.SERVER_NAME)
         logger.info("Use 'list_available_projects' and 'select_project' to open a project")
 
     # Started by hand in a terminal? Say what is going on, then wait as before

@@ -60,3 +60,8 @@ OLD_STATE_FOLDER = ".qualcoder_mcp"
 # MCP server uses `qualcoder://`, hence the departure.)
 RESOURCE_SCHEME = "exegete"
 OLD_RESOURCE_SCHEME = "qualcoder"
+
+# The server's own name: in the MCP handshake, in what it says, in the
+# `about` of the projects it creates and as the producer of its exports.
+# Fixed by the owner's ruling (29 September 2026).
+SERVER_NAME = "Exegete"

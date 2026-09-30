@@ -285,6 +285,15 @@ def history_names(folder):
     return [e["name"] for e in ps.read_sidecar(folder).history]
 
 
+def test_names_are_quoted_plainly_and_capped():
+    assert ps.quoted_names(()) == ""
+    assert ps.quoted_names(("A",)) == '"A"'
+    assert ps.quoted_names(("A", "B")) == '"A" and "B"'
+    assert ps.quoted_names(("A", "B", "C")) == '"A", "B" and "C"'
+    assert ps.quoted_names(tuple("ABCDEFG")) == \
+        '"C", "D", "E", "F" and "G" (the last 5 of 7)'
+
+
 def test_a_file_an_older_copy_wrote_beside_the_new_one_is_marked(folder):
     # a project Exegete named, then opened by 0.14, which found no
     # qualcoder_mcp.json, asked, and wrote one
@@ -536,7 +545,9 @@ class TestThroughTheServer:
         assert code_owner(folder, "AfterRemoval") is None
         report = json.loads(server.get_current_project())["ai_coder_name"]
         assert report["source"] == ps.SIDECAR_UNSET, report
-        assert report["hint"] == ps.EARLIER_MARKED_HINT
+        assert report["hint"] == ps.earlier_marked_hint(ps.read_sidecar(folder))
+        assert 'before the move to exegete.json, "Model A", which is not' \
+            in report["hint"]
         # the researcher's answer then moves the name once more
         out = json.loads(server.set_project_ai_coder_name("Model D"))
         assert out["success"] is True and out["previous_name"] is None
@@ -546,6 +557,63 @@ class TestThroughTheServer:
                                             create_backup=False))
         assert out.get("success") is True, out
         assert code_owner(folder, "AfterTheAsk") == "Model D"
+
+    def test_a_removed_new_file_in_a_project_named_first(
+            self, setup_server, qualcoder_db_path):
+        # a project Exegete named first has a marker holding no name.
+        # With exegete.json deleted (PRIVACY's way to reset the name)
+        # nothing moved and nothing was carried, and the answers say so
+        folder = Path(qualcoder_db_path)
+        out = json.loads(server.set_project_ai_coder_name("First Name"))
+        assert out["success"] is True and "moved_from" not in out, out
+        (folder / NEW).unlink()
+        report = json.loads(server.get_current_project())["ai_coder_name"]
+        assert report["source"] == ps.SIDECAR_UNSET, report
+        assert report["hint"].startswith(
+            f"{NEW}, where this project's AI coder name and its earlier "
+            f"names are kept, is missing from the project folder, so no "
+            f"name is set now.")
+        assert "move" not in report["hint"] and OLD not in report["hint"]
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out.get("action_required") == "set_project_ai_coder_name", out
+        out = json.loads(server.set_project_ai_coder_name("Second Name"))
+        assert out["success"] is True and out["previous_name"] is None, out
+        assert "moved_from" not in out
+        said = " ".join(out["warnings"])
+        assert "carried" not in said and OLD not in said, said
+        assert history_names(folder) == ["Second Name"]
+        assert as_0140_reads(folder / OLD) == "newer_format"
+
+    def test_a_removed_new_file_after_the_move_names_what_is_left(
+            self, setup_server, qualcoder_db_path):
+        # the names the marked file holds are the ones from before the
+        # move; a name set since then went with exegete.json, and the
+        # answers say both
+        folder = Path(qualcoder_db_path)
+        (folder / NEW).unlink()
+        zero = {"name": "Model 0", "set_at": None, "note": "",
+                "host_declaration": None}
+        old_file(folder, name="Model A", history=[zero])
+        out = json.loads(server.set_project_ai_coder_name("Model B"))
+        assert out["success"] is True and out["moved_from"] == OLD, out
+        (folder / NEW).unlink()
+        hint = json.loads(server.get_current_project())[
+            "ai_coder_name"]["hint"]
+        assert (f"{OLD} beside it is marked as moved and holds only the "
+                f"names this project used before the move to {NEW}, "
+                f"\"Model 0\" and \"Model A\", none of which is used now; "
+                f"any name set since the move was kept in {NEW} alone and "
+                f"went with it.") in hint
+        assert "Model B" not in hint
+        out = json.loads(server.set_project_ai_coder_name("Model C"))
+        assert out["success"] is True and out["moved_from"] == OLD, out
+        said = " ".join(out["warnings"])
+        assert (f"{NEW} was missing from the project folder, so the names "
+                f"this project used before the move, \"Model 0\" and "
+                f"\"Model A\", were carried from {OLD}") in said, said
+        assert (f"Any name set since the move was kept in the missing {NEW} "
+                f"alone and went with it.") in said
+        assert history_names(folder) == ["Model 0", "Model A", "Model C"]
 
     def test_an_older_copys_name_counts_as_this_projects_ai_work(
             self, setup_server, qualcoder_db_path):

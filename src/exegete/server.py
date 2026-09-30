@@ -136,7 +136,6 @@ from .project_settings import (
     AI_CODER_NAME_ENV,
     DEFAULT_AI_CODER_NAME,
     EARLIER_MARKED,
-    EARLIER_MARKED_HINT,
     EARLIER_NOT_MARKED,
     HISTORY_ECHO,
     KNOWN_AI_ASSISTANT_OWNER,
@@ -151,6 +150,8 @@ from .project_settings import (
     SidecarWriteError,
     UNSET_HINT,
     ai_coder_names_for_project,
+    earlier_marked_hint,
+    earlier_names,
     echoed_history,
     folder_is_writable,
     host_declaration,
@@ -158,6 +159,7 @@ from .project_settings import (
     mismatch as ai_coder_name_mismatch,
     newer_format_message,
     normalise_for_case_compare,
+    quoted_names,
     read_sidecar,
     settle_earlier_file,
     sidecar_path,
@@ -2348,7 +2350,7 @@ def _ai_coder_name_report() -> Dict[str, Any]:
                                   "hint": unreadable_message(state.path)}
     elif state.status == SIDECAR_UNSET:
         block["ai_coder_name"] = {"name": None, "source": SIDECAR_UNSET,
-                                  "hint": (EARLIER_MARKED_HINT
+                                  "hint": (earlier_marked_hint(state)
                                            if state.earlier_marked
                                            else UNSET_HINT)}
     else:
@@ -3865,15 +3867,24 @@ def _earlier_file_warnings(state, earlier, moving: bool,
     """What the setter says about qualcoder_mcp.json, and only what
     happened: marked is said only when the mark was made (v0.14.1)."""
     notes: List[str] = []
+    held = earlier_names(state)
+    # exegete.json gone from a project Exegete named first: its marker
+    # holds no names, so nothing was carried and nothing is said of a move
+    moving = moving and not (state.earlier_marked and not held)
     if moving:
         result["moved_from"] = OLD_SIDECAR_NAME
     if moving and state.earlier_marked:
-        # exegete.json had gone; the marked file gave only its history
+        # exegete.json had gone after the move; the marked file gave only
+        # the names from before it
+        one = len(held) == 1
         notes.append(
             f"{SIDECAR_NAME} was missing from the project folder, so the "
-            f"names this project used before were carried from "
-            f"{OLD_SIDECAR_NAME}, already marked as moved, into "
-            f"{SIDECAR_NAME}, where the name is kept from now on.")
+            f"{'name' if one else 'names'} this project used before the "
+            f"move, {quoted_names(held)}, "
+            f"{'was' if one else 'were'} carried from {OLD_SIDECAR_NAME}, "
+            f"already marked as moved, into {SIDECAR_NAME}, where the name "
+            f"is kept from now on. Any name set since the move was kept in "
+            f"the missing {SIDECAR_NAME} alone and went with it.")
     elif moving:
         text = (f"This project's AI coder name and its history were "
                 f"carried from {OLD_SIDECAR_NAME} into {SIDECAR_NAME}, "

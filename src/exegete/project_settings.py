@@ -181,11 +181,53 @@ UNSET_HINT = (
     "The first write will ask which name to store AI rows under; you can "
     "set it now with set_project_ai_coder_name.")
 
-EARLIER_MARKED_HINT = (
-    f"{SIDECAR_NAME} is missing from the project folder, and "
-    f"{OLD_SIDECAR_NAME} beside it is marked as moved: it holds only the "
-    f"names used before the move, so none of them is used now. "
-    + UNSET_HINT)
+# How many of a marked earlier file's names a message quotes, newest last.
+NAMES_QUOTED = 5
+
+
+def quoted_names(names_: Tuple[str, ...]) -> str:
+    """'"A"', '"A" and "B"', '"A", "B" and "C"'; past NAMES_QUOTED, the
+    newest of them and how many there are in all. Empty for none, so a
+    message can never fail on it after the name is stored."""
+    shown = [f"\"{n}\"" for n in names_[-NAMES_QUOTED:]]
+    if not shown:
+        return ""
+    text = (shown[0] if len(shown) == 1
+            else ", ".join(shown[:-1]) + " and " + shown[-1])
+    if len(names_) > NAMES_QUOTED:
+        text += f" (the last {NAMES_QUOTED} of {len(names_)})"
+    return text
+
+
+def earlier_names(state: "SidecarState") -> Tuple[str, ...]:
+    """The distinct names a marked earlier file read alone holds, oldest
+    first: those of the move, or none in a project Exegete named first
+    (its marker holds no name)."""
+    return _names(state.history) if state.earlier_marked else ()
+
+
+def earlier_marked_hint(state: "SidecarState") -> str:
+    """The read's hint when exegete.json is missing and the earlier file
+    beside it is marked (`SidecarState.earlier_marked`).
+
+    Says only what happened. A marker holding no names (a project Exegete
+    named first) means nothing ever moved; one holding names gives them,
+    and says that a name set since the move was kept in exegete.json
+    alone and went with it.
+    """
+    held = earlier_names(state)
+    if not held:
+        return (f"{SIDECAR_NAME}, where this project's AI coder name and "
+                f"its earlier names are kept, is missing from the project "
+                f"folder, so no name is set now. " + UNSET_HINT)
+    one = len(held) == 1
+    return (f"{SIDECAR_NAME} is missing from the project folder. "
+            f"{OLD_SIDECAR_NAME} beside it is marked as moved and holds only "
+            f"the {'name' if one else 'names'} this project used before the "
+            f"move to {SIDECAR_NAME}, {quoted_names(held)}, "
+            f"{'which is not' if one else 'none of which is'} used now; any "
+            f"name set since the move was kept in {SIDECAR_NAME} alone and "
+            f"went with it. " + UNSET_HINT)
 
 
 class SidecarWriteError(Exception):

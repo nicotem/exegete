@@ -490,6 +490,12 @@ WORDS = {
 }
 
 
+# Tools new in this release, whose descriptions have no v0.14.1 words to
+# keep: read_brief, the assistant's brief (tests/test_v0142_brief.py pins
+# its description)
+NEW_IN_0142 = {"read_brief"}
+
+
 def _fingerprint(description):
     words = description.split()
     return (len(description), len("".join(words)),
@@ -501,7 +507,7 @@ class TestTheDescriptionsKeepTheirWords:
     def test_every_description_keeps_its_words_and_length(self):
         server._apply_toolset("lifecycle")
         registered = server.mcp.original_descriptions
-        assert set(registered) == set(WORDS)
+        assert set(registered) == set(WORDS) | NEW_IN_0142
         exact = sys.version_info[:2] == (3, 13)
         changed = []
         for name, (length, solid, digest) in sorted(WORDS.items()):

@@ -33,6 +33,8 @@ from exegete.database import (
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."
 EXPECTED_TOOLS = {
+    # the assistant's brief (v0.14.2), in every tool set
+    "read_brief",
     # project management (5)
     "list_available_projects", "select_project", "get_current_project",
     "copy_project_to_workspace",
@@ -108,7 +110,7 @@ class TestToolSurfaceRegistration:
         tools = asyncio.run(server.mcp.list_tools())
         names = {t.name for t in tools}
         assert names == EXPECTED_TOOLS
-        assert len(names) == 73
+        assert len(names) == 74
 
 
 class TestEndToEndLoop:

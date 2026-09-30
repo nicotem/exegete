@@ -85,7 +85,7 @@ class TestSessionIdDuplicateRemoved:
 # the live registry so a tool added later is covered without an edit here.
 # ===========================================================================
 
-TOOL_COUNT = 73          # pinned in tests/test_v012_cli.py too
+TOOL_COUNT = 74          # pinned in tests/test_v012_cli.py too (read_brief, v0.14.2)
 
 
 def _count(toolset):
@@ -403,6 +403,13 @@ class TestNoResponseCarriesSessionId:
                 offenders.append(f"{name}: {where}")
 
         assert offenders == []
+        # read_brief answers the brief's text, not JSON (v0.14.2): it is
+        # the one tool that answers in prose, and holds no session id
+        prose = {name for name, why in excluded.items()
+                 if why.startswith("not JSON")}
+        assert prose <= {"read_brief"}, excluded
+        assert "session_id" not in tools["read_brief"].fn()
+        scanned |= prose
         # Anti-vacuity (fix round 2, R8). Today every registered tool
         # answers these arguments with a parseable JSON string, so the
         # sweep covers 69 of 69; the old guard, `json_responses >= 40`,

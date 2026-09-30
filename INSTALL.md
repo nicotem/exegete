@@ -106,6 +106,21 @@ OpenAI's apps goes step by step; guides of that kind for Claude Code
 and LM Studio are considered on request: ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
+**What the assistant is told (provisional).** The server gives the
+assistant a brief: how it expects the assistant to work with you
+(TOOLS.md, "What the assistant is told"). Hosts differ in what they
+pass on, so the brief reaches the assistant four ways. A short version
+is the server's opening text: Claude Code shows it (and keeps only the
+first 2,048 characters of any server's opening text; this one is
+shorter), Claude Desktop's chat is reported not to, LM Studio does not
+support it, and whether Cowork shows it is not yet checked. The tool
+`read_brief`, in every tool set, has a description that asks the
+assistant to call it at the start of every conversation about a
+project, so it reaches every host that sends tool descriptions. The
+same text is a help topic and the resource `exegete://guidance/brief`,
+and the answers that open a project carry a one-line reminder. The
+brief is provisional: a later release may change it.
+
 ## What You'll Need
 
 Before starting, make sure you have:
@@ -471,10 +486,10 @@ always to the same value.
   tools and a few others answered "No Qualcoder project selected" until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 73 tools;
-  `core` registers the 21-tool supervised coding set for local models
+- `EXEGETE_TOOLSET`: `full` (default) registers 74 tools;
+  `core` registers the 22-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
-  registers the full set plus `create_project`, 74 tools, so that a
+  registers the full set plus `create_project`, 75 tools, so that a
   study can be started from the conversation (TOOLS.md, "Starting a
   project from the conversation"). Configured by hand, creating
   projects stays out of the default set, so that researchers opt in to
@@ -688,9 +703,9 @@ parameters. We have not evaluated specific models with this server;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** This server exposes 73 tools by
+**Step 3. Use the core toolset.** This server exposes 74 tools by
 default, and the serialised tool definitions alone measure about
-195,000 characters, roughly 49k tokens (measured for 0.14 under
+196,000 characters, roughly 49k tokens (measured for 0.14.2 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
@@ -705,7 +720,7 @@ definitions measure about five per cent more).
 That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
-(in the config of Step 5) to register only the 21-tool supervised
+(in the config of Step 5) to register only the 22-tool supervised
 coding set, measured at about 65,000 characters, roughly 16k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly

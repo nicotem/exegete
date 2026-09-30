@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """QUALCODER_MCP_TOOLSET modes (EXPERIMENTAL, multi-host plan section 3.1).
 
-Default full = the backward-compatible full surface. core = the 21-tool
+Default full = the backward-compatible full surface. core = the 22-tool
 supervised-coding-loop subset for local-model hosts. Unknown values fail
 loudly at startup. The functional smoke drives a core-mode server over the
 REAL stdio transport through the whole suggest -> apply loop, proving the
@@ -32,9 +32,9 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 73
-EXPECTED_CORE = 21
-EXPECTED_LIFECYCLE = 74          # full plus create_project (v0.14)
+EXPECTED_FULL = 74              # 73, plus read_brief (v0.14.2)
+EXPECTED_CORE = 22              # 21, plus read_brief (v0.14.2)
+EXPECTED_LIFECYCLE = 75          # full plus create_project (v0.14)
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -155,7 +155,7 @@ class TestToolsetResolution:
 
 class TestLifecycleToolset:
     """`lifecycle` (v0.14): the full set plus create_project, registered
-    only in that mode, so every count taken at import stays 73."""
+    only in that mode, so every count taken at import stays 74."""
 
     def test_membership_is_full_plus_create_project(self):
         full = {t.name for t in asyncio.run(server.mcp.list_tools())}
@@ -429,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 195_266          # 73 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 64_804           # 21 tools, same environment
-    FULL_MEASURED_310 = 204_974      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 68_096
+    FULL_MEASURED = 195_733          # 74 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 65_271           # 22 tools, same environment
+    FULL_MEASURED_310 = 205_441      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 68_563
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 197_845     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 207_693
+    LIFECYCLE_MEASURED = 198_312     # 75 tools, same environment
+    LIFECYCLE_MEASURED_310 = 208_160
 
     # Why two per cent, away from the reference environment.
     #
@@ -462,9 +462,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "195,266"
-    CORE_CHARS = "64,804"
-    FULL_ROUNDED = "195,000"
+    FULL_CHARS = "195,733"
+    CORE_CHARS = "65,271"
+    FULL_ROUNDED = "196,000"
     CORE_ROUNDED = "65,000"
     FULL_TOKENS = "49k"
     CORE_TOKENS = "16k"
@@ -494,9 +494,17 @@ class TestThePublishedSchemaBudget:
         (`_v013_entry`). v0.14.1 moves it once more (the rename: the
         resource addresses in the tools' texts), so the current entry is
         the Unreleased one alone and 0.14.0's figure is history
-        (`_v0140_entry`).
+        (`_v0140_entry`). v0.14.2 moves it again (read_brief, a tool in
+        every set), so the current entry is the Unreleased one above the
+        0.14.1 heading, and 0.14.1's figure is history (`_v0141_entry`).
         """
-        return cls._read("CHANGELOG.md").split("## [0.14.0")[0]
+        return cls._read("CHANGELOG.md").split("## [0.14.1")[0]
+
+    @classmethod
+    def _v0141_entry(cls):
+        """The 0.14.1 entry, whose figure is history and stays put."""
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [0.14.1"):text.index("## [0.14.0")]
 
     @classmethod
     def _v0140_entry(cls):
@@ -629,6 +637,10 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0141 = self._v0141_entry()
+        assert v0141.count("Serialised tool") == 1
+        assert "full = 195,266 characters" in v0141
+        assert self.FULL_CHARS not in v0141
         v0140 = self._v0140_entry()
         assert v0140.count("Serialised tool") == 1
         assert "full = 195,325 characters" in v0140
@@ -653,7 +665,7 @@ class TestThePublishedSchemaBudget:
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
     LIFECYCLE_ROUNDED = "198,000"
-    LIFECYCLE_TOKENS = "49k"
+    LIFECYCLE_TOKENS = "50k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
         # v0.14.1: the README's measurement block moved to TOOLS.md

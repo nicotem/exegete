@@ -105,7 +105,8 @@ class TestTheExtensionKeepsItsIdentity:
         does follow the stem."""
         copy = tmp_path / "tree"
         for name in ("pyproject.toml", "uv.lock", "README.md", "NOTICE",
-                     "COPYING.LESSER", "legal/GPL-3.0.txt", build.TEMPLATE):
+                     "COPYING.LESSER", "legal/GPL-3.0.txt", build.TEMPLATE,
+                     f"{build.ICON_FOLDER}/icon.png"):
             (copy / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, copy / name)
         shutil.copytree(REPO / build.PACKAGE, copy / build.PACKAGE,
@@ -140,7 +141,8 @@ class TestTheExtensionsIcon:
     def _copy(self, tmp_path):
         copy = tmp_path / "tree"
         for name in ("pyproject.toml", "uv.lock", "README.md", "NOTICE",
-                     "COPYING.LESSER", "legal/GPL-3.0.txt", build.TEMPLATE):
+                     "COPYING.LESSER", "legal/GPL-3.0.txt", build.TEMPLATE,
+                     f"{build.ICON_FOLDER}/icon.png"):
             (copy / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, copy / name)
         shutil.copytree(REPO / build.PACKAGE, copy / build.PACKAGE,
@@ -148,8 +150,14 @@ class TestTheExtensionsIcon:
         return copy
 
     def test_without_an_icon_there_is_none(self, tmp_path, monkeypatch):
+        copy = self._copy(tmp_path)
+        template = json.loads((copy / build.TEMPLATE).read_text(
+            encoding="utf-8"))
+        template.pop("icon", None)
+        (copy / build.TEMPLATE).write_text(json.dumps(template),
+                                           encoding="utf-8")
         monkeypatch.setattr(build, "list_tools", lambda files: [])
-        manifest, files = build.bundle(build.TreeSource(self._copy(tmp_path)))
+        manifest, files = build.bundle(build.TreeSource(copy))
         assert "icon" not in manifest
         assert not [n for n in files if n.endswith(".png")]
 

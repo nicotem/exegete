@@ -32,6 +32,10 @@ still accepted (the Upgrading list below).
   is shown as Exegete, its file is `exegete-<version>.mcpb`, and its
   log becomes `mcp-server-Exegete.log`. Its manifest sets both
   spellings of its three settings, always to the same value.
+- The mark: the README opens with the braided ring beside the name,
+  on a light tile of its own so that it reads on a dark page too, and
+  the extension shows the ring with the E as its icon (a 512 px PNG,
+  the one file its package gains). The files are in `docs/brand/`.
 - The server's settings start `EXEGETE_`: `EXEGETE_TOOLSET`,
   `EXEGETE_AI_CODER_NAME`, `EXEGETE_WORKSPACE`,
   `EXEGETE_WORKSPACE_REQUIRED`, `EXEGETE_ALLOW_UNKNOWN_SCHEMA` and

@@ -313,14 +313,18 @@ class TestThePackage:
             for p in (REPO / build.PACKAGE).rglob("*")
             if p.is_file() and "__pycache__" not in p.parts
             and p.suffix != ".pyc")
+        # v0.14.1: and the icon the manifest names (test_v0141_mark.py)
         expected = {"manifest.json", ".python-version", "pyproject.toml",
                     "uv.lock", meta["readme"], *meta["license-files"],
-                    *package}
+                    *package, "icon.png"}
         assert set(files) == expected
         with zipfile.ZipFile(target) as z:
             assert sorted(z.namelist()) == sorted(expected)
-            for name in expected - {"manifest.json", ".python-version"}:
+            for name in expected - {"manifest.json", ".python-version",
+                                    "icon.png"}:
                 assert z.read(name) == (REPO / name).read_bytes(), name
+            assert z.read("icon.png") == (
+                REPO / build.ICON_FOLDER / "icon.png").read_bytes()
 
     def test_it_asks_uv_for_a_python_ci_tests(self, built):
         _, files, _ = built

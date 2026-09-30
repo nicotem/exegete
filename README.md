@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/nicotem/exegete/main/docs/brand/exegete-lockup.png" alt="The Exegete mark, a braided ring, beside the name Exegete" width="324"></p>
+
 # Exegete
 
 **A qualitative analysis application you use in conversation with an

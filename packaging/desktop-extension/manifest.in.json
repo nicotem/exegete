@@ -26,6 +26,7 @@
       }
     }
   },
+  "icon": "icon.png",
   "tools_generated": false,
   "prompts_generated": true,
   "compatibility": {

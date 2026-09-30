@@ -15,6 +15,7 @@ coding loop with example conversations.
 - [Working alongside QualCoder 4.0](#working-alongside-qualcoder-40)
 - [QualCoder 3.8.2 and edit mode: a caution](#qualcoder-382-and-edit-mode-a-caution)
 - [AI-Assisted Coding](#ai-assisted-coding)
+- [What the assistant is told: the brief (provisional)](#what-the-assistant-is-told-the-brief-provisional)
 - [Available Resources](#available-resources)
 - [Available Tools](#available-tools)
 - [Available Prompts](#available-prompts)
@@ -555,6 +556,38 @@ Never work on your original projects with AI coding! Always:
 
 For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md).
 
+## What the assistant is told: the brief (provisional)
+
+From 0.14.2 the server gives the assistant one brief: how it expects
+the assistant to work with you. The brief says what no single tool
+says (work on the project only through these tools, where Exegete sits
+beside QualCoder, how changes and approval happen, privacy, when to ask
+and when to act, how to report to you), and carries the two rules that
+hold across the tools, the grounding rules and the judgement of
+requests, in the very words the tools use. Each tool's description
+still gives that tool's own rules.
+
+Hosts differ in what they pass on to the assistant, so the brief
+reaches it four ways:
+
+- a short version, under 2,000 characters, as the server's opening
+  text, which Claude Code shows at the start of a session;
+- `read_brief()`, a tool in every tool set, whose description asks the
+  assistant to call it once at the start of every conversation about a
+  project: it returns the full brief (about 11,000 characters), or in
+  the `core` set the short version;
+- the same full brief as the help topic `explain_ai_coding_tools('brief')`
+  and the resource `exegete://guidance/brief`;
+- a one-line reminder in the answers that open or check a project
+  (`select_project`, `get_current_project`, `create_project`) and that
+  start a coding session (`analyze_for_coding`).
+
+The brief is **provisional**: it restates the rules the tools already
+give and takes no new position on method, and it may change once this
+project's statement on method is written. Once read, the full brief
+stays in that conversation and is sent again with every later request,
+until the host shortens the conversation.
+
 ## Available Resources
 
 The MCP server exposes these resources (read-only data). Their
@@ -572,30 +605,32 @@ no longer listed, until v1.0.
 - `exegete://cases/{case_id}` - Case details
 - `exegete://journal` - Journal entries
 - `exegete://guidance/methods` - Static methods notes: the grounding rules, the four-way methodological vocabulary (allow, allow_with_caveat, reframe_and_ask, refuse) and citations to the method literature QualCoder 4.0 ships prompts for; needs no project
+- `exegete://guidance/brief` - The assistant's brief (provisional), the text `read_brief()` returns; needs no project
 
 ## Available Tools
 
 Claude can use these tools to analyse your data. The full toolset
 (the default when you configure the server yourself,
 `EXEGETE_TOOLSET=full`; the Claude Desktop extension defaults to
-`lifecycle`) registers 73 tools; the argument lists below name every
+`lifecycle`) registers 74 tools; the argument lists below name every
 argument each tool declares, and each tool's own description says what
 each one does.
 
 > **Creating projects (Experimental):** with
 > `EXEGETE_TOOLSET=lifecycle` the server registers the full set
-> plus `create_project`, 74 tools. The Claude Desktop extension's tool
+> plus `create_project`, 75 tools. The Claude Desktop extension's tool
 > set setting defaults to `lifecycle`, so creating projects is on there;
 > configured by hand, the server defaults to `full`, so that researchers
 > opt in to a tool that makes folders on their disk; it is not in `core`
 > either. Measured as below, the
-> `lifecycle` definitions run to about 198,000 characters, roughly 49k
+> `lifecycle` definitions run to about 198,000 characters, roughly 50k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in the server's environment, only the
-> 21-tool supervised coding set is registered: list_available_projects,
-> select_project, get_current_project, get_project_summary,
+> 22-tool supervised coding set is registered: read_brief,
+> list_available_projects, select_project, get_current_project,
+> get_project_summary,
 > search_files, analyze_file_with_coding, search_coded_text,
 > get_coded_segments, get_coding_frequencies, analyze_for_coding,
 > record_suggestions, review_suggestions, edit_suggestion,
@@ -603,10 +638,10 @@ each one does.
 > set_project_ai_coder_name,
 > copy_project_to_workspace, delete_coding, list_backups.
 > Required for local models, optional elsewhere; unknown values fail
-> loudly at startup. Measured for 0.14 (the
+> loudly at startup. Measured for 0.14.2 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 195,000 characters for `full`, roughly 49k
+> definitions run to about 196,000 characters for `full`, roughly 49k
 > tokens at four characters per token, and about 65,000 characters for
 > `core`, roughly 16k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -615,6 +650,7 @@ each one does.
 > length.
 
 **Project Management:**
+- `read_brief()` - The assistant's brief (provisional): how this server expects the assistant to work with you. Its description asks the assistant to call it once at the start of every conversation about a project; it returns the full brief, or in the `core` set the short version, and reads nothing from the project. In every tool set (see "What the assistant is told" above)
 - `list_available_projects(search_directories)` - Discover QualCoder projects on your system
 - `select_project(project_path)` - Open/switch to a different project (reports `qualcoder_gui_signals` and remembers the selection for the recovery hint)
 - `get_current_project()` - Show which project is open, whether a released QualCoder has it open (`qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name

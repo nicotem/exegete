@@ -118,7 +118,7 @@ class TestPlacement:
         carriers = [n for n, t in server.mcp._tool_manager._tools.items()
                     if "reframe_and_ask" in (t.description or "")]
         assert carriers == ["analyze_for_coding"]
-        assert len(server.mcp._tool_manager._tools) == 73  # B1 setter, B3 compare, the flagship, the name list, the two renames
+        assert len(server.mcp._tool_manager._tools) == 74  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief (v0.14.2)
 
     def test_docstring_of_the_function_object_matches_the_registration(self):
         # _tool_guard uses functools.wraps, so the amended __doc__ travels
@@ -190,10 +190,13 @@ class TestExplainAiCodingTools:
         assert "title" in o and "workflow" in o  # existing pins
 
     def test_unknown_lists_the_seven_keys(self):
+        # v0.14.2: and the brief, the one topic answered as the brief's
+        # own text rather than as JSON (tests/test_v0142_brief.py)
         out = json.loads(server.explain_ai_coding_tools("unknown"))
-        assert out["available_tools"] == HELP_KEYS
+        assert out["available_tools"] == HELP_KEYS + ["brief"]
         for key in HELP_KEYS:
             assert "error" not in json.loads(server.explain_ai_coding_tools(key))
+        assert server.explain_ai_coding_tools("brief") == server.BRIEF_FULL
 
 
 class TestMethodsResource:
@@ -220,7 +223,7 @@ class TestMethodsResource:
         assert len(match) == 1
         assert match[0].mimeType == "text/markdown"
         assert "Static; needs no project" in (match[0].description or "")
-        assert len(res) == 7  # six data resources plus this one
+        assert len(res) == 8  # six data resources, this one and the brief (v0.14.2)
         assert len(asyncio.run(server.mcp.list_resource_templates())) == 3
 
     def test_resource_survives_core_toolset_mode(self):
@@ -275,9 +278,13 @@ class TestHouseRules:
 class TestHandshakeInstructions:
 
     def test_instructions_reach_the_low_level_server(self):
+        # v0.14.2: the opening text is the brief's short version, which
+        # sends the assistant to read_brief for the rest (the methods
+        # notes are named there) and keeps the approval sentence
         assert server.mcp._mcp_server.instructions == server.SERVER_INSTRUCTIONS
-        assert "evidence discipline" in server.SERVER_INSTRUCTIONS
-        assert "exegete://guidance/methods" in server.SERVER_INSTRUCTIONS
+        assert server.SERVER_INSTRUCTIONS == server.BRIEF_SHORT
+        assert "call read_brief once" in server.SERVER_INSTRUCTIONS
+        assert "exegete://guidance/methods" in server.BRIEF_FULL
         assert "Coding suggestions and code proposals are written to the " \
             "project only when each item has been marked approved" \
             in server.SERVER_INSTRUCTIONS
@@ -301,11 +308,12 @@ class TestHandshakeInstructions:
         a tool call the assistant makes; the rule for the assistant stays,
         and says who stands behind it.
         """
-        assert server.SERVER_INSTRUCTIONS.endswith(
-            "Coding suggestions and code proposals are written to the "
-            "project only when each item has been marked approved, which "
-            "you do only on the researcher's word: the server cannot tell "
-            "who approved.")
+        # v0.14.2: the sentence is the short version's fourth rule, no
+        # longer its last, and keeps its words
+        assert ("Coding suggestions and code proposals are written to the "
+                "project only when each item has been marked approved, which "
+                "you do only on the researcher's word: the server cannot tell "
+                "who approved.") in server.SERVER_INSTRUCTIONS
         assert "Nothing is written to the project" not in \
             server.SERVER_INSTRUCTIONS
 

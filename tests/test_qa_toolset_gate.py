@@ -104,11 +104,11 @@ def _session_lists(tmp_path, toolset_value):
 class TestSubprocessBehavior:
 
     def test_case_insensitive_core_in_real_subprocess(self, tmp_path):
-        """' CoRe ' (case + whitespace) must serve exactly the 20-tool set
+        """' CoRe ' (case + whitespace) must serve exactly the core set
         through the real transport, not just the unit resolver."""
         names, _, _ = _session_lists(tmp_path, " CoRe ")
         assert names == sorted(server.CORE_TOOLSET)
-        assert len(names) == 21
+        assert len(names) == 22           # with read_brief (v0.14.2)
 
     def test_resources_and_prompts_byte_identical_across_modes(self, tmp_path):
         """The mode must not touch resources or prompts AT ALL — byte-equal
@@ -129,7 +129,7 @@ class TestSubprocessBehavior:
         full_dir.mkdir()
         names_full, _, _ = _session_lists(full_dir, "full")
         assert names_unset == names_full
-        assert len(names_full) == 73
+        assert len(names_full) == 74
 
 
 class TestRegistryIsolation:
@@ -139,12 +139,12 @@ class TestRegistryIsolation:
         and confirm the registry returns to the identical full state
         (same objects, not lookalikes)."""
         before = dict(server.mcp._tool_manager._tools)
-        assert len(before) == 73
+        assert len(before) == 74
 
         for _ in range(2):
             removed = server._apply_toolset("core")
             try:
-                assert len(server.mcp._tool_manager._tools) == 21
+                assert len(server.mcp._tool_manager._tools) == 22
                 assert set(server.mcp._tool_manager._tools) \
                     == set(server.CORE_TOOLSET)
             finally:
@@ -160,6 +160,6 @@ class TestRegistryIsolation:
         """Importing the module must never shrink the surface — the filter
         runs only in main(). (A regression here would contaminate every
         in-process consumer, including the whole test suite.)"""
-        assert len(server.mcp._tool_manager._tools) == 73
+        assert len(server.mcp._tool_manager._tools) == 74
         # and CORE_TOOLSET stays a strict subset of the live surface
         assert server.CORE_TOOLSET < set(server.mcp._tool_manager._tools)

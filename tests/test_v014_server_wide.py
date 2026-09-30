@@ -81,6 +81,8 @@ EXPECTED_HINTS = {
     "review_suggestions": R, "list_backups": R,
     "get_coding_session_info": R, "list_coding_sessions": R,
     "explain_ai_coding_tools": R, "review_proposals": R,
+    # the assistant's brief (v0.14.2): reads nothing from the project
+    "read_brief": R,
     # Changes nothing, but sends every real name in pseudonyms.json to the
     # AI provider: marked as not read-only so that hosts ask before it
     # runs, as the owner's v0.13 ruling intends (the lead's correction)
@@ -515,8 +517,12 @@ class TestEveryNamedToolIsThere:
         core, _ = served_texts("core")
         marked = "restore_backup" + server.NOT_IN_THIS_TOOL_SET
         assert marked in core["description of list_backups"]
-        assert ("explain_ai_coding_tools('methodology_vocabulary')"
-                + server.NOT_IN_THIS_TOOL_SET) in core["instructions"]
+        # v0.14.2: the opening text is the brief's short version, which
+        # names only read_brief, in every set; the brief's full version,
+        # served as a resource in core too, is where the marks are
+        assert server.NOT_IN_THIS_TOOL_SET not in core["instructions"]
+        assert ("explain_ai_coding_tools()" + server.NOT_IN_THIS_TOOL_SET
+                in core["resource exegete://guidance/brief"])
         assert ("propose_codes" + server.NOT_IN_THIS_TOOL_SET
                 in core["resource exegete://guidance/methods"])
         full, _ = served_texts("full")
@@ -709,6 +715,8 @@ async def call_every_tool(client, root, lock_check=False):
     projects, exports = root / "projects", root / "exports"
     projects.mkdir()
     exports.mkdir()
+    # first, as its description asks (v0.14.2)
+    await run("read_brief", {})
     await run("list_available_projects",
               {"search_directories": [str(projects)]})
     made = await run("create_project", {

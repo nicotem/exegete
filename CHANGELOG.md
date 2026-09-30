@@ -7,7 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+v0.14.2, in progress: the assistant's brief, provisional.
+
+### Added: the assistant's brief (provisional)
+
+- The server gives the assistant one brief: how it expects the
+  assistant to work with the researcher. It says what no single tool
+  says (work on the project only through these tools, never by opening
+  its folder or database; where Exegete sits beside QualCoder; how
+  changes and approval happen; privacy; when to ask and when to act;
+  how to report), and carries the two rules that hold across the
+  tools, the grounding rules and the judgement of requests, composed
+  from the same text as `analyze_for_coding`'s description, so the two
+  cannot drift. Each tool's own rules are named in a line and left to
+  its description.
+- It reaches the assistant four ways, because hosts differ in what they
+  pass on: a short version as the server's opening text (below); a new
+  tool, `read_brief`, in every tool set and listed first, whose
+  description asks the assistant to call it once at the start of every
+  conversation about a project (it returns the full brief, about 11,000
+  characters, or in the `core` set the short version, and reads nothing
+  from the project); the same full brief as the help topic
+  `explain_ai_coding_tools('brief')` and the resource
+  `exegete://guidance/brief`; and a one-line reminder, under the key
+  `brief`, in the answers of `select_project`, `get_current_project`,
+  `create_project` and `analyze_for_coding`.
+- **Provisional.** The brief says so in its own text. It restates the
+  rules the tools already give and takes no new position on method:
+  the lines that would are held back until this project's statement on
+  method. Before it is released, the project's maintainer reads it and
+  runs a ten-minute live check in Cowork (whether Cowork shows the
+  opening text, cuts long tool texts at 2,048 characters, lets the
+  assistant read a resource by itself, and whether a rule given is
+  followed).
+- NOTICE's entry for QualCoder's methodology vocabulary now also names
+  QualCoder's `ai_prompts/_agent.md` as the source of the order and
+  ideas of four of the brief's sections, written in this project's own
+  words.
+
+### Changed: the opening text
+
+- The server's opening text is now the brief's short version, 1,919
+  characters, within the 2,048 that Claude Code keeps: what the tools
+  are for, to call `read_brief` at the start of every conversation
+  about a project, and the eleven rules that matter most. It keeps its
+  first sentence ("Exegete exposes a QualCoder project to this
+  conversation.") and v0.14's sentence on approval word for word; it no
+  longer names the help topic `methodology_vocabulary` or the methods
+  notes, which the brief names.
+
+### Measured
+
+- Serialised tool JSON with the brief: full = 195,733 characters (about
+  48.9k tokens at chars/4) over 74 tools, core = 65,271 (about 16.3k)
+  over 22, and the opt-in lifecycle set = 198,312 (about 49.6k) over
+  75, measured on Python 3.13.5 with mcp 1.30.0 in the repository's own
+  `venv/`; on Python 3.11.13 (the `.venv/`), 205,441, 68,563 and
+  208,160. Each grew by `read_brief`'s own entry (467 characters with
+  its separator, in every set, on both interpreters) and by nothing
+  else: every other tool's description is as 0.14.1 served it.
 
 ## [0.14.1-alpha] - 2026-10-01
 

@@ -326,8 +326,9 @@ class TestTheResourceAddresses:
                 [t.uriTemplate for t in templates])
 
     def test_ten_under_the_new_scheme_none_under_the_old(self):
+        # eleven from v0.14.2, with the brief's resource
         concrete, templates = self._resources()
-        assert len(concrete) + len(templates) == 10
+        assert len(concrete) + len(templates) == 11
         for address in concrete + templates:
             assert address.startswith(f"{names.RESOURCE_SCHEME}://")
             assert "qualcoder://" not in address

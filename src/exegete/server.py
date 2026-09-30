@@ -161,6 +161,7 @@ from .project_settings import (
     normalise_for_case_compare,
     quoted_names,
     read_sidecar,
+    removing_alone_warning,
     settle_earlier_file,
     sidecar_path,
     store_ai_coder_name,
@@ -2373,7 +2374,8 @@ def _ai_coder_name_report() -> Dict[str, Any]:
                 f"{_older_copy_would(unmarked.held_name)}. The next write "
                 f"here tries to mark it; if this stays, ask the user to "
                 f"unlock the file or make it writable, or to remove it if "
-                f"no such copy uses this project.")}
+                f"no such copy uses this project."
+                + _then(removing_alone_warning(unmarked.held_name)))}
     block["ai_coder_names_used"] = echoed_history(state)
     block["ai_coder_names_used_total"] = len(state.history)
     # A restricted EXISTS for the CURRENT name only (D7 9.5): whether the
@@ -3927,7 +3929,12 @@ def _earlier_file_not_marked_warning(earlier) -> str:
         f"{_older_copy_would(earlier.held_name)}. Tell the user, and ask "
         f"them to unlock the file or make it writable, or to remove it if "
         f"no such copy uses this project; every write here tries to mark "
-        f"it again.")
+        f"it again." + _then(removing_alone_warning(earlier.held_name)))
+
+
+def _then(sentence: str) -> str:
+    """A sentence to follow another, or nothing."""
+    return f" {sentence}" if sentence else ""
 
 
 def _older_copy_would(held_name: Optional[str]) -> str:

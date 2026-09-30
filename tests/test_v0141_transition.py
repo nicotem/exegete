@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 import exegete.server as server
-from exegete import state_folder, transition
+from exegete import env_settings, state_folder, transition
 
 REPO = Path(__file__).resolve().parents[1]
 POSIX_ONLY = pytest.mark.skipif(os.name == "nt", reason="POSIX links")
@@ -306,6 +306,81 @@ class TestTheEarlierProjectsFolder:
         code, out = run(tmp_path, tidy=True, logs=True)
         assert code == 1 and "never removes a folder" in out
         assert folder.is_dir()
+
+
+class TestTheProcessList:
+    """Whether an older copy runs is read from `ps` on macOS and Linux and
+    from Windows PowerShell on Windows, started by its full path in the
+    system folder: a bare name is looked up in the current folder first
+    on Windows, so a powershell.exe where the check is run would be run.
+    Without the system one nothing is read, so nothing is removed."""
+
+    OUT = b"1 uvx qualcoder-mcp\n"
+
+    def _run(self, monkeypatch):
+        calls = []
+
+        def run(cmd, **kwargs):
+            calls.append(list(cmd))
+            return subprocess.CompletedProcess(cmd, 0, self.OUT, b"")
+        monkeypatch.setattr(transition.subprocess, "run", run)
+        return calls
+
+    @staticmethod
+    def _listing_as(monkeypatch, os_name):
+        """_listing() with os.name set for the call alone: pytest itself
+        must not see "nt" on macOS or Linux (pathlib would make Windows
+        paths for its report of a failure)."""
+        with monkeypatch.context() as patched:
+            patched.setattr(os, "name", os_name)
+            return transition._listing()
+
+    def _windows(self, tmp_path):
+        root = tmp_path / "Windows"
+        exe = root / "System32" / "WindowsPowerShell" / "v1.0" / \
+            "powershell.exe"
+        exe.parent.mkdir(parents=True)
+        exe.write_bytes(b"")
+        return root, exe
+
+    def test_windows_powershell_by_its_full_path(self, tmp_path,
+                                                  monkeypatch):
+        root, exe = self._windows(tmp_path)
+        (tmp_path / "powershell.exe").write_bytes(b"")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("SystemRoot", str(root))
+        calls = self._run(monkeypatch)
+        lines = self._listing_as(monkeypatch, "nt")
+        assert [call[0] for call in calls] == [str(exe)]
+        assert calls[0][1:3] == ["-NoProfile", "-Command"]
+        assert lines == ["uvx qualcoder-mcp"]
+
+    def test_without_it_nothing_is_read(self, tmp_path, monkeypatch):
+        # a powershell.exe in the current folder is never the one run
+        (tmp_path / "powershell.exe").write_bytes(b"")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("SystemRoot", str(tmp_path / "Windows"))
+        calls = self._run(monkeypatch)
+        assert self._listing_as(monkeypatch, "nt") is None
+        assert calls == []
+
+    @pytest.mark.parametrize("value", [None, "", "Windows", "."])
+    def test_the_system_folder_is_a_full_path(self, tmp_path, monkeypatch,
+                                              value):
+        monkeypatch.chdir(tmp_path)
+        if value is None:
+            monkeypatch.delenv("SystemRoot", raising=False)
+        else:
+            monkeypatch.setenv("SystemRoot", value)
+        assert env_settings.windows_system_root() == "C:\\Windows"
+        monkeypatch.setenv("SystemRoot", str(tmp_path))
+        assert env_settings.windows_system_root() == str(tmp_path)
+
+    def test_ps_on_macos_and_linux(self, monkeypatch):
+        calls = self._run(monkeypatch)
+        assert self._listing_as(monkeypatch, "posix") == \
+            ["uvx qualcoder-mcp"]
+        assert calls == [["ps", "-axo", "pid=,args="]]
 
 
 class TestTheCommandLine:

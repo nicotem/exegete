@@ -4,7 +4,9 @@
 Every setting this server reads from its environment is read here and
 nowhere else (tests/test_v0141_compat.py forbids any other environment
 read in the package). Each has a new spelling, starting EXEGETE_, and
-the earlier one, which is still read until v1.0 (names.SETTINGS).
+the earlier one, which is still read until v1.0 (names.SETTINGS). The
+one other read here is not a setting: Windows' own folder, SystemRoot,
+from which the transition check starts PowerShell by its full path.
 
 The rule when both spellings are set:
 
@@ -162,3 +164,11 @@ def old_spellings_in_use(environ: Optional[Mapping[str, str]] = None
                 f"until {names.OLD_SPELLINGS_UNTIL}. Use {new} in the "
                 f"host's configuration instead.")
     return lines
+
+
+def windows_system_root() -> str:
+    """Windows' own folder: SystemRoot, or C:\\Windows when it is unset
+    or not a full path (a relative one would be looked up from the
+    current folder)."""
+    root = os.environ.get("SystemRoot", "")
+    return root if os.path.isabs(root) else "C:\\Windows"

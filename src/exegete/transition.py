@@ -35,7 +35,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
-from . import names, state_folder
+from . import env_settings, names, state_folder
 
 try:
     import tomllib
@@ -330,11 +330,24 @@ def _new_spelling(old: str) -> str:
 # Programs still started as qualcoder-mcp
 # ---------------------------------------------------------------------------
 
+def windows_powershell() -> Optional[str]:
+    """Windows PowerShell's full path in the system folder, or None when
+    it is not there. Never a bare name: Windows looks a bare name up in
+    the current folder before the system folders, so a powershell.exe in
+    the folder the check is run from would be run instead."""
+    path = os.path.join(env_settings.windows_system_root(), "System32",
+                        "WindowsPowerShell", "v1.0", "powershell.exe")
+    return path if os.path.isfile(path) else None
+
+
 def _listing() -> Optional[List[str]]:
     """Every other process's command line, or None when it cannot be
     read (then nothing is removed)."""
     if os.name == "nt":
-        cmd = ["powershell", "-NoProfile", "-Command",
+        powershell = windows_powershell()
+        if powershell is None:
+            return None
+        cmd = [powershell, "-NoProfile", "-Command",
                "Get-CimInstance Win32_Process | ForEach-Object "
                "{ \"$($_.ProcessId) $($_.CommandLine)\" }"]
     else:

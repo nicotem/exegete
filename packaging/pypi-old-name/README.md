@@ -23,15 +23,19 @@ What to change, if you want to, on each route:
   only the named package's commands on your path, so you get the
   `exegete` command there only by installing `exegete` itself
   (`pipx install exegete`, `uv tool install exegete`, `uvx exegete`).
+  To move to the new name, in this order: install `exegete` first,
+  then change the command in your assistant's settings to it, and
+  only then `pipx uninstall qualcoder-mcp` or `uv tool uninstall
+  qualcoder-mcp` (the other way round leaves no server).
 - **Settings.** The server's settings now start `EXEGETE_` (for
   example `EXEGETE_TOOLSET`); the old `QUALCODER_MCP_...` spellings and
   `QUALCODER_PROJECT_PATH` still work until version 1.0.
 
 **Tidying up.** `exegete --check-transition` (or
 `qualcoder-mcp --check-transition`) lists what the change left on your
-computer, each with the one step that tidies it, and changes nothing;
-with `--tidy` it removes the link left at `~/.qualcoder_mcp` when
-nothing can still use it. Running this package's command writes one
+computer, numbered in the order to take the steps, with full paths
+ready to paste, and changes nothing; with `--tidy` it removes the link
+left at `~/.qualcoder_mcp` once nothing can still use it. Running this package's command writes one
 line saying so.
 
 **Until version 1.0.** At version 1.0 the last release of this package

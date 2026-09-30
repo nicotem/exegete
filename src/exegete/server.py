@@ -10883,7 +10883,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                       "suggestion, and it is never a reason to withhold project "
                       "data the researcher asks to see"
         },
-        # v0.14.1, the owner's rulings 42 and 43
+        # v0.14.1: the transition check (transition.py)
         "moving_from_qualcoder_mcp": {
             "title": "Moving from qualcoder-mcp to Exegete",
             "what_changed": "qualcoder-mcp is now called Exegete. The "
@@ -10893,37 +10893,58 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                             "the researcher set up stops working.",
             "the_check": "In a terminal on the computer that runs the "
                          "server, `exegete --check-transition` lists what "
-                         "the change left behind, each with the one step "
-                         "that tidies it, and changes nothing: the old "
-                         "qualcoder-mcp package still installed (with the "
-                         "command that removes it, by how it was "
-                         "installed), a host's entry still starting the old "
-                         "command (with the entry to use instead; it only "
-                         "reads the hosts' files), the link left at "
-                         "~/.qualcoder_mcp and whether it can go, the "
-                         "desktop extension's logs under its earlier name, "
-                         "and the "
-                         "earlier projects folder (its projects are still "
-                         "found, and it needs nothing). It ends with exit "
-                         "code 0 when nothing is left.",
+                         "the change left behind, numbered in the order "
+                         "to take the steps, and changes nothing: first, "
+                         "where the old qualcoder-mcp package was "
+                         "installed with uv tool or pipx (or is 0.14.0 or "
+                         "earlier) and no exegete command exists yet, the "
+                         "command that installs Exegete; then each host's "
+                         "entry still starting the old command, with the "
+                         "entry to use instead (it only reads the hosts' "
+                         "files); then the command that removes the old "
+                         "package, by how it was installed; the link left "
+                         "at ~/.qualcoder_mcp and whether it can go; the "
+                         "desktop extension's logs under its earlier "
+                         "name; and the earlier projects folder, with "
+                         "what is in it. It ends with exit code 0 when "
+                         "nothing is left.",
+            "desktop_extension": "The desktop extension installs no "
+                                 "command. What it can leave is the link "
+                                 "at ~/.qualcoder_mcp and a log file "
+                                 "under the extension's earlier name, "
+                                 "both harmless; there is "
+                                 "no package to remove and no entry to "
+                                 "change. To run the check, the "
+                                 "researcher types `uvx exegete "
+                                 "--check-transition` in a terminal, "
+                                 "which needs uv there; if uvx is not "
+                                 "found, leaving both is fine.",
             "tidy": "`exegete --check-transition --tidy` also removes the "
-                    "link, only when it leads to ~/.exegete and nothing "
-                    "started as qualcoder-mcp is running; adding "
-                    "--tidy-old-logs also removes the old logs. It never "
-                    "touches projects, backups, the AI coder name files in "
-                    "projects or any host's configuration.",
+                    "link, only when it leads to ~/.exegete, nothing "
+                    "started as qualcoder-mcp is running, and neither a "
+                    "qualcoder-mcp older than 0.14.1 nor a host entry "
+                    "starting the old command is left (the check says "
+                    "which); adding --tidy-old-logs also removes the old "
+                    "logs. It never touches projects, backups, the AI "
+                    "coder name files in projects or any host's "
+                    "configuration.",
             "guiding_the_researcher": "You cannot run the check from the "
                                       "conversation: ask the researcher to "
                                       "run it in a terminal and to paste "
                                       "what it prints, then go through it "
-                                      "one item at a time, in its order. "
-                                      "Change a host's entry before "
-                                      "removing the old package, and quit "
-                                      "the host before changing its file. "
-                                      "Never suggest deleting a folder: "
-                                      "the check says which ones hold "
-                                      "research data or another copy's "
-                                      "key. Running it again shows what is "
+                                      "one item at a time, in its order: "
+                                      "installing Exegete first where it "
+                                      "says so, then the hosts' entries "
+                                      "(quit the host before changing its "
+                                      "file), then removing the old "
+                                      "package. Commands and entry lines "
+                                      "are printed on lines of their own, "
+                                      "with full paths: they are pasted "
+                                      "as printed. Never suggest deleting "
+                                      "a folder: the check names what is "
+                                      "in each, and research data or "
+                                      "another copy's key may be there. "
+                                      "Running it again shows what is "
                                       "left."
         },
         "methods_notes": {
@@ -18645,7 +18666,7 @@ def _build_arg_parser(started_as: Optional[str] = None
                     "MCP host over stdio; run it with --version to check the "
                     "installed version.")
     parser.add_argument("--version", action="version", version=version)
-    # v0.14.1, the owner's rulings 42 and 43: the transition check
+    # v0.14.1: the transition check (transition.py)
     parser.add_argument(
         "--check-transition", action="store_true",
         help="list what the move from qualcoder-mcp left on this computer, "

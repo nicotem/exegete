@@ -1511,7 +1511,12 @@ yet, and the first start after the update moves the server's own folder
   These tools put only the named package's commands on your PATH, so
   you get the `exegete` command there only by installing `exegete`
   itself (`pipx install exegete`, `uv tool install exegete`,
-  `uvx exegete`).
+  `uvx exegete`). To move to the new name, in this order: install
+  `exegete` first, then change the command in your host's
+  configuration to the new `exegete` command, and only then
+  `pipx uninstall qualcoder-mcp` or `uv tool uninstall qualcoder-mcp`
+  (the other way round leaves your host with no server, since the
+  copy of Exegete the old package brought goes with it).
 - **A copy of the source (git).** Quit your host, then `git pull` and
   `pip install -e .` as always (the second step makes the version read
   right; it is already part of updating a git install, so this adds no
@@ -1569,24 +1574,34 @@ yet, and the first start after the update moves the server's own folder
 **Afterwards, the transition check.** In a terminal, run
 `exegete --check-transition` (or `qualcoder-mcp --check-transition`,
 or with `python -m exegete.server` in front of the switch). It changes
-nothing: it lists what the change left behind and the one step that
-tidies each, and ends with exit code 0 when nothing is left. It
-reports the old `qualcoder-mcp` package if it is still installed, with
-the command that removes it for the way it was installed (pip, uv, uv
-tool, pipx or a copy of the source); an entry in Claude Desktop's,
-Claude Code's, LM Studio's or Codex's configuration that still starts
-the old command, with the entry to use instead (it only reads those
-files: change them yourself, with the host quit); the link at
-`~/.qualcoder_mcp`, and whether it can go; Claude Desktop's logs under
-the extension's earlier name; and the earlier projects folder, whose
-projects are still found and which needs nothing. Adding `--tidy`
-removes the link, and only when it leads to `~/.exegete` and nothing
-started as `qualcoder-mcp` is still running; adding `--tidy-old-logs`
-as well removes those old logs. Projects, backups, the AI coder name
-files in projects and the hosts' configuration files are never
-touched. Change a host's entry before you remove the old package. The
-old name's package is released beside Exegete until version 1.0; that
-last release will say plainly that it is the last.
+nothing: it lists what the change left behind, numbered in the order
+to take the steps, and ends with exit code 0 when nothing is left.
+First, where the old package was installed with uv tool or pipx (or is
+0.14.0 or earlier) and there is no `exegete` command yet, the command
+that installs Exegete; then each entry in Claude Desktop's, Claude
+Code's, LM Studio's or Codex's configuration that still starts the old
+command, with the entry to use instead (it only reads those files:
+change them yourself, with the host quit); then the command that
+removes the old package, for the way it was installed (pip, uv, uv
+tool, pipx or a copy of the source); the link at `~/.qualcoder_mcp`,
+and whether it can go; Claude Desktop's logs under
+the extension's earlier name; and the earlier projects folder, with
+what is in it (it is searched three folders down, like the project
+list, and never offered for removal while anything is in it).
+Commands and entry lines are printed on lines of their own, with full
+paths, ready to paste. Adding `--tidy` removes the link, and only
+when nothing started as `qualcoder-mcp` is still running, the link
+leads to `~/.exegete`, and nothing is left that could start an older
+copy (a package older than 0.14.1, or a host entry starting the old
+command; the check says which); adding `--tidy-old-logs` as well
+removes those old logs. Projects, backups, the AI coder name files in
+projects and the hosts' configuration files are never touched. If you
+use the desktop extension, there is no `exegete` command: type
+`uvx exegete --check-transition` instead. It needs uv in your
+terminal; if `uvx` is not found, what the extension can leave (the
+link and one old log file) is harmless and can stay. The old name's
+package is released beside Exegete until version 1.0; that last
+release will say plainly that it is the last.
 
 ---
 

@@ -69,7 +69,12 @@ still accepted (the Upgrading list below).
   read only the earlier file and refuse to write one of a newer format,
   so a copy still on them stops, saying the file was written by a newer
   version, instead of writing rows under a name you have since changed
-  (checked with the published 0.14.0). A restore of a backup made
+  (checked with the published 0.14.0). If the earlier file cannot be
+  rewritten at that moment (locked, read-only, or held by a sync
+  program), the answer says so plainly, naming the file and the name an
+  older copy would go on writing under, and never claims the mark; every
+  later AI write tries again, and the project's reads say so until the
+  mark is made. A restore of a backup made
   before the move brings back the earlier file alone; it is read, and
   the next change of name moves it again. If `exegete.json` is removed
   or lost after the move, the marked earlier file is not used for the

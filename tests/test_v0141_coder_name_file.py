@@ -217,7 +217,114 @@ def test_a_file_an_older_copy_wrote_beside_the_new_one_is_marked(folder):
     assert ps.read_sidecar(folder).name == "Exegete Name Two"
 
 
+@pytest.fixture
+def earlier_file_locked(monkeypatch):
+    """A replace that fails for qualcoder_mcp.json only, as a file locked
+    in the Finder, read-only on Windows or held by a sync program does.
+    Returns a function that lifts the lock."""
+    real = ps.os.replace
+
+    def replace(src, dst, *args, **kwargs):
+        if Path(dst).name == OLD:
+            raise PermissionError(13, "Operation not permitted", str(dst))
+        return real(src, dst, *args, **kwargs)
+
+    monkeypatch.setattr(ps.os, "replace", replace)
+    return lambda: monkeypatch.setattr(ps.os, "replace", real)
+
+
+def test_a_failed_mark_is_reported_not_claimed(folder, earlier_file_locked):
+    path = old_file(folder, name="Before")
+    before = path.read_bytes()
+    stored = ps.store_ai_coder_name(folder, "After")
+    assert stored.entry["name"] == "After"
+    assert ps.read_sidecar(folder).name == "After"
+    assert stored.earlier.status == ps.EARLIER_NOT_MARKED
+    assert stored.earlier.path == path
+    assert stored.earlier.held_name == "Before"
+    assert stored.earlier.error == "PermissionError"
+    assert path.read_bytes() == before
+    assert as_0140_reads(path) == "writable"
+    # the retry, once the file can be written, marks it
+    earlier_file_locked()
+    settled = ps.settle_earlier_file(folder)
+    assert settled.status == ps.EARLIER_MARKED
+    assert as_0140_reads(path) == "newer_format"
+    assert ps.settle_earlier_file(folder).status == ps.EARLIER_NOTHING
+
+
+def test_a_mark_made_is_reported(folder):
+    old_file(folder, name="Before")
+    stored = ps.store_ai_coder_name(folder, "After")
+    assert stored.earlier.status == ps.EARLIER_MARKED
+    assert stored.earlier.held_name == "Before"
+    assert ps.store_ai_coder_name(folder, "Again").earlier.status == \
+        ps.EARLIER_NOTHING
+
+
+def test_the_retry_leaves_other_earlier_files_alone(folder):
+    # no exegete.json in use: the earlier file is the one read, never
+    # marked by the retry; an unreadable exegete.json: nothing is touched
+    path = old_file(folder)
+    before = path.read_bytes()
+    assert ps.settle_earlier_file(folder).status == ps.EARLIER_NOTHING
+    (folder / NEW).write_text("{damaged", encoding="utf-8")
+    assert ps.settle_earlier_file(folder).status == ps.EARLIER_NOTHING
+    assert ps.unmarked_earlier_file(folder) is None
+    assert path.read_bytes() == before
+
+
 class TestThroughTheServer:
+
+    def test_a_failed_mark_is_said_plainly_and_retried(
+            self, setup_server, qualcoder_db_path, earlier_file_locked):
+        folder = Path(qualcoder_db_path)
+        (folder / NEW).unlink()
+        path = old_file(folder, name="Before")
+        out = json.loads(server.set_project_ai_coder_name("After"))
+        assert out["success"] is True, out
+        assert out["moved_from"] == OLD
+        assert out["earlier_file_not_marked"] == str(path)
+        said = " ".join(out["warnings"])
+        # never claimed, and said plainly, naming the file and the name
+        assert "marked so that" not in said
+        assert (f"{OLD} in the project folder could not be marked as moved "
+                f"(PermissionError)") in said
+        assert 'would still write rows under "Before"' in said
+        assert "unlock the file or make it writable" in said
+        assert as_0140_reads(path) == "writable"
+        # the reads say so too, until it is marked
+        report = json.loads(server.get_current_project())
+        assert report["earlier_file_not_marked"]["file"] == OLD
+        assert report["earlier_file_not_marked"]["name_it_holds"] == "Before"
+        # a write still under the lock goes ahead under the project's
+        # name, and the file stays as it is
+        out = json.loads(server.create_code("StillLocked",
+                                            create_backup=False))
+        assert out.get("success") is True, out
+        assert code_owner(folder, "StillLocked") == "After"
+        assert as_0140_reads(path) == "writable"
+        # the lock lifted: the next write marks it
+        earlier_file_locked()
+        out = json.loads(server.create_code("Unlocked", create_backup=False))
+        assert out.get("success") is True, out
+        assert as_0140_reads(path) == "newer_format"
+        assert json.loads(path.read_text(encoding="utf-8"))[
+            "ai_coder_name"]["name"] == "Before"
+        report = json.loads(server.get_current_project())
+        assert "earlier_file_not_marked" not in report
+
+    def test_a_refused_write_does_not_retry(self, setup_server,
+                                           qualcoder_db_path, monkeypatch):
+        # a refusal writes nothing, the earlier file included (here the
+        # host declares another name than the project's)
+        folder = Path(qualcoder_db_path)
+        path = old_file(folder, name="Written By 0.14")
+        before = path.read_bytes()
+        monkeypatch.setenv("EXEGETE_AI_CODER_NAME", "Someone Else")
+        out = json.loads(server.create_code("Refused", create_backup=False))
+        assert "This host declares the AI coder name" in out["error"], out
+        assert path.read_bytes() == before
 
     def test_the_setter_says_it_moved_the_name(self, setup_server,
                                                 qualcoder_db_path):

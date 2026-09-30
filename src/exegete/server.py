@@ -135,7 +135,9 @@ from .preview_tokens import (
 from .project_settings import (
     AI_CODER_NAME_ENV,
     DEFAULT_AI_CODER_NAME,
+    EARLIER_MARKED,
     EARLIER_MARKED_HINT,
+    EARLIER_NOT_MARKED,
     HISTORY_ECHO,
     KNOWN_AI_ASSISTANT_OWNER,
     LEGACY_IMPORT_OWNER,
@@ -157,9 +159,11 @@ from .project_settings import (
     newer_format_message,
     normalise_for_case_compare,
     read_sidecar,
+    settle_earlier_file,
     sidecar_path,
+    store_ai_coder_name,
+    unmarked_earlier_file,
     unreadable_message,
-    write_ai_coder_name,
 )
 from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
                        ProposedCode, reading_label, reading_in_words,
@@ -2271,10 +2275,12 @@ def _resolve_write_owner(
 
     Returns (owner, None) when the write may proceed and (None, error)
     otherwise, the _resolve_category_by_name shape, so each tool returns
-    the dict exactly as it returns its other early errors. Pure with
-    respect to disk: it reads the sidecar and the environment and writes
-    nothing, so the same call gives the same answer until the setter
-    changes the project.
+    the dict exactly as it returns its other early errors. A refusal is
+    pure with respect to disk: it reads the sidecar and the environment
+    and writes nothing, so the same call gives the same answer until the
+    setter changes the project. A write that may proceed first keeps the
+    earlier qualcoder_mcp.json marked (settle_earlier_file): the retry
+    for a mark that failed, which changes nothing this call answers.
 
     Called at the last point before _perform_write at which a tool knows
     a row carrying an owner will be written: after its own argument
@@ -2303,6 +2309,7 @@ def _resolve_write_owner(
         return None, _mismatch_refusal(current, declared)
     if tool_owner is not None and tool_owner != current:
         return None, _owner_argument_refusal(current)
+    settle_earlier_file(_current_project_folder(), state)
     return current, None
 
 
@@ -2352,6 +2359,19 @@ def _ai_coder_name_report() -> Dict[str, Any]:
     block["host_declared_ai_coder_name"] = declared
     block["ai_coder_name_mismatch"] = ai_coder_name_mismatch(declared,
                                                              state.entry)
+    unmarked = unmarked_earlier_file(_current_project_folder(), state)
+    if unmarked is not None:
+        # a mark that failed, or a file an older copy wrote since: said
+        # on every read until a write marks it (reads never write)
+        block["earlier_file_not_marked"] = {
+            "file": OLD_SIDECAR_NAME, "name_it_holds": unmarked.held_name,
+            "hint": (
+                f"{OLD_SIDECAR_NAME} in the project folder is not marked as "
+                f"moved, so a copy of qualcoder-mcp 0.12 to 0.14 "
+                f"{_older_copy_would(unmarked.held_name)}. The next write "
+                f"here tries to mark it; if this stays, ask the user to "
+                f"unlock the file or make it writable, or to remove it if "
+                f"no such copy uses this project.")}
     block["ai_coder_names_used"] = echoed_history(state)
     block["ai_coder_names_used_total"] = len(state.history)
     # A restricted EXISTS for the CURRENT name only (D7 9.5): whether the
@@ -3808,10 +3828,11 @@ def set_project_ai_coder_name(name: str, note: str = "",
         if error is not None:
             return json.dumps({"error": error})
     try:
-        entry = write_ai_coder_name(folder, name, note=note,
-                                    host_declaration=declared)
+        stored = store_ai_coder_name(folder, name, note=note,
+                                     host_declaration=declared)
     except SidecarWriteError as e:
         return json.dumps({"error": str(e)})
+    entry, earlier = stored.entry, stored.earlier
 
     logger.info("Project AI coder name set")
     if note:
@@ -3827,22 +3848,8 @@ def set_project_ai_coder_name(name: str, note: str = "",
         "next": (f"Retry the write that was refused; it will now be "
                  f"attributed to \"{name}\"."),
     }
-    if moving and state.earlier_marked:
-        # exegete.json had gone; the marked file gave only its history
-        result["moved_from"] = OLD_SIDECAR_NAME
-        result["warnings"] = list(result["warnings"]) + [
-            f"{SIDECAR_NAME} was missing from the project folder, so the "
-            f"names this project used before were carried from "
-            f"{OLD_SIDECAR_NAME}, already marked as moved, into "
-            f"{SIDECAR_NAME}, where the name is kept from now on."]
-    elif moving:
-        result["moved_from"] = OLD_SIDECAR_NAME
-        result["warnings"] = list(result["warnings"]) + [
-            f"This project's AI coder name and its history were carried "
-            f"from {OLD_SIDECAR_NAME} into {SIDECAR_NAME}, where they are "
-            f"kept from now on. {OLD_SIDECAR_NAME} stays in the project "
-            f"folder, marked so that qualcoder-mcp 0.12 to 0.14 refuse to "
-            f"write it rather than use an outdated name."]
+    result["warnings"] = list(result["warnings"]) + \
+        _earlier_file_warnings(state, earlier, moving, result)
     if kept_aside is not None:
         result["replaced_unreadable_file"] = str(kept_aside)
         result["warnings"] = list(result["warnings"]) + [
@@ -3851,6 +3858,63 @@ def set_project_ai_coder_name(name: str, note: str = "",
             f"was deleted: tell the user, in case that file held a history "
             f"they want back."]
     return json.dumps(result, indent=2)
+
+
+def _earlier_file_warnings(state, earlier, moving: bool,
+                           result: Dict[str, Any]) -> List[str]:
+    """What the setter says about qualcoder_mcp.json, and only what
+    happened: marked is said only when the mark was made (v0.14.1)."""
+    notes: List[str] = []
+    if moving:
+        result["moved_from"] = OLD_SIDECAR_NAME
+    if moving and state.earlier_marked:
+        # exegete.json had gone; the marked file gave only its history
+        notes.append(
+            f"{SIDECAR_NAME} was missing from the project folder, so the "
+            f"names this project used before were carried from "
+            f"{OLD_SIDECAR_NAME}, already marked as moved, into "
+            f"{SIDECAR_NAME}, where the name is kept from now on.")
+    elif moving:
+        text = (f"This project's AI coder name and its history were "
+                f"carried from {OLD_SIDECAR_NAME} into {SIDECAR_NAME}, "
+                f"where they are kept from now on.")
+        if earlier.status == EARLIER_MARKED:
+            text += (f" {OLD_SIDECAR_NAME} stays in the project folder, "
+                     f"marked so that qualcoder-mcp 0.12 to 0.14 refuse to "
+                     f"write it rather than use an outdated name.")
+        notes.append(text)
+    elif earlier.status == EARLIER_MARKED:
+        notes.append(
+            f"{OLD_SIDECAR_NAME} in the project folder, which qualcoder-mcp "
+            f"0.12 to 0.14 could still write, is now marked as moved, so "
+            f"they refuse to write it rather than use an outdated name.")
+    if earlier.status == EARLIER_NOT_MARKED:
+        result["earlier_file_not_marked"] = str(earlier.path)
+        notes.append(_earlier_file_not_marked_warning(earlier))
+    return notes
+
+
+def _earlier_file_not_marked_warning(earlier) -> str:
+    """The plain warning for a qualcoder_mcp.json the setter could not
+    mark: what it means, and what the researcher can do."""
+    reason = f" ({earlier.error})" if earlier.error else ""
+    return (
+        f"{OLD_SIDECAR_NAME} in the project folder could not be marked as "
+        f"moved{reason}: it may be locked, read-only or held by a sync "
+        f"program. Until it is marked, a copy of qualcoder-mcp 0.12 to "
+        f"0.14 (another host, or another computer sharing this project) "
+        f"{_older_copy_would(earlier.held_name)}. Tell the user, and ask "
+        f"them to unlock the file or make it writable, or to remove it if "
+        f"no such copy uses this project; every write here tries to mark "
+        f"it again.")
+
+
+def _older_copy_would(held_name: Optional[str]) -> str:
+    """What an older copy would do with an unmarked qualcoder_mcp.json."""
+    if held_name:
+        return (f"would still write rows under \"{held_name}\", the name "
+                f"it holds")
+    return "could still store a name of its own in it"
 
 
 def _keep_unreadable_sidecar_aside(folder: Path) -> Tuple[Optional[Path],

@@ -56,7 +56,7 @@ import tempfile
 import unicodedata
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 from . import env_settings, names
 from .database import (KNOWN_AI_ASSISTANT_OWNER, validate_coder_name,
@@ -181,6 +181,27 @@ EARLIER_MARKED_HINT = (
 
 class SidecarWriteError(Exception):
     """The sidecar could not be written; nothing on disk was changed."""
+
+
+# What a write did about the earlier file (EarlierFile.status).
+EARLIER_NOTHING = "nothing"         # none to mark: absent, already marked,
+                                    # or not one this server rewrites
+EARLIER_MARKED = "marked"           # an unmarked version 1 file, marked now
+EARLIER_NOT_MARKED = "not_marked"   # one this write could not rewrite
+
+
+class EarlierFile(NamedTuple):
+    """What happened to `qualcoder_mcp.json` in one write."""
+    status: str
+    path: Path
+    held_name: Optional[str] = None    # the name it holds, for messages
+    error: Optional[str] = None        # why it was not marked (a type name)
+
+
+class NameStored(NamedTuple):
+    """`store_ai_coder_name`'s answer: the entry and the earlier file."""
+    entry: Dict[str, Any]
+    earlier: EarlierFile
 
 
 def _now_iso() -> str:
@@ -460,6 +481,25 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
                         now: Optional[str] = None) -> Dict[str, Any]:
     """Store `name` as the project's AI coder name; return the new entry.
 
+    `store_ai_coder_name` without the earlier file's report.
+
+    Raises:
+        SidecarWriteError: As `store_ai_coder_name`.
+    """
+    return store_ai_coder_name(project_folder, name, note=note,
+                               host_declaration=host_declaration,
+                               now=now).entry
+
+
+def store_ai_coder_name(project_folder: Any, name: str, note: str = "",
+                        host_declaration: Optional[str] = None,
+                        now: Optional[str] = None) -> NameStored:
+    """Store `name` as the project's AI coder name.
+
+    Returns the new entry and what happened to the earlier file, which
+    the setter reports: whether it was marked, and when it could not be,
+    why and under which name an older copy would go on writing.
+
     The MRU write discipline (`_open_mru_tmp`, server.py:80-120), with
     one addition: a single `fsync` before the replace, because this file
     is the only record of a choice the researcher made and re-creating it
@@ -479,7 +519,8 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
     a restore of an older backup), its name, history and other keys are
     carried into the new file, and the earlier file is then marked as
     moved (`_mark_earlier_file`), so that 0.12 to 0.14 refuse to write
-    it. A failure to mark it is logged and tried again at the next write;
+    it. A failure to mark it is logged and reported in the answer, and
+    every later owner-bearing write tries again (`settle_earlier_file`);
     the name itself is already stored.
 
     Raises:
@@ -555,8 +596,7 @@ def write_ai_coder_name(project_folder: Any, name: str, note: str = "",
         raise SidecarWriteError(
             f"The AI coder name could not be stored with the project "
             f"({type(e).__name__}). Nothing was changed.") from e
-    _mark_earlier_file(folder)
-    return entry
+    return NameStored(entry, _mark_earlier_file(folder))
 
 
 def _replace_atomically(folder: Path, target: Path, encoded: bytes) -> None:
@@ -595,39 +635,117 @@ def _replace_atomically(folder: Path, target: Path, encoded: bytes) -> None:
         raise
 
 
-def _mark_earlier_file(folder: Path) -> bool:
-    """Mark the earlier `qualcoder_mcp.json` as moved; True when marked.
+def _unmarked_earlier_file(folder: Path) -> Optional[Dict[str, Any]]:
+    """The earlier file's contents when it is one to mark, else None.
 
-    Only a regular file this server can read, in the shared format, at
-    version 1 is rewritten: its keys are kept (the name it held at the
-    move included, so 0.12 to 0.14 still recognise the rows it named),
-    and it gains format_version 2 and `moved_to`, which those versions
-    refuse to write. A file already marked, an unreadable one (its bytes
-    may be the only history) and a newer one are left as they are.
+    That is a regular file this server can read, in the shared format, at
+    version 1, which is what 0.12 to 0.14 write. A file already marked,
+    an unreadable one (its bytes may be the only history), a newer one
+    and anything that is not a regular file are never rewritten.
     """
     old = folder / OLD_SIDECAR_NAME
     try:
         st = os.lstat(old)
     except (OSError, ValueError):
-        return False
+        return None
     if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
-        return False
+        return None
     data = _read_raw(old)
     if (data is None or data.get("format") != SIDECAR_FORMAT
             or data.get("format_version") != SIDECAR_FORMAT_VERSION
             or isinstance(data.get("format_version"), bool)):
-        return False
+        return None
+    return data
+
+
+def _held_name(data: Dict[str, Any]) -> Optional[str]:
+    """The name a sidecar's current entry holds, when it validates."""
+    entry = _validated_entry(data.get("ai_coder_name"))
+    return entry["name"] if entry else None
+
+
+def _mark_earlier_file(folder: Path) -> EarlierFile:
+    """Mark the earlier `qualcoder_mcp.json` as moved; say what happened.
+
+    Only a file `_unmarked_earlier_file` returns is rewritten: its keys
+    are kept (the name it held at the move included, so 0.12 to 0.14
+    still recognise the rows it named), and it gains format_version 2
+    and `moved_to`, which those versions refuse to write. When the
+    rewrite fails (the file locked in the Finder, read-only on Windows,
+    held by a sync program), the answer says so, with the name an older
+    copy would go on writing under, and nothing else changes.
+    """
+    old = folder / OLD_SIDECAR_NAME
+    data = _unmarked_earlier_file(folder)
+    if data is None:
+        return EarlierFile(EARLIER_NOTHING, old)
+    held = _held_name(data)
     data["format_version"] = OLD_SIDECAR_MOVED_VERSION
     data[MOVED_TO_KEY] = SIDECAR_NAME
     data["written_by"] = f"{names.DISTRIBUTION} {_package_version()}"
     try:
         _replace_atomically(folder, old, _encoded_payload(data))
     except OSError as e:
-        logger.warning("The earlier AI coder name file could not be marked "
-                       "as moved (%s); the next write tries again",
+        logger.warning("%s could not be marked as moved (%s); every "
+                       "write that stores a name tries again",
+                       OLD_SIDECAR_NAME, type(e).__name__)
+        return EarlierFile(EARLIER_NOT_MARKED, old, held, type(e).__name__)
+    return EarlierFile(EARLIER_MARKED, old, held)
+
+
+def _earlier_file_to_settle(folder: Path, state: SidecarState) -> bool:
+    """Whether exegete.json is in use and readable at this version, the
+    one case in which the earlier file beside it is kept marked."""
+    return (state.path is not None and state.path.name == SIDECAR_NAME
+            and state.status in (SIDECAR_SET, SIDECAR_UNSET))
+
+
+def settle_earlier_file(project_folder: Any,
+                        state: Optional[SidecarState] = None) -> EarlierFile:
+    """Mark an unmarked earlier file beside exegete.json. Never raises.
+
+    The retry for a mark that failed, and the mark for a file an older
+    copy of the server wrote beside exegete.json after the move. Called
+    before every owner-bearing write (`server._resolve_write_owner`),
+    after the checks that may refuse it, so a refused write still writes
+    nothing. Acts only while exegete.json is in use and readable at this
+    version (`state`, read fresh when not given).
+    """
+    folder = Path(project_folder)
+    old = folder / OLD_SIDECAR_NAME
+    try:
+        if state is None:
+            state = read_sidecar(folder)
+        if not _earlier_file_to_settle(folder, state):
+            return EarlierFile(EARLIER_NOTHING, old)
+        return _mark_earlier_file(folder)
+    except Exception as e:                      # noqa: BLE001
+        # A write must never fail on this: the name it uses is right, and
+        # the next write tries again.
+        logger.warning("%s could not be checked (%s)", OLD_SIDECAR_NAME,
                        type(e).__name__)
-        return False
-    return True
+        return EarlierFile(EARLIER_NOT_MARKED, old, None, type(e).__name__)
+
+
+def unmarked_earlier_file(project_folder: Any,
+                          state: Optional[SidecarState] = None
+                          ) -> Optional[EarlierFile]:
+    """The earlier file when exegete.json is in use and it is unmarked.
+
+    A read: it never writes. The project reads report it, so that a mark
+    that failed stays visible until a write makes it or the researcher
+    unlocks or removes the file.
+    """
+    folder = Path(project_folder)
+    if state is None:
+        state = read_sidecar(folder)
+    if not _earlier_file_to_settle(folder, state):
+        return None
+    data = _unmarked_earlier_file(folder)
+    if data is None:
+        return None
+    return EarlierFile(EARLIER_NOT_MARKED, folder / OLD_SIDECAR_NAME,
+                       _held_name(data))
 
 
 def _package_version() -> str:

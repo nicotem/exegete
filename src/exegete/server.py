@@ -6938,7 +6938,8 @@ def analyze_for_coding(
         ai_coder_name_at_record=read_sidecar(_current_project_folder()).name
     )
 
-    # Save session (Claude records its suggestions with record_suggestions)
+    # Save session (the assistant records its suggestions with
+    # record_suggestions)
     session_manager.save_session(session)
 
     # The study in the researcher's own words: the project memo's public
@@ -7017,7 +7018,7 @@ Session ID: `{session.session_id}`
 
 This session has been created and saved. It covers only these files
 and {code_scope}; record_suggestions refuses anything outside it. Now
-YOU (Claude) need to:
+YOU, the assistant, need to:
 
 1. **Read before you code, and stay with the text.** Suggest a code only
    where the words support it; a file with nothing to suggest is a valid
@@ -7038,7 +7039,7 @@ YOU (Claude) need to:
 4. **Present the recorded suggestions to the user** in a clear, reviewable format
 
 **FOR THE USER:**
-Once Claude records and presents suggestions, you can:
+Once the assistant records and presents suggestions, you can:
 - Review the suggestions in the chat
 - Use `review_suggestions` to see more details
 - Use `update_suggestion_status` to record your decision on each one:
@@ -7464,7 +7465,7 @@ def record_suggestions(
     """Record AI coding suggestions into an analysis session for user review.
 
     This is step 2 of the AI coding workflow: after analyze_for_coding creates
-    a session, use this tool to persist the suggestions you (Claude) identified
+    a session, use this tool to persist the suggestions you identified
     by reading the files. Nothing is written to the QualCoder database: the
     suggestions are stored in the session for the user to review, approve, and
     apply.
@@ -10510,8 +10511,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     """Get help and examples for AI coding tools.
 
     This tool provides comprehensive documentation and examples for all
-    AI-assisted coding features. It's your guide to using Claude to
-    help code your qualitative data.
+    AI-assisted coding features: your guide to coding your qualitative
+    data with an AI assistant.
 
     Args:
         tool_name: Specific tool to explain (optional)
@@ -10528,17 +10529,17 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     # Comprehensive help documentation
     tool_help = {
         "overview": {
-            "title": "AI-Assisted Coding for Qualcoder",
-            "description": "Use Claude to help code your qualitative data. Claude can analyse interview transcripts, suggest codes, and create coded segments that you can review and apply directly to your Qualcoder project.",
+            "title": "AI-Assisted Coding for QualCoder",
+            "description": "Use an AI assistant to help code your qualitative data. The assistant can analyse interview transcripts, suggest codes, and create coded segments that you can review and apply directly to your QualCoder project.",
             "workflow": {
                 "step_1": "Ask the researcher the three questions first, "
                           "then start a coding session for the files and "
                           "codes they named, with the answers as "
                           "instruction (analyze_for_coding; it reads "
                           "nothing and suggests nothing)",
-                "step_2": "Claude reads the files and records its suggestions "
-                          "(record_suggestions; each one is verified against "
-                          "the file text)",
+                "step_2": "The assistant reads the files and records its "
+                          "suggestions (record_suggestions; each one is "
+                          "verified against the file text)",
                 "step_3": "Review suggestions (review_suggestions; "
                           "edit_suggestion adjusts a span or code in place "
                           "before approval)",
@@ -10642,7 +10643,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "Review, then record the researcher's decision on each "
                 "suggestion before applying (the server writes what is "
                 "marked approved; it cannot see who approved it)",
-                "Apply codings directly to Qualcoder database (with a backup "
+                "Apply codings directly to QualCoder database (with a backup "
                 "first, unless create_backup is false)",
                 "Writes refuse to run while a released QualCoder (3.x) has the "
                 "project open (lock file); an open QualCoder 4.0 window is "
@@ -10692,7 +10693,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             ]
         },
         "apply_codings": {
-            "purpose": "Apply approved coding suggestions directly to the Qualcoder database",
+            "purpose": "Apply approved coding suggestions directly to the QualCoder database",
             "when_to_use": "After reviewing suggestions and approving the ones you want",
             "workflow": [
                 "1. Run analyze_for_coding on your files",
@@ -10890,7 +10891,7 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     the session for the user to review, refine and approve; only
     create_proposed_codes (after approval) touches the codebook.
 
-    WORKFLOW: analyze_for_coding creates a session -> you (Claude) read
+    WORKFLOW: analyze_for_coding creates a session -> you read
     the files and record the codes you see emerging with this tool ->
     present them -> the user refines (update_proposal / merge_proposals)
     and decides (update_proposal_status) -> create_proposed_codes writes

@@ -23,7 +23,8 @@ must understand:
 > attribute data) is delivered into the conversation, and
 > conversation content is **transmitted to whichever AI provider your
 > host uses and processed like any other chat or API content**. For
-> Claude hosts that provider is Anthropic; with a fully local host
+> Claude hosts that provider is Anthropic; for OpenAI's apps (the
+> ChatGPT desktop app and Codex) it is OpenAI; with a fully local host
 > (rung 4 below) there is no external provider at all. Reading a
 > transcript through this tool sends the returned portions of that
 > transcript to that provider.
@@ -761,6 +762,107 @@ local)".
 - All quotes above were pulled 2026-08-17. Terms change; the linked
   pages govern. The Privacy Center now lives at privacy.claude.com
   (older privacy.anthropic.com links redirect there).
+
+## OpenAI's apps: the ChatGPT desktop app and Codex (Experimental)
+
+With the ChatGPT desktop app, or Codex's command line or editor
+extension (INSTALL.md's recipe, "ChatGPT's desktop app and Codex"), what
+a tool returns goes to OpenAI, and OpenAI's terms apply. The same
+discipline as above: OpenAI's pages are quoted verbatim with their
+addresses, never characterised in our own voice, and the linked pages
+govern. OpenAI's Help Center and openai.com refuse automated reading, so
+those pages were read on 30 September 2026 from the Internet Archive's
+captures of them, named with each quote: open the live page before you
+rely on it. (The recipe itself is Experimental, and not yet tried by
+this project. This project gives no steps for ChatGPT in a web browser,
+which could reach Exegete only through OpenAI's Secure MCP Tunnel;
+INSTALL.md says why.)
+
+**Services for individuals** (OpenAI's phrase; the page names the
+business plans separately, below). Help Center, "How your data is used
+to improve model performance",
+<https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>
+(Archive capture of 28 September 2026, which shows "Updated: 4 hours
+ago"):
+
+> "When you use our services for individuals, such as ChatGPT and
+> Codex, we may use your content to train our models. You can choose
+> whether your conversations help improve our models. To opt out, turn
+> off Improve the model for everyone under Settings > Data controls in
+> ChatGPT, or select Do not train on my content in our Privacy Portal."
+
+> "Either option is sufficient for ChatGPT conversations and Codex
+> tasks. You don’t need to do both. After you opt out, we won’t use
+> your new conversations to improve our models."
+
+> "Codex has a separate Include environments setting in Codex settings
+> for allowing training on full environments. Changing your settings in
+> ChatGPT or the Privacy Portal does not change that setting."
+
+The same page, on feedback:
+
+> "Even if you have opted out of training, you can still choose to
+> provide feedback to us about your interactions with our products (for
+> instance, by selecting thumbs up or thumbs down on a model response).
+> If you choose to provide feedback, the entire conversation associated
+> with that feedback may be used to train our models."
+
+The Privacy Portal is <https://privacy.openai.com/>.
+
+**ChatGPT Business, Enterprise and Edu, and the API.** The same page:
+
+> "By default, we don’t use inputs or outputs from ChatGPT Business,
+> ChatGPT Enterprise, ChatGPT Edu, or our API to improve our models. The
+> same applies to content in ChatGPT for Academic Researchers
+> workspaces."
+
+"Enterprise privacy at OpenAI", <https://openai.com/enterprise-privacy/>
+(the page shows "Updated: January 8, 2026"; Archive capture of
+29 September 2026):
+
+> "Yes, we are able to execute a Data Processing Addendum (DPA) with
+> customers for their use of ChatGPT Business, ChatGPT Enterprise, and
+> the API in support of their compliance with GDPR and other privacy
+> laws."
+
+**Codex: how you sign in decides.** Codex can be signed in to with a
+ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>
+(read 30 September 2026):
+
+> "Your sign-in method also determines which admin controls and
+> data-handling policies apply."
+
+**Codex keeps session transcripts on your computer.**
+<https://learn.chatgpt.com/docs/agent-approvals-security> (read
+30 September 2026):
+
+> "Review local data retention settings (for example,
+> `history.persistence` / `history.max_bytes`) if you don't want Codex
+> to save session transcripts under `CODEX_HOME`."
+
+`CODEX_HOME` is, unless you set it, `~/.codex`, the folder that holds
+Codex's `config.toml`. A session's transcript can hold what Exegete's
+tools returned in it, participants' words included, as Claude Code's
+local transcripts can ("Cross-rung cautions", above).
+
+**The UK, the EEA and Switzerland.** "Europe Terms of Use",
+<https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
+January 16, 2026"; Archive capture of 26 September 2026):
+
+> "These Terms of Use apply if you reside in the European Economic Area
+> (EEA), Switzerland, or UK."
+
+> "Opt out. If you do not want us to use your Content to train our
+> models, you have the option to opt out by updating your account
+> settings. Further information can be found in this article. Please
+> note that in some cases this may limit the ability of our Services to
+> better address your specific use case."
+
+OpenAI's privacy policy for the EEA and the UK is a separate page,
+<https://openai.com/policies/eu-privacy-policy/>, which this project has
+not been able to read. What the next two sections say about consent,
+controllers and processors, and special-category data holds in the same
+way when the provider is OpenAI.
 
 ## What this means for research data
 

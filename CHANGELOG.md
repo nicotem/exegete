@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-v0.14.1: qualcoder-mcp is now called Exegete, and the README review.
-The server's behaviour is unchanged; its names changed, with every
-earlier spelling still accepted (the Upgrading list below).
+v0.14.1: qualcoder-mcp is now called Exegete, and the README review,
+with a new introduction and a route for OpenAI's apps. The server's
+behaviour is unchanged; its names changed, with every earlier spelling
+still accepted (the Upgrading list below).
 
 ### Changed: qualcoder-mcp is now Exegete
 
@@ -124,18 +125,61 @@ earlier spelling still accepted (the Upgrading list below).
   the review touched. The pin on the README's "Completed in v0.13.0"
   list is retired with the list.
 
+### Changed: the introduction, and OpenAI's apps
+
+- The README's opening presents Exegete as a qualitative analysis
+  application in its own right, used through a conversation with an AI
+  assistant, that creates and works on QualCoder projects and stays
+  compatible with QualCoder, so a project opens there at any time; no
+  longer as a suite of tools that works on QualCoder projects. It says
+  what Exegete covers today (creating a project, Experimental; cases
+  and attributes; bringing in text; coding with suggestions the
+  researcher decides; the codebook; memos, annotations and a journal;
+  searching; reports and exports; comparing coders; replacing names;
+  backups and restore), what still needs QualCoder (documents other
+  than text, coding images, audio and video, graphs), and the whole
+  life of a project as the aim. The independence statement, the three
+  commitments and the paragraph on QualCoder's own server stand.
+- A route for OpenAI's apps (Experimental, written from OpenAI's
+  documentation of 30 September 2026 and not yet tried by this
+  project): the ChatGPT desktop app, and Codex's command line and
+  editor extension, which share one settings file, start Exegete on
+  your computer; ChatGPT in a web browser or on a phone does not, and
+  OpenAI's Secure MCP Tunnel, which could connect the web to it, is not
+  recommended for participants' data. README has the short version,
+  INSTALL.md the steps: a settings entry that makes Codex ask before
+  every tool that is not read-only (by default it asks only before a
+  tool that can replace or remove, and runs the tools that only add,
+  and `read_pseudonym_list`, without asking), the permission mode to
+  keep, and what to do if it does not start.
+- PRIVACY.md: a section on OpenAI's apps, quoting OpenAI's pages on
+  training and its opt-out for services for individuals, the business
+  plans and the API, Codex's sign-in, the session transcripts Codex
+  keeps under `~/.codex`, and the terms for the UK, the EEA and
+  Switzerland; README's "Where your data goes" names OpenAI and quotes
+  the Help Center once.
+- The served texts no longer address the assistant as Claude:
+  `analyze_for_coding`'s next steps, `record_suggestions`' and
+  `propose_codes`' descriptions, and `explain_ai_coding_tools`'
+  description and overview (which also spells QualCoder so), now say
+  "the assistant" or "you". No description grew.
+- Tests: the new claims pinned, the settings entry read as TOML and
+  checked against the command and settings this branch has, and
+  Codex's approval rule applied to every tool's marks.
+
 ### Measured
 
 - Serialised tool JSON as it stands after the rename's changes to the
-  tools' texts: full = 195,305 characters (about 48.8k tokens at
-  chars/4) over 73 tools, core = 64,825 (about 16.2k) over 21, and the
-  opt-in lifecycle set = 197,890 (about 49.5k) over 74, measured on
+  tools' texts: full = 195,284 characters (about 48.8k tokens at
+  chars/4) over 73 tools, core = 64,816 (about 16.2k) over 21, and the
+  opt-in lifecycle set = 197,869 (about 49.5k) over 74, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 205,013, 68,117 and 207,738. Moved by
+  Python 3.11.13 (the `.venv/`), 204,992, 68,108 and 207,717. Moved by
   the resource addresses the texts name (`exegete://` for
-  `qualcoder://`) and the settings they name (`EXEGETE_PROJECT_PATH`
+  `qualcoder://`), the settings they name (`EXEGETE_PROJECT_PATH`
   and `EXEGETE_AI_CODER_NAME` in `select_project` and
-  `export_refi_qda`).
+  `export_refi_qda`), and three descriptions that no longer address
+  the assistant as Claude, each a few characters shorter.
 
 ### Upgrading from 0.14.0
 

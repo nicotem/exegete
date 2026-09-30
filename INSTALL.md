@@ -88,21 +88,22 @@ Desktop configured by hand, and for contributors who want the source.
 This server is host-agnostic stdio MCP. Which AI processes your data,
 and under which terms, is decided by the host you run and the account
 you sign into, not by this server. The terms attach to the account and
-product line, not to the client application. Three routes, from easiest
-to most private:
+product line, not to the client application. Three routes with Claude,
+from easiest to most private, and OpenAI's apps:
 
 | Route | What it means | Where to read more |
 |---|---|---|
 | **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser or on a phone. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
-The multi-host support (the core toolset and the two recipes) is
+The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
 tested at the server level, but not yet exercised end to end on every
-host and not capability-evaluated on local models. Step-by-step guides
-for Claude Code and LM Studio, written for researchers rather than
-programmers, are considered on request: ask in
+host and not capability-evaluated on local models. The recipe for
+OpenAI's apps goes step by step; guides of that kind for Claude Code
+and LM Studio are considered on request: ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
 ## What You'll Need
@@ -115,7 +116,8 @@ Before starting, make sure you have:
   - If not installed, get it from: https://www.python.org/downloads/
 - ✅ **An MCP host**: the step-by-step guide below uses Claude Desktop
   configured by hand (download from: https://claude.ai/download);
-  recipes for Claude Code and LM Studio follow further down
+  recipes for Claude Code, LM Studio, and OpenAI's ChatGPT desktop app
+  and Codex follow further down
 - ✅ **A QualCoder project, or the `lifecycle` tool set.** On this
   route the default tool set, `full`, has no tool that creates a
   project, so you need a project made in QualCoder (a folder ending in
@@ -417,8 +419,9 @@ variables the server reads" below), not by the client.
 ## Environment variables the server reads
 
 All configuration is by environment variables in the `env` block of the
-server entry (Claude Desktop config, `.mcp.json`, LM Studio's mcp.json),
-or with `claude mcp add -e NAME=value ...` for Claude Code. Every
+server entry (Claude Desktop config, `.mcp.json`, LM Studio's mcp.json,
+the `[mcp_servers.exegete.env]` table of Codex's `config.toml`), or with
+`claude mcp add -e NAME=value ...` for Claude Code. Every
 variable is optional.
 
 **Earlier spellings, read until v1.0.** Before 0.14.1 each of these
@@ -735,6 +738,213 @@ corresponding care.
 
 ---
 
+## ChatGPT's desktop app and Codex (Experimental)
+
+> **Status: Experimental.** Written from OpenAI's documentation, read on
+> 30 September 2026 (its pages show no date), and, where it is silent,
+> from Codex's source code as it stood that day. This project has not
+> yet run Exegete in any OpenAI app; the steps may change after that
+> check.
+
+**Which OpenAI apps can use Exegete.** OpenAI's page on MCP
+(<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
+app, Codex CLI, and IDE extension support MCP servers and share MCP
+configuration for the same Codex host."
+
+- **The ChatGPT desktop app** (macOS, Windows or Linux:
+  <https://chatgpt.com/download/>): yes, by OpenAI's documentation. It
+  starts Exegete on your computer, from the settings file below. OpenAI documents this for
+  Codex, which you choose in the app's product selector; whether the
+  app's ChatGPT side (Chat and Work) offers Exegete's tools too is not
+  documented, and not yet checked.
+- **Codex's command line, and its extension for VS Code and similar
+  editors**: yes, by the same documentation, from the same settings
+  file.
+- **ChatGPT in a web browser**: not directly. It runs on OpenAI's
+  computers and connects to servers on the internet. OpenAI's Secure
+  MCP Tunnel can connect it to a program on your computer, but it is
+  made for developers and IT teams (it needs an OpenAI API Platform
+  organisation, an API key, a helper program left running and ChatGPT's
+  developer mode), and it makes every Exegete tool callable from the
+  OpenAI workspaces the tunnel is linked to. This project does not
+  recommend it for a project with participants' data, and gives no
+  steps for it.
+- **ChatGPT on a phone**: no.
+
+**Which plans.** OpenAI's Codex pricing page
+(<https://learn.chatgpt.com/docs/pricing>, read 30 September 2026) lists
+"ChatGPT desktop app for local chats", "Codex CLI" and "IDE extension"
+for the Plus, Pro, Business, Enterprise / Education and API Key plans;
+for Free and Go it mentions only the desktop app, "subject to rollout".
+You sign in to Codex with a ChatGPT account or with an API key, and
+which of the two decides which of OpenAI's data policies apply
+([PRIVACY.md](PRIVACY.md), "OpenAI's apps: the ChatGPT desktop app and
+Codex").
+
+**Step 1. Install Exegete.** It needs Python 3.10 or newer ("What
+You'll Need", above). In the Terminal (macOS or Linux):
+
+```bash
+python3 -m venv ~/exegete-venv
+~/exegete-venv/bin/pip install exegete
+```
+
+or in PowerShell on Windows:
+
+```powershell
+py -m venv $HOME\exegete-venv
+$HOME\exegete-venv\Scripts\pip install exegete
+```
+
+(`pipx install exegete` or `uv tool install exegete` also work.) The
+settings in step 2 need the full path of the `exegete` program, because
+an app started from the Dock or the Start menu may not look in the
+folders your Terminal does. After the lines above it is
+`/Users/YOUR_USERNAME/exegete-venv/bin/exegete` on a Mac,
+`/home/YOUR_USERNAME/exegete-venv/bin/exegete` on Linux and
+`C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe` on Windows;
+with pipx or uv, `which exegete` (on Windows, `where.exe exegete`)
+prints it.
+
+**Step 2. Add Exegete to Codex's settings file.** The desktop app, the
+command line and the editor extension all read one file, `config.toml`,
+in a folder called `.codex` in your home folder (OpenAI's page: "By
+default this is `~/.codex/config.toml`"). On a Mac, this line opens it
+in TextEdit, creating it first if it is not there:
+
+```bash
+mkdir -p ~/.codex && touch ~/.codex/config.toml && open -e ~/.codex/config.toml
+```
+
+On Windows, in PowerShell: `mkdir -Force $HOME\.codex` and then
+`notepad $HOME\.codex\config.toml` (Notepad offers to create the file).
+Paste these lines at the end of the file, write your own full path from
+step 1 after `command =`, and save:
+
+```toml
+[mcp_servers.exegete]
+command = "/Users/YOUR_USERNAME/exegete-venv/bin/exegete"
+startup_timeout_sec = 30
+tool_timeout_sec = 300
+default_tools_approval_mode = "writes"
+
+[mcp_servers.exegete.env]
+EXEGETE_TOOLSET = "lifecycle"
+EXEGETE_WORKSPACE = "~/QualCoder projects"
+
+[mcp_servers.exegete.tools.read_pseudonym_list]
+approval_mode = "prompt"
+```
+
+What the lines do:
+
+- `command`: the full path of the `exegete` program. On Windows, write
+  it between single quotes, which keep its backslashes as they are:
+  `command = 'C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe'`.
+- `default_tools_approval_mode = "writes"`: Codex asks you before every
+  Exegete tool that is not marked read-only (OpenAI's page: "The
+  `writes` mode prompts for tools that aren't marked read-only."). Keep
+  it. Without it, Codex's default for a server, `auto`, runs without
+  asking the tools that only add to a project, among them
+  `import_text_file`, `apply_codings` and `create_proposed_codes`
+  ("What hosts do with the tools' read and write marks", below).
+- `approval_mode = "prompt"` for `read_pseudonym_list`: Codex asks
+  before that tool whatever the line above says. It sends every real
+  name in the project's pseudonyms file to OpenAI.
+- `EXEGETE_TOOLSET = "lifecycle"`: every tool, creating a project
+  included, as in the Claude Desktop extension.
+- `EXEGETE_WORKSPACE`: where new projects and working copies go; here,
+  as in the extension, a folder called "QualCoder projects" in your
+  home folder, outside Documents, which iCloud or OneDrive may sync.
+  Codex passes Exegete only the settings its entry names ("Environment
+  variables the server reads", above, lists them all), so a setting
+  exported in a shell profile does not reach it (Codex's source code).
+- `startup_timeout_sec` and `tool_timeout_sec`: how many seconds Codex
+  waits for Exegete to start, and for one tool to finish. OpenAI's
+  defaults are 10 and 60; the first start after an install or update
+  can be slower, and replacing names or exporting a large project can
+  take more than a minute. These two values are suggestions, not yet
+  measured with Codex.
+
+If the file already has an entry named `exegete` (because you added it
+in the app's settings screen or with `codex mcp add`, below), do not
+paste a second one: a second `[mcp_servers.exegete]` line makes the
+whole file unreadable. Add the lines it lacks to the entry that is
+there instead.
+
+**Other ways to add it.** The desktop app has a settings screen for
+this (Settings, MCP servers, Add server: the name `exegete`, STDIO, and
+the full path from step 1 as the command; then Save), and the command
+line has one command:
+
+```bash
+codex mcp add exegete --env EXEGETE_TOOLSET=lifecycle --env "EXEGETE_WORKSPACE=~/QualCoder projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
+```
+
+OpenAI does not document that either writes the approval lines, so
+after either one, open the file as above and add what it lacks:
+`default_tools_approval_mode = "writes"` on the line straight after
+`[mcp_servers.exegete]`; at the end of the file, the last two lines of
+the block above (the `read_pseudonym_list` table); and, if the settings
+screen had no place for them, the `[mcp_servers.exegete.env]` line with
+the two settings under it.
+
+**Step 3. Restart, and check.** In the desktop app, open Settings, MCP
+servers, where `exegete` is now listed, and select Restart (or quit the
+app and open it again). Choose Codex in the product selector, start a
+new chat, and type `/mcp` in the message box: Exegete is among the
+connected servers. Then ask "Using the Exegete tools, is a project
+open?": the answer is that no project is open (a tool that only reads
+runs without asking). On the command line, `codex mcp list` lists
+Exegete, and `/mcp` inside `codex` shows it.
+
+**Step 4. Keep it asking.** In the desktop app, keep the permissions
+control below the message box on **Ask for approval**, as OpenAI
+advises ("For most work, start with **Ask for approval**.",
+<https://learn.chatgpt.com/docs/permission-modes>); on the command line
+it is `/permissions`. The other two modes take the decision from you:
+**Approve for me** (called Auto-review in settings) sends each request
+that needs approval to an automatic reviewer, an AI, instead of you,
+and **Full access** runs every tool call without asking (Codex's source
+code). When Codex asks before an Exegete tool, it may offer to remember
+your answer for the session or for good; for the tools that write, and
+for `read_pseudonym_list`, answer each time, since a remembered answer
+lets later calls run unasked. Codex's sandbox settings govern the
+commands the model runs, not Exegete, which reads and writes your
+projects whichever sandbox you choose (Codex's source code). What "Approving the AI's
+suggestions: your host's settings are the safeguard", below, says
+holds in Codex too.
+
+**If Exegete does not start, or its tools are missing:**
+
+- Check the full path: in a Terminal, the path from step 1 followed by
+  `--version` answers `exegete <version>`. If it does not, install again
+  (step 1).
+- Codex cannot read a settings file with a mistake in it, such as a
+  missing quote mark or a second `[mcp_servers.exegete]` line; compare
+  yours with the block above. On Windows, a path between double quotes
+  needs every backslash doubled; single quotes avoid that.
+- If Codex reports that the server timed out while starting, raise
+  `startup_timeout_sec`. If a tool stopped with a timeout, raise
+  `tool_timeout_sec`, and before asking again check whether the change
+  was made (ask for the project summary, or the list of backups): the
+  server may have finished it.
+- An `EXEGETE_TOOLSET` other than `full`, `core` or `lifecycle` stops
+  the server at start-up, and so does a relative path in
+  `EXEGETE_WORKSPACE`; the error names the setting.
+- To switch Exegete off without removing it, add `enabled = false` on
+  the line after `[mcp_servers.exegete]` (and delete it to switch it
+  back on). OpenAI's pricing page: "Every MCP server adds more context
+  to your messages and uses more of your limit. Disable MCP servers
+  when you don’t need them." Exegete's tool descriptions are long
+  (about 198,000 characters with `lifecycle`; TOOLS.md says how that
+  was measured), so switch it off in chats that do not need it.
+- Problems and results, good or bad, go to
+  [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
+  app and which version, and never put participant data in an issue.
+
+---
+
 ## What hosts do with the tools' read and write marks
 
 Every tool tells the host what kind of tool it is, in the four marks
@@ -806,6 +1016,25 @@ Desktop 2.9939.2 passes the read-only mark on with each tool, and runs
 its Code sessions and Cowork on a Claude Code of its own (2.1.281),
 whose program reads `anthropic/requiresUserInteraction` and then asks,
 with no option to always allow.
+
+**Codex** (the ChatGPT desktop app, and Codex's command line and editor
+extension), from OpenAI's pages and Codex's source code as read on 30
+September 2026 (OpenAI's page, <https://learn.chatgpt.com/docs/agent-approvals-security>:
+"Destructive app/MCP tool calls always require approval when the tool
+advertises a destructive annotation (unless the tool advertises a read
+annotation, which takes priority)."). Under a server's default,
+`auto`, Codex asks before a tool that can replace or remove, runs a
+read-only tool without asking, and also runs without asking a tool that
+is neither but is marked as reaching nothing beyond this computer. Here
+that is the 14 tools that only add (`import_text_file`,
+`apply_codings`, `create_proposed_codes`, `create_code` and the rest)
+and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
+mark Codex does not read. With `default_tools_approval_mode =
+"writes"` in the server's entry, Codex asks before every tool not
+marked read-only; the recipe above sets it, and asks before
+`read_pseudonym_list` in any mode. The desktop app's "Approve for me"
+sends what needs approval to an automatic reviewer instead of you, and
+"Full access" approves every call.
 
 So, for work on real data, keep the host in its asking mode (Manual),
 with "allow once" for anything that writes. In an auto mode, a

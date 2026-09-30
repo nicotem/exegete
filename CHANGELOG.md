@@ -74,7 +74,12 @@ still accepted (the Upgrading list below).
   program), the answer says so plainly, naming the file and the name an
   older copy would go on writing under, and never claims the mark; every
   later AI write tries again, and the project's reads say so until the
-  mark is made. A restore of a backup made
+  mark is made. A name an older copy stores in an unmarked
+  `qualcoder_mcp.json` beside `exegete.json` joins the history in the
+  same write that marks the file, and counts as this project's AI work
+  even before then (in `compare_coders`' roles, the delete previews and
+  pseudonymisation); so does the name the earlier file held at the
+  move, even where its own history lacked it. A restore of a backup made
   before the move brings back the earlier file alone; it is read, and
   the next change of name moves it again. If `exegete.json` is removed
   or lost after the move, the marked earlier file is not used for the

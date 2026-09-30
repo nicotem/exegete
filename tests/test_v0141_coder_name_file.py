@@ -106,8 +106,10 @@ def test_the_first_write_moves_the_name_and_marks_the_earlier_file(folder):
     new = json.loads((folder / NEW).read_text(encoding="utf-8"))
     assert new["ai_coder_name"] == entry
     assert new["format_version"] == 1
+    # the name the earlier file held stays in the history even though
+    # its own history lacked it: rows under it are this project's AI work
     assert [e["name"] for e in new["ai_coder_name_history"]] == \
-        ["First", "Second"]
+        ["First", "Earlier Name", "Second"]
     assert new["researcher_key"] == "kept"
     assert ps.MOVED_TO_KEY not in new
     assert new["written_by"].startswith("exegete ")
@@ -206,15 +208,74 @@ def test_an_unreadable_earlier_file_is_never_rewritten(folder):
     assert ps.read_sidecar(folder).name == "Fresh"
 
 
+def history_names(folder):
+    return [e["name"] for e in ps.read_sidecar(folder).history]
+
+
 def test_a_file_an_older_copy_wrote_beside_the_new_one_is_marked(folder):
     # a project Exegete named, then opened by 0.14, which found no
     # qualcoder_mcp.json, asked, and wrote one
     ps.write_ai_coder_name(folder, "Exegete Name")
     old_file(folder, name="Written By 0.14")
     assert ps.read_sidecar(folder).name == "Exegete Name"
-    ps.write_ai_coder_name(folder, "Exegete Name Two")
+    # its rows count as this project's AI work before any write, too
+    assert "Written By 0.14" in ps.ai_coder_names_for_project(folder)
+    stored = ps.store_ai_coder_name(folder, "Exegete Name Two")
     assert as_0140_reads(folder / OLD) == "newer_format"
     assert ps.read_sidecar(folder).name == "Exegete Name Two"
+    # the name it held joined the history in the write that marked it
+    assert history_names(folder) == \
+        ["Exegete Name", "Written By 0.14", "Exegete Name Two"]
+    assert stored.earlier.names_added == ("Written By 0.14",)
+    assert stored.earlier.status == ps.EARLIER_MARKED
+    assert ps.ai_coder_names_for_project(folder)[:3] == \
+        ("Exegete Name Two", "Exegete Name", "Written By 0.14")
+
+
+def test_the_retry_adds_an_older_copys_names_before_marking(folder):
+    ps.write_ai_coder_name(folder, "Exegete Name")
+    old_file(folder, name="Written By 0.14")
+    settled = ps.settle_earlier_file(folder)
+    assert settled.status == ps.EARLIER_MARKED
+    assert settled.names_added == ("Written By 0.14",)
+    state = ps.read_sidecar(folder)
+    assert state.name == "Exegete Name"          # the name is unchanged
+    assert history_names(folder) == ["Exegete Name", "Written By 0.14"]
+    assert as_0140_reads(folder / OLD) == "newer_format"
+    assert ps.settle_earlier_file(folder).status == ps.EARLIER_NOTHING
+    assert history_names(folder) == ["Exegete Name", "Written By 0.14"]
+
+
+def test_names_carried_at_the_move_are_not_added_twice(
+        folder, earlier_file_locked):
+    old_file(folder, name="Before")
+    ps.store_ai_coder_name(folder, "After")         # the mark fails
+    earlier_file_locked()
+    settled = ps.settle_earlier_file(folder)
+    assert settled.status == ps.EARLIER_MARKED
+    assert settled.names_added == ()
+    assert history_names(folder) == ["Before", "After"]
+
+
+def test_names_that_cannot_be_added_leave_the_file_unmarked(
+        folder, monkeypatch):
+    # marked, the file would never be read for its names again
+    ps.write_ai_coder_name(folder, "Exegete Name")
+    path = old_file(folder, name="Written By 0.14")
+    before = path.read_bytes()
+    real = ps.os.replace
+
+    def replace(src, dst, *args, **kwargs):
+        if Path(dst).name == NEW:
+            raise PermissionError(13, "Operation not permitted", str(dst))
+        return real(src, dst, *args, **kwargs)
+
+    monkeypatch.setattr(ps.os, "replace", replace)
+    settled = ps.settle_earlier_file(folder)
+    assert settled.status == ps.EARLIER_NOT_MARKED
+    assert settled.error == "PermissionError"
+    assert path.read_bytes() == before
+    assert history_names(folder) == ["Exegete Name"]
 
 
 @pytest.fixture
@@ -412,6 +473,32 @@ class TestThroughTheServer:
                                             create_backup=False))
         assert out.get("success") is True, out
         assert code_owner(folder, "AfterTheAsk") == "Model D"
+
+    def test_an_older_copys_name_counts_as_this_projects_ai_work(
+            self, setup_server, qualcoder_db_path):
+        # the name a 0.14 copy stored beside exegete.json: its rows count
+        # as this server's AI (compare_coders' roles, the delete previews
+        # and pseudonymisation all ask _ai_names_for_project), and the
+        # next write adds it to the history in the write that marks it
+        folder = Path(qualcoder_db_path)
+        old_file(folder, name="Named In 0.14")
+        role = server._coder_role("Named In 0.14",
+                                  server._ai_names_for_project())
+        assert role == "ai_this_server"
+        out = json.loads(server.create_code("AnyWrite", create_backup=False))
+        assert out.get("success") is True, out
+        assert "Named In 0.14" in history_names(folder)
+        assert as_0140_reads(folder / OLD) == "newer_format"
+        assert server._coder_role("Named In 0.14",
+                                  server._ai_names_for_project()) == \
+            "ai_this_server"
+        # the setter says so when it is the one that finds it
+        old_file(folder, name="Named Again In 0.14")
+        out = json.loads(server.set_project_ai_coder_name("Exegete Next"))
+        said = " ".join(out["warnings"])
+        assert (f'{OLD} in the project folder held "Named Again In 0.14", '
+                f"stored by an older copy") in said
+        assert "is now marked as moved" in said
 
     def test_the_setters_description_names_the_new_file(self):
         doc = " ".join(server.set_project_ai_coder_name.__doc__.split())

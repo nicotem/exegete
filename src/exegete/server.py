@@ -3883,7 +3883,17 @@ def _earlier_file_warnings(state, earlier, moving: bool,
                      f"marked so that qualcoder-mcp 0.12 to 0.14 refuse to "
                      f"write it rather than use an outdated name.")
         notes.append(text)
-    elif earlier.status == EARLIER_MARKED:
+    if earlier.names_added:
+        one = len(earlier.names_added) == 1
+        quoted = ", ".join(f"\"{n}\"" for n in earlier.names_added)
+        notes.append(
+            f"{OLD_SIDECAR_NAME} in the project folder held {quoted}, "
+            f"stored by an older copy of this server (qualcoder-mcp 0.12 "
+            f"to 0.14) beside {SIDECAR_NAME}; "
+            f"{'that name was' if one else 'those names were'} added to "
+            f"this project's history, so rows under "
+            f"{'it' if one else 'them'} count as this project's AI work.")
+    if not moving and earlier.status == EARLIER_MARKED:
         notes.append(
             f"{OLD_SIDECAR_NAME} in the project folder, which qualcoder-mcp "
             f"0.12 to 0.14 could still write, is now marked as moved, so "

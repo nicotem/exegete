@@ -196,6 +196,9 @@ class EarlierFile(NamedTuple):
     path: Path
     held_name: Optional[str] = None    # the name it holds, for messages
     error: Optional[str] = None        # why it was not marked (a type name)
+    # names an older copy stored in it after the move, added to
+    # exegete.json's history by the same write
+    names_added: Tuple[str, ...] = ()
 
 
 class NameStored(NamedTuple):
@@ -400,15 +403,7 @@ def read_sidecar(project_folder: Any) -> SidecarState:
         return SidecarState(SIDECAR_UNREADABLE, path=path)
     # A malformed history never costs the current name: it is
     # informational, and the next set rebuilds it (B1.3).
-    history: List[Dict[str, Any]] = []
-    raw_history = data.get("ai_coder_name_history")
-    if isinstance(raw_history, list):
-        for item in raw_history:
-            validated = _validated_entry(item)
-            if validated is None:
-                history = []
-                break
-            history.append(validated)
+    history = _validated_history(data.get("ai_coder_name_history"))
     if version > newest:
         return SidecarState(SIDECAR_NEWER_FORMAT, entry, history, path)
     if path.name == OLD_SIDECAR_NAME and _is_marked(data):
@@ -424,6 +419,18 @@ def read_sidecar(project_folder: Any) -> SidecarState:
     if entry is None:
         return SidecarState(SIDECAR_UNSET, None, history, path)
     return SidecarState(SIDECAR_SET, entry, history, path)
+
+
+def _validated_history(raw: Any) -> List[Dict[str, Any]]:
+    """A history, every entry validated; empty when any entry fails."""
+    history: List[Dict[str, Any]] = []
+    if isinstance(raw, list):
+        for item in raw:
+            validated = _validated_entry(item)
+            if validated is None:
+                return []
+            history.append(validated)
+    return history
 
 
 def _is_marked(data: Dict[str, Any]) -> bool:
@@ -555,7 +562,18 @@ def store_ai_coder_name(project_folder: Any, name: str, note: str = "",
     name = validate_coder_name(name, "name")
     note = validate_coder_note(note, "note")
     entry = _entry(name, now or _now_iso(), note, host_declaration)
-    history = list(state.history) + [entry]
+    added: List[Dict[str, Any]] = []
+    if path.name == OLD_SIDECAR_NAME:
+        # The move: the name the earlier file holds stays in the history
+        # even when its own history lacks it, so its rows still count.
+        history = _held_entries(state.entry, state.history)
+    else:
+        # A file an older copy wrote beside exegete.json: the names it
+        # holds join the history in this write, before it is marked.
+        history = list(state.history)
+        added = _missing(_entries_beside(folder, state), history)
+        history += added
+    history.append(entry)
     if len(history) > HISTORY_CAP:
         # Oldest first, and never the entry we are writing.
         history = history[len(history) - HISTORY_CAP:]
@@ -574,10 +592,28 @@ def store_ai_coder_name(project_folder: Any, name: str, note: str = "",
     payload["ai_coder_name"] = entry
     payload["ai_coder_name_history"] = history
 
-    # Trim in the unit the READER measures, on the bytes that will
-    # actually be written. Oldest first, and never the entry being
-    # written: a name change must not be refused because the project has
-    # a long past.
+    encoded = _trimmed_encoding(payload, path)
+    try:
+        _replace_atomically(folder, target, encoded)
+    except OSError as e:
+        raise SidecarWriteError(
+            f"The AI coder name could not be stored with the project "
+            f"({type(e).__name__}). Nothing was changed.") from e
+    earlier = _mark_earlier_file(folder)
+    return NameStored(entry, earlier._replace(names_added=_names(added)))
+
+
+def _trimmed_encoding(payload: Dict[str, Any], path: Path) -> bytes:
+    """The bytes to write, the history trimmed to the byte budget.
+
+    Trim in the unit the READER measures, on the bytes that will
+    actually be written. Oldest first, and never the last entry, the one
+    being written: a name change must not be refused because the
+    project has a long past.
+
+    Raises:
+        SidecarWriteError: When a one-entry history still does not fit.
+    """
     encoded = _encoded_payload(payload)
     while (len(encoded) > SIDECAR_WRITE_MAX_BYTES
            and len(payload["ai_coder_name_history"]) > 1):
@@ -589,14 +625,68 @@ def store_ai_coder_name(project_folder: Any, name: str, note: str = "",
         # unknown top-level keys this write preserves. Refuse rather than
         # write a file the reader will reject, and say where the size is.
         raise SidecarWriteError(oversized_message(path))
+    return encoded
 
+
+def _entries_beside(folder: Path, state: SidecarState) -> List[Dict[str, Any]]:
+    """The entries an unmarked earlier file beside exegete.json holds.
+
+    Empty unless exegete.json is in use and readable at this version and
+    the earlier file is one to mark (`_unmarked_earlier_file`): then its
+    validated history, and its current name when that history lacks it.
+    """
+    if not _earlier_file_to_settle(folder, state):
+        return []
+    data = _unmarked_earlier_file(folder)
+    if data is None:
+        return []
+    return _held_entries(_validated_entry(data.get("ai_coder_name")),
+                         _validated_history(data.get(
+                             "ai_coder_name_history")))
+
+
+def _missing(entries: List[Dict[str, Any]],
+             history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The entries not already in `history`, in their order (an entry
+    carried at the move is equal to its copy there, field for field)."""
+    return [e for i, e in enumerate(entries)
+            if e not in history and e not in entries[:i]]
+
+
+def _names(entries: List[Dict[str, Any]]) -> Tuple[str, ...]:
+    """The distinct names in `entries`, in order."""
+    return tuple(dict.fromkeys(e["name"] for e in entries))
+
+
+def _add_to_history(folder: Path) -> List[Dict[str, Any]]:
+    """Add the names an unmarked earlier file holds to exegete.json's
+    history, keeping its current name; return the entries added.
+
+    Read fresh, and written as a name change is (the same byte budget and
+    atomic replace), so a failure leaves exegete.json as it was.
+
+    Raises:
+        SidecarWriteError: exegete.json could not be read or written.
+    """
+    target = folder / SIDECAR_NAME
+    state = read_sidecar(folder)
+    added = _missing(_entries_beside(folder, state), state.history)
+    if not added:
+        return []
+    existing = _read_raw(target)
+    if existing is None:
+        raise SidecarWriteError(unreadable_message(target))
+    payload = dict(existing)
+    payload["written_by"] = f"{names.DISTRIBUTION} {_package_version()}"
+    payload["ai_coder_name_history"] = list(state.history) + added
+    encoded = _trimmed_encoding(payload, target)
     try:
         _replace_atomically(folder, target, encoded)
     except OSError as e:
         raise SidecarWriteError(
-            f"The AI coder name could not be stored with the project "
-            f"({type(e).__name__}). Nothing was changed.") from e
-    return NameStored(entry, _mark_earlier_file(folder))
+            f"{SIDECAR_NAME} could not be written "
+            f"({type(e).__name__}).") from e
+    return added
 
 
 def _replace_atomically(folder: Path, target: Path, encoded: bytes) -> None:
@@ -705,7 +795,9 @@ def settle_earlier_file(project_folder: Any,
     """Mark an unmarked earlier file beside exegete.json. Never raises.
 
     The retry for a mark that failed, and the mark for a file an older
-    copy of the server wrote beside exegete.json after the move. Called
+    copy of the server wrote beside exegete.json after the move, whose
+    names first join exegete.json's history (in one write of it, before
+    the mark), so its rows count as this project's AI work. Called
     before every owner-bearing write (`server._resolve_write_owner`),
     after the checks that may refuse it, so a refused write still writes
     nothing. Acts only while exegete.json is in use and readable at this
@@ -718,7 +810,20 @@ def settle_earlier_file(project_folder: Any,
             state = read_sidecar(folder)
         if not _earlier_file_to_settle(folder, state):
             return EarlierFile(EARLIER_NOTHING, old)
-        return _mark_earlier_file(folder)
+        added: List[Dict[str, Any]] = []
+        if _missing(_entries_beside(folder, state), state.history):
+            try:
+                added = _add_to_history(folder)
+            except SidecarWriteError as e:
+                # Not marked either: marked, the file would never be
+                # read for its names again. The next write tries both.
+                logger.warning("The names in %s could not be added to "
+                               "%s; it is left unmarked for now",
+                               OLD_SIDECAR_NAME, SIDECAR_NAME)
+                return EarlierFile(EARLIER_NOT_MARKED, old, None,
+                                   type(e.__cause__ or e).__name__)
+        return _mark_earlier_file(folder)._replace(
+            names_added=_names(added))
     except Exception as e:                      # noqa: BLE001
         # A write must never fail on this: the name it uses is right, and
         # the next write tries again.
@@ -804,7 +909,9 @@ def ai_coder_names_for_project(
     pseudonymisation next. Ordered, no duplicates:
 
     1. the project's current AI coder name, when set;
-    2. every name in the project's history, oldest first;
+    2. every name in the project's history, oldest first, then the
+       names in a qualcoder_mcp.json an older copy wrote beside
+       exegete.json and no write has marked yet (v0.14.1);
     3. `DEFAULT_AI_CODER_NAME`, always, because every pre-0.12 row this
        server wrote carries it and a name change never re-attributes
        rows;
@@ -829,6 +936,10 @@ def ai_coder_names_for_project(
     state = read_sidecar(project_folder)
     add(state.name)
     for item in state.history:
+        add(item.get("name"))
+    # A file an older copy wrote beside exegete.json, not yet marked:
+    # its names are this project's AI work before any write adds them
+    for item in _entries_beside(Path(project_folder), state):
         add(item.get("name"))
     add(DEFAULT_AI_CODER_NAME)
     add(host_declaration(environ))

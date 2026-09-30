@@ -82,8 +82,13 @@ class TestPlacement:
         d = _desc("analyze_for_coding")
         assert server.GROUNDING_RULES in d
         assert server.METHODOLOGY_VOCABULARY in d
-        assert d.index("WORKFLOW") < d.index(server.GROUNDING_RULES) \
-            < d.index(server.METHODOLOGY_VOCABULARY) < d.index("SPAN STYLE")
+        # v0.14.2: the judgement of requests moved up, after the three
+        # questions, into the first 2,048 characters, where Claude Code
+        # cuts a description (test_v0142_description_cut.py); the
+        # grounding rules stay after the workflow
+        assert d.index("BEFORE CALLING") \
+            < d.index(server.METHODOLOGY_VOCABULARY) < d.index("WORKFLOW") \
+            < d.index(server.GROUNDING_RULES) < d.index("SPAN STYLE")
         # the span and pairing guidance survives, reworded in v0.14's
         # second fix round (whole sentences by default; pairings asked)
         assert "whole sentences by default" in d and "PAIRINGS" in d
@@ -91,8 +96,12 @@ class TestPlacement:
     def test_record_suggestions_paragraph_sits_before_span_style(self):
         d = _desc("record_suggestions")
         assert server.GROUNDING_RECORD in d
-        assert d.index("verbatim excerpt of the file text") < d.index(server.GROUNDING_RECORD) \
-            < d.index("SPAN STYLE")
+        # v0.14.2: the list of checks each suggestion passes moved after
+        # the pairings and the private-note refusal, so that those fit
+        # within Claude Code's 2,048-character cut
+        assert d.index(server.GROUNDING_RECORD) < d.index("SPAN STYLE") \
+            < d.index(server.MARKER_REFUSED_DESCRIPTION) \
+            < d.index("verbatim excerpt of the file text")
 
     def test_propose_codes_and_read_tool_carry_their_paragraphs(self):
         d = _desc("propose_codes")

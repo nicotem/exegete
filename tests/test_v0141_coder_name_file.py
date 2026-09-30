@@ -79,12 +79,85 @@ def test_the_names_and_the_shared_format():
     assert ps.OLD_SIDECAR_MOVED_VERSION == 2
 
 
-def test_a_new_project_gets_only_the_new_file(folder):
-    ps.write_ai_coder_name(folder, "Qwen")
+def test_a_new_project_gets_a_marked_earlier_file_too(folder):
+    # so that 0.12 to 0.14 refuse and say to upgrade, rather than ask for
+    # a name of their own and write under it beside Exegete
+    stored = ps.store_ai_coder_name(folder, "Qwen")
+    assert stored.earlier.status == ps.EARLIER_CREATED
     assert ps.read_sidecar(folder).name == "Qwen"
-    assert (folder / NEW).is_file()
-    assert not (folder / OLD).exists()
     assert ps.sidecar_path(folder) == folder / NEW
+    marker = json.loads((folder / OLD).read_text(encoding="utf-8"))
+    assert marker == {"format": "qualcoder-mcp-project", "format_version": 2,
+                      "moved_to": NEW,
+                      "written_by": marker["written_by"]}
+    assert marker["written_by"].startswith("exegete ")
+    assert as_0140_reads(folder / OLD) == "newer_format"
+    assert sorted(p.name for p in folder.iterdir()) == \
+        sorted(["data.qda", NEW, OLD])
+    # later writes leave it as it is
+    before = (folder / OLD).read_bytes()
+    assert ps.store_ai_coder_name(folder, "Qwen Two").earlier.status == \
+        ps.EARLIER_NOTHING
+    assert (folder / OLD).read_bytes() == before
+    # and the name never comes from it: exegete.json lost, the next
+    # write asks
+    (folder / NEW).unlink()
+    state = ps.read_sidecar(folder)
+    assert state.status == ps.SIDECAR_UNSET and state.earlier_marked
+    assert state.history == []
+
+
+def test_the_marker_is_never_written_over_a_file_that_appeared(
+        folder, monkeypatch):
+    # an older copy writes its own qualcoder_mcp.json in the instant
+    # between the look and the write: it is kept, byte for byte
+    theirs = b'{"written": "by 0.14 in that instant"}'
+    real = ps._inherit_mode_bits
+
+    def meanwhile(tmp, project_folder):
+        # after the look, before the marker lands
+        if Path(tmp).name.startswith(OLD):
+            (folder / OLD).write_bytes(theirs)
+        return real(tmp, project_folder)
+
+    monkeypatch.setattr(ps, "_inherit_mode_bits", meanwhile)
+    stored = ps.store_ai_coder_name(folder, "Qwen")
+    assert stored.earlier.status == ps.EARLIER_NOTHING
+    assert (folder / OLD).read_bytes() == theirs
+    assert sorted(p.name for p in folder.iterdir()) == \
+        sorted(["data.qda", NEW, OLD])              # no temp file left
+
+
+def test_the_marker_without_hard_links(folder, monkeypatch):
+    # some shared and removable drives have no hard links
+    def link(src, dst, *args, **kwargs):
+        raise OSError(45, "Operation not supported")
+
+    monkeypatch.setattr(ps.os, "link", link)
+    stored = ps.store_ai_coder_name(folder, "Qwen")
+    assert stored.earlier.status == ps.EARLIER_CREATED
+    assert as_0140_reads(folder / OLD) == "newer_format"
+    assert sorted(p.name for p in folder.iterdir()) == \
+        sorted(["data.qda", NEW, OLD])
+
+
+def test_a_marker_that_cannot_be_written_is_tried_again(folder,
+                                                        monkeypatch):
+    real = ps.tempfile.mkstemp
+
+    def mkstemp(*args, prefix="", **kwargs):
+        if prefix.startswith(OLD):
+            raise PermissionError(13, "Permission denied")
+        return real(*args, prefix=prefix, **kwargs)
+
+    monkeypatch.setattr(ps.tempfile, "mkstemp", mkstemp)
+    stored = ps.store_ai_coder_name(folder, "Qwen")
+    assert stored.entry["name"] == "Qwen"           # the name is stored
+    assert stored.earlier.status == ps.EARLIER_NOT_CREATED
+    assert not (folder / OLD).exists()
+    monkeypatch.setattr(ps.tempfile, "mkstemp", real)
+    assert ps.settle_earlier_file(folder).status == ps.EARLIER_CREATED
+    assert as_0140_reads(folder / OLD) == "newer_format"
 
 
 def test_the_earlier_file_alone_is_read_and_left_as_it_is(folder):
@@ -499,6 +572,32 @@ class TestThroughTheServer:
         assert (f'{OLD} in the project folder held "Named Again In 0.14", '
                 f"stored by an older copy") in said
         assert "is now marked as moved" in said
+
+    def test_a_project_named_first_by_exegete_has_the_marker(
+            self, setup_server, qualcoder_db_path):
+        # the fixture names its project through the real writer
+        folder = Path(qualcoder_db_path)
+        assert as_0140_reads(folder / OLD) == "newer_format"
+        # one named before the marker existed, or whose marker was
+        # removed, gets it back at its next write
+        (folder / OLD).unlink()
+        out = json.loads(server.create_code("NextWrite", create_backup=False))
+        assert out.get("success") is True, out
+        assert as_0140_reads(folder / OLD) == "newer_format"
+        assert json.loads((folder / OLD).read_text(
+            encoding="utf-8")).get("ai_coder_name") is None
+
+    def test_an_unnamed_project_gets_no_marker_from_a_refused_write(
+            self, setup_server_unset, qualcoder_db_path):
+        folder = Path(qualcoder_db_path)
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out.get("action_required") == "set_project_ai_coder_name"
+        assert not (folder / OLD).exists() and not (folder / NEW).exists()
+        out = json.loads(server.set_project_ai_coder_name("First Name"))
+        assert out["success"] is True, out
+        assert "moved_from" not in out
+        assert not any(OLD in w for w in out["warnings"])  # said nowhere
+        assert as_0140_reads(folder / OLD) == "newer_format"
 
     def test_the_setters_description_names_the_new_file(self):
         doc = " ".join(server.set_project_ai_coder_name.__doc__.split())

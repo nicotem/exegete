@@ -1009,8 +1009,13 @@ class TestSidecarWriter:
         real = ps.os.fsync
         monkeypatch.setattr(ps.os, "fsync",
                             lambda fd: (calls.append(fd), real(fd))[1])
+        # v0.14.1: a project's first name also writes the marked
+        # qualcoder_mcp.json beside it, a file of its own with its own
+        # fsync; every later write is the name file's one fsync
         write_ai_coder_name(qualcoder_db_path, "Synced")
-        assert len(calls) == 1
+        assert len(calls) == 2
+        write_ai_coder_name(qualcoder_db_path, "Synced Again")
+        assert len(calls) == 3
 
     def test_temp_names_are_unique(self, setup_server_unset,
                                    qualcoder_db_path, monkeypatch):
@@ -1025,7 +1030,10 @@ class TestSidecarWriter:
         monkeypatch.setattr(ps.tempfile, "mkstemp", spy)
         for i in range(5):
             write_ai_coder_name(qualcoder_db_path, f"N{i}")
-        assert len(set(seen)) == 5
+        # five name writes, and the marked qualcoder_mcp.json the first
+        # one writes beside the name file (v0.14.1)
+        assert len(seen) == 6
+        assert len(set(seen)) == 6
 
     @POSIX_ONLY
     def test_a_symlinked_sidecar_is_refused_for_reading_and_writing(

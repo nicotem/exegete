@@ -259,3 +259,21 @@ def test_the_published_0140_refuses_once_a_failed_mark_is_retried(
     assert_0140_refuses(run_0140(folder), "Before")
     assert {p.name: p.read_bytes() for p in folder.iterdir()} == before
     assert ps.read_sidecar(folder).name == "After"
+
+
+def test_the_published_0140_refuses_a_project_exegete_named_first(
+        tmp_path, run_0140):
+    # No qualcoder_mcp.json before: Exegete writes one already marked,
+    # holding no name, so 0.14.0 refuses and says to upgrade rather than
+    # ask for a name of its own and write under it beside Exegete.
+    from exegete import project_settings as ps
+    folder = tmp_path / "home" / "Study.qda"
+    folder.mkdir(parents=True)
+    (folder / "data.qda").write_bytes(b"")
+    ps.write_ai_coder_name(folder, "Named By Exegete")
+    before = {p.name: p.read_bytes() for p in folder.iterdir()}
+    assert sorted(before) == ["data.qda", ps.SIDECAR_NAME,
+                              ps.OLD_SIDECAR_NAME]
+    assert_0140_refuses(run_0140(folder), None)
+    assert {p.name: p.read_bytes() for p in folder.iterdir()} == before
+    assert ps.read_sidecar(folder).name == "Named By Exegete"

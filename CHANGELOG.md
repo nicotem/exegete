@@ -74,7 +74,14 @@ still accepted (the Upgrading list below).
   program), the answer says so plainly, naming the file and the name an
   older copy would go on writing under, and never claims the mark; every
   later AI write tries again, and the project's reads say so until the
-  mark is made. A name an older copy stores in an unmarked
+  mark is made. A project Exegete names first gets a small
+  `qualcoder_mcp.json` too, written already marked and holding no name,
+  so that a copy still on 0.12 to 0.14 refuses and says to upgrade
+  rather than ask for a name of its own and write rows under it beside
+  Exegete (checked with the published 0.14.0); it is never written over
+  a file that appeared meanwhile, and the next AI write puts it back if
+  it is removed. Until v1.0, like the other support for the old name.
+  A name an older copy stores in an unmarked
   `qualcoder_mcp.json` beside `exegete.json` joins the history in the
   same write that marks the file, and counts as this project's AI work
   even before then (in `compare_coders`' roles, the delete previews and
@@ -301,7 +308,9 @@ qualcoder-mcp" says what you may change on each route.
   project's name is stored after the update; the earlier
   `qualcoder_mcp.json` stays beside it, marked so that qualcoder-mcp
   0.12 to 0.14 refuse to write it (they say it was written by a newer
-  version: update that copy). Until then, and after a restore of an
+  version: update that copy). A project Exegete names first gets a
+  marked `qualcoder_mcp.json` holding no name, for the same reason,
+  until v1.0. Until then, and after a restore of an
   older backup, the earlier file is read as before. If `exegete.json`
   goes missing later, the next AI write asks for the name again rather
   than use the one from before the move.

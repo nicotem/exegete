@@ -40,6 +40,15 @@ The file's new name (v0.14.1, the owner's ruling 41, decision 7):
   keeping its history: the name it holds is the one from before the
   move, and every change since lived in exegete.json only, so the next
   write asks, as the messages promise, and never goes back to it.
+- A project Exegete names first gets an earlier file too, written
+  already marked and holding no name, so that 0.12 to 0.14 refuse and
+  say to upgrade rather than ask for a name of their own and write under
+  it beside Exegete. Until v1.0, like the other support for the old
+  name.
+- The mark is reported only when made. One that fails (a locked,
+  read-only or synced file) is said, and every owner-bearing write
+  tries again (`settle_earlier_file`); a name an older copy stored in
+  an unmarked earlier file beside exegete.json joins its history first.
 - An earlier file that cannot be read is never rewritten (its bytes may
   be the only history), and neither is one of a version above 2.
 
@@ -188,6 +197,8 @@ EARLIER_NOTHING = "nothing"         # none to mark: absent, already marked,
                                     # or not one this server rewrites
 EARLIER_MARKED = "marked"           # an unmarked version 1 file, marked now
 EARLIER_NOT_MARKED = "not_marked"   # one this write could not rewrite
+EARLIER_CREATED = "created"         # none there: written already marked
+EARLIER_NOT_CREATED = "not_created" # none there, and none could be written
 
 
 class EarlierFile(NamedTuple):
@@ -757,6 +768,12 @@ def _held_name(data: Dict[str, Any]) -> Optional[str]:
 def _mark_earlier_file(folder: Path) -> EarlierFile:
     """Mark the earlier `qualcoder_mcp.json` as moved; say what happened.
 
+    With nothing at that name (a project Exegete names first, or a file
+    removed since), one is written already marked, holding no name
+    (`_write_marker`), so that 0.12 to 0.14 refuse and say to upgrade
+    rather than ask for a name of their own. Until v1.0, like the other
+    support for the old name.
+
     Only a file `_unmarked_earlier_file` returns is rewritten: its keys
     are kept (the name it held at the move included, so 0.12 to 0.14
     still recognise the rows it named), and it gains format_version 2
@@ -766,6 +783,8 @@ def _mark_earlier_file(folder: Path) -> EarlierFile:
     copy would go on writing under, and nothing else changes.
     """
     old = folder / OLD_SIDECAR_NAME
+    if not os.path.lexists(old):
+        return _write_marker(folder)
     data = _unmarked_earlier_file(folder)
     if data is None:
         return EarlierFile(EARLIER_NOTHING, old)
@@ -783,6 +802,76 @@ def _mark_earlier_file(folder: Path) -> EarlierFile:
     return EarlierFile(EARLIER_MARKED, old, held)
 
 
+def _write_marker(folder: Path) -> EarlierFile:
+    """Write `qualcoder_mcp.json` already marked, holding no name.
+
+    Version 2 and `moved_to`, and nothing else of the format's: 0.12 to
+    0.14 check the version first, so they report the file as written by
+    a newer version and refuse to write it or any row, and Exegete never
+    takes a name from it (a marked file alone reads as unset). Never
+    written over a file that appeared meanwhile (`_create_exclusively`).
+    """
+    old = folder / OLD_SIDECAR_NAME
+    marker = {"format": SIDECAR_FORMAT,
+              "format_version": OLD_SIDECAR_MOVED_VERSION,
+              MOVED_TO_KEY: SIDECAR_NAME,
+              "written_by": f"{names.DISTRIBUTION} {_package_version()}"}
+    try:
+        created = _create_exclusively(folder, old, _encoded_payload(marker))
+    except OSError as e:
+        logger.warning("%s could not be written beside %s (%s); every "
+                       "write that stores a name tries again",
+                       OLD_SIDECAR_NAME, SIDECAR_NAME, type(e).__name__)
+        return EarlierFile(EARLIER_NOT_CREATED, old, None, type(e).__name__)
+    return EarlierFile(EARLIER_CREATED if created else EARLIER_NOTHING, old)
+
+
+def _create_exclusively(folder: Path, target: Path, encoded: bytes) -> bool:
+    """Write `encoded` at `target` only if nothing is there; True if so.
+
+    The temp file of `_replace_atomically`, then a hard link to the
+    target's name, which fails rather than replace a file an older copy
+    wrote in the same instant. Where the file system has no hard links
+    (some shared and removable drives), a replace after a last look, and
+    only while the name is still free.
+
+    Raises:
+        OSError: The file could not be written; nothing is left behind.
+    """
+    tmp: Optional[Path] = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(dir=str(folder),
+                                        prefix=f"{target.name}.",
+                                        suffix=".tmp")
+        tmp = Path(tmp_name)
+        try:
+            handle = os.fdopen(fd, "wb")
+        except BaseException:
+            os.close(fd)
+            raise
+        with handle as f:
+            f.write(encoded)
+            f.flush()
+            os.fsync(f.fileno())
+        _inherit_mode_bits(tmp, folder)
+        try:
+            os.link(str(tmp), str(target))
+        except FileExistsError:
+            return False
+        except OSError:
+            if os.path.lexists(target):
+                return False
+            os.replace(str(tmp), str(target))
+            tmp = None
+        return True
+    finally:
+        if tmp is not None:
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
 def _earlier_file_to_settle(folder: Path, state: SidecarState) -> bool:
     """Whether exegete.json is in use and readable at this version, the
     one case in which the earlier file beside it is kept marked."""
@@ -792,12 +881,13 @@ def _earlier_file_to_settle(folder: Path, state: SidecarState) -> bool:
 
 def settle_earlier_file(project_folder: Any,
                         state: Optional[SidecarState] = None) -> EarlierFile:
-    """Mark an unmarked earlier file beside exegete.json. Never raises.
+    """Keep the earlier file beside exegete.json marked. Never raises.
 
     The retry for a mark that failed, and the mark for a file an older
     copy of the server wrote beside exegete.json after the move, whose
     names first join exegete.json's history (in one write of it, before
-    the mark), so its rows count as this project's AI work. Called
+    the mark), so its rows count as this project's AI work. With nothing
+    at the old name, the marker is written (`_write_marker`). Called
     before every owner-bearing write (`server._resolve_write_owner`),
     after the checks that may refuse it, so a refused write still writes
     nothing. Acts only while exegete.json is in use and readable at this

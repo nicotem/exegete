@@ -113,6 +113,19 @@ What stays local, always, unless a sync service copies the folder it is in:
   result; treat the note like any other project text the model can read.
   QualCoder never reads or writes this file. Deleting it makes the next
   AI write ask for the name again.
+- a small `qualcoder_mcp.json` beside `exegete.json`, until v1.0: in a
+  project from before 0.14.1, the earlier file, marked as moved and
+  keeping the name it held at the move; in a project Exegete named
+  first, one written already marked, holding no name and nothing of
+  yours (its format, its version, `moved_to` and the version that wrote
+  it). It is there so that an older copy of the server (0.12 to 0.14,
+  from before the rename, on another host or computer that opens the
+  project) refuses to write to the project and says to upgrade, rather than
+  asking for a name of its own and writing rows under it. Exegete never
+  takes the name from it. If it cannot be marked (locked, read-only, or
+  held by a sync program), the answer says so and every AI write tries
+  again; if it is removed, the next AI write puts it back. Like the
+  setting, it travels with the project folder.
 - the pseudonymisation run manifests (`~/.exegete/pseudonymisation/`,
   one JSON file per `pseudonymise_source` run, created owner-only on
   POSIX systems): the pseudonyms applied, the replacement spans, the

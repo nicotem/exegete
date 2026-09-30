@@ -1564,7 +1564,10 @@ yet, and the first start after the update moves the server's own folder
   `exegete.json`, and `qualcoder_mcp.json` stays, marked so that an
   older copy of the server (0.12 to 0.14) refuses to write it rather
   than use an outdated name: if one says the file "was written by a
-  newer version", update that copy. Projects created
+  newer version", update that copy. A project Exegete names first gets
+  a small `qualcoder_mcp.json` too, holding no name, for the same
+  reason: an older copy then refuses rather than asks for a name of its
+  own. Both stay until v1.0; PRIVACY.md says what they hold. Projects created
   earlier still name qualcoder-mcp as their creator; new ones name
   Exegete. The resource addresses are now `exegete://...`; the old
   `qualcoder://...` ones are still answered until v1.0.

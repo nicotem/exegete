@@ -264,8 +264,9 @@ def test_the_approval_steps_are_named_where_the_readme_points():
             "your decisions and write what you approved",
             "INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-"
             "are-the-safeguard",
-            "choose \"allow once\" in Claude (in its new experience, with "
-            "the conversation on Manual), and answer each prompt in Codex.",
+            "choose \"allow once\" in Claude (with its permission setting "
+            "on Manual, if your message box has one), and answer each "
+            "prompt in Codex.",
             "no coding is written until the codings are applied."):
         assert words in adds, words
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "

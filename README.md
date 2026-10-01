@@ -173,6 +173,11 @@ Before you use participants' data with Claude Desktop's chat:
    to your ethics committee or data protection officer: it lists the
    questions they will ask.
 
+In the version of Claude where chat and Cowork are one conversation
+("Claude Desktop, with one click", below, says how to tell), the same
+list applies: set up as it says, that conversation too reaches your
+project only through Exegete, as far as Anthropic's pages say.
+
 Keep OpenAI's route for practice and for data that is not sensitive
 until a setting that stops Codex's own reads has been tested with
 Exegete. With OpenAI's apps, turn training off before you use them with
@@ -280,17 +285,28 @@ This is the easiest start, in three steps.
    Install, and Install again when it says it must fetch a few things it
    needs (a minute or two, online). No Terminal, no configuration file.
 
-To check: start a new conversation, click "+", then Connectors:
-Exegete is listed. Claude asks before it uses a tool; "Allow once"
-keeps it asking ("What it does that QualCoder does not", below, says
-why that matters). In Claude's new experience, keep the conversation
-on Manual, its default: on Auto, Claude does not ask. Before any
-participants' data, also check two things in Claude. Computer use
-should be off (Settings, General). No folder that holds your projects
-or transcripts should be connected to it (in Claude's new experience,
-rolling out to Pro and Max plans first, connected folders are listed
-under "Trusted folders"; if you have never connected a folder, there
-is nothing to undo). "Where your data goes", above, says why.
+To check, start a new conversation, click "+", then Connectors, and see
+that Exegete is listed.
+
+Before any participants' data, check three things in Claude ("Where
+your data goes", above, says why):
+
+1. Claude asks before it uses a tool, and "Allow once" keeps it asking
+   ("What it does that QualCoder does not", below, says why that
+   matters). On a Pro or Max plan, if your message box offers no choice
+   between "Chat" and "Cowork", you have the version of Claude in which
+   the two are one conversation (Anthropic's page, read on 1 October
+   2026, says it is reaching accounts gradually, starting with those
+   plans). There, a permission setting in the message box decides
+   whether Claude asks: keep it on Manual, its default; on Auto, Claude
+   does not ask. Manual keeps Claude asking, but it is checks 2 and 3
+   that keep your projects out of its reach, except through Exegete.
+2. Computer use is off (Settings, General).
+3. No folder that holds your projects or transcripts is connected to
+   Claude, and no other extension that reads files is installed. In
+   the version where chat and Cowork are one, connected folders are
+   listed under "Trusted folders"; if you have never connected a
+   folder, there is nothing to undo.
 
 The extension is not signed by its developer; a computer or Claude
 account managed by your university or employer may refuse it.
@@ -460,8 +476,9 @@ row by row), Exegete adds:
   change. Never allow for the whole conversation the steps that record
   your decisions and write what you approved
   ([INSTALL.md, "Approving the AI's suggestions"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-are-the-safeguard)
-  names them): choose "allow once" in Claude (in its new experience,
-  with the conversation on Manual), and answer each prompt in Codex.
+  names them): choose "allow once" in Claude (with its permission
+  setting on Manual, if your message box has one), and answer each
+  prompt in Codex.
   Before any coding is applied, check that the counts the approval step shows (approved,
   rejected, pending) match what you said. If they do not, say so, and
   do not let the assistant apply the codings until they do: no coding
@@ -603,8 +620,8 @@ program at a time.
   together, the code tree and code counts by attribute, as tables;
   PDF text labelled as QualCoder's extraction; and counts of the places
   replacing names cannot reach
-- v0.17: a Manual, and codings placed by the words quoted rather than
-  by position
+- v0.17: a user manual, and codings placed by the words quoted rather
+  than by position
 - Later: coding images, audio, video and areas of PDF pages; more work
   alongside QualCoder 4.0; and changes testers ask for
   ([file yours](https://github.com/nicotem/exegete/issues))

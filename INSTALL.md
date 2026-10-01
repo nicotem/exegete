@@ -56,16 +56,19 @@ hosts do with the tools' read and write marks", further down, says
 what each does. That is what Anthropic documents, for Cowork and
 Claude Code. What Claude Desktop's ordinary chat, where step 5 asks its
 question, does with the tools' marks is not documented, and this
-project has not yet checked it. In Claude's new experience, where chat
-and Cowork are one and which is rolling out to Pro and Max plans
-first, Anthropic's page names the two modes
+project has not yet checked it. In the version of Claude where chat
+and Cowork are one conversation, which Anthropic is rolling out to Pro
+and Max plans first, a permission setting in the message box has two
+modes
 (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
 read 1 October 2026): "**Manual (default):** Claude asks before it
 takes actions, and you choose whether to allow each one." and
 "**Auto:** Claude keeps working without stopping to ask about each
 step, and automated safety checks run before it takes an action."
-Keep the conversation on Manual. For work on real data, keep Claude
-asking.
+The same page says how to tell whether you have that version: "If
+you're on a Pro or Max plan and your message box still shows "Chat"
+and "Cowork" options, you don't have it yet." Keep the setting on
+Manual. For work on real data, keep Claude asking.
 
 **Not signed.** The extension carries no publisher signature. On a
 personal Claude plan it installs like any other extension. If your
@@ -621,22 +624,35 @@ recommended).
 **2. In one Terminal window: a folder of its own, the key, the server,
 then Claude Code.** Get a key from the Console at
 <https://platform.claude.com/settings/keys>. Then, in one Terminal
-window, make an empty folder for Claude Code, set the key, register
-Exegete there and start Claude Code (Claude Code offers a server added
-this way only in the folder where it was added):
+window, make an empty folder for Claude Code and set the key there:
 
 ```bash
 mkdir -p ~/claude-exegete && cd ~/claude-exegete
-export ANTHROPIC_API_KEY=sk-ant-...
+read -rs ANTHROPIC_API_KEY && export ANTHROPIC_API_KEY
+```
+
+The second line waits for your key: paste it and press Return. Nothing
+shows as you paste. Do not type the key into a command instead: the
+Terminal keeps every command you type, in plain text, in a file in your
+home folder, which assistants that open files by themselves can read.
+Then, in the same window, register Exegete and start Claude Code
+(Claude Code offers a server added this way only in the folder where it
+was added):
+
+```bash
 claude mcp add exegete -- exegete
 claude
 ```
 
-or in PowerShell on Windows:
+In PowerShell on Windows, the same steps (the second line asks for the
+key and shows it as stars):
 
 ```powershell
 mkdir -Force $HOME\claude-exegete; cd $HOME\claude-exegete
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
+$env:ANTHROPIC_API_KEY = [System.Net.NetworkCredential]::new("", (Read-Host "Paste your key" -AsSecureString)).Password
+```
+
+```powershell
 claude mcp add exegete -- exegete
 claude
 ```
@@ -645,8 +661,8 @@ The key is set only in that window, and only until you close it.
 Claude Code started in another window, or after a restart, has no key:
 it runs on your Pro or Max login if you have one, under the consumer
 terms, or asks you to sign in. So each time, in a new window, go to
-the folder (`cd ~/claude-exegete`), set the key again, and start
-`claude` there; Exegete stays registered in that folder.
+the folder (`cd ~/claude-exegete`), set the key again the same way,
+and start `claude` there; Exegete stays registered in that folder.
 
 A new Terminal window opens in your home folder, which holds your
 projects; never start Claude Code there, in Documents, in your projects

@@ -493,12 +493,12 @@ the conversation, and the project's list of the real names behind its
 pseudonyms (pseudonyms.json, in the project folder) too, unless the
 researcher asks to see it; they back the project up, hold suggestions
 for approval and check whether QualCoder has the project open. A direct
-read or write bypasses all of that. Files exported from the project
-carry memos in full, private notes included: open them only when the
-researcher asks, and tell them first that the file holds their private
-notes, which then go to the AI provider with the conversation. When a
-tool refuses, tell the researcher why; do not
-look for a way round it.
+read or write bypasses all of that. Files exported by export_codebook,
+export_coded_segments_report and export_refi_qda carry memos in full,
+private notes included: open one only when the researcher asks, and
+tell them first that it holds any private notes they wrote, which then
+go to the AI provider with the conversation. When a tool refuses, tell
+the researcher why; do not look for a way round it.
 
 ## 4. Where you are: outside QualCoder
 

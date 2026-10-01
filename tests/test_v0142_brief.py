@@ -27,9 +27,11 @@ entry and nothing else.
 import ast
 import asyncio
 import contextlib
+import inspect
 import json
 import re
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -40,6 +42,15 @@ import exegete.server as server  # noqa: E402
 
 REPO = Path(__file__).parent.parent
 TOOL_SETS = ("full", "core", "lifecycle")
+
+# The full brief's line on exports, which names the exports whose file
+# keeps memos, private notes included
+EXPORTS_LINE = ("Files exported by export_codebook, "
+                "export_coded_segments_report and export_refi_qda carry memos "
+                "in full, private notes included: open one only when the "
+                "researcher asks, and tell them first that it holds any "
+                "private notes they wrote, which then go to the AI provider "
+                "with the conversation.")
 
 
 def _flat(text):
@@ -159,10 +170,9 @@ class TestItSaysWhatTheToolsDo:
             _flat(server.BRIEF_SHORT)
 
     def test_an_export_is_opened_only_after_saying_what_it_holds(self):
-        assert ("open them only when the researcher asks, and tell them "
-                "first that the file holds their private notes, which then "
-                "go to the AI provider with the conversation."
-                in _flat(server.BRIEF_FULL))
+        full = _flat(server.BRIEF_FULL)
+        assert (EXPORTS_LINE in full)
+        assert "Files exported from the project carry memos" not in full
 
     def test_approval_is_marked_on_the_researchers_word(self):
         """The server writes what is marked approved and cannot tell who
@@ -500,3 +510,105 @@ class TestTheSizes:
             if sys.version_info[:2] == (3, 13):
                 assert len(json.dumps(others)) == self.BEFORE[mode], mode
                 assert len(json.dumps(entry)) == 465
+
+
+# ---------------------------------------------------------------------------
+# The exports the brief names, and the lengths the documents give
+# ---------------------------------------------------------------------------
+
+def _file_exports():
+    """The export tools that write a file (they take output_path)."""
+    return {name for name in dir(server) if name.startswith("export_")
+            and callable(getattr(server, name))
+            and "output_path" in inspect.signature(
+                getattr(server, name)).parameters}
+
+
+@pytest.fixture
+def project_with_private_notes(tmp_path):
+    """A project whose file memo, code memo and coding memo each have a
+    private part; the server's selection is restored afterwards."""
+    sys.path.insert(0, str(Path(__file__).parent))
+    import track5_helpers as H
+    from exegete.database import QualcoderDatabase
+    spec = {"name": "notes",
+            "files": [{"name": "a.txt", "fulltext": "R: It was hard.",
+                       "memo": "file public ##### FILEPRIVATE"}],
+            "codes": [{"name": "Hardship",
+                       "memo": "code public ##### CODEPRIVATE"}],
+            "codings": [{"cid": 1, "fid": 1, "seltext": "It was hard.",
+                         "pos0": 3, "pos1": 15,
+                         "memo": "coding public ##### CODINGPRIVATE"}]}
+    folder = Path(H.build_project(spec, tmp_path))
+    H.write_fixture_sidecar(folder)
+    saved = (server.db, server.current_project_path)
+    server.db = QualcoderDatabase(str(folder))
+    server.current_project_path = str(folder)
+    try:
+        yield tmp_path / "exports"
+    finally:
+        server.db.close()
+        server.db, server.current_project_path = saved
+
+
+class TestTheExportsTheBriefNames:
+    """The brief tells the assistant to say, before opening an exported
+    file, that it holds the researcher's private notes. Of the five
+    exports that write a file, three keep memos in full; the frequencies
+    table and the case-by-code matrix hold counts and names only."""
+
+    KEEP = {"export_codebook", "export_coded_segments_report",
+            "export_refi_qda"}
+
+    def test_the_names_are_the_exports_whose_description_says_so(self):
+        exports = _file_exports()
+        assert exports == self.KEEP | {"export_frequencies_csv",
+                                       "export_case_code_matrix_csv"}
+        keeps = {name for name in exports
+                 if "keeps memo text in full" in
+                 _flat(inspect.getdoc(getattr(server, name)))}
+        assert keeps == self.KEEP
+        assert set(re.findall(r"\bexport_\w+", EXPORTS_LINE)) == self.KEEP
+
+    def test_the_names_are_the_exports_whose_file_holds_private_notes(
+            self, project_with_private_notes):
+        out = project_with_private_notes
+        holds = set()
+        for tool in sorted(_file_exports()):
+            target = out / tool
+            target.mkdir(parents=True)
+            path = target / "x.qdpx" if tool == "export_refi_qda" else target
+            answer = json.loads(_call(tool, output_path=str(path)))
+            assert "error" not in answer, (tool, answer)
+            blob = b""
+            for p in (p for p in target.rglob("*") if p.is_file()):
+                blob += p.read_bytes()
+                if zipfile.is_zipfile(p):
+                    with zipfile.ZipFile(p) as z:
+                        blob += b"".join(z.read(n) for n in z.namelist())
+            assert blob, tool
+            if b"PRIVATE" in blob:
+                holds.add(tool)
+        assert holds == self.KEEP
+
+
+def test_the_lengths_the_documents_give_are_the_briefs():
+    """CHANGELOG.md and TOOLS.md state the brief's lengths: the short
+    version exactly, the full one to the hundred."""
+    short, full = len(server.BRIEF_SHORT), len(server.BRIEF_FULL)
+    changelog = " ".join(REPO.joinpath("CHANGELOG.md").read_text(
+        encoding="utf-8").split())
+    entry = changelog[changelog.index("## [0.14.2-alpha]"):
+                      changelog.index("## [0.14.1-alpha]")]
+    tools = " ".join(REPO.joinpath("TOOLS.md").read_text(
+        encoding="utf-8").split())
+    stated = re.findall(r"the brief's short version, ([\d,]+) characters",
+                        entry)
+    assert [int(s.replace(",", "")) for s in stated] == [short]
+    for where, text in (("CHANGELOG", entry), ("TOOLS", tools)):
+        about = re.findall(r"full brief(?:, | \()about ([\d,]+) characters",
+                           text)
+        assert about, where
+        for figure in about:
+            assert int(figure.replace(",", "")) == round(full, -2), where
+    assert "under 2,000 characters" in tools and short < 2000

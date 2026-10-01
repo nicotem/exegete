@@ -322,22 +322,27 @@ assistant. These pages change often, and the linked pages govern.
   1.46388.3). In a Cowork session that runs in the cloud, "Claude
   fetches a copy of just that file"
   (<https://support.claude.com/en/articles/15520349-use-claude-cowork-on-web-desktop-and-mobile>,
-  the same day). In the newer experience Anthropic is rolling out to
-  Pro and Max plans, "everything Claude Cowork does is available from
-  any conversation", and "Folders you gave Cowork access to are listed
+  the same day). In the version of Claude where chat and Cowork are
+  one conversation, which Anthropic is rolling out to Pro and Max plans
+  first, "everything Claude Cowork does is available from any
+  conversation", and "Folders you gave Cowork access to are listed
   under Trusted folders."
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
-  the same day). Keep QualCoder projects, transcripts and your projects
-  folder out of every folder connected to Claude.
+  the same day). The same page, read again on 1 October 2026, says how
+  to tell: "If you're on a Pro or Max plan and your message box still
+  shows "Chat" and "Cowork" options, you don't have it yet." Keep
+  QualCoder projects, transcripts and your projects folder out of every
+  folder connected to Claude.
 - **Claude Desktop's chat, with the extension**: **not by itself, as far
   as Anthropic's pages say.** They document no way for the older,
   separate chat to open a file on your computer other than one you
   attach or one a tool, such as Exegete's, reads for it; no page says so
   in one sentence, and this project has not tested it. Three
-  exceptions. In the newer experience above, a conversation can read a
-  folder you connect. "Local MCP servers bundled with plugins and
-  desktop extensions run on your computer with the same permissions as
-  any other program you run."
+  exceptions. In the version where chat and Cowork are one
+  conversation (above), a conversation can read a folder you connect.
+  "Local MCP servers bundled with plugins and desktop extensions run on
+  your computer with the same permissions as any other program you
+  run."
   (<https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>,
   the same day), so another extension that reads files can read your
   project. And computer use, once switched on (Settings, General,
@@ -345,23 +350,23 @@ assistant. These pages change often, and the linked pages govern.
   run your dev tools automatically", and "Claude asks for your
   permission before accessing each application."
   (<https://support.claude.com/en/articles/14128542-let-claude-use-your-computer-in-cowork>,
-  the same day); it is in Cowork and Claude Code, and in the newer
-  experience any conversation has it ("Computer use: In beta on Pro and
-  Max plans, Claude can use apps on your computer directly by clicking,
-  typing, and navigating your screen.", the article on the newer
-  experience above). It works from screenshots, and sees more than the
-  applications you allow: "Claude takes screenshots of your computer to
-  understand how to navigate the screen and the apps to which you've
-  given permission." and "This means Claude can see any information
-  visible on your screen or those apps, including personal data,
-  sensitive documents, or private information belonging to you or
-  others." (the article on computer use above, read 1 October 2026). So
-  through any window on the screen, QualCoder's or a file viewer's, it
-  can see a project, the private part of memos included. With no other
-  extension that reads files, computer
-  use off, and no folder that holds your projects or transcripts
-  connected (your home folder, Documents or a whole drive included),
-  the assistant reaches your project only through Exegete.
+  the same day); it is in Cowork and Claude Code, and in the version
+  where chat and Cowork are one conversation any conversation has it
+  ("Computer use: In beta on Pro and Max plans, Claude can use apps on
+  your computer directly by clicking, typing, and navigating your
+  screen.", the article on that version above). It works from
+  screenshots, and sees more than the applications you allow: "Claude
+  takes screenshots of your computer to understand how to navigate the
+  screen and the apps to which you've given permission." and "This means
+  Claude can see any information visible on your screen or those apps,
+  including personal data, sensitive documents, or private information
+  belonging to you or others." (the article on computer use above, read
+  1 October 2026). So through any window on the screen, QualCoder's or a
+  file viewer's, it can see a project, the private part of memos
+  included. With no other extension that reads files, computer use off,
+  and no folder that holds your projects or transcripts connected (your
+  home folder, Documents or a whole drive included), the assistant
+  reaches your project only through Exegete.
 - **LM Studio** (0.4.25, its chat window): **not by itself.** Its
   pages document no file tool of its own for the chat (its MCP page,
   <https://lmstudio.ai/docs/app/mcp>, read 30 September 2026, lists
@@ -895,7 +900,8 @@ change what Anthropic may do with what it receives, not what Claude
 Code reads: Claude Code opens files by itself, outside Exegete
 ("Assistants that open files by themselves", above). For participants'
 data under commercial terms, this project suggests Claude Desktop's
-chat with Exegete on a Team or Enterprise account (rung 3).
+chat with Exegete on a Team or Enterprise account (rung 3), set up as
+"Assistants that open files by themselves", above, says.
 
 ### Rung 3: Team/Enterprise (Claude for Work)
 
@@ -1553,8 +1559,9 @@ will ask, and the summary above depends on them:
   transmits file 7's text through them.
 - **For participants' data, use an assistant with no file access of
   its own**, such as Claude Desktop's chat with the extension, with
-  computer use off and no folder that holds your projects connected to
-  it. An assistant that opens files by itself (Codex, Claude Code,
+  computer use off, no folder that holds your projects or transcripts
+  connected to it, and no other extension that reads files. An
+  assistant that opens files by itself (Codex, Claude Code,
   Cowork in the folders you connect) can read a project whole, outside
   this server; "Assistants that open files by themselves", above, says
   which do and what narrows it.

@@ -32,7 +32,7 @@ rewritten for readers new to Exegete.
   pass on: a short version as the server's opening text (below); a new
   tool, `read_brief`, in every tool set and listed first, whose
   description asks the assistant to call it once at the start of every
-  conversation about a project (it returns the full brief, about 11,600
+  conversation about a project (it returns the full brief, about 11,700
   characters, or in the `core` set the short version, and reads nothing
   from the project); the same full brief as the help topic
   `explain_ai_coding_tools('brief')` and the resource
@@ -234,10 +234,20 @@ rewritten for readers new to Exegete.
   coding quotes the file's words exactly, and that approved suggestions
   are written by the assistant in a step of its own; the approval
   advice says that no coding is written until the codings are applied.
-  Where Claude asks before a tool, the README names Claude's Manual
-  mode, its default, and its Auto mode, which does not ask; "Trusted
-  folders" belongs to Claude's new experience, rolling out by plan; and
-  Cowork comes with Claude's apps on the computer, the web and phones.
+  The check after installing is one sentence to see that Exegete is
+  listed, then three numbered checks before participants' data: that
+  Claude asks before it uses a tool; computer use off; and no folder
+  that holds projects or transcripts connected, and no other extension
+  that reads files. The first explains once, with the date Anthropic's
+  page was read, the version of Claude in which chat and Cowork are one
+  conversation, and how to tell (on a Pro or Max plan, the message box
+  offers no choice between "Chat" and "Cowork"): there, keep the
+  permission setting in the message box on Manual, its default, since
+  on Auto Claude does not ask; Manual keeps Claude asking, and the
+  other two checks keep projects out of its reach; connected folders
+  are listed under "Trusted folders". "Where your data goes" says that its list applies
+  to that version too. Cowork comes with Claude's apps on the computer,
+  the web and phones. "What comes next" names a user manual.
   "A first session" ends with a next step, and "Three commitments"
   names the three before counting them.
 
@@ -249,7 +259,11 @@ rewritten for readers new to Exegete.
   and starting Claude Code there ran it on a personal login (consumer
   terms) or asked for one. The steps say so, and give the Windows
   PowerShell form, as the Claude Code section now does for its folder
-  line.
+  line. The key is no longer typed into a command, which the Terminal
+  keeps in plain text in a history file in the home folder: the recipe
+  asks for it with `read -rs` (bash and zsh) or `Read-Host
+  -AsSecureString` (PowerShell), so it is pasted without showing and is
+  not recorded.
 - INSTALL.md and PRIVACY.md say that Claude Code's own file tools, in
   auto mode, the mode it starts in, also read outside its folder, after
   one question the first time; the older `claude mcp add` and `remove`
@@ -259,13 +273,18 @@ rewritten for readers new to Exegete.
   use off, no folder that holds projects or transcripts connected to
   it, and no other extension that reads files (INSTALL.md's table,
   Claude Code section, API-key recipe and OpenAI steps; PRIVACY.md's
-  summary; QUICKSTART.md).
+  summary and its practical mitigations; the README's check after
+  installing; QUICKSTART.md), or point to them (PRIVACY.md's second
+  rung).
 - INSTALL.md: desktop extension users run
   `uvx exegete@latest --check-transition`, as the help topic says; the
   paragraph on the check names what it now also says; the approvals
   paragraph quotes Anthropic's page on the Manual and Auto modes of
-  Claude's new experience; and OpenAI's training setting is turned off
-  first, before the four numbered steps, in the README's words.
+  the version of Claude in which chat and Cowork are one conversation,
+  and on how to tell whether you have it (PRIVACY.md quotes the latter
+  too, and names that version in the same plain words); and OpenAI's
+  training setting is turned off first, before the four numbered
+  steps, in the README's words.
 - PRIVACY.md: deleting `exegete.json` has the name asked for again,
   except beside an earlier `qualcoder_mcp.json` that could not be
   marked and still holds a name, when both files are removed; the Team

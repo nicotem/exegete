@@ -1474,7 +1474,8 @@ class TestClaudeCodesRoutes:
         # v0.14.2: the key, the server and Claude Code in one window, where
         # the key is set (test_v0142_docs.py pins the rest)
         assert _blocks(recipe, "bash")[0].strip().splitlines() == [
-            folder, "export ANTHROPIC_API_KEY=sk-ant-...",
+            folder, "read -rs ANTHROPIC_API_KEY && export ANTHROPIC_API_KEY"]
+        assert _blocks(recipe, "bash")[1].strip().splitlines() == [
             "claude mcp add exegete -- exegete", "claude"]
         routes = _claude_code_routes()
         for where in ("INSTALL, Claude Code", "INSTALL, the API-key recipe"):
@@ -1568,15 +1569,21 @@ class TestTheSmallerPoints:
         one_click = _between(_flat("README.md"),
                              "### Claude Desktop, with one click",
                              "### ChatGPT's desktop app and Codex (OpenAI)")
-        # v0.14.2: "Trusted folders" belongs to Claude's new experience,
-        # rolling out by plan (Anthropic's page, read 1 October 2026)
-        assert ("Before any participants' data, also check two things in "
-                "Claude. Computer use should be off (Settings, General). No "
-                "folder that holds your projects or transcripts should be "
-                "connected to it (in Claude's new experience, rolling out to "
-                "Pro and Max plans first, connected folders are listed under "
-                "\"Trusted folders\"; if you have never connected a folder, "
-                "there is nothing to undo).") in one_click
+        # v0.14.2: three numbered checks, the chat's three conditions
+        # among them; "Trusted folders" belongs to the version of Claude
+        # in which chat and Cowork are one conversation (Anthropic's page,
+        # read 1 October 2026)
+        assert ("Before any participants' data, check three things in "
+                "Claude") in one_click
+        for words in ("2. Computer use is off (Settings, General).",
+                      "3. No folder that holds your projects or transcripts "
+                      "is connected to Claude, and no other extension that "
+                      "reads files is installed. In the version where chat "
+                      "and Cowork are one, connected folders are listed "
+                      "under \"Trusted folders\"; if you have never "
+                      "connected a folder, there is nothing to undo."):
+            assert words in one_click, words
+        assert "also check two things" not in one_click
         # "Trusted folders" is Anthropic's word, as PRIVACY.md quotes it
         assert "Folders you gave Cowork access to are listed under Trusted " \
                "folders." in _privacy_hosts()

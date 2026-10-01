@@ -16,9 +16,14 @@ questions its checklist gains; and no release labels at the top of the
 two coding guides or in TOOLS.md's section on the brief.
 """
 
+import os
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
@@ -57,6 +62,15 @@ OPENAI = ("## ChatGPT's desktop app and Codex (Experimental)",
 
 FOLDER_BASH = "mkdir -p ~/claude-exegete && cd ~/claude-exegete"
 FOLDER_PS = r"mkdir -Force $HOME\claude-exegete; cd $HOME\claude-exegete"
+# The key is read, never typed into a command, so the shell's history
+# file (plain text, in the home folder) does not keep it
+READ_KEY_BASH = "read -rs ANTHROPIC_API_KEY && export ANTHROPIC_API_KEY"
+READ_KEY_PS = ('$env:ANTHROPIC_API_KEY = [System.Net.NetworkCredential]'
+               '::new("", (Read-Host "Paste your key" -AsSecureString))'
+               '.Password')
+SERVER_AND_START = ["claude mcp add exegete -- exegete", "claude"]
+# A key typed into a command, in bash, zsh or PowerShell form
+TYPED_KEY = re.compile(r"ANTHROPIC_API_KEY\s*=\s*[\"']?sk-")
 
 # PRIVACY.md's three conditions for Claude Desktop's chat
 THIRD = "no other extension that reads files"
@@ -101,12 +115,12 @@ def test_the_recipe_sets_the_key_registers_and_starts_in_one_window():
     for one (code.claude.com/docs/en/authentication, read 30 September
     2026)."""
     recipe = _install_part(*RECIPE)
-    first = _blocks(recipe, "bash")[0].splitlines()
-    assert first == [FOLDER_BASH, "export ANTHROPIC_API_KEY=sk-ant-...",
-                     "claude mcp add exegete -- exegete", "claude"]
-    assert _blocks(recipe, "powershell")[0].splitlines() == [
-        FOLDER_PS, '$env:ANTHROPIC_API_KEY = "sk-ant-..."',
-        "claude mcp add exegete -- exegete", "claude"]
+    bash = _blocks(recipe, "bash")
+    assert bash[0].splitlines() == [FOLDER_BASH, READ_KEY_BASH]
+    assert bash[1].splitlines() == SERVER_AND_START
+    powershell = _blocks(recipe, "powershell")
+    assert powershell[0].splitlines() == [FOLDER_PS, READ_KEY_PS]
+    assert powershell[1].splitlines() == SERVER_AND_START
     flat = " ".join(recipe.split())
     for words in ("**2. In one Terminal window: a folder of its own, the "
                   "key, the server, then Claude Code.**",
@@ -120,6 +134,97 @@ def test_the_recipe_sets_the_key_registers_and_starts_in_one_window():
         assert words in flat, words
     for gone in ("second Terminal window", "`claude` again"):
         assert gone not in flat, gone
+
+
+def _shipped_markdown():
+    return sorted(p.name for p in REPO.glob("*.md")) + sorted(
+        str(p.relative_to(REPO)) for p in (REPO / "docs").rglob("*.md"))
+
+
+def test_the_key_is_read_not_typed_into_a_command():
+    """The Terminal keeps every command typed, in plain text, in a
+    history file in the home folder, which assistants that open files by
+    themselves can read; the recipe has the key pasted into `read` (or
+    PowerShell's `Read-Host`), so no command holds it."""
+    for name in _shipped_markdown():
+        assert not TYPED_KEY.search(_read(name)), name
+    flat = " ".join(_install_part(*RECIPE).split())
+    for words in ("make an empty folder for Claude Code and set the key "
+                  "there:",
+                  "The second line waits for your key: paste it and press "
+                  "Return. Nothing shows as you paste. Do not type the key "
+                  "into a command instead: the Terminal keeps every command "
+                  "you type, in plain text, in a file in your home folder, "
+                  "which assistants that open files by themselves can read.",
+                  "In PowerShell on Windows, the same steps (the second "
+                  "line asks for the key and shows it as stars):",
+                  "set the key again the same way, and start `claude` "
+                  "there"):
+        assert words in flat, words
+
+
+def test_the_typed_key_check_would_notice():
+    # the recipe's lines as they stood, in both shells
+    for old in ("export ANTHROPIC_API_KEY=sk-ant-...",
+                '$env:ANTHROPIC_API_KEY = "sk-ant-..."',
+                "ANTHROPIC_API_KEY='sk-ant-api03-x' claude"):
+        assert TYPED_KEY.search(old), old
+    for kept in (READ_KEY_BASH, READ_KEY_PS, "unset ANTHROPIC_API_KEY",
+                 "`Remove-Item Env:ANTHROPIC_API_KEY`"):
+        assert not TYPED_KEY.search(kept), kept
+
+
+def _shells():
+    if sys.platform == "win32":
+        return []
+    return [name for name in ("zsh", "bash") if shutil.which(name)]
+
+
+def _interactive(shell, home, lines):
+    """Feed `lines` to an interactive shell that keeps its history in a
+    file in `home`, as macOS's /etc/zshrc sets it up for zsh; return
+    what the shell printed and what its history file holds."""
+    home.mkdir()
+    history = home / f".{shell}_history"
+    env = {"HOME": str(home), "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+           "TERM": "dumb"}
+    if shell == "zsh":
+        (home / ".zshrc").write_text(f"HISTFILE={history}\nHISTSIZE=2000\n"
+                                     "SAVEHIST=1000\n", encoding="utf-8")
+        env["ZDOTDIR"] = str(home)
+        command = ["zsh", "-d", "-i"]
+    else:
+        env["HISTFILE"] = str(history)
+        command = ["bash", "--norc", "--noprofile", "-i"]
+    proc = subprocess.run(command, input="\n".join(lines + ["exit"]) + "\n",
+                          capture_output=True, text=True, env=env,
+                          timeout=60)
+    saved = history.read_text(encoding="utf-8", errors="replace") \
+        if history.exists() else ""
+    return proc.stdout + proc.stderr, saved
+
+
+@pytest.mark.skipif(not _shells(), reason="needs zsh or bash, not Windows")
+@pytest.mark.parametrize("shell", _shells() or ["none"])
+def test_the_recipes_key_line_keeps_the_key_out_of_the_history(shell,
+                                                               tmp_path):
+    """Run the recipe's own key line, from INSTALL.md, in an interactive
+    shell, paste a made-up key, and look in the history file: the key is
+    exported to the programs started there (Claude Code reads it) and is
+    not in the file. The line it replaced puts the key in the file."""
+    fake = "sk-ant-TEST-ONLY-not-a-key"
+    probe = "echo length:$(printenv ANTHROPIC_API_KEY | wc -c | tr -d ' ')"
+    key_line = _blocks(_install_part(*RECIPE), "bash")[0].splitlines()[1]
+    printed, saved = _interactive(shell, tmp_path / "recipe",
+                                  [key_line, fake, probe])
+    assert f"length:{len(fake) + 1}" in printed, printed
+    assert key_line in saved, saved
+    assert fake not in saved, saved
+    # the probe sees a key typed into a command
+    printed, saved = _interactive(shell, tmp_path / "typed",
+                                  [f"export ANTHROPIC_API_KEY={fake}", probe])
+    assert f"length:{len(fake) + 1}" in printed, printed
+    assert fake in saved, saved
 
 
 def test_the_claude_code_folder_line_has_a_windows_form():
@@ -201,6 +306,19 @@ def _chat_suggestions():
         "QUICKSTART, what you need": _between(
             _flat("QUICKSTART.md"), "## Prerequisites Checklist",
             "## Installation Steps"),
+        "PRIVACY, practical mitigations": _between(
+            privacy, "- **For participants' data, use an assistant with no "
+            "file access of its own**", "- **Consult your institution's"),
+    }
+
+
+def _chat_set_up():
+    """Where the reader sets the chat up, straight after installing: the
+    conditions as checks."""
+    return {
+        "README, the check after installing": _between(
+            _flat("README.md"), "Before any participants' data, check "
+            "three things in Claude", "The extension is not signed"),
     }
 
 
@@ -211,7 +329,15 @@ def test_the_chats_three_conditions_travel_with_it():
         assert THIRD in text or "another extension that reads files" \
             in text, where
         assert "transcripts" in text, where
-    # and the other route points to them
+    for where, text in _chat_set_up().items():
+        assert "Computer use is off" in text, where
+        assert THIRD in text, where
+        assert "transcripts" in text, where
+    # and the other routes point to them
+    rung_two = _between(_flat("PRIVACY.md"), "### Rung 2:", "### Rung 3:")
+    assert ("on a Team or Enterprise account (rung 3), set up as "
+            "\"Assistants that open files by themselves\", above, says.") \
+        in rung_two
     other = _between(_flat("README.md"), "**Other assistants.**",
                      "**Updating.**")
     assert ("for participants' data use Claude Desktop's chat with the "
@@ -229,6 +355,16 @@ def test_the_conditions_check_would_notice():
            "with computer use off and no folder that holds your projects "
            "connected to it")
     assert THIRD not in old and "transcripts" not in old
+    # the README's one-click check and PRIVACY.md's practical mitigations
+    # as they stood, with two of the three
+    for old in ("Before any participants' data, also check two things in "
+                "Claude. Computer use should be off (Settings, General). No "
+                "folder that holds your projects or transcripts should be "
+                "connected to it",
+                "such as Claude Desktop's chat with the extension, with "
+                "computer use off and no folder that holds your projects "
+                "connected to it."):
+        assert THIRD not in old, old
 
 
 # ---------------------------------------------------------------------------
@@ -240,25 +376,111 @@ ONE_CLAUDE = ("<https://support.claude.com/en/articles/16761823-claude-"
               "cowork-and-chat-are-one-claude>")
 
 
+# Anthropic's way to tell whether an account has that version, as
+# INSTALL.md and PRIVACY.md quote it (read 1 October 2026)
+HOW_TO_TELL = ("\"If you're on a Pro or Max plan and your message box still "
+               "shows \"Chat\" and \"Cowork\" options, you don't have it "
+               "yet.\"")
+
+
+def test_the_check_after_installing_is_a_short_list():
+    """One sentence to see that Exegete is listed, then three numbered
+    checks, the chat's three conditions among them."""
+    one_click = _between(_flat("README.md"), "### Claude Desktop, with one "
+                         "click", "### ChatGPT's desktop app and Codex")
+    check = _between(one_click, "To check,", "The extension is not signed")
+    assert check.startswith("To check, start a new conversation, click "
+                            "\"+\", then Connectors, and see that Exegete "
+                            "is listed. Before any participants' data, check "
+                            "three things in Claude (\"Where your data "
+                            "goes\", above, says why): 1. Claude asks "
+                            "before it uses a tool, and \"Allow once\" "
+                            "keeps it asking"), check
+    numbered = re.findall(r"(?<![\w.])(\d)\. ", check)
+    assert numbered == ["1", "2", "3"], numbered
+
+
 def test_claudes_manual_mode_is_named_where_claude_asks():
+    """The version of Claude in which chat and Cowork are one
+    conversation is explained once, with the date Anthropic's page was
+    read and how to tell: keep its permission setting on Manual; the
+    folders and computer use are what keep projects out of reach."""
     readme = _flat("README.md")
     one_click = _between(readme, "### Claude Desktop, with one click",
                          "### ChatGPT's desktop app and Codex (OpenAI)")
-    assert ("In Claude's new experience, keep the conversation on Manual, "
-            "its default: on Auto, Claude does not ask.") in one_click
-    assert ("choose \"allow once\" in Claude (in its new experience, with "
-            "the conversation on Manual), and answer each prompt in "
-            "Codex.") in readme
+    for words in ("On a Pro or Max plan, if your message box offers no "
+                  "choice between \"Chat\" and \"Cowork\", you have the "
+                  "version of Claude in which the two are one conversation "
+                  "(Anthropic's page, read on 1 October 2026, says it is "
+                  "reaching accounts gradually, starting with those "
+                  "plans).",
+                  "There, a permission setting in the message box decides "
+                  "whether Claude asks: keep it on Manual, its default; on "
+                  "Auto, Claude does not ask.",
+                  "Manual keeps Claude asking, but it is checks 2 and 3 that "
+                  "keep your projects out of its reach, except through "
+                  "Exegete."):
+        assert words in one_click, words
+    # explained once
+    assert readme.count("no choice between \"Chat\" and \"Cowork\"") == 1
+    assert readme.count("1 October 2026, says it is reaching accounts") == 1
+    data = _between(readme, "## Where your data goes", "## Start here")
+    assert ("In the version of Claude where chat and Cowork are one "
+            "conversation (\"Claude Desktop, with one click\", below, says "
+            "how to tell), the same list applies: set up as it says, that "
+            "conversation too reaches your project only through Exegete, as "
+            "far as Anthropic's pages say.") in data
+    assert ("choose \"allow once\" in Claude (with its permission setting "
+            "on Manual, if your message box has one), and answer each "
+            "prompt in Codex.") in readme
     approvals = _between(_flat("INSTALL.md"), "**Approvals.**",
                          "**Not signed.**")
     for words in (ONE_CLAUDE,
+                  "In the version of Claude where chat and Cowork are one "
+                  "conversation, which Anthropic is rolling out to Pro and "
+                  "Max plans first, a permission setting in the message box "
+                  "has two modes",
                   "\"**Manual (default):** Claude asks before it takes "
                   "actions, and you choose whether to allow each one.\"",
                   "\"**Auto:** Claude keeps working without stopping to ask "
                   "about each step, and automated safety checks run before "
                   "it takes an action.\"",
-                  "Keep the conversation on Manual."):
+                  HOW_TO_TELL,
+                  "Keep the setting on Manual."):
         assert words in approvals, words
+    assert HOW_TO_TELL in _flat("PRIVACY.md")
+
+
+# Words that date, or leave the reader to guess what they name
+DATING = re.compile(r"(?i)\bnew(?:er)? experience\b")
+
+
+def _without_dating_words():
+    changelog = _between(_read("CHANGELOG.md"), "## [0.14.2-alpha]",
+                         "## [0.14.1-alpha]")
+    texts = {name: _flat(name) for name in (
+        "README.md", "INSTALL.md", "PRIVACY.md", "QUICKSTART.md", "TOOLS.md",
+        "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")}
+    texts["CHANGELOG, 0.14.2"] = " ".join(changelog.split())
+    return texts
+
+
+def test_no_new_experience_and_a_user_manual():
+    for where, text in _without_dating_words().items():
+        assert not DATING.search(text), where
+    upcoming = _between(_flat("README.md"), "## What comes next",
+                        "## Disclaimer")
+    assert "v0.17: a user manual, and" in upcoming
+    assert "a Manual" not in upcoming
+
+
+def test_the_dating_check_would_notice():
+    for old in ("In Claude's new experience, keep the conversation on "
+                "Manual", "In the newer experience Anthropic is rolling out",
+                "(in its new experience, with the conversation on Manual)"):
+        assert DATING.search(old), old
+    assert not DATING.search("the version of Claude where chat and Cowork "
+                             "are one conversation")
 
 
 def test_cowork_and_trusted_folders_as_anthropic_says():

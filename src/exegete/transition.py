@@ -1046,13 +1046,22 @@ def posix_ps() -> Optional[str]:
 
 Row = Tuple[int, int, Optional[int], str]
 
+# How long the process list may take, in seconds, and how many times it is
+# tried when it takes longer. ps answers at once; Windows PowerShell's
+# Get-CimInstance can take tens of seconds on a slow or busy computer (a CI
+# runner once needed more than 20), and a list not read keeps the link, so
+# the researcher could not tidy.
+PROCESS_LIST_SECONDS = {"windows": 60, "posix": 20}
+PROCESS_LIST_TRIES = 2                   # one retry after a time-out
+
 
 def _process_table() -> Optional[List[Row]]:
     """(process id, parent's id, when it started, command line) for every
-    process, or None when it cannot be read (then nothing is removed).
-    When it started is read on Windows alone (None elsewhere), where a
-    dead parent's number stays on its child and can be taken by a later
-    program; on macOS and Linux an orphan is given a new parent."""
+    process, or None when it cannot be read (then nothing is removed); a
+    list that takes too long is asked for once more. When it started is
+    read on Windows alone (None elsewhere), where a dead parent's number
+    stays on its child and can be taken by a later program; on macOS and
+    Linux an orphan is given a new parent."""
     windows = os.name == "nt"
     if windows:
         powershell = windows_powershell()
@@ -1069,12 +1078,18 @@ def _process_table() -> Optional[List[Row]]:
         if ps is None:
             return None
         cmd = [ps, "-axo", "pid=,ppid=,args="]
-    try:
-        done = subprocess.run(cmd, capture_output=True, timeout=20,
-                              check=False)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if done.returncode != 0:
+    limit = PROCESS_LIST_SECONDS["windows" if windows else "posix"]
+    done = None
+    for _ in range(PROCESS_LIST_TRIES):
+        try:
+            done = subprocess.run(cmd, capture_output=True, timeout=limit,
+                                  check=False)
+            break
+        except subprocess.TimeoutExpired:
+            continue                     # too slow this time: once more
+        except (OSError, subprocess.SubprocessError):
+            return None
+    if done is None or done.returncode != 0:
         return None
     rows: List[Row] = []
     numbers = 3 if windows else 2

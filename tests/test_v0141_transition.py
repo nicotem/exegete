@@ -1116,9 +1116,72 @@ class TestTheProcessList:
         assert transition.started_as_old(transition._listing()) == [
             "C:\\v\\Scripts\\uv.exe tool uvx qualcoder-mcp"]
 
-    def test_the_real_process_list_holds_this_process(self):
+    # A list that takes too long. Windows PowerShell's Get-CimInstance
+    # once took more than the 20 seconds 0.14.1 allowed, on CI's Windows
+    # runner; the check then keeps the link, and a researcher on a slow
+    # computer could not tidy. 0.14.2 gives PowerShell longer and asks
+    # once more after a time-out.
+
+    def _slow(self, monkeypatch, tmp_path, os_name, times_out,
+              error=subprocess.TimeoutExpired):
+        """The list on `os_name`, from a subprocess.run that fails with
+        `error` the first `times_out` times; returns the listing and the
+        limit given to each call."""
+        if os_name == "nt":
+            root, _ = self._windows(tmp_path)
+            monkeypatch.setenv("SystemRoot", str(root))
+        else:
+            ps = write(tmp_path / "bin" / "ps", "")
+            monkeypatch.setattr(transition, "POSIX_PS", (str(ps),))
+        limits = []
+
+        def run(cmd, **kwargs):
+            limits.append(kwargs.get("timeout"))
+            if len(limits) <= times_out:
+                if error is subprocess.TimeoutExpired:
+                    raise error(cmd, kwargs.get("timeout"))
+                raise error("cannot start it")
+            out = self.OUT_WINDOWS if cmd[0].endswith(".exe") else self.OUT
+            return subprocess.CompletedProcess(cmd, 0, out, b"")
+        monkeypatch.setattr(transition.subprocess, "run", run)
+        monkeypatch.setattr(transition, "_own_ids", lambda: (1000, 999))
+        return self._listing_as(monkeypatch, os_name), limits
+
+    @pytest.mark.parametrize("os_name", ["nt", "posix"])
+    def test_a_slow_list_is_asked_for_once_more(self, tmp_path, monkeypatch,
+                                               os_name):
+        lines, limits = self._slow(monkeypatch, tmp_path, os_name, 1)
+        assert lines == ["uvx qualcoder-mcp"]
+        assert len(limits) == 2
+
+    @pytest.mark.parametrize("os_name", ["nt", "posix"])
+    def test_too_slow_twice_reads_nothing(self, tmp_path, monkeypatch,
+                                          os_name):
+        # nothing is read, so nothing is removed; and no third try
+        lines, limits = self._slow(monkeypatch, tmp_path, os_name, 2)
+        assert lines is None
+        assert len(limits) == 2
+
+    def test_another_failure_is_not_tried_again(self, tmp_path, monkeypatch):
+        lines, limits = self._slow(monkeypatch, tmp_path, "nt", 1,
+                                   error=OSError)
+        assert lines is None
+        assert len(limits) == 1
+
+    def test_powershell_is_given_a_minute(self, tmp_path, monkeypatch):
+        _, windows = self._slow(monkeypatch, tmp_path, "nt", 0)
+        assert windows == [60]
+        _, posix = self._slow(monkeypatch, tmp_path, "posix", 0)
+        assert posix == [20]
+
+    def test_the_real_process_list_holds_this_process(self, monkeypatch):
         # on Windows this runs the PowerShell command itself, so a mistake
-        # in it shows here rather than as "could not be read"
+        # in it shows here rather than as "could not be read". A CI runner
+        # under load can be slower than any researcher's computer: the
+        # test gives the same command more time than the check does, so a
+        # slow runner does not fail it and what it proves is unchanged
+        monkeypatch.setitem(transition.PROCESS_LIST_SECONDS, "windows", 150)
+        monkeypatch.setitem(transition.PROCESS_LIST_SECONDS, "posix", 60)
         rows = transition._process_table()
         assert rows is not None
         mine = [row for row in rows if row[0] == os.getpid()]

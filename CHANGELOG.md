@@ -93,7 +93,7 @@ otherwise, and may change before it is released.
   other options v0.14 deprecated: an import always takes a backup
   first. A call that passes it is answered with the deprecation.
 
-### Added: document import (provisional)
+### Added (provisional): bringing documents in
 
 - `import_documents` brings Word (.docx), OpenDocument (.odt), RTF,
   plain text (.txt), Markdown (.md), web pages (.html, .htm) and
@@ -178,7 +178,6 @@ otherwise, and may change before it is released.
   standard and lifecycle sets, not in core); the rest of the growth is
   `start` on `analyze_file_with_coding` and the two descriptions changed
   above.
-
 
 ## [0.14.2-alpha] - 2026-10-02
 

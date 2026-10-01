@@ -9889,15 +9889,17 @@ def _import_names_list(apply: bool, folder: Path):
             pseudo.canonical_mapping(validated), None)
 
 
-def _optional_formats_available() -> set:
-    """The optional part's formats this install can read."""
+def _optional_formats_available() -> frozenset:
+    """The optional part's formats this install can read: PDF with
+    PyMuPDF, EPUB with EbookLib (and the lxml it needs)."""
     import importlib.util
     available = set()
     if importlib.util.find_spec("pymupdf") is not None:
         available.add(doc_readers.PDF)
-    if importlib.util.find_spec("ebooklib") is not None:
+    if (importlib.util.find_spec("ebooklib") is not None
+            and importlib.util.find_spec("lxml") is not None):
         available.add(doc_readers.EPUB)
-    return available
+    return frozenset(available)
 
 
 def _reading_folder_root() -> Optional[Path]:

@@ -481,3 +481,20 @@ class TestTheReadingRoutesModules:
         monkeypatch.setattr(reading_folder, "root", lambda *a, **k: place)
         preview = _call(paths=[str(place / "copy.txt")])
         assert "reading folder" in preview["refused"][0]["reason"]
+
+
+class TestWithoutTheOptionalPart:
+
+    @pytest.mark.parametrize("missing, name", [("pymupdf", "report.pdf"),
+                                                ("ebooklib", "book.epub")])
+    def test_each_format_needs_its_own_library(self, project, folder,
+                                               monkeypatch, missing, name):
+        import importlib.util
+        real = importlib.util.find_spec
+        monkeypatch.setattr(importlib.util, "find_spec",
+                            lambda n, *a: None if n == missing
+                            else real(n, *a))
+        (folder / name).write_bytes(b"not read")
+        preview = _call(paths=[str(folder / name)])
+        assert "cannot read PDF and EPUB files yet" in \
+            preview["refused"][0]["reason"]

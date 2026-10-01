@@ -99,7 +99,7 @@ class Context:
     names_list: str = "none"                 # none, empty, entries, off
     names_list_entries: int = 0
     names_list_canonical: Any = None
-    optional_available: bool = False
+    optional_available: frozenset = frozenset()   # PDF, EPUB readable
     qc382: bool = False
     encoding: Optional[str] = None
     pdfs_with_listed_names: bool = False
@@ -324,7 +324,8 @@ def prepare(item: Item, ctx: Context, seen_keys: set,
         _refuse(item, "other_format" if suffix in words.OTHER_FORMATS
                 else "unsupported", suffix=suffix)
         return None
-    if item.kind in doc_readers.OPTIONAL_FORMATS and not ctx.optional_available:
+    if (item.kind in doc_readers.OPTIONAL_FORMATS
+            and item.kind not in ctx.optional_available):
         _refuse(item, "optional_missing")
         return None
     problem = file_name_problem(item.name)
@@ -379,7 +380,8 @@ _CHARSET_NAMES = {
     "Windows Central European (cp1250)", "cp1251": "Windows Cyrillic "
     "(cp1251)", "cp1257": "Windows Baltic (cp1257)", "cp775": "DOS Baltic "
     "(cp775)", "cp1006": "Urdu (cp1006)", "cp1253": "Windows Greek "
-    "(cp1253)", "cp1254": "Windows Turkish (cp1254)", "utf-8": "UTF-8", "utf-8-sig": "UTF-8", "ascii": "ASCII",
+    "(cp1253)", "cp1254": "Windows Turkish (cp1254)", "utf-8": "UTF-8",
+    "utf-8-sig": "UTF-8", "ascii": "ASCII",
 }
 
 

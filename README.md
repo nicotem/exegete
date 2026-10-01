@@ -11,8 +11,9 @@ AI assistant, compatible with QualCoder.**
 Analyse your interviews by asking, in your own words. Your AI assistant
 reads, searches and suggests; you decide. Every suggested coding quotes
 the text word for word and waits for your approval, and your project
-stays one that [QualCoder](https://github.com/ccbogel/QualCoder), the
-free qualitative analysis program, opens.
+stays one that QualCoder opens.
+[QualCoder](https://github.com/ccbogel/QualCoder) is free software for
+qualitative analysis, of the same kind as NVivo, ATLAS.ti and MAXQDA.
 
 > **You:** Bring this into the project Practice as "Interview 3". [text]\
 > **Assistant:** First: which name should my work be stored under?\
@@ -37,13 +38,11 @@ free qualitative analysis program, opens.
 *An illustration, shortened, with made-up practice text; your
 assistant's words will differ.*
 
-Exegete (formerly qualcoder-mcp) is an application for qualitative
-data analysis in its own right, not an add-on to QualCoder, and you do
-not need QualCoder to start. It stays compatible with QualCoder, so you
-can open the same project there whenever you like, one program at a
-time. It has no window of its own: your assistant, such as Claude
-Desktop, starts it, and its work appears in the conversation. It is not
-a remote control for QualCoder, which need not be running.
+Exegete (formerly qualcoder-mcp) is an application in its own right,
+not an add-on or a remote control for QualCoder: you do not need
+QualCoder to start, or running while you work. It has no window of its
+own: your assistant, such as Claude Desktop, starts it, and its work
+appears in the conversation.
 
 - **New here?** [Start here](https://github.com/nicotem/exegete#start-here):
   Claude Desktop, one click, then a practice project.
@@ -56,10 +55,12 @@ a remote control for QualCoder, which need not be running.
   an MCP server over stdio, three tool sets, every tool,
   `pipx install exegete`.
 
-Exegete is free and open source (LGPL, QualCoder's own licence), tested
-on Windows, macOS and Linux with every change. It is an early version
-(an alpha) built by one researcher, independently of QualCoder's
-developers; parts marked Experimental have had little or no use yet.
+Exegete is free, open-source software, under QualCoder's own licence
+(LGPL-3.0-or-later), and costs nothing (your assistant may: see "Start
+here"). It is tested on Windows, macOS and Linux with every change. It
+is an early version (an alpha) built by one researcher, independently
+of QualCoder's developers; parts marked Experimental have had little or
+no use yet.
 Questions and ideas go to
 [GitHub Issues](https://github.com/nicotem/exegete/issues), not email;
 never put participant data in an issue.
@@ -184,8 +185,8 @@ Some assistants also open files on your computer by themselves:
 | Assistant | For participants' data | Opens files by itself? | Its AI's maker |
 |---|---|---|---|
 | **Claude Desktop's chat**, with the extension | Suggested, set up as below | Not by itself, as far as Anthropic's pages say, set up as below | Anthropic; on a Team or Enterprise account, commercial terms |
-| **Claude's Cowork** | Not suggested: use the chat; if you use it, keep projects and transcripts out of every connected folder | Yes, in the folders you connect to it | Anthropic |
-| **Claude Code** | Not suggested | Yes, without asking, in the folder it starts in and beyond | Anthropic; with an organisation's API key, commercial terms |
+| **Claude's Cowork** | The chat suggested instead: Cowork reads the folders you connect, so keep projects and transcripts out of them | Yes, in the folders you connect to it | Anthropic |
+| **Claude Code** | The chat suggested instead: Claude Code reads beyond its folder without asking | Yes, without asking, in the folder it starts in and beyond | Anthropic; with an organisation's API key, commercial terms |
 | **ChatGPT's desktop app and Codex** (Experimental) | Practice and data that is not sensitive, until a setting that stops those reads is tested | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode | OpenAI |
 | **LM Studio**, with a local model (Experimental: no local model has yet been evaluated with Exegete) | Also suggested, with no other server or plugin that reads files | Its chat: not by itself | None outside. Use the `core` tool set: local models are weaker with many tools |
 
@@ -207,10 +208,12 @@ where chat and Cowork are one conversation, below):
    transcripts (your home folder, Documents or a whole drive included;
    connected folders may be listed under "Trusted folders"). Do not add
    another extension that reads files either.
-3. On a personal Claude plan (Free, Pro or Max), check the Model
-   Improvement setting at https://claude.ai/settings/data-privacy-controls:
-   while it is on, Anthropic may use your conversations to train its
-   models (PRIVACY.md quotes the terms, with their exceptions).
+3. **Switch training off** before participants' data: while it is on,
+   Anthropic may use your conversations to train its models. On a
+   personal plan (Free, Pro or Max) it is the Model Improvement
+   setting, at https://claude.ai/settings/data-privacy-controls. Rating
+   a reply (thumbs up or down) can still let Anthropic train on that
+   conversation (PRIVACY.md quotes the terms).
 4. On an account your university or employer provides, ask whoever
    manages it which terms apply.
 5. Take
@@ -239,6 +242,19 @@ says where):
 Claude Desktop, with one click, is the easiest start, and the one this
 project suggests for participants' data. Came straight here? First
 read [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes).
+
+**What it costs.** Exegete costs nothing; your assistant may. On
+1 October 2026 the makers' pages listed, in US dollars,
+[Claude's](https://claude.com/pricing) Free plan, Pro at $20 a month,
+Max from $100, Team and Enterprise by the seat (Enterprise also by
+use); and [ChatGPT's](https://learn.chatgpt.com/docs/pricing) desktop
+app on Free and Go "subject to rollout", Codex's command line from
+Plus ($20 a month). Plans have usage limits (Claude's reset every five
+hours); at one, you wait or move up a plan. Longer conversations and
+more tool use count for more, so coding many transcripts uses far more
+than practice; OpenAI adds that every MCP server "uses more of your
+limit". LM Studio is free, and its local model wants 16 GB of memory
+or more.
 
 ### Claude Desktop, with one click
 
@@ -275,14 +291,18 @@ release marked "Latest" when this was checked, on 1 October 2026. The
 
 ### ChatGPT's desktop app and Codex (OpenAI)
 
-These can start Exegete too (ChatGPT in a web browser cannot), for
-practice and data that is not sensitive until a safer setting has been
-tested. Experimental: written from OpenAI's documentation, read on 30
-September 2026, and not yet tried by this project.
+These can start Exegete too (ChatGPT in a web browser cannot). Codex
+reads files by itself, so this project suggests them for practice and
+data that is not sensitive until a safer setting has been tested.
+Experimental: written from OpenAI's documentation, read on 30 September
+2026, and not yet tried by this project.
 
-1. **Turn off training first**, before any use with Exegete, practice
-   included: "Improve the model for everyone" in ChatGPT's Settings,
-   Data controls.
+1. **Switch training off** before participants' data: while it is on,
+   OpenAI may use your conversations to train its models. On a
+   personal plan (Free, Go, Plus or Pro) it is "Improve the model for
+   everyone" in ChatGPT's Settings, Data controls, and Codex's separate
+   "Include environments". Rating a reply (thumbs up or down) can still
+   let OpenAI train on that conversation.
 2. **Then follow
    [INSTALL.md's steps](https://github.com/nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-app-and-codex-experimental)**,
    by the Terminal route (a few typed commands; Python 3.10 or newer):
@@ -294,7 +314,14 @@ September 2026, and not yet tried by this project.
 ### A first session
 
 Practise on text that is not from a participant, such as a page you
-write. Ask the assistant to "Create a new QualCoder project called
+write. Codex and Claude Code can open files on your computer by
+themselves, so a real study kept on the same computer is within their
+reach even while you practise, and Exegete's list of projects tells
+them where it is. If that matters for a study, you could keep practice
+projects in a folder of their own, or work on that study with Claude
+Desktop's chat.
+
+Ask the assistant to "Create a new QualCoder project called
 Practice" (Experimental), then bring in your page as in the example.
 With the extension or OpenAI's steps, the project is made in "QualCoder
 projects", in your home folder: open it in QualCoder (Project, Open
@@ -329,9 +356,8 @@ There, new projects and copies go to `~/Documents/Exegete projects`,
 which iCloud or OneDrive may sync, unless
 [`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
 names another folder. Claude Code opens files by itself ("Where your
-data goes", above): never start it in your home folder, Documents, your
-projects folder or a study's folder, and for participants' data use
-Claude Desktop's chat instead.
+data goes", above), so for participants' data this project suggests
+Claude Desktop's chat.
 
 **Updating.** Updates are manual and never touch your projects:
 install a newer `.mcpb` the same way, or, on the Terminal route, run

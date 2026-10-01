@@ -298,7 +298,7 @@ def _chat_suggestions():
             install, "**Step 3. Give Codex a folder of its own",
             "**Step 4. Keep it asking.**"),
         "PRIVACY, the summary of assistants": _between(
-            privacy, "So, for participants' data, this project suggests",
+            privacy, "**For participants' data**, this project suggests",
             "## Keeping notes private"),
         "PRIVACY, the checklist": _between(
             privacy, "## Before you use real participant data, check "
@@ -307,8 +307,8 @@ def _chat_suggestions():
             _flat("QUICKSTART.md"), "## Prerequisites Checklist",
             "## Installation Steps"),
         "PRIVACY, practical mitigations": _between(
-            privacy, "- **For participants' data, use an assistant with no "
-            "file access of its own**", "- **Consult your institution's"),
+            privacy, "- **An assistant that opens files by itself can read "
+            "a project whole**", "- **Consult your institution's"),
     }
 
 
@@ -339,17 +339,18 @@ def test_the_chats_three_conditions_travel_with_it():
     assert ("on a Team or Enterprise account (rung 3), set up as "
             "\"Assistants that open files by themselves\", above, says.") \
         in rung_two
+    # (the owner, 1 October 2026: warn, don't prescribe. The README's
+    # "Other assistants" no longer says "never start it"; the table says
+    # what Claude Code reads and suggests the chat instead, and "A first
+    # session" carries the warning about practising. INSTALL.md names the
+    # folders, the projects folder and Documents among them, as the reason
+    # its steps use an empty folder.)
     other = _between(_flat("README.md"), "**Other assistants.**",
                      "**Updating.**")
-    assert "for participants' data use Claude Desktop's chat instead." \
-        in other
-    # v0.14.2, the README's first round of checks: the folders INSTALL.md
-    # names, the projects folder and Documents among them (the Terminal
-    # route's default projects folder is in Documents)
-    assert ("never start it in your home folder, Documents, your projects "
-            "folder or a study's folder") in other
-    assert ("never start it in your home folder, Documents, your projects "
-            "folder or any folder that holds a study") in \
+    assert "never start" not in other.lower()
+    assert ("started in your home folder (where a new Terminal window "
+            "opens), Documents, your projects folder or a study's folder, "
+            "it reads that study without asking.") in \
         " ".join(_read("INSTALL.md").split())
     row = _between(_read("INSTALL.md"),
                    "| **Anthropic commercial-terms routes**", "\n")
@@ -511,13 +512,17 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
     # (the README's second round of checks: the verdict second, so that
     # it shows on a phone; the maker last)
     assert ("| Yes, in the folders you connect to it | Anthropic |") in data
-    assert "| **Claude's Cowork** | Not suggested: use the chat;" in data
+    assert ("| **Claude's Cowork** | The chat suggested instead: Cowork "
+            "reads the folders you connect") in data
     assert "Cowork is a part of Claude Desktop." not in data
     assert ("use-claude-cowork-on-web-desktop-and-mobile") in \
         _flat("PRIVACY.md")
-    # the account's terms, in the list before participants' data
-    assert ("3. On a personal Claude plan (Free, Pro or Max), check the "
-            "Model Improvement setting") in data
+    # the account's terms, in the list before participants' data (the
+    # owner, 1 October 2026: the same training advice for both makers)
+    assert ("3. **Switch training off** before participants' data: while "
+            "it is on, Anthropic may use your conversations to train its "
+            "models. On a personal plan (Free, Pro or Max) it is the Model "
+            "Improvement setting") in data
     assert "the newer Claude app" not in _flat("README.md")
     # Anthropic's words for the rollout, as PRIVACY.md quotes the page
     assert "rolling out to Pro and Max plans" in _flat("PRIVACY.md")
@@ -529,28 +534,34 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
 
 def test_install_turns_training_off_first_in_the_readmes_words():
     install = " ".join(_install_part(*OPENAI).split())
-    first = _between(install, "**First, turn off training**",
+    first = _between(install, "**First, switch training off**",
                      "**Step 1. Install Exegete.**")
     # v0.14.2, the README rewritten to persuade: the README gives the step
     # and the first of the two switches; INSTALL.md gives both, and Codex's
-    # "Include environments"
-    readme = _between(_flat("README.md"), "**Turn off training first**",
+    # "Include environments". The owner, 1 October 2026: the same advice
+    # for both makers, before participants' data ("practice included"
+    # went: the warning about practising carries its reason)
+    readme = _between(_flat("README.md"), "1. **Switch training off**",
                       "Then follow")
-    for words in ("before any use with Exegete, practice included",
+    for words in ("before participants' data: while it is on, OpenAI may "
+                  "use your conversations to train its models.",
                   "\"Improve the model for everyone\" in ChatGPT's "
-                  "Settings, Data controls"):
+                  "Settings, Data controls",
+                  "Rating a reply (thumbs up or down) can still let OpenAI "
+                  "train on that conversation."):
         assert words in first, words
         assert words in readme, words
+    assert "practice included" not in first + readme
     for words in ("choose \"Do not train on my content\" in OpenAI's "
                   "Privacy Portal",
-                  "Codex's \"Include environments\" is a separate setting "
-                  "(PRIVACY.md says more)."):
+                  "and turn off Codex's \"Include environments\", a "
+                  "separate setting that neither changes."):
         assert words in first, words
     # before any numbered step, and the steps are the four the README
     # says follow it
     steps = re.findall(r"\*\*Step (\d)\. ", install)
     assert steps == ["1", "2", "3", "4"]
-    assert install.index("**First, turn off training**") < \
+    assert install.index("**First, switch training off**") < \
         install.index("**Step 1. Install Exegete.**")
     assert ("INSTALL.md#chatgpts-desktop-app-and-codex-experimental"
             in _flat("README.md"))
@@ -632,8 +643,9 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "For participants' data this project suggests Claude Desktop's "
             "chat with the extension, with computer use off, no folder that "
             "holds your projects or transcripts connected to it, and no "
-            "other extension that reads files. OpenAI's apps are for "
-            "practice and for data that is not sensitive.",
+            "other extension that reads files; it suggests OpenAI's apps "
+            "for practice and for data that is not sensitive, until a "
+            "setting that stops Codex's reads has been tested.",
             "- **What stays on the computer, and for how long.**",
             "the lists of suggestions waiting for review "
             "(`~/.exegete/sessions/`)",
@@ -643,10 +655,12 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "Claude Code's transcripts (`~/.claude/projects/`)",
             "and when you will delete them."):
         assert words in checklist, words
-    # the eight questions, in that order: terms first, as before
+    # the nine questions, in that order: terms first, as before, then
+    # training with either maker (the owner, 1 October 2026)
     questions = re.findall(r"- \*\*([^*]+)\*\*", checklist)
-    assert len(questions) == 8
+    assert len(questions) == 9
     assert questions[0].startswith("Your Claude plan's terms differ")
+    assert questions[1] == "Training, with either maker."
     assert questions[-2:] == ["Which assistant, and whether it opens files "
                               "by itself.", "What stays on the computer, "
                               "and for how long."]

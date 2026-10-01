@@ -84,16 +84,20 @@ class TestTheIntroduction:
                 "conversation with an AI assistant, compatible with "
                 "QualCoder.**") in opening
         # v0.14.2, the README rewritten to persuade: the same facts, in
-        # one paragraph that leads with them
-        assert ("Exegete (formerly qualcoder-mcp) is an application for "
-                "qualitative data analysis in its own right, not an add-on "
-                "to QualCoder, and you do not need QualCoder to start.") \
-            in opening
-        assert ("It stays compatible with QualCoder, so you can open the "
-                "same project there whenever you like, one program at a "
-                "time. It has no window of its own: your assistant, such as "
-                "Claude Desktop, starts it, and its work appears in the "
-                "conversation.") in opening
+        # one paragraph that leads with them. The README's third round
+        # (with the owner's decisions of 1 October 2026): the newcomer
+        # check's shorter form, every decided fact kept; compatibility is
+        # the tagline's and the lede's ("your project stays one that
+        # QualCoder opens"), and one program at a time is said where the
+        # reader acts on it ("A first session")
+        assert ("Exegete (formerly qualcoder-mcp) is an application in its "
+                "own right, not an add-on or a remote control for "
+                "QualCoder: you do not need QualCoder to start, or running "
+                "while you work. It has no window of its own: your "
+                "assistant, such as Claude Desktop, starts it, and its work "
+                "appears in the conversation.") in opening
+        assert "your project stays one that QualCoder opens." in opening
+        assert "**One program at a time.**" in _flat("README.md")
         # Not "at any time": one program at a time, as "A first session"
         # says further down. (v0.14.2: the technical paragraph now sits
         # in "How it works", which the same absences bind.)
@@ -130,8 +134,8 @@ class TestTheIntroduction:
         # developers". The README's second round of checks: said once, in
         # the positioning paragraph, which already says Exegete has no
         # window of its own ("What it is not" was a second saying)
-        assert ("its work appears in the conversation. It is not a remote "
-                "control for QualCoder, which need not be running.") \
+        assert ("not an add-on or a remote control for QualCoder: you do "
+                "not need QualCoder to start, or running while you work.") \
             in opening
         assert "**What it is not.**" not in _flat("README.md")
         compatibility = _between(readme, "**Compatibility with QualCoder.**",
@@ -285,10 +289,14 @@ class TestTheReadmesRoute:
         # v0.14.2, the README rewritten to persuade: training first and
         # INSTALL.md's steps for the rest; the README's first round of
         # checks: three numbered steps, the folder the third
-        for words in ("for practice and data that is not sensitive until a "
-                      "safer setting has been tested",
-                      "**Turn off training first**, before any use with "
-                      "Exegete, practice included",
+        # (the owner, 1 October 2026: the suggestion with its reason; the
+        # same training advice for both makers, before participants' data)
+        for words in ("Codex reads files by itself, so this project "
+                      "suggests them for practice and data that is not "
+                      "sensitive until a safer setting has been tested",
+                      "1. **Switch training off** before participants' "
+                      "data: while it is on, OpenAI may use your "
+                      "conversations to train its models.",
                       "they make the app ask before every change Exegete "
                       "makes. 3. **Give Codex a folder of its own**",
                       "INSTALL.md#chatgpts-desktop-app-and-codex-experimental",
@@ -305,7 +313,7 @@ class TestTheReadmesRoute:
         # settings lines' reason is INSTALL.md's, whose facts
         # test_without_it_the_adding_tools_run_unasked checks against the
         # tools' marks
-        assert section.index("**Turn off training first**") < \
+        assert section.index("**Switch training off**") < \
             section.index("Then follow")
 
     def test_where_your_data_goes_names_openai(self):
@@ -326,7 +334,7 @@ class TestTheReadmesRoute:
         # its route
         assert "Anthropic may use your conversations to train its models" \
             in data
-        assert "**Turn off training first**" in _readme_openai()
+        assert "**Switch training off**" in _readme_openai()
 
 
 # ---------------------------------------------------------------------------
@@ -770,9 +778,12 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "\"Codex CLI treats the directory where you start it as the "
                 "project for the chat.\" "
                 "(<https://learn.chatgpt.com/docs/projects>",
-                "Never give Codex your home folder, Documents, your projects "
-                "folder (`~/QualCoder projects`), or a folder with "
-                "transcripts or other study files",
+                # (the owner, 1 October 2026: warn, don't prescribe)
+                "Given your home folder, Documents, your projects folder "
+                "(`~/QualCoder projects`) or a folder with transcripts or "
+                "other study files instead, Codex would work among them: "
+                "what it reads there goes to OpenAI without passing through "
+                "Exegete",
                 "start a new chat in your `exegete-chats` folder",
                 "With the desktop app alone, make the folder in Finder or "
                 "File Explorer instead (a new folder named `exegete-chats`, "
@@ -817,11 +828,12 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "`on-request` is the setting behind \"Ask for approval\" "
                 "and the read-only mode",
                 "That is why step 3 keeps study files out of Codex's "
-                "folder, and why this route is for practice and "
-                "non-sensitive data for now.",
+                "folder, and why this project suggests this route for "
+                "practice and non-sensitive data for now.",
                 "if Codex started in its read-only mode, you may keep it "
-                "there (Exegete's tools work the same); never choose Full "
-                "access."):
+                "there (Exegete's tools work the same). Full access would "
+                "run every tool call without asking you, so this project "
+                "suggests leaving it aside."):
             assert words in flat, words
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
@@ -864,8 +876,11 @@ class TestCodexWorksInAFolderOfItsOwn:
                         "<https://github.com/openai/codex/tree/rust-v0.159.2/"
                         "codex-rs>"):
             assert address in section, address
-        assert ("A study's folder, the projects folder or the home folder "
-                "should never be Codex's place to work") in section
+        # (the owner, 1 October 2026: warn, don't prescribe)
+        assert ("Codex changes files in the folder it works in without "
+                "asking, so a study's folder, the projects folder or the "
+                "home folder given to it as that folder would be open to its "
+                "changes as well as its reads") in section
         assert ON_REQUEST_READS in section
         # The hedge that read as if the reading scope were unknown is gone
         for name in SHIPPED_TEXTS:
@@ -902,7 +917,8 @@ class TestWhatCodexKeepsAndTheOptOut:
 
     def test_readme_gives_openai_users_the_opt_out_and_a_deadline(self):
         """v0.14.2, the README review: the switch is the first of OpenAI's
-        own steps, before any use, practice included, and never inside
+        own steps (the owner, 1 October 2026: before participants' data,
+        in the same words as Claude's), and never inside
         the list about participants' data, which would read as if it made
         OpenAI's apps fit for such data. OpenAI's words, and the archive's
         date, are pinned on PRIVACY.md only."""
@@ -912,11 +928,12 @@ class TestWhatCodexKeepsAndTheOptOut:
         # (test_install_turns_training_off_first_in_the_readmes_words)
         data = _readme_data()
         steps = _readme_openai()
-        first = _between(steps, "**Turn off training first**",
+        first = _between(steps, "1. **Switch training off**",
                          "Then follow")
-        for words in ("before any use with Exegete, practice included",
+        for words in ("before participants' data",
                       "\"Improve the model for everyone\" in ChatGPT's "
-                      "Settings, Data controls."):
+                      "Settings, Data controls, and Codex's separate "
+                      "\"Include environments\"."):
             assert words in first, words
         # No OpenAI setting in the list before participants' data
         listed = _between(data, "Before you use participants' data with "
@@ -1017,8 +1034,14 @@ class TestTheStepsANewcomerCanGetWrong:
         first = _between(_flat("README.md"), "### A first session",
                          "### Other assistants, and updates")
         # v0.14.2, the README rewritten to persuade: no assistant named at
-        # all; where the project is made, for each route, is TOOLS.md's
-        assert re.findall(r"\bClaude\b(?! Desktop)", first) == []
+        # all; where the project is made, for each route, is TOOLS.md's.
+        # The owner, 1 October 2026: the one exception is the warning
+        # about practising, which names the two assistants it is about
+        warning = ("Codex and Claude Code can open files on your computer "
+                   "by themselves")
+        assert warning in first
+        steps = first.replace(warning, "")
+        assert re.findall(r"\bClaude\b(?! Desktop)", steps) == []
         for words in ("Ask the assistant to",
                       "Before the assistant changes a project"):
             assert words in first, words
@@ -1258,7 +1281,9 @@ class TestAssistantsOwnFileAccess:
             data.index("| **ChatGPT's desktop app and Codex**")
         # v0.14.2: with PRIVACY.md's third condition, as everywhere the
         # chat is suggested (test_v0142_docs.py)
-        assert ("So, for participants' data, this project suggests an "
+        # (the owner, 1 October 2026: after the warning about practising,
+        # under a lead of its own)
+        assert ("**For participants' data**, this project suggests an "
                 "assistant with no file access of its own: Claude Desktop's "
                 "chat with the extension, with computer use off, no folder "
                 "that holds your projects or transcripts connected to it, "
@@ -1507,16 +1532,28 @@ class TestClaudeCodesRoutes:
                 "read-only commands (such as `cat`, `grep` and `find`) read "
                 "outside that folder without asking too, in every mode, "
                 "unless a setting that blocks such reads is on.",
-                "So never start it in your home folder, Documents, your "
-                "projects folder or any folder that holds a study (a new "
-                "Terminal window opens in your home folder)",
+                # (the owner, 1 October 2026: the warning, with
+                # suggestions, in place of "never start it")
+                "So a real study kept on the same computer is within its "
+                "reach even while you practise, and Exegete's list of "
+                "projects tells it where it is; started in your home folder "
+                "(where a new Terminal window opens), Documents, your "
+                "projects folder or a study's folder, it reads that study "
+                "without asking. If that matters for a study, you could "
+                "keep practice projects in a folder of their own, or work on "
+                "that study with an assistant without file access of its "
+                "own, such as Claude Desktop's chat with the extension,",
                 # v0.14.2: and its file tools in auto mode
                 "it does not stop its read-only commands reading them, or "
                 "its file tools in auto mode."):
             assert words in routes["INSTALL, Claude Code"], words
-        assert ("never start Claude Code there, in Documents, in your "
-                "projects folder or in any folder that holds a study") in \
-            routes["INSTALL, the API-key recipe"]
+        assert ("Claude Code reads the folder it starts in without asking: "
+                "started there, in Documents, in your projects folder or in "
+                "a folder that holds a study, it would read your studies "
+                "from the start, which is why these steps go to the empty "
+                "folder first.") in routes["INSTALL, the API-key recipe"]
+        for text in routes.values():
+            assert "never start" not in text.lower()
         assert "Never start it in your home folder, your projects folder " \
                "or a study's folder;" not in routes["INSTALL, Claude Code"]
 
@@ -1538,9 +1575,9 @@ class TestClaudeCodesRoutes:
         hosts = _privacy_hosts()
         assert "With Claude Code or Cowork, keep your projects out of " \
                "their folders, as above." not in hosts
-        assert ("starting it elsewhere keeps your projects out of the "
-                "folder it reads without asking, but does not stop its "
-                "read-only commands reading them") in hosts
+        assert ("an empty folder of its own keeps your projects out of that "
+                "folder, but does not stop its read-only commands reading "
+                "them") in hosts
 
 
 # Anthropic's article on computer use (read 30 September 2026)
@@ -1631,9 +1668,11 @@ class TestTheSmallerPoints:
 
     def test_openais_route_says_practice_first_and_windows_in_full(self):
         install = _install_openai_flat()
-        box = ("Until a setting that stops Codex reading files by itself has "
-               "been tested, use this route for practice and for data that "
-               "is not sensitive; step 3 says why.")
+        # (the owner, 1 October 2026: the suggestion with its reason)
+        box = ("Codex reads files on your computer by itself, so until a "
+               "setting that stops it has been tested, this project "
+               "suggests this route for practice and for data that is not "
+               "sensitive; step 3 says more.")
         assert box in install
         assert install.index(box) < \
             install.index("**Which OpenAI apps can use Exegete.**")
@@ -1664,8 +1703,10 @@ class TestTheSmallerPoints:
         for words in ("LM Studio's JavaScript sandbox plugin, which LM Studio "
                       "publishes and which is switched on chat by chat,",
                       "LM Studio's pages do not say whether its commands "
-                      "stop at that folder: keep a study's folders, and the "
-                      "folders that hold them, out of it."):
+                      "stop at that folder, so given a study's folder, or a "
+                      "folder that holds one, it may read and change the "
+                      "study; this project suggests keeping them out of "
+                      "it."):
             assert words in hosts, words
 
     def test_no_text_assumes_participants_data_goes_to_openai(self):

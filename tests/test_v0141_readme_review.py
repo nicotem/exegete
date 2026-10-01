@@ -48,9 +48,10 @@ def test_the_readme_says_what_it_is_not():
             "values taken from QualCoder so that its results match "
             "QualCoder's exactly, and [NOTICE](https://github.com/nicotem/"
             "exegete/blob/main/NOTICE) lists them") in readme
-    # (the README's second round of checks: said once, in the opening)
-    assert ("It is not a remote control for QualCoder, which need not be "
-            "running.") in readme
+    # (the README's second round of checks: said once, in the opening;
+    # the third, the newcomer check's shorter form of the opening)
+    assert ("not an add-on or a remote control for QualCoder: you do not "
+            "need QualCoder to start, or running while you work.") in readme
     # The opening no longer describes a connector
     assert "A Model Context Protocol (MCP) server that connects" \
         not in readme
@@ -157,12 +158,16 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     assert quoted not in readme
     data = readme[readme.index("## Where your data goes"):
                   readme.index("## Start here")]
-    # v0.14.2, the README rewritten to persuade: the check, shorter
-    assert ("3. On a personal Claude plan (Free, Pro or Max), check the "
-            "Model Improvement setting at "
-            "https://claude.ai/settings/data-privacy-controls: while it is "
-            "on, Anthropic may use your conversations to train its models "
-            "(PRIVACY.md quotes the terms, with their exceptions).") in data
+    # v0.14.2, the README rewritten to persuade: the check, shorter. The
+    # owner, 1 October 2026: the same training advice for both makers,
+    # with the feedback exception beside it
+    assert ("3. **Switch training off** before participants' data: while "
+            "it is on, Anthropic may use your conversations to train its "
+            "models. On a personal plan (Free, Pro or Max) it is the Model "
+            "Improvement setting, at "
+            "https://claude.ai/settings/data-privacy-controls. Rating a "
+            "reply (thumbs up or down) can still let Anthropic train on "
+            "that conversation (PRIVACY.md quotes the terms).") in data
     assert "unless you opt out there" not in readme
     # The quoted words are PRIVACY.md's own quotation of the Consumer Terms
     privacy = _flat_quotes("PRIVACY.md")

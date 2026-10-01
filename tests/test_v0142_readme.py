@@ -89,9 +89,12 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
             "#where-your-data-goes): the AI behind your assistant runs on "
             "its maker's computers, and what it reads goes there; some "
             "assistants also open files by themselves.",
-            "Exegete is free and open source (LGPL, QualCoder's own "
-            "licence), tested on Windows, macOS and Linux with every "
-            "change.",
+            # (the owner, 1 October 2026: free, open-source software, the
+            # licence named, and what it costs, in "Start here")
+            "Exegete is free, open-source software, under QualCoder's own "
+            "licence (LGPL-3.0-or-later), and costs nothing (your assistant "
+            "may: see \"Start here\"). It is tested on Windows, macOS and "
+            "Linux with every change.",
             "an early version (an alpha) built by one researcher, "
             "independently of QualCoder's developers",
             "parts marked Experimental have had little or no use yet",

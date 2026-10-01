@@ -100,7 +100,14 @@ def _tools(mode="lifecycle"):
 # sentence under the tool-set table shorter, the routes no longer listed
 # twice). The judge advised taking the corrected figure as the ceiling
 # from here on: any later addition is paid for by a cut.
-README_LIMIT = 30_050
+# The owner's decisions of 1 October 2026 (the warning about practising,
+# the same training advice for both makers, QualCoder beside NVivo,
+# ATLAS.ti and MAXQDA, what it costs) added about 1,750 characters; the
+# judge's shorter positioning paragraph and the sentence "Other
+# assistants" no longer needs ("never start it") paid back about 300,
+# and the page lands at 31,489, within the about 31,000 the round was
+# given.
+README_LIMIT = 31_500
 
 
 def test_the_readme_stays_short():
@@ -416,14 +423,18 @@ def test_the_assistants_table():
     assert "Requires the reduced core toolset." in install
     assert cells["Claude Desktop's chat"][VERDICT] == \
         "Suggested, set up as below"
+    # (the owner, 1 October 2026: warn, don't prescribe; each verdict
+    # gives its reason and a suggestion)
     assert cells["Claude's Cowork"][VERDICT] == (
-        "Not suggested: use the chat; if you use it, keep projects and "
-        "transcripts out of every connected folder")
+        "The chat suggested instead: Cowork reads the folders you connect, "
+        "so keep projects and transcripts out of them")
     checklist = _between(privacy, "## Before you use real participant data, "
                          "check these", "## Practical mitigations")
     assert ("Codex, Claude Code and Claude's Cowork can open files on your "
             "computer by themselves") in checklist
-    assert cells["Claude Code"][VERDICT] == "Not suggested"
+    assert cells["Claude Code"][VERDICT] == (
+        "The chat suggested instead: Claude Code reads beyond its folder "
+        "without asking")
     assert cells["ChatGPT's desktop app and Codex"][VERDICT] == (
         "Practice and data that is not sensitive, until a setting that "
         "stops those reads is tested")

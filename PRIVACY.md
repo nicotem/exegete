@@ -304,9 +304,11 @@ assistant. These pages change often, and the linked pages govern.
   (<https://code.claude.com/docs/en/sandboxing>, the same day), so it
   protects a folder only together with a rule that denies it or the
   setting that blocks reads outside the working folders. This project
-  has not tested these settings with Exegete. At the least, never start
-  Claude Code in your home folder, your projects folder or a study's
-  folder, and never add one of them as a working folder.
+  has not tested these settings with Exegete. Without them, Claude Code
+  started in your home folder, your projects folder or a study's folder,
+  or given one of them as a working folder, reads the studies there
+  without asking; an empty folder of its own, as INSTALL.md's steps
+  use, keeps them out of that folder.
 - **Claude's Cowork** (in Claude Desktop): **yes, in the folders you
   connect to it.**
   <https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>
@@ -330,9 +332,10 @@ assistant. These pages change often, and the linked pages govern.
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
   the same day). The same page, read again on 1 October 2026, says how
   to tell: "If you're on a Pro or Max plan and your message box still
-  shows "Chat" and "Cowork" options, you don't have it yet." Keep
-  QualCoder projects, transcripts and your projects folder out of every
-  folder connected to Claude.
+  shows "Chat" and "Cowork" options, you don't have it yet." So a
+  QualCoder project, a transcript or your projects folder inside a
+  folder connected to Claude is within its reach; kept out of every
+  connected folder, they stay out of it.
 - **Claude Desktop's chat, with the extension**: **not by itself, as far
   as Anthropic's pages say.** They document no way for the older,
   separate chat to open a file on your computer other than one you
@@ -387,24 +390,31 @@ assistant. These pages change often, and the linked pages govern.
   change and run commands on the files in the folder you give it
   (<https://lmstudio.ai/docs/bionic/quick-start>, the same day), and
   LM Studio's pages do not say whether its commands stop at that
-  folder: keep a study's folders, and the folders that hold them, out
-  of it.
+  folder, so given a study's folder, or a folder that holds one, it may
+  read and change the study; this project suggests keeping them out of
+  it.
 
-So, for participants' data, this project suggests an assistant with no
+**While you practise.** Codex and Claude Code can open files on your
+computer by themselves, so a real study kept on the same computer is
+within their reach even while you practise, and Exegete's list of
+projects tells them where it is. If that matters for a study, you
+could keep practice projects in a folder of their own, or work on that
+study with Claude Desktop's chat.
+
+**For participants' data**, this project suggests an assistant with no
 file access of its own: Claude Desktop's chat with the extension, with
 computer use off, no folder that holds your projects or transcripts
 connected to it, and no other extension that reads files, or LM
-Studio's chat with Exegete and no other server
-or plugin that reads files. OpenAI's apps are for practice and for data
-that is not sensitive until a setting that stops Codex's reads has been
-tested with Exegete. With Cowork, keep your projects out of every
-folder connected to it. With Claude Code, never start it in your home
-folder, your projects folder or a study's folder; starting it elsewhere
-keeps your projects out of the folder it reads without asking, but does
-not stop its read-only commands reading them, or its file tools in
-auto mode (above), so for
-participants' data this project suggests the chat above instead, on
-whichever plan or terms you use.
+Studio's chat with Exegete and no other server or plugin that reads
+files. It suggests OpenAI's apps for practice and for data that is not
+sensitive until a setting that stops Codex's reads has been tested
+with Exegete. Cowork reads every folder connected to it, so projects
+kept out of those folders stay out of its reach. Claude Code reads the
+folder it starts in without asking: an empty folder of its own keeps
+your projects out of that folder, but does not stop its read-only
+commands reading them, or its file tools in auto mode (above), which
+is why, for participants' data, this project suggests the chat above
+instead, on whichever plan or terms you use.
 
 ## Keeping notes private from the AI: the '#####' memo convention
 
@@ -843,7 +853,9 @@ and not yet capability-evaluated; see the INSTALL.md recipes.)
 
 ### Rung 1: Claude consumer plans (Free/Pro/Max, including Claude Code signed in with them)
 
-Do not assume what your account's training default is. Open
+Switch training off before participants' data: while it is on,
+Anthropic may use your conversations to train its models. Do not
+assume what your account's training default is. Open
 <https://claude.ai/settings/data-privacy-controls> and check the Model
 Improvement setting yourself. The governing documents:
 
@@ -947,8 +959,26 @@ local)".
 ### Cross-rung cautions
 
 - Feedback mechanisms, safety flagging, and opt-in programmes can pierce
-  every Anthropic route. Never use feedback features (thumbs,
-  /feedback, /bug) in sessions containing participant data.
+  every Anthropic route. A thumbs up or down sends the conversation it
+  rates.
+  <https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training>
+  (read 1 October 2026): "When you provide us feedback via our thumbs
+  up/down button, we will store the entire related conversation,
+  including any content, custom styles or conversation preferences, in
+  our secured back-end for up to 5 years. Feedback data does not
+  include raw content from connectors (e.g. Google Drive), including
+  remote and local MCP servers, though data may be included if it’s
+  directly copied into your conversation with Claude." and "We may use
+  your feedback to analyze the effectiveness of our Services, conduct
+  research, study user behavior, and train our AI models as permitted
+  under applicable laws." So, by that page, what Exegete's tools return
+  is left out, and what Claude's replies quote from it is not. In
+  Claude Code, "Transcripts shared via
+  `/feedback`, or via `/bug` and `/share`, which report through the
+  same path, are retained for 5 years."
+  (<https://code.claude.com/docs/en/data-usage>, the same day). So in
+  sessions containing participant data, this project suggests giving
+  no feedback.
 - Claude Code opens files by itself, outside Exegete, on every rung:
   "Assistants that open files by themselves", above, says what it reads
   without asking and what narrows it.
@@ -1044,12 +1074,15 @@ that open files by themselves", above). What Codex reads by itself goes
 to OpenAI without passing through Exegete, so none of Exegete's
 protections applies to it: not the `#####` mark, which Exegete never
 passes on, not the approval before anything is written, not the preview
-or the backup. A study's folder, the projects folder or the home folder
-should never be Codex's place to work; INSTALL.md's recipe gives it an
-empty folder of its own, which keeps a study's files out of the place
-Codex works in, so that it does not change them without asking, and
-does not keep Codex from reading them, or from searching other folders
-for them. OpenAI documents a setting, in beta, that can refuse
+or the backup. Codex changes files in the folder it works in without
+asking, so a study's folder, the projects folder or the home folder
+given to it as that folder would be open to its changes as well as its
+reads; INSTALL.md's recipe gives it an empty folder of its own, which
+keeps a study's files out of the place Codex works in, so that it does
+not change them without asking, and does not keep Codex from reading
+them, or from searching other folders for them. Practising, too,
+leaves a real study on the same computer within its reach ("While you
+practise", above). OpenAI documents a setting, in beta, that can refuse
 Codex's reads outside its folder, a "permission profile"
 (<https://learn.chatgpt.com/docs/permissions>, read 30 September 2026:
 "Beta. Permission profiles are under active development and may
@@ -1096,8 +1129,11 @@ workspaces with local computer access switched on,
 > exclusively on the connected computer."
 
 **Services for individuals** (OpenAI's phrase; the page names the
-business plans separately, below). Help Center, "How your data is used
-to improve model performance",
+business plans separately, below). Switch training off before
+participants' data: while it is on, OpenAI may use your conversations
+to train its models. The settings, Codex's separate one included, and
+the exception for feedback are quoted below. Help Center, "How your
+data is used to improve model performance",
 <https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>
 (Archive capture of 28 September 2026,
 <https://web.archive.org/web/20260928102458/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
@@ -1235,6 +1271,14 @@ will ask, and the summary above depends on them:
   Team/Enterprise/API terms. Inputs being used for model training would
   almost never be covered by existing participant consent; an ethics
   board asks this first.
+- **Training, with either maker.** Switch training off before
+  participants' data: while it is on, the maker may use your
+  conversations to train its models. With Anthropic it is the Model
+  Improvement setting (rung 1); with OpenAI, "Improve the model for
+  everyone" and Codex's separate "Include environments" ("OpenAI's
+  apps", above). Rating a reply (thumbs up or down) can still let either
+  maker train on that conversation ("Cross-rung cautions"; "OpenAI's
+  apps").
 - **Controller / processor, and a written agreement.** Your institution
   is normally the data controller and Anthropic a processor. UK/EU GDPR
   (Art. 28) then requires a written data-processing agreement, and a
@@ -1263,8 +1307,11 @@ will ask, and the summary above depends on them:
   themselves", above). For participants' data this project suggests
   Claude Desktop's chat with the extension, with computer use off, no
   folder that holds your projects or transcripts connected to it, and
-  no other extension that reads files. OpenAI's apps are for practice
-  and for data that is not sensitive.
+  no other extension that reads files; it suggests OpenAI's apps for
+  practice and for data that is not sensitive, until a setting that
+  stops Codex's reads has been tested. Practising, too, leaves a real study
+  on the same computer within reach of Codex and Claude Code ("While
+  you practise", above).
 - **What stays on the computer, and for how long.** Copies stay on the
   computer you work on: the project, its backups and your exports; the
   lists of suggestions waiting for review (`~/.exegete/sessions/`);
@@ -1553,18 +1600,22 @@ will ask, and the summary above depends on them:
     on any failure after the backup was taken as well as on success; any
     of these can itself contain one of those names. The tool's
     description says so.
-- **Only open projects whose consent covers third-party processing.**
+- **Check that a project's consent covers third-party processing**
+  before you open it with an assistant whose AI runs on its maker's
+  computers: what the assistant reads goes to that maker, which your
+  participants may not have agreed to ("What this means for research
+  data", above).
 - **Consider which files you let the AI read.** Exegete's tools read
   only what is asked for: a session that never touches file 7 never
   transmits file 7's text through them.
-- **For participants' data, use an assistant with no file access of
-  its own**, such as Claude Desktop's chat with the extension, with
-  computer use off, no folder that holds your projects or transcripts
-  connected to it, and no other extension that reads files. An
-  assistant that opens files by itself (Codex, Claude Code,
-  Cowork in the folders you connect) can read a project whole, outside
-  this server; "Assistants that open files by themselves", above, says
-  which do and what narrows it.
+- **An assistant that opens files by itself can read a project
+  whole** (Codex, Claude Code, Cowork in the folders you connect),
+  outside this server; "Assistants that open files by themselves",
+  above, says which do and what narrows it. For participants' data,
+  this project suggests one with no file access of its own, such as
+  Claude Desktop's chat with the extension, with computer use off, no
+  folder that holds your projects or transcripts connected to it, and
+  no other extension that reads files.
 - **Consult your institution's DPO or ethics board** if you are unsure,
   before the analysis, not after.
 - Remember that the server's safety features (read-only default,

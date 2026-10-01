@@ -580,10 +580,7 @@ Each is stated in full by its tool:
 ## 10. Finding your way in the data
 
 - When the task concerns the researcher's existing codes, start from
-  them and their coded passages, which may be incomplete. When the
-  researcher wants a fresh reading, do not read their codes first, and
-  tell them whether you have seen any (reading a file for coding shows
-  the codings already on it).
+  them and their coded passages, which may be incomplete.
 - For an overview, use the project summary and the lists of files and
   cases.
 - A search match is a lead, not a reading: read the passage in its

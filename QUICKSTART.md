@@ -18,12 +18,16 @@ README's one-click extension is the easier start.
       `claude mcp add exegete -- <venv-python> -m exegete.server`
       in an empty folder of its own (see "Alternative: Claude Code and
       other MCP clients" in INSTALL.md). Claude Code opens files by
-      itself, outside Exegete: never start it in your home folder or a
-      folder that holds a study, and for participants' data use Claude
-      Desktop's chat instead, with computer use off, no folder that
-      holds your projects or transcripts connected to it, and no other
-      extension that reads files (PRIVACY.md, "Assistants that open
-      files by themselves")
+      itself, outside Exegete, so a real study kept on the same
+      computer is within its reach even while you practise, and
+      Exegete's list of projects tells it where it is; started in your
+      home folder or a folder that holds a study, it reads that study
+      without asking. If that matters for a study, you could keep
+      practice projects in a folder of their own, or work on that
+      study with Claude Desktop's chat, with computer use off, no
+      folder that holds your projects or transcripts connected to it,
+      and no other extension that reads files (PRIVACY.md, "Assistants
+      that open files by themselves")
 - [ ] At least one QualCoder project (a `.qda` project folder): the
       setup below cannot create one; the one-click extension can
 

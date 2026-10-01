@@ -108,10 +108,10 @@ from easiest to most private, and OpenAI's apps:
 
 | Route | What it means | Where to read more |
 |---|---|---|
-| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
+| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. It is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so this project suggests this route for practice and non-sensitive data until a safer setting is tested. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so this project suggests this route for practice and non-sensitive data until a safer setting is tested. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
@@ -417,13 +417,17 @@ blocks such reads is on. In auto mode, the mode it starts in, its own
 file tools read outside that folder as well, after one question the
 first time they do. [PRIVACY.md](PRIVACY.md), "Assistants that
 open files by themselves", quotes Anthropic's pages and names those
-settings. So never start it in your home folder, Documents, your
-projects folder or any folder that holds a study (a new Terminal window
-opens in your home folder), and for participants' data use an assistant
-without file access of its own, such as Claude Desktop's chat with the
-extension, with computer use off, no folder that holds your projects
-or transcripts connected to it, and no other extension that reads
-files. Make an empty folder for it, and do the rest there:
+settings. So a real study kept on the same computer is within its
+reach even while you practise, and Exegete's list of projects tells it
+where it is; started in your home folder (where a new Terminal window
+opens), Documents, your projects folder or a study's folder, it reads
+that study without asking. If that matters for a study, you could keep
+practice projects in a folder of their own, or work on that study with
+an assistant without file access of its own, such as Claude Desktop's
+chat with the extension, with computer use off, no folder that holds
+your projects or transcripts connected to it, and no other extension
+that reads files. The steps below start Claude Code in an empty folder
+of its own; make it, and do the rest there:
 
 ```bash
 mkdir -p ~/claude-exegete && cd ~/claude-exegete
@@ -671,10 +675,13 @@ the folder (`cd ~/claude-exegete`), set the key again the same way,
 and start `claude` there; Exegete stays registered in that folder.
 
 A new Terminal window opens in your home folder, which holds your
-projects; never start Claude Code there, in Documents, in your projects
-folder or in any folder that holds a study. The empty folder keeps your
-studies out of the folder it reads without asking; it does not stop its
-read-only commands reading them, or its file tools in auto mode.
+projects, and Claude Code reads the folder it starts in without asking:
+started there, in Documents, in your projects folder or in a folder
+that holds a study, it would read your studies from the start, which is
+why these steps go to the empty folder first. The empty folder keeps
+your studies out of the folder it reads without asking; it does not
+stop its read-only commands reading them, or its file tools in auto
+mode.
 
 Approve the key when prompted (Claude Code asks once and remembers the
 choice). If you ALSO have a Pro/Max subscription login, the
@@ -701,8 +708,11 @@ export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 ```
 
 and set `cleanupPeriodDays` in your Claude Code settings to shorten the
-local transcript cache. Never use feedback features (thumbs, /feedback,
-/bug) in sessions containing participant data. These settings close
+local transcript cache. Feedback (a thumbs up or down, `/feedback`,
+`/bug` or `/share`) sends the conversation to Anthropic, which may keep
+it for up to five years whatever your training setting (PRIVACY.md,
+"Cross-rung cautions"), so in sessions containing participant data this
+project suggests giving none. These settings close
 side channels; they do not change what Claude Code reads by itself
 (step 2), so they do not make this route one for participants' data.
 
@@ -869,9 +879,10 @@ corresponding care.
 > 30 September 2026 (its pages show no date), and, where it is silent,
 > from Codex's source code as it stood that day. This project has not
 > yet run Exegete in any OpenAI app; the steps may change after that
-> check. Until a setting that stops Codex reading files by itself has
-> been tested, use this route for practice and for data that is not
-> sensitive; step 3 says why.
+> check. Codex reads files on your computer by itself, so until a
+> setting that stops it has been tested, this project suggests this
+> route for practice and for data that is not sensitive; step 3 says
+> more.
 
 **Which OpenAI apps can use Exegete.** OpenAI's page on MCP
 (<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
@@ -951,13 +962,17 @@ which of the two decides which of OpenAI's data policies apply
 ([PRIVACY.md](PRIVACY.md), "OpenAI's apps: the ChatGPT desktop app and
 Codex").
 
-**First, turn off training**, before any use with Exegete, practice
-included. Turn off "Improve the model for everyone" in ChatGPT's
-Settings, Data controls, or choose "Do not train on my content" in
-OpenAI's Privacy Portal, <https://privacy.openai.com/> (either is
-enough, by OpenAI's Help Center: [PRIVACY.md](PRIVACY.md), "OpenAI's
-apps", quotes it). Codex's "Include environments" is a separate setting
-(PRIVACY.md says more).
+**First, switch training off** before participants' data: while it is
+on, OpenAI may use your conversations to train its models. On a
+personal plan (Free, Go, Plus or Pro), turn off "Improve the model for
+everyone" in ChatGPT's Settings, Data controls, or choose "Do not train
+on my content" in OpenAI's Privacy Portal, <https://privacy.openai.com/>
+(either is enough, by OpenAI's Help Center: [PRIVACY.md](PRIVACY.md),
+"OpenAI's apps", quotes it), and turn off Codex's "Include
+environments", a separate setting that neither changes. Rating a reply
+(thumbs up or down) can still let OpenAI train on that conversation.
+Claude's plans take the same advice, in the same words (the README's
+checks before participants' data).
 
 **Step 1. Install Exegete.** It needs Python 3.10 or newer ("What
 You'll Need", above). In the Terminal (macOS or Linux):
@@ -1105,12 +1120,12 @@ instead (a new folder named `exegete-chats`, in your home folder; on
 Windows, File Explorer opens your home folder when you type
 `%USERPROFILE%` in its address bar): the lines above end by starting
 `codex`, the command line, which the desktop app does not need. You
-open the folder in the app once Codex is chosen, below. Never give
-Codex your home folder, Documents, your projects folder
-(`~/QualCoder projects`), or a folder with transcripts
-or other study files: what Codex reads there goes to OpenAI without
-passing through Exegete, and what it changes there is changed without
-Exegete's approval step, preview or backup.
+open the folder in the app once Codex is chosen, below. Given your home
+folder, Documents, your projects folder (`~/QualCoder projects`) or a
+folder with transcripts or other study files instead, Codex would work
+among them: what it reads there goes to OpenAI without passing through
+Exegete, and what it changes there is changed without Exegete's
+approval step, preview or backup.
 
 A folder of its own keeps your study's files out of the place Codex
 works in, so it does not change them without asking. It does not keep
@@ -1122,14 +1137,17 @@ home folder but a few folders that hold keys (step 4 gives OpenAI's
 words); and Exegete's own answers tell Codex where your project is.
 Whatever Codex opens that way, a project's database among it, goes to
 OpenAI whole, the private part of every memo after `#####` included.
-So, until a setting that stops those reads has been tested with
-Exegete, use this route for practice and for data that is not
-sensitive, and, for participants' data, an assistant that has no file
-access of its own, such as Claude Desktop's chat with the extension,
-with computer use off, no folder that holds your projects or
-transcripts connected to it, and no other extension that reads files
-([PRIVACY.md](PRIVACY.md), "Assistants that open files by
-themselves").
+So a real study kept on the same computer is within Codex's reach even
+while you practise, and Exegete's list of projects tells it where it
+is. If that matters for a study, you could keep practice projects in a
+folder of their own, or work on that study with an assistant that has
+no file access of its own, such as Claude Desktop's chat with the
+extension, with computer use off, no folder that holds your projects
+or transcripts connected to it, and no other extension that reads
+files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by
+themselves"). Until a setting that stops those reads has been tested
+with Exegete, this project suggests this route for practice and for
+data that is not sensitive.
 
 Then, in the desktop app, open Settings, MCP servers, where `exegete`
 is now listed, and select Restart (or quit the app and open it again).
@@ -1154,7 +1172,8 @@ your answer for the session or for good; for the tools that write, and
 for `read_pseudonym_list`, answer each time, since a remembered answer
 lets later calls run unasked. On the command line, if Codex started in
 its read-only mode, you may keep it there (Exegete's tools work the
-same); never choose Full access.
+same). Full access would run every tool call without asking you, so
+this project suggests leaving it aside.
 
 "Ask for approval" does not ask before Codex changes a file in its own
 folder, nor before it reads one, wherever the file is. OpenAI's page
@@ -1177,9 +1196,10 @@ for approval" and the read-only mode, and in Codex's source code (its
 release of 29 September 2026) both let those commands read the whole
 disk (on Windows, at least everything in your home folder but a few
 folders that hold keys). That is why step 3 keeps
-study files out of Codex's folder, and why this route is for practice
-and non-sensitive data for now. Codex's sandbox settings govern the
-commands the model runs, not Exegete, which reads and writes your
+study files out of Codex's folder, and why this project suggests this
+route for practice and non-sensitive data for now. Codex's sandbox
+settings govern the commands the model runs, not Exegete, which reads
+and writes your
 projects whichever sandbox you choose (Codex's source code). What
 "Approving the AI's suggestions: your host's settings are the
 safeguard", below, says holds in Codex too.

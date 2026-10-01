@@ -33,7 +33,7 @@ advanced users.
   pass on: a short version as the server's opening text (below); a new
   tool, `read_brief`, in every tool set and listed first, whose
   description asks the assistant to call it once at the start of every
-  conversation about a project (it returns the full brief, about 11,700
+  conversation about a project (it returns the full brief, about 11,500
   characters, or in the `core` set the short version, and reads nothing
   from the project); the same full brief as the help topic
   `explain_ai_coding_tools('brief')` and the resource
@@ -48,6 +48,11 @@ advanced users.
   live check in Cowork (whether Cowork shows the opening text, cuts
   long tool texts at 2,048 characters, lets the assistant read a
   resource by itself, and whether a rule given is followed).
+- One line of the draft is not served: when the researcher wants a
+  fresh reading, not to read their codes first. Reading a file for
+  coding shows the codings already on it, so the line could not be
+  followed as written. It waits for an option to read a file without
+  its codings, planned with the work on reading whole files.
 - NOTICE's entry for QualCoder's methodology vocabulary now also names
   QualCoder's `ai_prompts/_agent.md` as the source of the order and
   ideas of four of the brief's sections, written in this project's own
@@ -246,8 +251,25 @@ advanced users.
   included (INSTALL.md, "What You'll Need"); how to hear of a new
   release (INSTALL.md, the one-click section); Codex's and Claude Code's
   reach in detail, and where Cowork runs (PRIVACY.md); the history of
-  the MIT releases (NOTICE). README.md is now about 30,000 characters,
+  the MIT releases (NOTICE). README.md is now about 31,500 characters,
   against 31,975 in 0.14.1, and its sentences are shorter.
+- The README now says plainly that Exegete is free, open-source
+  software, under QualCoder's own licence (LGPL-3.0-or-later), and what
+  using it costs: Exegete nothing; the assistant's plans and usage
+  limits as Anthropic's and OpenAI's pricing pages listed them on
+  1 October 2026, with the pages linked, and what the limits mean for
+  longer work; LM Studio free. One sentence places QualCoder beside
+  NVivo, ATLAS.ti and MAXQDA. The advice on training is the same for
+  Claude and for ChatGPT, in the same words: switch training off before
+  participants' data, with its reason, each maker's settings by name
+  (Codex's "Include environments" among them), and the exception, that
+  a rated reply can still be used for training. "A first session" now
+  explains that Codex and Claude Code can open files by themselves, so
+  a real study on the same computer is within their reach even while
+  you practise, and suggests what to do if that matters, where the
+  README used to say "never start it"; the assistants table gives the
+  reason with each suggestion, where it said "Not suggested". The
+  positioning paragraph is shorter, every fact in it kept.
 - Leftovers from earlier releases are gone ("new in 0.14", "from 0.14"
   in the table, an example file name with a version in it), and the
   sentence naming QualCoder 3.8.2 as "Latest" carries the date it was
@@ -309,6 +331,21 @@ advanced users.
   or data protection officer gains two questions: which assistant, and
   whether it opens files by itself; and what stays on the computer, and
   for how long.
+- Warnings explain rather than prescribe. Where INSTALL.md,
+  PRIVACY.md and QUICKSTART.md told the reader never to start Claude
+  Code in certain folders, never to give Codex one, never to rate a
+  reply in a session with participant data, or to open only projects
+  whose consent covers third-party processing, they now say what could
+  go wrong and suggest what to do, every fact kept. The warning about
+  practising is in INSTALL.md's Claude Code section and Codex's step 3,
+  in PRIVACY.md ("While you practise") and in QUICKSTART.md. The
+  training advice is the same for both makers in INSTALL.md's table and
+  OpenAI's first step and in PRIVACY.md's first rung and OpenAI's
+  section, and PRIVACY.md's list for an ethics committee or data
+  protection officer gains a question on training with either maker.
+  PRIVACY.md quotes Anthropic's pages, read on 1 October 2026, on what
+  a rated reply, `/feedback`, `/bug` and `/share` send, and for how
+  long they are kept.
 - QUICKSTART.md opens by sending newcomers to the one-click extension.
   Release labels are gone from the opening of AI_CODING_GUIDE.md and
   AI_CODING_WORKFLOW.md, from TOOLS.md's section on the brief and from

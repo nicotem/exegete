@@ -135,10 +135,16 @@ def write_reading_copy(project: Path, file_id: int, **page) -> Tuple[
 
 
 def copy_original(project: Path, file_id: int, source: Path) -> Path:
-    """A read-only copy of the original in the file's reading folder."""
+    """A read-only copy of the original in the file's reading folder,
+    under a name that ends as the original's does: the type rule holds
+    for the copy's own name too, so a long name cut to fit never makes a
+    document's copy a program's."""
+    name = reading_folder.safe_file_name(source.name, 120)
+    if not copied_type(name) or (os.path.splitext(name)[1].lower()
+                                 != os.path.splitext(source.name)[1].lower()):
+        raise ReadingRefusal(NOT_A_DOCUMENT_TYPE)
     folder = reading_folder.original_folder(project, file_id)
-    return reading_folder.copy_read_only(
-        source, folder, reading_folder.safe_name(source.name, 120))
+    return reading_folder.copy_read_only(source, folder, name)
 
 
 def present(path: Path, how: str, own_page: bool) -> Dict[str, Any]:

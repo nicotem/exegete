@@ -174,11 +174,11 @@ HELD_BACK = {
     "charset_names": "Its character set was guessed as {charset}, and "
                      "read that way, names from your list come out with "
                      "other letters (as in \"Agnčs\" for \"Agnès\"), "
-                     "so the list would not replace them; read as Windows "
-                     "Western (cp1252), it finds them. Name the character "
-                     "set with the encoding argument (encoding=\"cp1252\" "
-                     "for a file saved on Windows) and ask again, or open "
-                     "the file in its own app and save it as UTF-8.",
+                     "so the list would not replace them; read as "
+                     "{found}, it finds them. Name that character set "
+                     "with the encoding argument (encoding=\"{encoding}\") "
+                     "and ask again, or open the file in its own app and "
+                     "save it as UTF-8.",
     "not_read_in_time": "Not read in time; ask again for these.",
 }
 
@@ -203,15 +203,46 @@ WHY_GUESSED = (SAME_READING + " Saving the file as UTF-8 gives a file "
 WHY_SUBTITLES = ("QualCoder imports a subtitle file only as a recording's "
                  "transcript, so it has no reading of this document to "
                  "agree with.")
+# A web page whose text is not UTF-8: QualCoder's import fails on it, so
+# Exegete reads it by its declared character set, or a named or guessed
+# one.
+WHY_WEB = ("QualCoder cannot import this web page (its text is not "
+           "UTF-8), so there is no QualCoder reading to agree with. "
+           "Saving the page as UTF-8 gives a file both programs read the "
+           "same way.")
+WHY_WEB_GUESSED = (WHY_WEB + " If its accents look wrong, name the "
+                   "character set and ask again (encoding=\"cp1252\" for a "
+                   "page saved on Windows).")
 
 
-def why_line(subtitles: bool, codes: List[str]) -> str:
-    """The line said once for a file whose text a warning changes."""
+def why_line(subtitles: bool, codes: List[str],
+             web: Optional[str] = None) -> str:
+    """The line said once for a file whose text a warning changes. `web`
+    is "guessed" or "read" for a web page QualCoder cannot import (its
+    text is not UTF-8), read by a guessed character set or by its
+    declared or named one."""
     if subtitles:
         return WHY_SUBTITLES
+    if web == "guessed":
+        return WHY_WEB_GUESSED
+    if web:
+        return WHY_WEB
     if "charset_guessed_check" in codes:
         return WHY_GUESSED
     return WHY_AS_QUALCODER
+
+
+# A guessed character set of one byte a letter that is not Western:
+# what can go wrong, and the way round for each family of languages.
+_DOUBTFUL_GUESS = (
+    "Such a guess is often wrong (an ordinary Western European file "
+    "saved on Windows is often read as Central European), and then every "
+    "accented letter reads as another (\"è\" as \"č\", \"ã\" as "
+    "\"ă\"). Way round: name the character set the file was saved in and "
+    "ask again (encoding=\"cp1252\" for Western European text saved on "
+    "Windows, \"mac_roman\" for a file from an old Mac, and \"cp1250\", "
+    "\"cp1257\" or \"cp1254\" for Central European, Baltic or Turkish "
+    "text saved on Windows), or save the file as UTF-8 in its own app.")
 
 # Sign code -> (group, words). Group "changes" changes what the
 # researcher will read; "information" does not.
@@ -297,12 +328,14 @@ WARNINGS = {
         "differently."),
     "charset_guessed_check": ("changes",
         "Its character set was guessed as {charset}, as QualCoder guesses "
-        "it. For a file in a Western European language that guess is "
-        "often wrong, and then every accented letter reads as another "
-        "(\"è\" as \"č\", \"ã\" as \"ă\"). Way round: name the "
-        "character set and ask again (encoding=\"cp1252\" for a file "
-        "saved on Windows, \"mac_roman\" for one from an old Mac), or "
-        "save the file as UTF-8 in its own app."),
+        "it. " + _DOUBTFUL_GUESS),
+    # The same for a web page whose text is not UTF-8, which QualCoder
+    # does not guess for: its import fails on such a page.
+    "web_charset_guessed": ("information",
+        "Its character set was guessed as {charset}. QualCoder cannot "
+        "import this web page, since its text is not UTF-8."),
+    "web_charset_guessed_check": ("changes",
+        "Its character set was guessed as {charset}. " + _DOUBTFUL_GUESS),
     "charset_named": ("information",
         "It was read as {charset}, the character set named; the memo "
         "records it."),

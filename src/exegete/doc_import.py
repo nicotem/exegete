@@ -431,7 +431,9 @@ _CHARSET_NAMES = {
     "(cp1251)", "cp1257": "Windows Baltic (cp1257)", "cp775": "DOS Baltic "
     "(cp775)", "cp1006": "Urdu (cp1006)", "cp1253": "Windows Greek "
     "(cp1253)", "cp1254": "Windows Turkish (cp1254)", "utf-8": "UTF-8",
-    "utf-8-sig": "UTF-8", "ascii": "ASCII",
+    "utf-8-sig": "UTF-8", "ascii": "ASCII", "iso8859-2": "Central "
+    "European (ISO 8859-2)", "iso8859_2": "Central European (ISO 8859-2)",
+    "iso8859_10": "Nordic (ISO 8859-10)",
 }
 
 
@@ -468,25 +470,60 @@ def doubtful_guess(charset: Optional[str]) -> bool:
         return False
 
 
+# The character sets of one byte a letter that European documents are
+# commonly saved in, as the encoding argument names them: Windows
+# Western, Central European, Baltic and Turkish, ISO Latin 2 and Mac
+# Roman. A guessed file is read each of these ways for the names list.
+OTHER_READINGS = ("cp1252", "cp1250", "cp1257", "cp1254", "iso8859-2",
+                  "mac_roman")
+
+
 def names_escape_the_guess(compiled: Any, data: bytes,
-                           charset: Optional[str]) -> bool:
-    """Whether the file's bytes, read as Windows Western (cp1252), hold a
-    name from the list that the guessed reading does not: the guess
-    turned a listed name's accents into other letters, so the list would
-    not replace it."""
+                           charset: Optional[str]) -> Optional[str]:
+    """The character set, of `OTHER_READINGS`, in whose reading the
+    file's bytes hold names from the list that the guessed reading does
+    not, or None: the guess turned a listed name's letters into others,
+    so the list would not replace it. Of several, the one finding the
+    most such names, then the first in the list."""
     from . import pseudonymise as pseudo
     name = _canonical(charset)
-    if name is None or name == "cp1252":
-        return False
-    western = data.decode("cp1252", "replace")
+    if name is None or data.isascii():
+        return None
     guessed = data.decode(name, "replace")
-    if western == guessed:
+    in_guess: Optional[set] = None
+    best, most = None, 0
+    for other in OTHER_READINGS:
+        if _canonical(other) == name:
+            continue
+        reading = data.decode(other, "replace")
+        if reading == guessed:
+            continue
+        found = {r.entry for r in pseudo.find_replacements(compiled,
+                                                           reading)}
+        if not found:
+            continue
+        if in_guess is None:
+            in_guess = {r.entry for r in
+                        pseudo.find_replacements(compiled, guessed)}
+        missed = len(found - in_guess)
+        if missed > most:
+            best, most = other, missed
+    return best
+
+
+def _hold_for_names(item: Item, ctx: Context, data: bytes,
+                    charset: Optional[str]) -> bool:
+    """Hold the file back when another reading of its bytes finds listed
+    names the guessed one does not, naming that reading's character
+    set; whether it was held."""
+    other = names_escape_the_guess(ctx.compiled, data, charset)
+    if other is None:
         return False
-    found = {r.entry for r in pseudo.find_replacements(compiled, western)}
-    if not found:
-        return False
-    return bool(found - {r.entry for r in
-                         pseudo.find_replacements(compiled, guessed)})
+    item.status, item.code = "held", "charset_names"
+    item.numbers["charset"] = charset_words(charset)
+    item.numbers["found"] = charset_words(other)
+    item.numbers["encoding"] = other
+    return True
 
 
 def evaluate(item: Item, result: Dict[str, Any], ctx: Context,
@@ -525,14 +562,12 @@ def evaluate(item: Item, result: Dict[str, Any], ctx: Context,
         return
     elif (data is not None and ctx.compiled is not None
           and result.get("charset_guessed")
-          and names_escape_the_guess(ctx.compiled, data,
-                                     result.get("charset"))):
+          and _hold_for_names(item, ctx, data, result.get("charset"))):
         # Nothing looks garbled, but the guess has changed the letters
         # of a listed name, which the list would then not replace
         # (charset-normalizer reads much Western text as Central
-        # European; QualCoder makes the same guess).
-        item.status, item.code = "held", "charset_names"
-        item.numbers["charset"] = charset_words(result.get("charset"))
+        # European, and Polish or Turkish as Western; QualCoder makes
+        # the same guess).
         return
     elif ctx.compiled is not None:
         replacements = pseudo.find_replacements(ctx.compiled, text)
@@ -572,8 +607,11 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         add("near_limit", characters=characters, limit=ctx.max_characters)
     charset = result.get("charset")
     if result.get("charset_guessed"):
-        add("charset_guessed_check" if doubtful_guess(charset)
-            else "charset_guessed", charset=charset_words(charset))
+        code = ("charset_guessed_check" if doubtful_guess(charset)
+                else "charset_guessed")
+        if web_reading(item, result):
+            code = "web_" + code
+        add(code, charset=charset_words(charset))
     elif ctx.encoding is not None and charset == ctx.encoding:
         add("charset_named", charset=charset_words(charset))
     for code in ("astral", "invisible"):
@@ -588,6 +626,17 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
     if item.kind == doc_readers.PDF and ctx.qc382:
         add("qc382_pdf")
     return out
+
+
+def web_reading(item: Item, result: Dict[str, Any]) -> Optional[str]:
+    """For a web page whose text is not UTF-8, which QualCoder's import
+    fails on (it reads every page as UTF-8): "guessed" when its
+    character set was guessed, else "read" (declared, or named). None
+    for any other file."""
+    if item.kind != doc_readers.WEB or result.get("charset") in (
+            None, "utf-8"):
+        return None
+    return "guessed" if result.get("charset_guessed") else "read"
 
 
 def _memo(item: Item, result: Dict[str, Any], ctx: Context) -> str:
@@ -684,7 +733,9 @@ def refusal_words(item: Item) -> str:
         return words.say(words.HELD_BACK, code,
                          names=numbers.get("listed_names"),
                          count=numbers.get("listed_count"),
-                         charset=numbers.get("charset"))
+                         charset=numbers.get("charset"),
+                         found=numbers.get("found"),
+                         encoding=numbers.get("encoding"))
     numbers.setdefault("format", {
         doc_readers.WORD: "Word", doc_readers.OPENDOCUMENT: "OpenDocument",
         doc_readers.EPUB: "EPUB"}.get(item.kind, "document"))
@@ -729,7 +780,8 @@ def file_entry(item: Item) -> Dict[str, Any]:
     if changes:
         entry["changes_what_you_will_read"] = changes
         entry["why"] = words.why_line(item.kind == doc_readers.SUBTITLES,
-                                      item.warning_codes)
+                                      item.warning_codes,
+                                      web_reading(item, result))
     if information:
         entry["for_information"] = information
     if item.real_place:

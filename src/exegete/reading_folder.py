@@ -138,6 +138,19 @@ def safe_name(name: str, limit: int = 80) -> str:
     return result or "file"
 
 
+def safe_file_name(name: str, limit: int = 120) -> str:
+    """`safe_name` for a copy whose ending says what it is: the part
+    before the ending is cut to fit and the ending (".docx") is kept
+    whole, so a long name never loses its type or takes an earlier one
+    ("A....exe.docx" cut to "A....exe"). An ending that is not a few
+    letters and digits counts as part of the name."""
+    stem, ending = os.path.splitext(unicodedata.normalize("NFC", str(name)))
+    if not (2 <= len(ending) <= 10 and ending[1:].isascii()
+            and ending[1:].isalnum()):
+        return safe_name(name, limit)
+    return safe_name(stem, limit - len(ending)) + ending
+
+
 def _owner_only(path: Path, mode: int) -> None:
     try:
         os.chmod(path, mode)

@@ -786,8 +786,13 @@ Six cautions:
   and its notes. A PDF holding names from your list is held back unless
   you say so for that import. A plain text file whose character set is
   guessed can come in with a listed name's letters changed ("Agnès"
-  read as "Agnčs"), which the list would then not replace: such a file
-  is held back until you name the character set.
+  read as "Agnčs"), which the list would then not replace. Exegete
+  reads such a file again in the character sets European documents are
+  most often saved in (Windows Western, Central European, Baltic and
+  Turkish, ISO Latin 2 and Mac Roman); when one of them finds a listed
+  name the guess does not, the file is held back until you name the
+  character set, and the preview says which. A name the guess changes
+  in a character set outside that list is not caught.
 - **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
   can read any file your account can, originals included. Exegete's
   descriptions ask the assistant to give paths and never to open a

@@ -52,7 +52,9 @@ otherwise, and may change before it is released.
   only. Only originals of the document and media types QualCoder
   imports are copied and shown; any other type (a program or a shortcut,
   say, in a project from someone else) is neither copied nor shown,
-  since read-only does not stop such a file acting when opened. Copies
+  since read-only does not stop such a file acting when opened. A long
+  name is shortened before its ending, never through it, and the
+  copy's own name must pass the same rule. Copies
   are read-only and keep the internet-origin mark Windows and macOS put
   on a downloaded file, so Word still opens a stranger's attachment in
   Protected View.
@@ -133,7 +135,10 @@ otherwise, and may change before it is released.
 - Named departures, each with its reason in TOOLS.md: a file in which
   no text is found is refused, where QualCoder stores its raw bytes; a
   file declaring XML entities is refused; a web page QualCoder cannot
-  store is read by its declared character set; a file whose accents came
+  store is read by its declared character set, and its preview says
+  that QualCoder cannot import it (never that QualCoder reads it the
+  same way), with the way round for a guessed one (name the character
+  set); a file whose accents came
   out garbled is held back until the researcher names the character set
   (`encoding`) or fixes the file; subtitle files come in as documents,
   with every byte-order mark at their start removed; an OpenDocument
@@ -154,10 +159,15 @@ otherwise, and may change before it is released.
   be Central European or Baltic, which reads every "è" as "č" with no
   other sign (QualCoder makes the same guess, and stores the same
   text). Such a guess is now among what changes the text, with the way
-  round (name the character set, or save the file as UTF-8); and when
-  the file read as Windows Western holds a name from the names list
-  that the guessed reading does not, the file is held back, since the
-  list would not replace that name.
+  round (name the character set, or save the file as UTF-8, with the
+  sets for Central European, Baltic and Turkish text as well as Western
+  and old Mac files); and when the file, read in one of the character
+  sets European documents are most often saved in (Windows Western,
+  Central European, Baltic and Turkish, ISO Latin 2, Mac Roman), holds
+  a name from the names list that the guessed reading does not, the
+  file is held back, naming that set, since the list would not replace
+  that name. This holds whatever the guess: a Polish or Turkish file is
+  often guessed to be Windows Western.
 - The batch goes in together or not at all: a file the preview read as
   ready that reads otherwise at the import (out of time or memory, say)
   stops the whole import, naming the file; a file the preview held back

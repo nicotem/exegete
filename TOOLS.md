@@ -598,7 +598,8 @@ original of a type QualCoder imports (documents, pictures, audio and
 video) is copied, opened or shown, and a web page only shown; any other
 type, such as a program or a shortcut in a project from someone else,
 is neither copied nor shown, since a read-only copy of it could still
-act when opened. A file
+act when opened. A long name is shortened before its ending, never
+through it, so the copy is always of the original's type. A file
 whose text was typed or pasted in has no original, so the reading copy
 opens instead. With no screen (an SSH session, Linux without a desktop),
 nothing opens and the answer gives the place only.
@@ -668,9 +669,9 @@ the reason:
 |---|---|---|---|
 | No text found in a Word, OpenDocument, EPUB, RTF or web page file, or none QualCoder can find (an OpenDocument file not saved by LibreOffice: pandoc's, the Mac's TextEdit's) | stores the file's raw bytes, or its markup, as the text | refused, with the reason and, for OpenDocument, the way round (save it again in LibreOffice, or as Word) | QualCoder's result is noise |
 | An RTF file holding an emoji (RTF writes it in two halves) | the import fails on the insert, leaving the copy | refused, with the way round (save it as Word, or remove the emoji) | neither program can store the two halves |
-| A web page whose text holds bytes that are not UTF-8 | the import fails | read by its declared character set, else by the plain text rule | QualCoder has no text for it to differ from |
+| A web page whose text holds bytes that are not UTF-8 | the import fails | read by its declared character set, else by the plain text rule; the preview says QualCoder cannot import it, and never that QualCoder reads it the same way | QualCoder has no text for it to differ from |
 | Accents that came out garbled ("Ã©" for "é", or letters of another alphabet in a guessed character set) | stored as guessed | held back until the researcher names the character set (`encoding`) or fixes the file | a garbled name escapes the pseudonyms list |
-| A character set guessed as Central European, Baltic or another set of one byte a letter that is not Western (an ordinary Western European file saved on Windows often is, and every "è" then reads as "č") | stored as guessed | stored as guessed, and named among what changes the text, with the way round; held back when, read as Windows Western (cp1252), the file holds a name from the names list that the guessed reading does not | the pseudonyms list's promise; the researcher sees the risk before saying yes |
+| A character set guessed as Central European, Baltic or another set of one byte a letter that is not Western (an ordinary Western European file saved on Windows often is, and every "è" then reads as "č") | stored as guessed | stored as guessed, and named among what changes the text, with the way round; held back when, read in one of the character sets European documents are most often saved in (Windows Western, Central European, Baltic and Turkish, ISO Latin 2, Mac Roman), the file holds a name from the names list that the guessed reading does not, whatever the guess (a Polish or Turkish file is often guessed to be Windows Western); the hold names that set | the pseudonyms list's promise; the researcher sees the risk before saying yes |
 | XML entity declarations (Word, EPUB) | expanded, or imported with stray text | refused | safety |
 | Word's XML | the standard parser | defusedxml, which gives the same tree for ordinary documents | safety |
 | Subtitle files (`.srt`, `.vtt`) | taken only as a recording's transcript | imported as text documents, as they stand, every byte-order mark at the start removed | Exegete does not import media yet; the preview says such a document cannot later become a recording's transcript; a mark left at the start is hidden by QualCoder's text view, which would show every coding a character early |

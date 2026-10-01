@@ -112,6 +112,13 @@ FILE_REFUSALS = {
     "no_text": "No text was found in this file. QualCoder would store the "
                "file's own codes as its text, which is noise; Exegete does "
                "not import it.",
+    "odt_not_libreoffice": "QualCoder cannot find the text in this "
+                           "OpenDocument file, because it was not saved by "
+                           "LibreOffice (pandoc and the Mac's TextEdit write "
+                           "it differently); QualCoder would store the "
+                           "file's own codes as its text. Open it in "
+                           "LibreOffice and save it again as .odt, or save "
+                           "it as Word (.docx), then import that.",
     "empty": "This file is empty.",
     "pdf_password": "This PDF is protected by a password. Save a copy "
                     "without the password (in Preview or Acrobat), then "
@@ -121,6 +128,11 @@ FILE_REFUSALS = {
     "unstorable": "This file holds a character a project cannot store "
                   "(QualCoder's import fails on it too). Open it in its "
                   "own app and save a fresh copy.",
+    "unstorable_rtf": "It holds an emoji, or another character RTF writes "
+                      "in two halves, which neither QualCoder nor Exegete "
+                      "can store (QualCoder's import fails on it). Save it "
+                      "as Word (.docx) in its app, or remove the emoji, "
+                      "then import that.",
     "too_long": "Its text is {characters} characters long, over Exegete's "
                 "limit of {limit}. Import long books and reports in "
                 "QualCoder.",
@@ -159,6 +171,14 @@ HELD_BACK = {
                      "for \"é\") in the file itself, and names in it would "
                      "escape your names list. Open it in its own app, "
                      "correct them, save it, then ask again.",
+    "charset_names": "Its character set was guessed as {charset}, and "
+                     "read that way, names from your list come out with "
+                     "other letters (as in \"Agnčs\" for \"Agnès\"), "
+                     "so the list would not replace them; read as Windows "
+                     "Western (cp1252), it finds them. Name the character "
+                     "set with the encoding argument (encoding=\"cp1252\" "
+                     "for a file saved on Windows) and ask again, or open "
+                     "the file in its own app and save it as UTF-8.",
     "not_read_in_time": "Not read in time; ask again for these.",
 }
 
@@ -170,11 +190,28 @@ LIBREOFFICE_TO_WORD = ("Way round: in LibreOffice, choose File, Save As, "
                        "tabs).")
 ACCEPT_CHANGES = ("Way round: accept or reject all changes, save, then "
                   "import.")
+COPY_INTO_TEXT = ("To code them, copy them into the document's own text "
+                  "first, then import it.")
 # Said once for a file whose text a warning changes: why the import does
 # not mend what QualCoder's way of reading does, and why the ways round
 # are chosen as they are.
 WHY_AS_QUALCODER = (SAME_READING + " Each way round gives a file QualCoder "
                     "reads the same way too.")
+WHY_GUESSED = (SAME_READING + " Saving the file as UTF-8 gives a file "
+               "QualCoder reads the same way too; naming the character set "
+               "does not, since QualCoder keeps its own guess.")
+WHY_SUBTITLES = ("QualCoder imports a subtitle file only as a recording's "
+                 "transcript, so it has no reading of this document to "
+                 "agree with.")
+
+
+def why_line(subtitles: bool, codes: List[str]) -> str:
+    """The line said once for a file whose text a warning changes."""
+    if subtitles:
+        return WHY_SUBTITLES
+    if "charset_guessed_check" in codes:
+        return WHY_GUESSED
+    return WHY_AS_QUALCODER
 
 # Sign code -> (group, words). Group "changes" changes what the
 # researcher will read; "information" does not.
@@ -185,7 +222,7 @@ WARNINGS = {
         "youInterviewer\". " + TO_WORD_TEXT),
     "word_tab_stops": ("changes",
         "Tab stops set on a paragraph come in as tab characters at its "
-        "start."),
+        "start. " + TO_WORD_TEXT),
     "word_text_box": ("changes",
         "Text in text boxes comes in more than once (up to four times). "
         + TO_WORD_TEXT),
@@ -196,13 +233,14 @@ WARNINGS = {
         "It has text moved with tracked changes, which comes in twice. "
         + ACCEPT_CHANGES),
     "word_table": ("changes",
-        "Each table cell comes in as a paragraph of its own."),
+        "Each table cell comes in as a paragraph of its own. "
+        + TO_WORD_TEXT),
     "word_headers_footers": ("changes",
-        "Headers and footers are left out."),
+        "Headers and footers are left out. " + COPY_INTO_TEXT),
     "word_footnotes": ("changes",
-        "Footnotes and endnotes are left out."),
+        "Footnotes and endnotes are left out. " + COPY_INTO_TEXT),
     "word_comments": ("changes",
-        "Comments are left out."),
+        "Comments are left out. " + COPY_INTO_TEXT),
     "odt_comments": ("changes",
         "Comments leave markup in the text, their author and date among "
         "it, as in \"<dc:creator>Ana</dc:creator>\". "
@@ -224,11 +262,14 @@ WARNINGS = {
         "line of its own. " + LIBREOFFICE_TO_WORD),
     "web_blocks": ("changes",
         "Blocks and table cells run together, as in \"Name:Ana\" for a "
-        "table of two cells."),
+        "table of two cells. Way round: open the page in a word "
+        "processor, save it as a Word document (.docx), and import "
+        "that."),
     "pdf_scanned": ("changes",
         "This PDF is pictures of pages, with no words Exegete can read; "
         "only QualCoder's area coding works on it. QualCoder imports it "
-        "the same way."),
+        "the same way. Way round: run text recognition (OCR) on it in "
+        "another program, then import the result."),
     "pandoc_wrapped": ("changes",
         "Its lines are broken at 72 characters, as a converter such as "
         "pandoc leaves them; each break stays in the text. See "
@@ -254,6 +295,14 @@ WARNINGS = {
     "charset_guessed": ("information",
         "Its character set was guessed as {charset}; QualCoder may guess "
         "differently."),
+    "charset_guessed_check": ("changes",
+        "Its character set was guessed as {charset}, as QualCoder guesses "
+        "it. For a file in a Western European language that guess is "
+        "often wrong, and then every accented letter reads as another "
+        "(\"è\" as \"č\", \"ã\" as \"ă\"). Way round: name the "
+        "character set and ask again (encoding=\"cp1252\" for a file "
+        "saved on Windows, \"mac_roman\" for one from an old Mac), or "
+        "save the file as UTF-8 in its own app."),
     "charset_named": ("information",
         "It was read as {charset}, the character set named; the memo "
         "records it."),

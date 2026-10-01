@@ -126,11 +126,16 @@ def _which(name: str) -> Optional[str]:
 
 
 def _check(path: Path) -> Optional[str]:
-    """The path must be absolute and name an existing ordinary file."""
+    """The path must be absolute, inside Exegete's reading folder, and
+    name an existing ordinary file."""
+    from . import reading_folder
+    from .path_identity import is_inside
     if not path.is_absolute():
         return "the file's place is not a full path"
     if path.is_symlink() or not path.is_file():
         return "the file is not there as an ordinary file"
+    if not is_inside(path, reading_folder.root()):
+        return "Exegete opens only files in its own reading folder"
     return None
 
 

@@ -85,7 +85,7 @@ def project(setup_server):
     """The fixture project with file 50: the text above, two
     overlapping codings, one with a memo whose private part must stay
     out, one placed after the emoji by QualCoder's count, and an
-    annotation."""
+    annotation whose private part must stay out too."""
     folder = server._current_project_folder()
     add_file(folder, 50, "P03 interview.docx", TEXT,
              mediapath="/docs/P03 interview.docx",
@@ -101,7 +101,7 @@ def project(setup_server):
                units(TEXT, after) + 8, "an emoji")
     sql(folder, "INSERT INTO annotation (anid, fid, pos0, pos1, memo, "
         "owner, date) VALUES (1, 50, 0, 7, ?, 'TestCoder', '2026-10-01')",
-        (f"{SECRET_MEMO} note",))
+        (f"{SECRET_MEMO} note ##### {PRIVATE_MEMO}",))
     docs = folder / "documents"
     docs.mkdir(exist_ok=True)
     (docs / "P03 interview.docx").write_bytes(b"PK\x03\x04 original bytes")
@@ -195,7 +195,8 @@ class TestTheReadingCopy:
         page = page_of(answer)
         assert PRIVATE_MEMO not in page
         assert "#####" in page          # only in the line that says so
-        assert answer["counts"]["private_parts_left_out"] == 2
+        # The file's memo, the coding's and the annotation's.
+        assert answer["counts"]["private_parts_left_out"] == 3
 
     def test_a_coding_after_an_emoji_placed_by_qualcoders_count(self,
                                                                  project):
@@ -356,7 +357,8 @@ ALLOWED = {
                                                   "checked"},
     "label": {"for"}, "table": set(), "caption": set(), "thead": set(),
     "tbody": set(), "tr": set(), "th": set(), "td": set(),
-    "span": {"class", "id", "data-author", "data-code"}, "bdi": set(),
+    "span": {"class", "id", "data-author", "data-code", "dir"},
+    "bdi": set(),
     "sup": {"class", "data-code"}, "main": {"id"}, "section": {"id"},
     "footer": set(),
 }

@@ -17,6 +17,7 @@ library's message, which a hostile document could fill.
 
 import codecs
 import io
+import posixpath
 import re
 import struct
 import zipfile
@@ -43,6 +44,10 @@ PLAIN_FORMATS = frozenset({TEXT, MARKDOWN, SUBTITLES})
 MAX_ARCHIVE_ENTRIES = 10_000
 MAX_ARCHIVE_PART = 25 * 1024 * 1024
 MAX_ARCHIVE_TOTAL = 100 * 1024 * 1024
+# The largest directory 10,000 entries with names of up to a kilobyte
+# need: a larger one is refused before zipfile parses it, whatever count
+# the end record gives.
+MAX_ARCHIVE_DIRECTORY = MAX_ARCHIVE_ENTRIES * (46 + 1024)
 
 BOM = "\ufeff"
 
@@ -69,20 +74,27 @@ _ZIP64_EOCD = b"PK\x06\x06"
 def zip_entry_count(data: bytes) -> int:
     """The number of entries an archive's end record declares, read
     before its directory is (the directory of a hostile archive can be
-    made to cost far more than its size)."""
+    made to cost far more than its size). The directory's recorded size,
+    which bounds what zipfile parses, is checked too: a record can give
+    a count of one over a directory of a million entries."""
     tail_start = max(0, len(data) - (22 + 65535))
     at = data.rfind(_EOCD, tail_start)
     if at < 0 or at + 22 > len(data):
         raise ReadRefused("not_an_archive")
     count = struct.unpack_from("<H", data, at + 10)[0]
+    directory = struct.unpack_from("<I", data, at + 12)[0]
     locator = at - 20
     if locator >= 0 and data[locator:locator + 4] == _ZIP64_LOCATOR:
         offset = struct.unpack_from("<Q", data, locator + 8)[0]
         if (offset + 56 <= len(data)
                 and data[offset:offset + 4] == _ZIP64_EOCD):
             count = struct.unpack_from("<Q", data, offset + 32)[0]
+            directory = struct.unpack_from("<Q", data, offset + 40)[0]
         else:
             raise ReadRefused("not_an_archive")
+    if directory > MAX_ARCHIVE_DIRECTORY:
+        raise ReadRefused("archive_too_many_entries",
+                          limit=MAX_ARCHIVE_ENTRIES)
     return count
 
 
@@ -544,6 +556,13 @@ def read_opendocument(raw: bytes) -> Tuple[str, Dict[str, int]]:
         content = archive.read("content.xml")
     except KeyError:
         raise ReadRefused("not_this_format") from None
+    if (b"</office:text>" in content
+            and b"</text:sequence-decls>" not in content):
+        # QualCoder's recipe starts after a part LibreOffice always
+        # writes and pandoc and the Mac's own converter do not: it finds
+        # no text, and stores the file's own bytes (a named departure:
+        # refused, with the way round).
+        raise ReadRefused("odt_not_libreoffice")
     text = odt_recipe(content).replace("\n", "\n\n")
     seen: Dict[str, int] = {}
     for code, marker in (("odt_comments", b"<office:annotation"),
@@ -567,31 +586,44 @@ def read_opendocument(raw: bytes) -> Tuple[str, Dict[str, int]]:
 # (helpers.py 382-422), each chapter through the web page rules
 # ---------------------------------------------------------------------------
 
-# Parts never parsed as XML (pictures, fonts, sound); every other part
-# is looked at, whatever its name, since the package file's name is the
-# book's own choice.
-_EPUB_BINARY_PARTS = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp",
-                      ".ttf", ".otf", ".woff", ".woff2", ".mp3", ".mp4",
-                      ".m4a", ".ogg", ".wav", ".webm")
 _ENTITY_MARKERS = (b"<!ENTITY", "<!ENTITY".encode("utf-16-le"),
                    "<!ENTITY".encode("utf-16-be"))
+
+
+def _counted_epub_reader(epub, archive: "Archive"):
+    """EbookLib's own reader, with every part it reads taken through
+    `archive`: so each read counts towards the archive's total (a
+    chapter the manifest lists thirty times is unpacked, and counted,
+    thirty times), and each part is looked at for entity declarations
+    before EbookLib parses it, whatever its name or media type."""
+
+    class CountedReader(epub.EpubReader):
+        def read_file(self, name):
+            # The same normalisation as EbookLib's own read_file.
+            data = archive.read(posixpath.normpath(name))
+            if any(marker in data for marker in _ENTITY_MARKERS):
+                raise ReadRefused("xml_entities")
+            return data
+
+    return CountedReader
 
 
 def read_epub(raw: bytes) -> str:
     archive = Archive(raw)
     archive.check_whole()
-    # A book whose XML declares entities is refused before EbookLib sees
-    # it (a named departure: QualCoder imports it, with stray text from
-    # the declarations).
-    for name in archive.names():
-        if name.lower().endswith(_EPUB_BINARY_PARTS):
-            continue
-        if any(marker in archive.read(name) for marker in _ENTITY_MARKERS):
-            raise ReadRefused("xml_entities")
     import ebooklib
     from ebooklib import epub
+    if not callable(getattr(epub.EpubReader, "read_file", None)):
+        # An EbookLib whose reads could not be counted is not used.
+        raise ReadRefused("damaged")
+    # EbookLib's read_epub, with its reads counted: a part EbookLib
+    # reads that declares entities refuses the book before EbookLib
+    # parses it (a named departure: QualCoder imports it, with stray
+    # text from the declarations).
     try:
-        book = epub.read_epub(io.BytesIO(raw))
+        reader = _counted_epub_reader(epub, archive)(io.BytesIO(raw), None)
+        book = reader.load()
+        reader.process()
     except ReadRefused:
         raise
     except Exception:
@@ -838,6 +870,12 @@ def read_document(kind: str, raw: bytes, encoding: Optional[str] = None
         # (import_transcription_from_file 2484-2505).
         if text and text[0] == BOM and kind != SUBTITLES:
             text = text[1:]
+        if kind == SUBTITLES:
+            # Every mark at the start goes (a named departure: the
+            # transcript route keeps all but one, which QualCoder's text
+            # view then hides, so every coding would show a character
+            # early).
+            text = text.lstrip(BOM)
     if kind == SUBTITLES and text.strip() == "":
         # The transcript route refuses a file of spaces too.
         raise ReadRefused("empty")
@@ -853,8 +891,9 @@ def read_document(kind: str, raw: bytes, encoding: Optional[str] = None
 
     if _SURROGATE.search(text):
         # A character SQLite cannot store as text (an RTF escape can make
-        # one); QualCoder's import fails on it.
-        raise ReadRefused("unstorable")
+        # one); QualCoder's import fails on it. RTF writes an emoji as two
+        # escapes, which striprtf leaves as two halves.
+        raise ReadRefused("unstorable_rtf" if kind == RTF else "unstorable")
     if kind == PDF:
         if text.strip() == "":
             signs["pdf_scanned"] = 1

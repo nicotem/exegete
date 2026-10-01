@@ -41,14 +41,28 @@ DEPARTURES = {
     "entities.epub": {"refused": "xml_entities"},
     # QualCoder finds no text and stores the raw archive as the text.
     "picture_only.docx": {"refused": "no_text"},
-    "no_sequence_decls.odt": {"refused": "no_text"},
+    # The same, for an OpenDocument file not saved by LibreOffice: its
+    # own refusal, with the way round.
+    "no_sequence_decls.odt": {"refused": "odt_not_libreoffice"},
     # QualCoder's import fails with an error of the zip library.
     "not_a_zip.docx": {"refused": "not_an_archive"},
     # QualCoder cannot store the text (it holds bytes that are not UTF-8)
     # and its import stops; Exegete decodes by the declared character
     # set, else by the plain text rule.
     "cp1252_declared.html": {"text": "\nCafé – résumé\n"},
-    "cp1252_plain.html": {"decoded": True},
+    # With no declared set, the plain text rule's guess: Windows Central
+    # European at the recorded charset-normalizer, which garbles "à" and
+    # "è" (pinned to the character, so a change of guess shows; the
+    # preview names such a guess among what changes the text).
+    "cp1252_plain.html": {"decoded": "\nGarçon, ŕ la façon, trčs élégant."
+                                     "\n\nEncore une fois, trčs élégant."
+                                     "\n"},
+    # QualCoder takes a subtitle file only as a recording's transcript,
+    # which keeps all but one of the byte-order marks at its start; as a
+    # document, every one goes, since QualCoder's text view hides the
+    # one left and would show every coding a character early.
+    "boms.srt": {"text": "1\n00:00:01,000 --> 00:00:02,000\nHi.\n",
+                 "recorded_text_differs": True},
 }
 # Files both programs refuse, with Exegete's code for the refusal.
 BOTH_REFUSE = {"empty.txt": "empty", "damaged.pdf": "damaged",
@@ -97,9 +111,11 @@ def _check(name: str, recorded: dict, ours: dict) -> None:
     if name in DEPARTURES:
         wanted = DEPARTURES[name]
         # It is a departure because QualCoder stores noise, fails, or
-        # (for entities) stores text from the declarations.
+        # (for entities) stores text from the declarations, or (for a
+        # subtitle file) because Exegete takes it as a document.
         assert ("text" not in recorded or recorded.get("noise")
-                or name.startswith("entities")), (name, recorded)
+                or name.startswith("entities")
+                or wanted.get("recorded_text_differs")), (name, recorded)
         if "refused" in wanted:
             assert ours.get("refused") == wanted["refused"], (name, ours)
         elif "text" in wanted:
@@ -107,7 +123,10 @@ def _check(name: str, recorded: dict, ours: dict) -> None:
         else:
             assert "text" in ours, (name, ours)
             assert not any("\udc80" <= c <= "\udcff" for c in ours["text"])
-            assert "ç" in ours["text"]          # "ç", decoded
+            if _same_library(name):
+                assert ours["text"] == wanted["decoded"], (name, ours)
+            else:
+                assert "ç" in ours["text"]          # "ç", decoded
         return
     if name in BOTH_REFUSE:
         assert "refused" in recorded, (name, recorded)

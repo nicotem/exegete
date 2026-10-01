@@ -24,9 +24,14 @@ OneDrive, and not indexed by the computer's search:
   `~/.cache/exegete/reading`.
 
 Folders are made readable by their owner only (0700) and pages likewise
-(0600); copies of originals are read-only (0400) and never runnable.
+(0600); copies of originals are read-only (0400), and only originals
+of the document and media types QualCoder imports are copied
+(reading.copied_type), since read-only does not stop a program or a
+shortcut acting when opened.
 One subfolder per project, named from the project's name and a digest of
-where it is; in it, one folder per file (`file-<id>`) and `previews`.
+where it is; in it, one folder per file (`file-<id>`, the copy of its
+original in `original` inside, so it never shares a name with the page)
+and `previews`.
 
 Tidying: preview pages go after the import, or an hour after they were
 written; a file's folder goes whenever Exegete changes that file's text
@@ -61,6 +66,7 @@ TEMP_PREFIX = ".exegete-tmp-"
 TEMP_LIFETIME = 10 * 60
 NOTE_NAME = "About this folder.txt"
 PREVIEWS = "previews"
+ORIGINAL = "original"
 # The first line of every page Exegete writes here; a page is replaced
 # only when it carries it (an existing file without it is not Exegete's).
 PAGE_MARK = "<!-- Written by Exegete for reading on this computer. -->"
@@ -270,6 +276,13 @@ def project_folder(project, now: Optional[float] = None) -> Path:
 def file_folder(project, file_id: int) -> Path:
     """The folder for one file's reading copy and copy of its original."""
     return _make(project_folder(project) / f"file-{int(file_id)}")
+
+
+def original_folder(project, file_id: int) -> Path:
+    """The folder for the copy of one file's original, inside the file's
+    own folder: a copy keeps the original's name, so in a folder of its
+    own it can never take the place of the reading copy's page."""
+    return _make(file_folder(project, file_id) / ORIGINAL)
 
 
 def previews_folder(project) -> Path:

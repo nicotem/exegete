@@ -251,8 +251,10 @@ class TestTheOpener:
     of the launchers."""
 
     @pytest.fixture
-    def asked(self, monkeypatch):
+    def asked(self, monkeypatch, tmp_path):
         calls = []
+        # The opener's own check: only files in the reading folder.
+        monkeypatch.setattr(reading_folder, "root", lambda *a, **k: tmp_path)
         monkeypatch.setattr(opener, "_run",
                             lambda argv: calls.append(list(argv)) or 0)
         monkeypatch.setattr(opener, "_startfile",
@@ -334,6 +336,18 @@ class TestTheOpener:
                                 platform="darwin").done is opened
         assert bool(asked) is opened
         assert opener.show_in_folder(path, platform="darwin").done
+
+    def test_a_file_outside_the_reading_folder_is_neither_opened_nor_shown(
+            self, asked, tmp_path, tmp_path_factory, monkeypatch):
+        outside = tmp_path_factory.mktemp("elsewhere") / "notes.docx"
+        outside.write_bytes(b"x")
+        for platform in ("darwin", "win32", "linux"):
+            for outcome in (opener.open_file(outside, platform=platform),
+                            opener.show_in_folder(outside,
+                                                  platform=platform)):
+                assert not outcome.done
+                assert "reading folder" in outcome.reason
+        assert asked == []
 
     def test_no_screen_no_opening(self, asked, odd, monkeypatch):
         monkeypatch.setenv("SSH_CONNECTION", "10.0.0.1 22 10.0.0.2 22")

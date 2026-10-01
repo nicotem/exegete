@@ -6355,7 +6355,7 @@ def _forget_reading_copies(file_ids: Optional[Sequence[int]] = None
                            ) -> None:
     """Remove the reading copies and copies of originals Exegete wrote
     for these files, or for the whole open project when `file_ids` is
-    None, after a write changed their text, name or memos (v0.14.3,
+    None, after a write changed their text or name (v0.14.3,
     decision 6): a copy written before a file was pseudonymised would
     otherwise keep the real names. Never fails the write that called it."""
     try:
@@ -9932,7 +9932,11 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
         compiled=compiled, names_list=state, names_list_entries=count,
         names_list_canonical=canonical,
         optional_available=_optional_formats_available(),
-        qc382=caps is not None and not caps.has_coder_visibility,
+        # A project QualCoder 4.0 has not opened: no sub-codes column
+        # (schema v16). QualCoder 3.8.2 makes and keeps its projects at
+        # v14, with the coder visibility of every project from v14 on,
+        # so visibility cannot tell the two apart.
+        qc382=caps is not None and not caps.has_supercid,
         encoding=encoding, pdfs_with_listed_names=pdfs_with_names,
         max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo)
     return ctx, names_stop
@@ -10002,6 +10006,13 @@ IMPORT_DONE_LINES = {
                   "coding excerpt of that file."),
     "prune": ("The project's backups now take about {size} MB; "
               "prune_backups removes old ones."),
+    "pdf_release": ("QualCoder 4.0 checks a PDF's stored text against its "
+                    "own reading of the PDF, which can differ with another "
+                    "release of the PDF library (PyMuPDF; this import used "
+                    "{version}). If QualCoder reports a text mismatch and "
+                    "offers to restructure, which rewrites the text and "
+                    "moves codings by searching for their passages, take a "
+                    "backup and check the codings before you accept."),
 }
 PRUNE_MENTION_MB = 500
 
@@ -10057,6 +10068,9 @@ def import_documents(
         stops.append(owner_stop)
     if names_stop is not None:
         stops.append(names_stop)
+    documents_stop = doc_import.documents_folder_problem(project_folder)
+    if documents_stop is not None:
+        stops.append(documents_stop)
     token_args = canonical_args(
         "import_documents", paths=paths,
         apply_project_pseudonyms=apply_project_pseudonyms,
@@ -10102,6 +10116,7 @@ def _import_documents_preview(paths, ctx, stops, token_args) -> str:
     except PreviewSecretUnavailable:
         return json.dumps(
             _token_error("preview_secret_unavailable", "import_documents"))
+    doc_import.remember_outcomes(payload["preview_token"], result)
     # The preview's own order first (what stops it, the summary line, the
     # names list, ...), then the token and how to use it.
     answer = dict(payload.pop("preview"))
@@ -10112,6 +10127,9 @@ def _import_documents_preview(paths, ctx, stops, token_args) -> str:
 def _import_documents_write(paths, ctx, token_args, preview_token,
                             project_folder) -> str:
     result = doc_import.survey(paths, ctx, read_texts=False)
+    # The files the preview held back or refused after reading them are
+    # skipped as it said; the token's state binds that list too.
+    doc_import.apply_outcomes(result, preview_token)
     state = fingerprint_rows(result.fingerprint(ctx), [])
     try:
         outcome = verify(preview_token, "import_documents", token_args,
@@ -10160,11 +10178,15 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
                 committed = True
+                doc_import.forget_outcomes(preview_token)
             except doc_import.BatchFailed as e:
+                failure = doc_import.BATCH_FAILURES.get(
+                    e.code, doc_import.BATCH_FAILURES["not_copied"])
+                if e.file:
+                    failure += f" The file: {e.file}."
                 return json.dumps(_with_backup({
-                    "error": doc_import.BATCH_FAILURES.get(
-                        e.code, doc_import.BATCH_FAILURES["not_copied"]),
-                    "nothing_changed": True}, backup_path), indent=2)
+                    "error": failure, "nothing_changed": True},
+                    backup_path), indent=2, ensure_ascii=False)
             except DatabaseLockedError as e:
                 return json.dumps(_with_backup({"error": str(e)},
                                                backup_path))
@@ -10223,7 +10245,14 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
                                 "reason": doc_import.refusal_words(i)}
                                for i in held_now]
     if refused_now or result.path_refusals:
-        answer["not_imported"] = len(refused_now) + len(result.path_refusals)
+        # Refused at the preview, as it said: each named, with its reason.
+        answer["not_imported"] = (
+            [{"path": r["given"],
+              "reason": doc_import.words.PATH_REFUSALS.get(
+                  r["code"], doc_import.words.PATH_REFUSALS["unreadable"])}
+             for r in result.path_refusals]
+            + [{"file": doc_import.item_label(i),
+                "reason": doc_import.refusal_words(i)} for i in refused_now])
     if any(i.kind == doc_readers.PDF for i in taken):
         answer["pymupdf_version"] = _pymupdf_version()
     if written.marks_lost:
@@ -10235,6 +10264,9 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     if any(i.kind == doc_readers.PDF and i.numbers.get("listed_count")
            for i in taken):
         lines.append(IMPORT_DONE_LINES["pdf_names"])
+    if any(i.kind == doc_readers.PDF for i in taken):
+        lines.append(IMPORT_DONE_LINES["pdf_release"].format(
+            version=answer.get("pymupdf_version") or "unknown"))
     if ctx.names_list in ("none", "empty"):
         lines.append(IMPORT_DONE_LINES["no_list"])
     backups = [b for b in _collect_backups(ctx.project_folder)

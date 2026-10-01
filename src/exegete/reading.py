@@ -50,6 +50,26 @@ COPY_NOTE = ("This is a copy for reading: changes to it go nowhere. It "
              "so it is not pseudonymised.")
 
 
+# Only an original of a type QualCoder imports is copied and shown (a web
+# page original is only shown, never opened: opener.openable). Anything
+# else in a project, such as a program or a shortcut from someone else's
+# project, could act when double-clicked, read-only or not, so Exegete
+# neither copies nor shows it.
+NOT_A_DOCUMENT_TYPE = (
+    "This original is not one of the document or media types QualCoder "
+    "imports, so Exegete neither copies nor shows it: a file of another "
+    "type, such as a program or a shortcut, could act when opened. Ask "
+    "whoever made the project what the file is.")
+
+
+def copied_type(name: str) -> bool:
+    """Whether an original with this name is of a type Exegete copies
+    and shows: the document and media types QualCoder imports, and web
+    pages (shown only)."""
+    suffix = os.path.splitext(name)[1].lower()
+    return suffix in opener.OPENABLE or suffix in opener.WEB_PAGES
+
+
 class ReadingRefusal(Exception):
     """A plain refusal, for the answer."""
 
@@ -80,6 +100,8 @@ def original_source(project: Path, mediapath: Optional[str]
         return None, ("The original's stored name is not one Exegete can "
                       "use safely, so it was not opened; QualCoder's "
                       "Manage files opens it.")
+    if not copied_type(name):
+        return None, NOT_A_DOCUMENT_TYPE
     folder = project / folder_name
     try:
         folder_info = os.lstat(folder)
@@ -114,7 +136,7 @@ def write_reading_copy(project: Path, file_id: int, **page) -> Tuple[
 
 def copy_original(project: Path, file_id: int, source: Path) -> Path:
     """A read-only copy of the original in the file's reading folder."""
-    folder = reading_folder.file_folder(project, file_id)
+    folder = reading_folder.original_folder(project, file_id)
     return reading_folder.copy_read_only(
         source, folder, reading_folder.safe_name(source.name, 120))
 

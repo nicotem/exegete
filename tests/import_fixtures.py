@@ -45,7 +45,7 @@ TEXT = {
     "utf16.txt": "\ufeffInterview in UTF-16, with é.\n"
                  .encode("utf-16-le"),
     "emoji.txt": "Before \U0001F600 after.\n".encode("utf-8"),
-    "nul.txt": b"A\x00B and a tab\there\n",
+    "nul_chars.txt": b"A\x00B and a tab\there\n",
     "only_spaces.txt": b"   \n  \n",
     "empty.txt": b"",
     "garbled.txt": "José said hello to Renée.\n".encode("utf-8")

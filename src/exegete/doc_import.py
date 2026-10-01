@@ -43,7 +43,7 @@ SIZE_LIMITS = {
     doc_readers.PDF: 100 * MB,
 }
 # What an interrupted import leaves in the folder of originals, so that
-# the next import (and the server's start) recognises and removes it.
+# the next import recognises and removes it.
 TEMP_PREFIX = ".exegete-importing-"
 ORDINALS = ("first", "second", "third", "fourth", "fifth", "sixth",
             "seventh", "eighth", "ninth", "tenth")
@@ -74,6 +74,7 @@ class Item:
     replacements: int = 0
     memo: str = ""
     warnings: List[Tuple[str, str]] = field(default_factory=list)
+    warning_codes: List[str] = field(default_factory=list)
     real_place: Optional[str] = None
 
     pre_code: str = ""             # a refusal decided before reading
@@ -151,12 +152,61 @@ class Survey:
     def fingerprint(self, ctx: Context) -> Dict[str, Any]:
         return {
             "items": [item.fingerprint() for item in self.items],
+            "read_outcomes": [entry[:3] for entry in read_outcomes(self)],
             "paths": [[r["given"], r["code"]] for r in self.path_refusals],
             "folders": [[f["given"], f["files"]] for f in self.folders],
             "project_names": sorted(ctx.source_names),
             "documents": sorted(ctx.documents_listing),
             "names_list": [ctx.names_list, ctx.names_list_canonical],
         }
+
+
+# ---------------------------------------------------------------------------
+# What the preview's reading decided, kept for the import
+# ---------------------------------------------------------------------------
+
+# The files the preview held back or refused once it had read them, by
+# the preview's token, so that the import skips exactly those and a file
+# the preview called ready either goes in or stops the whole batch. The
+# token's signed state binds the same list, so what is kept here can only
+# be the preview's own; when it is not here (the server restarted since
+# the preview), a preview that held back or refused a file after reading
+# it no longer matches, and the import asks for a fresh preview.
+_PREVIEW_OUTCOMES: "Dict[str, List[List[Any]]]" = {}
+_KEEP_OUTCOMES = 64
+
+
+def read_outcomes(result: "Survey") -> List[List[Any]]:
+    """[order, status, code, numbers] for every file held back or refused
+    after its text was read (a decision made before reading is in the
+    file's own fingerprint)."""
+    return [[item.order, item.status, item.code, dict(item.numbers)]
+            for item in result.items
+            if item.status in ("held", "refused") and not item.pre_code]
+
+
+def remember_outcomes(token: str, result: "Survey") -> None:
+    _PREVIEW_OUTCOMES[token] = read_outcomes(result)
+    while len(_PREVIEW_OUTCOMES) > _KEEP_OUTCOMES:
+        _PREVIEW_OUTCOMES.pop(next(iter(_PREVIEW_OUTCOMES)))
+
+
+def apply_outcomes(result: "Survey", token: Any) -> None:
+    """Give the import's survey (which reads no text) the preview's own
+    decisions on the files it held back or refused after reading them."""
+    kept = _PREVIEW_OUTCOMES.get(token) if isinstance(token, str) else None
+    by_order = {entry[0]: entry for entry in (kept or [])}
+    for item in result.items:
+        entry = by_order.get(item.order)
+        if entry is None or item.status != "ready":
+            continue
+        item.status, item.code = entry[1], entry[2]
+        item.numbers.update(entry[3])
+
+
+def forget_outcomes(token: Any) -> None:
+    if isinstance(token, str):
+        _PREVIEW_OUTCOMES.pop(token, None)
 
 
 def _supported_suffixes() -> List[str]:
@@ -391,9 +441,60 @@ def charset_words(name: Optional[str]) -> str:
     return _CHARSET_NAMES.get(name.lower(), name)
 
 
-def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
+# The Western character sets, which read the accented letters of Western
+# European languages as Windows Western (cp1252) does.
+_WESTERN = frozenset({"cp1252", "iso8859-1", "iso8859-15"})
+
+
+def _canonical(charset: Optional[str]) -> Optional[str]:
+    import codecs
+    try:
+        return codecs.lookup(charset or "").name
+    except (LookupError, ValueError):
+        return None
+
+
+def doubtful_guess(charset: Optional[str]) -> bool:
+    """Whether a guessed character set is one byte a letter and not a
+    Western one: for an ordinary Western European file saved on Windows
+    or an old Mac, such a guess (Central European, Baltic) reads every
+    accented letter as another ("è" as "č") without any other sign."""
+    name = _canonical(charset)
+    if name is None or name in _WESTERN:
+        return False
+    try:
+        return len(bytes(range(256)).decode(name, "replace")) == 256
+    except (LookupError, ValueError):
+        return False
+
+
+def names_escape_the_guess(compiled: Any, data: bytes,
+                           charset: Optional[str]) -> bool:
+    """Whether the file's bytes, read as Windows Western (cp1252), hold a
+    name from the list that the guessed reading does not: the guess
+    turned a listed name's accents into other letters, so the list would
+    not replace it."""
+    from . import pseudonymise as pseudo
+    name = _canonical(charset)
+    if name is None or name == "cp1252":
+        return False
+    western = data.decode("cp1252", "replace")
+    guessed = data.decode(name, "replace")
+    if western == guessed:
+        return False
+    found = {r.entry for r in pseudo.find_replacements(compiled, western)}
+    if not found:
+        return False
+    return bool(found - {r.entry for r in
+                         pseudo.find_replacements(compiled, guessed)})
+
+
+def evaluate(item: Item, result: Dict[str, Any], ctx: Context,
+             data: Optional[bytes] = None) -> None:
     """What the import does with one file's text: holds it back, or
-    applies the names list and gathers its warnings and memo."""
+    applies the names list and gathers its warnings and memo. `data` is
+    the file's bytes, for the check of a guessed character set against
+    the names list."""
     from . import pseudonymise as pseudo
     item.read = result
     text = result["text"]
@@ -422,6 +523,17 @@ def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
             code = "garbled_fixed"
         item.status, item.code = "held", code
         return
+    elif (data is not None and ctx.compiled is not None
+          and result.get("charset_guessed")
+          and names_escape_the_guess(ctx.compiled, data,
+                                     result.get("charset"))):
+        # Nothing looks garbled, but the guess has changed the letters
+        # of a listed name, which the list would then not replace
+        # (charset-normalizer reads much Western text as Central
+        # European; QualCoder makes the same guess).
+        item.status, item.code = "held", "charset_names"
+        item.numbers["charset"] = charset_words(result.get("charset"))
+        return
     elif ctx.compiled is not None:
         replacements = pseudo.find_replacements(ctx.compiled, text)
         text = pseudo.apply_replacements(text, replacements)
@@ -445,6 +557,7 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
     def add(code: str, **numbers: Any) -> None:
         group = words.WARNINGS[code][0]
         out.append((group, words.say(words.WARNINGS, code, **numbers)))
+        item.warning_codes.append(code)
 
     for code in ("word_line_break", "word_tab_stops", "word_text_box",
                  "word_tracked_changes", "word_moved_text", "word_table",
@@ -459,7 +572,8 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         add("near_limit", characters=characters, limit=ctx.max_characters)
     charset = result.get("charset")
     if result.get("charset_guessed"):
-        add("charset_guessed", charset=charset_words(charset))
+        add("charset_guessed_check" if doubtful_guess(charset)
+            else "charset_guessed", charset=charset_words(charset))
     elif ctx.encoding is not None and charset == ctx.encoding:
         add("charset_named", charset=charset_words(charset))
     for code in ("astral", "invisible"):
@@ -512,7 +626,7 @@ def _read_one(item: Item, data: bytes, ctx: Context) -> None:
             numbers["encoding"] = ctx.encoding
         _refuse(item, failed.code, before_reading=False, **numbers)
         return
-    evaluate(item, result, ctx)
+    evaluate(item, result, ctx, data)
 
 
 def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
@@ -569,7 +683,8 @@ def refusal_words(item: Item) -> str:
     if code in words.HELD_BACK:
         return words.say(words.HELD_BACK, code,
                          names=numbers.get("listed_names"),
-                         count=numbers.get("listed_count"))
+                         count=numbers.get("listed_count"),
+                         charset=numbers.get("charset"))
     numbers.setdefault("format", {
         doc_readers.WORD: "Word", doc_readers.OPENDOCUMENT: "OpenDocument",
         doc_readers.EPUB: "EPUB"}.get(item.kind, "document"))
@@ -613,7 +728,8 @@ def file_entry(item: Item) -> Dict[str, Any]:
                    if group == "information"]
     if changes:
         entry["changes_what_you_will_read"] = changes
-        entry["why"] = words.WHY_AS_QUALCODER
+        entry["why"] = words.why_line(item.kind == doc_readers.SUBTITLES,
+                                      item.warning_codes)
     if information:
         entry["for_information"] = information
     if item.real_place:
@@ -739,9 +855,17 @@ class BatchFailed(Exception):
     """The batch cannot be written; nothing it made is left behind. The
     code is one of Exegete's own."""
 
-    def __init__(self, code: str):
+    def __init__(self, code: str, file: Optional[str] = None):
         super().__init__(code)
         self.code = code
+        self.file = file
+
+
+DOCUMENTS_NOT_A_FOLDER = (
+    "The project's folder of originals ('documents') is a link, or not an "
+    "ordinary folder, so Exegete copies nothing into it: the copies would "
+    "land outside the project, where its backups do not reach. Make it an "
+    "ordinary folder inside the project, then ask again.")
 
 
 BATCH_FAILURES = {
@@ -757,15 +881,41 @@ BATCH_FAILURES = {
     "out_of_time": f"Reading the batch took longer than "
                    f"{BATCH_SECONDS // 60} minutes; nothing was imported. "
                    f"Import fewer files at a time.",
-    "differs": "A file read differently at the import than at the preview; "
-               "nothing was imported. Ask for a fresh preview.",
+    "documents_not_a_folder": DOCUMENTS_NOT_A_FOLDER + " Nothing was "
+                              "imported.",
+    "differs": "A file read differently at the import than at the preview "
+               "(reading it took too long or needed too much memory this "
+               "time, say); nothing was imported. Ask for a fresh preview, "
+               "or leave that file out.",
 }
+
+
+def documents_folder_problem(project_folder: Path) -> Optional[str]:
+    """None when the project's folder of originals is absent (the import
+    makes it) or an ordinary folder inside the project, not a link or a
+    junction (the reading route's rule); else why not, in words."""
+    from . import reading_folder
+    from .path_identity import is_inside
+    folder = Path(project_folder) / "documents"
+    try:
+        info = os.lstat(folder)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return DOCUMENTS_NOT_A_FOLDER
+    if (not stat.S_ISDIR(info.st_mode) or reading_folder.is_link(folder)
+            or not is_inside(folder, Path(project_folder))):
+        return DOCUMENTS_NOT_A_FOLDER
+    return None
 
 
 def sweep_temporary_copies(documents: Path) -> int:
     """Remove what an interrupted import left in the folder of originals
-    (recognised by Exegete's own prefix): regular files only."""
+    (recognised by Exegete's own prefix): regular files only, and never
+    through a folder of originals that is a link."""
     removed = 0
+    if documents_folder_problem(documents.parent) is not None:
+        return 0
     try:
         entries = list(os.scandir(documents))
     except OSError:
@@ -806,10 +956,13 @@ def _write_new_file(path: Path, data: bytes) -> None:
         os.close(fd)
 
 
-def _publish(temp: Path, final: Path) -> None:
-    """Give a complete copy its final name, never replacing a file."""
+def _publish(temp: Path, final: Path, written: "Written") -> None:
+    """Give a complete copy its final name, never replacing a file. The
+    final name is recorded the moment it exists, so a failure after it
+    (removing the temporary name, say) still takes it back."""
     if os.name == "nt":
         os.rename(temp, final)          # refuses an existing name
+        written.moved(temp, final)
         return
     try:
         os.link(temp, final)            # refuses an existing name
@@ -821,8 +974,11 @@ def _publish(temp: Path, final: Path) -> None:
         if os.path.lexists(final):
             raise FileExistsError(str(final)) from None
         os.rename(temp, final)
+        written.moved(temp, final)
         return
+    written.finals.append(final)
     os.unlink(temp)
+    written.temps.remove(temp)
 
 
 @dataclass
@@ -831,6 +987,10 @@ class Written:
     temps: List[Path] = field(default_factory=list)
     finals: List[Path] = field(default_factory=list)
     marks_lost: int = 0
+
+    def moved(self, temp: Path, final: Path) -> None:
+        self.finals.append(final)
+        self.temps.remove(temp)
 
     def remove_all(self) -> None:
         for path in self.temps + self.finals:
@@ -850,10 +1010,14 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
     names. Raises BatchFailed; the caller rolls back and calls
     `written.remove_all()`."""
     documents = ctx.project_folder / "documents"
+    if documents_folder_problem(ctx.project_folder) is not None:
+        raise BatchFailed("documents_not_a_folder")
     try:
         documents.mkdir(exist_ok=True)
     except OSError:
         raise BatchFailed("not_copied") from None
+    if documents_folder_problem(ctx.project_folder) is not None:
+        raise BatchFailed("documents_not_a_folder")
     started = now()
     taken: List[Item] = []
     for item in result.items:
@@ -883,11 +1047,12 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
             raise BatchFailed("not_copied")
         _read_one(item, copy, ctx)
         if item.status != "ready":
-            # Held back or refused, exactly as at the preview (the same
-            # bytes, the same rules): its copy goes.
-            written.temps.remove(temp)
-            os.unlink(temp)
-            continue
+            # The preview read this file as ready, and the researcher
+            # approved the batch with it in: a file that now reads
+            # otherwise (it ran out of time or memory, say) stops the
+            # whole batch, which goes in together or not at all. Files
+            # the preview held back or refused were never taken up here.
+            raise BatchFailed("differs", file=item_label(item))
         row = insert_row(name=item.name, fulltext=item.text,
                          mediapath="/docs/" + item.name, memo=item.memo,
                          owner=owner)
@@ -898,11 +1063,9 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
         temp = Path(item.numbers.pop("temp"))
         final = documents / item.name
         try:
-            _publish(temp, final)
+            _publish(temp, final, written)
         except FileExistsError:
             raise BatchFailed("name_taken") from None
         except OSError:
             raise BatchFailed("not_copied") from None
-        written.temps.remove(temp)
-        written.finals.append(final)
     return taken

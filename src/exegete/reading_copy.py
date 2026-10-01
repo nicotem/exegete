@@ -273,7 +273,8 @@ def render_text(text: str, codings: List[Coding],
             out.append(
                 f'<span class="comment-start" id="{coding.number}" '
                 f'data-author="{esc(coding.name)}" '
-                f'data-code="{coding.code_id}">{esc(coding.name)}</span>')
+                f'data-code="{coding.code_id}" dir="auto">'
+                f'{esc(coding.name)}</span>')
         if index + 1 == len(bounds):
             break
         piece = text[here:bounds[index + 1]]

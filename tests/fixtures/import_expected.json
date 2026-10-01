@@ -72,7 +72,7 @@
    "memo": "PDF annotations:\n[p. 1] Check this with Pat.\n[p. 1] Public part ##### private part",
    "text": "Pat said the clinic was far away.\n"
   },
-  "nul.txt": {
+  "nul_chars.txt": {
    "text": "A\u0000B and a tab\there\n"
   },
   "one_space.docx": {

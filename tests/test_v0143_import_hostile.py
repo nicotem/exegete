@@ -147,9 +147,22 @@ class TestConvertedDocuments:
         answer = json.loads(server.explain_ai_coding_tools(
             "converted_documents"))
         place = Path(answer["defaults_file"])
-        assert place.read_text(encoding="utf-8") == \
-            "wrap: none\nsandbox: true\n"
+        # Windows' checkouts may turn the line endings into its own
+        assert place.read_bytes().replace(b"\r\n", b"\n") == \
+            b"wrap: none\nsandbox: true\n"
         assert "sandbox" in " ".join(answer["steps"])
+
+    def test_windows_line_endings_are_the_same_file(self, tmp_path,
+                                                    monkeypatch):
+        """git on Windows checks the file out with CRLF line endings
+        (CI's Windows runners do); it is still Exegete's own."""
+        fake = tmp_path / "exegete" / "server.py"
+        fake.parent.mkdir()
+        (fake.parent / server.PANDOC_DEFAULTS_NAME).write_bytes(
+            b"wrap: none\r\nsandbox: true\r\n")
+        monkeypatch.setattr(server, "__file__", str(fake))
+        assert server._pandoc_defaults_place() == str(
+            (fake.parent / server.PANDOC_DEFAULTS_NAME).resolve())
 
     def test_a_changed_defaults_file_is_not_named(self, monkeypatch):
         monkeypatch.setattr(server, "PANDOC_DEFAULTS_SHA256", "0" * 64)

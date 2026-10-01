@@ -11663,6 +11663,9 @@ def _pandoc_defaults_place() -> Optional[str]:
         data = path.read_bytes()[:4096]
     except OSError:
         return None
+    # A checkout that turns line endings into Windows' own (git's
+    # autocrlf) holds the same two lines; pandoc reads either.
+    data = data.replace(b"\r\n", b"\n")
     if hashlib.sha256(data).hexdigest() != PANDOC_DEFAULTS_SHA256:
         return None
     return str(path)

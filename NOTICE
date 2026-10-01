@@ -799,15 +799,17 @@ These are in the repository only; no package contains them.
 Added for document import (0.14.3, provisional)
 -----------------------------------------------
 
-79. QualCoder's Word text walk (copied verbatim)
+79. QualCoder's Word text walk (copied, the namespace as a constant)
     Here: src/exegete/doc_readers.py, getdocumenttext.
     From: docx.py, lines 85-110.
     Author: Mike MacCana (python-docx, MIT licence, whose notice the
     file carries), modified in 2022 by Colin Curtain for QualCoder.
     Why: so that a Word file's stored text is QualCoder's to the
     character: every paragraph at any depth, its text and tab elements
-    in document order. The tree is parsed with defusedxml instead of
-    the standard parser.
+    in document order. The walk is copied with Word's namespace
+    written as a constant where QualCoder builds it from its prefix
+    table, and its comments rewrapped; the tree is parsed with
+    defusedxml instead of the standard parser.
 
 80. QualCoder's OpenDocument text recipe (closely ported)
     Here: src/exegete/doc_readers.py, _ODT_REPLACEMENTS, _ODT_TAG_STARTS,

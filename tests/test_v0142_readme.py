@@ -98,11 +98,14 @@ def test_how_it_works_explains_before_it_instructs():
             "in Claude Desktop it comes as an extension, a file you "
             "download and double-click. It has no AI of its own.",
             # the two ways a text comes in, and what each sends
-            "You can paste or attach a transcript's text in the "
+            "You can ask the assistant to bring in documents from your "
+            "computer, Word and PDF included (provisional): "
+            "Exegete reads them on your computer, as QualCoder's own import "
+            "does, and only what the assistant later reads of them goes to "
+            "the AI's maker, as for a document imported in QualCoder.",
+            "Or you can paste or attach a transcript's text in the "
             "conversation, and the assistant hands it to Exegete: the whole "
             "text goes to the AI's maker.",
-            "Or you can import a document in QualCoder, Word and PDF "
-            "included: only what the assistant later reads of it goes.",
             # what Exegete checks: the quoted words, not whether the code
             # fits (record_suggestions' verbatim check)
             "Exegete checks that each suggested coding quotes the file's "

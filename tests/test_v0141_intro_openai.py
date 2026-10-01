@@ -187,7 +187,7 @@ class TestTheIntroduction:
             assert not re.search(r"image|audio|video|media|graph", name), name
         stages = _between(_flat("README.md"), "### What you need, at each "
                           "stage", "### Claude Desktop, with one click")
-        for words in ("bring in documents (Word, PDF, images, audio, video)",
+        for words in ("bring in images, audio and video",
                       "to code images, audio, video or an area of a PDF "
                       "page", "graphs", "to code by selecting text "
                       "yourself"):

@@ -768,7 +768,7 @@ provider, and what does not:
 | Step | Sent to the AI provider | Not sent |
 |---|---|---|
 | The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token | the text; any library's or the document's own messages |
-| The import | the arguments, and the answer: ids, names, counts, the backup's name | the text |
+| The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's name | the text |
 | Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
 
 Six cautions:
@@ -784,7 +784,10 @@ Six cautions:
 - **What is not pseudonymised**: the originals (copied unchanged into
   the project's folder of originals, as QualCoder does), a PDF's text
   and its notes. A PDF holding names from your list is held back unless
-  you say so for that import.
+  you say so for that import. A plain text file whose character set is
+  guessed can come in with a listed name's letters changed ("Agnès"
+  read as "Agnčs"), which the list would then not replace: such a file
+  is held back until you name the character set.
 - **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
   can read any file your account can, originals included. Exegete's
   descriptions ask the assistant to give paths and never to open a

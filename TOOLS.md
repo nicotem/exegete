@@ -593,7 +593,12 @@ Native first, as on any computer:
    per coding, named after its code.
 
 Linked originals (QualCoder's `docs:` paths, which point outside the
-project) are not opened: QualCoder's Manage files opens them. A file
+project) are not opened: QualCoder's Manage files opens them. Only an
+original of a type QualCoder imports (documents, pictures, audio and
+video) is copied, opened or shown, and a web page only shown; any other
+type, such as a program or a shortcut in a project from someone else,
+is neither copied nor shown, since a read-only copy of it could still
+act when opened. A file
 whose text was typed or pasted in has no original, so the reading copy
 opens instead. With no screen (an SSH session, Linux without a desktop),
 nothing opens and the answer gives the place only.
@@ -661,23 +666,37 @@ the reason:
 
 | | QualCoder 4.0 | Exegete | Why |
 |---|---|---|---|
-| No text found in a Word, OpenDocument, EPUB, RTF or web page file | stores the file's raw bytes, or its markup, as the text | refused, with the reason | QualCoder's result is noise |
+| No text found in a Word, OpenDocument, EPUB, RTF or web page file, or none QualCoder can find (an OpenDocument file not saved by LibreOffice: pandoc's, the Mac's TextEdit's) | stores the file's raw bytes, or its markup, as the text | refused, with the reason and, for OpenDocument, the way round (save it again in LibreOffice, or as Word) | QualCoder's result is noise |
+| An RTF file holding an emoji (RTF writes it in two halves) | the import fails on the insert, leaving the copy | refused, with the way round (save it as Word, or remove the emoji) | neither program can store the two halves |
 | A web page whose text holds bytes that are not UTF-8 | the import fails | read by its declared character set, else by the plain text rule | QualCoder has no text for it to differ from |
 | Accents that came out garbled ("Ã©" for "é", or letters of another alphabet in a guessed character set) | stored as guessed | held back until the researcher names the character set (`encoding`) or fixes the file | a garbled name escapes the pseudonyms list |
+| A character set guessed as Central European, Baltic or another set of one byte a letter that is not Western (an ordinary Western European file saved on Windows often is, and every "è" then reads as "č") | stored as guessed | stored as guessed, and named among what changes the text, with the way round; held back when, read as Windows Western (cp1252), the file holds a name from the names list that the guessed reading does not | the pseudonyms list's promise; the researcher sees the risk before saying yes |
 | XML entity declarations (Word, EPUB) | expanded, or imported with stray text | refused | safety |
 | Word's XML | the standard parser | defusedxml, which gives the same tree for ordinary documents | safety |
-| Subtitle files (`.srt`, `.vtt`) | taken only as a recording's transcript | imported as text documents, as they stand | Exegete does not import media yet; the preview says such a document cannot later become a recording's transcript |
+| Subtitle files (`.srt`, `.vtt`) | taken only as a recording's transcript | imported as text documents, as they stand, every byte-order mark at the start removed | Exegete does not import media yet; the preview says such a document cannot later become a recording's transcript; a mark left at the start is hidden by QualCoder's text view, which would show every coding a character early |
 | Links to originals | "Link" offered; files of 2 GB or more always linked | always copied; files over the size limit refused | a project that holds its own originals |
+| The internet-origin mark (Windows' zone mark, the Mac's quarantine mark) | the bytes copied alone | carried onto the project's copy when the original has one | a stranger's attachment still opens in Word's Protected View |
+| A folder of originals (`documents`) that is a link | not checked here | stops the import | the copies would land outside the project, where its backups do not reach |
 | File names | as on the disk | Exegete's name rules, one Unicode form; a name differing only in letter case from one in the folder of originals refused | names that look the same compare the same |
-| Errors and batches | some files stop the batch and leave their copy | the batch goes in together or not at all; files refused at the preview are skipped | one clear outcome |
-| Limits | none | per-format file sizes (8 MB plain text, Markdown and subtitles; 32 MB web pages and RTF; 100 MB Word, OpenDocument, EPUB and PDF), 10,000 entries and 25 MB a part (100 MB in all) inside an archive, 1,000,000 characters of text, 60 seconds and 1 GB of memory to read a file, five minutes a batch, 50 files a batch | hostile and huge files; Exegete may refuse a file QualCoder would import, and says so |
+| Errors and batches | some files stop the batch and leave their copy | the batch goes in together or not at all: a file that reads otherwise at the import than at the preview stops it, named; files held back or refused at the preview are skipped, unread | one clear outcome |
+| Limits | none | per-format file sizes (8 MB plain text, Markdown and subtitles; 32 MB web pages and RTF; 100 MB Word, OpenDocument, EPUB and PDF), 10,000 entries and 25 MB a part (100 MB in all, a part read twice counted twice) inside an archive, 1,000,000 characters of text, 60 seconds and 1 GB of memory to read a file, five minutes a batch, 50 files a batch | hostile and huge files; Exegete may refuse a file QualCoder would import, and says so |
 | The names list | applied entry by entry; a backslash in a pseudonym read as a pattern | applied in one pass, longest first, each pseudonym written literally; a list Exegete cannot use stops the import | one pass never rewrites a pseudonym it has written |
 | PDFs, and file names, holding listed names | imported | held back (a PDF comes in with `import_pdfs_with_listed_names`; a file name is renamed first) | the names list's promise |
 | PDF highlights and underlines | offered to be coded at import | counted in the preview, not coded | every coding needs the researcher's approval |
 | The file's memo | empty, PDF notes apart | also `memo` and a named character set, before the PDF notes | what the researcher asked to record |
 | The file's owner | the researcher's coder name | the AI coder name, on the row and its attribute values | Exegete's rule for every write (provisional, decision 5) |
 | QualCoder's search and AI indexes | written at import | left to QualCoder's next opening of the project | QualCoder rebuilds both itself |
+| A PDF's text | read with the PyMuPDF release QualCoder has | read with the release Exegete has (the extension pins 1.28.2, the release the parity tests pass with); another release can read some PDFs differently, and QualCoder 4.0 may then report a text mismatch and offer to restructure, which moves codings | the import's answer names the release and says to take a backup and check before accepting |
 | Folders | no folder import | a folder's own supported files, in name order; its subfolders named, not opened | one place to name |
+
+**In a project QualCoder 3.8.2 made** (schema v14, no sub-codes
+column), more differs, because the table above compares with QualCoder
+4.0: 3.8.2 shows a PDF Exegete imported but will not let its text be
+coded in its PDF view (the preview says so for each PDF); Windows line
+endings are removed where 3.8.2 kept them; an EPUB is read in reading
+order, without the navigation page 3.8.2 includes; and the names list
+is applied with each name written literally where 3.8.2 read it as a
+pattern.
 
 Every document is read in a separate, short-lived process with a time
 limit and a memory cap, and every refusal and warning is in Exegete's

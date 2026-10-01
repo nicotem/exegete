@@ -49,9 +49,13 @@ otherwise, and may change before it is released.
   (`~/Library/Caches/Exegete/Reading.noindex` on a Mac,
   `%LOCALAPPDATA%\Exegete\Reading` on Windows, marked not to be
   indexed, `~/.cache/exegete/reading` on Linux), readable by its owner
-  only. Copies of originals keep the internet-origin mark Windows and
-  macOS put on a downloaded file, so Word still opens a stranger's
-  attachment in Protected View, and are read-only and never runnable.
+  only. Only originals of the document and media types QualCoder
+  imports are copied and shown; any other type (a program or a shortcut,
+  say, in a project from someone else) is neither copied nor shown,
+  since read-only does not stop such a file acting when opened. Copies
+  are read-only and keep the internet-origin mark Windows and macOS put
+  on a downloaded file, so Word still opens a stranger's attachment in
+  Protected View.
   Tidied: a file's page and copy go whenever Exegete changes the file's
   text or name (`rename_file`, `pseudonymise_source`, which with
   `rewrite_memos` clears the whole project's pages, and
@@ -131,8 +135,11 @@ otherwise, and may change before it is released.
   file declaring XML entities is refused; a web page QualCoder cannot
   store is read by its declared character set; a file whose accents came
   out garbled is held back until the researcher names the character set
-  (`encoding`) or fixes the file; subtitle files come in as documents;
-  originals are always copied, never linked; per-format size limits,
+  (`encoding`) or fixes the file; subtitle files come in as documents,
+  with every byte-order mark at their start removed; an OpenDocument
+  file not saved by LibreOffice, and an RTF file holding an emoji, are
+  refused with the way round; originals are always copied, never
+  linked, and keep their internet-origin mark; per-format size limits,
   archive limits and time and memory limits; the AI coder name owns the
   rows (decision 5).
 - The project's pseudonyms list is applied to the stored text by
@@ -142,6 +149,33 @@ otherwise, and may change before it is released.
   round. A PDF holding listed names is held back unless the researcher
   says so (`import_pdfs_with_listed_names`); a file whose own name holds
   a listed name is held back and referred to only by its position.
+- A plain text file or web page whose character set is guessed: an
+  ordinary Western European file saved on Windows is often guessed to
+  be Central European or Baltic, which reads every "è" as "č" with no
+  other sign (QualCoder makes the same guess, and stores the same
+  text). Such a guess is now among what changes the text, with the way
+  round (name the character set, or save the file as UTF-8); and when
+  the file read as Windows Western holds a name from the names list
+  that the guessed reading does not, the file is held back, since the
+  list would not replace that name.
+- The batch goes in together or not at all: a file the preview read as
+  ready that reads otherwise at the import (out of time or memory, say)
+  stops the whole import, naming the file; a file the preview held back
+  or refused is skipped without being read again, and the answer names
+  each file not imported, with its reason.
+- Limits that hold whatever a file declares: every part EbookLib reads
+  from an EPUB counts towards the 100 MB, each time it is read (a
+  chapter listed thirty times is thirty reads), and is checked for
+  entity declarations whatever its name; an archive's directory larger
+  than 10,000 entries could need is refused before it is parsed.
+- A project whose folder of originals is a link stops the import (the
+  copies would land outside the project, where its backups do not
+  reach), as it already stopped the reading tool.
+- In a project QualCoder 3.8.2 made (no sub-codes column), each PDF's
+  preview says that 3.8.2 shows it but will not let its text be coded;
+  the switch had looked at coder visibility, which 3.8.2 projects have
+  too. After a PDF is imported, the answer says what to do if QualCoder
+  4.0 reports a text mismatch, which another PyMuPDF release can cause.
 - Every document is read in a separate, short-lived process: started
   isolated, handed the file's bytes rather than a path, answering in
   plain data, its error output dropped, with a time limit and a memory

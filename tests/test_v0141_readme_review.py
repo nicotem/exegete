@@ -256,7 +256,7 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
             "still needed for several things") in stance
     assert '("What you need, at each stage", above, lists them)' in stance
     assert ("**QualCoder is recommended from the start, and needed** to "
-            "bring in documents") in readme
+            "bring in images, audio and video") in readme
     # The interoperability commitments, restated
     assert ("the commitments above hold: every project stays a QualCoder "
             "project, in QualCoder's format; Exegete follows "

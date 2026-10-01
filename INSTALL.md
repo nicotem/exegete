@@ -158,13 +158,13 @@ Before starting, make sure you have:
   QualCoder 4.0-Beta pre-release work (project schemas v14 through
   v17); see "Supported QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
-- ✅ **QualCoder itself**, recommended, and needed to bring in
-  documents (Word, PDF, images, audio, video) and any text you would
-  rather not pass through the conversation (this server imports only
-  text the assistant hands it), to code images, audio, video or an
-  area of a PDF page, and for graphs (since v0.14.3, provisionally,
-  Exegete opens a page in your browser with a file's whole text and its
-  codings):
+- ✅ **QualCoder itself**, recommended, and needed to bring in images,
+  audio and video (since v0.14.3, provisionally, this server brings in
+  documents with `import_documents`, their text staying on the
+  computer on the way in; PDF and EPUB need its optional part, below),
+  to code images, audio, video or an area of a PDF page, and for graphs
+  (since v0.14.3, provisionally, Exegete opens a page in your browser
+  with a file's whole text and its codings):
   https://github.com/ccbogel/QualCoder/releases (3.8.2 is the release
   marked "Latest"; the 4.0-Beta at the top of the page is a test
   version)
@@ -1330,10 +1330,16 @@ once, and never set the import to "always allow": a document's hidden
 instructions could otherwise have an assistant bring in another file
 unasked. PRIVACY.md, "Bringing documents in", says what reaches the AI
 provider. The Claude Desktop extension switches on the optional part
-for PDF and EPUB (PyMuPDF and EbookLib, about 24 to 35 MB more to
+for PDF and EPUB (PyMuPDF 1.28.2 and EbookLib 0.20, the releases it
+pins and the parity tests pass with; about 24 to 35 MB more to
 download at the first start, AGPL-licensed); installed from PyPI
 without it (`pip install exegete`), Exegete imports the other formats
-and says it cannot read PDF or EPUB yet.
+and says it cannot read PDF or EPUB yet (`pip install
+"exegete[pdf-epub]"` adds it). A PDF's text is QualCoder 4.0's only at
+the same PyMuPDF release: with another, QualCoder may report a text
+mismatch and offer to restructure, which moves codings, so take a
+backup and check them before you accept; the import's answer names the
+release it used.
 
 ---
 

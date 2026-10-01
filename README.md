@@ -88,10 +88,13 @@ which is why the same Exegete can be used from more than one assistant.
 Exegete reads and writes that format, and follows QualCoder's rules
 wherever the two must agree, so the project stays a QualCoder project.
 QualCoder opens the same folder, one program at a time. Texts come in
-two ways. You can paste or attach a transcript's text in the
-conversation, and the assistant hands it to Exegete: the whole text
-goes to the AI's maker. Or you can import a document in QualCoder, Word
-and PDF included: only what the assistant later reads of it goes.
+two ways. You can ask the assistant to bring in documents from your
+computer, Word and PDF included (provisional): Exegete reads them
+on your computer, as QualCoder's own import does, and only what the
+assistant later reads of them goes to the AI's maker, as for a document
+imported in QualCoder. Or you can paste or attach a
+transcript's text in the conversation, and the assistant hands it to
+Exegete: the whole text goes to the AI's maker.
 
 **When anything is written.** Reading changes nothing in your project,
 but what is read goes to the AI's maker ("Where your data goes",
@@ -132,8 +135,9 @@ computer by themselves, outside Exegete, so this project does not
 suggest them for participants' data.
 
 Text you paste or attach in the conversation goes to the AI's maker in
-full. A file you import in QualCoder goes only as far as the assistant
-later reads it ("How it works", above).
+full. A document you bring in through Exegete, or import in QualCoder,
+goes only as far as the assistant later reads it ("How it works",
+above).
 
 **Assistants that open files by themselves.** Some assistants can also
 open files on your computer by themselves, with tools of their own and
@@ -237,13 +241,15 @@ goes.
   (the steps follow), or one of OpenAI's apps (after them). QualCoder is
   not needed to start. The next item says when it is.
 - **QualCoder is recommended from the start, and needed** to bring in
-  documents (Word, PDF, images, audio, video), and any text you would
-  rather not pass through the conversation: Exegete imports only text
-  the assistant hands it. It is also needed to code by selecting text
-  yourself, to code images, audio, video or an area of a PDF page, for
-  graphs, and for the reports in its Reports menu. To read a whole file
-  with its coding highlighted, ask Exegete to open it for you: a page
-  opens in your browser, and its text stays off the conversation.
+  images, audio and video. Exegete brings in documents (provisional):
+  Word, OpenDocument, RTF, text, Markdown, web pages and subtitles, and
+  PDF and EPUB in the extension; installed from PyPI without its
+  optional part, it leaves PDF and EPUB to QualCoder. QualCoder is also
+  needed to code by selecting text yourself, to code images, audio,
+  video or an area of a PDF page, for graphs, and for the reports in its
+  Reports menu. To read a whole file with its coding highlighted, ask
+  Exegete to open it for you (provisional): a page opens in your
+  browser, and its text stays off the conversation.
   [Download QualCoder](https://github.com/ccbogel/QualCoder/releases):
   3.8.2, the release marked "Latest" when this was checked, on 1 October
   2026. It is further down the page, for Windows or a Mac with Apple
@@ -537,7 +543,7 @@ QualCoder 3.8.2 and the 4.0-Beta pre-release:
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
 | Create a project | Yes | Yes, in the extension's default tool set (Experimental) |
-| Import sources | Text, documents, PDFs, images, audio, video | Text the assistant hands over |
+| Import sources | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles, PDF, EPUB; provisional), and text the assistant hands over |
 | Code text, including a PDF's text | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, or an area of a PDF page | Yes | No |
 | Codebook: create, rename, move, merge, delete | Yes | Yes, with a preview before merging or deleting; nesting an existing code under another is done in QualCoder |

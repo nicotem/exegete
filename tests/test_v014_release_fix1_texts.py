@@ -81,9 +81,17 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             "(`lifecycle`): with it you can create a project") in flat
     assert "The other two choices cannot create a project." in flat
     assert ("**QualCoder is recommended from the start, and needed** to "
-            "bring in documents (Word, PDF, images, audio, video)") in stages
-    assert "Exegete imports only text the assistant hands it" \
-        in flat
+            "bring in images, audio and video. Exegete brings in documents "
+            "(provisional)") in stages
+    # v0.14.3 (provisional): documents come in through import_documents,
+    # so neither document says any longer that only handed text does,
+    # nor that QualCoder is needed for Word or PDF files
+    for document in (readme, install):
+        assert "imports only text" not in document
+        assert "documents (Word, PDF, images, audio, video)" not in document
+    assert "| Import sources | Text, documents, PDFs, images, audio, " \
+        "video | Documents from your computer" in readme
+    assert "Or you can import a document in QualCoder" not in readme
     assert "Its standard tool set cannot create a project" in flat
     for name in ("`full`", "`core`"):
         assert name not in stages, name
@@ -102,7 +110,7 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             "creates a project") in needs
     assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
     assert ("**QualCoder itself**, recommended, and needed to bring in "
-            "documents") in needs
+            "images, audio and video") in " ".join(needs.split())
     # The facts it rests on: the extension's tool set defaults to
     # lifecycle, which alone has create_project (not full, the default
     # configured by hand, and not core), and a file is imported from text

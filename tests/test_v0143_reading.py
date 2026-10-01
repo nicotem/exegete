@@ -538,6 +538,10 @@ class TestPandocMakesComments:
         pandoc = shutil.which("pandoc")
         if pandoc is None:
             pytest.skip("pandoc is not installed here")
+        version = subprocess.run([pandoc, "--version"], capture_output=True,
+                                 text=True, timeout=30).stdout.split()
+        if len(version) < 2 or int(version[1].split(".")[0]) < 3:
+            pytest.skip("the design checked pandoc 3; this one is older")
         page = host("open_file_for_reading", file_id=50)["location"]
         out = tmp_path / "copy.docx"
         subprocess.run([pandoc, "--sandbox", "-f", "html", "-t", "docx",

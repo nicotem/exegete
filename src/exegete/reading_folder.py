@@ -144,9 +144,11 @@ def _mark_not_indexed(path: Path) -> None:
     if sys.platform != "win32":
         return
     try:
+        import ctypes
         kernel32 = ctypes_windll().kernel32
+        kernel32.GetFileAttributesW.restype = ctypes.c_uint32
         attributes = kernel32.GetFileAttributesW(str(path))
-        if attributes == 0xFFFFFFFF:
+        if attributes == 0xFFFFFFFF:        # INVALID_FILE_ATTRIBUTES
             return
         kernel32.SetFileAttributesW(str(path),
                                     attributes | _NOT_CONTENT_INDEXED)

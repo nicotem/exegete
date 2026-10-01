@@ -134,7 +134,10 @@ class TestWriting:
 
 def _age(path: Path, seconds: float) -> None:
     then = time.time() - seconds
-    os.utime(path, (then, then), follow_symlinks=False)
+    if os.utime in os.supports_follow_symlinks:
+        os.utime(path, (then, then), follow_symlinks=False)
+    else:                       # Windows: no link here to follow anyway
+        os.utime(path, (then, then))
 
 
 class TestTidying:

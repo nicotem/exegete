@@ -164,8 +164,17 @@ class TestCloudFolders:
     Documents`), whose `~/Library` carries the hidden flag."""
 
     @pytest.fixture
-    def home(self, tmp_path):
+    def home(self, tmp_path, monkeypatch):
         import os
+        from exegete import import_paths
+        # pytest's scratch folders lie under the hidden AppData on
+        # Windows; the rule is for the researcher's own places
+        excused = {os.path.normcase(str(p)) for p in tmp_path.parents}
+        real = import_paths.hidden_step
+        monkeypatch.setattr(
+            import_paths, "hidden_step",
+            lambda step, info: (os.path.normcase(str(step)) not in excused
+                                and real(step, info)))
         home = tmp_path / "home"
         cloud = home / "Library" / "CloudStorage" / "OneDrive-Uni" / "Study"
         cloud.mkdir(parents=True)

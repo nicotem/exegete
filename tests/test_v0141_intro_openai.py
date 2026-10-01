@@ -1237,12 +1237,15 @@ class TestAssistantsOwnFileAccess:
                 "been tested with Exegete.") in data
         assert data.index("**For participants' data**") < \
             data.index("Keep OpenAI's route")
+        # v0.14.2: with PRIVACY.md's third condition, as everywhere the
+        # chat is suggested (test_v0142_docs.py)
         assert ("So, for participants' data, this project suggests an "
                 "assistant with no file access of its own: Claude Desktop's "
-                "chat with the extension, with computer use off and no "
-                "folder that holds your projects or transcripts connected to "
-                "it, or LM Studio's chat with Exegete and no other server or "
-                "plugin that reads files.") in _privacy_hosts()
+                "chat with the extension, with computer use off, no folder "
+                "that holds your projects or transcripts connected to it, "
+                "and no other extension that reads files, or LM Studio's "
+                "chat with Exegete and no other server or plugin that reads "
+                "files.") in _privacy_hosts()
         # The older condition, which left out the folders that hold a study
         for name in ("README.md", "PRIVACY.md", "INSTALL.md"):
             assert "none of your study's folders connected" not in \
@@ -1468,8 +1471,11 @@ class TestClaudeCodesRoutes:
         assert section.index(folder) < \
             section.index("claude mcp add exegete -- exegete")
         recipe = _api_key_recipe()
+        # v0.14.2: the key, the server and Claude Code in one window, where
+        # the key is set (test_v0142_docs.py pins the rest)
         assert _blocks(recipe, "bash")[0].strip().splitlines() == [
-            folder, "export ANTHROPIC_API_KEY=sk-ant-...", "claude"]
+            folder, "export ANTHROPIC_API_KEY=sk-ant-...",
+            "claude mcp add exegete -- exegete", "claude"]
         routes = _claude_code_routes()
         for where in ("INSTALL, Claude Code", "INSTALL, the API-key recipe"):
             assert ("Claude Code offers a server added this way only in the "
@@ -1482,7 +1488,9 @@ class TestClaudeCodesRoutes:
                 "So never start it in your home folder, Documents, your "
                 "projects folder or any folder that holds a study (a new "
                 "Terminal window opens in your home folder)",
-                "it does not stop its read-only commands reading them."):
+                # v0.14.2: and its file tools in auto mode
+                "it does not stop its read-only commands reading them, or "
+                "its file tools in auto mode."):
             assert words in routes["INSTALL, Claude Code"], words
         assert ("never start Claude Code there, in Documents, in your "
                 "projects folder or in any folder that holds a study") in \
@@ -1560,11 +1568,15 @@ class TestTheSmallerPoints:
         one_click = _between(_flat("README.md"),
                              "### Claude Desktop, with one click",
                              "### ChatGPT's desktop app and Codex (OpenAI)")
+        # v0.14.2: "Trusted folders" belongs to Claude's new experience,
+        # rolling out by plan (Anthropic's page, read 1 October 2026)
         assert ("Before any participants' data, also check two things in "
                 "Claude. Computer use should be off (Settings, General). No "
                 "folder that holds your projects or transcripts should be "
-                "connected to it (the newer Claude app lists connected "
-                "folders under \"Trusted folders\").") in one_click
+                "connected to it (in Claude's new experience, rolling out to "
+                "Pro and Max plans first, connected folders are listed under "
+                "\"Trusted folders\"; if you have never connected a folder, "
+                "there is nothing to undo).") in one_click
         # "Trusted folders" is Anthropic's word, as PRIVACY.md quotes it
         assert "Folders you gave Cowork access to are listed under Trusted " \
                "folders." in _privacy_hosts()

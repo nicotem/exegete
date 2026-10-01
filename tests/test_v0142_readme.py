@@ -103,11 +103,18 @@ def test_how_it_works_explains_before_it_instructs():
             "text goes to the AI's maker.",
             "Or you can import a document in QualCoder, Word and PDF "
             "included: only what the assistant later reads of it goes.",
-            # when anything is written, and not more than that
+            # what Exegete checks: the quoted words, not whether the code
+            # fits (record_suggestions' verbatim check)
+            "Exegete checks that each suggested coding quotes the file's "
+            "words exactly, keeps suggestions waiting, and writes to your "
+            "project; you decide.",
+            # when anything is written, and not more than that: approving
+            # marks, and the assistant writes in a step of its own
+            # (apply_codings, create_proposed_codes)
             "Suggested codings and proposed codes wait in a review list "
-            "outside the project until you approve them. Other changes, "
-            "such as making a code or writing a memo, are made when the "
-            "tool runs.",
+            "outside the project until you approve them and the assistant "
+            "writes them. Other changes, such as making a code or writing "
+            "a memo, are made when the tool runs.",
             # the approval, with its reason and its limit
             "Exegete hears only from the assistant, never from you "
             "directly.",
@@ -257,8 +264,9 @@ def test_the_approval_steps_are_named_where_the_readme_points():
             "your decisions and write what you approved",
             "INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-"
             "are-the-safeguard",
-            "choose \"allow once\" in Claude, and answer each prompt in Codex.",
-            "no coding is written before that step."):
+            "choose \"allow once\" in Claude (in its new experience, with "
+            "the conversation on Manual), and answer each prompt in Codex.",
+            "no coding is written until the codings are applied."):
         assert words in adds, words
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "
                        "suggestions: your host's settings are the safeguard",
@@ -275,10 +283,15 @@ def test_the_approval_steps_are_named_where_the_readme_points():
 def test_the_commitments_open_with_what_they_promise():
     section = _between(_readme(), "## Three commitments", "## Read next")
     opening = section[:section.index("**Compatibility with QualCoder.**")]
-    assert ("They are this project's promises about your work: your project "
-            "stays a QualCoder project, in QualCoder's format, that "
-            "QualCoder opens. The second of the three, symmetry, is an aim, "
-            "not yet a fact.") in opening
+    # named before they are counted
+    assert ("There are three: compatibility, symmetry and interoperability. "
+            "Together they are this project's promises about your work: "
+            "your project stays a QualCoder project, in QualCoder's format, "
+            "that QualCoder opens. The second, symmetry, is an aim, not yet "
+            "a fact.") in opening
+    for label in ("**Compatibility with QualCoder.**", "**Symmetry:",
+                  "**Interoperability.**"):
+        assert label in section, label
     for words in ("keep your project yours", "whatever you do"):
         assert words not in section, words
 

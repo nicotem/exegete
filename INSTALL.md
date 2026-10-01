@@ -14,14 +14,15 @@ server comes as a desktop extension, one file ending in `.mcpb`, which
 Claude Desktop installs itself. Claude fetches what the server needs
 (a tool called uv, which then fetches Python and the server's own
 libraries), so you need no Python, no Terminal and no configuration
-file. The extension
-arrives with v0.14; earlier releases have none.
+file.
 
 1. **Get Claude Desktop**, the latest version, from
    https://claude.ai/download, and sign in.
 2. **Download the extension**, `exegete-<version>.mcpb`, from
-   the Assets of the latest release on GitHub:
-   https://github.com/nicotem/exegete/releases
+   https://github.com/nicotem/exegete/releases: take the newest release
+   that has such a file under its Assets (every release of this alpha
+   is marked Pre-release; an early build marked "not a release" has
+   none).
 3. **Install it**: double-click the file. (Or drag it onto the Claude
    window, or in Claude go to Settings, Extensions, Advanced settings,
    Install Extension..., and choose it.) Claude shows the extension,
@@ -55,7 +56,15 @@ hosts do with the tools' read and write marks", further down, says
 what each does. That is what Anthropic documents, for Cowork and
 Claude Code. What Claude Desktop's ordinary chat, where step 5 asks its
 question, does with the tools' marks is not documented, and this
-project has not yet checked it. For work on real data, keep Claude
+project has not yet checked it. In Claude's new experience, where chat
+and Cowork are one and which is rolling out to Pro and Max plans
+first, Anthropic's page names the two modes
+(<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
+read 1 October 2026): "**Manual (default):** Claude asks before it
+takes actions, and you choose whether to allow each one." and
+"**Auto:** Claude keeps working without stopping to ask about each
+step, and automated safety checks run before it takes an action."
+Keep the conversation on Manual. For work on real data, keep Claude
 asking.
 
 **Not signed.** The extension carries no publisher signature. On a
@@ -93,8 +102,8 @@ from easiest to most private, and OpenAI's apps:
 
 | Route | What it means | Where to read more |
 |---|---|---|
-| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
-| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so this project suggests this route for practice and non-sensitive data until a safer setting is tested. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
@@ -395,21 +404,31 @@ what it reads that way goes to the AI provider whole, the private part
 of memos included. It reads the folder it starts in without asking, and
 its read-only commands (such as `cat`, `grep` and `find`) read outside
 that folder without asking too, in every mode, unless a setting that
-blocks such reads is on. [PRIVACY.md](PRIVACY.md), "Assistants that
+blocks such reads is on. In auto mode, the mode it starts in, its own
+file tools read outside that folder as well, after one question the
+first time they do. [PRIVACY.md](PRIVACY.md), "Assistants that
 open files by themselves", quotes Anthropic's pages and names those
 settings. So never start it in your home folder, Documents, your
 projects folder or any folder that holds a study (a new Terminal window
 opens in your home folder), and for participants' data use an assistant
 without file access of its own, such as Claude Desktop's chat with the
-extension. Make an empty folder for it, and do the rest there:
+extension, with computer use off, no folder that holds your projects
+or transcripts connected to it, and no other extension that reads
+files. Make an empty folder for it, and do the rest there:
 
 ```bash
 mkdir -p ~/claude-exegete && cd ~/claude-exegete
 ```
 
+or in PowerShell on Windows:
+
+```powershell
+mkdir -Force $HOME\claude-exegete; cd $HOME\claude-exegete
+```
+
 Starting Claude Code in that folder keeps your studies out of the
 folder it reads without asking; it does not stop its read-only commands
-reading them.
+reading them, or its file tools in auto mode.
 
 In that folder, register Exegete with one command; Claude Code offers a
 server added this way only in the folder where it was added, so start
@@ -498,7 +517,9 @@ always to the same value.
   `lifecycle`. Any other value stops the server at start-up with an error
   naming the valid values. Resources and prompts are not affected.
   In Claude Desktop, add `"EXEGETE_TOOLSET": "lifecycle"` to the
-  server's `env` block; for Claude Code:
+  server's `env` block; for Claude Code, in the folder you start it in
+  (`~/claude-exegete`, never your home folder: "Alternative: Claude
+  Code and other MCP clients", above):
 
   ```bash
   claude mcp add exegete -e EXEGETE_TOOLSET=lifecycle -- ~/Documents/exegete/venv/bin/python -m exegete.server
@@ -583,58 +604,75 @@ is only the mechanics.
 The key changes the terms, not what Claude Code reads. Claude Code opens
 files by itself, outside Exegete, whichever way you sign in: it reads
 the folder it starts in without asking, and its read-only commands read
-outside it too ("Alternative: Claude Code and other MCP clients",
+outside it too, as do its file tools in auto mode, the mode it starts
+in ("Alternative: Claude Code and other MCP clients",
 above; [PRIVACY.md](PRIVACY.md), "Assistants that open files by
 themselves", with Anthropic's pages). What it reads that way goes to
 Anthropic whole, the private part of memos included. For participants'
 data, this project suggests an assistant without file access of its
 own, such as Claude Desktop's chat with Exegete on a Team or Enterprise
-account, which has the same commercial terms (PRIVACY.md, rung 3).
+account, which has the same commercial terms (PRIVACY.md, rung 3),
+set up with computer use off, no folder that holds your projects or
+transcripts connected to it, and no other extension that reads files.
 
 **1. Install Exegete** as described above (PyPI install
 recommended).
 
-**2. Authenticate with the API key, in a folder of its own.** Get a key
-from the Console at <https://platform.claude.com/settings/keys>, then
-make an empty folder for Claude Code and start it there:
+**2. In one Terminal window: a folder of its own, the key, the server,
+then Claude Code.** Get a key from the Console at
+<https://platform.claude.com/settings/keys>. Then, in one Terminal
+window, make an empty folder for Claude Code, set the key, register
+Exegete there and start Claude Code (Claude Code offers a server added
+this way only in the folder where it was added):
 
 ```bash
 mkdir -p ~/claude-exegete && cd ~/claude-exegete
 export ANTHROPIC_API_KEY=sk-ant-...
+claude mcp add exegete -- exegete
 claude
 ```
+
+or in PowerShell on Windows:
+
+```powershell
+mkdir -Force $HOME\claude-exegete; cd $HOME\claude-exegete
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
+claude mcp add exegete -- exegete
+claude
+```
+
+The key is set only in that window, and only until you close it.
+Claude Code started in another window, or after a restart, has no key:
+it runs on your Pro or Max login if you have one, under the consumer
+terms, or asks you to sign in. So each time, in a new window, go to
+the folder (`cd ~/claude-exegete`), set the key again, and start
+`claude` there; Exegete stays registered in that folder.
 
 A new Terminal window opens in your home folder, which holds your
 projects; never start Claude Code there, in Documents, in your projects
 folder or in any folder that holds a study. The empty folder keeps your
 studies out of the folder it reads without asking; it does not stop its
-read-only commands reading them.
+read-only commands reading them, or its file tools in auto mode.
 
 Approve the key when prompted (Claude Code asks once and remembers the
 choice). If you ALSO have a Pro/Max subscription login, the
 [authentication docs](https://code.claude.com/docs/en/authentication)
 state that the API key takes precedence once approved; run `unset
-ANTHROPIC_API_KEY` to switch back to the subscription. Verify which
-credential is active with `/status`: an "API key" row appears when an
-API key is in use.
+ANTHROPIC_API_KEY` (in PowerShell, `Remove-Item Env:ANTHROPIC_API_KEY`)
+to switch back to the subscription.
 
-**3. Register the server** in the same folder (in a second Terminal
-window, after `cd ~/claude-exegete`): Claude Code offers a server added
-this way only in the folder where it was added.
-
-```bash
-claude mcp add exegete -- exegete
-```
-
-Verify with `claude mcp list` (the server should show as Connected) and,
-after starting `claude` again in that folder, `/mcp` inside a session.
-See <https://code.claude.com/docs/en/mcp>.
+**3. Check the key and the server.** Inside the session, `/status`
+shows which credential is active (an "API key" row appears when an API
+key is in use), and `/mcp` lists Exegete. Before starting `claude`,
+`claude mcp list` in that folder shows it too (it should show as
+Connected). See <https://code.claude.com/docs/en/mcp>.
 
 **4. Strict posture (optional).**
 Claude Code has side channels documented on its
 [data-usage page](https://code.claude.com/docs/en/data-usage): error
 reporting, session surveys, `/feedback` retention, and local plaintext
-transcripts under `~/.claude/projects/`. Mitigations:
+transcripts under `~/.claude/projects/`. Mitigations (set in the same
+window, before starting `claude`, like the key):
 
 ```bash
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
@@ -891,6 +929,14 @@ which of the two decides which of OpenAI's data policies apply
 ([PRIVACY.md](PRIVACY.md), "OpenAI's apps: the ChatGPT desktop app and
 Codex").
 
+**First, turn off training**, before any use with Exegete, practice
+included. Turn off "Improve the model for everyone" in ChatGPT's
+Settings, Data controls, or choose "Do not train on my content" in
+OpenAI's Privacy Portal, <https://privacy.openai.com/> (either is
+enough, by OpenAI's Help Center: [PRIVACY.md](PRIVACY.md), "OpenAI's
+apps", quotes it). Codex's "Include environments" is a separate setting
+(PRIVACY.md says more).
+
 **Step 1. Install Exegete.** It needs Python 3.10 or newer ("What
 You'll Need", above). In the Terminal (macOS or Linux):
 
@@ -1058,8 +1104,9 @@ So, until a setting that stops those reads has been tested with
 Exegete, use this route for practice and for data that is not
 sensitive, and, for participants' data, an assistant that has no file
 access of its own, such as Claude Desktop's chat with the extension,
-with computer use off and no folder that holds your projects connected
-to it ([PRIVACY.md](PRIVACY.md), "Assistants that open files by
+with computer use off, no folder that holds your projects or
+transcripts connected to it, and no other extension that reads files
+([PRIVACY.md](PRIVACY.md), "Assistants that open files by
 themselves").
 
 Then, in the desktop app, open Settings, MCP servers, where `exegete`
@@ -1687,31 +1734,45 @@ nothing: it lists what the change left behind, numbered in the order
 to take the steps, and ends with exit code 0 when nothing is left.
 First, where the old package was installed with uv tool or pipx (or is
 0.14.0 or earlier) and there is no `exegete` command yet, the command
-that installs Exegete; then each entry in Claude Desktop's, Claude
-Code's, LM Studio's or Codex's configuration that still starts the old
+that installs Exegete, or, where a host's entry starts an `exegete`
+command that is no longer there, how to put it back; then each entry
+in Claude Desktop's, Claude Code's, LM Studio's or Codex's
+configuration that still starts the old
 command, with the entry to use instead (it only reads those files:
 change them yourself, with the host quit); then the command that
 removes the old package, for the way it was installed (pip, uv, uv
-tool, pipx or a copy of the source); a desktop extension older than
+tool, pipx or a copy of the source; where uv tool installed it with
+`--with-executables-from exegete`, followed by the command that
+installs Exegete's command again, since uv's uninstall takes it too);
+a desktop extension older than
 Exegete, to update; the link at `~/.qualcoder_mcp`, and whether it can
 go; Claude Desktop's logs under the extension's earlier name; and the
 earlier projects folder, with what is in it (it is searched three
 folders down, like the project list, and never offered for removal
 while anything is in it). For a copy of the source, it names the
-folder and says to quit your host before updating it. Commands and
-entry lines are printed on lines of their own, with full paths, ready
-to paste. Adding `--tidy` removes the link, and only when nothing
+folder and says to quit your host before updating it. On Windows it
+also looks for Claude Desktop's files in the folder Windows keeps for
+its app package (under `%LOCALAPPDATA%\Packages`), as well as in
+`%APPDATA%\Claude`. Commands and entry lines are printed on lines of
+their own, with full paths, ready to paste; where a command writes
+characters of a folder's name as codes, a line under it says to paste
+it into bash or zsh, since dash (the `sh` of Debian and Ubuntu) reads
+them wrongly. Adding `--tidy` removes the link, and only when nothing
 started as `qualcoder-mcp` is still running, the link leads to
 `~/.exegete`, and nothing is left that could start an older copy (a
 package older than 0.14.1, a host entry starting the old command, or a
 desktop extension older than Exegete; the check says which). It cannot
 see an older copy started from a project's own `.mcp.json` file (Claude
 Code's project entries): while one could still start, keep the link.
-Adding `--tidy-old-logs` as well removes those old logs. Projects,
+Once `--tidy` has removed the link, the check prints the one command
+that puts it back, should such a copy still start. Adding
+`--tidy-old-logs` as well removes those old logs. Projects,
 backups, the AI coder name files in projects and the hosts'
 configuration files are never touched. If you use the desktop
 extension, there is no `exegete` command: type
-`uvx exegete --check-transition` instead. It needs uv in your
+`uvx exegete@latest --check-transition` instead (`@latest` makes uv
+fetch the newest release, rather than run a copy it fetched before,
+whose check may not see the extension). It needs uv in your
 terminal; if `uvx` is not found, what the extension can leave (the
 link and one old log file) is harmless and can stay. The old name's
 package is released beside Exegete until version 1.0; that last
@@ -1821,7 +1882,12 @@ Claude Desktop, after:
 `QUALCODER_PROJECT_PATH` is read until v1.0 as the earlier spelling of
 `EXEGETE_PROJECT_PATH`.)
 
-Claude Code: re-register once, under the same name:
+Claude Code: re-register once, under the same name. Claude Code offers
+a server added this way only in the folder where it was added, so run
+`claude mcp remove` in the folder where you added it, and
+`claude mcp add` in the folder you start Claude Code in, never your
+home folder ("Alternative: Claude Code and other MCP clients", above,
+says why):
 
 ```bash
 claude mcp remove qualcoder
@@ -1899,7 +1965,8 @@ If you want to remove the MCP server:
    - Claude Desktop configured by hand: Settings > Developer > Edit Config, delete the
      "exegete" section (or "qualcoder", from an earlier version of this
      guide), save, then fully quit and reopen Claude Desktop
-   - Claude Code: `claude mcp remove exegete` (or `qualcoder`)
+   - Claude Code: `claude mcp remove exegete` (or `qualcoder`), in
+     the folder where it was added, the one you start Claude Code in
    - LM Studio: delete the "exegete" (or "qualcoder") block from mcp.json
 
 2. **Remove the package**:

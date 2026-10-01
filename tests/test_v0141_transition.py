@@ -1386,7 +1386,11 @@ def test_the_documents_give_the_order_and_the_extensions_way():
     for text in (install, old):
         assert "install `exegete` first" in text
         assert "then change" in text
-    assert "`uvx exegete --check-transition`" in install
+    # v0.14.2: `@latest`, as the help topic says, since uv otherwise
+    # reruns a copy it fetched before, whose check may not see the
+    # extension
+    assert "`uvx exegete@latest --check-transition`" in install
+    assert "`uvx exegete --check-transition`" not in install
     assert "desktop extension" in install.split(
         "**Afterwards, the transition check.**")[1]
     assert "older than 0.14.1" in install

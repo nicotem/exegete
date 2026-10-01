@@ -78,8 +78,8 @@ file you download and double-click. It has no AI of its own.
 
 **Who does what.** You write what you want, and the assistant chooses
 which of Exegete's tools to use. The AI reads and suggests; Exegete
-checks each suggested coding against the file's words, keeps
-suggestions waiting, and writes to your project; you decide.
+checks that each suggested coding quotes the file's words exactly,
+keeps suggestions waiting, and writes to your project; you decide.
 Technically, Exegete is an MCP server: the Model Context Protocol (MCP)
 is only the standard way an assistant reaches tools on your computer,
 which is why the same Exegete can be used from more than one assistant.
@@ -96,7 +96,8 @@ and PDF included: only what the assistant later reads of it goes.
 **When anything is written.** Reading changes nothing in your project,
 but what is read goes to the AI's maker ("Where your data goes",
 next). Suggested codings and proposed codes wait in a review list
-outside the project until you approve them. Other changes, such as
+outside the project until you approve them and the assistant writes
+them. Other changes, such as
 making a code or writing a memo, are made when the tool runs. Your
 assistant asks you first, if it is set to ask ("Start here" shows
 how). Larger changes show a preview first, and backups can be restored.
@@ -137,8 +138,10 @@ later reads it ("How it works", above).
 **Assistants that open files by themselves.** Some assistants can also
 open files on your computer by themselves, with tools of their own and
 without Exegete: Codex (OpenAI's route), Claude Code, and Claude's
-Cowork (in the folders you connect to it). Cowork is a part of Claude
-Desktop. What they read that way goes to their maker too.
+Cowork (in the folders you connect to it). Cowork comes with Claude's
+apps, on the computer, the web and phones; it reads the folders
+connected to it in Claude Desktop. What they read that way goes to
+their maker too.
 Exegete's protections (the
 `#####` mark below, your approval before anything is written, the
 backups) do not apply to it; Exegete cannot see such a read or stop it.
@@ -146,9 +149,10 @@ backups) do not apply to it; Exegete cannot see such a read or stop it.
 **For participants' data**, use an assistant that has no file access
 of its own, such as Claude Desktop's chat with the extension. As far as
 Anthropic's pages say, that chat opens no file by itself once it is set
-up as the list below says. The list also covers your account: on
-personal plans, Anthropic and OpenAI may use your conversations to
-train their models unless you opt out (PRIVACY.md quotes their words).
+up as the list below says. The list also covers your Claude account:
+on personal plans, Anthropic and OpenAI may use your conversations to
+train their models unless you opt out (PRIVACY.md quotes their words);
+for OpenAI's apps, the paragraph after the list says what to turn off.
 
 Before you use participants' data with Claude Desktop's chat:
 
@@ -266,9 +270,10 @@ This is the easiest start, in three steps.
    https://claude.ai/download. Sign in.
 2. **Download the extension.** Open the
    [Releases page](https://github.com/nicotem/exegete/releases)
-   and take the release at the top (every release of this alpha is
-   marked Pre-release). Under its Assets, download the file whose name
-   starts with `exegete-` and ends in `.mcpb`, not "Source code".
+   and take the newest release that has, under its Assets, a file whose
+   name starts with `exegete-` and ends in `.mcpb` (every release of
+   this alpha is marked Pre-release; an early build marked "not a
+   release" has no such file). Download that file, not "Source code".
 3. **Install it.** Double-click the file (if Claude does not open, drag
    the file onto Claude's window). Claude Desktop shows its usual
    warning to install only extensions whose developer you trust: click
@@ -278,11 +283,14 @@ This is the easiest start, in three steps.
 To check: start a new conversation, click "+", then Connectors:
 Exegete is listed. Claude asks before it uses a tool; "Allow once"
 keeps it asking ("What it does that QualCoder does not", below, says
-why that matters). Before any participants' data, also check two
-things in Claude. Computer use should be off (Settings, General). No
-folder that holds your projects or transcripts should be connected to
-it (the newer Claude app lists connected folders under "Trusted
-folders"). "Where your data goes", above, says why.
+why that matters). In Claude's new experience, keep the conversation
+on Manual, its default: on Auto, Claude does not ask. Before any
+participants' data, also check two things in Claude. Computer use
+should be off (Settings, General). No folder that holds your projects
+or transcripts should be connected to it (in Claude's new experience,
+rolling out to Pro and Max plans first, connected folders are listed
+under "Trusted folders"; if you have never connected a folder, there
+is nothing to undo). "Where your data goes", above, says why.
 
 The extension is not signed by its developer; a computer or Claude
 account managed by your university or employer may refuse it.
@@ -329,7 +337,8 @@ check). The steps:
    them, or searching other folders for them.
 
 [INSTALL.md, "ChatGPT's desktop app and Codex"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-app-and-codex-experimental)
-has each step in full, which OpenAI plans include these apps, and what
+has each step in full (training first, as here, then four numbered
+steps from installing), which OpenAI plans include these apps, and what
 to do if Exegete does not start. This route is Experimental: it follows
 OpenAI's documentation, read on 30 September 2026, and has not yet been
 tried by this project. What the assistant reads goes to OpenAI.
@@ -373,6 +382,11 @@ under another code as an ordinary code. Before you move such a project
 between 3.8.2 and 4.0, read
 ["Opening it in QualCoder" in TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental).
 
+**Next, a page of practice text.** Paste a page of your practice text
+and ask the assistant to bring it into Practice. Before anything is
+written, it asks which name to store its work under (the AI coder
+name, above). Then try the requests at the top of this page.
+
 **A project you already have.** Try the assistant on a practice
 project first. For a real study, ask the assistant to copy your project
 into its folder for projects and to work on the copy. Your original is
@@ -402,7 +416,8 @@ nothing goes to an outside provider (Experimental: no local model has
 yet been evaluated with Exegete). Claude Code opens files by itself,
 outside Exegete ("Where your data goes", above). Never start it in your
 home folder or in a folder that holds a study, and for participants'
-data use Claude Desktop's chat with the extension instead.
+data use Claude Desktop's chat with the extension instead, set up as
+that section says.
 
 **Updating.** Updates are manual, and Exegete does not look for
 new versions itself. Look at the Releases page now and then (with a
@@ -445,11 +460,12 @@ row by row), Exegete adds:
   change. Never allow for the whole conversation the steps that record
   your decisions and write what you approved
   ([INSTALL.md, "Approving the AI's suggestions"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-are-the-safeguard)
-  names them): choose "allow once" in Claude, and answer each prompt
-  in Codex. Before any coding is applied, check that the counts the
-  approval step shows (approved, rejected, pending) match what you said.
-  If they do not, say so, and do not let the assistant apply the codings
-  until they do: no coding is written before that step.
+  names them): choose "allow once" in Claude (in its new experience,
+  with the conversation on Manual), and answer each prompt in Codex.
+  Before any coding is applied, check that the counts the approval step shows (approved,
+  rejected, pending) match what you said. If they do not, say so, and
+  do not let the assistant apply the codings until they do: no coding
+  is written until the codings are applied.
 - **A preview before the larger changes.** Merging or deleting codes
   and categories, replacing names in stored text, and restoring or
   pruning backups each show first what would change, and go ahead only
@@ -468,9 +484,10 @@ row by row), Exegete adds:
 
 ## Three commitments
 
-They are this project's promises about your work: your project stays a
-QualCoder project, in QualCoder's format, that QualCoder opens. The
-second of the three, symmetry, is an aim, not yet a fact.
+There are three: compatibility, symmetry and interoperability.
+Together they are this project's promises about your work: your
+project stays a QualCoder project, in QualCoder's format, that
+QualCoder opens. The second, symmetry, is an aim, not yet a fact.
 
 **Compatibility with QualCoder.** Exegete reads and writes projects
 from QualCoder 3.8.2, from the QualCoder 4.0 beta, and in the formats

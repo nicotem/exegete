@@ -1,5 +1,9 @@
 # Quick Start Guide
 
+**New to Exegete?** Start with the README's one-click extension for
+Claude Desktop instead:
+[README, "Claude Desktop, with one click"](https://github.com/nicotem/exegete#claude-desktop-with-one-click).
+
 This guide will get you up and running with Exegete (formerly
 qualcoder-mcp), a qualitative analysis application you use in
 conversation with an AI assistant, compatible with QualCoder, in 10
@@ -16,8 +20,10 @@ README's one-click extension is the easier start.
       other MCP clients" in INSTALL.md). Claude Code opens files by
       itself, outside Exegete: never start it in your home folder or a
       folder that holds a study, and for participants' data use Claude
-      Desktop's chat instead (PRIVACY.md, "Assistants that open files by
-      themselves")
+      Desktop's chat instead, with computer use off, no folder that
+      holds your projects or transcripts connected to it, and no other
+      extension that reads files (PRIVACY.md, "Assistants that open
+      files by themselves")
 - [ ] At least one QualCoder project (a `.qda` project folder): the
       setup below cannot create one; the one-click extension can
 

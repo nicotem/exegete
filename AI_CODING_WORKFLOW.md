@@ -1,6 +1,6 @@
 # AI Coding Workflow Guide
 
-Complete guide to using Claude for AI-assisted qualitative coding with the conversational approval workflow (v0.4.0+).
+Complete guide to using Claude for AI-assisted qualitative coding with the conversational approval workflow.
 
 ## Table of Contents
 
@@ -13,7 +13,7 @@ Complete guide to using Claude for AI-assisted qualitative coding with the conve
 
 ## Overview
 
-The AI coding workflow in v0.4.0+ uses a **conversational approval process** where:
+The AI coding workflow uses a **conversational approval process** where:
 
 1. Claude is told to ask what to look for, how long a passage should be
    and whether one passage may carry more than one code, then analyses

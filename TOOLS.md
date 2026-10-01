@@ -558,8 +558,8 @@ For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://gi
 
 ## What the assistant is told: the brief (provisional)
 
-From 0.14.2 the server gives the assistant one brief: how it expects
-the assistant to work with you. The brief says what no single tool
+The server gives the assistant one brief: how it expects the assistant
+to work with you. The brief says what no single tool
 says (work on the project only through these tools, where Exegete sits
 beside QualCoder, how changes and approval happen, privacy, when to ask
 and when to act, how to report to you), and carries the two rules that

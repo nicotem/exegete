@@ -1,19 +1,15 @@
 # AI-Assisted Coding Guide
 
 Guide to coding qualitative data with Claude through Exegete (formerly
-qualcoder-mcp)
-(the conversational workflow, v0.6.0 and later).
+qualcoder-mcp), in the conversational workflow.
 
-> **This guide replaces the v0.3.0 export/import guide.** The old
-> `suggest_coding_for_files` / `export_coding_suggestions` /
-> `suggest_new_codes` / `export_new_codes_for_import` tools were removed
-> in v0.4.0. Codings are now written directly to the project database
-> after your explicit approval; no REFI import step is needed. (A
-> REFI-QDA *export* tool, `export_refi_qda`, is deprecated and goes in
-> v0.15: it files every coding under the AI coder name; QualCoder's own
-> export, Project, Export, REFI-QDA Project export, keeps each coder.)
-> For the step-by-step walkthrough with example
-> conversations, see [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md).
+> Codings are written directly to the project database after your
+> explicit approval; no import step is needed. (A REFI-QDA *export*
+> tool, `export_refi_qda`, is deprecated and goes in v0.15: it files
+> every coding under the AI coder name; QualCoder's own export,
+> Project, Export, REFI-QDA Project export, keeps each coder.) For the
+> step-by-step walkthrough with example conversations, see
+> [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md).
 
 ## How It Works
 

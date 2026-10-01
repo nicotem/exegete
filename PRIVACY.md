@@ -116,7 +116,10 @@ What stays local, always, unless a sync service copies the folder it is in:
   set_project_ai_coder_name, and the current name appears on every write
   result; treat the note like any other project text the model can read.
   QualCoder never reads or writes this file. Deleting it makes the next
-  AI write ask for the name again.
+  AI write ask for the name again, unless the earlier
+  `qualcoder_mcp.json` beside it could not be marked as moved and still
+  holds a name (Exegete says so while it stays unmarked): that name
+  would then come back without a question, so remove both files.
 - a small `qualcoder_mcp.json` beside `exegete.json`, until v1.0: in a
   project from before 0.14.1, the earlier file, marked as moved and
   keeping the name it held at the move; in a project Exegete named
@@ -346,9 +349,16 @@ assistant. These pages change often, and the linked pages govern.
   experience any conversation has it ("Computer use: In beta on Pro and
   Max plans, Claude can use apps on your computer directly by clicking,
   typing, and navigating your screen.", the article on the newer
-  experience above). Through an application you allow, such as
-  QualCoder or a file viewer, it can see a project, the private part of
-  memos included. With no other extension that reads files, computer
+  experience above). It works from screenshots, and sees more than the
+  applications you allow: "Claude takes screenshots of your computer to
+  understand how to navigate the screen and the apps to which you've
+  given permission." and "This means Claude can see any information
+  visible on your screen or those apps, including personal data,
+  sensitive documents, or private information belonging to you or
+  others." (the article on computer use above, read 1 October 2026). So
+  through any window on the screen, QualCoder's or a file viewer's, it
+  can see a project, the private part of memos included. With no other
+  extension that reads files, computer
   use off, and no folder that holds your projects or transcripts
   connected (your home folder, Documents or a whole drive included),
   the assistant reaches your project only through Exegete.
@@ -377,15 +387,17 @@ assistant. These pages change often, and the linked pages govern.
 
 So, for participants' data, this project suggests an assistant with no
 file access of its own: Claude Desktop's chat with the extension, with
-computer use off and no folder that holds your projects or transcripts
-connected to it, or LM Studio's chat with Exegete and no other server
+computer use off, no folder that holds your projects or transcripts
+connected to it, and no other extension that reads files, or LM
+Studio's chat with Exegete and no other server
 or plugin that reads files. OpenAI's apps are for practice and for data
 that is not sensitive until a setting that stops Codex's reads has been
 tested with Exegete. With Cowork, keep your projects out of every
 folder connected to it. With Claude Code, never start it in your home
 folder, your projects folder or a study's folder; starting it elsewhere
 keeps your projects out of the folder it reads without asking, but does
-not stop its read-only commands reading them (above), so for
+not stop its read-only commands reading them, or its file tools in
+auto mode (above), so for
 participants' data this project suggests the chat above instead, on
 whichever plan or terms you use.
 
@@ -900,7 +912,12 @@ do NOT touch:
 
 If your institution already has a Team or Enterprise deployment, using
 this server through Claude Desktop or Claude Code under that account
-is already commercial-terms coverage; no API key is needed.
+is already commercial-terms coverage; no API key is needed. The terms
+do not change what Claude Code reads: on this rung as on the others,
+Claude Code opens files by itself, outside Exegete ("Assistants that
+open files by themselves", above). For participants' data, this
+project suggests Claude Desktop's chat with Exegete under that
+account, set up as that section says.
 
 ### Rung 4: fully local models (Experimental)
 
@@ -1232,6 +1249,25 @@ will ask, and the summary above depends on them:
 - **Secondary use.** Re-analysing data gathered for one study with AI may
   go beyond the original consent and ethics approval, and may itself need
   review.
+- **Which assistant, and whether it opens files by itself.** Codex,
+  Claude Code and Claude's Cowork can open files on your computer by
+  themselves, outside Exegete, and what they read that way goes to
+  their maker whole, the private part of memos included; Exegete cannot
+  see such a read or stop it ("Assistants that open files by
+  themselves", above). For participants' data this project suggests
+  Claude Desktop's chat with the extension, with computer use off, no
+  folder that holds your projects or transcripts connected to it, and
+  no other extension that reads files. OpenAI's apps are for practice
+  and for data that is not sensitive.
+- **What stays on the computer, and for how long.** Copies stay on the
+  computer you work on: the project, its backups and your exports; the
+  lists of suggestions waiting for review (`~/.exegete/sessions/`);
+  Claude Desktop's log of the extension, which keeps every request and
+  answer, names and quoted text included (INSTALL.md, "Reading the
+  server log"); Codex's session files (`~/.codex/sessions`) and Claude
+  Code's transcripts (`~/.claude/projects/`). Say where each is kept,
+  whether a sync or backup service copies it, who else can reach the
+  computer, and when you will delete them.
 
 ## Practical mitigations
 

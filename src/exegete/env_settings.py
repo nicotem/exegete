@@ -172,3 +172,34 @@ def windows_system_root() -> str:
     current folder)."""
     root = os.environ.get("SystemRoot", "")
     return root if os.path.isabs(root) else "C:\\Windows"
+
+
+# The system's own values that reading a file on the computer needs
+# (v0.14.3, provisional). Not settings: where this account's caches live,
+# and whether there is a screen on which to open a window.
+
+def windows_local_app_data() -> Optional[str]:
+    """Windows' per-account folder for data that is neither roamed nor
+    synced, LOCALAPPDATA, or None when it is unset or not a full path."""
+    value = os.environ.get("LOCALAPPDATA", "")
+    return value if os.path.isabs(value) else None
+
+
+def xdg_cache_home() -> Optional[str]:
+    """XDG_CACHE_HOME when it is a full path, else None (the XDG rules
+    say a relative value is to be ignored)."""
+    value = os.environ.get("XDG_CACHE_HOME", "")
+    return value if os.path.isabs(value) else None
+
+
+def remote_session() -> bool:
+    """Whether this process runs in an SSH session, where a window would
+    open on another computer's screen, or on none."""
+    return any(os.environ.get(name)
+               for name in ("SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY"))
+
+
+def linux_display() -> bool:
+    """Whether a Linux desktop session is reachable: DISPLAY (X11) or
+    WAYLAND_DISPLAY is set."""
+    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))

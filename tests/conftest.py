@@ -864,3 +864,28 @@ def session_with_suggestions(setup_server, qualcoder_db_path):
 
     setup_server.session_manager.save_session(session)
     return session
+
+
+@pytest.fixture(autouse=True)
+def _no_window_opens(_isolate_home, _sandbox_patch):
+    """v0.14.3: no test opens a window on the developer's screen, and
+    the reading folder lands in the sandbox.
+
+    The reading tool asks the system to open a page in the browser or a
+    copy in its app. Every test gets launchers that only record what they
+    were asked and report a failure; a test of the opener replaces them
+    with its own recorder. The reading folder follows the moved home on
+    a Mac; LOCALAPPDATA (Windows) and XDG_CACHE_HOME (Linux) would point
+    it back at the real account, so they are moved into the sandbox too.
+    """
+    from exegete import opener, reading_folder
+    asked = []
+    _sandbox_patch.setattr(opener, "_run",
+                           lambda argv: asked.append(argv) or -1)
+    _sandbox_patch.setattr(opener, "_startfile",
+                           lambda path: asked.append([path]) and False)
+    home = Path.home()
+    _sandbox_patch.setenv("LOCALAPPDATA", str(home / "AppData" / "Local"))
+    _sandbox_patch.setenv("XDG_CACHE_HOME", str(home / ".cache"))
+    _sandbox_patch.setattr(reading_folder, "_last_sweep", 0.0)
+    yield asked

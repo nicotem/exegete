@@ -51,8 +51,15 @@ def _between(text, start, end):
 
 def _opening():
     # v0.14.2, the README review: the opening ends where "How it works"
-    # begins (the technical paragraph and "What it is not" moved there)
-    return _between(_flat("README.md"), "# Exegete", "## How it works")
+    # begins (the technical paragraph and "What it is not" moved there).
+    # The README rewritten to persuade: it ends where "What you can do"
+    # begins, and the lists that followed it are that section
+    return _between(_flat("README.md"), "# Exegete", "## What you can do")
+
+
+def _what_you_can_do():
+    return _between(_flat("README.md"), "## What you can do",
+                    "## How it works")
 
 
 def _how_it_works():
@@ -76,13 +83,16 @@ class TestTheIntroduction:
         assert ("**A qualitative analysis application you use in "
                 "conversation with an AI assistant, compatible with "
                 "QualCoder.**") in opening
+        # v0.14.2, the README rewritten to persuade: the same facts, in
+        # one paragraph that leads with them
         assert ("Exegete (formerly qualcoder-mcp) is an application for "
-                "qualitative data analysis in its own right.") in opening
+                "qualitative data analysis in its own right, not an add-on "
+                "to QualCoder, and you do not need QualCoder to start.") \
+            in opening
         assert ("It stays compatible with QualCoder, so you can open the "
                 "same project there whenever you like, one program at a "
-                "time. It is not an add-on to QualCoder, and you do not need "
-                "QualCoder to start. It has no window of its own: your "
-                "assistant starts it, and its work appears in the "
+                "time. It has no window of its own: your assistant, such as "
+                "Claude Desktop, starts it, and its work appears in the "
                 "conversation.") in opening
         # Not "at any time": one program at a time, as "A first session"
         # says further down. (v0.14.2: the technical paragraph now sits
@@ -100,12 +110,20 @@ class TestTheIntroduction:
         readme = _flat("README.md")
         opening = _opening()
         # The example requests, and the researcher's judgement (they wait
-        # for the methods review)
-        assert ("start a project, bring in transcripts, suggest codings "
-                "for the files you choose, compare two coders, replace "
-                "participants' names and export reports. The assistant "
-                "suggests; whether a code fits the words, and what a coding "
-                "means, stays your judgement.") in opening
+        # for the methods review). v0.14.2, the README rewritten to
+        # persuade: the requests lead the list of what you can do, in
+        # substance, and the judgement closes the coding item
+        can_do = _what_you_can_do()
+        for request in ("**Start a project**", "**Bring in transcripts**",
+                        "**Code the files you choose, with suggestions you "
+                        "approve**", "**Coder comparison**",
+                        "**Replace participants' names in text already "
+                        "coded**", "**Export** the codebook"):
+            assert request in can_do, request
+        assert ("Whether a code fits the words, and what a coding means, "
+                "stays your judgement.") in can_do
+        assert ("Your AI assistant reads, searches and suggests; you "
+                "decide.") in opening
         # Independence, and not a remote control. v0.14.2: "What it is
         # not" is split, words unchanged: its first sentence ends "How it
         # works"; the rest sits beside the compatibility commitment, and
@@ -128,37 +146,47 @@ class TestTheIntroduction:
 
     def test_what_it_covers_today_rests_on_the_tools(self):
         opening = _opening()
-        covers = _between(opening, "**What it covers today:**",
-                          "**What still needs QualCoder:**")
+        # v0.14.2, the README rewritten to persuade: the list of what it
+        # covers is "What you can do", one bold-led item per feature
+        covers = _what_you_can_do()
         tools = _lifecycle_tools()
-        # Each item the opening names, and the tools that carry it
+        # Each item the list names, and the tools that carry it
         claims = {
-            "creating a project (Experimental)": ["create_project"],
-            "cases and their attributes": ["create_case",
-                                           "create_attribute_type",
-                                           "set_attribute"],
-            "bringing in text through the conversation": [
+            "**Start a project** in QualCoder's format (Experimental)": [
+                "create_project", "copy_project_to_workspace"],
+            "sort them into cases with attributes such as age, role or "
+            "site": ["create_case", "create_attribute_type",
+                     "set_attribute", "link_file_to_case"],
+            "**Bring in transcripts** through the conversation": [
                 "import_text_file"],
-            "coding, with each suggested coding waiting for your decision": [
-                "record_suggestions", "update_suggestion_status",
-                "apply_codings"],
-            "the codebook (making, renaming, moving, merging and deleting "
-            "codes and categories)": [
-                "create_code", "create_category", "rename_code",
-                "rename_category", "move_code_to_category", "move_category",
+            "**Code the files you choose, with suggestions you approve**": [
+                "analyze_for_coding", "record_suggestions",
+                "update_suggestion_status", "apply_codings"],
+            "**Grow the codebook**: codes proposed from the data; rename, "
+            "recolour, move, merge and delete, with a preview before "
+            "merging or deleting": [
+                "propose_codes", "create_proposed_codes", "create_code",
+                "create_category", "rename_code", "rename_category",
+                "recolor_code", "move_code_to_category", "move_category",
                 "merge_codes", "merge_category", "delete_code",
                 "delete_category"],
-            "memos, annotations and a journal": ["set_memo", "add_annotation",
-                                                 "add_journal_entry"],
-            "searching the texts, the codings and the memos": [
-                "search_files", "search_coded_text", "search_memos"],
-            "reports and exports": ["export_code_report", "export_codebook",
-                                    "export_frequencies_csv"],
-            "comparing two coders": ["compare_coders"],
-            "replacing participants' names with pseudonyms": [
+            "**Explore**: search texts, codings and memos; frequencies; "
+            "codes that occur together; a case-by-code matrix; cases and "
+            "files by attribute": [
+                "search_files", "search_coded_text", "search_memos",
+                "get_coding_frequencies", "find_cooccurring_codes",
+                "get_case_code_matrix", "query_by_attribute"],
+            "**Write** memos, annotations and a research journal": [
+                "set_memo", "add_annotation", "add_journal_entry"],
+            "**Coder comparison**": ["compare_coders"],
+            "**Replace participants' names in text already coded**": [
                 "pseudonymise_source"],
-            "backups, with a way to restore one": ["list_backups",
-                                                   "restore_backup"],
+            "**Export** the codebook, a coding report, frequencies and the "
+            "case-by-code matrix as CSV, text or Markdown": [
+                "export_codebook", "export_code_report",
+                "export_frequencies_csv", "export_case_code_matrix_csv"],
+            "**Go back**: a backup before each change, by default, and a way "
+            "to restore one": ["list_backups", "restore_backup"],
         }
         for words, needed in claims.items():
             assert words in covers, words
@@ -168,15 +196,17 @@ class TestTheIntroduction:
         assert "create_project" not in server.CORE_TOOLSET
 
     def test_what_still_needs_qualcoder_is_named_and_true(self):
-        opening = _opening()
-        needs = _between(opening, "**What still needs QualCoder:**",
+        # v0.14.2, the README rewritten to persuade: the list, by stage,
+        # sits after what you can do, with the download and its date
+        needs = _between(_what_you_can_do(), "**Still needs QualCoder**",
                          "**The aim**")
-        assert ("bringing in documents other than text (Word, PDF, images, "
-                "audio, video); seeing the coding highlighted in the text; "
-                "coding images, audio and video, or an area of a PDF page; "
-                "and graphs. \"What you need, at each stage\", below, and "
-                "the table under \"Three commitments\", which compares the "
-                "two programs row by row, together list the rest.") in needs
+        assert ("**Still needs QualCoder**, which is recommended from the "
+                "start: bringing in documents other than text (Word, PDF, "
+                "images, audio, video) and text you would rather not pass "
+                "through the conversation; seeing the coding highlighted in "
+                "the text; coding images, audio, video or an area of a PDF "
+                "page; graphs; and its Reports menu.") in needs
+        assert "you do not need QualCoder to start" in _opening()
         assert "lists everything" not in needs
         # Text arrives as content in the call, never as a file path
         import inspect
@@ -185,16 +215,9 @@ class TestTheIntroduction:
         # No tool codes media or draws a graph
         for name in _lifecycle_tools():
             assert not re.search(r"image|audio|video|media|graph", name), name
-        stages = _between(_flat("README.md"), "### What you need, at each "
-                          "stage", "### Claude Desktop, with one click")
-        for words in ("bring in documents (Word, PDF, images, audio, video)",
-                      "to code images, audio, video or an area of a PDF "
-                      "page", "graphs", "to see the coding highlighted in "
-                      "the text"):
-            assert words in stages, words
 
     def test_the_whole_life_of_a_project_is_the_aim(self):
-        opening = _opening()
+        opening = _what_you_can_do()
         assert ("**The aim** is the whole life of a project in Exegete, from "
                 "its creation to the finished analysis, without needing "
                 "QualCoder for any of it, while every project stays one "
@@ -218,31 +241,20 @@ class TestTheReadmesRoute:
 
     def test_which_apps_work_and_which_do_not(self):
         section = _readme_openai()
-        assert ("By OpenAI's documentation, its apps that run on your "
-                "computer can start Exegete there: the ChatGPT desktop app "
-                "(macOS, Windows, or Linux in preview) and Codex, OpenAI's "
-                "command line and editor extension. The desktop app, the "
-                "command line and the editor extension read one settings "
-                "file.") in section
-        assert ("ChatGPT in a web browser cannot start Exegete: it runs on "
-                "OpenAI's computers and reaches only tools on the "
-                "internet.") in section
-        # The phone, and another computer: they can use the Exegete on
-        # your computer through OpenAI's Remote
-        # (learn.chatgpt.com/docs/remote-connections, read 30 September
-        # 2026). v0.14.2, the README review: one sentence and INSTALL.md
-        # for where to check; OpenAI's words and the pairing's detail are
-        # pinned in INSTALL.md and PRIVACY.md
-        # (test_install_says_what_remote_needs_in_openais_words,
-        # test_remote_another_computer_and_where_to_check).
-        assert ("A phone, or another computer, can use the Exegete on your "
-                "computer through OpenAI's Remote. This project suggests "
-                "leaving Remote off on a computer where Exegete works on "
-                "participants' data (INSTALL.md says where to check).") \
-            in section
+        # v0.14.2, the README rewritten to persuade: the README says which
+        # apps, in a clause; which plans and systems, the one settings file
+        # and OpenAI's Remote are INSTALL.md's (pinned in
+        # test_install_says_what_remote_needs_in_openais_words and
+        # test_openais_words_for_choosing_codex)
+        assert ("These can start Exegete too (ChatGPT in a web browser "
+                "cannot)") in section
         assert "INSTALL.md#chatgpts-desktop-app-and-codex-experimental" \
             in section
         assert "cannot use such tools at all" not in section
+        install = _install_openai_flat()
+        assert "**ChatGPT on a phone**: it cannot start Exegete, but it can " \
+            "use it through OpenAI's Remote." in install
+        assert "read one file, `config.toml`" in install
 
     def test_the_tunnel_is_never_recommended(self):
         # v0.14.2, the README review: the tunnel left the README for
@@ -259,38 +271,30 @@ class TestTheReadmesRoute:
 
     def test_the_steps_the_approvals_and_the_status(self):
         section = _readme_openai()
-        for words in ("1. **Turn off training first**, before any use "
-                      "with Exegete, practice included.",
-                      "2. **Install Exegete** by the Terminal route",
-                      "**Add Exegete to the settings file**, with the lines "
-                      "that make the app ask you before every change "
-                      "Exegete makes.",
-                      "5. **Give Codex a folder of its own**",
-                      "keep the app's permissions on \"Ask for approval\"",
-                      "These apps have no one-click extension, and until a "
-                      "safer setting has been tested, this route is for "
-                      "practice and for data that is not sensitive",
+        # v0.14.2, the README rewritten to persuade: one paragraph, with
+        # training first and INSTALL.md's steps for the rest
+        for words in ("for practice and data that is not sensitive until a "
+                      "safer setting has been tested",
+                      "**Turn off training first**, before any use with "
+                      "Exegete, practice included",
+                      "they make the app ask before every change Exegete "
+                      "makes, and give Codex a folder of its own",
                       "INSTALL.md#chatgpts-desktop-app-and-codex-experimental",
-                      "This route is Experimental: it follows OpenAI's "
-                      "documentation, read on 30 September 2026, and has not "
-                      "yet been tried by this project."):
+                      "Experimental: written from OpenAI's documentation, "
+                      "read on 30 September 2026, and not yet tried by this "
+                      "project."):
             assert words in section, words
         # It sits in "Start here", after the one-click route
         start = _between(_flat("README.md"), "## Start here",
-                         "## What it does that QualCoder does not")
+                         "## Three commitments")
         assert start.index("### Claude Desktop, with one click") < \
             start.index("### ChatGPT's desktop app and Codex (OpenAI)")
-        # v0.14.2: training is turned off before anything is installed,
-        # and the settings step keeps its reason, whose facts
+        # training is turned off before anything is installed; the
+        # settings lines' reason is INSTALL.md's, whose facts
         # test_without_it_the_adding_tools_run_unasked checks against the
         # tools' marks
-        assert section.index("1. **Turn off training first**") < \
-            section.index("2. **Install Exegete**")
-        assert ("Without them, Codex runs without asking you the tools that "
-                "add to your project (importing a text, applying approved "
-                "codings). It also runs without asking the one that sends "
-                "the real names in your pseudonym list to OpenAI.") \
-            in section
+        assert section.index("**Turn off training first**") < \
+            section.index("Then follow")
 
     def test_where_your_data_goes_names_openai(self):
         data = _between(_flat("README.md"), "## Where your data goes",
@@ -304,9 +308,13 @@ class TestTheReadmesRoute:
                  "models.")
         assert quote not in data
         assert quote in _flat("PRIVACY.md")
-        assert ("on personal plans, Anthropic and OpenAI may use your "
-                "conversations to train their models unless you opt out "
-                "(PRIVACY.md quotes their words)") in data
+        # v0.14.2, the README rewritten to persuade: each maker's training
+        # switch is said where the reader acts on it: Anthropic's in the
+        # list before participants' data, OpenAI's as the first step of
+        # its route
+        assert "Anthropic may use your conversations to train its models" \
+            in data
+        assert "**Turn off training first**" in _readme_openai()
 
 
 # ---------------------------------------------------------------------------
@@ -722,23 +730,15 @@ class TestCodexWorksInAFolderOfItsOwn:
                  "codex")
 
     def test_readme_step_gives_it_a_folder_after_codex_is_chosen(self):
-        # Codex is selected first, so that a literal reader does not look
-        # for "Codex's place to work" before Codex is on the screen
         # v0.14.2, the README review: the step is shorter, and fifth;
         # making the folder in Finder or File Explorer, and `exegete-chats`,
-        # are in INSTALL.md's step 3 (the next test)
+        # are in INSTALL.md's step 3 (the next test). The README rewritten
+        # to persuade: a clause, with what the folder does not stop; the
+        # order (Codex chosen first) is INSTALL.md's, pinned there
         section = _readme_openai()
-        step = ("5. **Give Codex a folder of its own**: an empty folder for "
-                "these chats, opened as its place to work, never your home "
-                "folder, Documents, your projects folder or a folder with "
-                "transcripts. It keeps your study's files out of the place "
-                "Codex works in; it does not stop Codex reading them, or "
-                "searching other folders for them.")
-        assert step in section
-        choose = ("4. **Restart the app**, select Codex from the ChatGPT "
-                  "dropdown in the desktop app")
-        assert choose in section
-        assert section.index(choose) < section.index(step)
+        assert ("give Codex a folder of its own, which keeps your study's "
+                "files out of the place Codex works in but does not stop "
+                "Codex reading them.") in section
 
     def test_install_step_three_has_the_folder_and_the_lines(self):
         section = _install_openai()
@@ -817,26 +817,20 @@ class TestCodexWorksInAFolderOfItsOwn:
         assert "in any mode" not in marks
 
     def test_where_your_data_goes_says_what_codex_reads_by_itself(self):
+        # v0.14.2, the README rewritten to persuade: the assistants table
+        # says it, with the two sentences under it; the dates and OpenAI's
+        # words are PRIVACY.md's (below)
         data = _readme_data()
         for words in (
-                "Some assistants can also open files on your computer by "
-                "themselves, with tools of their own and without Exegete: "
-                "Codex (OpenAI's route), Claude Code, and Claude's Cowork "
-                "(in the folders you connect to it).",
+                "Some assistants also open files on your computer by "
+                "themselves:",
+                "| **ChatGPT's desktop app and Codex** (Experimental) | "
+                "OpenAI | Codex: yes, well beyond its folder, without "
+                "asking, even in \"Ask for approval\" and read-only mode |",
                 "Exegete's protections (the `#####` mark below, your "
                 "approval before anything is written, the backups) do not "
-                "apply to it; Exegete cannot see such a read or stop it.",
-                "Codex can read files well beyond the folder it works in, "
-                "by itself and without asking, in its \"Ask for approval\" "
-                "mode and in its read-only mode alike",
-                "Exegete's own answers tell it where your project is.",
-                "(OpenAI's page on approvals and Codex's source code, read "
-                "on 30 September 2026; PRIVACY.md quotes them.)",
-                "A folder of its own (\"ChatGPT's desktop app and Codex\", "
-                "below) keeps your study's files out of the place Codex "
-                "works in, so it does not change them without asking; it "
-                "does not stop Codex reading them, or searching other "
-                "folders for them."):
+                "apply to it; Exegete cannot see such a read or stop it",
+                "Exegete's own answers tell it where your project is"):
             assert words in data, words
         section = _privacy_openai()
         assert "**Codex's own file access.**" in section
@@ -862,13 +856,13 @@ class TestWhatCodexKeepsAndTheOptOut:
     def test_codex_session_files_are_named_with_what_they_hold(self):
         # v0.14.2, the README review: a list of what stays on your
         # computer; the path, `~/.codex`, is pinned on PRIVACY.md (below)
+        # v0.14.2, the README rewritten to persuade: the list is a
+        # sentence, after the private notes
         data = _readme_data()
-        stays = _between(data, "**What stays on your computer**, unless it "
-                         "is in a folder that iCloud, OneDrive or another "
-                         "sync service copies:", "**Private notes and names.**")
-        assert ("- with Codex, its session files, which keep what Exegete's "
-                "tools returned and what Codex read by itself (PRIVACY.md "
-                "says where).") in stays
+        stays = data[data.index("**What stays on your computer**"):]
+        assert ("Codex's session files, with what Codex read by itself "
+                "([PRIVACY.md](https://github.com/nicotem/exegete/blob/main/"
+                "PRIVACY.md) says where") in stays
         section = _privacy_openai()
         assert ("A session's transcript can hold what Exegete's tools "
                 "returned in it, and what Codex's own commands read, "
@@ -889,26 +883,22 @@ class TestWhatCodexKeepsAndTheOptOut:
         the list about participants' data, which would read as if it made
         OpenAI's apps fit for such data. OpenAI's words, and the archive's
         date, are pinned on PRIVACY.md only."""
+        # v0.14.2, the README rewritten to persuade: the step is said
+        # once, where the reader acts on it; the second switch and Codex's
+        # "Include environments" are INSTALL.md's
+        # (test_install_turns_training_off_first_in_the_readmes_words)
         data = _readme_data()
         steps = _readme_openai()
-        first = _between(steps, "1. **Turn off training first**",
-                         "2. **Install Exegete**")
-        for words in ("before any use with Exegete, practice included.",
-                      "Turn off \"Improve the model for everyone\" in "
-                      "ChatGPT's Settings, Data controls, or choose \"Do not "
-                      "train on my content\" in OpenAI's Privacy Portal "
-                      "(either is enough, by OpenAI's Help Center).",
-                      "Codex's \"Include environments\" is a separate "
-                      "setting (PRIVACY.md says more)."):
+        first = _between(steps, "**Turn off training first**",
+                         "Then follow")
+        for words in ("before any use with Exegete, practice included",
+                      "\"Improve the model for everyone\" in ChatGPT's "
+                      "Settings, Data controls."):
             assert words in first, words
-        # The data section points to it, with the timing
-        assert ("With OpenAI's apps, turn training off before you use them "
-                "with Exegete at all, practice included. The first of the "
-                "steps under \"ChatGPT's desktop app and Codex\", below, "
-                "says where.") in data
         # No OpenAI setting in the list before participants' data
         listed = _between(data, "Before you use participants' data with "
-                          "Claude Desktop's chat:", "Keep OpenAI's route")
+                          "Claude Desktop's chat", "**Private notes and "
+                          "names.**")
         for word in ("OpenAI", "Improve the model", "Privacy Portal",
                      "Include environments", "Codex", "ChatGPT"):
             assert word not in listed, word
@@ -998,12 +988,10 @@ class TestTheStepsANewcomerCanGetWrong:
     def test_a_first_session_speaks_to_any_assistant(self):
         first = _between(_flat("README.md"), "### A first session",
                          "### Other assistants, and updates")
-        assert re.findall(r"\bClaude\b(?! Desktop)", first) == \
-            ["Claude"], "only 'to Anthropic with Claude' names Claude"
-        for words in ("ask the assistant, for example",
-                      "(with OpenAI's apps, the folder in your settings "
-                      "entry)",
-                      "to OpenAI with ChatGPT's desktop app or Codex",
+        # v0.14.2, the README rewritten to persuade: no assistant named at
+        # all; where the project is made, for each route, is TOOLS.md's
+        assert re.findall(r"\bClaude\b(?! Desktop)", first) == []
+        for words in ("ask the assistant to",
                       "Before the assistant changes a project"):
             assert words in first, words
 
@@ -1169,16 +1157,17 @@ class TestAssistantsOwnFileAccess:
         changelog = _flat("CHANGELOG.md")
         entry_0141 = changelog[changelog.index("## [0.14.1-alpha]"):
                                changelog.index("## [0.14.0-alpha]")]
+        # v0.14.2, the README rewritten to persuade: the table says how
+        # far Codex reads; the route, what its folder does not stop
         places = {
             "README, where your data goes": (
-                _readme_data(), "it does not stop Codex reading them, or "
-                "searching other folders for them."),
+                _readme_data(), "Codex: yes, well beyond its folder, without "
+                "asking"),
             "README, the steps": (
-                steps, "it does not stop Codex reading them, or searching "
-                "other folders for them"),
+                steps, "does not stop Codex reading them"),
             "README, a project you already have": (
-                own, "With an assistant that opens files by itself, such as "
-                "Codex, the path you give it lets it read the original too"),
+                own, "though an assistant that opens files by itself, such "
+                "as Codex, can read it from the path you give"),
             "INSTALL, the table": (
                 table, "Codex can also read your projects' files by itself, "
                 "without asking"),
@@ -1204,8 +1193,12 @@ class TestAssistantsOwnFileAccess:
 
     def test_participants_data_goes_to_an_assistant_without_file_access(self):
         chat = "such as Claude Desktop's chat with the extension"
+        # v0.14.2, the README rewritten to persuade: the README's table
+        # row says it, with the list it is set up by
+        assert ("| **Claude Desktop's chat**, with the extension | Anthropic "
+                "| Not by itself, as far as Anthropic's pages say, set up as "
+                "below | Suggested, set up as below |") in _readme_data()
         for where, text in {
-                "README": _readme_data(),
                 "INSTALL, step 3": _install_openai_flat(),
                 "PRIVACY, mitigations": _between(_flat("PRIVACY.md"),
                                                  "## Practical mitigations",
@@ -1217,26 +1210,20 @@ class TestAssistantsOwnFileAccess:
         # PRIVACY.md's third condition (no other extension that reads
         # files) added; OpenAI's route for practice follows the list
         data = _readme_data()
-        assert ("**For participants' data**, use an assistant that has no "
-                "file access of its own, such as Claude Desktop's chat with "
-                "the extension. As far as Anthropic's pages say, that chat "
-                "opens no file by itself once it is set up as the list "
-                "below says.") in data
         listed = _between(data, "Before you use participants' data with "
-                          "Claude Desktop's chat:", "Keep OpenAI's route")
-        for words in ("1. Keep computer use off (the setting that lets "
-                      "Claude use other apps on your computer: Settings, "
-                      "General).",
+                          "Claude Desktop's chat", "**Private notes and "
+                          "names.**")
+        for words in ("1. Keep computer use off (Settings, General).",
                       "2. Do not connect to it any folder that holds your "
                       "projects or transcripts (your home folder, Documents "
-                      "or a whole drive included). Do not add another "
-                      "extension that reads files either."):
+                      "or a whole drive included; connected folders may be "
+                      "listed under \"Trusted folders\"). Do not add "
+                      "another extension that reads files either."):
             assert words in listed, words
-        assert ("Keep OpenAI's route for practice and for data that is not "
-                "sensitive until a setting that stops Codex's own reads has "
-                "been tested with Exegete.") in data
-        assert data.index("**For participants' data**") < \
-            data.index("Keep OpenAI's route")
+        assert ("| Practice and data that is not sensitive, until a setting "
+                "that stops those reads is tested |") in data
+        assert data.index("| **Claude Desktop's chat**") < \
+            data.index("| **ChatGPT's desktop app and Codex**")
         # v0.14.2: with PRIVACY.md's third condition, as everywhere the
         # chat is suggested (test_v0142_docs.py)
         assert ("So, for participants' data, this project suggests an "
@@ -1328,8 +1315,10 @@ class TestAssistantsOwnFileAccess:
         # phone or another computer; leave Remote off; INSTALL.md says
         # where to check), pinned in test_which_apps_work_and_which_do_not;
         # INSTALL.md and PRIVACY.md keep the detail, pinned here
+        # v0.14.2, the README rewritten to persuade: the README names no
+        # phone or Remote; INSTALL.md and PRIVACY.md say it
         steps = _readme_openai()
-        assert "A phone, or another computer, can use the Exegete" in steps
+        assert "Remote" not in steps
         another = ("\"You can control a host from ChatGPT on iOS or Android, "
                    "or from another Mac or Windows device when Control other "
                    "devices is available.\"")
@@ -1569,20 +1558,15 @@ class TestTheSmallerPoints:
         one_click = _between(_flat("README.md"),
                              "### Claude Desktop, with one click",
                              "### ChatGPT's desktop app and Codex (OpenAI)")
-        # v0.14.2: three numbered checks, the chat's three conditions
-        # among them; "Trusted folders" belongs to the version of Claude
-        # in which chat and Cowork are one conversation (Anthropic's page,
-        # read 1 October 2026)
-        assert ("Before any participants' data, check three things in "
-                "Claude") in one_click
-        for words in ("2. Computer use is off (Settings, General).",
-                      "3. No folder that holds your projects or transcripts "
-                      "is connected to Claude, and no other extension that "
-                      "reads files is installed. In the version where chat "
-                      "and Cowork are one, connected folders are listed "
-                      "under \"Trusted folders\"; if you have never "
-                      "connected a folder, there is nothing to undo."):
-            assert words in one_click, words
+        # v0.14.2, the README rewritten to persuade: the checks after
+        # installing joined the one list before participants' data, which
+        # the one-click route points to; "Trusted folders" belongs to the
+        # version of Claude in which chat and Cowork are one conversation
+        # (Anthropic's page, read 1 October 2026)
+        assert ("Before participants' data, go through the list in \"Where "
+                "your data goes\", above.") in one_click
+        assert ("connected folders may be listed under \"Trusted "
+                "folders\"") in _readme_data()
         assert "also check two things" not in one_click
         # "Trusted folders" is Anthropic's word, as PRIVACY.md quotes it
         assert "Folders you gave Cowork access to are listed under Trusted " \

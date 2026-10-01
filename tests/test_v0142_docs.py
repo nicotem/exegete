@@ -86,13 +86,13 @@ def test_the_download_step_survives_an_early_build():
     named `0.14.1-alpha.dev1` sat above 0.14.1 with no extension file;
     every release here is a pre-release, so GitHub's "latest" link
     cannot help either. Both documents say which release to take."""
+    # v0.14.2, the README rewritten to persuade: the README's step is
+    # shorter; why (the Pre-release mark, the early build) is INSTALL's
     readme = _between(_flat("README.md"), "### Claude Desktop, with one "
                       "click", "### ChatGPT's desktop app and Codex")
-    assert ("take the newest release that has, under its Assets, a file "
-            "whose name starts with `exegete-` and ends in `.mcpb` (every "
-            "release of this alpha is marked Pre-release; an early build "
-            "marked \"not a release\" has no such file). Download that "
-            "file, not \"Source code\".") in readme
+    assert ("take the file whose name starts with `exegete-` and ends in "
+            "`.mcpb` from the newest release that has one under its "
+            "Assets.") in readme
     install = " ".join(_install_part(
         "## Claude Desktop: the one-click extension",
         "**Approvals.**").split())
@@ -287,7 +287,7 @@ def _chat_suggestions():
     return {
         "README, where your data goes": _between(
             _flat("README.md"), "Before you use participants' data with "
-            "Claude Desktop's chat:", "Keep OpenAI's route"),
+            "Claude Desktop's chat", "**Private notes and names.**"),
         "INSTALL, the table, consumer plans": _between(
             _read("INSTALL.md"), "| **Claude consumer plans**", "\n"),
         "INSTALL, Claude Code": " ".join(_install_part(*CLAUDE_CODE)
@@ -313,12 +313,13 @@ def _chat_suggestions():
 
 
 def _chat_set_up():
-    """Where the reader sets the chat up, straight after installing: the
-    conditions as checks."""
+    """Where the reader sets the chat up: the conditions as checks. (v0.14.2,
+    the README rewritten to persuade: one list, in "Where your data goes",
+    which the check after installing points to.)"""
     return {
-        "README, the check after installing": _between(
-            _flat("README.md"), "Before any participants' data, check "
-            "three things in Claude", "The extension is not signed"),
+        "README, the checks before participants' data": _between(
+            _flat("README.md"), "Before you use participants' data with "
+            "Claude Desktop's chat", "**Private notes and names.**"),
     }
 
 
@@ -330,8 +331,8 @@ def test_the_chats_three_conditions_travel_with_it():
             in text, where
         assert "transcripts" in text, where
     for where, text in _chat_set_up().items():
-        assert "Computer use is off" in text, where
-        assert THIRD in text, where
+        assert "1. Keep computer use off" in text, where
+        assert "Do not add another extension that reads files" in text, where
         assert "transcripts" in text, where
     # and the other routes point to them
     rung_two = _between(_flat("PRIVACY.md"), "### Rung 2:", "### Rung 3:")
@@ -340,8 +341,8 @@ def test_the_chats_three_conditions_travel_with_it():
         in rung_two
     other = _between(_flat("README.md"), "**Other assistants.**",
                      "**Updating.**")
-    assert ("for participants' data use Claude Desktop's chat with the "
-            "extension instead, set up as that section says.") in other
+    assert "for participants' data use Claude Desktop's chat instead." \
+        in other
     row = _between(_read("INSTALL.md"),
                    "| **Anthropic commercial-terms routes**", "\n")
     assert "on a Team or Enterprise account, set up as in the row above" \
@@ -384,20 +385,25 @@ HOW_TO_TELL = ("\"If you're on a Pro or Max plan and your message box still "
 
 
 def test_the_check_after_installing_is_a_short_list():
-    """One sentence to see that Exegete is listed, then three numbered
-    checks, the chat's three conditions among them."""
+    """One sentence to see that Exegete is listed, "Allow once", the
+    Manual setting where Claude asks, and a pointer to the one list of
+    checks before participants' data (v0.14.2, the README rewritten to
+    persuade: the three checks joined the list where the reader decides)."""
     one_click = _between(_flat("README.md"), "### Claude Desktop, with one "
                          "click", "### ChatGPT's desktop app and Codex")
-    check = _between(one_click, "To check,", "The extension is not signed")
-    assert check.startswith("To check, start a new conversation, click "
-                            "\"+\", then Connectors, and see that Exegete "
-                            "is listed. Before any participants' data, check "
-                            "three things in Claude (\"Where your data "
-                            "goes\", above, says why): 1. Claude asks "
-                            "before it uses a tool, and \"Allow once\" "
-                            "keeps it asking"), check
-    numbered = re.findall(r"(?<![\w.])(\d)\. ", check)
-    assert numbered == ["1", "2", "3"], numbered
+    check = one_click[one_click.index("To check,"):]
+    assert check.startswith("To check, click \"+\" in a new conversation, "
+                            "then Connectors: Exegete is listed. When "
+                            "Claude asks to use a tool, \"Allow once\" "
+                            "keeps it asking."), check
+    assert check.endswith("Before participants' data, go through the list "
+                          "in \"Where your data goes\", above. "), check
+    assert not re.findall(r"(?<![\w.])(\d)\. ", check)
+    data = _between(_flat("README.md"), "Before you use participants' data "
+                    "with Claude Desktop's chat", "**Private notes and "
+                    "names.**")
+    assert re.findall(r"(?<![\w.])(\d)\. ", data) == ["1", "2", "3", "4",
+                                                         "5"]
 
 
 def test_claudes_manual_mode_is_named_where_claude_asks():
@@ -408,28 +414,24 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     readme = _flat("README.md")
     one_click = _between(readme, "### Claude Desktop, with one click",
                          "### ChatGPT's desktop app and Codex (OpenAI)")
-    for words in ("On a Pro or Max plan, if your message box offers no "
-                  "choice between \"Chat\" and \"Cowork\", you have the "
-                  "version of Claude in which the two are one conversation "
-                  "(Anthropic's page, read on 1 October 2026, says it is "
-                  "reaching accounts gradually, starting with those "
-                  "plans).",
-                  "There, a permission setting in the message box decides "
-                  "whether Claude asks: keep it on Manual, its default; on "
-                  "Auto, Claude does not ask.",
-                  "Manual keeps Claude asking, but it is checks 2 and 3 that "
-                  "keep your projects out of its reach, except through "
-                  "Exegete."):
-        assert words in one_click, words
+    # v0.14.2, the README rewritten to persuade: in fewer words, still
+    # once, with the date and how to tell
+    assert ("On a Pro or Max plan, if your message box offers no choice "
+            "between \"Chat\" and \"Cowork\", the two are one conversation "
+            "in your Claude (Anthropic's page, read on 1 October 2026, says "
+            "this is reaching accounts gradually): keep its permission "
+            "setting on Manual, its default; on Auto, Claude does not "
+            "ask.") in one_click
     # explained once
     assert readme.count("no choice between \"Chat\" and \"Cowork\"") == 1
-    assert readme.count("1 October 2026, says it is reaching accounts") == 1
+    assert readme.count("1 October 2026, says this is reaching accounts") \
+        == 1
     data = _between(readme, "## Where your data goes", "## Start here")
-    assert ("In the version of Claude where chat and Cowork are one "
-            "conversation (\"Claude Desktop, with one click\", below, says "
-            "how to tell), the same list applies: set up as it says, that "
-            "conversation too reaches your project only through Exegete, as "
-            "far as Anthropic's pages say.") in data
+    assert ("Before you use participants' data with Claude Desktop's chat "
+            "(also where chat and Cowork are one conversation, below):") \
+        in data
+    assert "connected folders may be listed under \"Trusted folders\"" \
+        in data
     assert ("choose \"allow once\" in Claude (with its permission setting "
             "on Manual, if your message box has one), and answer each "
             "prompt in Codex.") in readme
@@ -484,17 +486,19 @@ def test_the_dating_check_would_notice():
 
 
 def test_cowork_and_trusted_folders_as_anthropic_says():
+    # v0.14.2, the README rewritten to persuade: the README's table gives
+    # Cowork's reach; where Cowork runs is PRIVACY.md's, with Anthropic's
+    # page on the web, desktop and mobile
     data = _between(_flat("README.md"), "## Where your data goes",
                     "## Start here")
-    assert ("Cowork comes with Claude's apps, on the computer, the web and "
-            "phones; it reads the folders connected to it in Claude "
-            "Desktop.") in data
+    assert ("| **Claude's Cowork** | Anthropic | Yes, in the folders you "
+            "connect to it |") in data
     assert "Cowork is a part of Claude Desktop." not in data
-    assert ("The list also covers your Claude account: on personal plans, "
-            "Anthropic and OpenAI may use your conversations to train their "
-            "models unless you opt out (PRIVACY.md quotes their words); for "
-            "OpenAI's apps, the paragraph after the list says what to turn "
-            "off.") in data
+    assert ("use-claude-cowork-on-web-desktop-and-mobile") in \
+        _flat("PRIVACY.md")
+    # the account's terms, in the list before participants' data
+    assert ("3. On a personal Claude plan (Free, Pro or Max), check the "
+            "Model Improvement setting") in data
     assert "the newer Claude app" not in _flat("README.md")
     # Anthropic's words for the rollout, as PRIVACY.md quotes the page
     assert "rolling out to Pro and Max plans" in _flat("PRIVACY.md")
@@ -508,24 +512,29 @@ def test_install_turns_training_off_first_in_the_readmes_words():
     install = " ".join(_install_part(*OPENAI).split())
     first = _between(install, "**First, turn off training**",
                      "**Step 1. Install Exegete.**")
-    readme = _between(_flat("README.md"), "1. **Turn off training first**",
-                      "2. **Install Exegete**")
-    for words in ("before any use with Exegete, practice included.",
-                  "Turn off \"Improve the model for everyone\" in ChatGPT's "
-                  "Settings, Data controls, or choose \"Do not train on my "
-                  "content\" in OpenAI's Privacy Portal",
+    # v0.14.2, the README rewritten to persuade: the README gives the step
+    # and the first of the two switches; INSTALL.md gives both, and Codex's
+    # "Include environments"
+    readme = _between(_flat("README.md"), "**Turn off training first**",
+                      "Then follow")
+    for words in ("before any use with Exegete, practice included",
+                  "\"Improve the model for everyone\" in ChatGPT's "
+                  "Settings, Data controls"):
+        assert words in first, words
+        assert words in readme, words
+    for words in ("choose \"Do not train on my content\" in OpenAI's "
+                  "Privacy Portal",
                   "Codex's \"Include environments\" is a separate setting "
                   "(PRIVACY.md says more)."):
         assert words in first, words
-        assert words in readme, words
     # before any numbered step, and the steps are the four the README
     # says follow it
     steps = re.findall(r"\*\*Step (\d)\. ", install)
     assert steps == ["1", "2", "3", "4"]
     assert install.index("**First, turn off training**") < \
         install.index("**Step 1. Install Exegete.**")
-    assert ("has each step in full (training first, as here, then four "
-            "numbered steps from installing)") in _flat("README.md")
+    assert ("INSTALL.md#chatgpts-desktop-app-and-codex-experimental"
+            in _flat("README.md"))
 
 
 # ---------------------------------------------------------------------------
@@ -587,7 +596,7 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
     readme = _flat("README.md")
     anchor = ("PRIVACY.md#before-you-use-real-participant-data-check-"
               "these")
-    assert readme.count(anchor) == 2
+    assert readme.count(anchor) == 1
     checklist = _between(_flat("PRIVACY.md"), "## Before you use real "
                          "participant data, check these",
                          "## Practical mitigations")
@@ -668,20 +677,17 @@ def test_quickstart_sends_a_newcomer_to_the_one_click_start():
 
 
 def test_a_first_session_says_what_to_do_next():
-    """The step after the practice project brings text in, which asks for
-    the AI coder name first (import_text_file writes under it); the
-    example requests stay where they are, unchanged."""
+    """The step after the practice project brings text in, as the example
+    on the first screen does, which asks for the AI coder name first
+    (import_text_file writes under it); more requests are TOOLS.md's."""
     import inspect
     import exegete.server as server
     first = _between(_flat("README.md"), "### A first session",
                      "### Other assistants, and updates")
-    nxt = ("**Next, a page of practice text.** Paste a page of your practice "
-           "text and ask the assistant to bring it into Practice. Before "
-           "anything is written, it asks which name to store its work under "
-           "(the AI coder name, above). Then try the requests at the top of "
-           "this page.")
-    assert nxt in first
-    assert first.index("**Two coder names.**") < first.index(nxt)
+    assert ("bring in a page as in the example above, and try [more "
+            "requests](https://github.com/nicotem/exegete/blob/main/"
+            "TOOLS.md#example-requests).") in first
+    assert first.index("Practice") < first.index("**Two coder names.**")
     assert "_resolve_write_owner" in inspect.getsource(
         server.import_text_file)
 

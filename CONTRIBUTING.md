@@ -209,7 +209,8 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
-│   │   └── refi_export.py       # REFI-QDA XML export
+│   │   ├── refi_export.py       # REFI-QDA XML export
+│   │   └── transition.py        # --check-transition: what the move from qualcoder-mcp left
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)

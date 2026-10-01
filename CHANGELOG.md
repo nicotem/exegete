@@ -14,7 +14,8 @@ Nothing yet.
 v0.14.2: the assistant's brief, provisional; the rules a model must
 not miss within the 2,048 characters Claude Code shows of a tool
 description; fixes from the checks of 0.14.1; and the README,
-rewritten for readers new to Exegete.
+rewritten to say plainly what Exegete does, for newcomers and for
+advanced users.
 
 ### Added: the assistant's brief (provisional)
 
@@ -169,87 +170,78 @@ rewritten for readers new to Exegete.
   reruns a copy it fetched before, and names what the check now says;
   "This comes first. Quit your AI host first" says "first" once.
 
-### Changed: the README, rewritten for readers new to Exegete
+### Changed: the README, rewritten for newcomers and advanced users
 
-- README.md is rewritten for a researcher who has not met Exegete,
-  QualCoder or MCP before: each section opens with what it is for,
-  explains before it instructs, and follows each warning with an
-  action. What it promised stays: the introduction, the example
-  requests, what Exegete covers and what still needs QualCoder, the
-  three commitments and the dated table, the facts on QualCoder's own
-  MCP server and the paragraph after them, the account of assistants
-  that open files by themselves, and the line on Cohen's kappa keep
-  their words or their substance.
-- The first screen ends with "Before you start", a short list: an early
-  version by one researcher, independent of QualCoder's developers;
-  which computer; that the AI behind the assistant runs on its maker's
-  computers; where to begin, with links to three sections; and where to
-  ask.
-- A new section, "How it works": the assistant app and the AI behind
-  it; Exegete, which has no AI of its own (a test checks that its one
-  dependency is the MCP library and that its source imports no model
-  client or network library); the project, and the two ways a text
-  comes in; when anything is written; and why Exegete cannot tell
-  whether an approval was the researcher's. "What it is not" is split,
-  its words unchanged: its first sentence ends this section, and the
-  rest sits beside the compatibility commitment.
-- "Where your data goes" opens with a short version, then lists the
-  settings to check before participants' data, with the third
-  condition PRIVACY.md gives (no other extension that reads files).
-  Turning off OpenAI's training setting is now the first of the steps
-  for OpenAI's apps, before any use, practice included, and no longer
-  sits beside the advice on participants' data. The one-click route's
-  check names computer use and connected folders.
-- Moved out, because the files named already say it: the makers' terms
-  in their own words, the dates of the archived pages, how far Codex
-  reads on each operating system, Claude Code's read-only commands and
-  the folder of Codex's session files (PRIVACY.md); phones and OpenAI's
-  Remote in detail, the tunnel for developers, enterprise workspaces,
-  Codex's defaults and how to make its folder (INSTALL.md); the four
-  tools to keep approving one at a time (INSTALL.md and TOOLS.md, which
-  the README links); the project formats' numbers (TOOLS.md). Projects
-  from a QualCoder older than 3.8 moved, within the README, to "A
-  project you already have".
-- Leftovers from earlier releases removed: "new in 0.14", "from 0.14"
-  in the table, an example file name with a version in it, and "then
-  called qualcoder-mcp" in the table's date line. The sentence naming
-  QualCoder 3.8.2 as "Latest" now carries the date it was checked,
-  because the README is frozen into each extension and PyPI upload. The
-  table of what each program does was checked again on 1 October 2026
-  against this release and QualCoder's releases, and re-dated.
-- The README does not describe the assistant's brief while the brief
-  is provisional; TOOLS.md and INSTALL.md do.
-- Tests: the pins on the README's words moved with their text; new
-  pins for the first screen, "How it works", the first line of "Start
-  here", the two coder names, the commitments' opening and the date
-  beside "Latest"; two sweeps of the README, one for labels tied to a
-  release (no "NEW") and one for words that make counts sound like
-  findings; and the link check now reads the README's own sections at
-  their absolute address.
-- After the checks of the rewrite: the download step now says to take
-  the newest release that has an extension file under its Assets,
-  since GitHub orders the Releases page by version number and an early
-  build can sit above the release with no file to download (INSTALL.md
-  likewise). "How it works" says that Exegete checks that a suggested
-  coding quotes the file's words exactly, and that approved suggestions
-  are written by the assistant in a step of its own; the approval
-  advice says that no coding is written until the codings are applied.
-  The check after installing is one sentence to see that Exegete is
-  listed, then three numbered checks before participants' data: that
-  Claude asks before it uses a tool; computer use off; and no folder
-  that holds projects or transcripts connected, and no other extension
-  that reads files. The first explains once, with the date Anthropic's
-  page was read, the version of Claude in which chat and Cowork are one
-  conversation, and how to tell (on a Pro or Max plan, the message box
-  offers no choice between "Chat" and "Cowork"): there, keep the
-  permission setting in the message box on Manual, its default, since
-  on Auto Claude does not ask; Manual keeps Claude asking, and the
-  other two checks keep projects out of its reach; connected folders
-  are listed under "Trusted folders". "Where your data goes" says that its list applies
-  to that version too. Cowork comes with Claude's apps on the computer,
-  the web and phones. "What comes next" names a user manual.
-  "A first session" ends with a next step, and "Three commitments"
-  names the three before counting them.
+- README.md is rewritten to say what Exegete does for the reader, and to
+  show it, before it explains: the tagline as before, then a sentence on
+  what it does for you (ask in your own words; every suggested coding
+  quotes the text word for word and waits for your approval; the project
+  stays one QualCoder opens); the positioning (an application in its own
+  right, compatible with QualCoder, not an add-on, no window of its own);
+  a short example conversation, labelled as an illustration with
+  made-up practice text, in which each step is one the software takes
+  (the AI coder name asked before the first write, the three questions
+  before coding, quotes with their readings, a rejection, the counts,
+  the backup); one next step for each reader (newcomers, anyone with
+  participants' data, advanced users); and a status line (free and open
+  source, an early version by one researcher, independently of
+  QualCoder's developers; Issues, not email, never participant data).
+  Two badges, the PyPI version and the licence; no test badge.
+- Back from 0.14.0, redrawn: a diagram of how the parts fit and where
+  data goes (the assistant app, the AI model on its maker's computers,
+  Exegete with no AI of its own, the project, QualCoder alongside, one
+  program at a time); a diagram of a coding's path, from the request
+  through the review list to the backup and the write; a map of the
+  documents and of the code; a list of what you can do today, and
+  "What comes next" as plans, not promises, with document import and
+  reading imported files first; the table of assistants (where what
+  each reads goes, whether it opens files by itself, and what this
+  project suggests for participants' data); and the table of the three
+  tool sets, with their sizes as measured below. The diagrams are text,
+  at most 66 characters wide, so that GitHub and PyPI show them alike.
+- New: "For advanced users": what Exegete is technically, the tool sets,
+  the features beyond the basics by tool name, how it is tested, and
+  the map.
+- Kept, in their words or their substance: what still needs QualCoder,
+  with the dated "Latest"; the aim; the disclosure of assistants that
+  open files by themselves, with the checks before participants' data;
+  private notes and names, word for word; the approval and its limit;
+  one program at a time; the three commitments, with the table checked
+  on 1 October 2026; the dated facts on QualCoder's own MCP server and
+  the paragraph after them; the example requests and the line on
+  Cohen's kappa. Every warning is said once, where the reader acts on
+  it. "What it does that QualCoder does not" and "Read next" are no
+  longer sections: their points sit in "What you can do", "How it
+  works", the comparison table and the map.
+- Moved out, because the documents named say it in full: OpenAI's steps
+  past the first, which apps and plans, the settings lines' reason and
+  OpenAI's Remote (INSTALL.md); where a project is made and opening it
+  in QualCoder, with the coder name's place in QualCoder's settings
+  (TOOLS.md, "Starting a project from the conversation"); projects from
+  a QualCoder older than 3.8, in full (TOOLS.md, "Supported QualCoder
+  versions"); QualCoder's downloads, Intel Macs included (INSTALL.md,
+  "What You'll Need"); how to hear of a new release (INSTALL.md, the
+  one-click section); Codex's and Claude Code's reach in detail, and
+  where Cowork runs (PRIVACY.md); the history of the MIT releases
+  (NOTICE). README.md is now about 27,500 characters, against 31,975
+  in 0.14.1.
+- Leftovers from earlier releases are gone ("new in 0.14", "from 0.14"
+  in the table, an example file name with a version in it), and the
+  sentence naming QualCoder 3.8.2 as "Latest" carries the date it was
+  checked, because the README is frozen into each extension and PyPI
+  upload. The brief is named, provisional, among the advanced features;
+  TOOLS.md and INSTALL.md describe it.
+- Tests: the pins on the README's words moved with their text; two
+  sweeps keep out labels tied to a release and words that make counts
+  sound like findings; the link check reads the README's own sections
+  at their absolute address; new
+  pins (`tests/test_v0142_readme_persuasive.py`) hold the length, the
+  three diagrams and the example (width, characters, labels, borders,
+  each step a behaviour of the server), the assistants table against
+  PRIVACY.md, the tool-set table against the server and the measurement
+  below, the advanced section's tool names and arguments against the
+  server, how it is tested against the CI workflow, the map against the
+  files, "What comes next" as plans, and the badges.
 
 ### Changed: the other documents, beside the README
 

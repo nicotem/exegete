@@ -787,7 +787,7 @@ class TestTheDocuments:
         text = (REPO / "README.md").read_text(encoding="utf-8")
         start = _section(text, "## Start here")
         one_click = _section(start, "### Claude Desktop, with one click")
-        one_click = one_click[:one_click.index("**A first project.**")]
+        one_click = one_click[:one_click.index("### ChatGPT's desktop app")]
         assert start.index("### Claude Desktop, with one click") \
             < start.index("**Other assistants.**")
         assert ("INSTALL.md#claude-desktop-the-one-click-extension-"

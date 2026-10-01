@@ -155,12 +155,12 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     assert quoted not in readme
     data = readme[readme.index("## Where your data goes"):
                   readme.index("## Start here")]
-    assert ("3. On a personal Claude plan (Free, Pro or Max), open "
-            "https://claude.ai/settings/data-privacy-controls and look at "
-            "the Model Improvement setting. While it is on, Anthropic may "
-            "use your conversations to train its models (PRIVACY.md quotes "
-            "the terms, with their exceptions): decide before you use "
-            "participants' data.") in data
+    # v0.14.2, the README rewritten to persuade: the check, shorter
+    assert ("3. On a personal Claude plan (Free, Pro or Max), check the "
+            "Model Improvement setting at "
+            "https://claude.ai/settings/data-privacy-controls: while it is "
+            "on, Anthropic may use your conversations to train its models "
+            "(PRIVACY.md quotes the terms, with their exceptions).") in data
     assert "unless you opt out there" not in readme
     # The quoted words are PRIVACY.md's own quotation of the Consumer Terms
     privacy = _flat_quotes("PRIVACY.md")
@@ -176,7 +176,7 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
 def test_the_three_commitments():
     readme = _flat("README.md")
     section = readme[readme.index("## Three commitments"):
-                     readme.index("## Read next")]
+                     readme.index("## For advanced users")]
     for heading in ("**Compatibility with QualCoder.**",
                     "**Symmetry: the same work in either place, as a "
                     "commitment.**",
@@ -234,7 +234,7 @@ def _stance(readme):
                          "September 2026).")
     after = readme.index("gives the commits these facts were read at.",
                          facts)
-    return readme[after:readme.index("## Read next", after)]
+    return readme[after:readme.index("## For advanced users", after)]
 
 
 def test_the_readme_states_the_projects_stance_after_the_facts():
@@ -251,12 +251,15 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
             "same project at any time.") in stance
     assert "can be run from the conversation" not in stance
     # The aim is a direction, and the paragraph says what still needs
-    # QualCoder today, pointing to the section that lists it
+    # QualCoder today, pointing to the list above it (v0.14.2, the README
+    # rewritten to persuade: the list is "Still needs QualCoder", under
+    # "What you can do")
     assert ("That is a direction, not yet a fact: today QualCoder is "
-            "still needed for several things") in stance
-    assert '("What you need, at each stage", above, lists them)' in stance
-    assert ("**QualCoder is recommended from the start, and needed** to "
-            "bring in documents") in readme
+            "still needed for several things (above).") in stance
+    assert ("**Still needs QualCoder**, which is recommended from the "
+            "start: bringing in documents other than text") in readme
+    assert readme.index("**Still needs QualCoder**") < \
+        readme.index("**QualCoder's own MCP server**")
     # The interoperability commitments, restated
     assert ("the commitments above hold: every project stays a QualCoder "
             "project, in QualCoder's format; Exegete follows "

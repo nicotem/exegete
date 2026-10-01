@@ -1,0 +1,483 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+"""v0.14.2, the README rewritten to persuade (the owner, 1 October 2026:
+"Gone are the diagrams about architecture, about structure, the list
+advertising features present and future, and the table about different
+model configuration. And it's wordy.").
+
+Pinned here: the length the rewrite reached, so that the README cannot
+grow back; the three diagrams and the example (their width, and only
+characters that render one column wide on GitHub and on PyPI); the
+architecture diagram's labels and borders; the path of a coding, each
+step a behaviour of the server; the example's steps, in order, each one
+the software takes; the assistants table against PRIVACY.md's verdicts,
+and the two sentences under it; the tool-set table against the server's
+tool sets and the CHANGELOG's measurement; the advanced section's tool
+names and arguments against the server; how it is tested, against the CI
+workflow; the map against the files; "What comes next" as plans; and the
+two badges, with no test badge.
+"""
+
+import asyncio
+import inspect
+import json
+import re
+import sys
+from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:          # Python 3.10
+    import tomli as tomllib
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "src"))
+
+import exegete.server as server                   # noqa: E402
+from exegete import names                         # noqa: E402
+
+
+def _read(name):
+    return (REPO / name).read_text(encoding="utf-8")
+
+
+def _flat(text):
+    return " ".join(text.replace("\n>", " ").split())
+
+
+def _between(text, start, end):
+    first = text.index(start)
+    return text[first:text.index(end, first + len(start))]
+
+
+def _section(heading, following):
+    return _between(_read("README.md"), f"\n## {heading}\n",
+                    f"\n## {following}\n")
+
+
+def _blocks(text):
+    return re.findall(r"(?ms)^```text\n(.*?)^```", text)
+
+
+def _words(block):
+    """A diagram's words, its drawing characters left out."""
+    return " ".join("".join(c for c in block if c not in DRAWING).split())
+
+
+def _tools(mode="lifecycle"):
+    """The tools a set registers, the registry put back afterwards (the
+    conftest's fixture restores it only between tests)."""
+    registry = server.mcp._tool_manager._tools
+    before = dict(registry)
+    instructions = server.mcp._mcp_server.instructions
+    try:
+        server._apply_toolset(mode)
+        return {t.name: t for t in asyncio.run(server.mcp.list_tools())}
+    finally:
+        registry.clear()
+        registry.update(before)
+        server.mcp._mcp_server.instructions = instructions
+
+
+# ---------------------------------------------------------------------------
+# Length: the figure the rewrite reached, so the README cannot grow back
+# ---------------------------------------------------------------------------
+
+# Counted in characters, not bytes (the diagrams' box-drawing characters
+# are three bytes each). The plan's target was 22,000; the decided facts
+# and the restored diagrams and tables did not fit in it, and the report
+# gives the figure and why.
+README_LIMIT = 27_500
+
+
+def test_the_readme_stays_short():
+    assert len(_read("README.md")) <= README_LIMIT
+
+
+# ---------------------------------------------------------------------------
+# The diagrams and the example: the same on GitHub and on PyPI
+# ---------------------------------------------------------------------------
+
+# One column wide in the usual monospaced fonts; no emoji or wide
+# characters
+DRAWING = set("─│┌┐└┘├┼▼▲►◄")
+WIDTH = 66
+
+
+def _diagram_faults(block):
+    faults = []
+    for line in block.splitlines():
+        if len(line) > WIDTH:
+            faults.append(f"wider than {WIDTH}: {line}")
+        odd = [c for c in line if not (c.isascii() or c in DRAWING)]
+        if odd:
+            faults.append(f"{odd}: {line}")
+        if "\t" in line:
+            faults.append(f"a tab: {line}")
+    return faults
+
+
+def test_the_blocks_render_alike_everywhere():
+    readme = _read("README.md")
+    blocks = _blocks(readme)
+    # the example, the architecture, a coding's path and the map
+    assert len(blocks) == 4
+    for block in blocks:
+        assert _diagram_faults(block) == []
+    # every fenced block is marked text, and nothing PyPI shows as source
+    assert readme.count("```") == 2 * len(blocks)
+    for gone in ("```mermaid", "> [!", "<details", "<picture"):
+        assert gone not in readme, gone
+
+
+def test_the_diagram_check_would_notice():
+    assert _diagram_faults("x" * 67)
+    assert _diagram_faults("You \U0001F600 ask")
+    assert _diagram_faults("宽 wide")
+    assert _diagram_faults("a\ttab")
+    assert not _diagram_faults("│  You ─ ask ─► Assistant app ◄──┼─┐")
+
+
+def test_the_architecture_diagram():
+    section = _section("How it works", "Where your data goes")
+    # one plain sentence before it says the same in words
+    before = _flat(section[:section.index("```text")])
+    assert ("It has no AI of its own. The AI model behind your assistant, "
+            "which reads and suggests, runs on its maker's computers unless "
+            "it is a local one.") in before
+    block = _blocks(section)[0]
+    flat = _words(block)
+    for label in ("Your computer", "You ask Assistant app",
+                  "uses Exegete's tools", "Exegete (no AI of its own)",
+                  "reads and writes", "Your project, in QualCoder's format",
+                  "one program at a time", "QualCoder (optional)",
+                  "The AI model, on its maker's computers",
+                  "(or yours, if local): what the assistant reads through "
+                  "Exegete goes there."):
+        assert label in flat, label
+    lines = block.splitlines()
+    # the box closes, its right border in one column
+    column = lines[0].index("┐")
+    bottom = next(i for i, line in enumerate(lines) if line.startswith("└"))
+    for line in lines[1:bottom + 1]:
+        assert line[column] in "│┼┘", line
+    # no arrow from Exegete to the AI: Exegete sends nothing itself; the
+    # line to the AI leaves from the assistant app's row only
+    assistant = next(line for line in lines if "Assistant app" in line)
+    assert assistant.endswith("┼─┐")
+    assert sum(line.rstrip().endswith("┐") for line in lines) == 2
+    exegete = next(line for line in lines if "Exegete (no AI" in line)
+    assert not set("◄►") & set(exegete)
+
+
+def test_the_path_of_a_coding():
+    section = _section("How it works", "Where your data goes")
+    block = _blocks(section)[1]
+    steps = [re.split(r"\s{2,}", line)[0] for line in block.splitlines()
+             if line and not line.startswith(" ")]
+    assert steps == ["You ask", "The assistant", "Review list",
+                     "You decide", "Apply", "Your project"]
+    flat = _words(block)
+    for words in ("reads the file through Exegete and suggests; Exegete "
+                  "checks each quote is the file's own words",
+                  "outside your project, not yet written; the assistant is "
+                  "told to show each passage with its reading and its "
+                  "reason",
+                  "approve, reject or reopen, in the conversation; the "
+                  "assistant passes it on: check the counts",
+                  "Exegete checks again, takes a backup, then writes every "
+                  "approved coding, or none",
+                  "the codings, under the AI coder name you chose"):
+        assert words in flat, words
+    # each step a behaviour of the server
+    status = inspect.signature(server.update_suggestion_status).parameters
+    assert {"approve", "reject", "reopen"} <= set(status)
+    apply = inspect.signature(server.apply_codings)
+    assert apply.parameters["create_backup"].default is True
+    doc = " ".join(server.apply_codings.__doc__.split())
+    assert "re-validated BEFORE the backup" in doc
+    assert "single all-or-nothing transaction" in doc
+
+
+def test_the_map_names_files_that_exist():
+    section = _section("For advanced users", "What comes next")
+    block = _blocks(section)[-1]
+    lines = block.splitlines()
+    assert lines[0] == "github.com/nicotem/exegete"
+    folder = REPO
+    named = []
+    for line in lines[1:]:
+        match = re.match(r"( *)[├└]── (\S+)", line)
+        assert match, line
+        indent, name = match.groups()
+        if name.endswith("/"):
+            folder = REPO / name
+            assert folder.is_dir(), name
+            continue
+        path = (folder if indent else REPO) / name
+        assert path.is_file(), name
+        named.append(name)
+    for name in ("README.md", "PRIVACY.md", "INSTALL.md", "TOOLS.md",
+                 "CONTRIBUTING.md", "NOTICE", "server.py", "database.py"):
+        assert name in named, name
+
+
+# ---------------------------------------------------------------------------
+# The example conversation: each step one the software takes
+# ---------------------------------------------------------------------------
+
+def test_the_example_shows_the_steps_the_software_takes():
+    readme = _read("README.md")
+    opening = readme[:readme.index("\n## What you can do\n")]
+    example = _flat(_blocks(opening)[0])
+    steps = [
+        # a text brought in through the conversation
+        "Bring this into Practice as \"Interview 3\".",
+        # the AI coder name, asked before the first write
+        "which name should my work be stored under?",
+        "Done. Practice now holds Interview 3.",
+        # a coding session for a file the researcher names
+        "suggest codings in Interview 3.",
+        # the three questions before it
+        "What should I look for, how long should a passage be, and may a "
+        "passage carry more than one code?",
+        # quotes, each with its reading, one with the words it rests on
+        "each quoting the text word for word",
+        "explicit",
+        "interpretive: rests on \"so I walked\"",
+        # a rejection on the researcher's own judgement
+        "Reject 3: that is support, not coping.",
+        # the counts from the approval step, then the backup
+        "2 approved, 1 rejected, 0 pending.",
+        "Backup taken; 2 codings written under \"AI assistant\".",
+    ]
+    positions = [example.index(step) for step in steps]
+    assert positions == sorted(positions)
+    # the steps are the server's: the three questions, the two readings,
+    # the counts it returns, and the name asked by the first write
+    questions = " ".join(server.analyze_for_coding.__doc__.split())
+    for words in ("What to look for", "How long a coded passage should be",
+                  "Whether a passage may carry more than one code"):
+        assert words in questions, words
+    record = " ".join(server.record_suggestions.__doc__.split())
+    assert "\"explicit\"" in record and "\"interpretive\"" in record
+    status = inspect.getsource(server.update_suggestion_status)
+    for key in ("['approved']", "['rejected']", "['pending']"):
+        assert key in status, key
+    assert "_resolve_write_owner" in inspect.getsource(
+        server.import_text_file)
+    # labelled for what it is, straight after it
+    after = _flat(opening[opening.rindex("```"):])
+    assert after.startswith("``` *An illustration, shortened, with made-up "
+                            "practice text; your assistant's words will "
+                            "differ.*")
+
+
+# ---------------------------------------------------------------------------
+# The assistants table, and the two sentences under it
+# ---------------------------------------------------------------------------
+
+ASSISTANTS = ("Claude Desktop's chat", "Claude's Cowork", "Claude Code",
+              "ChatGPT's desktop app and Codex", "LM Studio")
+
+
+def _rows(section, start):
+    return [line for line in section.splitlines() if line.startswith(start)]
+
+
+def _cells(row):
+    return [cell.strip() for cell in row.strip().strip("|").split("|")]
+
+
+def test_the_assistants_table():
+    section = _section("Where your data goes", "Start here")
+    assert ("| Assistant | Its AI's maker | Opens files by itself? | For "
+            "participants' data |") in section
+    rows = _rows(section, "| **")
+    assert [re.match(r"\| \*\*([^*]+)\*\*", row).group(1) for row in rows] \
+        == list(ASSISTANTS)
+    cells = dict(zip(ASSISTANTS, (_cells(row) for row in rows)))
+    # each verdict as PRIVACY.md gives it, assistant by assistant
+    privacy = _flat(_read("PRIVACY.md"))
+    hosts = _between(privacy, "## Assistants that open files by themselves",
+                     "## Keeping notes private")
+    verdicts = {
+        "Claude Desktop's chat": ("Not by itself, as far as Anthropic's "
+                                  "pages say",
+                                  "**not by itself, as far as Anthropic's "
+                                  "pages say.**"),
+        "Claude's Cowork": ("Yes, in the folders you connect to it",
+                            "**yes, in the folders you connect to it.**"),
+        "Claude Code": ("Yes, without asking, in the folder it starts in "
+                        "and beyond", "**yes**"),
+        "ChatGPT's desktop app and Codex": (
+            "Codex: yes, well beyond its folder, without asking, even in "
+            "\"Ask for approval\" and read-only mode",
+            "**yes, without asking**"),
+        "LM Studio": ("Its chat: not by itself", "**not by itself.**"),
+    }
+    for name, (readme_words, privacy_words) in verdicts.items():
+        assert cells[name][2].startswith(readme_words), name
+        assert privacy_words in hosts, name
+    # what each maker receives, and what this project suggests
+    assert [cells[name][1] for name in ASSISTANTS] == [
+        "Anthropic", "Anthropic", "Anthropic", "OpenAI", "None outside"]
+    assert cells["Claude Desktop's chat"][3] == "Suggested, set up as below"
+    assert cells["Claude Code"][3] == "Not suggested"
+    assert cells["ChatGPT's desktop app and Codex"][3] == (
+        "Practice and data that is not sensitive, until a setting that "
+        "stops those reads is tested")
+    assert cells["LM Studio"][3] == ("Also suggested, with no other server "
+                                     "or plugin that reads files")
+    # the Experimental routes say so, and why
+    assert "(Experimental)" in cells["ChatGPT's desktop app and Codex"][0]
+    assert ("(Experimental: no local model has yet been evaluated with "
+            "Exegete)") in cells["LM Studio"][0]
+    # the two sentences the table cannot carry
+    flat = _flat(section)
+    assert ("What they read that way goes to their maker too. Exegete's "
+            "protections (the `#####` mark below, your approval before "
+            "anything is written, the backups) do not apply to it; Exegete "
+            "cannot see such a read or stop it, and Exegete's own answers "
+            "tell it where your project is") in flat
+
+
+# ---------------------------------------------------------------------------
+# The tool-set table, against the server and the CHANGELOG's measurement
+# ---------------------------------------------------------------------------
+
+def _measured():
+    changelog = _read("CHANGELOG.md")
+    entry = _flat(_between(changelog, "## [0.14.2-alpha]",
+                           "## [0.14.1-alpha]"))
+    measured = entry[entry.index("### Measured"):]
+    found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) .*? "
+                      r"lifecycle set = ([\d,]+)", measured)
+    full, core, lifecycle = (int(n.replace(",", "")) for n in found.groups())
+    later = re.search(r"on Python 3\.11\.13 \(the `\.venv/`\), ([\d,]+),",
+                      measured)
+    return ({"full": full, "core": core, "lifecycle": lifecycle},
+            int(later.group(1).replace(",", "")))
+
+
+def test_the_tool_set_table():
+    section = _section("For advanced users", "What comes next")
+    assert ("| Tool set | Tools | Tool descriptions | For | Default in |"
+            in section)
+    rows = {_cells(row)[0].strip("`"): _cells(row)
+            for row in _rows(section, "| `")}
+    assert list(rows) == ["lifecycle", "full", "core"]
+    sizes, full_on_311 = _measured()
+    for mode, cells in rows.items():
+        count = len(_tools(mode))
+        assert cells[1].startswith(f"{count}: "), mode
+        size = sizes[mode]
+        assert cells[2] == (f"about {round(size / 1000) * 1000:,} "
+                            f"characters, {round(size / 4000)}k tokens"), mode
+    assert "create_project" in _tools("lifecycle")
+    assert "create_project" not in _tools("full")
+    # the defaults: the extension's manifest, the server's own, and none
+    manifest = json.loads(_read("packaging/desktop-extension/"
+                                "manifest.in.json"))
+    assert manifest["user_config"]["toolset"]["default"] == "lifecycle"
+    assert rows["lifecycle"][4] == "the one-click extension"
+    assert "(default full)" in server._resolve_toolset_mode.__doc__
+    assert rows["full"][4] == "the Terminal route"
+    assert rows["core"][4] == "none: set `EXEGETE_TOOLSET=core`"
+    assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
+    # the sentence under it, with the interpreters and the per cent
+    flat = _flat(section)
+    assert ("(measured on Python 3.13 at four characters a token; about "
+            "five per cent more on 3.10 to 3.12)") in flat
+    assert round(100 * (full_on_311 / sizes["full"] - 1)) == 5
+
+
+# ---------------------------------------------------------------------------
+# The advanced section, against the code
+# ---------------------------------------------------------------------------
+
+ARGUMENTS = {"get_coded_segments": ("cursor", "strategy", "max_chars",
+                                    "coder"),
+             "search_files": ("cursor", "exclude_code_ids"),
+             "search_coded_text": ("cursor", "exclude_code_ids"),
+             "find_cooccurring_codes": ("window_size",),
+             "query_by_attribute": ("operator",)}
+GUARDED = ("merge_codes", "merge_category", "delete_code", "delete_category",
+           "pseudonymise_source", "restore_backup", "prune_backups")
+
+
+def test_the_advanced_section_rests_on_the_code():
+    section = _section("For advanced users", "What comes next")
+    flat = _flat(section)
+    opening = flat[:flat.index("| Tool set |")]
+    for words in ("in Python 3.10 or newer, with no online service and no "
+                  "telemetry",
+                  "It reads a project's SQLite database read-only; each "
+                  "tool that writes opens its own connection, after a "
+                  "backup (by default), and refuses while QualCoder 3.8.2 "
+                  "has the project open.",
+                  "`pipx install exegete`"):
+        assert words in opening, words
+    with open(REPO / "pyproject.toml", "rb") as handle:
+        project = tomllib.load(handle)["project"]
+    assert project["requires-python"] == ">=3.10"
+    assert "?mode=ro" in _read("src/exegete/database.py")
+    # every name in the list is a tool the assistant is given, or one of
+    # the arguments it names
+    beyond = _between(flat, "**Beyond the basics**", "**Tested.**")
+    tools = _tools("lifecycle")
+    for name in re.findall(r"`([a-z_]+)`", beyond):
+        assert name in tools or name in ("exclude_code_ids", "coder"), name
+    for tool, arguments in ARGUMENTS.items():
+        parameters = inspect.signature(getattr(server, tool)).parameters
+        for argument in arguments:
+            assert argument in parameters, (tool, argument)
+    for tool in GUARDED:
+        assert f"`{tool}`" in beyond, tool
+        assert "preview_token" in inspect.signature(
+            getattr(server, tool)).parameters, tool
+    assert f"`{names.RESOURCE_SCHEME}://...`" in beyond
+    assert asyncio.run(server.mcp.list_prompts())
+    assert "\"--check-transition\"" in inspect.getsource(server)
+    assert "within the 2,048 characters Claude Code keeps" in beyond
+
+
+def test_how_it_is_tested_matches_the_workflow():
+    flat = _flat(_section("For advanced users", "What comes next"))
+    assert ("More than 5,000 automated tests run on Windows, macOS and "
+            "Linux, with Python 3.10 and 3.13, on every change pushed; they "
+            "test the server, not a researcher's use of it") in flat
+    workflow = _read(".github/workflows/ci.yml")
+    assert "os: [ubuntu-latest, windows-latest, macos-latest]" in workflow
+    assert "python-version: [\"3.10\", \"3.13\"]" in workflow
+    triggers = workflow[workflow.index("\non:\n"):workflow.index("\njobs:")]
+    assert "push:\n    branches: [\"**\"]" in triggers
+
+
+# ---------------------------------------------------------------------------
+# What comes next, and the badges
+# ---------------------------------------------------------------------------
+
+def test_what_comes_next_is_plans():
+    section = _flat(_section("What comes next", "Disclaimer"))
+    assert ("Plans, not promises: the order may change with what testers "
+            "report.") in section
+    items = re.findall(r" - ([^ ]+(?: [^ ]+)?)", section)
+    assert [item.split(",")[0].split(":")[0] for item in items] == [
+        "Next", "v0.15", "v0.16", "v0.17", "Later"]
+    assert ("- Next, in development: bringing in documents, not only text, "
+            "and an easy way to read a whole imported file yourself, beyond "
+            "the passages the assistant quotes") in section
+
+
+def test_two_badges_and_no_test_badge():
+    readme = _read("README.md")
+    badges = re.findall(r"\[!\[[^\]]*\]\((https://img\.shields\.io/[^)]+)\)\]",
+                        readme)
+    assert badges == ["https://img.shields.io/pypi/v/exegete",
+                      "https://img.shields.io/badge/licence-"
+                      "LGPL--3.0--or--later-blue"]
+    for word in ("actions/workflows", "badge.svg", "workflow/status"):
+        assert word not in readme, word
+    with open(REPO / "pyproject.toml", "rb") as handle:
+        assert tomllib.load(handle)["project"]["license"] == \
+            "LGPL-3.0-or-later"

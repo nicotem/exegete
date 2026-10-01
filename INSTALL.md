@@ -79,6 +79,9 @@ developer MCP servers are disabled on this device..."), and your IT
 team decides.
 
 **Updating**: download the newer `.mcpb` and install it the same way.
+Exegete does not look for new versions itself; with a GitHub account,
+Watch, then Custom, then Releases, on the repository's page sends you a
+notice of each.
 **Removing**: Settings, Extensions, Exegete, Uninstall. Neither
 touches your projects; what else stays is under "Uninstalling" below.
 **The log** is `mcp-server-Exegete.log` in `~/Library/Logs/Claude`
@@ -162,7 +165,10 @@ Before starting, make sure you have:
   images, audio, video or an area of a PDF page, and for graphs:
   https://github.com/ccbogel/QualCoder/releases (3.8.2 is the release
   marked "Latest"; the 4.0-Beta at the top of the page is a test
-  version)
+  version). 3.8.2's downloads are further down that page, for Windows,
+  Ubuntu and Macs with Apple Silicon (M1 or later): QualCoder offers
+  none for older Intel Macs, and its notes there say how to open it the
+  first time
 
 ---
 

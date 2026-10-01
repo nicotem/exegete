@@ -96,6 +96,11 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > views refresh through an internal event bus only), so they appear after
 > the project is closed and reopened in QualCoder.
 
+A project from a QualCoder older than 3.8 must first be opened once in
+QualCoder 3.8 or newer, which updates it as it opens; close it again
+before Exegete changes it (the oldest formats cannot even be read
+before that).
+
 Sub-codes (a code nested under another code, schema v16 and newer) are
 supported: creating them, moving a code with its sub-codes, merging
 (the source's sub-codes move under the target), branch-aware deletion,
@@ -239,7 +244,8 @@ tools plus `create_project`.
   not be where QualCoder's Open dialog starts; the result gives the full
   path.
 - **Your coder name.** The assistant asks for the coder name you use in
-  QualCoder (Settings, Coder name), after every other check, so you are
+  QualCoder (Project menu, Settings, "Current coder"; on a Mac it may be
+  under the QualCoder menu instead), after every other check, so you are
   asked once. If you do not know it or do not use QualCoder yet, say so:
   the project is created, and the check that keeps the AI's codings
   apart from yours stays off until QualCoder records your name, the
@@ -254,7 +260,8 @@ tools plus `create_project`.
   reason. Short names, in folders near the top of the disk, travel
   better.
 - **Opening it in QualCoder.** QualCoder 4.0 opens it without changing
-  its format (Project, Open Project, then the folder), and without a
+  its format (Project, Open Project, then the folder; on a Mac, Finder's
+  Go menu, Home, opens your home folder), and without a
   message when you open it under the coder name you gave (under another
   name, it asks whether to keep yours or switch). QualCoder 3.8.2 opens it without any warning and keeps
   everything in it, but cannot show what 4.0 added: sub-codes appear

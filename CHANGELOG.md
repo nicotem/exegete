@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-v0.14.2, in progress: the assistant's brief, provisional.
+v0.14.2, in progress: the assistant's brief, provisional; the rules a
+model must not miss within the 2,048 characters Claude Code shows of a
+tool description; and fixes from the checks of 0.14.1.
 
 ### Added: the assistant's brief (provisional)
 
@@ -25,21 +27,21 @@ v0.14.2, in progress: the assistant's brief, provisional.
   pass on: a short version as the server's opening text (below); a new
   tool, `read_brief`, in every tool set and listed first, whose
   description asks the assistant to call it once at the start of every
-  conversation about a project (it returns the full brief, about 11,000
+  conversation about a project (it returns the full brief, about 11,600
   characters, or in the `core` set the short version, and reads nothing
   from the project); the same full brief as the help topic
   `explain_ai_coding_tools('brief')` and the resource
   `exegete://guidance/brief`; and a one-line reminder, under the key
   `brief`, in the answers of `select_project`, `get_current_project`,
   `create_project` and `analyze_for_coding`.
-- **Provisional.** The brief says so in its own text. It restates the
-  rules the tools already give and takes no new position on method:
-  the lines that would are held back until this project's statement on
-  method. Before it is released, the project's maintainer reads it and
-  runs a ten-minute live check in Cowork (whether Cowork shows the
-  opening text, cuts long tool texts at 2,048 characters, lets the
-  assistant read a resource by itself, and whether a rule given is
-  followed).
+- **Provisional.** The brief says so in its own text. It carries the
+  tools' own rules, adds how to work with the researcher where no
+  single tool says, and leaves out, until this project's statement on
+  method, the lines that would take a position on method. Before it is
+  released, the project's maintainer reads it and runs a ten-minute
+  live check in Cowork (whether Cowork shows the opening text, cuts
+  long tool texts at 2,048 characters, lets the assistant read a
+  resource by itself, and whether a rule given is followed).
 - NOTICE's entry for QualCoder's methodology vocabulary now also names
   QualCoder's `ai_prompts/_agent.md` as the source of the order and
   ideas of four of the brief's sections, written in this project's own
@@ -47,7 +49,7 @@ v0.14.2, in progress: the assistant's brief, provisional.
 
 ### Changed: the opening text
 
-- The server's opening text is now the brief's short version, 1,919
+- The server's opening text is now the brief's short version, 1,978
   characters, within the 2,048 that Claude Code keeps: what the tools
   are for, to call `read_brief` at the start of every conversation
   about a project, and the eleven rules that matter most. It keeps its
@@ -56,18 +58,111 @@ v0.14.2, in progress: the assistant's brief, provisional.
   longer names the help topic `methodology_vocabulary` or the methods
   notes, which the brief names.
 
+### Changed: the rules a model must not miss come first in each tool description
+
+- Claude Code keeps only the first 2,048 characters of each tool
+  description, and does not tell the model that anything was cut. In
+  fourteen descriptions the rules a model must not miss now come
+  first, word for word: paragraphs (in two places a sentence or a list
+  item) changed places, and no word was added, removed or changed. The
+  fourteen: `analyze_for_coding`, `apply_codings`, `compare_coders`,
+  `create_code`, `delete_code`, `delete_coding`, `edit_suggestion`,
+  `merge_category`, `merge_codes`, `prune_backups`,
+  `pseudonymise_source`, `record_suggestions`, `rename_file` and
+  `select_project`.
+- Claude Code now shows, among others, `analyze_for_coding`'s judgement
+  of requests (straight after the three questions to ask before a
+  coding session), the preview-then-confirm paragraphs of `merge_codes`
+  and `prune_backups`, the refusal while QualCoder has the project open
+  in five tools that write, the refusal of private-note text in
+  `create_code` and `record_suggestions`, and `delete_coding`'s two
+  guards.
+- To make room, two paragraphs moved past the cut. In
+  `analyze_for_coding`, the one on stopping while QualCoder has the
+  project open (the tool's answer says so when it applies), with the
+  start of the coding workflow, whose end was already past the cut
+  (`update_suggestion_status` states the approval rule within its own).
+  In `pseudonymise_source`, the one on two people who share a name,
+  which the preview now carries (below).
+- Still past the cut, each reaching the model another way:
+  `analyze_for_coding`'s grounding rules (the short grounding rules sit
+  within the cut of `analyze_file_with_coding`, `record_suggestions`
+  and `propose_codes`, and the opening text names them; one sentence,
+  on a participant who is unsure or contradicts themselves, reaches
+  Claude Code only through `read_brief`) and its pairings
+  (`record_suggestions` states them within its cut); four of
+  `pseudonymise_source`'s paragraphs (the refusal while QualCoder has
+  the project open, which the server enforces under QualCoder 3.8.2;
+  what the run does not rewrite, which the preview counts; and that the
+  backup keeps the real names and the file should be read again, which
+  the run's answer says); and, in the Returns sections of
+  `record_suggestions`, `propose_codes` and `edit_suggestion`, the rule
+  to relay a warning about emoji and line endings, which the warning in
+  each answer now states. Shortening the descriptions themselves is
+  planned for v0.15.
+
 ### Changed: a warning in pseudonymisation's preview
 
 - When `rewrite_memos` would rewrite a note, `pseudonymise_source`'s
   preview now warns that the run rewrites the names in notes and
   journal entries across the whole project, so that the notes about
   someone else who shares a name are rewritten too, with this mapping's
-  pseudonym; it asks the assistant to check with the researcher and,
-  for a shared name, to keep `rewrite_memos` off. The description's
-  paragraph on two people who share a name now sits past the 2,048
-  characters Claude Code shows, after the rules that apply to every
-  run; the preview, which the assistant shows the researcher before any
-  run, carries the rule in every host.
+  pseudonym. It asks the assistant to check with the researcher (a yes
+  or no is enough, so no real name need be typed) and, for a shared
+  name, gives the description's three instructions in its own words:
+  keep `rewrite_memos` off, change the notes that name either person by
+  hand, and give the second person a typed mapping that is not saved to
+  the project. The preview's hint now asks the assistant to read out
+  every warning, as the description does within the cut.
+- `record_suggestions`' warning about files with emoji or Windows line
+  endings now says to relay it to the researcher before approval, as
+  the same warning from `propose_codes` and `edit_suggestion` already
+  did.
+
+### Fixed: the AI coder name file beside an earlier one that could not be marked
+
+- When the earlier file, `qualcoder_mcp.json`, could not be marked as
+  moved (it was locked or read-only) and still holds the name from
+  before the move, the messages for an `exegete.json` written by a
+  newer version, or too large to write, now say to move both files
+  aside and name the name that would come back, as the message for a
+  damaged file already did in 0.14.1; they no longer say that the next
+  write will ask for the name again, which was untrue there.
+- The warning given while the earlier file stays unmarked now also says
+  that deleting `exegete.json` alone, to have the name asked for again,
+  would bring that earlier name back, and to remove both files instead.
+
+### Fixed: the transition check
+
+- After `uv tool install qualcoder-mcp --with-executables-from exegete`,
+  following the check's steps ended with no `exegete` command, since
+  `uv tool uninstall qualcoder-mcp` takes the command with it. The
+  check now reads uv's record of the tool and, in that case, ends the
+  removal step with `uv tool install --force exegete`, saying why.
+- A host whose settings start the `exegete` command at a place where
+  there is none is now reported, with the command that puts it back
+  when uv or pipx installed Exegete, instead of "Nothing is left
+  behind".
+- On Windows the check also looks in the folder Windows keeps for
+  Claude Desktop's app package, for its settings file, extensions and
+  logs, so an older extension installed that way keeps the link at
+  `~/.qualcoder_mcp`, as on the Mac.
+- Once `--tidy` has removed the link, the check prints the one command
+  that puts it back, for an older copy started from a project's own
+  `.mcp.json` file, which it cannot see.
+- Where a printed command writes characters of a folder's name as
+  codes, a line says to paste it into bash or zsh, since dash (the
+  `sh` of Debian and Ubuntu) reads them wrongly.
+- Windows' list of running programs, which the check reads to see
+  whether an older copy runs, is given 60 seconds instead of 20, and
+  is asked for once more after a time-out (`ps` on macOS and Linux
+  keeps 20 seconds, with the same retry). On a slow computer the check
+  had kept the link, the safe way round, and the researcher could not
+  tidy.
+- The help topic `moving_from_qualcoder_mcp` gives desktop extension
+  users `uvx exegete@latest --check-transition`, since uv otherwise
+  reruns a copy it fetched before, and names what the check now says;
+  "This comes first. Quit your AI host first" says "first" once.
 
 ### Measured
 
@@ -78,7 +173,8 @@ v0.14.2, in progress: the assistant's brief, provisional.
   `venv/`; on Python 3.11.13 (the `.venv/`), 205,441, 68,563 and
   208,160. Each grew by `read_brief`'s own entry (467 characters with
   its separator, in every set, on both interpreters) and by nothing
-  else: every other tool's description is as 0.14.1 served it.
+  else: every other tool's description keeps the words and the length
+  0.14.1 served (fourteen changed order; see above).
 
 ## [0.14.1-alpha] - 2026-10-01
 

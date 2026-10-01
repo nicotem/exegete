@@ -574,7 +574,7 @@ reaches it four ways:
   text, which Claude Code shows at the start of a session;
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
-  project: it returns the full brief (about 11,000 characters), or in
+  project: it returns the full brief (about 11,600 characters), or in
   the `core` set the short version;
 - the same full brief as the help topic `explain_ai_coding_tools('brief')`
   and the resource `exegete://guidance/brief`;
@@ -582,11 +582,12 @@ reaches it four ways:
   (`select_project`, `get_current_project`, `create_project`) and that
   start a coding session (`analyze_for_coding`).
 
-The brief is **provisional**: it restates the rules the tools already
-give and takes no new position on method, and it may change once this
-project's statement on method is written. Once read, the full brief
-stays in that conversation and is sent again with every later request,
-until the host shortens the conversation.
+The brief is **provisional**: it carries the tools' own rules, adds how
+to work with the researcher where no single tool says, and leaves out,
+until this project's statement on method, the lines that would take a
+position on method; it may change once that statement is written.
+Once read, the full brief stays in that conversation and is sent again
+with every later request, until the host shortens the conversation.
 
 ## Available Resources
 

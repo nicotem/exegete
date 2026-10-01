@@ -1744,3 +1744,24 @@ def test_the_help_topic_says_what_0_14_2_added():
     assert ("(@latest makes uv fetch the newest release, rather than run "
             "one it fetched before, whose check may not know the "
             "extension)") in extension
+
+
+def test_the_changelog_says_what_0_14_2_changed_in_the_check():
+    changelog = " ".join((REPO / "CHANGELOG.md").read_text(
+        encoding="utf-8").split())
+    entry = changelog[changelog.index("### Fixed: the transition check"):
+                      changelog.index("## [0.14.1-alpha]")]
+    entry = entry[:entry.index("### ", 4)]
+    for words in (
+            "uv tool install qualcoder-mcp --with-executables-from exegete",
+            "`uv tool install --force exegete`",
+            "with the command that puts it back when uv or pipx installed",
+            "Claude Desktop's app package",
+            "prints the one command that puts it back",
+            "paste it into bash or zsh",
+            "is given 60 seconds instead of 20, and is asked for once more "
+            "after a time-out",
+            "`uvx exegete@latest --check-transition`"):
+        assert words in entry, words
+    assert transition.PROCESS_LIST_SECONDS == {"windows": 60, "posix": 20}
+    assert transition.PROCESS_LIST_TRIES == 2

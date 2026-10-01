@@ -453,6 +453,23 @@ class TestProvisionalAndHeldBack:
             assert re.search(r"[Pp]rovisional", text), where
         assert "`read_brief()`" in tools
 
+    def test_the_documents_do_not_say_it_only_restates(self):
+        """The brief adds conduct no tool gives (sections 2, 10, 12 and
+        13), so the documents say what it carries, adds and leaves out."""
+        tools = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
+        changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        unreleased = _flat(changelog[changelog.index("## [Unreleased]"):
+                                     changelog.index("## [0.14.1-alpha]")])
+        for where, text in (("TOOLS.md", tools),
+                            ("CHANGELOG's Unreleased entry", unreleased)):
+            assert "restates the rules the tools already give" not in text
+            assert "takes no new position on method" not in text, where
+            assert ("carries the tools' own rules, adds how to work with "
+                    "the researcher where no single tool says, and leaves "
+                    "out, until this project's statement on method, the "
+                    "lines that would take a position on method"
+                    in text), where
+
 
 # ---------------------------------------------------------------------------
 # The per-request sizes

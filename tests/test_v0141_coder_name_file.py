@@ -495,6 +495,21 @@ def test_removing_the_new_file_alone_is_warned_of():
         f"both files instead.")
 
 
+def test_the_changelog_says_what_0_14_2_changed():
+    changelog = " ".join((Path(__file__).parent.parent / "CHANGELOG.md")
+                         .read_text(encoding="utf-8").split())
+    entry = changelog[changelog.index(
+        "### Fixed: the AI coder name file"):
+        changelog.index("## [0.14.1-alpha]")]
+    entry = entry[:entry.index("### ", 4)]
+    for words in ("written by a newer version, or too large to write",
+                  "move both files aside and name the name that would "
+                  "come back",
+                  "deleting `exegete.json` alone",
+                  "remove both files instead"):
+        assert words in entry, words
+
+
 class TestThroughTheServer:
 
     def test_a_failed_mark_is_said_plainly_and_retried(

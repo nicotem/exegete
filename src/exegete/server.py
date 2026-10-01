@@ -89,6 +89,7 @@ from .database import (
 )
 from . import pseudonymise as pseudo
 from . import new_project
+from .path_identity import is_inside, is_inside_any
 from .cursors import (
     CURSOR_MAX_LENGTH,
     CURSOR_TOO_LONG,
@@ -5885,8 +5886,7 @@ def export_refi_qda(
         return json.dumps({
             "error": STATE_FOLDER_EXPORT_REFUSAL
         })
-    project_folder = validate_qda_path(current_project_path).parent
-    if project_folder in out_file.parents or out_file.parent == project_folder:
+    if _inside_project_folder(out_file):
         return json.dumps({
             "error": "Refusing to write the export inside the project folder; "
                      "choose a location outside it."
@@ -17453,21 +17453,20 @@ def _inside_state_home(out_file) -> bool:
     the MRU pointer. No export has business there, and refusing on
     principle means no export can ever be aimed at the secret, whatever a
     caller intends. Resolved on both sides so a symlinked home or a
-    traversing path cannot slip past the comparison.
+    traversing path cannot slip past the comparison, and compared by
+    which folder each step really is (0.14.3): on a disk that ignores
+    letter case, a textual comparison let another spelling of the state
+    folder through (path_identity says how).
     """
-    try:
-        target = Path(out_file).resolve()
-    except (OSError, RuntimeError):
-        return False
-    for folder in (preview_tokens_state_home(),
-                   preview_tokens_old_state_home()):
-        try:
-            home = Path(folder).resolve()
-        except (OSError, RuntimeError):
-            continue
-        if home == target or home in target.parents:
-            return True
-    return False
+    return is_inside_any(out_file, (preview_tokens_state_home(),
+                                    preview_tokens_old_state_home()))
+
+
+def _inside_project_folder(out_file) -> bool:
+    """Whether an export path lands inside the open project's folder,
+    decided by identity as `_inside_state_home` is (0.14.3)."""
+    project_folder = validate_qda_path(current_project_path).parent
+    return is_inside(out_file, project_folder)
 
 
 def _relative_output_refusal(output_path: Any) -> Optional[str]:
@@ -17557,8 +17556,7 @@ def _resolve_export_path(output_path: str, suffix: str, default_name: str,
         return None, {
             "error": STATE_FOLDER_EXPORT_REFUSAL
         }
-    project_folder = validate_qda_path(current_project_path).parent
-    if project_folder in out_file.parents or out_file.parent == project_folder:
+    if _inside_project_folder(out_file):
         return None, {
             "error": "Refusing to write the export inside the project "
                      "folder; choose a location outside it."

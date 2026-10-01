@@ -226,10 +226,18 @@ class TestTheOriginal:
     def test_shown_in_its_folder(self, project, _no_window_opens):
         answer = host("open_file_for_reading", file_id=50, show="in_folder")
         assert answer["shown"] == "in_folder"
-        asked = _no_window_opens[-1]
+        location = Path(answer["location"])
         if sys.platform == "darwin":
-            assert asked == ["/usr/bin/open", "-R", answer["location"]]
-        assert answer["location"] in asked
+            assert _no_window_opens[-1] == ["/usr/bin/open", "-R",
+                                            str(location)]
+        # On Linux the file manager is asked by the file's address, then
+        # (the recorder says no) the folder is opened; elsewhere the path
+        # itself is the last argument
+        named = {str(location), f"array:string:{location.as_uri()}",
+                 str(location.parent)}
+        assert any(arg in named for call in _no_window_opens
+                   for arg in call)
+        assert str(project) not in json.dumps(_no_window_opens)
 
     def test_asked_twice_the_copy_is_replaced(self, project):
         first = host("open_file_for_reading", file_id=50, show="original")

@@ -513,7 +513,10 @@ class TestWhatTheAssistantIsTold:
         assert text.startswith("Import text typed or pasted in the "
                                "conversation as a new text file. The text "
                                "passes through the conversation, so it "
-                               "reaches the AI provider. At most 1,000,000 "
+                               "reaches the AI provider. For a document on "
+                               "the researcher's computer use "
+                               "import_documents, which keeps its text off "
+                               "the conversation. At most 1,000,000 "
                                "characters.")
 
     def test_skipping_the_backup_on_import_is_deprecated(self, project):

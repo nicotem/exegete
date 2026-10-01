@@ -9559,8 +9559,9 @@ def import_text_file(
     """Import text typed or pasted in the conversation as a new text file.
 
     The text passes through the conversation, so it reaches the AI
-    provider. At most 1,000,000 characters. Like QualCoder's "Create
-    text file":
+    provider. For a document on the researcher's computer use
+    import_documents, which keeps its text off the conversation. At most
+    1,000,000 characters. Like QualCoder's "Create text file":
     the file is visible in QualCoder's file manager and can be coded.
 
     Optionally links the new file to an existing case (participant) in the

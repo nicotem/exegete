@@ -463,8 +463,9 @@ WORDS = {
     "get_file_attributes": (317, 246, "49a2ce568819b490"),
     "get_project_summary": (242, 202, "19d66f09ec602fed"),
     # v0.14.3 (provisional): says that the text passes through the
-    # conversation, and the deprecated create_backup=false
-    "import_text_file": (3916, 2905, "2b6a32504fbb25c9"),
+    # conversation, its pointer to import_documents, and the deprecated
+    # create_backup=false
+    "import_text_file": (4025, 2998, "30b5d7a15295c216"),
     "link_file_to_case": (1846, 1434, "89fd22da7be857b6"),
     "list_attribute_types": (415, 335, "5609e42ca8a0ceea"),
     "list_available_projects": (792, 622, "62e5c4a8248d1d5e"),

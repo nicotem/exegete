@@ -495,8 +495,9 @@ class TestTheSizes:
     # 1.30.0: 0.14.1's were 195,266, 64,804 and 197,845; v0.14.3
     # (provisional) moves them by the reading tool's entry, the `start`
     # argument on analyze_file_with_coding and the two descriptions it
-    # changes (tests/test_v0142_description_cut.py pins those)
-    BEFORE = {"full": 197_110, "core": 66_485, "lifecycle": 199_689}
+    # changes, import_text_file's pointer to import_documents among them
+    # (tests/test_v0142_description_cut.py pins those)
+    BEFORE = {"full": 197_220, "core": 66_485, "lifecycle": 199_799}
 
     @staticmethod
     def _entry(tool):

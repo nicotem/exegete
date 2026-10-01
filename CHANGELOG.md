@@ -85,7 +85,8 @@ otherwise, and may change before it is released.
   (usually one made in QualCoder after an emoji) is marked
   `stored_passage_differs` in `analyze_file_with_coding`, never moved.
 - `import_text_file`'s description says first that its text passes
-  through the conversation, and gives the 1,000,000-character limit.
+  through the conversation, points to `import_documents` for a document
+  on the computer, and gives the 1,000,000-character limit.
 
 ### Deprecated
 
@@ -168,11 +169,11 @@ otherwise, and may change before it is released.
 
 ### Measured
 
-- Serialised tool JSON: full = 200,222 characters (about 50.1k tokens
+- Serialised tool JSON: full = 200,332 characters (about 50.1k tokens
   at chars/4) over 76 tools, core = 66,952 (about 16.7k) over 23, and
-  the opt-in lifecycle set = 202,801 (about 50.7k) over 77, measured on
+  the opt-in lifecycle set = 202,911 (about 50.7k) over 77, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 210,066, 70,328 and 212,785.
+  Python 3.11.13 (the `.venv/`), 210,180, 70,328 and 212,899.
   `open_file_for_reading`'s own entry is 1,355 characters on 3.13, and
   `import_documents`' 2,643 (2,645 with its separator; it is in the
   standard and lifecycle sets, not in core); the rest of the growth is

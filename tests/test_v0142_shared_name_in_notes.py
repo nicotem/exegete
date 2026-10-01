@@ -18,7 +18,11 @@ run, in every host. What this file pins:
   including a run with no match in the file itself;
 - what it says is what the run then does: the note about the other
   person who shares the name is rewritten with this mapping's pseudonym;
-- it carries the description's own words for the rule.
+- it carries the description's own words for the rule, all three of
+  its instructions;
+- it asks only whether anyone shares a name: with the project's own list
+  of real names, the answer need not be a name;
+- the preview's hint asks for every warning to be read out.
 """
 
 import asyncio
@@ -41,11 +45,16 @@ from track5_helpers import write_fixture_sidecar  # noqa: E402
 WARNING = server._SHARED_NAME_IN_NOTES_WARNING
 MAPPING = [{"original": "Thomas", "pseudonym": "Alex"}]
 
-# The description's own words for the rule, which the warning repeats
+# The description's own words for the rule, which the warning repeats:
+# what happens, and all three of its instructions (the notes, by hand,
+# and the second person's own pseudonym)
 RULE_WORDS = (
     "no order of runs avoids this",
     "keep rewrite_memos off on every run of a shared name and change the "
     "notes that name either person by hand",
+    "give the second person a typed mapping with save_mapping_to_project "
+    "off and researcher_keeps_mapping on (pseudonyms.json holds one "
+    "pseudonym per name)",
 )
 
 
@@ -116,6 +125,14 @@ class TestThePreviewSaysIt:
         assert out["preview"]["memo_rewrites"]["totals"]["rows"] == 2
         assert out["warnings"].count(WARNING) == 1
 
+    def test_the_hint_asks_for_every_warning(self, tmp_path):
+        """The description, within the cut, says to show every warning;
+        the preview's own hint says it too."""
+        with _selected(_project(tmp_path)):
+            out = _preview(rewrite_memos=True)
+        assert WARNING in out["warnings"]
+        assert "the residue summary and every warning" in out["hint"]
+
     def test_what_it_warns_of_is_what_the_run_does(self, tmp_path):
         """The run on the first Thomas's file rewrites the notes about
         the second Thomas, and leaves the second one's file text."""
@@ -169,6 +186,12 @@ class TestTheWarningCarriesTheRule:
         for words in RULE_WORDS:
             assert re.search(re.escape(words), paragraph, re.I), words
             assert words in warning, words
+
+    def test_a_yes_or_no_is_enough(self):
+        """With the project's own list of real names, the assistant is
+        never shown them; the question it asks must not need one."""
+        assert ("Ask the user whether anyone does (a yes or no is enough) "
+                "before executing" in _flat(WARNING))
 
     def test_it_is_written_to_the_house_rules(self):
         assert "—" not in WARNING and "–" not in WARNING

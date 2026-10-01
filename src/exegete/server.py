@@ -8235,7 +8235,8 @@ def record_suggestions(
             f"a different position system for such files (its documented "
             f"emoji bug), so codings on them may render shifted or "
             f"unhighlighted in the QualCoder editor, and GUI-created codings "
-            f"there may not verify. Reports and exports are unaffected."
+            f"there may not verify. Reports and exports are unaffected. "
+            f"Relay this to the user before proceeding to approval."
         )
     return json.dumps(result, indent=2)
 
@@ -14535,18 +14536,22 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any]
 # v0.14.2 that paragraph sits past the 2,048 characters Claude Code shows
 # of a tool description (the rules that apply to every run come first), so
 # the preview, which every host passes on, is where the model meets it.
-# Two of its clauses are the paragraph's own words, pinned by
-# tests/test_v0142_shared_name_in_notes.py.
+# Its three instructions are the paragraph's own words, pinned by
+# tests/test_v0142_shared_name_in_notes.py; "(a yes or no is enough)" keeps
+# a real name out of the answer when the mapping is the project's own list.
 _SHARED_NAME_IN_NOTES_WARNING = (
     "Warning: with rewrite_memos on, this run rewrites these names in notes "
     "and journal entries across the whole project, not only in those "
     "attached to this file (see memo_rewrites). If someone else in the "
     "project shares a name in this mapping, the notes about them are "
     "rewritten too, with this mapping's pseudonym, and no order of runs "
-    "avoids this. Ask the user whether anyone does before executing; if "
-    "so, preview again with rewrite_memos off, keep rewrite_memos off on "
-    "every run of a shared name and change the notes that name either "
-    "person by hand.")
+    "avoids this. Ask the user whether anyone does (a yes or no is "
+    "enough) before executing; if so, preview again with rewrite_memos "
+    "off, keep rewrite_memos off on every run of a shared name and change "
+    "the notes that name either person by hand; give the second person a "
+    "typed mapping with save_mapping_to_project off and "
+    "researcher_keeps_mapping on (pseudonyms.json holds one pseudonym per "
+    "name).")
 
 
 def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
@@ -16178,10 +16183,11 @@ def pseudonymise_source(
             backup_fail_detail="no text was rewritten",
             confirm_hint=(
                 "Read the user the per-file replacement counts, every "
-                "collision and the residue summary, and say plainly that this "
-                "rewrites the stored text and moves every coding in that "
-                "file. Only with an explicit yes, call pseudonymise_source "
-                "again exactly as execute_with says, with the SAME mapping."),
+                "collision, the residue summary and every warning, and say "
+                "plainly that this rewrites the stored text and moves every "
+                "coding in that file. Only with an explicit yes, call "
+                "pseudonymise_source again exactly as execute_with says, "
+                "with the SAME mapping."),
             execute_arguments={
                 "case_mode": case_mode,
                 "overlap_policy": overlap_policy,

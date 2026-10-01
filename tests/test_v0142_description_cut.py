@@ -37,7 +37,9 @@ words are matched across line breaks and indentation.
 
 import asyncio
 import hashlib
+import json
 import re
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -251,7 +253,10 @@ LEFT_PAST_THE_CUT = {
         "does not fit beside the judgement of requests; the short "
         "grounding rules sit within the cut of the three tools that read, "
         "record and propose (analyze_file_with_coding, record_suggestions, "
-        "propose_codes), and the opening text names them",
+        "propose_codes), and the opening text names them; one sentence, "
+        "where the participant is unsure or contradicts themselves, is in "
+        "none of those and reaches Claude Code only through read_brief, "
+        "whose answer carries the grounding rules whole",
     ("analyze_for_coding", "coding_workflow_approval"):
         "update_suggestion_status says within its cut to approve only "
         "what the user confirmed; the opening text and this tool's answer "
@@ -282,7 +287,8 @@ LEFT_PAST_THE_CUT = {
         "within the cut says to relay every warning "
         "(test_v0142_shared_name_in_notes.py)",
     ("record_suggestions", "relay_position_safety_warning"):
-        "inside the Returns section, which is not split",
+        "inside the Returns section, which is not split; the warning in "
+        "the answer says to relay it",
     ("propose_codes", "relay_position_safety_warning"):
         "inside the Returns section; the warning in the answer says "
         "to relay it",
@@ -557,3 +563,69 @@ class TestTheDescriptionsKeepTheirWords:
         for name, (earlier, later) in moved.items():
             d = " ".join(registered[name].split())
             assert d.index(earlier) < d.index(later), name
+
+
+# ---------------------------------------------------------------------------
+# The other ways in that the reasons name
+# ---------------------------------------------------------------------------
+
+def _call(tool, **args):
+    """A tool's answer through FastMCP's own call path, as a host makes
+    it."""
+    out = asyncio.run(server.mcp.call_tool(tool, args))
+    blocks = out[0] if isinstance(out, tuple) else out
+    return "".join(getattr(b, "text", "") for b in blocks)
+
+
+class TestTheOtherWaysInAreReal:
+    """Where a reason in LEFT_PAST_THE_CUT says the model meets a rule
+    another way, that way exists."""
+
+    def test_record_suggestions_warning_says_to_relay_it(
+            self, setup_server, qualcoder_db_path):
+        """The relay rule is past the cut in all three tools that give the
+        warning; their answers say to relay it, record_suggestions' too
+        from v0.14.2, and the reasons say so."""
+        text = "Intro \U0001F600 emoji. I feel very stressed today."
+        con = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        try:
+            con.execute("INSERT INTO source (id, name, fulltext) "
+                        "VALUES (70, 'emoji.txt', ?)", (text,))
+            con.commit()
+        finally:
+            con.close()
+        session = json.loads(_call("analyze_for_coding", file_ids=[70],
+                                   instruction="test"))
+        answer = json.loads(_call(
+            "record_suggestions",
+            coding_session_id=session["coding_session_id"],
+            suggestions=[{"reading": "explicit", "file_id": 70,
+                          "code_name": "Stress",
+                          "segment_text": "I feel very stressed",
+                          "reason": "The participant says so."}]))
+        assert answer["recorded_count"] == 1, answer
+        warning = answer["position_safety_warning"]
+        assert "emoji.txt" in warning
+        assert warning.endswith(
+            "Relay this to the user before proceeding to approval.")
+        for (name, rule), reason in LEFT_PAST_THE_CUT.items():
+            if rule == "relay_position_safety_warning":
+                assert "the warning in the answer says to relay it" \
+                    in reason, name
+
+    def test_the_grounding_sentence_only_read_brief_carries(self, served):
+        """One sentence of the grounding rules is in no shorter grounding
+        text and not in the opening text: in Claude Code it arrives only
+        with read_brief's answer, and the reason says so."""
+        sentence = ("Where the participant is unsure or contradicts "
+                    "themselves, say so rather than settle it.")
+        assert sentence in " ".join(server.GROUNDING_RULES.split())
+        assert sentence in " ".join(server.BRIEF_FULL.split())
+        for mode, (tools, opening) in served.items():
+            assert sentence not in " ".join(opening.split()), mode
+            for name, description in tools.items():
+                found = re.search(_words(sentence), description)
+                assert not found or found.end() > CUT, (mode, name)
+        reason = LEFT_PAST_THE_CUT[("analyze_for_coding", "grounding_rules")]
+        assert "unsure or contradicts themselves" in reason
+        assert "only through read_brief" in reason

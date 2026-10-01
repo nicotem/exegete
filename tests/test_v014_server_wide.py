@@ -96,6 +96,9 @@ EXPECTED_HINTS = {
     "add_journal_entry": A, "import_text_file": A,
     "link_file_to_case": A, "create_attribute_type": A,
     "add_annotation": A,
+    # writes a page or a copy outside the project and opens it on the
+    # researcher's screen; a repeat opens it again (v0.14.3)
+    "open_file_for_reading": A,
     # replaces what exists, and a repeat changes nothing
     "rename_code": C1,
     "rename_category": C1, "rename_case": C1, "rename_file": C1,
@@ -770,6 +773,7 @@ async def call_every_tool(client, root, lock_check=False):
     await run("export_code_report", {"code_name": "Doubt"})
     await run("get_project_summary", {})
     await run("analyze_file_with_coding", {"file_id": 1})
+    await run("open_file_for_reading", {"file_id": 1})
     await run("list_attribute_types", {})
     await run("get_file_attributes", {"file_id": 1})
     await run("get_case_attributes", {"case_id": 1})
@@ -1849,6 +1853,9 @@ NOT_PROJECT_WRITES = {
     "export_codebook": "file", "export_coded_segments_report": "file",
     "export_frequencies_csv": "file", "export_case_code_matrix_csv": "file",
     "read_pseudonym_list": "reads only (marked so that hosts ask)",
+    "open_file_for_reading": "writes a page or a copy in the reading "
+                             "folder, outside the project, and works "
+                             "while QualCoder has it open, as reads do",
 }
 
 

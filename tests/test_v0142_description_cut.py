@@ -425,7 +425,8 @@ class TestTheRulesSitWithinTheCut:
 WORDS = {
     "add_annotation": (1697, 1406, "eb754cae1fd5fd0c"),
     "add_journal_entry": (1137, 943, "c3a73ee84df3096d"),
-    "analyze_file_with_coding": (1977, 1620, "c800e920aaa2fe59"),
+    # v0.14.3 (provisional): reads in parts, the `start` argument
+    "analyze_file_with_coding": (2235, 1832, "3439e33c120d8ae9"),
     "analyze_for_coding": (6101, 4958, "c774dca8502c1ab6"),
     "apply_codings": (2627, 2152, "f9afa83a8784cd88"),
     "cleanup_old_sessions": (842, 684, "e2e05fad8d2357ea"),
@@ -461,7 +462,9 @@ WORDS = {
     "get_current_project": (1921, 1571, "a7bdafc47afae608"),
     "get_file_attributes": (317, 246, "49a2ce568819b490"),
     "get_project_summary": (242, 202, "19d66f09ec602fed"),
-    "import_text_file": (3757, 2786, "37c3de867cf6da5f"),
+    # v0.14.3 (provisional): says that the text passes through the
+    # conversation, and the deprecated create_backup=false
+    "import_text_file": (3916, 2905, "2b6a32504fbb25c9"),
     "link_file_to_case": (1846, 1434, "89fd22da7be857b6"),
     "list_attribute_types": (415, 335, "5609e42ca8a0ceea"),
     "list_available_projects": (792, 622, "62e5c4a8248d1d5e"),
@@ -504,6 +507,9 @@ WORDS = {
 # keep: read_brief, the assistant's brief (tests/test_v0142_brief.py pins
 # its description)
 NEW_IN_0142 = {"read_brief"}
+# and in v0.14.3 (provisional): the reading tool, whose description
+# tests/test_v0143_reading.py pins
+NEW_IN_0143 = {"open_file_for_reading"}
 
 
 def _fingerprint(description):
@@ -517,7 +523,7 @@ class TestTheDescriptionsKeepTheirWords:
     def test_every_description_keeps_its_words_and_length(self):
         server._apply_toolset("lifecycle")
         registered = server.mcp.original_descriptions
-        assert set(registered) == set(WORDS) | NEW_IN_0142
+        assert set(registered) == set(WORDS) | NEW_IN_0142 | NEW_IN_0143
         exact = sys.version_info[:2] == (3, 13)
         changed = []
         for name, (length, solid, digest) in sorted(WORDS.items()):

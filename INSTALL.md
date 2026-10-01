@@ -138,7 +138,10 @@ brief is provisional: a later release may change it.
 Before starting, make sure you have:
 
 - ✅ **A computer** with macOS, Windows or Linux (paths differ
-  slightly), and **Python 3.10 or newer**
+  slightly), and **Python 3.10 or newer**. Opening a file for you to
+  read (provisional, v0.14.3) needs a screen: on Linux, a desktop
+  session; in an SSH session nothing opens, and Exegete gives the
+  page's place instead
   - Check by opening Terminal and typing: `python3 --version`
   - If not installed, get it from: https://www.python.org/downloads/
 - ✅ **An MCP host**: the step-by-step guide below uses Claude Desktop
@@ -158,8 +161,10 @@ Before starting, make sure you have:
 - ✅ **QualCoder itself**, recommended, and needed to bring in
   documents (Word, PDF, images, audio, video) and any text you would
   rather not pass through the conversation (this server imports only
-  text the assistant hands it), to see the coding in the text, to code
-  images, audio, video or an area of a PDF page, and for graphs:
+  text the assistant hands it), to code images, audio, video or an
+  area of a PDF page, and for graphs (since v0.14.3, provisionally,
+  Exegete opens a page in your browser with a file's whole text and its
+  codings):
   https://github.com/ccbogel/QualCoder/releases (3.8.2 is the release
   marked "Latest"; the 4.0-Beta at the top of the page is a test
   version)
@@ -508,10 +513,10 @@ always to the same value.
   tools and a few others answered "No Qualcoder project selected" until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 74 tools;
-  `core` registers the 22-tool supervised coding set for local models
+- `EXEGETE_TOOLSET`: `full` (default) registers 75 tools;
+  `core` registers the 23-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
-  registers the full set plus `create_project`, 75 tools, so that a
+  registers the full set plus `create_project`, 76 tools, so that a
   study can be started from the conversation (TOOLS.md, "Starting a
   project from the conversation"). Configured by hand, creating
   projects stays out of the default set, so that researchers opt in to
@@ -757,9 +762,9 @@ parameters. We have not evaluated specific models with this server;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** This server exposes 74 tools by
+**Step 3. Use the core toolset.** This server exposes 75 tools by
 default, and the serialised tool definitions alone measure about
-196,000 characters, roughly 49k tokens (measured for 0.14.2 under
+198,000 characters, roughly 49k tokens (measured for 0.14.3 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
@@ -774,13 +779,13 @@ definitions measure about five per cent more).
 That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
-(in the config of Step 5) to register only the 22-tool supervised
-coding set, measured at about 65,000 characters, roughly 16k tokens.
+(in the config of Step 5) to register only the 23-tool supervised
+coding set, measured at about 67,000 characters, roughly 17k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-16k tokens of schema exceed the 8k default context. When loading the
+17k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
-(that leaves about 16k tokens for your transcript excerpts and
+(that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
 or 64k if you must run the full surface (its schema alone is about 49k
 tokens).
@@ -1207,7 +1212,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 198,000 characters with `lifecycle`; TOOLS.md says how that
+  (about 200,000 characters with `lifecycle`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1296,7 +1301,7 @@ annotation, which takes priority)."). Under a server's default,
 `auto`, Codex asks before a tool that can replace or remove, runs a
 read-only tool without asking, and also runs without asking a tool that
 is neither but is marked as reaching nothing beyond this computer. Here
-that is the 14 tools that only add (`import_text_file`,
+that is the 15 tools that only add (`import_text_file`,
 `apply_codings`, `create_proposed_codes`, `create_code` and the rest)
 and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
 mark Codex does not read. With `default_tools_approval_mode =

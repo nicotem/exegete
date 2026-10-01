@@ -189,8 +189,8 @@ class TestTheIntroduction:
                           "stage", "### Claude Desktop, with one click")
         for words in ("bring in documents (Word, PDF, images, audio, video)",
                       "to code images, audio, video or an area of a PDF "
-                      "page", "graphs", "to see the coding highlighted in "
-                      "the text"):
+                      "page", "graphs", "to code by selecting text "
+                      "yourself"):
             assert words in stages, words
 
     def test_the_whole_life_of_a_project_is_the_aim(self):
@@ -444,7 +444,7 @@ class TestCodexAsksBeforeEveryChange:
                          and not codex_asks(tool.annotations, "auto"))
         assert "read_pseudonym_list" in unasked
         adding = [n for n in unasked if n != "read_pseudonym_list"]
-        assert len(adding) == 14
+        assert len(adding) == 15
         for name in ("import_text_file", "apply_codings",
                      "create_proposed_codes", "create_code"):
             assert name in adding, name
@@ -453,7 +453,7 @@ class TestCodexAsksBeforeEveryChange:
             assert codex_asks(tools[name].annotations, "auto"), name
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("Here that is the 14 tools that only add "
+        assert ("Here that is the 15 tools that only add "
                 "(`import_text_file`, `apply_codings`, "
                 "`create_proposed_codes`, `create_code` and the rest) and "
                 "`read_pseudonym_list`") in marks

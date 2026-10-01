@@ -89,10 +89,10 @@ def _projects_dir() -> Path:
 def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
-EXPECTED_TOOLS = 74              # read_brief joined in v0.14.2
+EXPECTED_TOOLS = 75              # open_file_for_reading joined in v0.14.3
 EXPECTED_CONCRETE_RESOURCES = 8   # six data resources + exegete://guidance/methods (0.12) + exegete://guidance/brief (0.14.2)
-EXPECTED_RESOURCE_TEMPLATES = 3
-EXPECTED_RESOURCES_TOTAL = 11
+EXPECTED_RESOURCE_TEMPLATES = 4      # the file resource's later parts (v0.14.3)
+EXPECTED_RESOURCES_TOTAL = 12
 EXPECTED_PROMPTS = 4
 
 # jsonschema is installed in the worktree venv; when this module is run under a

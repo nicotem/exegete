@@ -9,6 +9,7 @@ arguments, never a shell. The system calls are replaced by recorders
 here (conftest's `_no_window_opens`, or the test's own).
 """
 
+import json
 import os
 import stat
 import subprocess
@@ -19,8 +20,11 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent))
 
+import exegete.server as server  # noqa: E402
 from exegete import opener, reading_folder  # noqa: E402
+import track5_helpers as H  # noqa: E402
 
 POSIX = os.name == "posix"
 
@@ -196,6 +200,47 @@ class TestTidying:
             pytest.skip("no symbolic links here")
         reading_folder.forget_file(project, 9)
         assert (outside / "keep.txt").read_text(encoding="utf-8") == "keep"
+
+
+class TestTheWritesThatTidy:
+    """Exegete changes a file's text or name: its copies go."""
+
+    def _copies(self):
+        project = server._current_project_folder()
+        folder = reading_folder.file_folder(project, 1)
+        reading_folder.write_page(
+            folder, "p.html", "<!DOCTYPE html>\n" + reading_folder.PAGE_MARK)
+        return folder
+
+    def test_renaming_a_file(self, setup_server):
+        folder = self._copies()
+        out = json.loads(server.rename_file(1, "renamed.txt"))
+        assert out.get("changed"), out
+        assert not folder.exists()
+
+    def test_pseudonymising_a_file(self, setup_server):
+        folder = self._copies()
+        mapping = [{"original": "deadlines", "pseudonym": "targets"}]
+        preview = json.loads(server.pseudonymise_source(mapping=mapping,
+                                                        file_id=1))
+        arguments = dict(preview["execute_with"]["arguments"])
+        arguments.update(mapping=mapping, researcher_keeps_mapping=True)
+        out = json.loads(server.pseudonymise_source(**arguments))
+        assert out.get("success"), out
+        assert not folder.exists()
+
+    def test_restoring_a_backup(self, setup_server):
+        json.loads(server.import_text_file("marker.txt", "marker"))
+        project = server._current_project_folder()
+        backups = sorted(p for p in project.parent.iterdir()
+                         if p.name.startswith(project.stem + "_")
+                         or "backup" in p.name.lower())
+        assert backups, list(project.parent.iterdir())
+        folder = self._copies()
+        out = json.loads(H.execute_destructive(server.restore_backup,
+                                               str(backups[-1])))
+        assert out.get("success"), out
+        assert not folder.exists()
 
 
 class TestTheOpener:

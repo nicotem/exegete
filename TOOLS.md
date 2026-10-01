@@ -28,7 +28,8 @@ Through these tools an AI assistant can:
 
 - Read your codes, categories, and coding structure
 - Access coded text segments and original source documents
-- **Analyse complete transcripts with coding context**
+- **Analyse complete transcripts with coding context**, a part at a time for long files
+- **Let you read a whole file on your own computer** (provisional, v0.14.3): a page in your browser with its text and codings, or a read-only copy of the original in its own app, without the text passing through the conversation
 - Search through your qualitative data
 - Generate coding frequency reports
 - Analyse themes and patterns
@@ -556,6 +557,65 @@ Never work on your original projects with AI coding! Always:
 
 For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md).
 
+## Reading a whole file (provisional)
+
+New in 0.14.3, and provisional until the owner's decisions on the import
+and reading design are in. A researcher often needs to read a whole
+interview, not only the passages the assistant quotes. Ask the
+assistant to open a file for you; it calls `open_file_for_reading`, and
+the file opens on your own screen. Its text does not pass through the
+conversation: the assistant is told only where the page or copy is, and
+how many codings, codes and notes it shows.
+
+Native first, as on any computer:
+
+1. **In its folder** (`show="in_folder"`): Finder or File Explorer
+   opens with a read-only copy of the original selected. On a Mac,
+   press the space bar for Quick Look.
+2. **In its own app** (`show="original"`): a read-only copy of the
+   document as it was imported opens in Word, Pages, LibreOffice,
+   Preview or a media player. This is QualCoder's "View original text
+   file", done on a copy, so that a change saved in Word cannot leave
+   the project's own copy disagreeing with its stored text. The copy
+   keeps the mark Windows and macOS put on a file from the internet, so
+   Word still opens a stranger's attachment in Protected View. It has
+   no codings, and it is not pseudonymised.
+3. **A reading copy in your browser** (`show="reading_copy"`, the
+   default, and the only one that shows the codings): a web page with
+   the whole text laid out as stored, each coded passage in its code's
+   colour with the code's name, every overlapping coding shown, a list
+   of the codes with a tick box that hides each one, a "text only"
+   switch, and the annotations and the public part of memos as numbered
+   notes at the end. The private part of memos (from `#####`) is left
+   out, and the page says so. It is written after QualCoder's own HTML
+   export of a coded file. Converted with pandoc (for example your
+   pandoc server, file to file) it becomes a Word file with one comment
+   per coding, named after its code.
+
+Linked originals (QualCoder's `docs:` paths, which point outside the
+project) are not opened: QualCoder's Manage files opens them. A file
+whose text was typed or pasted in has no original, so the reading copy
+opens instead. With no screen (an SSH session, Linux without a desktop),
+nothing opens and the answer gives the place only.
+
+**Where the pages go.** Into a private folder of Exegete's own, outside
+the project, not synced and not indexed by the computer's search: on a
+Mac `~/Library/Caches/Exegete/Reading.noindex`, on Windows
+`%LOCALAPPDATA%\Exegete\Reading` (marked not to be indexed), on Linux
+`~/.cache/exegete/reading`. Readable by your account only. Exegete
+deletes a file's page and copy whenever it changes that file's text or
+name (renaming, pseudonymising, restoring a backup), and anything there
+a week after it was written. To keep a page, save it elsewhere from the
+browser or print it to PDF. PRIVACY.md lists every place a transcript's
+text can end up.
+
+**Talking about a passage.** Copy a few words of it into the
+conversation; those words go to the AI provider. The page says it is
+not meant to be read by an AI assistant, but nothing enforces that: an
+assistant with file tools of its own (Claude Code, Cowork, Codex), or
+one that can see your browser, could read it. The assistant's brief and
+the tool's description ask it not to.
+
 ## What the assistant is told: the brief (provisional)
 
 The server gives the assistant one brief: how it expects the assistant
@@ -574,7 +634,7 @@ reaches it four ways:
   text, which Claude Code shows at the start of a session;
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
-  project: it returns the full brief (about 11,700 characters), or in
+  project: it returns the full brief (about 11,900 characters), or in
   the `core` set the short version;
 - the same full brief as the help topic `explain_ai_coding_tools('brief')`
   and the resource `exegete://guidance/brief`;
@@ -601,9 +661,10 @@ no longer listed, until v1.0.
 - `exegete://categories/list` - Code categories
 - `exegete://codes/{code_id}` - Specific code details
 - `exegete://files/list` - All source files
-- `exegete://files/{file_id}` - File content
+- `exegete://files/{file_id}` - File content; a long file's first part, whose `part` names the address of the next
+- `exegete://files/{file_id}/from/{start}` - A long file's content from character `start` (v0.14.3, provisional)
 - `exegete://cases/list` - All cases
-- `exegete://cases/{case_id}` - Case details
+- `exegete://cases/{case_id}` - Case details; excerpts past one answer's size are cut, each saying where its text continues
 - `exegete://journal` - Journal entries
 - `exegete://guidance/methods` - Static methods notes: the grounding rules, the four-way methodological vocabulary (allow, allow_with_caveat, reframe_and_ask, refuse) and citations to the method literature QualCoder 4.0 ships prompts for; needs no project
 - `exegete://guidance/brief` - The assistant's brief (provisional), the text `read_brief()` returns; needs no project
@@ -613,38 +674,39 @@ no longer listed, until v1.0.
 Claude can use these tools to analyse your data. The full toolset
 (the default when you configure the server yourself,
 `EXEGETE_TOOLSET=full`; the Claude Desktop extension defaults to
-`lifecycle`) registers 74 tools; the argument lists below name every
+`lifecycle`) registers 75 tools; the argument lists below name every
 argument each tool declares, and each tool's own description says what
 each one does.
 
 > **Creating projects (Experimental):** with
 > `EXEGETE_TOOLSET=lifecycle` the server registers the full set
-> plus `create_project`, 75 tools. The Claude Desktop extension's tool
+> plus `create_project`, 76 tools. The Claude Desktop extension's tool
 > set setting defaults to `lifecycle`, so creating projects is on there;
 > configured by hand, the server defaults to `full`, so that researchers
 > opt in to a tool that makes folders on their disk; it is not in `core`
 > either. Measured as below, the
-> `lifecycle` definitions run to about 198,000 characters, roughly 50k
+> `lifecycle` definitions run to about 200,000 characters, roughly 50k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in the server's environment, only the
-> 22-tool supervised coding set is registered: read_brief,
+> 23-tool supervised coding set is registered: read_brief,
 > list_available_projects, select_project, get_current_project,
 > get_project_summary,
-> search_files, analyze_file_with_coding, search_coded_text,
+> search_files, analyze_file_with_coding, open_file_for_reading,
+> search_coded_text,
 > get_coded_segments, get_coding_frequencies, analyze_for_coding,
 > record_suggestions, review_suggestions, edit_suggestion,
 > update_suggestion_status, apply_codings, create_code, set_memo,
 > set_project_ai_coder_name,
 > copy_project_to_workspace, delete_coding, list_backups.
 > Required for local models, optional elsewhere; unknown values fail
-> loudly at startup. Measured for 0.14.2 (the
+> loudly at startup. Measured for 0.14.3 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 196,000 characters for `full`, roughly 49k
-> tokens at four characters per token, and about 65,000 characters for
-> `core`, roughly 16k tokens. On Python 3.10 to 3.12 the same
+> definitions run to about 198,000 characters for `full`, roughly 49k
+> tokens at four characters per token, and about 67,000 characters for
+> `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
 > LM Studio recipe in INSTALL.md for what that means for context
@@ -686,7 +748,8 @@ never a coder hidden in QualCoder). A known value with nothing in scope
 still answers empty, and that answer is a finding.
 
 **Rich Transcript Analysis:**
-- `analyze_file_with_coding(file_id)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld)
+- `analyze_file_with_coding(file_id, start)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3, provisional): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding whose stored passage is not the text at its positions (usually one made in QualCoder after an emoji, which QualCoder counts as two characters) is marked `stored_passage_differs`, never moved
+- `open_file_for_reading(file_id, show)` - **Let the researcher read a whole file on their own computer** (provisional, v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). See "Reading a whole file" below
 
 **Attributes & Demographics:**
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)

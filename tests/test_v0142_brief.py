@@ -491,8 +491,12 @@ class TestTheSizes:
     v0.14.1 served it (tests/test_v0142_description_cut.py pins their
     words; test_toolset_modes.py pins the new totals)."""
 
-    # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
-    BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
+    # The figures without read_brief, measured on Python 3.13.5 with mcp
+    # 1.30.0: 0.14.1's were 195,266, 64,804 and 197,845; v0.14.3
+    # (provisional) moves them by the reading tool's entry, the `start`
+    # argument on analyze_file_with_coding and the two descriptions it
+    # changes (tests/test_v0142_description_cut.py pins those)
+    BEFORE = {"full": 197_110, "core": 66_485, "lifecycle": 199_689}
 
     @staticmethod
     def _entry(tool):
@@ -605,7 +609,11 @@ def test_the_lengths_the_documents_give_are_the_briefs():
     stated = re.findall(r"the brief's short version, ([\d,]+) characters",
                         entry)
     assert [int(s.replace(",", "")) for s in stated] == [short]
-    for where, text in (("CHANGELOG", entry), ("TOOLS", tools)):
+    # 0.14.2's figure for the full brief is history: v0.14.3 added a line
+    # (provisional) on reading a whole file
+    assert re.findall(r"full brief(?:, | \()about ([\d,]+) characters",
+                      entry) == ["11,700"]
+    for where, text in (("TOOLS", tools),):
         about = re.findall(r"full brief(?:, | \()about ([\d,]+) characters",
                            text)
         assert about, where

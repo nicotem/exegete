@@ -326,9 +326,10 @@ class TestTheResourceAddresses:
                 [t.uriTemplate for t in templates])
 
     def test_ten_under_the_new_scheme_none_under_the_old(self):
-        # eleven from v0.14.2, with the brief's resource
+        # eleven from v0.14.2, with the brief's resource; twelve from
+        # v0.14.3, with the file resource's later parts
         concrete, templates = self._resources()
-        assert len(concrete) + len(templates) == 11
+        assert len(concrete) + len(templates) == 12
         for address in concrete + templates:
             assert address.startswith(f"{names.RESOURCE_SCHEME}://")
             assert "qualcoder://" not in address
@@ -339,6 +340,7 @@ class TestTheResourceAddresses:
         addresses = concrete + [t.replace("{code_id}", "1")
                                 .replace("{file_id}", "1")
                                 .replace("{case_id}", "1")
+                                .replace("{start}", "0")
                                 for t in templates]
 
         def read(uri):

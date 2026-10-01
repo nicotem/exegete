@@ -239,9 +239,11 @@ goes.
 - **QualCoder is recommended from the start, and needed** to bring in
   documents (Word, PDF, images, audio, video), and any text you would
   rather not pass through the conversation: Exegete imports only text
-  the assistant hands it. It is also needed to see the coding
-  highlighted in the text, to code images, audio, video or an area of a
-  PDF page, for graphs, and for the reports in its Reports menu.
+  the assistant hands it. It is also needed to code by selecting text
+  yourself, to code images, audio, video or an area of a PDF page, for
+  graphs, and for the reports in its Reports menu. To read a whole file
+  with its coding highlighted, ask Exegete to open it for you: a page
+  opens in your browser, and its text stays off the conversation.
   [Download QualCoder](https://github.com/ccbogel/QualCoder/releases):
   3.8.2, the release marked "Latest" when this was checked, on 1 October
   2026. It is further down the page, for Windows or a Mac with Apple

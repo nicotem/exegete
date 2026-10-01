@@ -118,7 +118,7 @@ class TestPlacement:
         carriers = [n for n, t in server.mcp._tool_manager._tools.items()
                     if "reframe_and_ask" in (t.description or "")]
         assert carriers == ["analyze_for_coding"]
-        assert len(server.mcp._tool_manager._tools) == 74  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief (v0.14.2)
+        assert len(server.mcp._tool_manager._tools) == 75  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief (v0.14.2), open_file_for_reading (v0.14.3)
 
     def test_docstring_of_the_function_object_matches_the_registration(self):
         # _tool_guard uses functools.wraps, so the amended __doc__ travels
@@ -224,7 +224,7 @@ class TestMethodsResource:
         assert match[0].mimeType == "text/markdown"
         assert "Static; needs no project" in (match[0].description or "")
         assert len(res) == 8  # six data resources, this one and the brief (v0.14.2)
-        assert len(asyncio.run(server.mcp.list_resource_templates())) == 3
+        assert len(asyncio.run(server.mcp.list_resource_templates())) == 4
 
     def test_resource_survives_core_toolset_mode(self):
         removed = server._apply_toolset("core")

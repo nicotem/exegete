@@ -7,7 +7,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+Provisional: what follows is built to the recommended answers of the
+import and reading design of 1 October 2026, until the owner decides
+otherwise, and may change before it is released.
+
+### Added (provisional): reading a whole file on your own computer
+
+- `open_file_for_reading(file_id, show)`, in every tool set: a
+  researcher can read a whole file without its text passing through the
+  conversation, native first. `show="in_folder"` shows a read-only copy
+  of the original in Finder or File Explorer (on a Mac the space bar
+  then gives Quick Look); `show="original"` opens that copy in its own
+  app (QualCoder's "View original text file", done on a copy, so that a
+  change saved in Word cannot leave the project's copy disagreeing with
+  its stored text); `show="reading_copy"`, the default and the one view
+  that shows the codings, writes a web page with the whole text laid
+  out as stored and its codings in their codes' colours, after
+  QualCoder's own HTML export of a coded file, and opens it in the
+  researcher's browser. The answer gives the place of what was opened,
+  and counts; never the text, never a memo. TOOLS.md, "Reading a whole
+  file", and PRIVACY.md, "Reading a whole file: what leaves the
+  computer", say more.
+- The reading copy: every overlapping coding drawn as an underline of
+  its own; the code's name at the start of each passage and, for screen
+  readers and print, after it; a list of the codes with a tick box that
+  hides each one, and a "text only" switch, done in the style sheet
+  with no script; annotations and the public part of memos as numbered
+  notes linked both ways; the private part of every memo (from `#####`)
+  left out, with a line saying so; what the page cannot draw (areas on
+  images and PDF pages, audio and video codings) counted; suggestions
+  awaiting a decision counted. A coding is placed where its stored
+  passage matches the text, at its positions read as characters or,
+  failing that, as QualCoder's editor counts them (an emoji as two).
+  Safe by structure: project data only in escaped text and quoted
+  attributes, colours checked, selectors by number, a content security
+  policy that allows no script, fetch, form or base address, and no
+  link outside the page. Converted with pandoc, the page becomes a Word
+  file with one comment per coding, named after its code.
+- The reading folder: a private folder of Exegete's own, outside every
+  project, out of iCloud and OneDrive and not indexed
+  (`~/Library/Caches/Exegete/Reading.noindex` on a Mac,
+  `%LOCALAPPDATA%\Exegete\Reading` on Windows, marked not to be
+  indexed, `~/.cache/exegete/reading` on Linux), readable by its owner
+  only. Copies of originals keep the internet-origin mark Windows and
+  macOS put on a downloaded file, so Word still opens a stranger's
+  attachment in Protected View, and are read-only and never runnable.
+  Tidied: a file's page and copy go whenever Exegete changes the file's
+  text or name (`rename_file`, `pseudonymise_source`, which with
+  `rewrite_memos` clears the whole project's pages, and
+  `restore_backup`); preview pages an hour after they were written;
+  everything a week after, when the server starts.
+- Opening is narrow: only files Exegete has just written into the
+  reading folder; never a shell, never Python's `webbrowser` module,
+  never `qlmanage`; only the document and media types QualCoder
+  imports (a web page that was a project's original is only shown); and
+  with no screen (an SSH session, Linux without a desktop) nothing
+  opens and the answer gives the place.
+- The assistant's brief gains one line under Privacy: use
+  `open_file_for_reading` when the researcher wants to read a whole
+  file, and never open, read or look at what it opens.
+
+### Changed (provisional): whole-file reads in parts
+
+- `analyze_file_with_coding` (with a new `start` argument), the
+  `exegete://files/{file_id}` resource and the `exegete://cases/{case_id}`
+  resource returned a whole file's text with no limit: a
+  1,000,000-character file came back as about 250,000 tokens, ten times
+  the 25,000 Claude Code allows one answer. A long file now comes a
+  part at a time, sized to fit that limit with the codings beside it
+  (about 60,000 characters of English text a part, fewer in other
+  scripts), with `part` saying where the next starts; every position,
+  in every part, counts from the start of the whole file. A file that
+  fits one part reads as before. The file resource's later parts are at
+  `exegete://files/{file_id}/from/{start}`; a case's excerpts are cut
+  to one answer's size, each saying where its text continues.
+- Every coding whose stored passage is not the text at its positions
+  (usually one made in QualCoder after an emoji) is marked
+  `stored_passage_differs` in `analyze_file_with_coding`, never moved.
+- `import_text_file`'s description says first that its text passes
+  through the conversation, and gives the 1,000,000-character limit.
+
+### Deprecated
+
+- `import_text_file`'s `create_backup=false`, removed in v0.15 with the
+  other options v0.14 deprecated: an import always takes a backup
+  first. A call that passes it is answered with the deprecation.
+
+### Measured
+
+- Serialised tool JSON: full = 197,577 characters (about 49.4k tokens
+  at chars/4) over 75 tools, core = 66,952 (about 16.7k) over 23, and
+  the opt-in lifecycle set = 200,156 (about 50.0k) over 76, measured on
+  Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
+  Python 3.11.13 (the `.venv/`), 207,377, 70,328 and 210,096.
+  `open_file_for_reading`'s own entry is 1,355 characters on 3.13; the
+  rest of the growth is `start` on `analyze_file_with_coding` and the
+  two descriptions changed above.
 
 ## [0.14.2-alpha] - 2026-10-02
 

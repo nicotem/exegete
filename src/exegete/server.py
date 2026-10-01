@@ -89,6 +89,7 @@ from .database import (
 )
 from . import pseudonymise as pseudo
 from . import new_project
+from . import parts, reading, reading_folder
 from .path_identity import is_inside, is_inside_any
 from .cursors import (
     CURSOR_MAX_LENGTH,
@@ -303,6 +304,9 @@ DEPRECATED_CASCADE = (
 DEPRECATED_OWNER = (
     "Deprecated, removed in v0.15: owner, which can only repeat the "
     "project's AI coder name.")
+DEPRECATED_IMPORT_SKIP_BACKUP = (
+    "Deprecated, removed in v0.15: create_backup=false; an import always "
+    "takes a backup first.")
 DEPRECATED_HELP_TOPICS = (
     "Deprecated, removed in v0.15: the topics analyze_for_coding, "
     "apply_codings, edit_suggestion and coding_style_guidance, which "
@@ -607,6 +611,11 @@ Each is stated in full by its tool:
   server never shows it to you; do not try to infer it.
 - Where the researcher uses pseudonyms, use them, and never try to work
   out who someone is.
+- When the researcher wants to read a whole file, use
+  open_file_for_reading: it opens on their screen and its text stays off
+  the conversation. That page and the copies it opens are for the
+  researcher: never open, read or look at them with any tool, browser or
+  screenshot.
 
 ## 12. When to ask and when to act
 
@@ -3391,9 +3400,42 @@ def get_file_content(file_id: int) -> str:
     Returns the full text content of the file along with metadata.
     For non-text files (media), returns metadata only.
     """
+    return _file_content_part(file_id, 0)
+
+
+@mcp.resource(f"{names.RESOURCE_SCHEME}://files/{{file_id}}/from/{{start}}")
+@_resource_guard
+def get_file_content_from(file_id: int, start: int) -> str:
+    """A part of a long text file's content, from character `start`.
+
+    Long files come in parts (v0.14.3); the first part's `part` block
+    gives the address of the next.
+    """
+    return _file_content_part(file_id, start)
+
+
+def _file_content_part(file_id: int, start: Any) -> str:
+    """The file resource's answer: the whole content when it fits one
+    part, else the part from `start` with its `part` block."""
     file_data = get_db().get_file_content(file_id)
     if file_data is None:
         return json.dumps({"error": f"File with id {file_id} not found"})
+    whole = file_data.get("content") or ""
+    try:
+        start = int(start)
+    except (TypeError, ValueError):
+        start = -1
+    problem = parts.start_problem(start, len(whole))
+    if problem is not None:
+        return json.dumps({"error": problem})
+    end = parts.choose_end(whole, start)
+    if start > 0 or end < len(whole):
+        file_data["content"] = whole[start:end]
+        file_data["part"] = parts.part_block(
+            start, end, len(whole),
+            f"read {names.RESOURCE_SCHEME}://files/{file_id}/from/{end}, "
+            f"or call analyze_file_with_coding(file_id={file_id}, "
+            f"start={end}).")
     return _ai_json(file_data, indent=2)
 
 
@@ -3422,7 +3464,40 @@ def get_case_info(case_id: int) -> str:
     case = get_db().get_case_details(case_id)
     if case is None:
         return json.dumps({"error": f"Case with id {case_id} not found"})
+    _case_excerpts_in_parts(case)
     return _ai_json(case, indent=2)
+
+
+def _case_excerpts_in_parts(case: Dict[str, Any]) -> None:
+    """Keep a case's excerpts within one answer's budget (v0.14.3): a
+    case linked to whole files carries each file's whole text. Excerpts
+    are given in order until the budget is spent; the one that spends it
+    is cut, and it and every later one say where their text continues,
+    as a whole-file position to read from with analyze_file_with_coding."""
+    left = float(parts.BUDGET)
+    cut = False
+    for segment in case.get("text_segments") or []:
+        text = segment.get("text") or ""
+        start = int(segment.get("position_start") or 0)
+        if cut:
+            if text:
+                segment["text"] = ""
+                segment["text_continues_at"] = start
+            continue
+        costs = parts.Costs(text)
+        if costs.of(0, len(text)) <= left:
+            left -= costs.of(0, len(text))
+            continue
+        end = parts.choose_end(text, 0, budget=max(left, 1.0), costs=costs)
+        segment["text"] = text[:end]
+        segment["text_continues_at"] = start + end
+        cut = True
+    if cut:
+        case["parts_note"] = (
+            "The excerpts' text is cut to fit one answer. Each excerpt "
+            "marked text_continues_at continues there, a whole-file "
+            "position: call analyze_file_with_coding(file_id=..., "
+            "start=...) with it.")
 
 
 @mcp.resource(f"{names.RESOURCE_SCHEME}://journal")
@@ -6115,17 +6190,32 @@ def get_project_summary() -> str:
     return _ai_json(summary, indent=2)
 
 
+# A coding whose stored passage is not the text at its positions (v0.14.3):
+# usually one made in QualCoder after an emoji, which QualCoder's editor
+# counts as two characters. Flagged, never moved: other tools use the
+# positions as stored.
+STORED_PASSAGE_NOTE = (
+    "Codings marked stored_passage_differs have a stored passage that is "
+    "not the text at their positions, usually because QualCoder counts an "
+    "emoji as two characters. Quote the text at the positions, not the "
+    "stored passage, and say so if it matters.")
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 @_with_guidance(GROUNDING_READ, before="Args:")
-def analyze_file_with_coding(file_id: int) -> str:
+def analyze_file_with_coding(file_id: int, start: int = 0) -> str:
     """Return a text file's whole text with its coded segments.
 
     Read a file this way before suggesting codings for it, or to answer a
     question that needs the whole account rather than coded extracts.
+    A long file comes in parts (about 60,000 characters of English): the
+    result's `part` says where the next starts; ask again with that
+    `start`. Every position is a whole-file position, in every part.
 
     Args:
         file_id: The numeric ID of the file to analyse
+        start: Where the part begins, in characters (default 0)
 
     Returns:
         JSON object with:
@@ -6158,6 +6248,10 @@ def analyze_file_with_coding(file_id: int) -> str:
         return json.dumps({
             "error": f"File with id {file_id} not found"
         })
+    whole = result.get("full_text") or ""
+    problem = parts.start_problem(start, len(whole))
+    if problem is not None:
+        return json.dumps({"error": problem})
 
     # Non-text sources: say so explicitly — an empty full_text was
     # previously indistinguishable from a genuinely empty text file (track6)
@@ -6197,7 +6291,163 @@ def analyze_file_with_coding(file_id: int) -> str:
             "and codings written here may render shifted or unhighlighted "
             "in the QualCoder editor. Reports and exports are unaffected."
         )
+    _in_parts(result, file_id, start)
     return _ai_json(result, indent=2)
+
+
+def _in_parts(result: Dict[str, Any], file_id: int, start: int) -> None:
+    """Cut a whole-file read to one part (v0.14.3, provisional), and flag
+    every coding whose stored passage differs from the text at its
+    positions. A file that fits one part reads as before, flags apart."""
+    whole = result.get("full_text") or ""
+    segments = result.get("coded_segments") or []
+    for segment in segments:
+        if parts.passage_differs(whole, segment):
+            segment["stored_passage_differs"] = True
+    if any(s.get("stored_passage_differs") for s in segments):
+        result["stored_passage_note"] = STORED_PASSAGE_NOTE
+    end = parts.choose_end(whole, start, segments)
+    if start == 0 and end >= len(whole):
+        return
+    result.pop("full_text", None)
+    result["part_text"] = whole[start:end]
+    result["coded_segments"] = parts.overlapping(segments, start, end)
+    result["annotations"] = parts.overlapping(
+        result.get("annotations") or [], start, end)
+    result["part"] = parts.part_block(
+        start, end, len(whole),
+        f"call analyze_file_with_coding(file_id={file_id}, start={end}).")
+
+
+# ============================================================================
+# READING A WHOLE FILE ON THE COMPUTER (v0.14.3, provisional)
+# ============================================================================
+
+def _suggestion_counts(file_id: int) -> Tuple[int, int]:
+    """(pending, approved and not yet applied) suggestions for a file,
+    across this project's coding sessions."""
+    pending = approved = 0
+    try:
+        listed = session_manager.list_sessions(
+            project_path=current_project_path, days_old=36500)
+    except Exception:
+        return 0, 0
+    for meta in listed:
+        try:
+            session = session_manager.load_session(meta["coding_session_id"])
+        except Exception:
+            continue
+        for suggestion in session.get_suggestions_by_file(file_id):
+            if suggestion.status == "pending":
+                pending += 1
+            elif suggestion.status == "approved":
+                approved += 1
+    return pending, approved
+
+
+def _forget_reading_copies(file_ids: Optional[Sequence[int]] = None
+                           ) -> None:
+    """Remove the reading copies and copies of originals Exegete wrote
+    for these files, or for the whole open project when `file_ids` is
+    None, after a write changed their text, name or memos (v0.14.3,
+    decision 6): a copy written before a file was pseudonymised would
+    otherwise keep the real names. Never fails the write that called it."""
+    try:
+        project = _current_project_folder()
+        if file_ids is None:
+            reading_folder.forget_project(project)
+        else:
+            for file_id in file_ids:
+                reading_folder.forget_file(project, int(file_id))
+    except Exception as e:
+        logger.warning("Could not tidy the reading folder: %s",
+                       error_label(e))
+
+
+@mcp.tool(annotations=TOOL_ADDS)
+@_tool_guard
+def open_file_for_reading(file_id: int, show: str = "reading_copy") -> str:
+    """Let the researcher read a whole file on their own computer; its text
+    does not pass through the conversation. Call this only when the
+    researcher asks to read or see a file.
+
+    show="reading_copy" (the default) writes a web page with the file's
+    full text and its codings (each passage in its code's colour and
+    named), a list of the codes, and the annotations and the public part
+    of memos as notes, then opens it in the researcher's browser.
+    show="original" opens a read-only copy of the document as it was
+    imported, in its own app. show="in_folder" shows that copy in Finder
+    or File Explorer (on a Mac, the space bar then gives Quick Look).
+
+    The answer is the page's location and counts, never the text. The
+    page is for the researcher: do not open it, read it or look at it
+    with any tool, browser or screenshot. The original has no codings and
+    is not pseudonymised. Takes a file id, never a path.
+
+    Args:
+        file_id: The file's numeric id
+        show: "reading_copy" (default), "original" or "in_folder"
+    """
+    if show not in reading.SHOW_CHOICES:
+        return json.dumps({"error": "show must be 'reading_copy', "
+                                    "'original' or 'in_folder'."})
+    db_ = get_db()
+    refusal = _refuse_unknown_id(db_, "file", file_id, "file_id")
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    project = _current_project_folder()
+    data = db_.get_file_with_coding(file_id)
+    info = data["file_info"]
+    mediapath = db_.conn.execute("SELECT mediapath FROM source WHERE id = ?",
+                                 (file_id,)).fetchone()[0]
+    result: Dict[str, Any] = {"file_id": file_id, "file_name": info["name"]}
+    try:
+        if show != "reading_copy":
+            source, why = reading.original_source(project, mediapath)
+            if source is not None:
+                copy = reading.copy_original(project, file_id, source)
+                result.update({"shown": show, "location": str(copy),
+                               "note": reading.COPY_NOTE})
+                result.update(reading.present(
+                    copy, "open" if show == "original" else "show",
+                    own_page=False))
+                return json.dumps(result, indent=2)
+            if why != "no_original":
+                result.update({"shown": "nothing", "note": why})
+                return json.dumps(result, indent=2)
+            result["note"] = ("This file has no original in the project "
+                              "(its text was typed or pasted in), so the "
+                              "reading copy is shown instead.")
+        pending, approved = _suggestion_counts(file_id)
+        counts = db_.non_text_coding_counts(file_ids=[file_id])
+        no_text = None
+        if info.get("unusable_pdf"):
+            no_text = info["unusable_pdf"].get("message")
+        elif not info.get("is_text", True):
+            no_text = (f"This file is {info.get('type', 'media')}, with no "
+                       f"text; ask for the original to see it.")
+        visibility = _coder_visibility_note()
+        path, page_counts = reading.write_reading_copy(
+            project, file_id, project_name=project_display_name(
+                current_project_path),
+            file_name=info["name"] or f"file {file_id}",
+            text=data["full_text"] or "",
+            segments=data["coded_segments"],
+            annotations=data["annotations"], file_memo=info.get("memo"),
+            written_at=reading.now(),
+            coder_note=("Codings by coders hidden in QualCoder are not "
+                        "shown, as in QualCoder." if visibility else None),
+            not_drawn={"region": counts.get("region", 0),
+                       "audio_video": counts.get("audio_video", 0)},
+            suggestions_pending=pending, suggestions_approved=approved,
+            no_text_reason=no_text, version=_package_version)
+        result.update({"shown": "reading_copy", "location": str(path),
+                       "counts": page_counts})
+        result.update(reading.present(
+            path, "open" if show != "in_folder" else "show", own_page=True))
+    except (reading.ReadingRefusal, reading_folder.ReadingFolderError) as exc:
+        return json.dumps({"error": str(exc)}, indent=2)
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_READS)
@@ -9288,6 +9538,8 @@ def apply_codings(
 @_tool_guard
 @_deprecated(DEPRECATED_OWNER, before="Args:",
              when=lambda a: a.get("owner") is not None)
+@_deprecated(DEPRECATED_IMPORT_SKIP_BACKUP, before="Args:",
+             when=lambda a: a.get("create_backup") is False)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def import_text_file(
     filename: str,
@@ -9298,11 +9550,12 @@ def import_text_file(
     case_name: Optional[str] = None,
     apply_project_pseudonyms: bool = False
 ) -> str:
-    """Import text content as a new source file in the QualCoder project.
+    """Import text typed or pasted in the conversation as a new text file.
 
-    Creates a new text source file in the project database, similar to
-    QualCoder's "Create text file" feature. The file will be visible in
-    QualCoder's file manager and available for coding.
+    The text passes through the conversation, so it reaches the AI
+    provider. At most 1,000,000 characters. Like QualCoder's "Create
+    text file":
+    the file is visible in QualCoder's file manager and can be coded.
 
     Optionally links the new file to an existing case (participant) in the
     same transaction; without a case link the file is invisible to every
@@ -9330,7 +9583,8 @@ def import_text_file(
         owner: Deprecated (above). Only the project's AI coder name is
                accepted, as a no-op; any other value is refused before
                backup or write (set_project_ai_coder_name changes it)
-        create_backup: Create timestamped backup before writing (default: True)
+        create_backup: Create timestamped backup before writing (default:
+                       True; false is deprecated, above)
         case_name: Optional existing case to link the new file to.
                    The same name after spacing and Unicode form are
                    normalised is used first; otherwise one that differs
@@ -10717,6 +10971,7 @@ def restore_backup(backup_path: str,
         return json.dumps(failed)
 
     switch_project(current_project_path)
+    _forget_reading_copies()
 
     result = {
         "success": True,
@@ -16299,6 +16554,9 @@ def pseudonymise_source(
                 Path(tmp).unlink()
             except OSError:
                 pass
+    _forget_reading_copies(
+        None if captured["written"].get("memos") is not None else
+        [item["file_id"] for item in captured["written"]["files"]])
     manifest = _pseudonymise_manifest(
         captured["plan"], captured["written"], compiled, bind, backup_path,
         captured.get("journal_entry"), when, secret, project_path_at_start,
@@ -17305,6 +17563,8 @@ def rename_file(file_id: int, new_name: str,
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="the file was not renamed")
+    if result.get("changed"):
+        _forget_reading_copies([file_id])
     # A rename back that only a backup licensed goes in v0.15 (owner
     # ruling 25, question 8)
     if result.get("changed") and any(name is not None
@@ -18934,6 +19194,10 @@ CORE_TOOLSET = frozenset({
     "get_project_summary",
     # file search and read-with-coding
     "search_files", "analyze_file_with_coding",
+    # reading a whole file on the computer, its text kept off the
+    # conversation (v0.14.3, provisional): most useful with local models,
+    # where reading a file otherwise pulls all of it into a small context
+    "open_file_for_reading",
     # coded-text retrieval and frequencies
     "search_coded_text", "get_coded_segments", "get_coding_frequencies",
     # the supervised suggestion loop
@@ -19287,6 +19551,14 @@ def main(argv: Optional[List[str]] = None, *,
     # never for --version (state_folder says how, and what happens when
     # the move cannot be made)
     _settle_state_folder()
+
+    # v0.14.3 (provisional): the reading folder's stale pages and copies
+    # (previews after an hour, everything after a week) go at each start
+    try:
+        reading_folder.sweep()
+    except Exception as e:
+        logger.warning("Could not tidy the reading folder: %s",
+                       error_label(e))
 
     # Run the server using stdio transport
     mcp.run(transport="stdio")

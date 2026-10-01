@@ -12,6 +12,8 @@
       "args": [
         "run",
         "--frozen",
+        "--extra",
+        "pdf-epub",
         "--directory",
         "${__dirname}",
         "exegete"

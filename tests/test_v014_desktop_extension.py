@@ -242,9 +242,14 @@ class TestTheSettings:
         assert config["command"] == "uv"
         scripts = PYPROJECT["project"]["scripts"]
         # --frozen (fix round 1): each start installs exactly the lock,
-        # never re-resolving it against a tester's own uv settings
-        assert config["args"] == ["run", "--frozen", "--directory",
+        # never re-resolving it against a tester's own uv settings.
+        # --extra pdf-epub (0.14.3, provisional, decision 1): the
+        # optional part for PDF and EPUB import, switched on here
+        assert config["args"] == ["run", "--frozen", "--extra",
+                                  *EXTENSION_EXTRAS, "--directory",
                                   "${__dirname}", *scripts]
+        assert set(EXTENSION_EXTRAS) <= set(
+            PYPROJECT["project"]["optional-dependencies"])
         assert scripts == {"exegete": "exegete.server:main"}
         assert (REPO / server_block["entry_point"]).is_file()
 
@@ -418,6 +423,10 @@ def _marker_environment(system, machine, python=build.PYTHON_VERSION):
     }
 
 
+# The optional parts the extension's manifest switches on (0.14.3).
+EXTENSION_EXTRAS = ("pdf-epub",)
+
+
 def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION):
     """Whether a wheel's tags suit CPython `python` on that computer."""
     stem = filename[:-len(".whl")]
@@ -442,9 +451,9 @@ def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION):
                for p in platforms.split("."))
 
 
-def lock_wheel_gaps(lock, root, system, machine):
-    """(package, version) the lock would install for `root` on that
-    computer with no wheel that fits it."""
+def lock_wheel_gaps(lock, root, system, machine, root_extras=()):
+    """(package, version) the lock would install for `root` (with
+    `root_extras`) on that computer with no wheel that fits it."""
     from packaging.markers import Marker
     environment = _marker_environment(system, machine)
     entries = {}
@@ -460,7 +469,7 @@ def lock_wheel_gaps(lock, root, system, machine):
         return found[0]
 
     gaps, seen = [], set()
-    todo = [(entries[root][0], ())]
+    todo = [(entries[root][0], tuple(sorted(root_extras)))]
     while todo:
         package, extras = todo.pop()
         key = (package["name"], package["version"], extras)
@@ -525,8 +534,21 @@ class TestAWheelForEveryComputer:
 
     @pytest.mark.parametrize("system,machine", sorted(ENVIRONMENTS))
     def test_every_package_installed_has_a_wheel(self, system, machine):
+        # The extension installs the package with its optional part
+        # (0.14.3), so the walk starts from the root with that extra
         assert lock_wheel_gaps(self._lock(), PYPROJECT["project"]["name"],
-                               system, machine) == []
+                               system, machine,
+                               root_extras=EXTENSION_EXTRAS) == []
+
+    def test_the_walk_follows_the_roots_extra(self):
+        """Without the extra, PyMuPDF is not walked; with it, it is."""
+        lock = self._lock()
+        name = PYPROJECT["project"]["name"]
+        root = next(p for p in lock["package"] if p["name"] == name)
+        assert "pymupdf" in [d["name"] for d in
+                             root["optional-dependencies"]["pdf-epub"]]
+        assert "pymupdf" not in [d["name"] for d in
+                                 root.get("dependencies", [])]
 
     def test_the_versions_each_computer_gets(self):
         from packaging.markers import Marker
@@ -701,9 +723,10 @@ class TestCiBuildsIt:
             "x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc",
             "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"}
         assert len(loop) == len(ENVIRONMENTS)
+        # with the optional part the manifest switches on (0.14.3)
         assert ('uv sync --frozen --dry-run --no-install-project --no-build '
-                '--python "$(cat .python-version)" --python-platform '
-                '"$target"') in job
+                '--extra pdf-epub --python "$(cat .python-version)" '
+                '--python-platform "$target"') in job
 
     def test_the_official_validator_checks_the_manifest(self):
         job = self._job("desktop-extension")

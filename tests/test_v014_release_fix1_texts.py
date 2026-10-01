@@ -117,47 +117,19 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "content" in params and "path" not in params
 
 
-def test_privacy_says_the_export_guard_compares_the_spelling(monkeypatch):
+def test_privacy_says_the_export_guard_decides_by_the_folder():
     privacy = _doc("PRIVACY.md")
     assert "No export can be written into this folder" not in privacy
-    # Fix round 2: the gap is macOS's alone. Windows paths compare
-    # ignoring letter case, so the guard already refuses there.
     assert "on macOS and Windows, whose file systems ignore" not in privacy
-    assert ("The export tools refuse paths inside this folder as it is "
-            "spelled. On Windows the guard's comparison ignores letter "
-            "case, so a spelling in another letter case is refused there "
-            "too. On macOS, whose file system usually ignores letter case, "
-            "such a spelling (`~/.EXEGETE`) is not yet caught (the "
-            "guard is fixed in v0.15).") in privacy
-
-    # Both halves, from the guard itself, on any platform: its own
-    # comparison run with each platform's path rules, resolve() keeping
-    # the letter case given (the guard's worst case; Windows' own
-    # resolve() returns the folder's stored name).
-    from pathlib import PurePosixPath, PureWindowsPath
-
-    class WinPath(PureWindowsPath):
-        def resolve(self, strict=False):
-            return self
-
-    class MacPath(PurePosixPath):
-        def resolve(self, strict=False):
-            return self
-
-    def refused(path_cls, home, target):
-        monkeypatch.setattr(server, "Path", path_cls)
-        monkeypatch.setattr(server, "preview_tokens_state_home",
-                            lambda: path_cls(home))
-        return server._inside_state_home(target)
-
-    win_home = r"C:\Users\r\.qualcoder_mcp"
-    assert refused(WinPath, win_home, r"C:\Users\r\.qualcoder_mcp\a.csv")
-    assert refused(WinPath, win_home, r"C:\Users\r\.QUALCODER_MCP\b.csv")
-    assert refused(WinPath, win_home, r"c:\users\r\.Qualcoder_Mcp")
-    assert not refused(WinPath, win_home, r"C:\Users\r\Documents\c.csv")
-    mac_home = "/Users/r/.qualcoder_mcp"
-    assert refused(MacPath, mac_home, "/Users/r/.qualcoder_mcp/a.csv")
-    assert not refused(MacPath, mac_home, "/Users/r/.QUALCODER_MCP/b.csv")
+    # 0.14.2: the guard decides by which folder a path really is, so the
+    # gap macOS had (another letter case got through) is closed; the
+    # behaviour is tested on real folders in test_v0143_path_identity.py.
+    assert "not yet caught (the guard is fixed in v0.15)" not in privacy
+    assert ("export tools refuse paths inside this folder, and inside the "
+            "project folder, by which folder a path really is, not by how "
+            "it is spelled") in _flat(privacy)
+    assert "(since 0.14.2; before, a Mac let such a spelling through)" in \
+        _flat(privacy)
 
 
 def test_the_changelog_says_what_the_assistant_is_told():

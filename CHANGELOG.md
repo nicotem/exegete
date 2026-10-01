@@ -138,6 +138,16 @@ advanced users.
   that deleting `exegete.json` alone, to have the name asked for again,
   would bring that earlier name back, and to remove both files instead.
 
+### Fixed: exports refused inside the project and state folders, however spelled
+
+- The export tools refuse to write inside the project folder or
+  Exegete's own folder (`~/.exegete`). They used to compare paths as
+  text, so on a Mac, whose disk usually ignores letter case, another
+  spelling of either folder (for example `~/.EXEGETE`) got past the
+  check and the export was written inside it. The refusal now compares
+  each existing folder on the way by its identity on the disk, keeping
+  the textual comparison only for folders that do not exist yet.
+
 ### Fixed: the transition check
 
 - After `uv tool install qualcoder-mcp --with-executables-from exegete`,

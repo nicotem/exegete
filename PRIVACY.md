@@ -85,11 +85,11 @@ What stays local, always, unless a sync service copies the folder it is in:
   secret by itself, with the same two effects, when it finds the file
   malformed or, on macOS and Linux, readable by other accounts (after a
   restore or a sync tool widened its mode), and logs that it did. The
-  export tools refuse paths inside this folder as it is spelled. On
-  Windows the guard's comparison ignores letter case, so a spelling in
-  another letter case is refused there too. On macOS, whose file system
-  usually ignores letter case, such a spelling (`~/.EXEGETE`) is
-  not yet caught (the guard is fixed in v0.15).
+  export tools refuse paths inside this folder, and inside the project
+  folder, by which folder a path really is, not by how it is spelled:
+  another spelling of the same folder, such as `~/.EXEGETE` on a Mac or
+  on Windows, whose disks usually ignore letter case, is refused too
+  (since 0.14.2; before, a Mac let such a spelling through).
 - the last-used project pointer (`~/.exegete/mru_project.json`:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful

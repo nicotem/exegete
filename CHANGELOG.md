@@ -56,6 +56,19 @@ v0.14.2, in progress: the assistant's brief, provisional.
   longer names the help topic `methodology_vocabulary` or the methods
   notes, which the brief names.
 
+### Changed: a warning in pseudonymisation's preview
+
+- When `rewrite_memos` would rewrite a note, `pseudonymise_source`'s
+  preview now warns that the run rewrites the names in notes and
+  journal entries across the whole project, so that the notes about
+  someone else who shares a name are rewritten too, with this mapping's
+  pseudonym; it asks the assistant to check with the researcher and,
+  for a shared name, to keep `rewrite_memos` off. The description's
+  paragraph on two people who share a name now sits past the 2,048
+  characters Claude Code shows, after the rules that apply to every
+  run; the preview, which the assistant shows the researcher before any
+  run, carries the rule in every host.
+
 ### Measured
 
 - Serialised tool JSON with the brief: full = 195,733 characters (about

@@ -49,10 +49,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # With the optional part (0.14.3), so the PDF and EPUB import
+      # tests run on every platform rather than skip.
       - name: Install package and dev dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,pdf-epub]"
 
       - name: Run test suite
         shell: bash
@@ -256,6 +258,65 @@ jobs:
           test "$(ls builds/*/*.mcpb | wc -l)" -eq 3
           test "$(sha256sum builds/*/*.mcpb | cut -d' ' -f1 | sort -u | wc -l)" -eq 1
 
+  # 0.14.3 (provisional): the import's stored text against QualCoder's
+  # own extraction functions, run without QualCoder's interface
+  # (scripts/qualcoder_parity.py): a gate at the commit the readers
+  # follow, and a watch on QualCoder's newest code, whose changes are a
+  # notice for the lead, never a failure. QualCoder's source is checked
+  # out read only; QualCoder itself is never run.
+  qualcoder-parity:
+    name: QualCoder parity (${{ matrix.which }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    continue-on-error: ${{ matrix.which == 'watch' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - which: gate
+            ref: 9bddf17f86aa457aff72c3a38dbc10a37f296ad2
+          - which: watch
+            ref: master
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out QualCoder's source, read only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: ccbogel/QualCoder
+          ref: ${{ matrix.ref }}
+          path: qualcoder-src
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install the package with the optional part
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,pdf-epub]"
+
+      - name: Exegete's text against QualCoder's
+        env:
+          QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src
+        run: python -m pytest -ra tests/test_v0143_import_parity.py
+
+      - name: What QualCoder's newest code stores differently
+        if: matrix.which == 'watch'
+        shell: bash
+        run: |
+          if ! python scripts/qualcoder_parity.py --qualcoder qualcoder-src --check tests/fixtures/import_expected.json; then
+            echo "::notice title=QualCoder parity watch::QualCoder's newest code stores different text for some test documents; the job log names them"
+          fi
+
   # v0.14.1, the rename: the old name's package, built on every push, the
   # upgrade paths through the old name, offline, and the published 0.14.0
   # working through the state folder's link. The wheelhouse is fetched
@@ -311,7 +372,7 @@ jobs:
       - name: Fetch the wheelhouse for the offline tests
         shell: bash
         run: |
-          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "charset-normalizer>=3.4" "defusedxml>=0.7.1" "striprtf==0.0.33" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
           pip download --dest "$RUNNER_TEMP/wheelhouse" --no-deps --only-binary=:all: "qualcoder-mcp==0.14.0a0"
 
       # RENAME_TESTS_MUST_RUN turns a skip into a failure, so this job

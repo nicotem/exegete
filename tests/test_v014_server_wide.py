@@ -90,6 +90,9 @@ EXPECTED_HINTS = {
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
+    # 0.14.3 (provisional): a repeat of the preview reads again, and a
+    # repeat of the import finds its files there and its token spent
+    "import_documents": A1,
     # adds
     "copy_project_to_workspace": A, "analyze_for_coding": A,
     "apply_codings": A, "create_proposed_codes": A,
@@ -171,10 +174,16 @@ class TestToolAnnotations:
                  if "preview_token" in tool.inputSchema.get("properties",
                                                             {})]
         assert sorted(gated) == sorted([
-            "delete_category", "delete_code", "merge_category",
-            "merge_codes", "prune_backups", "pseudonymise_source",
-            "restore_backup"])
+            "delete_category", "delete_code", "import_documents",
+            "merge_category", "merge_codes", "prune_backups",
+            "pseudonymise_source", "restore_backup"])
         for name in gated:
+            if name == "import_documents":
+                # 0.14.3: a preview first for the researcher's approval of
+                # what comes in, but the import only adds (the design's
+                # Part 5), so it is not marked destructive
+                assert listed[name].annotations.destructiveHint is False
+                continue
             assert listed[name].annotations.destructiveHint is True, name
             assert listed[name].annotations.readOnlyHint is False, name
 
@@ -194,8 +203,13 @@ class TestToolAnnotations:
         server._apply_toolset("lifecycle")
         listed = host_session(lambda client: client.list_tools()).tools
         marked = {tool.name: tool.meta for tool in listed if tool.meta}
-        assert marked == {"read_pseudonym_list": {
-            "anthropic/requiresUserInteraction": True}}
+        # 0.14.3: and import_documents, whose two calls the researcher
+        # approves (the design's "Asking every time")
+        assert marked == {
+            "read_pseudonym_list": {
+                "anthropic/requiresUserInteraction": True},
+            "import_documents": {
+                "anthropic/requiresUserInteraction": True}}
         wire = next(t for t in listed
                     if t.name == "read_pseudonym_list").model_dump(
                         by_alias=True, exclude_none=True)
@@ -734,6 +748,27 @@ async def call_every_tool(client, root, lock_check=False):
                                    "memo": "First interview"})
     await run("import_text_file", {"filename": "int2.txt",
                                    "content": TEXT_2})
+    # 0.14.3: a document brought in by its path, preview then import
+    interviews = root / "interviews"
+    interviews.mkdir()
+    (interviews / "int3.txt").write_text("Notes from the third visit.\n",
+                                         encoding="utf-8")
+    # pytest's scratch folders lie under the hidden AppData on Windows,
+    # which the import refuses for the researcher's own places
+    from exegete import import_paths
+    real_hidden_step = import_paths.hidden_step
+    excused = {os.path.normcase(str(p)) for p in Path(root).parents}
+    import_paths.hidden_step = lambda step, info: (
+        os.path.normcase(str(step)) not in excused
+        and real_hidden_step(step, info))
+    try:
+        preview = await run("import_documents",
+                            {"paths": [str(interviews)]})
+        await run("import_documents",
+                  {"paths": [str(interviews)],
+                   "preview_token": preview["preview_token"]})
+    finally:
+        import_paths.hidden_step = real_hidden_step
     await run("create_category", {"name": "Feelings"})
     await run("create_category", {"name": "Other"})
     await run("create_code", {"name": "Trust", "category": "Feelings",

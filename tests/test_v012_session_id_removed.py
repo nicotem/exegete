@@ -85,7 +85,7 @@ class TestSessionIdDuplicateRemoved:
 # the live registry so a tool added later is covered without an edit here.
 # ===========================================================================
 
-TOOL_COUNT = 75          # pinned in tests/test_v012_cli.py too (open_file_for_reading, v0.14.3)
+TOOL_COUNT = 76          # pinned in tests/test_v012_cli.py too (open_file_for_reading and import_documents, v0.14.3)
 
 
 def _count(toolset):

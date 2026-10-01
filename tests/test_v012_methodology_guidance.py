@@ -118,7 +118,7 @@ class TestPlacement:
         carriers = [n for n, t in server.mcp._tool_manager._tools.items()
                     if "reframe_and_ask" in (t.description or "")]
         assert carriers == ["analyze_for_coding"]
-        assert len(server.mcp._tool_manager._tools) == 75  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief (v0.14.2), open_file_for_reading (v0.14.3)
+        assert len(server.mcp._tool_manager._tools) == 76  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief (v0.14.2), open_file_for_reading and import_documents (v0.14.3)
 
     def test_docstring_of_the_function_object_matches_the_registration(self):
         # _tool_guard uses functools.wraps, so the amended __doc__ travels
@@ -193,7 +193,9 @@ class TestExplainAiCodingTools:
         # v0.14.2: and the brief, the one topic answered as the brief's
         # own text rather than as JSON (tests/test_v0142_brief.py)
         out = json.loads(server.explain_ai_coding_tools("unknown"))
-        assert out["available_tools"] == HELP_KEYS + ["brief"]
+        # 0.14.3: and converted_documents, which import_documents names
+        assert out["available_tools"] == HELP_KEYS + ["brief",
+                                                      "converted_documents"]
         for key in HELP_KEYS:
             assert "error" not in json.loads(server.explain_ai_coding_tools(key))
         assert server.explain_ai_coding_tools("brief") == server.BRIEF_FULL

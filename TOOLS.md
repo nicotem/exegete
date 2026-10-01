@@ -649,6 +649,40 @@ position on method; it may change once that statement is written.
 Once read, the full brief stays in that conversation and is sent again
 with every later request, until the host shortens the conversation.
 
+## Document import: where it departs from QualCoder (provisional)
+
+`import_documents` (0.14.3, provisional) stores the text QualCoder 4.0's
+own import stores from the same file, so that a project imported by
+either program looks the same to both (QualCoder 4.0 at commit
+`9bddf17`; `scripts/qualcoder_parity.py` runs QualCoder's own extraction
+functions on the test documents and the tests compare the text to the
+character). Where Exegete does something else, it says so here, with
+the reason:
+
+| | QualCoder 4.0 | Exegete | Why |
+|---|---|---|---|
+| No text found in a Word, OpenDocument, EPUB, RTF or web page file | stores the file's raw bytes, or its markup, as the text | refused, with the reason | QualCoder's result is noise |
+| A web page whose text holds bytes that are not UTF-8 | the import fails | read by its declared character set, else by the plain text rule | QualCoder has no text for it to differ from |
+| Accents that came out garbled ("Ã©" for "é", or letters of another alphabet in a guessed character set) | stored as guessed | held back until the researcher names the character set (`encoding`) or fixes the file | a garbled name escapes the pseudonyms list |
+| XML entity declarations (Word, EPUB) | expanded, or imported with stray text | refused | safety |
+| Word's XML | the standard parser | defusedxml, which gives the same tree for ordinary documents | safety |
+| Subtitle files (`.srt`, `.vtt`) | taken only as a recording's transcript | imported as text documents, as they stand | Exegete does not import media yet; the preview says such a document cannot later become a recording's transcript |
+| Links to originals | "Link" offered; files of 2 GB or more always linked | always copied; files over the size limit refused | a project that holds its own originals |
+| File names | as on the disk | Exegete's name rules, one Unicode form; a name differing only in letter case from one in the folder of originals refused | names that look the same compare the same |
+| Errors and batches | some files stop the batch and leave their copy | the batch goes in together or not at all; files refused at the preview are skipped | one clear outcome |
+| Limits | none | per-format file sizes (8 MB plain text, Markdown and subtitles; 32 MB web pages and RTF; 100 MB Word, OpenDocument, EPUB and PDF), 10,000 entries and 25 MB a part (100 MB in all) inside an archive, 1,000,000 characters of text, 60 seconds and 1 GB of memory to read a file, five minutes a batch, 50 files a batch | hostile and huge files; Exegete may refuse a file QualCoder would import, and says so |
+| The names list | applied entry by entry; a backslash in a pseudonym read as a pattern | applied in one pass, longest first, each pseudonym written literally; a list Exegete cannot use stops the import | one pass never rewrites a pseudonym it has written |
+| PDFs, and file names, holding listed names | imported | held back (a PDF comes in with `import_pdfs_with_listed_names`; a file name is renamed first) | the names list's promise |
+| PDF highlights and underlines | offered to be coded at import | counted in the preview, not coded | every coding needs the researcher's approval |
+| The file's memo | empty, PDF notes apart | also `memo` and a named character set, before the PDF notes | what the researcher asked to record |
+| The file's owner | the researcher's coder name | the AI coder name, on the row and its attribute values | Exegete's rule for every write (provisional, decision 5) |
+| QualCoder's search and AI indexes | written at import | left to QualCoder's next opening of the project | QualCoder rebuilds both itself |
+| Folders | no folder import | a folder's own supported files, in name order; its subfolders named, not opened | one place to name |
+
+Every document is read in a separate, short-lived process with a time
+limit and a memory cap, and every refusal and warning is in Exegete's
+own words, never a library's message.
+
 ## Available Resources
 
 The MCP server exposes these resources (read-only data). Their
@@ -674,18 +708,18 @@ no longer listed, until v1.0.
 Claude can use these tools to analyse your data. The full toolset
 (the default when you configure the server yourself,
 `EXEGETE_TOOLSET=full`; the Claude Desktop extension defaults to
-`lifecycle`) registers 75 tools; the argument lists below name every
+`lifecycle`) registers 76 tools; the argument lists below name every
 argument each tool declares, and each tool's own description says what
 each one does.
 
 > **Creating projects (Experimental):** with
 > `EXEGETE_TOOLSET=lifecycle` the server registers the full set
-> plus `create_project`, 76 tools. The Claude Desktop extension's tool
+> plus `create_project`, 77 tools. The Claude Desktop extension's tool
 > set setting defaults to `lifecycle`, so creating projects is on there;
 > configured by hand, the server defaults to `full`, so that researchers
 > opt in to a tool that makes folders on their disk; it is not in `core`
 > either. Measured as below, the
-> `lifecycle` definitions run to about 200,000 characters, roughly 50k
+> `lifecycle` definitions run to about 203,000 characters, roughly 51k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
@@ -704,7 +738,7 @@ each one does.
 > loudly at startup. Measured for 0.14.3 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 198,000 characters for `full`, roughly 49k
+> definitions run to about 200,000 characters for `full`, roughly 50k
 > tokens at four characters per token, and about 67,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -788,6 +822,7 @@ still answers empty, and that answer is a finding.
 - `create_proposed_codes(coding_session_id, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first
 
 **Data Import, Cases & Attributes (Write Operations):**
+- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, encoding, memo)` - **WRITES TO DATABASE** (provisional, 0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer as QualCoder 4.0's own import reads them, so both programs store the same text; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's pseudonyms list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back. Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, garbled character sets until one is named. Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" below. In the full and lifecycle sets, not core
 - `import_text_file(filename, content, memo, owner, create_backup, case_name, apply_project_pseudonyms)` - **WRITES TO DATABASE** - Add a new text source, optionally linked to a case. The name follows `rename_file`'s rules (at most 200 bytes in UTF-8; no path, control or invisible characters; no name Windows cannot store; not a name already in the project's `documents/` folder). With `apply_project_pseudonyms=true` the project's own `pseudonyms.json` is applied to the text before it is stored, which is what QualCoder does to every text file it imports; default off; `owner` is deprecated, removed in v0.15 (see "The `owner` argument is deprecated" above)
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **WRITES TO DATABASE** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and names it)
 - `create_case(name, memo, create_backup)` - **WRITES TO DATABASE** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)

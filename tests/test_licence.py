@@ -323,7 +323,7 @@ def _defined_names(path):
 # entry dropped, the rest renumbered over it, or a Here line changed
 # fails the test until this snapshot is edited in the same change, so
 # that no item leaves NOTICE by accident.
-NOTICE_ENTRIES = 78
+NOTICE_ENTRIES = 81             # 0.14.3: document import, 79-81
 NOTICE_HERE = (
     (1, "src/exegete/memo_privacy.py", "PERSONAL_NOTE_MARK",
      "_SEPARATOR_CHARS", "split_public_private_memo", "extract_ai_memo",
@@ -532,6 +532,11 @@ NOTICE_HERE = (
     (76, "QUALCODER_IMPORT_CAPABILITIES.md"),
     (77, "QUALCODER_IMPORT_CAPABILITIES.md"),
     (78, "RESEARCH_SUMMARY.md"),
+    (79, "src/exegete/doc_readers.py", "getdocumenttext"),
+    (80, "src/exegete/doc_readers.py", "_ODT_REPLACEMENTS",
+     "_ODT_TAG_STARTS", "_ODT_ENTITIES", "odt_recipe"),
+    (81, "scripts/qualcoder_parity.py", "QualCoder.stored",
+     "QualCoder._transcript"),
 )
 
 

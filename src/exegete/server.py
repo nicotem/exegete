@@ -84,6 +84,7 @@ from .database import (
     nfc_ordered,
     position_safe as db_position_safe,
     read_project_pseudonyms,
+    MAX_TEXT_CONTENT_LENGTH,
     read_project_pseudonyms_with_raw,
     PSEUDONYMS_JSON_NAME,
 )
@@ -91,6 +92,7 @@ from . import pseudonymise as pseudo
 from . import new_project
 from . import parts, reading, reading_folder
 from .path_identity import is_inside, is_inside_any
+from . import doc_import, doc_readers
 from .cursors import (
     CURSOR_MAX_LENGTH,
     CURSOR_TOO_LONG,
@@ -819,6 +821,10 @@ TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
 # FastMCP sends no tool metadata of its own.
 TOOL_META = {
     "read_pseudonym_list": {"anthropic/requiresUserInteraction": True},
+    # import_documents (0.14.3, provisional): the researcher approves each
+    # import, the preview and then the import; Claude Code asks before
+    # both calls (the design's "Asking every time").
+    "import_documents": {"anthropic/requiresUserInteraction": True},
 }
 
 def _argument_name_for_display(name: Any) -> str:
@@ -9832,6 +9838,413 @@ def import_text_file(
     return json.dumps(output, indent=2)
 
 
+# ============================================================================
+# DOCUMENT IMPORT (0.14.3, provisional): import_documents
+# ============================================================================
+
+IMPORT_DOCUMENTS_ADVICE_NAMES = (
+    " Correct the list in QualCoder (Project, Pseudonyms), then ask again. "
+    "The import applies the list as the text comes in, so it cannot go "
+    "ahead with a list it cannot read.")
+
+
+def _import_owner_stop() -> Optional[str]:
+    """Why the import could not record an owner, without writing anything
+    (the preview writes nothing; `_resolve_write_owner` may settle an
+    earlier file)."""
+    state = read_sidecar(_current_project_folder())
+    if state.status == SIDECAR_UNREADABLE:
+        return unreadable_message(state.path)
+    if state.status == SIDECAR_NEWER_FORMAT:
+        return newer_format_message(state.path)
+    if not state.is_set:
+        return _ask_refusal(owner_supplied=False)["error"]
+    declared = host_declaration()
+    if ai_coder_name_mismatch(declared, state.entry):
+        return _mismatch_refusal(state.name, declared)["error"]
+    return None
+
+
+def _import_names_list(apply: bool, folder: Path):
+    """(state, entries, compiled, canonical, stop) for the project's names
+    list. An empty list counts as none, as in QualCoder; a list the engine
+    cannot use stops the import, and turning pseudonyms off is never
+    offered as the way round."""
+    if not apply:
+        return "off", 0, None, None, None
+    if not os.path.lexists(str(folder / PSEUDONYMS_JSON_NAME)):
+        return "none", 0, None, None, None
+    try:
+        entries, _encoding = read_project_pseudonyms(folder)
+        if not entries:
+            return "empty", 0, None, None, None
+        validated = pseudo.validate_mapping(entries, "exact",
+                                            may_echo_names=False)
+    except FileNotFoundError:
+        return "none", 0, None, None, None
+    except (ValueError, OSError, RuntimeError) as e:
+        return "none", 0, None, None, _pseudonyms_json_error(
+            e, IMPORT_DOCUMENTS_ADVICE_NAMES)
+    return ("entries", len(validated.entries), pseudo.Compiled(validated),
+            pseudo.canonical_mapping(validated), None)
+
+
+def _optional_formats_available() -> set:
+    """The optional part's formats this install can read."""
+    import importlib.util
+    available = set()
+    if importlib.util.find_spec("pymupdf") is not None:
+        available.add(doc_readers.PDF)
+    if importlib.util.find_spec("ebooklib") is not None:
+        available.add(doc_readers.EPUB)
+    return available
+
+
+def _reading_folder_root() -> Optional[Path]:
+    """Exegete's reading folder (decision 6), refused as a source."""
+    from . import reading_folder
+    try:
+        return Path(reading_folder.root())
+    except Exception:
+        return None
+
+
+def _import_context(project_folder: Path, apply_pseudonyms: bool,
+                    pdfs_with_names: bool, encoding: Optional[str],
+                    memo: str):
+    state, count, compiled, canonical, names_stop = _import_names_list(
+        apply_pseudonyms, project_folder)
+    db = get_db()
+    rows = db.conn.execute("SELECT name, mediapath FROM source").fetchall()
+    caps = getattr(db, "capabilities", None)
+    ctx = doc_import.Context(
+        project_folder=project_folder,
+        source_names={r["name"]: r["mediapath"] for r in rows},
+        documents_listing=db.documents_listing(),
+        refused_places=[
+            ("project", project_folder),
+            ("state_folder", preview_tokens_state_home()),
+            ("state_folder", preview_tokens_old_state_home()),
+            ("reading_folder", _reading_folder_root())],
+        compiled=compiled, names_list=state, names_list_entries=count,
+        names_list_canonical=canonical,
+        optional_available=_optional_formats_available(),
+        qc382=caps is not None and not caps.has_coder_visibility,
+        encoding=encoding, pdfs_with_listed_names=pdfs_with_names,
+        max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo)
+    return ctx, names_stop
+
+
+def _folder_megabytes(folder: Path) -> float:
+    total = 0
+    for root, _dirs, files in os.walk(folder):
+        for name in files:
+            try:
+                total += os.lstat(os.path.join(root, name)).st_size
+            except OSError:
+                pass
+    return round(total / (1024 * 1024), 1)
+
+
+def _import_backup_note(project_folder: Path, adding_bytes: int):
+    backups = [b for b in _collect_backups(project_folder)
+               if b["kind"] == "mcp"]
+    return {"backup": "one backup of the whole project is taken first, "
+                      "before anything is written",
+            "backup_size_mb": _folder_megabytes(project_folder),
+            "backups_already_take_mb": round(
+                sum(b["size_mb"] for b in backups), 1),
+            "this_batch_adds_mb": round(adding_bytes / (1024 * 1024), 1),
+            "backup_tip": "Each import takes a backup of the whole "
+                          "project, originals included, so bringing "
+                          "several files in at once keeps backups few."}
+
+
+def _import_arguments_error(paths, encoding, memo) -> Optional[str]:
+    if (not isinstance(paths, list) or not paths
+            or len(paths) > doc_import.MAX_PATHS):
+        return (f"paths must be a list of 1 to {doc_import.MAX_PATHS} full "
+                f"paths, each to a file or a folder; nothing was done.")
+    for given in paths:
+        if (not isinstance(given, str) or not given.strip()
+                or len(given) > 4096 or "\x00" in given):
+            return ("Each of paths must be a full path to a file or a "
+                    "folder; nothing was done.")
+    if encoding is not None and doc_readers.named_encoding(encoding) is None:
+        return ("encoding must name a text encoding, such as cp1252 "
+                "(Windows Western), mac_roman or latin_1; nothing was read.")
+    if not isinstance(memo, str):
+        return "memo must be text; nothing was done."
+    if len(memo) > doc_import.MAX_MEMO:
+        return (f"memo is too long ({len(memo)} characters; limit "
+                f"{doc_import.MAX_MEMO}); nothing was done.")
+    return None
+
+
+IMPORT_DONE_LINES = {
+    "take_back": ("If any of these is the wrong file, say so now: restoring "
+                  "the backup taken just before ({backup}) takes the import "
+                  "back, and nothing else has changed yet."),
+    "corrections": ("Exegete keeps its own copy. Changes you make later to "
+                    "the file on your computer do not reach the project, so "
+                    "correct transcripts before you start coding them."),
+    "owner": ("The files are recorded under the AI coder name '{owner}': it "
+              "records who brought them in, on your word."),
+    "no_list": ("This project has no list of names to replace. If these "
+                "documents name participants, replace the names before the "
+                "assistant reads them: pseudonymise_source on each file, or "
+                "make the list in QualCoder's Pseudonyms dialog."),
+    "pdf_names": ("A PDF brought in names people from your list: its names "
+                  "will reach the AI provider on every later read, search or "
+                  "coding excerpt of that file."),
+    "prune": ("The project's backups now take about {size} MB; "
+              "prune_backups removes old ones."),
+}
+PRUNE_MENTION_MB = 500
+
+
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
+@_tool_guard
+def import_documents(
+    paths: List[str],
+    preview_token: Optional[str] = None,
+    apply_project_pseudonyms: bool = True,
+    import_pdfs_with_listed_names: bool = False,
+    encoding: Optional[str] = None,
+    memo: str = ""
+) -> str:
+    """Bring documents from the researcher's computer into the open project, read here as QualCoder's own import reads them; their text never passes through the conversation. Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part.
+
+    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (a summary line, names, sizes, lengths, warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, each original is copied into the project and its text stored.
+
+    Refused, or kept out of the batch, with the reason: while QualCoder has the project open; anything in the project, Exegete's own folders, a hidden folder or a link; other file types; files over the limits; names already in the project. The project's pseudonyms list, if any, is applied to the stored text (never to PDFs, nor to the originals). Set apply_project_pseudonyms=false or import_pdfs_with_listed_names=true only when the researcher has said so for this import, never to get past a refusal.
+
+    Never paste a document's text into a tool, or open it with this app's own tools first: give its path. For typed text, use import_text_file; for a document converted by another tool, see explain_ai_coding_tools('converted_documents').
+
+    Args:
+        paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
+        preview_token: from the preview, for the import
+        apply_project_pseudonyms: default true; false only on the researcher's word
+        import_pdfs_with_listed_names: default false; true only on the researcher's word
+        encoding: a character set the researcher names, for guessed files (e.g. cp1252)
+        memo: a note for every file (e.g. its source); at most 10,000 characters
+    """
+    error = _import_arguments_error(paths, encoding, memo)
+    if error is None:
+        marker = private_marker_refusal(memo, "memo")
+        if marker is not None:
+            error = marker
+    if error is not None:
+        return json.dumps({"error": error}, indent=2)
+    _adopt_configured_project()
+    if current_project_path is None:
+        return json.dumps({"error": _no_project_message()}, indent=2)
+    encoding = (None if encoding is None
+                else doc_readers.named_encoding(encoding))
+    project_folder = _current_project_folder()
+    ctx, names_stop = _import_context(
+        project_folder, apply_project_pseudonyms,
+        import_pdfs_with_listed_names, encoding, memo)
+    stops = []
+    gate = _write_gate_error()
+    if gate is not None:
+        stops.append(gate["error"])
+    owner_stop = _import_owner_stop()
+    if owner_stop is not None:
+        stops.append(owner_stop)
+    if names_stop is not None:
+        stops.append(names_stop)
+    token_args = canonical_args(
+        "import_documents", paths=paths,
+        apply_project_pseudonyms=apply_project_pseudonyms,
+        import_pdfs_with_listed_names=import_pdfs_with_listed_names,
+        encoding=encoding, memo=memo)
+    if preview_token is None:
+        return _import_documents_preview(paths, ctx, stops, token_args)
+    if stops:
+        return json.dumps({"error": " ".join(stops),
+                           "nothing_changed": True}, indent=2)
+    return _import_documents_write(paths, ctx, token_args, preview_token,
+                                   project_folder)
+
+
+def _import_documents_preview(paths, ctx, stops, token_args) -> str:
+    result = doc_import.survey(paths, ctx)
+    adding = sum(i.size for i in result.items if i.status == "ready")
+    preview = doc_import.preview_answer(
+        result, ctx, stops,
+        _import_backup_note(ctx.project_folder, adding))
+    ready = [i for i in result.items if i.status == "ready"]
+    if stops or result.out_of_time or not ready:
+        preview["nothing_to_import"] = (
+            "No import can be made from this preview: "
+            + ("what stops the import comes first above." if stops else
+               "no file is ready." if not ready else
+               "some files were not read in time."))
+        return json.dumps(preview, indent=2, ensure_ascii=False)
+    try:
+        payload = _issue_preview(
+            "import_documents", token_args, preview, [],
+            "Show the researcher the summary, the names list line and "
+            "every warning, and wait for their word before calling again "
+            "with the token.",
+            {"paths": list(paths),
+             "apply_project_pseudonyms": token_args[
+                 "apply_project_pseudonyms"],
+             "import_pdfs_with_listed_names": token_args[
+                 "import_pdfs_with_listed_names"],
+             "encoding": token_args["encoding"],
+             "memo": token_args["memo"]},
+            state_preview=result.fingerprint(ctx))
+    except PreviewSecretUnavailable:
+        return json.dumps(
+            _token_error("preview_secret_unavailable", "import_documents"))
+    # The preview's own order first (what stops it, the summary line, the
+    # names list, ...), then the token and how to use it.
+    answer = dict(payload.pop("preview"))
+    answer.update(payload)
+    return json.dumps(answer, indent=2, ensure_ascii=False)
+
+
+def _import_documents_write(paths, ctx, token_args, preview_token,
+                            project_folder) -> str:
+    result = doc_import.survey(paths, ctx, read_texts=False)
+    state = fingerprint_rows(result.fingerprint(ctx), [])
+    try:
+        outcome = verify(preview_token, "import_documents", token_args,
+                         _token_project(), state)
+    except PreviewSecretUnavailable:
+        return json.dumps(
+            _token_error("preview_secret_unavailable", "import_documents"))
+    if outcome != OK:
+        return json.dumps(_token_error(outcome, "import_documents"))
+    owner, owner_error = _resolve_write_owner()
+    if owner_error is not None:
+        return json.dumps(owner_error, indent=2)
+    if not any(i.status == "ready" for i in result.items):
+        return json.dumps({"error": "No file in this batch is ready to "
+                                    "import; nothing was changed.",
+                           "nothing_changed": True}, indent=2)
+    lock_error = _write_gate_error()
+    if lock_error is not None:
+        return json.dumps(lock_error)
+    write_db = get_db(read_only=False)
+    backup_path = None
+    committed = False
+    written = doc_import.Written()
+    taken: List[Any] = []
+    try:
+        with hold_project_lock(project_folder) as lock_held:
+            doc_import.sweep_temporary_copies(project_folder / "documents")
+            try:
+                backup_path = write_db.backup_before_write()
+            except Exception as e:
+                logger.error("Failed to create backup: %s", error_label(e))
+                return json.dumps({
+                    "error": _backup_failed_text(
+                        isinstance(e, DatabaseLockedError),
+                        isinstance(e, BackupWithoutDatabaseError)),
+                    "message": "Aborting to protect your data."})
+            try:
+                taken = doc_import.write_batch(
+                    write_db.insert_imported_document, result, ctx, owner,
+                    written)
+                if not taken:
+                    return json.dumps(_with_backup({
+                        "error": "No file was imported: every file was held "
+                                 "back or refused when read again.",
+                        "nothing_changed": True}, backup_path), indent=2)
+                _recheck_lock_before_commit(project_folder, lock_held)
+                write_db.conn.commit()
+                committed = True
+            except doc_import.BatchFailed as e:
+                return json.dumps(_with_backup({
+                    "error": doc_import.BATCH_FAILURES.get(
+                        e.code, doc_import.BATCH_FAILURES["not_copied"]),
+                    "nothing_changed": True}, backup_path), indent=2)
+            except DatabaseLockedError as e:
+                return json.dumps(_with_backup({"error": str(e)},
+                                               backup_path))
+            except (ValueError, TypeError) as e:
+                return json.dumps(_with_backup({"error": str(e)},
+                                               backup_path))
+            except sqlite3.Error as e:
+                logger.error("SQLite error during the document import: %s",
+                             error_label(e))
+                return json.dumps(_with_backup(
+                    {"error": _write_failed_text(
+                        _rollback_if_open(write_db),
+                        "no file was imported", e)}, backup_path))
+    finally:
+        if not committed:
+            _rollback_if_open(write_db)
+            written.remove_all()
+        _downgrade_to_readonly()
+    return json.dumps(_import_done_answer(result, taken, ctx, owner,
+                                          backup_path, written),
+                      indent=2, ensure_ascii=False)
+
+
+def _pymupdf_version() -> Optional[str]:
+    try:
+        from importlib.metadata import version
+        return version("pymupdf")
+    except Exception:
+        return None
+
+
+def _import_done_answer(result, taken, ctx, owner, backup_path,
+                        written) -> Dict[str, Any]:
+    """What the import answers: each file's id, name, length and
+    warnings, the names replaced, the backup; then the lines for the
+    assistant to show. Never the text."""
+    files = []
+    for item in taken:
+        entry = doc_import.file_entry(item)
+        entry["file_id"] = item.numbers["file_id"]
+        entry["name"] = entry.pop("file")
+        files.append(entry)
+    answer: Dict[str, Any] = {
+        "success": True,
+        "message": (f"{len(taken)} file{'s' if len(taken) != 1 else ''} "
+                    f"imported, each original copied into the project's "
+                    f"folder of originals."),
+        "files": files,
+    }
+    if ctx.names_list == "entries":
+        answer["names_replaced"] = sum(i.replacements for i in taken)
+    held_now = [i for i in result.items if i.status == "held"]
+    refused_now = [i for i in result.items if i.status == "refused"]
+    if held_now:
+        answer["held_back"] = [{"file": doc_import.item_label(i),
+                                "reason": doc_import.refusal_words(i)}
+                               for i in held_now]
+    if refused_now or result.path_refusals:
+        answer["not_imported"] = len(refused_now) + len(result.path_refusals)
+    if any(i.kind == doc_readers.PDF for i in taken):
+        answer["pymupdf_version"] = _pymupdf_version()
+    if written.marks_lost:
+        answer["internet_origin_marks_not_carried"] = written.marks_lost
+    backup_name = Path(backup_path).name if backup_path else "none"
+    lines = [IMPORT_DONE_LINES["take_back"].format(backup=backup_name),
+             IMPORT_DONE_LINES["corrections"],
+             IMPORT_DONE_LINES["owner"].format(owner=owner)]
+    if any(i.kind == doc_readers.PDF and i.numbers.get("listed_count")
+           for i in taken):
+        lines.append(IMPORT_DONE_LINES["pdf_names"])
+    if ctx.names_list in ("none", "empty"):
+        lines.append(IMPORT_DONE_LINES["no_list"])
+    backups = [b for b in _collect_backups(ctx.project_folder)
+               if b["kind"] == "mcp"]
+    size = round(sum(b["size_mb"] for b in backups))
+    if size >= PRUNE_MENTION_MB:
+        lines.append(IMPORT_DONE_LINES["prune"].format(size=size))
+    answer["for_the_researcher"] = lines
+    if backup_path:
+        answer["backup_path"] = str(backup_path)
+    return answer
+
+
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 def link_file_to_case(
@@ -11229,6 +11642,74 @@ def cleanup_old_sessions(days_old: int = 30) -> str:
 
 
 
+# The pandoc defaults file the converted_documents topic names (0.14.3,
+# provisional, decision 3): two lines, checked against this digest before
+# its place is given, so a file changed on the disk is never named.
+PANDOC_DEFAULTS_NAME = "pandoc-defaults.yaml"
+PANDOC_DEFAULTS_SHA256 = (
+    "b4d754a14793defdc74218602a5550f2e853756c60c61e35f571f5a4904d80d6")
+
+
+def _pandoc_defaults_place() -> Optional[str]:
+    """The defaults file's place in the installed package, if its
+    contents are Exegete's own."""
+    path = Path(__file__).resolve().parent / PANDOC_DEFAULTS_NAME
+    try:
+        if path.is_symlink() or not path.is_file():
+            return None
+        data = path.read_bytes()[:4096]
+    except OSError:
+        return None
+    if hashlib.sha256(data).hexdigest() != PANDOC_DEFAULTS_SHA256:
+        return None
+    return str(path)
+
+
+def _converted_documents_help() -> Dict[str, Any]:
+    place = _pandoc_defaults_place()
+    return {
+        "title": "Bringing in a document converted by another tool, such "
+                 "as a pandoc server",
+        "why": "Exegete reads Word, OpenDocument, RTF, web page, Markdown, "
+               "plain text and subtitle files itself, as QualCoder does, so "
+               "both programs store the same text. A converter gives other "
+               "text, so a converted file comes in as a .txt of its own.",
+        "steps": [
+            "Convert file to file: the original in, a .txt out, in a folder "
+            "outside the project. Always give an output file: without one, "
+            "a converter server returns the whole document into the "
+            "conversation.",
+            "With pandoc, from the first conversion, pass Exegete's "
+            "defaults file (below): it stops pandoc's line wrapping (wrap: "
+            "none) and keeps pandoc from fetching from the web or reading "
+            "other files (sandbox: true). Use no other defaults file and no "
+            "filters: either can make pandoc run programs.",
+            "Import the .txt with import_documents, by its path, and say in "
+            "memo which document it was converted from and with what. The "
+            "project keeps the .txt as its original, not the document it "
+            "came from; its text is not QualCoder's reading of that "
+            "document.",
+            "The preview warns of a converter's layout (lines broken at 72 "
+            "characters, ruled tables, numbered notes gathered at the "
+            "end); with wrap: none the first does not arise."],
+        "never": [
+            "Do not convert .tex files this way: a LaTeX file can pull in "
+            "private files from the computer.",
+            "Do not convert .html or .epub files: Exegete reads them itself "
+            "(EPUB with the optional part).",
+            "Never convert to .odt: QualCoder stores a pandoc-made .odt as "
+            "noise, and Exegete refuses it. Pandoc cannot read PDF."],
+        "defaults_file": place if place is not None else (
+            "not available: the file in Exegete's package is missing or "
+            "has been changed, so it is not named. Reinstall Exegete."),
+        "what_leaves_the_computer": (
+            "The two paths, the options and pandoc's one-line answer (its "
+            "warnings can quote addresses or paths found in the document); "
+            "not the text, unless the output file is left out or the "
+            "converted file is read back."),
+    }
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 @_deprecated(DEPRECATED_HELP_TOPICS, before="Args:",
@@ -11662,6 +12143,10 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         # the exegete://guidance/brief resource return
         return _brief()
 
+    if tool_name == "converted_documents":
+        # 0.14.3 (provisional): import_documents' description points here
+        return json.dumps(_converted_documents_help(), indent=2)
+
     if tool_name is None:
         # Return overview
         return json.dumps(tool_help["overview"], indent=2)
@@ -11683,7 +12168,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "methodology_vocabulary",
                 "methods_notes",
                 "moving_from_qualcoder_mcp",
-                "brief"
+                "brief",
+                "converted_documents"
             ],
             "tip": "Use explain_ai_coding_tools() with no arguments for an "
                    "overview of the coding loop. Only the topics listed above "

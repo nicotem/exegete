@@ -92,11 +92,10 @@ What stays local, always, unless a sync service copies the folder it is in:
   secret by itself, with the same two effects, when it finds the file
   malformed or, on macOS and Linux, readable by other accounts (after a
   restore or a sync tool widened its mode), and logs that it did. The
-  export tools refuse paths inside this folder as it is spelled. On
-  Windows the guard's comparison ignores letter case, so a spelling in
-  another letter case is refused there too. On macOS, whose file system
-  usually ignores letter case, such a spelling (`~/.EXEGETE`) is
-  not yet caught (the guard is fixed in v0.15).
+  export tools refuse paths inside this folder, decided by which folder
+  a path really is rather than by its spelling, so a spelling in another
+  letter case (`~/.EXEGETE`) is refused on macOS and Windows too (fixed
+  in 0.14.3, provisional; until then it was caught on Windows only).
 - the last-used project pointer (`~/.exegete/mru_project.json`:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful
@@ -758,6 +757,55 @@ project has the coder-visibility capability:
 
 Projects without the coder-visibility capability (schemas older than
 v14) are unaffected.
+
+## Bringing documents in (provisional, 0.14.3)
+
+`import_documents` reads documents on your computer, by their paths,
+the way QualCoder's own import reads them. The documents' text does not
+pass through the conversation on the way in. What does reach the AI
+provider, and what does not:
+
+| Step | Sent to the AI provider | Not sent |
+|---|---|---|
+| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token | the text; any library's or the document's own messages |
+| The import | the arguments, and the answer: ids, names, counts, the backup's name | the text |
+| Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
+
+Six cautions:
+
+- **File names travel everywhere** (in the paths, the answers and every
+  later read), so a participant's name in a file's name reaches the
+  provider. Name files by pseudonym or number before importing. With a
+  names list, a file whose name holds a listed name is held back, and
+  is referred to only by its position.
+- **A folder's preview is a listing**: given any folder your account can
+  read, it returns the names and sizes of the documents in it, before
+  any import.
+- **What is not pseudonymised**: the originals (copied unchanged into
+  the project's folder of originals, as QualCoder does), a PDF's text
+  and its notes. A PDF holding names from your list is held back unless
+  you say so for that import.
+- **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
+  can read any file your account can, originals included. Exegete's
+  descriptions ask the assistant to give paths and never to open a
+  document with its own tools; nothing enforces that.
+- **Hidden instructions in a document** can try to steer an assistant
+  into previewing and importing some other document. The short list of
+  formats, the refusal of hidden places and links, the preview and your
+  approval stand against it: allow the import once, after reading the
+  preview, and never set it to "always allow". Codex's default mode
+  runs it without asking.
+- **A file imported by mistake** stays in every backup taken after it,
+  since a backup copies the whole project. Restoring the backup taken
+  just before the import takes it back while nothing else has changed.
+
+Each document is read in a separate, short-lived process with a time
+limit and a memory cap, handed the file's bytes rather than its path;
+it runs without a sandbox for now (one where the system offers it, on a
+Mac and on Linux, is planned; Windows offers none). Import and reading
+use no network. A document converted with another tool, such as a pandoc
+server, should be converted file to file, never into the conversation
+(`explain_ai_coding_tools('converted_documents')`).
 
 ## Backups, project copies, and the `ai_data/` folder
 

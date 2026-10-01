@@ -444,7 +444,11 @@ class TestCodexAsksBeforeEveryChange:
                          and not codex_asks(tool.annotations, "auto"))
         assert "read_pseudonym_list" in unasked
         adding = [n for n in unasked if n != "read_pseudonym_list"]
-        assert len(adding) == 15
+        # 0.14.3: open_file_for_reading and import_documents add, so
+        # Codex's default mode runs them unasked too, which INSTALL.md
+        # says (allow the import once elsewhere)
+        assert len(adding) == 16
+        assert "import_documents" in adding
         for name in ("import_text_file", "apply_codings",
                      "create_proposed_codes", "create_code"):
             assert name in adding, name
@@ -453,10 +457,11 @@ class TestCodexAsksBeforeEveryChange:
             assert codex_asks(tools[name].annotations, "auto"), name
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("Here that is the 15 tools that only add "
+        assert ("Here that is the 16 tools that only add "
                 "(`import_text_file`, `apply_codings`, "
-                "`create_proposed_codes`, `create_code` and the rest) and "
-                "`read_pseudonym_list`") in marks
+                "`create_proposed_codes`, `create_code` and the rest, "
+                "`open_file_for_reading` and `import_documents` among them "
+                "from 0.14.3) and `read_pseudonym_list`") in marks
 
     def test_the_rule_would_notice(self):
         from mcp.types import ToolAnnotations

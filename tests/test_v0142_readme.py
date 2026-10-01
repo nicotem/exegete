@@ -170,14 +170,17 @@ def _model_or_network_uses(source):
 
 
 def test_it_has_no_ai_of_its_own():
-    """"It has no AI of its own" (README, "How it works"): its one
-    dependency is the MCP library, and nothing in its source imports a
-    model's client or a network library, or asks the host's model through
-    MCP's sampling call. The day that changes, this fails."""
+    """"It has no AI of its own" (README, "How it works"): its
+    dependencies are the MCP library and, from 0.14.3 (provisional), the
+    three small libraries the document import reads with (a character
+    set guesser, a safe XML parser, QualCoder's RTF reader), none of them
+    a model's client or a network library; and nothing in its source
+    imports one, or asks the host's model through MCP's sampling call.
+    The day that changes, this fails."""
     with open(REPO / "pyproject.toml", "rb") as handle:
         dependencies = tomllib.load(handle)["project"]["dependencies"]
     assert [re.match(r"[A-Za-z0-9_.-]+", d).group(0) for d in dependencies] \
-        == ["mcp"]
+        == ["mcp", "charset-normalizer", "defusedxml", "striprtf"]
     found = {}
     for path in sorted((REPO / "src").rglob("*.py")):
         uses = _model_or_network_uses(path.read_text(encoding="utf-8"))

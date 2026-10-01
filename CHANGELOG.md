@@ -93,16 +93,92 @@ otherwise, and may change before it is released.
   other options v0.14 deprecated: an import always takes a backup
   first. A call that passes it is answered with the deprecation.
 
+### Added: document import (provisional)
+
+- `import_documents` brings Word (.docx), OpenDocument (.odt), RTF,
+  plain text (.txt), Markdown (.md), web pages (.html, .htm) and
+  subtitle files (.srt, .vtt) into the open project from the
+  researcher's computer, by their paths or a folder's, and PDF and EPUB
+  with an optional part (below). Exegete reads each document on the
+  computer, the way QualCoder 4.0's own import reads it, so a project
+  imported by either program looks the same to both; the documents'
+  text never passes through the conversation.
+- Two steps, as Exegete's other changes that matter: the first call
+  writes nothing and answers with a preview (a summary line, the names
+  list's state, each file's name, size, length and warnings in plain
+  words with a way round, the files held back or refused and why, the
+  backup it will take), never the text; only with the preview's token,
+  on the researcher's word, does the second call take one backup, copy
+  each original unchanged into the project's folder of originals
+  (`documents`, stored path `/docs/<name>`, as QualCoder does) and store
+  its text. The token binds the files' contents, each folder's list of
+  files and the project's names: a file changed or added after the
+  preview refuses the import. QualCoder's lock and the signs that
+  QualCoder 4.0 has the project open refuse it before any backup. A
+  failure after the backup takes the batch back and names the backup.
+  Claude Code asks before both calls
+  (`anthropic/requiresUserInteraction`).
+- The text is QualCoder 4.0's, to the character, checked against
+  QualCoder's own extraction functions on every test document
+  (`scripts/qualcoder_parity.py`, `tests/test_v0143_import_parity.py`).
+  QualCoder's Word reader is copied with its MIT notice and parses
+  through defusedxml; OpenDocument follows QualCoder's string recipe
+  with no parser; RTF uses striprtf, as QualCoder does; web pages follow
+  QualCoder's rules, written afresh.
+- Named departures, each with its reason in TOOLS.md: a file in which
+  no text is found is refused, where QualCoder stores its raw bytes; a
+  file declaring XML entities is refused; a web page QualCoder cannot
+  store is read by its declared character set; a file whose accents came
+  out garbled is held back until the researcher names the character set
+  (`encoding`) or fixes the file; subtitle files come in as documents;
+  originals are always copied, never linked; per-format size limits,
+  archive limits and time and memory limits; the AI coder name owns the
+  rows (decision 5).
+- The project's pseudonyms list is applied to the stored text by
+  default, as QualCoder's import does (never to PDFs, nor to the
+  originals); an empty list counts as none; a list Exegete cannot use
+  stops the import, and turning the list off is never offered as the way
+  round. A PDF holding listed names is held back unless the researcher
+  says so (`import_pdfs_with_listed_names`); a file whose own name holds
+  a listed name is held back and referred to only by its position.
+- Every document is read in a separate, short-lived process: started
+  isolated, handed the file's bytes rather than a path, answering in
+  plain data, its error output dropped, with a time limit and a memory
+  cap on every system. No library's message reaches an answer.
+- Paths: `~` and quoted paths accepted; hidden places, links (except
+  into a Mac's cloud drive folders), network paths typed as such, the
+  open project, Exegete's state folders and its reading folder refused,
+  each with a next step in plain words.
+- `explain_ai_coding_tools('converted_documents')`: how to bring in a
+  document converted by another tool, such as a pandoc server (file to
+  file, with Exegete's defaults file, which keeps pandoc sandboxed from
+  the first conversion), named by the import's description.
+- The optional part `pdf-epub` (PyMuPDF and EbookLib, the libraries
+  QualCoder 4.0 reads PDF and EPUB with, AGPL-licensed) is switched on in
+  the Claude Desktop extension (decision 1, provisional; if the owner
+  says nothing, the release ships without it). New libraries in every
+  install: charset-normalizer, defusedxml, and striprtf pinned exactly.
+
+### Fixed
+
+- The export tools' refusals of the project folder and the state folder
+  compared paths as text, so on a disk that ignores letter case (a Mac's
+  usual disk, Windows) another spelling of either folder got past them.
+  They now decide by which folder a path really is.
+
 ### Measured
 
-- Serialised tool JSON: full = 197,577 characters (about 49.4k tokens
-  at chars/4) over 75 tools, core = 66,952 (about 16.7k) over 23, and
-  the opt-in lifecycle set = 200,156 (about 50.0k) over 76, measured on
+- Serialised tool JSON: full = 200,222 characters (about 50.1k tokens
+  at chars/4) over 76 tools, core = 66,952 (about 16.7k) over 23, and
+  the opt-in lifecycle set = 202,801 (about 50.7k) over 77, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 207,377, 70,328 and 210,096.
-  `open_file_for_reading`'s own entry is 1,355 characters on 3.13; the
-  rest of the growth is `start` on `analyze_file_with_coding` and the
-  two descriptions changed above.
+  Python 3.11.13 (the `.venv/`), 210,066, 70,328 and 212,785.
+  `open_file_for_reading`'s own entry is 1,355 characters on 3.13, and
+  `import_documents`' 2,643 (2,645 with its separator; it is in the
+  standard and lifecycle sets, not in core); the rest of the growth is
+  `start` on `analyze_file_with_coding` and the two descriptions changed
+  above.
+
 
 ## [0.14.2-alpha] - 2026-10-02
 

@@ -1,5 +1,10 @@
 # Qualcoder Import Capabilities - Research Summary
 
+> **HISTORICAL DOCUMENT (early research).** This summary predates
+> Exegete's own document import. From 0.14.3 (provisional), Exegete
+> brings documents in itself, by their paths, the way QualCoder's import
+> reads them: see `import_documents` in TOOLS.md.
+
 ## What I Found
 
 After examining the Qualcoder source code, I discovered Qualcoder **DOES have import capabilities**, but they're specific and different from what I initially proposed.

@@ -184,7 +184,9 @@ class TestCanonicalJson:
         assert set(pt.REGISTRY) == {
             "merge_codes", "delete_code", "delete_category",
             "merge_category", "restore_backup", "prune_backups",
-            "pseudonymise_source"}
+            "pseudonymise_source",
+            # 0.14.3 (provisional): one row, as H1 promised
+            "import_documents"}
         assert pt.canonical_args("delete_code", code_id=7) == {"code_id": 7}
         with pytest.raises(KeyError):
             pt.canonical_args("set_memo", target_id=1)

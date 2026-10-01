@@ -62,6 +62,8 @@ EXPECTED_TOOLS = {
     "edit_suggestion", "update_suggestion_status", "apply_codings",
     # writes & recovery (6)
     "import_text_file", "link_file_to_case", "delete_coding",
+    # document import (0.14.3, provisional)
+    "import_documents",
     "list_backups", "restore_backup", "export_refi_qda",
     # sessions & help (5)
     "get_coding_session_info", "list_coding_sessions",
@@ -113,7 +115,7 @@ class TestToolSurfaceRegistration:
         tools = asyncio.run(server.mcp.list_tools())
         names = {t.name for t in tools}
         assert names == EXPECTED_TOOLS
-        assert len(names) == 75
+        assert len(names) == 76          # open_file_for_reading and import_documents (0.14.3)
 
 
 class TestEndToEndLoop:

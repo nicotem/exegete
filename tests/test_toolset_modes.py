@@ -32,9 +32,9 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 75              # plus open_file_for_reading (v0.14.3)
+EXPECTED_FULL = 76              # plus open_file_for_reading and import_documents (v0.14.3)
 EXPECTED_CORE = 23              # plus open_file_for_reading (v0.14.3)
-EXPECTED_LIFECYCLE = 76          # full plus create_project (v0.14)
+EXPECTED_LIFECYCLE = 77          # full plus create_project (v0.14)
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -429,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 197_577          # 75 tools, Python 3.13.5, mcp 1.30.0
+    FULL_MEASURED = 200_222          # 76 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 66_952           # 23 tools, same environment
-    FULL_MEASURED_310 = 207_377      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 210_066      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 70_328
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 200_156     # 76 tools, same environment
-    LIFECYCLE_MEASURED_310 = 210_096
+    LIFECYCLE_MEASURED = 202_801     # 77 tools, same environment
+    LIFECYCLE_MEASURED_310 = 212_785
 
     # Why two per cent, away from the reference environment.
     #
@@ -462,11 +462,11 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "197,577"
+    FULL_CHARS = "200,222"
     CORE_CHARS = "66,952"
-    FULL_ROUNDED = "198,000"
+    FULL_ROUNDED = "200,000"
     CORE_ROUNDED = "67,000"
-    FULL_TOKENS = "49k"
+    FULL_TOKENS = "50k"
     CORE_TOKENS = "17k"
 
     @staticmethod
@@ -509,7 +509,10 @@ class TestThePublishedSchemaBudget:
 
     @classmethod
     def _v0142_entry(cls):
-        """The 0.14.2 entry, whose figure is history and stays put."""
+        """The 0.14.2 entry, whose figure is history and stays put
+        (0.14.3 adds open_file_for_reading and import_documents,
+        provisional, so the current entry is the Unreleased one above the
+        0.14.2 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.14.2"):text.index("## [0.14.1")]
 
@@ -681,8 +684,8 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "200,000"
-    LIFECYCLE_TOKENS = "50k"
+    LIFECYCLE_ROUNDED = "203,000"
+    LIFECYCLE_TOKENS = "51k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
         # v0.14.1: the README's measurement block moved to TOOLS.md

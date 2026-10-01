@@ -33,6 +33,8 @@ JOB_TIME_LIMITS = {
     "test": JOB_TIME_LIMIT_MINUTES,
     "desktop-extension": 20,
     "desktop-extension-same": 10,
+    # 0.14.3: the import's text against QualCoder's own code
+    "qualcoder-parity": 20,
     # v0.14.1, the rename: the old name's package and its upgrades
     "rename-upgrade": 20,
 }

@@ -441,6 +441,23 @@ def _args_pseudonymise_source(kwargs):
                 kwargs["save_mapping_to_project"])}
 
 
+def _args_import_documents(kwargs):
+    """The arguments that decide what a document import brings in (0.14.3,
+    provisional): the paths as given, the two switches, the character set
+    named and the memo. All of them are already in the conversation, so
+    the public bind is plain. What the files hold, the project's names
+    and its folder of originals, and the names list, are the state the
+    token's MAC covers (the server's fingerprint), never the bind."""
+    encoding = kwargs.get("encoding")
+    return {"paths": [str(p) for p in kwargs["paths"]],
+            "apply_project_pseudonyms": bool(
+                kwargs["apply_project_pseudonyms"]),
+            "import_pdfs_with_listed_names": bool(
+                kwargs["import_pdfs_with_listed_names"]),
+            "encoding": None if encoding is None else str(encoding),
+            "memo": str(kwargs.get("memo") or "")}
+
+
 REGISTRY: Dict[str, Any] = {
     "merge_codes": _args_merge_codes,
     "delete_code": _args_delete_code,
@@ -449,6 +466,7 @@ REGISTRY: Dict[str, Any] = {
     "restore_backup": _args_restore_backup,
     "prune_backups": _args_prune_backups,
     "pseudonymise_source": _args_pseudonymise_source,
+    "import_documents": _args_import_documents,
 }
 
 # The tools whose public `bind` is keyed with the secret. D3 3.2 declared

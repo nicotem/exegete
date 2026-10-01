@@ -176,4 +176,4 @@ class TestTtyNotice:
     def test_registry_intact_after_main_in_process(self, monkeypatch, capsys, stub_run):
         monkeypatch.setattr(sys, "stdin", _FakeStdin(tty=False))
         server.main([])
-        assert len(server.mcp._tool_manager._tools) == 75
+        assert len(server.mcp._tool_manager._tools) == 76   # open_file_for_reading and import_documents (0.14.3)

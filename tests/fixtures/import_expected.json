@@ -1,0 +1,130 @@
+{
+ "files": {
+  "bom.txt": {
+   "text": "With a byte-order mark\n"
+  },
+  "boms.srt": {
+   "text": "\ufeff1\n00:00:01,000 --> 00:00:02,000\nHi.\n"
+  },
+  "book.epub": {
+   "text": "\nSecond chapter, caf\u00e9.\n\n\n \nChapter one \nFirst words.\n \n\n \nOutside the spine.\n \n\n"
+  },
+  "cp1252.txt": {
+   "text": "Caf\u0137 r\u0137sum\u0137, na\u2019ve \u00a2 \u014dquoted\u00f6 \u01065\nCaf\u0137 r\u0137sum\u0137, na\u2019ve \u00a2 \u014dquoted\u00f6 \u01065\nCaf\u0137 r\u0137sum\u0137, na\u2019ve \u00a2 \u014dquoted\u00f6 \u01065\n"
+  },
+  "cp1252_declared.html": {
+   "error": "UnicodeEncodeError"
+  },
+  "cp1252_in_comment.html": {
+   "text": "\nPlain text.\n"
+  },
+  "cp1252_plain.html": {
+   "error": "UnicodeEncodeError"
+  },
+  "cr_only.txt": {
+   "text": "Line one\nLine two\n"
+  },
+  "crlf.txt": {
+   "text": "Interviewer: Hello.\nPat: Hello again.\n"
+  },
+  "damaged.pdf": {
+   "refused": "damaged or unreadable"
+  },
+  "emoji.txt": {
+   "text": "Before \ud83d\ude00 after.\n"
+  },
+  "empty.txt": {
+   "refused": "empty"
+  },
+  "entities.docx": {
+   "text": "expanded"
+  },
+  "entities.epub": {
+   "text": "]>c\n&x;\n\n\n"
+  },
+  "escapes.rtf": {
+   "text": "Caf\u00e9 and na\u00efve.\nUnicode \u20ac5 and \u00e9t\u00e9.\nTab.\n"
+  },
+  "features.docx": {
+   "text": "First paragraph,after a break.\n\nA\ttab and  two spaces.\n\n\t\tTab stops defined here.\n\n\t\n\n\tChanged properties.\n\nCell one\n\nCell two\n\nOuterIn a box\n\nIn a box\n\nInserted.\n\nMoved.\n\nMoved.\n\nCaf\u00e9 & <tags> \u00fcber \ud83d\ude00"
+  },
+  "features.odt": {
+   "text": "\n\nA heading\n\n\n\nFirst styled words,spaced,tabbedand broken.\n\nItem one\n\n\n\nItem two\n\n\n\n\n\n=== TABLE ===\n\nCell\n\n\n\n=== END TABLE ===\n\nA comment here<office:annotation><dc:creator>Ann</dc:creator><dc:date>2026-01-01T10:00:00</dc:date>Note text\n\n</office:annotation> and a note1</text:note-citation>Footnote\n\n</text:note-body></text:note>.\n\nCaf\u00e9 & <x> 'q' \"d\" &#233; back\\slash\n\nUnknown end</x:odd>\n\n"
+  },
+  "garbled.txt": {
+   "text": "Jos\u00c3\u00a9 said hello to Ren\u00c3\u00a9e.\n"
+  },
+  "latin1.txt": {
+   "text": "Gar\u00e7on, \u0155 la fa\u00e7on de Jos\u00e9.\nGar\u00e7on, \u0155 la fa\u00e7on de Jos\u00e9.\nGar\u00e7on, \u0155 la fa\u00e7on de Jos\u00e9.\n"
+  },
+  "no_sequence_decls.odt": {
+   "noise": true,
+   "text": "PK\u0003\u0004\u0014\u0000\u0000\u0000\u0000\u0000\u0000\u0000!\u0000^\u00c62\f'\u0000\u0000\u0000'\u0000\u0000\u0000\b\u0000\u0000\u0000mimetypeapplication/vnd.oasis.opendocument.textPK\u0003\u0004\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u0000\u00ff\u00c5\u001a\u00f4,\u0000\u0000\u0000*\u0000\u0000\u0000\u0015\u0000\u0000\u0000META-INF/manifest.xml\u00b3\u00b1\u00af\u00c8\u00cdQ(K-*\u00ce\u00cc\u00cf\u00b3U2\u00d43PRH\u00cdK\u00ceO\u00c9\u00ccK\u00b7U\n\nq\u00d3\u00b5P\u00b2\u00b7\u00b3\u00a9\u00d0\u00b7\u0003\u0000PK\u0003\u0004\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u00003\u00eb\u009c\u00e8\u00ce\u0000\u0000\u0000\u00e0\u0001\u0000\u0000\u000b\u0000\u0000\u0000content.xml\u008d\u0091\u00c1j\u00c30\f@\u007f\u00c5\u00f8\u00deh\u00b9\u0015\u00e1\u00a4\u0087B\u00ef\u0085\u00ee\u0003\\[\u00e9\f\u008e\u0014lg\u00eb\u00fe~I\u00ba\u0095\u00e60\u00c8I\u00c8z\u00cfB\u00929\u00dc\u00fb\u00a8>)\u00e5 \u00dc\u00e8\u00baz\u00d3\u008a\u00d8\u0089\u000f|k\u00f4\u00fb\u00e5\u00b4\u00db\u00ebCk\u00a4\u00eb\u0082#\u00f4\u00e2\u00c6\u009e\u00b8\u00ec\u009cp\u0099\u00a2\u009ad\u00ce\u00f8\u00a86zL\u008cbs\u00c8\u00c8\u00b6\u00a7\u008c\u00c5\u00a1\f\u00c4\u007f\u0016\u00be\u00d2\u00b8\u00b4z\u00bc\u0014\u00ba\u0097\u00ad\u00f6\u00cc\u00ae\\{\u008d\u009b[/\u00f0\u00ab\u00ed\u0093\u00fd\u00da*\u00cf\u00ec\u00b4\u0095\u0095\u00ee\u001a\u00fdQ\u00ca\u0080\u0000\u00c3\u0098b%\u00e9\u0006\u00de\u0001E\u009a\u00bd\fuU\u0083~n\u00ef*\u00fe\u00fb\u0099\u00ccs\u00b4f\u0099fh/SP\u00e7\u00d1\u00c6\u00a3xJ\u00caYf)\u00aa\u000b\u00ec+\u0003\u00bf\u008c\u0081\u0095\t\u00abO\u00e1\u009f\u0003\u00b5?PK\u0001\u0002\u0014\u0003\u0014\u0000\u0000\u0000\u0000\u0000\u0000\u0000!\u0000^\u00c62\f'\u0000\u0000\u0000'\u0000\u0000\u0000\b\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0080\u0001\u0000\u0000\u0000\u0000mimetypePK\u0001\u0002\u0014\u0003\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u0000\u00ff\u00c5\u001a\u00f4,\u0000\u0000\u0000*\u0000\u0000\u0000\u0015\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0080\u0001M\u0000\u0000\u0000META-INF/manifest.xmlPK\u0001\u0002\u0014\u0003\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u00003\u00eb\u009c\u00e8\u00ce\u0000\u0000\u0000\u00e0\u0001\u0000\u0000\u000b\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0080\u0001\u00ac\u0000\u0000\u0000content.xmlPK\u0005\u0006\u0000\u0000\u0000\u0000\u0003\u0000\u0003\u0000\u00b2\u0000\u0000\u0000\u00a3\u0001\u0000\u0000\u0000\u0000"
+  },
+  "not_a_zip.docx": {
+   "error": "BadZipFile"
+  },
+  "notes.md": {
+   "text": "# Heading\n\n- item *one*\n- item two\n\n[link](x)\n"
+  },
+  "notes.pdf": {
+   "markups": 1,
+   "memo": "PDF annotations:\n[p. 1] Check this with Pat.\n[p. 1] Public part ##### private part",
+   "text": "Pat said the clinic was far away.\n"
+  },
+  "nul.txt": {
+   "text": "A\u0000B and a tab\there\n"
+  },
+  "one_space.docx": {
+   "text": " "
+  },
+  "only_spaces.txt": {
+   "text": "   \n  \n"
+  },
+  "page.html": {
+   "text": "The title\nHeading\nFirst paragraph wrapped.\n\nSecond & \u00e9 \u00e9 \u263a\n\n\nOne\nTwoBlock oneBlock twoABLine\nbreak "
+  },
+  "pandoc.txt": {
+   "text": "This line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\nThis line was written by a converter that wraps text at seventy\n\n+-------+-------+\n| a     | b     |\n+-------+-------+\n\nA note[1] and another[2].\n\n[1] First.\n\n[2] Second.\n"
+  },
+  "password.pdf": {
+   "refused": "password protected"
+  },
+  "picture_only.docx": {
+   "noise": true,
+   "text": "PK\u0003\u0004\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u0000\u0086~\u00fe\u009e\u009a\u0000\u0000\u0000\u00c3\u0000\u0000\u0000\u0013\u0000\u0000\u0000[Content_Types].xml%\u008eK\u000e\u00c20\fD\u00af\u0012yOSX \u0084\u0092t\u00c1\u00e7\u0004\u00e5\u0000V\u00ea~D\u00ebD\u008dA\u00ed\u00edI\u00e9\u00d2\u00f3f\u00c6c\u00aae\u001a\u00d5\u0097\u00e64\u0004\u00b6p,JP\u00c4>4\u0003w\u0016^\u00f5\u00f3p\u0001\u0095\u0004\u00b9\u00c110YX)A\u00e5L\u00bdFJ*g9Y\u00e8E\u00e2U\u00eb\u00e4{\u009a0\u0015!\u0012g\u00d2\u0086yB\u00c9\u00e7\u00dc\u00e9\u0088\u00fe\u008d\u001d\u00e9SY\u009e\u00b5\u000f,\u00c4r\u0090\u00ad\u0003\u009c\u00b9S\u008b\u009fQ\u00d4c\u00c9\u00f2\u00be#\u00c7A\u00ddv\u00df\u00f6\u00ca\u0002\u00c68\u000e\u001e%c\u00bdQ\u00ed\u008c\u00fe\u008fp?PK\u0003\u0004\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u0000\u0012\u0080Y\u00e9\u0099\u0000\u0000\u0000\u00ca\u0000\u0000\u0000\u0011\u0000\u0000\u0000word/document.xmlE\u008e\u00d1\u000e\u00820\fE\u007f\u0085\u00f4]\u008a>\u0018C\u0018\u00bc\u00f9\u0005\u00fa\u0001s\u009b@\u00c2\u00dae\u009dN\u00fe\u00deAb|is{o\u00cem7|\u00fcR\u00bd]\u0094\u0099I\u00c1\u00b1n\u00a0rd\u00d8\u00ce4*\u00b8\u00df\u00ae\u0087\u000bT\u00924Y\u00bd09\u0005\u00ab\u0013\u0018\u00fa.\u00b7\u0096\u00cd\u00cb;JU\u0001\u0090\u00b4Y\u00c1\u0094Rh\u0011\u00c5L\u00cek\u00a998*\u00de\u0093\u00a3\u00d7\u00a9\u00c88b\u00e6hCd\u00e3D\n\u00df/xj\u009a3z=\u0013l\u00c8\u0007\u00dbu\u00dba\u001bq/\u0089:\u0097$\u00f6\u001d\u00ee\u0017\u00dcM\u00fcE\u00f1\u00ffF\u00ff\u0005PK\u0001\u0002\u0014\u0003\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u0000\u0086~\u00fe\u009e\u009a\u0000\u0000\u0000\u00c3\u0000\u0000\u0000\u0013\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0080\u0001\u0000\u0000\u0000\u0000[Content_Types].xmlPK\u0001\u0002\u0014\u0003\u0014\u0000\u0000\u0000\b\u0000\u0000\u0000!\u0000\u0012\u0080Y\u00e9\u0099\u0000\u0000\u0000\u00ca\u0000\u0000\u0000\u0011\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0080\u0001\u00cb\u0000\u0000\u0000word/document.xmlPK\u0005\u0006\u0000\u0000\u0000\u0000\u0002\u0000\u0002\u0000\u0080\u0000\u0000\u0000\u0093\u0001\u0000\u0000\u0000\u0000"
+  },
+  "raw_utf8.rtf": {
+   "text": "Jos\u00c3\u00a9 typed as UTF-8.\n"
+  },
+  "scanned.pdf": {
+   "markups": 0,
+   "text": "\n\n\n"
+  },
+  "talk.srt": {
+   "text": "1\n00:00:01,000 --> 00:00:02,500\nHello there.\n\n2\n00:00:03,000 --> 00:00:04,000\nGeneral Kenobi.\n"
+  },
+  "talk.vtt": {
+   "text": "WEBVTT\n\n00:00.000 --> 00:01.500\nHello.\n"
+  },
+  "three_boms.txt": {
+   "text": "Three marks\n"
+  },
+  "three_pages.pdf": {
+   "markups": 0,
+   "text": "First page of the report, an inter- view with a hyphenated line end.\n\nA second block on page one.\n\nThird page.\n"
+  },
+  "utf16.txt": {
+   "text": "Interview in UTF-16, with \u00e9.\n"
+  }
+ },
+ "qualcoder_commit": "9bddf17f86aa457aff72c3a38dbc10a37f296ad2",
+ "versions": {
+  "charset-normalizer": "3.5.1",
+  "ebooklib": "0.20",
+  "lxml": "6.1.3",
+  "pymupdf": "1.28.2",
+  "python": "3.13.5",
+  "striprtf": "0.0.33"
+ }
+}

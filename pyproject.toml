@@ -52,6 +52,16 @@ dependencies = [
     # (verified empirically in a fresh venv). Lifting the cap is an
     # explicit migration project, not a routine bump.
     "mcp>=1.17.0,<2",
+    # Document import (0.14.3, provisional). charset-normalizer guesses a
+    # plain text file's character set, as QualCoder's own import does;
+    # defusedxml parses the XML inside Word files and refuses entity
+    # declarations; striprtf is QualCoder's RTF reader, pinned exactly
+    # because the stored text must not change under a researcher with a
+    # new release (it had seven releases in two years). Each has a wheel
+    # or is pure Python on every computer the extension supports.
+    "charset-normalizer>=3.4",
+    "defusedxml>=0.7.1",
+    "striprtf==0.0.33",
 ]
 
 [project.urls]
@@ -62,6 +72,18 @@ Changelog = "https://github.com/nicotem/exegete/blob/main/CHANGELOG.md"
 Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 
 [project.optional-dependencies]
+# PDF and EPUB import (0.14.3, provisional, the owner's decision): the two
+# libraries QualCoder 4.0 itself reads them with, so the stored text is
+# QualCoder's to the character. Both are AGPL-3.0, so an install with
+# this part is, as a whole, under the AGPL's terms, as QualCoder's own
+# installs are; installs without it are untouched. lxml (which EbookLib
+# needs) at 6.1.0 or newer, the release that fixed its latest advisory;
+# PyMuPDF at 1.26.7 or newer, for the same reason.
+pdf-epub = [
+    "pymupdf>=1.26.7",
+    "ebooklib>=0.20",
+    "lxml>=6.1.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -126,6 +148,10 @@ filterwarnings = [
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+# The pandoc defaults file the converted_documents help names (0.14.3)
+exegete = ["pandoc-defaults.yaml"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

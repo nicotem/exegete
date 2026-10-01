@@ -201,7 +201,9 @@ WORKFLOW_JOBS = {
     # v0.14: the desktop extension's build and its cross-platform check.
     "ci.yml": {"test", "desktop-extension", "desktop-extension-same",
                # v0.14.1: the rename's old name's package and upgrades.
-               "rename-upgrade"},
+               "rename-upgrade",
+               # 0.14.3: the import's text against QualCoder's own code.
+               "qualcoder-parity"},
     "publish.yml": {"build", "publish-to-testpypi", "publish-to-pypi"},
 }
 

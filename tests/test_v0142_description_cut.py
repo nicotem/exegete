@@ -508,8 +508,9 @@ WORDS = {
 # its description)
 NEW_IN_0142 = {"read_brief"}
 # and in v0.14.3 (provisional): the reading tool, whose description
-# tests/test_v0143_reading.py pins
-NEW_IN_0143 = {"open_file_for_reading"}
+# tests/test_v0143_reading.py pins, and the import tool, whose description
+# tests/test_v0143_import_hostile.py pins
+NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
 
 
 def _fingerprint(description):

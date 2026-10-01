@@ -166,6 +166,14 @@ def old_spellings_in_use(environ: Optional[Mapping[str, str]] = None
     return lines
 
 
+def reader_process_environment() -> Dict[str, str]:
+    """The few variables the document import's reading process is
+    started with (0.14.3, provisional): the system path, the locale and,
+    on Windows, the system root; never the host's other settings."""
+    keep = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "SYSTEMROOT", "SystemRoot")
+    return {key: os.environ[key] for key in keep if key in os.environ}
+
+
 def windows_system_root() -> str:
     """Windows' own folder: SystemRoot, or C:\\Windows when it is unset
     or not a full path (a relative one would be looked up from the

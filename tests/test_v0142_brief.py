@@ -507,13 +507,22 @@ class TestTheSizes:
         for mode in TOOL_SETS:
             tools, _ = _listed(mode)
             payload = [self._entry(t) for t in tools]
-            others = [e for e in payload if e["name"] != "read_brief"]
+            # The tools added after 0.14.2 are left out with it, so the
+            # figure stays 0.14.2's (0.14.3: import_documents)
+            others = [e for e in payload if e["name"] != "read_brief"
+                      and e["name"] not in ADDED_AFTER_0142]
             entry = next(e for e in payload if e["name"] == "read_brief")
-            grown = len(json.dumps(payload)) - len(json.dumps(others))
+            with_brief = [e for e in payload
+                          if e["name"] not in ADDED_AFTER_0142]
+            grown = len(json.dumps(with_brief)) - len(json.dumps(others))
             assert grown == len(json.dumps(entry)) + len(", "), mode
             if sys.version_info[:2] == (3, 13):
                 assert len(json.dumps(others)) == self.BEFORE[mode], mode
                 assert len(json.dumps(entry)) == 465
+
+
+# Tools added after 0.14.2, left out of its growth figure.
+ADDED_AFTER_0142 = ("import_documents",)
 
 
 # ---------------------------------------------------------------------------

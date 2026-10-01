@@ -110,7 +110,10 @@ ASK_WRITES = {
 # nothing, which is the rebate the ask refusal offers.
 OWNER_RESOLVING_TOOLS = frozenset(ASK_WRITES) | {"apply_codings",
                                                  "create_proposed_codes",
-                                                 "pseudonymise_source"}
+                                                 "pseudonymise_source",
+                                                 # 0.14.3: import_documents'
+                                                 # write half
+                                                 "_import_documents_write"}
 ELEVEN_WRITE_TOOLS = OWNER_RESOLVING_TOOLS
 
 
@@ -443,7 +446,7 @@ class TestTheAsk:
                     break
         assert resolving == set(OWNER_RESOLVING_TOOLS), (
             resolving ^ set(OWNER_RESOLVING_TOOLS))
-        assert len(OWNER_RESOLVING_TOOLS) == 12
+        assert len(OWNER_RESOLVING_TOOLS) == 13
 
     def test_the_ask_repeats_byte_identically(self, setup_server_unset,
                                               qualcoder_db_path):

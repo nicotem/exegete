@@ -7563,6 +7563,72 @@ class QualcoderDatabase:
 
         return name
 
+    def _insert_source_row(self, name: str, fulltext: str,
+                           mediapath: Optional[str], memo: str, owner: str,
+                           date_str: str) -> Tuple[int, int]:
+        """The write steps shared by import_text_file and the document
+        import (0.14.3): the source row, then one empty value for each
+        file attribute type, with the same owner and date, as QualCoder's
+        own import writes them (manage_files.py 3352-3376 at 9bddf17).
+        Returns (file id, attribute values written). Raises
+        sqlite3.Error; the caller owns the transaction."""
+        cursor = self.conn.execute("""
+            INSERT INTO source (name, fulltext, mediapath, memo, owner, date)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, fulltext, mediapath, memo, owner, date_str))
+        file_id = cursor.lastrowid
+        # Placeholders for file-type attribute types, driven by
+        # caseOrFile='file' exactly like QualCoder's own file writers. The
+        # real domain set is case|file|journal; 'both' does not exist
+        # (cases-attributes.md section 1).
+        attr_types = self.conn.execute(
+            "SELECT name FROM attribute_type WHERE caseOrFile = 'file'"
+        ).fetchall()
+        for attr_type_row in attr_types:
+            self.conn.execute("""
+                INSERT INTO attribute (name, attr_type, value, id, date, owner)
+                VALUES (?, 'file', '', ?, ?, ?)
+            """, (attr_type_row["name"], file_id, date_str, owner))
+        return file_id, len(attr_types)
+
+    def insert_imported_document(self, name: str, fulltext: str,
+                                 mediapath: str, memo: str,
+                                 owner: str) -> Dict[str, Any]:
+        """One document's row for import_documents (0.14.3, provisional),
+        in the caller's transaction (no commit here).
+
+        The text arrives as QualCoder's import would store it, already
+        normalised for its format (a PDF's not at all), so nothing is done
+        to it here. The checks are QualCoder's emptiness test (exactly
+        empty text refused; text of spaces goes in, as a scanned PDF's
+        line breaks do), Exegete's name rules and length limit, and the
+        owner's rules; the name must be new.
+        """
+        self._require_write_access()
+        if not isinstance(name, str) or file_name_problem(name) is not None:
+            raise ValueError("The file's name cannot be used in a project.")
+        if not isinstance(fulltext, str) or fulltext == "":
+            raise ValueError("The document's text is empty.")
+        if len(fulltext) > MAX_TEXT_CONTENT_LENGTH:
+            raise ValueError("The document's text is over the length limit.")
+        if not isinstance(mediapath, str) or mediapath != "/docs/" + name:
+            raise ValueError("The stored path must be the project's own "
+                             "folder of originals.")
+        validate_coder_name(owner, "owner")
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            file_id, attributes = self._insert_source_row(
+                name, fulltext, mediapath, memo or "", owner, date_str)
+        except sqlite3.IntegrityError:
+            raise ValueError("A file with this name is already in the "
+                             "project.") from None
+        except sqlite3.Error as e:
+            if _is_locked_error(e):
+                raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
+            raise
+        return {"id": file_id, "name": name, "date": date_str,
+                "owner": owner, "attributes_created": attributes}
+
     def import_text_file(
         self,
         name: str,
@@ -7617,25 +7683,8 @@ class QualcoderDatabase:
         memo = extract_ai_memo(memo or "")
 
         try:
-            cursor = self.conn.execute("""
-                INSERT INTO source (name, fulltext, mediapath, memo, owner, date)
-                VALUES (?, ?, NULL, ?, ?, ?)
-            """, (name, content, memo, owner, date_str))
-            file_id = cursor.lastrowid
-
-            # Create attribute placeholders for file-type attribute types —
-            # driven by caseOrFile='file' exactly like QualCoder's own file
-            # writers (manage_files.py:1387-1392). The real domain set is
-            # case|file|journal; 'both' does not exist (cases-attributes.md
-            # §1), so the old IN ('file','both') superset was wrong.
-            attr_types = self.conn.execute(
-                "SELECT name FROM attribute_type WHERE caseOrFile = 'file'"
-            ).fetchall()
-            for attr_type_row in attr_types:
-                self.conn.execute("""
-                    INSERT INTO attribute (name, attr_type, value, id, date, owner)
-                    VALUES (?, 'file', '', ?, ?, ?)
-                """, (attr_type_row["name"], file_id, date_str, owner))
+            file_id, attributes = self._insert_source_row(
+                name, content, None, memo, owner, date_str)
 
             if auto_commit:
                 self.conn.commit()
@@ -7648,7 +7697,7 @@ class QualcoderDatabase:
                 "content_length": len(content),
                 "owner": owner,
                 "date": date_str,
-                "attributes_created": len(attr_types)
+                "attributes_created": attributes
             }
 
         except sqlite3.IntegrityError as e:

@@ -887,5 +887,12 @@ def _no_window_opens(_isolate_home, _sandbox_patch):
     home = Path.home()
     _sandbox_patch.setenv("LOCALAPPDATA", str(home / "AppData" / "Local"))
     _sandbox_patch.setenv("XDG_CACHE_HOME", str(home / ".cache"))
+    # Every runner looks like a desktop with a screen, so that the
+    # launchers are asked (and record) the same everywhere: a Linux CI
+    # runner has no DISPLAY, and a developer may be in an SSH session.
+    # The tests of the screen check set these themselves.
+    _sandbox_patch.setenv("DISPLAY", ":99")
+    for name in ("SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY"):
+        _sandbox_patch.delenv(name, raising=False)
     _sandbox_patch.setattr(reading_folder, "_last_sweep", 0.0)
     yield asked

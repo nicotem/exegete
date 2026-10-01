@@ -343,6 +343,14 @@ def test_the_chats_three_conditions_travel_with_it():
                      "**Updating.**")
     assert "for participants' data use Claude Desktop's chat instead." \
         in other
+    # v0.14.2, the README's first round of checks: the folders INSTALL.md
+    # names, the projects folder and Documents among them (the Terminal
+    # route's default projects folder is in Documents)
+    assert ("never start it in your home folder, Documents, your projects "
+            "folder or a study's folder") in other
+    assert ("never start it in your home folder, Documents, your projects "
+            "folder or any folder that holds a study") in \
+        " ".join(_read("INSTALL.md").split())
     row = _between(_read("INSTALL.md"),
                    "| **Anthropic commercial-terms routes**", "\n")
     assert "on a Team or Enterprise account, set up as in the row above" \
@@ -391,13 +399,19 @@ def test_the_check_after_installing_is_a_short_list():
     persuade: the three checks joined the list where the reader decides)."""
     one_click = _between(_flat("README.md"), "### Claude Desktop, with one "
                          "click", "### ChatGPT's desktop app and Codex")
-    check = one_click[one_click.index("To check,"):]
+    # v0.14.2, the README's first round of checks: a short list after one
+    # sentence, the five checks linked last, with why Manual is not enough
+    check = _between(one_click, "To check,", "**Get QualCoder too**")
     assert check.startswith("To check, click \"+\" in a new conversation, "
-                            "then Connectors: Exegete is listed. When "
-                            "Claude asks to use a tool, \"Allow once\" "
-                            "keeps it asking."), check
-    assert check.endswith("Before participants' data, go through the list "
-                          "in \"Where your data goes\", above. "), check
+                            "then Connectors: Exegete is listed. Then: - "
+                            "When Claude asks to use a tool, choose \"Allow "
+                            "once\": it keeps Claude asking. - "), check
+    assert check.endswith("- Before participants' data, go through [the "
+                          "five checks](https://github.com/nicotem/exegete"
+                          "#where-your-data-goes): Manual keeps Claude "
+                          "asking; the checks keep your files out of its "
+                          "reach. "), check
+    assert check.count(" - ") == 3
     assert not re.findall(r"(?<![\w.])(\d)\. ", check)
     data = _between(_flat("README.md"), "Before you use participants' data "
                     "with Claude Desktop's chat", "**Private notes and "
@@ -416,12 +430,12 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
                          "### ChatGPT's desktop app and Codex (OpenAI)")
     # v0.14.2, the README rewritten to persuade: in fewer words, still
     # once, with the date and how to tell
-    assert ("On a Pro or Max plan, if your message box offers no choice "
-            "between \"Chat\" and \"Cowork\", the two are one conversation "
-            "in your Claude (Anthropic's page, read on 1 October 2026, says "
-            "this is reaching accounts gradually): keep its permission "
-            "setting on Manual, its default; on Auto, Claude does not "
-            "ask.") in one_click
+    # v0.14.2, the README's first round of checks: a bullet of its own
+    assert ("- If your message box offers no choice between \"Chat\" and "
+            "\"Cowork\", the two are one conversation (Pro and Max plans; "
+            "Anthropic's page, read on 1 October 2026, says this is reaching "
+            "accounts gradually). Keep its permission setting on Manual, its "
+            "default: on Auto, Claude does not ask.") in one_click
     # explained once
     assert readme.count("no choice between \"Chat\" and \"Cowork\"") == 1
     assert readme.count("1 October 2026, says this is reaching accounts") \
@@ -432,9 +446,12 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
         in data
     assert "connected folders may be listed under \"Trusted folders\"" \
         in data
-    assert ("choose \"allow once\" in Claude (with its permission setting "
-            "on Manual, if your message box has one), and answer each "
-            "prompt in Codex.") in readme
+    # v0.14.2, the README's first round of checks: the Manual setting is
+    # explained once, after installing; the approval paragraph names the
+    # choice in each app
+    assert ("\"Allow once\" in Claude, each prompt answered in Codex.") \
+        in readme
+    assert readme.count("permission setting on Manual") == 1
     approvals = _between(_flat("INSTALL.md"), "**Approvals.**",
                          "**Not signed.**")
     for words in (ONE_CLAUDE,
@@ -587,6 +604,12 @@ def test_computer_use_sees_the_screen():
         assert words in privacy, words
     assert "Through an application you allow, such as QualCoder" \
         not in privacy
+    # v0.14.2, the README's first round of checks: the README says once,
+    # where the reader meets the setting, what computer use is
+    readme = _flat("README.md")
+    assert ("1. Keep computer use off (Settings, General): it lets Claude "
+            "see your screen and use other apps.") in readme
+    assert "Claude can use apps on your computer directly" in privacy
 
 
 def test_the_checklist_asks_about_the_assistant_and_the_copies():
@@ -684,9 +707,19 @@ def test_a_first_session_says_what_to_do_next():
     import exegete.server as server
     first = _between(_flat("README.md"), "### A first session",
                      "### Other assistants, and updates")
-    assert ("bring in a page as in the example above, and try [more "
-            "requests](https://github.com/nicotem/exegete/blob/main/"
-            "TOOLS.md#example-requests).") in first
+    # v0.14.2, the README's first round of checks: where the project is
+    # made and how to see the coding in it, for a newcomer who has just
+    # practised (the extension's own default folder)
+    assert ("then bring in your page as in the example. The project is "
+            "made in \"QualCoder projects\", in your home folder: open it in "
+            "QualCoder (Project, Open Project) to see your coding in the "
+            "text. [More requests to try](https://github.com/nicotem/"
+            "exegete/blob/main/TOOLS.md#example-requests).") in first
+    import json
+    manifest = json.loads(_read("packaging/desktop-extension/"
+                                "manifest.in.json"))
+    assert manifest["user_config"]["projects_folder"]["default"] == \
+        "~/QualCoder projects"
     assert first.index("Practice") < first.index("**Two coder names.**")
     assert "_resolve_write_owner" in inspect.getsource(
         server.import_text_file)

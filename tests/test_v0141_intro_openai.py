@@ -162,9 +162,12 @@ class TestTheIntroduction:
             "**Code the files you choose, with suggestions you approve**": [
                 "analyze_for_coding", "record_suggestions",
                 "update_suggestion_status", "apply_codings"],
-            "**Grow the codebook**: codes proposed from the data; rename, "
-            "recolour, move, merge and delete, with a preview before "
-            "merging or deleting": [
+            # v0.14.2, the README's first round of checks: who proposes
+            # the codes, and that they wait for approval
+            "**Grow the codebook**: new codes the assistant proposes from "
+            "your files, created once you approve them; rename, recolour, "
+            "move, merge and delete, with a preview before merging or "
+            "deleting": [
                 "propose_codes", "create_proposed_codes", "create_code",
                 "create_category", "rename_code", "rename_category",
                 "recolor_code", "move_code_to_category", "move_category",
@@ -176,6 +179,10 @@ class TestTheIntroduction:
                 "search_files", "search_coded_text", "search_memos",
                 "get_coding_frequencies", "find_cooccurring_codes",
                 "get_case_code_matrix", "query_by_attribute"],
+            # v0.14.2, the README's first round of checks: what the
+            # assistant can already read, beside "What comes next"
+            "a whole transcript, read with its codings": [
+                "analyze_file_with_coding"],
             "**Write** memos, annotations and a research journal": [
                 "set_memo", "add_annotation", "add_journal_entry"],
             "**Coder comparison**": ["compare_coders"],
@@ -271,14 +278,15 @@ class TestTheReadmesRoute:
 
     def test_the_steps_the_approvals_and_the_status(self):
         section = _readme_openai()
-        # v0.14.2, the README rewritten to persuade: one paragraph, with
-        # training first and INSTALL.md's steps for the rest
+        # v0.14.2, the README rewritten to persuade: training first and
+        # INSTALL.md's steps for the rest; the README's first round of
+        # checks: three numbered steps, the folder the third
         for words in ("for practice and data that is not sensitive until a "
                       "safer setting has been tested",
                       "**Turn off training first**, before any use with "
                       "Exegete, practice included",
                       "they make the app ask before every change Exegete "
-                      "makes, and give Codex a folder of its own",
+                      "makes. 3. **Give Codex a folder of its own**",
                       "INSTALL.md#chatgpts-desktop-app-and-codex-experimental",
                       "Experimental: written from OpenAI's documentation, "
                       "read on 30 September 2026, and not yet tried by this "
@@ -736,9 +744,11 @@ class TestCodexWorksInAFolderOfItsOwn:
         # to persuade: a clause, with what the folder does not stop; the
         # order (Codex chosen first) is INSTALL.md's, pinned there
         section = _readme_openai()
-        assert ("give Codex a folder of its own, which keeps your study's "
-                "files out of the place Codex works in but does not stop "
-                "Codex reading them.") in section
+        # v0.14.2, the README's first round of checks: the third of three
+        # numbered steps
+        assert ("**Give Codex a folder of its own**, as those steps do: it "
+                "keeps your study's files out of the place Codex works in, "
+                "but does not stop Codex reading them.") in section
 
     def test_install_step_three_has_the_folder_and_the_lines(self):
         section = _install_openai()
@@ -827,8 +837,10 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "| **ChatGPT's desktop app and Codex** (Experimental) | "
                 "OpenAI | Codex: yes, well beyond its folder, without "
                 "asking, even in \"Ask for approval\" and read-only mode |",
+                # v0.14.2, the README's first round of checks: only codings
+                # wait for approval ("How it works" says what does not)
                 "Exegete's protections (the `#####` mark below, your "
-                "approval before anything is written, the backups) do not "
+                "approval before codings are written, the backups) do not "
                 "apply to it; Exegete cannot see such a read or stop it",
                 "Exegete's own answers tell it where your project is"):
             assert words in data, words
@@ -856,13 +868,14 @@ class TestWhatCodexKeepsAndTheOptOut:
     def test_codex_session_files_are_named_with_what_they_hold(self):
         # v0.14.2, the README review: a list of what stays on your
         # computer; the path, `~/.codex`, is pinned on PRIVACY.md (below)
-        # v0.14.2, the README rewritten to persuade: the list is a
-        # sentence, after the private notes
+        # v0.14.2, the README rewritten to persuade: after the private
+        # notes; its first round of checks: a list again, PRIVACY.md first
         data = _readme_data()
         stays = data[data.index("**What stays on your computer**"):]
-        assert ("Codex's session files, with what Codex read by itself "
-                "([PRIVACY.md](https://github.com/nicotem/exegete/blob/main/"
-                "PRIVACY.md) says where") in stays
+        assert ("([PRIVACY.md](https://github.com/nicotem/exegete/blob/main/"
+                "PRIVACY.md) says where):") in stays
+        assert "- Codex's session files, with what Codex read by itself." \
+            in stays
         section = _privacy_openai()
         assert ("A session's transcript can hold what Exegete's tools "
                 "returned in it, and what Codex's own commands read, "
@@ -976,8 +989,13 @@ class TestTheStepsANewcomerCanGetWrong:
 
     def test_updating_covers_the_terminal_route(self):
         readme = _flat("README.md")
-        assert ("on the Terminal route, which OpenAI's apps take too, "
-                "[INSTALL.md, \"Updating the MCP Server\"]") in readme
+        # v0.14.2, the README's first round of checks: shorter; OpenAI's
+        # route says it is the Terminal route
+        assert ("or, on the Terminal route, run [the one command](https://"
+                "github.com/nicotem/exegete/blob/main/INSTALL.md"
+                "#updating-the-mcp-server)") in readme
+        assert ("2. **Then follow [INSTALL.md's steps]" in readme
+                and "by the Terminal route" in _readme_openai())
         updating = _between(_read("INSTALL.md"), "## Updating the MCP Server",
                             "**Git (contributor) install**")
         assert "$HOME\\exegete-venv\\Scripts\\pip install --upgrade exegete" \
@@ -991,7 +1009,7 @@ class TestTheStepsANewcomerCanGetWrong:
         # v0.14.2, the README rewritten to persuade: no assistant named at
         # all; where the project is made, for each route, is TOOLS.md's
         assert re.findall(r"\bClaude\b(?! Desktop)", first) == []
-        for words in ("ask the assistant to",
+        for words in ("Ask the assistant to",
                       "Before the assistant changes a project"):
             assert words in first, words
 
@@ -1213,7 +1231,7 @@ class TestAssistantsOwnFileAccess:
         listed = _between(data, "Before you use participants' data with "
                           "Claude Desktop's chat", "**Private notes and "
                           "names.**")
-        for words in ("1. Keep computer use off (Settings, General).",
+        for words in ("1. Keep computer use off (Settings, General)",
                       "2. Do not connect to it any folder that holds your "
                       "projects or transcripts (your home folder, Documents "
                       "or a whole drive included; connected folders may be "
@@ -1563,8 +1581,12 @@ class TestTheSmallerPoints:
         # the one-click route points to; "Trusted folders" belongs to the
         # version of Claude in which chat and Cowork are one conversation
         # (Anthropic's page, read 1 October 2026)
-        assert ("Before participants' data, go through the list in \"Where "
-                "your data goes\", above.") in one_click
+        # v0.14.2, the README's first round of checks: a link to the five
+        # checks, as the last of the checks after installing
+        assert ("- Before participants' data, go through [the five checks]"
+                "(https://github.com/nicotem/exegete#where-your-data-goes)"
+                ": Manual keeps Claude asking; the checks keep your files "
+                "out of its reach.") in one_click
         assert ("connected folders may be listed under \"Trusted "
                 "folders\"") in _readme_data()
         assert "also check two things" not in one_click

@@ -189,29 +189,39 @@ advanced users.
   stays one QualCoder opens); the positioning (an application in its own
   right, compatible with QualCoder, not an add-on, no window of its own);
   a short example conversation, labelled as an illustration with
-  made-up practice text, in which each step is one the software takes
-  (the AI coder name asked before the first write, the three questions
-  before coding, quotes with their readings, a rejection, the counts,
-  the backup); one next step for each reader (newcomers, anyone with
-  participants' data, advanced users); and a status line (free and open
-  source, an early version by one researcher, independently of
-  QualCoder's developers; Issues, not email, never participant data).
-  Two badges, the PyPI version and the licence; no test badge.
+  made-up practice text and written as text that wraps on a phone, in
+  which each step is one the software takes (the AI coder name asked
+  before the first write, the three questions before coding, quotes
+  with their readings, the explicit one stating what the code names, a
+  rejection, the counts, the backup); one next step for each reader,
+  each with its reason (newcomers; anyone with interviews or other
+  participants' data, told on the first screen that what the assistant
+  reads goes to the maker of its AI, and that some assistants open
+  files by themselves; advanced users); and a status line (free and
+  open source, tested on Windows, macOS and Linux with every change, an
+  early version by one researcher, independently of QualCoder's
+  developers; Issues, not email, never participant data). Two badges,
+  the PyPI version and the licence; no test badge.
 - Back from 0.14.0, redrawn: a diagram of how the parts fit and where
   data goes (the assistant app, the AI model on its maker's computers,
   Exegete with no AI of its own, the project, QualCoder alongside, one
-  program at a time); a diagram of a coding's path, from the request
+  program at a time), with 0.14.0's technical labels (MCP over standard
+  input and output; reads read-only, writes after a backup); a diagram of a coding's path, from the request
   through the review list to the backup and the write; a map of the
   documents and of the code; a list of what you can do today, and
   "What comes next" as plans, not promises, with document import and
   reading imported files first; the table of assistants (where what
   each reads goes, whether it opens files by itself, and what this
-  project suggests for participants' data); and the table of the three
-  tool sets, with their sizes as measured below. The diagrams are text,
+  project suggests for participants' data), with the routes of 0.14.0's
+  table of AI hosts (Claude's personal plans, Anthropic's commercial
+  terms through an API key or a Team or Enterprise account, and local
+  models; INSTALL.md's table linked); and the table of the three tool
+  sets, with their sizes as measured below. The diagrams are text,
   at most 66 characters wide, so that GitHub and PyPI show them alike.
-- New: "For advanced users": what Exegete is technically, the tool sets,
-  the features beyond the basics by tool name, how it is tested, and
-  the map.
+- New: "For advanced users": what Exegete is technically (where the
+  assistant's data goes included, and what a backup copies), the tool
+  sets, the features beyond the basics, each family led by what it is
+  for, how it is tested, and the map.
 - Kept, in their words or their substance: what still needs QualCoder,
   with the dated "Latest"; the aim; the disclosure of assistants that
   open files by themselves, with the checks before participants' data;
@@ -233,8 +243,8 @@ advanced users.
   "What You'll Need"); how to hear of a new release (INSTALL.md, the
   one-click section); Codex's and Claude Code's reach in detail, and
   where Cowork runs (PRIVACY.md); the history of the MIT releases
-  (NOTICE). README.md is now about 27,500 characters, against 31,975
-  in 0.14.1.
+  (NOTICE). README.md is now about 29,650 characters, against 31,975
+  in 0.14.1, and its sentences are shorter.
 - Leftovers from earlier releases are gone ("new in 0.14", "from 0.14"
   in the table, an example file name with a version in it), and the
   sentence naming QualCoder 3.8.2 as "Latest" carries the date it was

@@ -760,10 +760,13 @@ def test_the_terminal_route_says_where_projects_go():
     assert "\n## Environment variables the server reads\n" in \
         _read("INSTALL.md")
     # the server's own: with no setting, the workspace is that folder
+    # (compared by its parts below the home folder, so that no test builds
+    # a path into the researcher's own Documents: test_suite_hygiene.py)
     assert names.WORKSPACE_FOLDER == "Exegete projects"
     with mock.patch.dict(os.environ, {"EXEGETE_WORKSPACE": ""}):
-        assert database.default_workspace() == \
-            Path.home() / "Documents" / "Exegete projects"
+        workspace = database.default_workspace()
+    assert workspace.relative_to(Path.home()).parts == (
+        "Documents", "Exegete projects")
     # and INSTALL.md gives the same reason for keeping projects out of it
     assert ("because iCloud (Desktop and Documents) and OneDrive may sync "
             "`~/Documents`") in _flat("INSTALL.md")

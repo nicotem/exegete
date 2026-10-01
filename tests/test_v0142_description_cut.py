@@ -276,7 +276,11 @@ LEFT_PAST_THE_CUT = {
         "the run's answer says to re-read the file and lists the stale "
         "sessions",
     ("pseudonymise_source", "shared_name"):
-        "a special case, after the rules that apply to every run",
+        "a special case, after the rules that apply to every run; the "
+        "preview's answer warns of it, in the paragraph's own words, "
+        "whenever rewrite_memos would rewrite a note, and the paragraph "
+        "within the cut says to relay every warning "
+        "(test_v0142_shared_name_in_notes.py)",
     ("record_suggestions", "relay_position_safety_warning"):
         "inside the Returns section, which is not split",
     ("propose_codes", "relay_position_safety_warning"):

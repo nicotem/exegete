@@ -14530,6 +14530,25 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any]
     return " ".join(sentences)
 
 
+# v0.14.2: the rule of the description's paragraph "Two people who share a
+# name", said in the preview whenever the run would rewrite a note. Since
+# v0.14.2 that paragraph sits past the 2,048 characters Claude Code shows
+# of a tool description (the rules that apply to every run come first), so
+# the preview, which every host passes on, is where the model meets it.
+# Two of its clauses are the paragraph's own words, pinned by
+# tests/test_v0142_shared_name_in_notes.py.
+_SHARED_NAME_IN_NOTES_WARNING = (
+    "Warning: with rewrite_memos on, this run rewrites these names in notes "
+    "and journal entries across the whole project, not only in those "
+    "attached to this file (see memo_rewrites). If someone else in the "
+    "project shares a name in this mapping, the notes about them are "
+    "rewritten too, with this mapping's pseudonym, and no order of runs "
+    "avoids this. Ask the user whether anyone does before executing; if "
+    "so, preview again with rewrite_memos off, keep rewrite_memos off on "
+    "every run of a shared name and change the notes that name either "
+    "person by hand.")
+
+
 def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     """What the researcher has to be told before approving a run.
 
@@ -14689,7 +14708,11 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         # v0.13, Brief 2, 5.6: what the note rewrite does that the
         # researcher must hear before approving it, each only when its
         # count is not zero. The private part is never read, so the last
-        # clause of the first is not softened.
+        # clause of the second is not softened.
+        if memo_block.get("totals", {}).get("rows", 0):
+            # v0.14.2: a note that names someone else who shares a name is
+            # rewritten as well, and the server cannot tell the two apart.
+            warnings.append(_SHARED_NAME_IN_NOTES_WARNING)
         private = memo_block.get("memos_rewritten_with_private_part", 0)
         if private:
             warnings.append(

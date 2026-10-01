@@ -613,9 +613,11 @@ def read_epub(raw: bytes) -> str:
     archive.check_whole()
     import ebooklib
     from ebooklib import epub
-    if not callable(getattr(epub.EpubReader, "read_file", None)):
+    try:
         # An EbookLib whose reads could not be counted is not used.
-        raise ReadRefused("damaged")
+        epub.EpubReader.read_file
+    except AttributeError:
+        raise ReadRefused("damaged") from None
     # EbookLib's read_epub, with its reads counted: a part EbookLib
     # reads that declares entities refuses the book before EbookLib
     # parses it (a named departure: QualCoder imports it, with stray

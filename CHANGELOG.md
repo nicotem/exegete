@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-v0.14.2, in progress: the assistant's brief, provisional; the rules a
-model must not miss within the 2,048 characters Claude Code shows of a
-tool description; fixes from the checks of 0.14.1; and the README,
+Nothing yet.
+
+## [0.14.2-alpha] - 2026-10-02
+
+v0.14.2: the assistant's brief, provisional; the rules a model must
+not miss within the 2,048 characters Claude Code shows of a tool
+description; fixes from the checks of 0.14.1; and the README,
 rewritten for readers new to Exegete.
 
 ### Added: the assistant's brief (provisional)

@@ -33,8 +33,8 @@ body:
     id: mcp-version
     attributes:
       label: Exegete version
-      description: Run `exegete --version` in the environment you installed into (git installs, `python -m exegete.server --version`; an install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too). `pip show exegete`, `pipx list` and `uv tool list` also work; pip spells 0.14.1-alpha as 0.14.1a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
-      placeholder: e.g. 0.14.1a0
+      description: Run `exegete --version` in the environment you installed into (git installs, `python -m exegete.server --version`; an install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too). `pip show exegete`, `pipx list` and `uv tool list` also work; pip spells 0.14.2-alpha as 0.14.2a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
+      placeholder: e.g. 0.14.2a0
     validations:
       required: true
   - type: input

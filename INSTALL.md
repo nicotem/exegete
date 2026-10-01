@@ -1620,7 +1620,7 @@ terminal:
 ```
 
 It prints `exegete` followed by the version and exits; version
-`0.14.1-alpha` shows as `0.14.1a0`, its normalised form. The server
+`0.14.2-alpha` shows as `0.14.2a0`, its normalised form. The server
 also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a

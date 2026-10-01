@@ -527,7 +527,7 @@ wheels = [
 
 [[package]]
 name = "exegete"
-version = "0.14.1a0"
+version = "0.14.2a0"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },

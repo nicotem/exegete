@@ -60,7 +60,7 @@ Issues help everyone, permanently. Please use
   (`exegete --version` in the environment you installed into, or
   `python -m exegete.server --version` for a git install; `pip
   show exegete`, `pipx list` and `uv tool list` still work and
-  spell `0.14.1-alpha` as `0.14.1a0`; an install made under the
+  spell `0.14.2-alpha` as `0.14.2a0`; an install made under the
   earlier name answers `qualcoder-mcp --version` too), your MCP host (Claude Desktop, Claude
   Code, LM Studio, other), and the toolset (`EXEGETE_TOOLSET`:
   `core`, `lifecycle`, or `full` when the variable is not set). With the

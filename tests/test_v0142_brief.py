@@ -444,11 +444,11 @@ class TestProvisionalAndHeldBack:
         hosts = install[install.index("## Choosing your AI host"):]
         hosts = _flat(hosts[:hosts.index("\n## ", 5)])
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = _flat(changelog[changelog.index("## [Unreleased]"):
+        entry_0142 = _flat(changelog[changelog.index("## [0.14.2-alpha]"):
                                      changelog.index("## [0.14.1-alpha]")])
         for where, text in (("TOOLS.md", tools),
                             ("INSTALL.md's hosts section", hosts),
-                            ("CHANGELOG's Unreleased entry", unreleased)):
+                            ("CHANGELOG's 0.14.2 entry", entry_0142)):
             assert "read_brief" in text, where
             assert re.search(r"[Pp]rovisional", text), where
         assert "`read_brief()`" in tools
@@ -458,10 +458,10 @@ class TestProvisionalAndHeldBack:
         13), so the documents say what it carries, adds and leaves out."""
         tools = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = _flat(changelog[changelog.index("## [Unreleased]"):
+        entry_0142 = _flat(changelog[changelog.index("## [0.14.2-alpha]"):
                                      changelog.index("## [0.14.1-alpha]")])
         for where, text in (("TOOLS.md", tools),
-                            ("CHANGELOG's Unreleased entry", unreleased)):
+                            ("CHANGELOG's 0.14.2 entry", entry_0142)):
             assert "restates the rules the tools already give" not in text
             assert "takes no new position on method" not in text, where
             assert ("carries the tools' own rules, adds how to work with "

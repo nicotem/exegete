@@ -567,17 +567,17 @@ class TestTheDescriptionsKeepTheirWords:
         # that every description is as 0.14.1 served it
         changelog = " ".join((Path(__file__).parent.parent / "CHANGELOG.md")
                              .read_text(encoding="utf-8").split())
-        unreleased = changelog[changelog.index("## [Unreleased]"):
+        entry_0142 = changelog[changelog.index("## [0.14.2-alpha]"):
                                changelog.index("## [0.14.1-alpha]")]
-        entry = unreleased[unreleased.index(
+        entry = entry_0142[entry_0142.index(
             "### Changed: the rules a model must not miss come first"):]
         entry = entry[:entry.index("### ", 4)]
         assert "In fourteen descriptions" in entry
         for name in moved:
             assert f"`{name}`" in entry, name
-        assert "is as 0.14.1 served it" not in unreleased
+        assert "is as 0.14.1 served it" not in entry_0142
         assert ("keeps the words and the length 0.14.1 served (fourteen "
-                "changed order; see above)" in unreleased)
+                "changed order; see above)" in entry_0142)
 
 
 # ---------------------------------------------------------------------------

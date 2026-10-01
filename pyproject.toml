@@ -1,6 +1,6 @@
 [project]
 name = "exegete"
-version = "0.14.1-alpha"
+version = "0.14.2-alpha"
 description = "Exegete: a qualitative analysis application you use in conversation with an AI assistant, compatible with QualCoder. An MCP server, formerly qualcoder-mcp."
 authors = [{name = "Niccolò Tempini", email = "n.tempini@exeter.ac.uk"}]
 # PEP 639 SPDX licence expression (setuptools >= 77). LGPL-3.0-or-later

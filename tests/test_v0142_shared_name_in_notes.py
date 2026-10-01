@@ -213,6 +213,7 @@ class TestTheDocumentsSayIt:
                 in tools)
         changelog = _flat((self.REPO / "CHANGELOG.md").read_text(
             encoding="utf-8"))
-        unreleased = changelog[:changelog.index("## [0.14.1")]
+        entry_0142 = changelog[changelog.index("## [0.14.2-alpha]"):
+                               changelog.index("## [0.14.1")]
         assert ("When `rewrite_memos` would rewrite a note, "
-                "`pseudonymise_source`'s preview now warns" in unreleased)
+                "`pseudonymise_source`'s preview now warns" in entry_0142)

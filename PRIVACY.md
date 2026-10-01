@@ -335,7 +335,8 @@ assistant. These pages change often, and the linked pages govern.
   shows "Chat" and "Cowork" options, you don't have it yet." So a
   QualCoder project, a transcript or your projects folder inside a
   folder connected to Claude is within its reach; kept out of every
-  connected folder, they stay out of it.
+  connected folder, with computer use off and no other extension that
+  reads files (both below), they stay out of it.
 - **Claude Desktop's chat, with the extension**: **not by itself, as far
   as Anthropic's pages say.** They document no way for the older,
   separate chat to open a file on your computer other than one you
@@ -399,17 +400,20 @@ computer by themselves, so a real study kept on the same computer is
 within their reach even while you practise, and Exegete's list of
 projects tells them where it is. If that matters for a study, you
 could keep practice projects in a folder of their own, or work on that
-study with Claude Desktop's chat.
+study with Claude Desktop's chat. A folder of their own keeps practice
+projects apart but does not put the study out of reach, and what they
+open goes to their maker, which may train on it while training is on.
 
 **For participants' data**, this project suggests an assistant with no
 file access of its own: Claude Desktop's chat with the extension, with
 computer use off, no folder that holds your projects or transcripts
 connected to it, and no other extension that reads files, or LM
 Studio's chat with Exegete and no other server or plugin that reads
-files. It suggests OpenAI's apps for practice and for data that is not
-sensitive until a setting that stops Codex's reads has been tested
-with Exegete. Cowork reads every folder connected to it, so projects
-kept out of those folders stay out of its reach. Claude Code reads the
+files. Codex reads well beyond its folder without asking, and a
+setting that stops it has not yet been tested with Exegete. Cowork
+reads every folder connected to it, so projects kept out of those
+folders, with computer use off and no other extension that reads files,
+stay out of its reach. Claude Code reads the
 folder it starts in without asking: an empty folder of its own keeps
 your projects out of that folder, but does not stop its read-only
 commands reading them, or its file tools in auto mode (above), which
@@ -1087,9 +1091,9 @@ Codex's reads outside its folder, a "permission profile"
 (<https://learn.chatgpt.com/docs/permissions>, read 30 September 2026:
 "Beta. Permission profiles are under active development and may
 change."). This project has not yet tested it with Exegete, and gives
-no steps for it until it has. Until then it suggests OpenAI's apps for
-practice and for data that is not sensitive, and, for participants'
-data, an assistant with no file access of its own.
+no steps for it until it has. Until then, for participants' data, it
+suggests an assistant with no file access of its own, such as Claude
+Desktop's chat.
 
 **Phones, through a connected computer.** OpenAI's Remote,
 <https://learn.chatgpt.com/docs/remote> (read 30 September 2026):
@@ -1307,9 +1311,9 @@ will ask, and the summary above depends on them:
   themselves", above). For participants' data this project suggests
   Claude Desktop's chat with the extension, with computer use off, no
   folder that holds your projects or transcripts connected to it, and
-  no other extension that reads files; it suggests OpenAI's apps for
-  practice and for data that is not sensitive, until a setting that
-  stops Codex's reads has been tested. Practising, too, leaves a real study
+  no other extension that reads files. Codex reads well beyond its
+  folder without asking, and a setting that stops it has not yet been
+  tested. Practising, too, leaves a real study
   on the same computer within reach of Codex and Claude Code ("While
   you practise", above).
 - **What stays on the computer, and for how long.** Copies stay on the

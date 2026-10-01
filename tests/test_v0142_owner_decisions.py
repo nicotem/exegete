@@ -11,14 +11,18 @@ Pinned here:
   the exception for a rated reply (README, INSTALL.md, PRIVACY.md);
 - the warning about practising, explained and not prescribed, where a
   reader meets Codex and Claude Code (README, INSTALL.md, PRIVACY.md,
-  QUICKSTART.md), with no "never start it" or "Not suggested" left
-  without its reason (the owner: "warn, don't prescribe");
+  QUICKSTART.md), with what a folder of their own does not do and that
+  what they open may be used for training, and with no "never start
+  it", "Not suggested" or route "for practice" left without its reason
+  (the owner: "warn, don't prescribe");
+- Cowork's reach in PRIVACY.md, with all three conditions;
 - Exegete as free, open-source software, with the licence the package
   declares;
 - one neutral sentence placing QualCoder beside NVivo, ATLAS.ti and
   MAXQDA;
-- what using it costs, dated, with the makers' pages linked, and no
-  claim that a free plan is enough;
+- what using it costs, dated, with the makers' pages linked, the
+  weekly limits and the ways past a limit, and no claim that a free
+  plan is enough;
 - the brief: the "fresh reading" line held back until the reading tool
   can read a file without its codes (0.14.3), "Do not agree to please"
   kept, and the opening text under 2,000 characters.
@@ -152,6 +156,20 @@ OWNERS_WORDS = (
     "while you practise, and Exegete's list of projects tells them where it "
     "is. If that matters for a study, you could keep practice projects in a "
     "folder of their own, or work on that study with Claude Desktop's chat.")
+# What the owner's two suggestions leave open, said after them (the
+# checks of 1 October 2026: Exegete's list of projects also looks in
+# Documents, and the assistants read beyond their folder; and practice
+# is not covered by "before participants' data")
+APART = re.compile(
+    r"A folder of their own keeps practice projects apart but does not put "
+    r"the study out of (?:reach|Claude Code's reach|Codex's reach), and "
+    r"what (?:they open goes to their maker|it opens goes to the AI "
+    r"provider|Codex opens goes to OpenAI), which may train on it while "
+    r"training is on\b")
+OWNERS_WORDS_AND_AFTER = OWNERS_WORDS + (
+    " A folder of their own keeps practice projects apart but does not put "
+    "the study out of reach, and what they open goes to their maker, which "
+    "may train on it while training is on.")
 
 
 def _warning_places():
@@ -179,9 +197,13 @@ def test_the_warning_is_where_a_reader_meets_those_routes():
     for where, text in _warning_places().items():
         assert REACH.search(text), where
         assert SUGGESTION.search(text), where
+        # what the suggestions leave open, straight after them
+        found = APART.search(text)
+        assert found, where
+        assert SUGGESTION.search(text).end() < found.start(), where
     places = _warning_places()
-    assert OWNERS_WORDS in places["README, a first session"]
-    assert ("**While you practise.** " + OWNERS_WORDS) in \
+    assert OWNERS_WORDS_AND_AFTER in places["README, a first session"]
+    assert ("**While you practise.** " + OWNERS_WORDS_AND_AFTER) in \
         places["PRIVACY, assistants that open files"]
     # In the README, after the advice to practise on text that is not a
     # participant's, and before the steps
@@ -197,7 +219,12 @@ PRESCRIBING = ("never start", "never give codex", "never use feedback",
                "only open projects", "use this route for practice",
                "use claude desktop's chat instead",
                "openai's apps are for practice",
-               "should never be codex's place")
+               "should never be codex's place",
+               # OpenAI's route given a purpose instead of a warning and
+               # an alternative (the judge, 1 October 2026)
+               "practice and data that is not sensitive",
+               "practice and for data that is not sensitive",
+               "practice and non-sensitive data")
 
 
 def test_no_document_prescribes_where_exegete_may_be_used():
@@ -214,14 +241,81 @@ def test_no_document_prescribes_where_exegete_may_be_used():
             "transcripts out of them |") in data
     assert ("| **Claude Code** | The chat suggested instead: Claude Code "
             "reads beyond its folder without asking |") in data
+    assert ("| **ChatGPT's desktop app and Codex** (Experimental) | The chat "
+            "suggested instead: Codex reads well beyond its folder without "
+            "asking, and a setting that stops it is not yet tested |") in data
 
 
 def test_the_prescribing_check_would_notice():
     for old in ("Claude Code opens files by itself: never start it in your "
                 "home folder",
                 "| **Claude Code** | Not suggested |",
-                "Never use feedback features (thumbs, /feedback, /bug)"):
+                "Never use feedback features (thumbs, /feedback, /bug)",
+                "| Practice and data that is not sensitive, until a setting "
+                "that stops those reads is tested |",
+                "this project suggests this route for practice and for data "
+                "that is not sensitive",
+                "so this project suggests this route for practice and "
+                "non-sensitive data until a safer setting is tested"):
         assert any(words in old.lower() for words in PRESCRIBING), old
+
+
+def test_openais_route_is_warned_of_with_an_alternative():
+    """Where a reader meets OpenAI's route, the documents say what Codex
+    reads by itself and suggest, for participants' data, an assistant
+    with no file access of its own, as they do for Claude Code."""
+    suggestion = ("for participants' data this project suggests an "
+                  "assistant with no file access of its own, such as Claude "
+                  "Desktop's chat, until a setting that stops Codex's reads "
+                  "has been tested with Exegete")
+    readme = _between(_flat("README.md"), "### ChatGPT's desktop app and "
+                      "Codex (OpenAI)", "1. **Switch training off**")
+    assert ("Codex reads files by itself, so " + suggestion + ".") in readme
+    install = _flat("INSTALL.md")
+    row = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
+    assert ("Codex can also read your projects' files by itself, without "
+            "asking, so " + suggestion + ".") in row
+    box = _between(install, "## ChatGPT's desktop app and Codex "
+                   "(Experimental)", "**Which OpenAI apps can use Exegete.**")
+    assert ("Codex reads files on your computer by itself, so " + suggestion
+            + "; step 3 says more.") in box
+    step_four = _between(install, "**Step 4. Keep it asking.**",
+                         "**If Exegete does not start")
+    assert ("and why, for participants' data, this project suggests an "
+            "assistant with no file access of its own for now (the box at "
+            "the top of this section).") in step_four
+    privacy = _flat("PRIVACY.md")
+    hosts = _between(privacy, "**For participants' data**, this project "
+                     "suggests", "## Keeping notes private")
+    checklist = _between(privacy, "- **Which assistant, and whether it opens "
+                         "files by itself.**", "- **What stays on")
+    for where, text in (("PRIVACY, summary", hosts),
+                        ("PRIVACY, checklist", checklist)):
+        assert ("Codex reads well beyond its folder without asking, and a "
+                "setting that stops it has not yet been tested") in text, \
+            where
+    assert ("Until then, for participants' data, it suggests an assistant "
+            "with no file access of its own, such as Claude Desktop's chat.") \
+        in privacy
+
+
+def test_cowork_is_out_of_reach_only_with_all_three_conditions():
+    """PRIVACY.md says what keeps a project out of Cowork's reach with the
+    conditions the chat's entry gives: computer use, which Cowork has,
+    and another extension that reads files reach it too."""
+    privacy = _flat("PRIVACY.md")
+    hosts = _between(privacy, "## Assistants that open files by themselves",
+                     "## Keeping notes private")
+    assert ("kept out of every connected folder, with computer use off and "
+            "no other extension that reads files (both below), they stay out "
+            "of it.") in hosts
+    assert ("Cowork reads every folder connected to it, so projects kept out "
+            "of those folders, with computer use off and no other extension "
+            "that reads files, stay out of its reach.") in hosts
+    # the promise without its conditions is gone
+    for bare in ("kept out of every connected folder, they stay out of it",
+                 "projects kept out of those folders stay out of its reach"):
+        assert bare not in privacy, bare
 
 
 def test_the_facts_behind_the_warning_stay():
@@ -298,15 +392,34 @@ def test_the_readme_says_what_it_costs():
             "On 1 October 2026 the makers' pages listed, in US dollars,",
             "[Claude's](https://claude.com/pricing) Free plan, Pro at $20 a "
             "month, Max from $100, Team and Enterprise by the seat",
+            # the page's table of features starts at Plus
             "[ChatGPT's](https://learn.chatgpt.com/docs/pricing) desktop app "
-            "on Free and Go \"subject to rollout\", Codex's command line "
-            "from Plus ($20 a month).",
-            # what the limits mean for trying it and for longer work
-            "Plans have usage limits (Claude's reset every five hours)",
+            "for local chats, and Codex's command line, from Plus ($20 a "
+            "month).",
+            # what the limits mean for trying it and for longer work:
+            # claude.com/pricing, read 1 October 2026, "Every plan has
+            # usage limits that reset on a rolling five-hour session
+            # window, and paid plans add weekly limits on top." and "on
+            # paid plans, turn on usage credits"; OpenAI's page, the same
+            # day, "Weekly limits may also apply." and "can purchase
+            # additional credits"
+            "Plans have usage limits: Claude's reset every five hours, and "
+            "its paid plans add weekly limits, which longer work can reach; "
+            "OpenAI's may also be weekly.",
+            "At a limit you wait, move up a plan or, on a paid plan, pay for "
+            "extra use.",
             "coding many transcripts uses far more than practice",
             "every MCP server \"uses more of your limit\"",
-            "LM Studio is free"):
+            # LM Studio's pricing page also sells cloud plans; its system
+            # requirements say "16GB+ RAM recommended"
+            "LM Studio is free with a local model; its pages recommend "
+            "16 GB of memory or more."):
         assert words in cost, words
+    # the five-hour limit alone, and the plans the feature table does not
+    # list, are gone
+    for gone in ("(Claude's reset every five hours)",
+                 "you wait or move up a plan", "Free and Go"):
+        assert gone not in cost, gone
     # It reports the makers' pages; it does not say a free plan is enough
     for claim in ("free plan is enough", "enough for exegete",
                   "works on the free", "free plan works"):

@@ -26,8 +26,11 @@ README's one-click extension is the easier start.
       practice projects in a folder of their own, or work on that
       study with Claude Desktop's chat, with computer use off, no
       folder that holds your projects or transcripts connected to it,
-      and no other extension that reads files (PRIVACY.md, "Assistants
-      that open files by themselves")
+      and no other extension that reads files. A folder of their own
+      keeps practice projects apart but does not put the study out of
+      Claude Code's reach, and what it opens goes to the AI provider,
+      which may train on it while training is on (PRIVACY.md,
+      "Assistants that open files by themselves")
 - [ ] At least one QualCoder project (a `.qda` project folder): the
       setup below cannot create one; the one-click extension can
 

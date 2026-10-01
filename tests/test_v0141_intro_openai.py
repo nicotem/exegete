@@ -291,9 +291,12 @@ class TestTheReadmesRoute:
         # checks: three numbered steps, the folder the third
         # (the owner, 1 October 2026: the suggestion with its reason; the
         # same training advice for both makers, before participants' data)
-        for words in ("Codex reads files by itself, so this project "
-                      "suggests them for practice and data that is not "
-                      "sensitive until a safer setting has been tested",
+        # (the judge, the same day: an alternative, not a purpose)
+        for words in ("Codex reads files by itself, so for participants' "
+                      "data this project suggests an assistant with no file "
+                      "access of its own, such as Claude Desktop's chat, "
+                      "until a setting that stops Codex's reads has been "
+                      "tested with Exegete.",
                       "1. **Switch training off** before participants' "
                       "data: while it is on, OpenAI may use your "
                       "conversations to train its models.",
@@ -828,8 +831,9 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "`on-request` is the setting behind \"Ask for approval\" "
                 "and the read-only mode",
                 "That is why step 3 keeps study files out of Codex's "
-                "folder, and why this project suggests this route for "
-                "practice and non-sensitive data for now.",
+                "folder, and why, for participants' data, this project "
+                "suggests an assistant with no file access of its own for "
+                "now (the box at the top of this section).",
                 "if Codex started in its read-only mode, you may keep it "
                 "there (Exegete's tools work the same). Full access would "
                 "run every tool call without asking you, so this project "
@@ -853,8 +857,9 @@ class TestCodexWorksInAFolderOfItsOwn:
                 # v0.14.2, the README's second round of checks: the
                 # verdict second, so that it shows on a phone
                 "| **ChatGPT's desktop app and Codex** (Experimental) | "
-                "Practice and data that is not sensitive, until a setting "
-                "that stops those reads is tested | Codex: yes, well beyond "
+                "The chat suggested instead: Codex reads well beyond its "
+                "folder without asking, and a setting that stops it is not "
+                "yet tested | Codex: yes, well beyond "
                 "its folder, without asking, even in \"Ask for approval\" "
                 "and read-only mode | OpenAI |",
                 # v0.14.2, the README's first round of checks: only codings
@@ -1275,8 +1280,9 @@ class TestAssistantsOwnFileAccess:
                       "listed under \"Trusted folders\"). Do not add "
                       "another extension that reads files either."):
             assert words in listed, words
-        assert ("| Practice and data that is not sensitive, until a setting "
-                "that stops those reads is tested |") in data
+        assert ("| The chat suggested instead: Codex reads well beyond its "
+                "folder without asking, and a setting that stops it is not "
+                "yet tested |") in data
         assert data.index("| **Claude Desktop's chat**") < \
             data.index("| **ChatGPT's desktop app and Codex**")
         # v0.14.2: with PRIVACY.md's third condition, as everywhere the
@@ -1666,13 +1672,15 @@ class TestTheSmallerPoints:
             "is never sent to the AI through Exegete (an assistant that "
             "opens a project's files by itself reads every memo whole")
 
-    def test_openais_route_says_practice_first_and_windows_in_full(self):
+    def test_openais_route_says_its_reads_first_and_windows_in_full(self):
         install = _install_openai_flat()
         # (the owner, 1 October 2026: the suggestion with its reason)
-        box = ("Codex reads files on your computer by itself, so until a "
-               "setting that stops it has been tested, this project "
-               "suggests this route for practice and for data that is not "
-               "sensitive; step 3 says more.")
+        # (the judge, 1 October 2026: an alternative, not a purpose)
+        box = ("Codex reads files on your computer by itself, so for "
+               "participants' data this project suggests an assistant with "
+               "no file access of its own, such as Claude Desktop's chat, "
+               "until a setting that stops Codex's reads has been tested "
+               "with Exegete; step 3 says more.")
         assert box in install
         assert install.index(box) < \
             install.index("**Which OpenAI apps can use Exegete.**")

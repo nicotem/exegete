@@ -106,8 +106,15 @@ def _tools(mode="lifecycle"):
 # judge's shorter positioning paragraph and the sentence "Other
 # assistants" no longer needs ("never start it") paid back about 300,
 # and the page lands at 31,489, within the about 31,000 the round was
-# given.
-README_LIMIT = 31_500
+# given. Their first round of checks added about 430: the weekly limits
+# and the ways past a limit, which the pricing pages give and the cost
+# paragraph had left out; OpenAI's route given a warning and an
+# alternative instead of a purpose; and what a folder of their own does
+# not do, after the owner's warning about practising. The judge advised
+# raising the limit to what the round needs, with this reason, rather
+# than cutting decided wording to fit, and leaving a trim of repeated
+# warnings to a length pass of its own: 31,915.
+README_LIMIT = 32_000
 
 
 def test_the_readme_stays_short():
@@ -435,9 +442,11 @@ def test_the_assistants_table():
     assert cells["Claude Code"][VERDICT] == (
         "The chat suggested instead: Claude Code reads beyond its folder "
         "without asking")
+    # (the judge, 1 October 2026: a warning and an alternative, as for
+    # Claude Code, not a purpose)
     assert cells["ChatGPT's desktop app and Codex"][VERDICT] == (
-        "Practice and data that is not sensitive, until a setting that "
-        "stops those reads is tested")
+        "The chat suggested instead: Codex reads well beyond its folder "
+        "without asking, and a setting that stops it is not yet tested")
     assert cells["LM Studio"][VERDICT] == ("Also suggested, with no other "
                                            "server or plugin that reads "
                                            "files")

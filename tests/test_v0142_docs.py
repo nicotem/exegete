@@ -643,9 +643,9 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "For participants' data this project suggests Claude Desktop's "
             "chat with the extension, with computer use off, no folder that "
             "holds your projects or transcripts connected to it, and no "
-            "other extension that reads files; it suggests OpenAI's apps "
-            "for practice and for data that is not sensitive, until a "
-            "setting that stops Codex's reads has been tested.",
+            "other extension that reads files. Codex reads well beyond its "
+            "folder without asking, and a setting that stops it has not yet "
+            "been tested.",
             "- **What stays on the computer, and for how long.**",
             "the lists of suggestions waiting for review "
             "(`~/.exegete/sessions/`)",

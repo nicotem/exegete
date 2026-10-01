@@ -111,7 +111,7 @@ from easiest to most private, and OpenAI's apps:
 | **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. It is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so this project suggests this route for practice and non-sensitive data until a safer setting is tested. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat, until a setting that stops Codex's reads has been tested with Exegete. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
@@ -426,8 +426,11 @@ practice projects in a folder of their own, or work on that study with
 an assistant without file access of its own, such as Claude Desktop's
 chat with the extension, with computer use off, no folder that holds
 your projects or transcripts connected to it, and no other extension
-that reads files. The steps below start Claude Code in an empty folder
-of its own; make it, and do the rest there:
+that reads files. A folder of their own keeps practice projects apart
+but does not put the study out of Claude Code's reach, and what it
+opens goes to the AI provider, which may train on it while training is
+on. The steps below start Claude Code in an empty folder of its own;
+make it, and do the rest there:
 
 ```bash
 mkdir -p ~/claude-exegete && cd ~/claude-exegete
@@ -879,10 +882,10 @@ corresponding care.
 > 30 September 2026 (its pages show no date), and, where it is silent,
 > from Codex's source code as it stood that day. This project has not
 > yet run Exegete in any OpenAI app; the steps may change after that
-> check. Codex reads files on your computer by itself, so until a
-> setting that stops it has been tested, this project suggests this
-> route for practice and for data that is not sensitive; step 3 says
-> more.
+> check. Codex reads files on your computer by itself, so for
+> participants' data this project suggests an assistant with no file
+> access of its own, such as Claude Desktop's chat, until a setting that
+> stops Codex's reads has been tested with Exegete; step 3 says more.
 
 **Which OpenAI apps can use Exegete.** OpenAI's page on MCP
 (<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
@@ -1145,9 +1148,9 @@ no file access of its own, such as Claude Desktop's chat with the
 extension, with computer use off, no folder that holds your projects
 or transcripts connected to it, and no other extension that reads
 files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by
-themselves"). Until a setting that stops those reads has been tested
-with Exegete, this project suggests this route for practice and for
-data that is not sensitive.
+themselves"). A folder of their own keeps practice projects apart but
+does not put the study out of Codex's reach, and what Codex opens goes
+to OpenAI, which may train on it while training is on.
 
 Then, in the desktop app, open Settings, MCP servers, where `exegete`
 is now listed, and select Restart (or quit the app and open it again).
@@ -1196,8 +1199,9 @@ for approval" and the read-only mode, and in Codex's source code (its
 release of 29 September 2026) both let those commands read the whole
 disk (on Windows, at least everything in your home folder but a few
 folders that hold keys). That is why step 3 keeps
-study files out of Codex's folder, and why this project suggests this
-route for practice and non-sensitive data for now. Codex's sandbox
+study files out of Codex's folder, and why, for participants' data,
+this project suggests an assistant with no file access of its own for
+now (the box at the top of this section). Codex's sandbox
 settings govern the commands the model runs, not Exegete, which reads
 and writes your
 projects whichever sandbox you choose (Codex's source code). What

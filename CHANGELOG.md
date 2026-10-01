@@ -251,25 +251,36 @@ advanced users.
   included (INSTALL.md, "What You'll Need"); how to hear of a new
   release (INSTALL.md, the one-click section); Codex's and Claude Code's
   reach in detail, and where Cowork runs (PRIVACY.md); the history of
-  the MIT releases (NOTICE). README.md is now about 31,500 characters,
+  the MIT releases (NOTICE). README.md is now about 31,950 characters,
   against 31,975 in 0.14.1, and its sentences are shorter.
 - The README now says plainly that Exegete is free, open-source
   software, under QualCoder's own licence (LGPL-3.0-or-later), and what
-  using it costs: Exegete nothing; the assistant's plans and usage
-  limits as Anthropic's and OpenAI's pricing pages listed them on
-  1 October 2026, with the pages linked, and what the limits mean for
-  longer work; LM Studio free. One sentence places QualCoder beside
-  NVivo, ATLAS.ti and MAXQDA. The advice on training is the same for
-  Claude and for ChatGPT, in the same words: switch training off before
-  participants' data, with its reason, each maker's settings by name
-  (Codex's "Include environments" among them), and the exception, that
-  a rated reply can still be used for training. "A first session" now
-  explains that Codex and Claude Code can open files by themselves, so
-  a real study on the same computer is within their reach even while
-  you practise, and suggests what to do if that matters, where the
-  README used to say "never start it"; the assistants table gives the
-  reason with each suggestion, where it said "Not suggested". The
-  positioning paragraph is shorter, every fact in it kept.
+  using it costs: Exegete nothing; the assistant's plans as Anthropic's
+  and OpenAI's pricing pages listed them on 1 October 2026, with the
+  pages linked; their usage limits (Claude's every five hours and, on
+  paid plans, weekly, which longer work can reach; OpenAI's may also be
+  weekly) and what can be done at one (wait, move up a plan or, on a
+  paid plan, pay for extra use); that coding many transcripts uses far
+  more than practice; and LM Studio, free with a local model. One
+  sentence places QualCoder beside NVivo, ATLAS.ti and MAXQDA. The
+  advice on training is the same for Claude and for ChatGPT, in the same
+  words: switch training off before participants' data, with its reason,
+  each maker's settings by name (Codex's "Include environments" among
+  them), and the exception, that a rated reply can still be used for
+  training. "A first session" now explains that Codex and Claude Code
+  can open files by themselves, so a real study on the same computer is
+  within their reach even while you practise, and suggests what to do if
+  that matters, where the README used to say "never start it"; a folder
+  of their own keeps practice projects apart but does not put the study
+  out of reach, and what they open goes to their maker, which may train
+  on it while training is on. The assistants table gives the reason with
+  each suggestion, where it said "Not suggested". OpenAI's route is no
+  longer called one for practice and for data that is not sensitive: the
+  README says what Codex reads by itself and, for participants' data,
+  suggests an assistant with no file access of its own until a setting
+  that stops Codex's reads has been tested with Exegete, as it does for
+  Claude Code. The positioning paragraph is shorter, every fact in it
+  kept.
 - Leftovers from earlier releases are gone ("new in 0.14", "from 0.14"
   in the table, an example file name with a version in it), and the
   sentence naming QualCoder 3.8.2 as "Latest" carries the date it was
@@ -336,9 +347,18 @@ advanced users.
   Code in certain folders, never to give Codex one, never to rate a
   reply in a session with participant data, or to open only projects
   whose consent covers third-party processing, they now say what could
-  go wrong and suggest what to do, every fact kept. The warning about
-  practising is in INSTALL.md's Claude Code section and Codex's step 3,
-  in PRIVACY.md ("While you practise") and in QUICKSTART.md. The
+  go wrong and suggest what to do, every fact kept. Where they called
+  OpenAI's route one for practice and for data that is not sensitive,
+  they now say what Codex reads by itself and suggest, for
+  participants' data, an assistant with no file access of its own until
+  a setting that stops Codex's reads has been tested. PRIVACY.md says
+  what keeps a project out of Cowork's reach: kept out of every
+  connected folder, with computer use off and no other extension that
+  reads files. The warning about practising, with what a folder of
+  their own does not do and that what Codex or Claude Code opens may be
+  used for training while training is on, is in INSTALL.md's Claude
+  Code section and Codex's step 3, in PRIVACY.md ("While you practise")
+  and in QUICKSTART.md. The
   training advice is the same for both makers in INSTALL.md's table and
   OpenAI's first step and in PRIVACY.md's first rung and OpenAI's
   section, and PRIVACY.md's list for an ethics committee or data

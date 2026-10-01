@@ -187,7 +187,7 @@ Some assistants also open files on your computer by themselves:
 | **Claude Desktop's chat**, with the extension | Suggested, set up as below | Not by itself, as far as Anthropic's pages say, set up as below | Anthropic; on a Team or Enterprise account, commercial terms |
 | **Claude's Cowork** | The chat suggested instead: Cowork reads the folders you connect, so keep projects and transcripts out of them | Yes, in the folders you connect to it | Anthropic |
 | **Claude Code** | The chat suggested instead: Claude Code reads beyond its folder without asking | Yes, without asking, in the folder it starts in and beyond | Anthropic; with an organisation's API key, commercial terms |
-| **ChatGPT's desktop app and Codex** (Experimental) | Practice and data that is not sensitive, until a setting that stops those reads is tested | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode | OpenAI |
+| **ChatGPT's desktop app and Codex** (Experimental) | The chat suggested instead: Codex reads well beyond its folder without asking, and a setting that stops it is not yet tested | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode | OpenAI |
 | **LM Studio**, with a local model (Experimental: no local model has yet been evaluated with Exegete) | Also suggested, with no other server or plugin that reads files | Its chat: not by itself | None outside. Use the `core` tool set: local models are weaker with many tools |
 
 What they read that way goes to their maker too. Exegete cannot see
@@ -248,13 +248,14 @@ read [Where your data goes](https://github.com/nicotem/exegete#where-your-data-g
 [Claude's](https://claude.com/pricing) Free plan, Pro at $20 a month,
 Max from $100, Team and Enterprise by the seat (Enterprise also by
 use); and [ChatGPT's](https://learn.chatgpt.com/docs/pricing) desktop
-app on Free and Go "subject to rollout", Codex's command line from
-Plus ($20 a month). Plans have usage limits (Claude's reset every five
-hours); at one, you wait or move up a plan. Longer conversations and
-more tool use count for more, so coding many transcripts uses far more
-than practice; OpenAI adds that every MCP server "uses more of your
-limit". LM Studio is free, and its local model wants 16 GB of memory
-or more.
+app for local chats, and Codex's command line, from Plus ($20 a month).
+Plans have usage limits: Claude's reset every five hours, and its paid
+plans add weekly limits, which longer work can reach; OpenAI's may also
+be weekly. At a limit you wait, move up a plan or, on a paid plan, pay
+for extra use. Longer conversations and more tool use count for more,
+so coding many transcripts uses far more than practice; OpenAI adds
+that every MCP server "uses more of your limit". LM Studio is free with
+a local model; its pages recommend 16 GB of memory or more.
 
 ### Claude Desktop, with one click
 
@@ -292,8 +293,10 @@ release marked "Latest" when this was checked, on 1 October 2026. The
 ### ChatGPT's desktop app and Codex (OpenAI)
 
 These can start Exegete too (ChatGPT in a web browser cannot). Codex
-reads files by itself, so this project suggests them for practice and
-data that is not sensitive until a safer setting has been tested.
+reads files by itself, so for participants' data this project suggests
+an assistant with no file access of its own, such as Claude Desktop's
+chat, until a setting that stops Codex's reads has been tested with
+Exegete.
 Experimental: written from OpenAI's documentation, read on 30 September
 2026, and not yet tried by this project.
 
@@ -319,7 +322,9 @@ themselves, so a real study kept on the same computer is within their
 reach even while you practise, and Exegete's list of projects tells
 them where it is. If that matters for a study, you could keep practice
 projects in a folder of their own, or work on that study with Claude
-Desktop's chat.
+Desktop's chat. A folder of their own keeps practice projects apart but
+does not put the study out of reach, and what they open goes to their
+maker, which may train on it while training is on.
 
 Ask the assistant to "Create a new QualCoder project called
 Practice" (Experimental), then bring in your page as in the example.

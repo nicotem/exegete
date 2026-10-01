@@ -206,45 +206,48 @@ advanced users.
   data goes (the assistant app, the AI model on its maker's computers,
   Exegete with no AI of its own, the project, QualCoder alongside, one
   program at a time), with 0.14.0's technical labels (MCP over standard
-  input and output; reads read-only, writes after a backup); a diagram of a coding's path, from the request
-  through the review list to the backup and the write; a map of the
-  documents and of the code; a list of what you can do today, and
-  "What comes next" as plans, not promises, with document import and
-  reading imported files first; the table of assistants (where what
-  each reads goes, whether it opens files by itself, and what this
-  project suggests for participants' data), with the routes of 0.14.0's
-  table of AI hosts (Claude's personal plans, Anthropic's commercial
-  terms through an API key or a Team or Enterprise account, and local
-  models; INSTALL.md's table linked); and the table of the three tool
-  sets, with their sizes as measured below. The diagrams are text,
-  at most 66 characters wide, so that GitHub and PyPI show them alike.
+  input and output; reads read-only, writes after a backup); a diagram
+  of a coding's path, from the request through the review list to the
+  backup and the write; a map of the documents and of the code; a list
+  of what you can do today, and "What comes next" as plans, not
+  promises, with document import and reading imported files first; the
+  table of assistants (what this project suggests for participants'
+  data, whether each opens files by itself, and where what it reads
+  goes), with the routes of 0.14.0's table of AI hosts (Anthropic's
+  commercial terms through a Team or Enterprise account or an
+  organisation's API key, and local models, with their trade-off;
+  INSTALL.md's table linked); and the table of the three tool sets, with
+  their sizes as measured below. The diagrams are text, at most 66
+  characters wide, so that GitHub and PyPI show them alike.
 - New: "For advanced users": what Exegete is technically (where the
   assistant's data goes included, and what a backup copies), the tool
   sets, the features beyond the basics, each family led by what it is
   for, how it is tested, and the map.
-- Kept, in their words or their substance: what still needs QualCoder,
-  with the dated "Latest"; the aim; the disclosure of assistants that
-  open files by themselves, with the checks before participants' data;
-  private notes and names, word for word; the approval and its limit;
-  one program at a time; the three commitments, with the table checked
-  on 1 October 2026; the dated facts on QualCoder's own MCP server and
-  the paragraph after them; the example requests and the line on
-  Cohen's kappa. Every warning is said once, where the reader acts on
-  it. "What it does that QualCoder does not" and "Read next" are no
-  longer sections: their points sit in "What you can do", "How it
+- Kept, in their words or their substance: what still needs QualCoder;
+  the aim; the disclosure of assistants that open files by themselves,
+  with the checks before participants' data; private notes and names,
+  word for word; the approval and its limit; one program at a time;
+  where a project is made, route by route (the extension's folder for
+  projects, or `~/Documents/Exegete projects` on the Terminal route,
+  which iCloud or OneDrive may sync), and opening it in QualCoder; the
+  dated "Latest", in "Start here"; the three commitments, with the table
+  checked on 1 October 2026; the dated facts on QualCoder's own MCP
+  server and the paragraph after them; the example requests and the line
+  on Cohen's kappa. Each warning is said in full once, where the reader
+  acts on it. "What it does that QualCoder does not" and "Read next" are
+  no longer sections: their points sit in "What you can do", "How it
   works", the comparison table and the map.
 - Moved out, because the documents named say it in full: OpenAI's steps
   past the first, which apps and plans, the settings lines' reason and
-  OpenAI's Remote (INSTALL.md); where a project is made and opening it
-  in QualCoder, with the coder name's place in QualCoder's settings
-  (TOOLS.md, "Starting a project from the conversation"); projects from
-  a QualCoder older than 3.8, in full (TOOLS.md, "Supported QualCoder
-  versions"); QualCoder's downloads, Intel Macs included (INSTALL.md,
-  "What You'll Need"); how to hear of a new release (INSTALL.md, the
-  one-click section); Codex's and Claude Code's reach in detail, and
-  where Cowork runs (PRIVACY.md); the history of the MIT releases
-  (NOTICE). README.md is now about 29,650 characters, against 31,975
-  in 0.14.1, and its sentences are shorter.
+  OpenAI's Remote (INSTALL.md); the coder name's place in QualCoder's
+  settings (TOOLS.md, "Starting a project from the conversation");
+  projects from a QualCoder older than 3.8, in full (TOOLS.md,
+  "Supported QualCoder versions"); QualCoder's downloads, Intel Macs
+  included (INSTALL.md, "What You'll Need"); how to hear of a new
+  release (INSTALL.md, the one-click section); Codex's and Claude Code's
+  reach in detail, and where Cowork runs (PRIVACY.md); the history of
+  the MIT releases (NOTICE). README.md is now about 30,000 characters,
+  against 31,975 in 0.14.1, and its sentences are shorter.
 - Leftovers from earlier releases are gone ("new in 0.14", "from 0.14"
   in the table, an example file name with a version in it), and the
   sentence naming QualCoder 3.8.2 as "Latest" carries the date it was

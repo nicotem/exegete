@@ -125,13 +125,15 @@ class TestTheIntroduction:
         assert ("Your AI assistant reads, searches and suggests; you "
                 "decide.") in opening
         # Independence, and not a remote control. v0.14.2: "What it is
-        # not" is split, words unchanged: its first sentence ends "How it
-        # works"; the rest sits beside the compatibility commitment, and
-        # the opening keeps "independently of QualCoder's developers"
-        assert ("**What it is not.** It is not a remote control for the "
-                "QualCoder application: it does not start or control "
-                "QualCoder, and QualCoder need not be running while you "
-                "work.") in _how_it_works()
+        # not" is split: the rest sits beside the compatibility
+        # commitment, and the opening keeps "independently of QualCoder's
+        # developers". The README's second round of checks: said once, in
+        # the positioning paragraph, which already says Exegete has no
+        # window of its own ("What it is not" was a second saying)
+        assert ("its work appears in the conversation. It is not a remote "
+                "control for QualCoder, which need not be running.") \
+            in opening
+        assert "**What it is not.**" not in _flat("README.md")
         compatibility = _between(readme, "**Compatibility with QualCoder.**",
                                  "**Symmetry:")
         assert ("It is not QualCoder, and it is not made or endorsed by "
@@ -180,8 +182,10 @@ class TestTheIntroduction:
                 "get_coding_frequencies", "find_cooccurring_codes",
                 "get_case_code_matrix", "query_by_attribute"],
             # v0.14.2, the README's first round of checks: what the
-            # assistant can already read, beside "What comes next"
-            "a whole transcript, read with its codings": [
+            # assistant can already read, beside "What comes next"; the
+            # second round: who reads it, so that it is not taken for the
+            # reading of a whole file yourself, which is in development
+            "a whole transcript with its codings, read by the assistant": [
                 "analyze_file_with_coding"],
             "**Write** memos, annotations and a research journal": [
                 "set_memo", "add_annotation", "add_journal_entry"],
@@ -834,15 +838,21 @@ class TestCodexWorksInAFolderOfItsOwn:
         for words in (
                 "Some assistants also open files on your computer by "
                 "themselves:",
+                # v0.14.2, the README's second round of checks: the
+                # verdict second, so that it shows on a phone
                 "| **ChatGPT's desktop app and Codex** (Experimental) | "
-                "OpenAI | Codex: yes, well beyond its folder, without "
-                "asking, even in \"Ask for approval\" and read-only mode |",
+                "Practice and data that is not sensitive, until a setting "
+                "that stops those reads is tested | Codex: yes, well beyond "
+                "its folder, without asking, even in \"Ask for approval\" "
+                "and read-only mode | OpenAI |",
                 # v0.14.2, the README's first round of checks: only codings
-                # wait for approval ("How it works" says what does not)
-                "Exegete's protections (the `#####` mark below, your "
-                "approval before codings are written, the backups) do not "
-                "apply to it; Exegete cannot see such a read or stop it",
-                "Exegete's own answers tell it where your project is"):
+                # wait for approval ("How it works" says what does not);
+                # the second round: one meaning for each "it"
+                "Exegete cannot see such a read or stop it, and its "
+                "protections (the `#####` mark below, your approval before "
+                "codings are written, the backups) do not apply to it.",
+                "Exegete's own answers also tell the assistant where your "
+                "project is"):
             assert words in data, words
         section = _privacy_openai()
         assert "**Codex's own file access.**" in section
@@ -1213,9 +1223,13 @@ class TestAssistantsOwnFileAccess:
         chat = "such as Claude Desktop's chat with the extension"
         # v0.14.2, the README rewritten to persuade: the README's table
         # row says it, with the list it is set up by
-        assert ("| **Claude Desktop's chat**, with the extension | Anthropic "
-                "| Not by itself, as far as Anthropic's pages say, set up as "
-                "below | Suggested, set up as below |") in _readme_data()
+        # v0.14.2, the README's second round of checks: the verdict
+        # second, and the chat's commercial-terms route in its maker cell
+        assert ("| **Claude Desktop's chat**, with the extension | "
+                "Suggested, set up as below | Not by itself, as far as "
+                "Anthropic's pages say, set up as below | Anthropic; on a "
+                "Team or Enterprise account, commercial terms |") \
+            in _readme_data()
         for where, text in {
                 "INSTALL, step 3": _install_openai_flat(),
                 "PRIVACY, mitigations": _between(_flat("PRIVACY.md"),

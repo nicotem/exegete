@@ -42,7 +42,8 @@ data analysis in its own right, not an add-on to QualCoder, and you do
 not need QualCoder to start. It stays compatible with QualCoder, so you
 can open the same project there whenever you like, one program at a
 time. It has no window of its own: your assistant, such as Claude
-Desktop, starts it, and its work appears in the conversation.
+Desktop, starts it, and its work appears in the conversation. It is not
+a remote control for QualCoder, which need not be running.
 
 - **New here?** [Start here](https://github.com/nicotem/exegete#start-here):
   Claude Desktop, one click, then a practice project.
@@ -80,7 +81,7 @@ never put participant data in an issue.
   and delete, with a preview before merging or deleting.
 - **Explore**: search texts, codings and memos; frequencies; codes that
   occur together; a case-by-code matrix; cases and files by attribute;
-  a whole transcript, read with its codings.
+  a whole transcript with its codings, read by the assistant.
 - **Write** memos, annotations and a research journal.
 - **Coder comparison**: per-code agreement between two coders, with
   QualCoder's own coefficient and Cohen's kappa side by side.
@@ -169,10 +170,6 @@ record your decisions and write them
 coding is applied, check that the counts (approved, rejected, pending)
 match what you said; if not, say so.
 
-**What it is not.** It is not a remote control for the QualCoder
-application: it does not start or control QualCoder, and QualCoder need
-not be running while you work.
-
 ## Where your data goes
 
 **In short.** Exegete has no online service and sends nothing anywhere
@@ -184,22 +181,21 @@ imported in QualCoder, only as far as the assistant reads it.
 
 Some assistants also open files on your computer by themselves:
 
-| Assistant | Its AI's maker | Opens files by itself? | For participants' data |
+| Assistant | For participants' data | Opens files by itself? | Its AI's maker |
 |---|---|---|---|
-| **Claude Desktop's chat**, with the extension | Anthropic | Not by itself, as far as Anthropic's pages say, set up as below | Suggested, set up as below |
-| **Claude's Cowork** | Anthropic | Yes, in the folders you connect to it | Not suggested: use the chat; if you use it, keep projects and transcripts out of every connected folder |
-| **Claude Code** | Anthropic; with an API key, on commercial terms | Yes, without asking, in the folder it starts in and beyond | Not suggested |
-| **ChatGPT's desktop app and Codex** (Experimental) | OpenAI | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode | Practice and data that is not sensitive, until a setting that stops those reads is tested |
-| **LM Studio**, with a local model (Experimental: no local model has yet been evaluated with Exegete) | None outside | Its chat: not by itself | Also suggested, with no other server or plugin that reads files |
+| **Claude Desktop's chat**, with the extension | Suggested, set up as below | Not by itself, as far as Anthropic's pages say, set up as below | Anthropic; on a Team or Enterprise account, commercial terms |
+| **Claude's Cowork** | Not suggested: use the chat; if you use it, keep projects and transcripts out of every connected folder | Yes, in the folders you connect to it | Anthropic |
+| **Claude Code** | Not suggested | Yes, without asking, in the folder it starts in and beyond | Anthropic; with an organisation's API key, commercial terms |
+| **ChatGPT's desktop app and Codex** (Experimental) | Practice and data that is not sensitive, until a setting that stops those reads is tested | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode | OpenAI |
+| **LM Studio**, with a local model (Experimental: no local model has yet been evaluated with Exegete) | Also suggested, with no other server or plugin that reads files | Its chat: not by itself | None outside. Use the `core` tool set: local models are weaker with many tools |
 
-What they read that way goes to their maker too. Exegete's protections
-(the `#####` mark below, your approval before codings are written, the
-backups) do not apply to it; Exegete cannot see such a read or stop
-it, and Exegete's own answers tell it where your project is
+What they read that way goes to their maker too. Exegete cannot see
+such a read or stop it, and its protections (the `#####` mark below,
+your approval before codings are written, the backups) do not apply to
+it. Exegete's own answers also tell the assistant where your project is
 ([PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)).
-Which terms apply (a personal plan, an API key, a Team or Enterprise
-account) is set by your account, not by Exegete; institutions should
-prefer organisational accounts
+Which terms apply is set by your account, not by Exegete;
+institutions should prefer organisational accounts
 ([INSTALL.md, "Choosing your AI host"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#choosing-your-ai-host-data-governance-options-experimental)).
 
 Before you use participants' data with Claude Desktop's chat (also
@@ -300,8 +296,9 @@ September 2026, and not yet tried by this project.
 Practise on text that is not from a participant, such as a page you
 write. Ask the assistant to "Create a new QualCoder project called
 Practice" (Experimental), then bring in your page as in the example.
-The project is made in "QualCoder projects", in your home folder: open
-it in QualCoder (Project, Open Project) to see your coding in the text.
+With the extension or OpenAI's steps, the project is made in "QualCoder
+projects", in your home folder: open it in QualCoder (Project, Open
+Project) to see your coding in the text.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).
 
 **Two coder names.** When it makes the project, the assistant asks for
@@ -328,10 +325,13 @@ only once the project is opened again.
 Claude Desktop set up by hand take the Terminal route
 ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)),
 whose standard tool set cannot create a project unless switched on.
-Claude Code opens files by itself ("Where your data goes", above):
-never start it in your home folder, Documents, your projects folder or
-a study's folder, and for participants' data use Claude Desktop's chat
-instead.
+There, new projects and copies go to `~/Documents/Exegete projects`,
+which iCloud or OneDrive may sync, unless
+[`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
+names another folder. Claude Code opens files by itself ("Where your
+data goes", above): never start it in your home folder, Documents, your
+projects folder or a study's folder, and for participants' data use
+Claude Desktop's chat instead.
 
 **Updating.** Updates are manual and never touch your projects:
 install a newer `.mcpb` the same way, or, on the Terminal route, run
@@ -427,19 +427,20 @@ every tool.
 |---|---|---|---|---|
 | `lifecycle` | 75: all, creating a project (Experimental) included | about 198,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | the one-click extension; elsewhere, set `EXEGETE_TOOLSET=lifecycle` |
 | `full` | 74: all but creating a project | about 196,000 characters, 49k tokens | the same | the Terminal route |
-| `core` | 22: the supervised coding loop and its safety tools | about 65,000 characters, 16k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
+| `core` | 22: the coding loop and its safety tools | about 65,000 characters, 16k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
-A host that passes every tool's definition (its name, description and
-arguments) to the model with each request needs this much of its
-context before any of your text (measured on Python 3.13 at four
-characters a token; about five per cent more on 3.10 to 3.12).
+That is how much of a model's context a host uses when it sends every
+tool's definition (name, description and arguments) with each request:
+measured on Python 3.13, at four characters a token; about five per
+cent more on 3.10 to 3.12.
 
 **Beyond the basics**:
 
-- **Supervised coding**: `analyze_for_coding`, `record_suggestions`,
-  `review_suggestions`, `edit_suggestion`, `update_suggestion_status`,
-  `apply_codings`; codes the assistant proposes: `propose_codes`,
-  `update_proposal`, `create_proposed_codes`.
+- **Coding with your approval**, the path drawn above:
+  `analyze_for_coding`, `record_suggestions`, `review_suggestions`,
+  `edit_suggestion`, `update_suggestion_status`, `apply_codings`;
+  codes the assistant proposes: `propose_codes`, `update_proposal`,
+  `create_proposed_codes`.
 - **Large projects**, larger than a model's context: paging cursors,
   orderings and a character budget on `get_coded_segments`; cursors and
   `exclude_code_ids` (text the codes you name have not reached) on
@@ -466,7 +467,8 @@ characters a token; about five per cent more on 3.10 to 3.12).
 Linux, with Python 3.10 and 3.13, on every change pushed; they test the
 server, not a researcher's use of it
 ([CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md)).
-The repository:
+
+**The repository**, each document linked from this page:
 
 ```text
 github.com/nicotem/exegete
@@ -479,18 +481,17 @@ github.com/nicotem/exegete
 ├── CONTRIBUTING.md    reporting, building and testing
 ├── NOTICE             what comes from QualCoder, and where
 └── src/exegete/
-    ├── server.py          the tools, resources and brief
-    ├── database.py        QualCoder's format, read and written
-    ├── sessions.py        the review list of suggestions
-    ├── pseudonymise.py    replacing names, keeping the coding
-    ├── coder_comparison.py agreement, the two kappas
-    ├── memo_privacy.py    the '#####' private-note rule
-    └── preview_tokens.py  a preview before larger changes
+    ├── server.py           the tools, resources and brief
+    ├── database.py         QualCoder's format, read and written
+    ├── sessions.py         the review list of suggestions
+    ├── pseudonymise.py     replacing names, keeping the coding
+    ├── coder_comparison.py agreement, both coefficients
+    ├── memo_privacy.py     the '#####' private-note rule
+    └── preview_tokens.py   a preview before larger changes
 ```
 
-Also linked:
-[AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md),
-[CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md).
+[AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md) ·
+[CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md)
 
 ## What comes next
 
@@ -500,14 +501,14 @@ Plans, not promises: the order may change with what testers report.
   easy way to read a whole imported file yourself, beyond the passages
   the assistant quotes
 - v0.15, the safety net: undo everything a session did; when replacing
-  names, choose which mentions to keep; and the removal of what 0.14
-  marks as going (TOOLS.md names each)
+  names, choose which mentions to keep; old tools marked as going are
+  retired (TOOLS.md names each)
 - v0.16, chat-first: more of the analysis shown in the conversation,
-  as tables (codes that occur together, the code tree, counts by
-  attribute); PDF text labelled as QualCoder's extraction; fuller
-  counts after names are replaced
-- v0.17: a user manual, and codings placed by the words they quote
-  rather than by position
+  as tables and graphs (codes that occur together, the code tree,
+  counts by attribute); PDFs that say where their text came from;
+  fuller counts of where names remain after replacing them
+- v0.17: a user manual, and codings placed by the passage they quote,
+  even when a quote does not match exactly
 - Later: coding images, audio, video and areas of PDF pages; more work
   alongside QualCoder 4.0; and what testers ask for
   ([file yours](https://github.com/nicotem/exegete/issues))

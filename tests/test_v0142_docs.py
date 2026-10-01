@@ -508,8 +508,10 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
     # page on the web, desktop and mobile
     data = _between(_flat("README.md"), "## Where your data goes",
                     "## Start here")
-    assert ("| **Claude's Cowork** | Anthropic | Yes, in the folders you "
-            "connect to it |") in data
+    # (the README's second round of checks: the verdict second, so that
+    # it shows on a phone; the maker last)
+    assert ("| Yes, in the folders you connect to it | Anthropic |") in data
+    assert "| **Claude's Cowork** | Not suggested: use the chat;" in data
     assert "Cowork is a part of Claude Desktop." not in data
     assert ("use-claude-cowork-on-web-desktop-and-mobile") in \
         _flat("PRIVACY.md")
@@ -709,12 +711,15 @@ def test_a_first_session_says_what_to_do_next():
                      "### Other assistants, and updates")
     # v0.14.2, the README's first round of checks: where the project is
     # made and how to see the coding in it, for a newcomer who has just
-    # practised (the extension's own default folder)
-    assert ("then bring in your page as in the example. The project is "
-            "made in \"QualCoder projects\", in your home folder: open it in "
-            "QualCoder (Project, Open Project) to see your coding in the "
-            "text. [More requests to try](https://github.com/nicotem/"
-            "exegete/blob/main/TOOLS.md#example-requests).") in first
+    # practised (the extension's own default folder); the second round:
+    # on the routes that set it, not on the Terminal route otherwise
+    # (test_the_terminal_route_says_where_projects_go, below)
+    assert ("then bring in your page as in the example. With the extension "
+            "or OpenAI's steps, the project is made in \"QualCoder "
+            "projects\", in your home folder: open it in QualCoder (Project, "
+            "Open Project) to see your coding in the text. [More requests "
+            "to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md"
+            "#example-requests).") in first
     import json
     manifest = json.loads(_read("packaging/desktop-extension/"
                                 "manifest.in.json"))
@@ -723,6 +728,45 @@ def test_a_first_session_says_what_to_do_next():
     assert first.index("Practice") < first.index("**Two coder names.**")
     assert "_resolve_write_owner" in inspect.getsource(
         server.import_text_file)
+    # OpenAI's steps set the same folder (INSTALL.md's settings lines)
+    openai = _flat("INSTALL.md")
+    assert "EXEGETE_WORKSPACE = \"~/QualCoder projects\"" in openai
+    assert ("`EXEGETE_WORKSPACE`: where new projects and working copies go; "
+            "here, as in the extension, a folder called \"QualCoder "
+            "projects\" in your home folder") in openai
+
+
+def test_the_terminal_route_says_where_projects_go():
+    """The README's second round of checks (the advanced reader's check,
+    1 October 2026): "A first session" gave the extension's folder as if
+    for every route. On the Terminal route otherwise (Claude Code, LM
+    Studio, a hand set-up), new projects and working copies go to
+    ~/Documents/Exegete projects, which a sync service may copy off the
+    computer; the README says so where it sends those readers, with the
+    setting that moves it linked to INSTALL.md's list of settings."""
+    import os
+    from unittest import mock
+    from exegete import database, names
+    other = _between(_flat("README.md"), "**Other assistants.**",
+                     "**Updating.**")
+    # the folder
+    assert ("There, new projects and copies go to `~/Documents/Exegete "
+            "projects`,") in other
+    # the sync caveat, and the setting that moves it
+    assert ("which iCloud or OneDrive may sync, unless [`EXEGETE_WORKSPACE`]"
+            "(https://github.com/nicotem/exegete/blob/main/INSTALL.md"
+            "#environment-variables-the-server-reads) names another "
+            "folder.") in other
+    assert "\n## Environment variables the server reads\n" in \
+        _read("INSTALL.md")
+    # the server's own: with no setting, the workspace is that folder
+    assert names.WORKSPACE_FOLDER == "Exegete projects"
+    with mock.patch.dict(os.environ, {"EXEGETE_WORKSPACE": ""}):
+        assert database.default_workspace() == \
+            Path.home() / "Documents" / "Exegete projects"
+    # and INSTALL.md gives the same reason for keeping projects out of it
+    assert ("because iCloud (Desktop and Documents) and OneDrive may sync "
+            "`~/Documents`") in _flat("INSTALL.md")
 
 
 # The release labels the owner asked to lose, in the opening of a guide:

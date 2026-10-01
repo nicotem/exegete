@@ -92,8 +92,15 @@ def _tools(mode="lifecycle"):
 # back about 2,000 characters, and shorter sentences took back less; the
 # figure reached is held (the judge advised no more than 29,000; the
 # links and labels the checks asked for take it a little past, and the
-# report says what reaching 22,000 would take).
-README_LIMIT = 29_700
+# report says what reaching 22,000 would take). The second round: where
+# a project is made, route by route, with the setting that moves it
+# linked; the commercial-terms routes and the local route's trade-off in
+# the assistants table; both feature lists in the reader's terms; paid
+# for in part by cuts that lose no fact ("What it is not" said once, the
+# sentence under the tool-set table shorter, the routes no longer listed
+# twice). The judge advised taking the corrected figure as the ceiling
+# from here on: any later addition is paid for by a cut.
+README_LIMIT = 30_050
 
 
 def test_the_readme_stays_short():
@@ -234,6 +241,19 @@ def test_the_map_names_files_that_exist():
     for name in ("README.md", "PRIVACY.md", "INSTALL.md", "TOOLS.md",
                  "CONTRIBUTING.md", "NOTICE", "server.py", "database.py"):
         assert name in named, name
+    # v0.14.2, the README's second round of checks: QualCoder's figure is
+    # not Cohen's kappa (coder_comparison.py says so), so the map does not
+    # call both "kappas"; and the descriptions of the code line up
+    assert "coder_comparison.py agreement, both coefficients" in block
+    assert "kappa" not in block
+    assert "is NOT Cohen's kappa" in _read("src/exegete/coder_comparison.py")
+    code = [line for line in lines if line.startswith("    ")]
+    assert len({len(re.match(r" *[├└]── \S+ +", line).group(0))
+                for line in code}) == 1
+    # led as the other parts of the section are, saying what the reader
+    # gets from it
+    assert ("\n**The repository**, each document linked from this page:\n"
+            "\n```text\ngithub.com/nicotem/exegete\n") in _read("README.md")
     # the map is a code block, so nothing in it can be clicked, and PyPI
     # has no file list: every document it names is a link somewhere on the
     # page (v0.14.2, the README's first round of checks)
@@ -337,8 +357,11 @@ def _cells(row):
 
 def test_the_assistants_table():
     section = _section("Where your data goes", "Start here")
-    assert ("| Assistant | Its AI's maker | Opens files by itself? | For "
-            "participants' data |") in section
+    # v0.14.2, the README's second round of checks: the verdict second,
+    # so that a reader on a phone sees it beside the name (GitHub cuts the
+    # table after its second column at 375 pixels)
+    assert ("| Assistant | For participants' data | Opens files by itself? | "
+            "Its AI's maker |") in section
     rows = _rows(section, "| **")
     assert [re.match(r"\| \*\*([^*]+)\*\*", row).group(1) for row in rows] \
         == list(ASSISTANTS)
@@ -365,47 +388,70 @@ def test_the_assistants_table():
     for name, (readme_words, privacy_words) in verdicts.items():
         assert cells[name][2].startswith(readme_words), name
         assert privacy_words in hosts, name
+    # (the columns: verdict, reach, maker)
+    MAKER, VERDICT = 3, 1
     # what each maker receives, and what this project suggests (v0.14.2,
     # the README's first round of checks: the commercial-terms route of
     # 0.14.0's table, and Cowork as PRIVACY.md's checklist puts it)
-    assert [cells[name][1] for name in ASSISTANTS] == [
-        "Anthropic", "Anthropic",
-        "Anthropic; with an API key, on commercial terms", "OpenAI",
-        "None outside"]
-    assert cells["Claude Desktop's chat"][3] == "Suggested, set up as below"
-    assert cells["Claude's Cowork"][3] == (
+    # v0.14.2, the README's second round of checks: the route this
+    # project suggests on commercial terms, the chat on a Team or
+    # Enterprise account (PRIVACY.md's rung 3), on the page; an
+    # organisation's key for Claude Code (PRIVACY.md leaves an
+    # individual's key unresolved); and the local route's trade-off, from
+    # INSTALL.md's table
+    assert [cells[name][MAKER] for name in ASSISTANTS] == [
+        "Anthropic; on a Team or Enterprise account, commercial terms",
+        "Anthropic",
+        "Anthropic; with an organisation's API key, commercial terms",
+        "OpenAI",
+        "None outside. Use the `core` tool set: local models are weaker "
+        "with many tools"]
+    assert ("For participants' data, this project suggests Claude Desktop's "
+            "chat with Exegete under that account") in privacy
+    assert ("For unambiguous commercial-terms coverage, use a Console "
+            "account created for the institution or research group") \
+        in privacy
+    install = _flat(_read("INSTALL.md"))
+    assert "local models are markedly weaker on many-tool work" in install
+    assert "Requires the reduced core toolset." in install
+    assert cells["Claude Desktop's chat"][VERDICT] == \
+        "Suggested, set up as below"
+    assert cells["Claude's Cowork"][VERDICT] == (
         "Not suggested: use the chat; if you use it, keep projects and "
         "transcripts out of every connected folder")
     checklist = _between(privacy, "## Before you use real participant data, "
                          "check these", "## Practical mitigations")
     assert ("Codex, Claude Code and Claude's Cowork can open files on your "
             "computer by themselves") in checklist
-    assert cells["Claude Code"][3] == "Not suggested"
-    assert cells["ChatGPT's desktop app and Codex"][3] == (
+    assert cells["Claude Code"][VERDICT] == "Not suggested"
+    assert cells["ChatGPT's desktop app and Codex"][VERDICT] == (
         "Practice and data that is not sensitive, until a setting that "
         "stops those reads is tested")
-    assert cells["LM Studio"][3] == ("Also suggested, with no other server "
-                                     "or plugin that reads files")
+    assert cells["LM Studio"][VERDICT] == ("Also suggested, with no other "
+                                           "server or plugin that reads "
+                                           "files")
     # the Experimental routes say so, and why
     assert "(Experimental)" in cells["ChatGPT's desktop app and Codex"][0]
     assert ("(Experimental: no local model has yet been evaluated with "
             "Exegete)") in cells["LM Studio"][0]
     # the two sentences the table cannot carry
+    # (v0.14.2, the README's second round of checks: one meaning for each
+    # "it", the same facts)
     flat = _flat(section)
-    assert ("What they read that way goes to their maker too. Exegete's "
-            "protections (the `#####` mark below, your approval before "
-            "codings are written, the backups) do not apply to it; Exegete "
-            "cannot see such a read or stop it, and Exegete's own answers "
-            "tell it where your project is") in flat
+    assert ("What they read that way goes to their maker too. Exegete "
+            "cannot see such a read or stop it, and its protections (the "
+            "`#####` mark below, your approval before codings are written, "
+            "the backups) do not apply to it. Exegete's own answers also "
+            "tell the assistant where your project is") in flat
     # and the terms, which the account sets, with 0.14.0's table of routes
     # (INSTALL.md, "Choosing your AI host") one link away
-    assert ("Which terms apply (a personal plan, an API key, a Team or "
-            "Enterprise account) is set by your account, not by Exegete; "
+    # (the second round: the routes are in the table's maker column now,
+    # so the sentence no longer lists them)
+    assert ("Which terms apply is set by your account, not by Exegete; "
             "institutions should prefer organisational accounts ([INSTALL.md, "
             "\"Choosing your AI host\"](https://github.com/nicotem/exegete/"
             "blob/main/INSTALL.md#choosing-your-ai-host-data-governance-"
             "options-experimental)).") in flat
-    install = _flat(_read("INSTALL.md"))
     assert ("| **Anthropic commercial-terms routes** (Claude Code with a "
             "Console API key; Team/Enterprise accounts) |") in install
     assert "Institutions should prefer organisational accounts." in install
@@ -459,12 +505,14 @@ def test_the_tool_set_table():
     assert rows["core"][4] == "none: set `EXEGETE_TOOLSET=core`"
     assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
     # the sentence under it, with the interpreters and the per cent
+    # (v0.14.2, the README's second round of checks: shorter, the same
+    # facts)
     flat = _flat(section)
-    assert ("A host that passes every tool's definition (its name, "
-            "description and arguments) to the model with each request") \
-        in flat
-    assert ("(measured on Python 3.13 at four characters a token; about "
-            "five per cent more on 3.10 to 3.12)") in flat
+    assert ("That is how much of a model's context a host uses when it "
+            "sends every tool's definition (name, description and "
+            "arguments) with each request: measured on Python 3.13, at four "
+            "characters a token; about five per cent more on 3.10 to "
+            "3.12.") in flat
     assert round(100 * (full_on_311 / sizes["full"] - 1)) == 5
 
 
@@ -532,8 +580,10 @@ def test_the_advanced_section_rests_on_the_code():
     # in bold; the brief's item in plain words; which previews say whose
     # work is affected (the four codebook cascades and the name
     # replacement build owner counts; restoring and pruning backups do not)
-    for lead in ("**Supervised coding**", "**Large projects**, larger than a "
-                 "model's context", "**QualCoder's conventions**",
+    # (the second round: the coding family led by what it gives, as the
+    # others are, not by a term a methodologist reads as machine learning)
+    for lead in ("**Coding with your approval**, the path drawn above:",
+                 "**Large projects**, larger than a model's context", "**QualCoder's conventions**",
                  "**Analysis**", "**Guarded changes**", "**The brief**",
                  "**Resources**"):
         assert lead in beyond, lead
@@ -545,6 +595,8 @@ def test_the_advanced_section_rests_on_the_code():
     assert "def _pseudonymise_by_owner" in database
     assert ("per-coder visibility (reads hide what QualCoder hides; a "
             "`coder` argument reads one coder in full)") in beyond
+    # (the second round: nor in the `core` row, "the coding loop")
+    assert "upervised" not in flat
     # nothing removed in v0.15 is advertised
     assert "`merge_proposals`" not in beyond
     assert "sampling" not in beyond
@@ -580,8 +632,24 @@ def test_what_comes_next_is_plans():
     # the reader will be able to do
     for words in ("undo everything a session did",
                   "when replacing names, choose which mentions to keep",
-                  "more of the analysis shown in the conversation, as tables"):
+                  "more of the analysis shown in the conversation, as tables",
+                  # v0.14.2, the README's second round of checks: the rest
+                  # in the reader's terms too (the roadmap's "What it is
+                  # for": graphs the assistant can show, PDFs labelled
+                  # honestly, counts where names remain, a fallback when a
+                  # quote does not match)
+                  "old tools marked as going are retired (TOOLS.md names "
+                  "each)",
+                  "as tables and graphs (codes that occur together, the code "
+                  "tree, counts by attribute)",
+                  "PDFs that say where their text came from",
+                  "fuller counts of where names remain after replacing them",
+                  "codings placed by the passage they quote, even when a "
+                  "quote does not match exactly"):
         assert words in section, words
+    for engineering in ("the removal of what 0.14", "QualCoder's extraction",
+                        "rather than by position"):
+        assert engineering not in section, engineering
     # and the list of what still needs QualCoder says the gap is worked on
     can_do = _flat(_section("What you can do", "How it works"))
     assert ("Bringing in documents, and reading a whole file yourself, are "

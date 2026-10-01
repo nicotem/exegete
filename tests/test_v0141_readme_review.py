@@ -48,7 +48,9 @@ def test_the_readme_says_what_it_is_not():
             "values taken from QualCoder so that its results match "
             "QualCoder's exactly, and [NOTICE](https://github.com/nicotem/"
             "exegete/blob/main/NOTICE) lists them") in readme
-    assert "QualCoder need not be running while you work" in readme
+    # (the README's second round of checks: said once, in the opening)
+    assert ("It is not a remote control for QualCoder, which need not be "
+            "running.") in readme
     # The opening no longer describes a connector
     assert "A Model Context Protocol (MCP) server that connects" \
         not in readme

@@ -288,8 +288,10 @@ def test_the_approval_steps_are_named_where_the_readme_points():
     which names them; each named tool is one the assistant is given. The
     advanced section names the tools of the coding loop."""
     readme = _readme()
+    # (the README's second round of checks: "What it is not", which
+    # followed, is said in the opening, so the section's end bounds it)
     approval = _between(readme, "**Your approval, and its limit.**",
-                        "**What it is not.**")
+                        "## Where your data goes")
     for words in (
             "so it records the approval the assistant reports: it cannot "
             "tell whether you gave it.",

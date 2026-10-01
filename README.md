@@ -39,155 +39,227 @@ and what a coding means, stays your judgement.
   creation to the finished analysis, without needing QualCoder for any
   of it, while every project stays one that QualCoder opens.
 
-Exegete runs on your computer, reads and writes QualCoder's project
-format, and follows QualCoder's rules wherever the two must agree, so
-your project stays a QualCoder project. Technically, Exegete is an MCP
-server: the Model Context Protocol (MCP) is only the standard way an
-assistant reaches tools on your computer, which is why the same Exegete
-can be used from more than one assistant. Claude Desktop is the easiest
-start; "Start here", below, also covers OpenAI's ChatGPT desktop app and
-Codex.
+**Before you start**
+
+- Exegete is an experimental early version (an alpha), built by one
+  researcher, independently of QualCoder's developers. Parts marked
+  Experimental have had little or no use yet, and each says why. Try it
+  on practice text first, and work on a copy of any real study.
+- The easiest start is the Claude Desktop app on a Mac or a Windows
+  computer; "Start here" also covers OpenAI's apps.
+- The assistant's app runs on your computer, but with Claude, ChatGPT
+  or Codex the AI behind it runs on its maker's computers, and what it
+  reads through Exegete goes there. Some assistants also open files on
+  your computer by themselves. Read
+  ["Where your data goes"](https://github.com/nicotem/exegete#where-your-data-goes)
+  before you use interviews or anything else from participants.
+- **To begin**, read
+  ["How it works"](https://github.com/nicotem/exegete#how-it-works)
+  (a short read) and "Where your data goes", then follow
+  ["Start here"](https://github.com/nicotem/exegete#start-here), from
+  installing to a first practice project.
+- Questions, problems and ideas go to
+  [GitHub Issues](https://github.com/nicotem/exegete/issues) (a free
+  GitHub account is needed), not email. Never put participant data in
+  an issue.
+
+## How it works
+
+This section explains the parts and how they fit together, before any
+instructions.
+
+**The parts.** Your AI assistant is an app on your computer, such as
+Claude Desktop, ChatGPT's desktop app or Codex (not a chat in a web
+browser). The AI model behind it, which reads and answers, runs on its
+maker's computers (Anthropic's or OpenAI's), unless you set up one that
+runs on your own computer. Exegete also runs on your computer: the
+assistant starts it, and in Claude Desktop it comes as an extension, a
+file you download and double-click. It has no AI of its own.
+
+**Who does what.** You write what you want, and the assistant chooses
+which of Exegete's tools to use. The AI reads and suggests; Exegete
+checks each suggested coding against the file's words, keeps
+suggestions waiting, and writes to your project; you decide.
+Technically, Exegete is an MCP server: the Model Context Protocol (MCP)
+is only the standard way an assistant reaches tools on your computer,
+which is why the same Exegete can be used from more than one assistant.
+
+**Your project** is a folder on your computer, in QualCoder's format.
+Exegete reads and writes that format, and follows QualCoder's rules
+wherever the two must agree, so the project stays a QualCoder project.
+QualCoder opens the same folder, one program at a time. Texts come in
+two ways. You can paste or attach a transcript's text in the
+conversation, and the assistant hands it to Exegete: the whole text
+goes to the AI's maker. Or you can import a document in QualCoder, Word
+and PDF included: only what the assistant later reads of it goes.
+
+**When anything is written.** Reading changes nothing in your project,
+but what is read goes to the AI's maker ("Where your data goes",
+next). Suggested codings and proposed codes wait in a review list
+outside the project until you approve them. Other changes, such as
+making a code or writing a memo, are made when the tool runs. Your
+assistant asks you first, if it is set to ask ("Start here" shows
+how). Larger changes show a preview first, and backups can be restored.
+
+**Your approval.** Exegete hears only from the assistant, never from
+you directly. When you approve a suggestion, the assistant passes your
+decision on, and Exegete records the approval the assistant reports: it
+cannot tell whether you gave it. "What it does that QualCoder does
+not" says what you can do about that.
 
 **What it is not.** It is not a remote control for the QualCoder
 application: it does not start or control QualCoder, and QualCoder need
-not be running while you work. It is not QualCoder, and it is not made
-or endorsed by QualCoder's developers (QualCoder is free software by
-Colin Curtain and contributors). It is a separate program that reads
-and writes QualCoder project files; it contains a small number of
-routines and values taken from QualCoder so that its results match
-QualCoder's exactly, and [NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE)
-lists them, with where each comes from.
-
-It is an experimental early version (an alpha), built by one
-researcher. Questions, problems and ideas go to
-[GitHub Issues](https://github.com/nicotem/exegete/issues) (a
-free GitHub account is needed), not email. Never put participant data
-in an issue.
+not be running while you work.
 
 ## Where your data goes
 
-Exegete runs on your computer, has no online service of its own
-and sends nothing anywhere itself. What the assistant reads through it
-(passages, codes, memos, names) becomes part of the conversation and
-goes to the AI provider behind your assistant: Anthropic for Claude
-Desktop and Claude's other apps, OpenAI for ChatGPT's desktop app and
-Codex, and no outside provider at all with a fully local model, which
-needs another assistant, such as LM Studio, set up by the Terminal
-route (installing by typing commands, as INSTALL.md shows;
-Experimental: no local model has yet been evaluated with Exegete).
-Text you bring in through the conversation (pasted or attached, then
-imported) goes to the provider in full; a file you import in QualCoder
-does not, only what the assistant later reads of it.
+This section says what leaves your computer, and what to set up before
+you use interviews or anything else from participants.
 
-Some assistants can also open files on your computer by themselves,
-with tools of their own and without Exegete: Codex (OpenAI's route),
-Claude Code, and Claude's Cowork (in the folders you connect to it).
-What they read that way goes to their provider too, and Exegete's
-protections (the `#####` mark below, your approval before anything is
-written, the backups) do not apply to it; Exegete cannot see such a
-read or stop it. Codex can read files well beyond the folder it works
-in, by itself and without asking, in its "Ask for approval" mode and in
-its read-only mode alike: on a Mac or Linux, any file your account can
-read; on Windows, at least everything in your home folder but a few
-folders that hold keys. Exegete's own answers tell it where your
-project is. (OpenAI's page on approvals and Codex's source code, read
-on 30 September 2026; PRIVACY.md quotes them.) A folder of its own
+**In short.** Exegete runs on your computer, has no online service of
+its own and sends nothing anywhere itself. What the assistant reads
+through it (passages, codes, memos, names) becomes part of the
+conversation, and goes to the maker of the AI behind your assistant.
+That is Anthropic for Claude Desktop and Claude's other apps, and
+OpenAI for ChatGPT's desktop app and Codex. With a fully local model,
+one that runs on your own computer, it goes to no outside provider at
+all (Experimental: no local model has yet been evaluated with
+Exegete). For participants'
+data, this project suggests Claude Desktop's chat with the extension,
+set up as the list below says. Codex and Claude Code open files on your
+computer by themselves, outside Exegete, so this project does not
+suggest them for participants' data.
+
+Text you paste or attach in the conversation goes to the AI's maker in
+full. A file you import in QualCoder goes only as far as the assistant
+later reads it ("How it works", above).
+
+**Assistants that open files by themselves.** Some assistants can also
+open files on your computer by themselves, with tools of their own and
+without Exegete: Codex (OpenAI's route), Claude Code, and Claude's
+Cowork (in the folders you connect to it). Cowork is a part of Claude
+Desktop. What they read that way goes to their maker too.
+Exegete's protections (the
+`#####` mark below, your approval before anything is written, the
+backups) do not apply to it; Exegete cannot see such a read or stop it.
+
+**For participants' data**, use an assistant that has no file access
+of its own, such as Claude Desktop's chat with the extension. As far as
+Anthropic's pages say, that chat opens no file by itself once it is set
+up as the list below says. The list also covers your account: on
+personal plans, Anthropic and OpenAI may use your conversations to
+train their models unless you opt out (PRIVACY.md quotes their words).
+
+Before you use participants' data with Claude Desktop's chat:
+
+1. Keep computer use off (the setting that lets Claude use other apps
+   on your computer: Settings, General).
+2. Do not connect to it any folder that holds your projects or
+   transcripts (your home folder, Documents or a whole drive included).
+   Do not add another extension that reads files either.
+3. On a personal Claude plan (Free, Pro or Max), open
+   https://claude.ai/settings/data-privacy-controls and look at the
+   Model Improvement setting. While it is on, Anthropic may use your
+   conversations to train its models (PRIVACY.md quotes the terms, with
+   their exceptions): decide before you use participants' data.
+4. On an account your university or employer provides, ask whoever
+   manages it which terms apply.
+5. Take PRIVACY.md's
+   ["Before you use real participant data, check these"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#before-you-use-real-participant-data-check-these)
+   to your ethics committee or data protection officer: it lists the
+   questions they will ask.
+
+Keep OpenAI's route for practice and for data that is not sensitive
+until a setting that stops Codex's own reads has been tested with
+Exegete. With OpenAI's apps, turn training off before you use them with
+Exegete at all, practice included. The first of the steps under
+"ChatGPT's desktop app and Codex", below, says where.
+[PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)
+goes through the assistants one by one, with each maker's page.
+
+**How far they reach.** Codex can read files well beyond the folder it
+works in, by itself and without asking, in its "Ask for approval" mode
+and in its read-only mode alike. Exegete's own answers tell it where
+your project is. (OpenAI's page on approvals and Codex's source code,
+read on 30 September 2026; PRIVACY.md quotes them.) A folder of its own
 ("ChatGPT's desktop app and Codex", below) keeps your study's files out
 of the place Codex works in, so it does not change them without asking;
 it does not stop Codex reading them, or searching other folders for
 them. Claude Code, as it comes, reads without asking in the folder it
-starts in, and its read-only commands, such as `cat`, read outside that
-folder without asking too (Anthropic's pages, which PRIVACY.md quotes).
+starts in, and can read outside it without asking too (PRIVACY.md says
+how).
 
-**For participants' data**, use an assistant that has no file access
-of its own, such as Claude Desktop's chat with the extension, with
-computer use off (the setting that lets Claude use other apps on your
-computer: Settings, General) and no folder that holds your projects or
-transcripts connected to it (your home folder, Documents or a whole
-drive included); as far as Anthropic's pages say, that chat then opens
-no file by itself. Keep OpenAI's route for practice and for data that is
-not sensitive until a setting that stops those reads has been tested
-with Exegete.
-[PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)
-goes through the assistants one by one, with each maker's page.
+**What stays on your computer**, unless it is in a folder that iCloud,
+OneDrive or another sync service copies:
 
-Your project, its backups, your exports, the lists of suggestions
-waiting for your review, Claude Desktop's own log of the extension
-(which keeps a copy of every request and answer, names and quoted text
-included; INSTALL.md says where), and, with Codex, its session files in
-`~/.codex`, which keep what Exegete's tools returned and what Codex
-read by itself (PRIVACY.md says more), stay on your computer, unless
-they are in a folder that iCloud, OneDrive or another sync service
-copies.
-Exegete never passes the part of a memo from a `#####` mark onward
-(QualCoder's mark for a private note) to the assistant, whichever
-QualCoder made the project. The mark works in memos, annotations and
-journal entries, not in the text of a transcript, and exported files
-keep the whole memo, private part included. Replacing names reduces the
-risk; it does not make anyone anonymous.
+- your project, its backups and your exports;
+- the lists of suggestions waiting for your review;
+- Claude Desktop's own log of the extension, which keeps a copy of
+  every request and answer, names and quoted text included (INSTALL.md
+  says where);
+- with Codex, its session files, which keep what Exegete's tools
+  returned and what Codex read by itself (PRIVACY.md says where).
 
-Which provider, and under which terms, is decided by your assistant and
-your account, not by Exegete. On a personal Claude plan (Free,
-Pro or Max), open https://claude.ai/settings/data-privacy-controls and
-check the Model Improvement setting yourself (Anthropic's consumer
-terms allow training on your conversations "unless you opt out of
-training through your account settings"; PRIVACY.md quotes them, with
-the exceptions) before you use participant data. With ChatGPT's desktop
-app or Codex, OpenAI's terms apply. OpenAI's Help Center says: "When
-you use our services for individuals, such as ChatGPT and Codex, we may
-use your content to train our models." It also says: "To opt out, turn
-off Improve the model for everyone under Settings > Data controls in
-ChatGPT, or select Do not train on my content in our Privacy Portal."
-Do one of the two before you use these apps with Exegete at all;
-Codex's "Include environments" is a separate setting. (Read from the
-Internet Archive's copy of 28 September 2026: PRIVACY.md gives its
-address, the terms for business plans, and what OpenAI says about that
-setting.) On an
-account your university or employer provides, ask whoever manages it
-which terms apply.
+**Private notes and names.** Exegete never passes the part of a memo
+from a `#####` mark onward (QualCoder's mark for a private note) to the
+assistant, whichever QualCoder made the project. The mark works in
+memos, annotations and journal entries, not in the text of a
+transcript, and exported files keep the whole memo, private part
+included. Replacing names reduces the risk; it does not make anyone
+anonymous.
+
 [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)
-quotes the terms, and covers consent, institutional accounts and fully
-local models: read it before you use participant data.
+is the full reference: each maker's terms in their own words, consent,
+institutional accounts and fully local models.
 
 ## Start here
+
+There are two ways to start. Claude Desktop, with one click, is the
+easiest, and the one this project suggests for participants' data.
+ChatGPT's desktop app and Codex take the Terminal route (installing by
+typing a few commands), and are for practice and data that is not
+sensitive. If you came straight here, read "How it works" and "Where
+your data goes" first: the assistant you choose decides where your data
+goes.
 
 ### What you need, at each stage
 
 - **To start:** Claude Desktop on macOS or Windows, and the extension
   (the steps follow), or one of OpenAI's apps (after them). QualCoder is
-  not needed to start. Leave the
-  extension's "Tool set" setting as it comes (`lifecycle`): with it you
-  can create a project, add cases and attributes, bring in text through
-  the conversation, make codes and code the text, all from the
-  conversation. The other two choices, `full` and `core`, cannot create
-  a project; with them the extension works on projects that already
-  exist.
+  not needed to start. The next item says when it is.
 - **QualCoder is recommended from the start, and needed** to bring in
-  documents (Word, PDF, images, audio, video) and any text you would
-  rather not pass through the conversation (Exegete imports only
-  text the assistant hands it); to see the coding highlighted in the
-  text; to code images, audio, video or an area of a PDF page; for
-  graphs; and for the reports in its Reports menu.
+  documents (Word, PDF, images, audio, video), and any text you would
+  rather not pass through the conversation: Exegete imports only text
+  the assistant hands it. It is also needed to see the coding
+  highlighted in the text, to code images, audio, video or an area of a
+  PDF page, for graphs, and for the reports in its Reports menu.
   [Download QualCoder](https://github.com/ccbogel/QualCoder/releases):
-  3.8.2, the release marked "Latest", further down the page, for
-  Windows or a Mac with Apple Silicon (M1 or later; QualCoder offers no
-  download for older Intel Macs). Its notes on that page say how to
-  open it the first time. The "4.0-Beta" at the top also works, but it
-  is a test version, and Exegete cannot tell when it has your
-  project open (see "One program at a time" below).
+  3.8.2, the release marked "Latest" when this was checked, on 1 October
+  2026. It is further down the page, for Windows or a Mac with Apple
+  Silicon (M1 or later; QualCoder offers no download for older Intel
+  Macs). Its notes on that page say how to open it the first time. The
+  "4.0-Beta" at the top also works, but it is a test version, and
+  Exegete cannot tell when it has your project open (see "One program
+  at a time" below).
+- **One setting to leave as it comes.** A tool set is the group of
+  Exegete's tools your assistant is given. Leave the extension's "Tool
+  set" setting as it comes (`lifecycle`): with it you can create a
+  project, add cases and attributes, bring in text through the
+  conversation, make codes and code the text, all from the
+  conversation. The other two choices cannot create a project.
 - **The Terminal route**
   ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)),
   which OpenAI's apps take too, needs Python 3.10 or newer. Its standard
-  tool set, `full`, cannot create a project: use a project made in
-  QualCoder, or switch project creation on as INSTALL.md shows (its
-  steps for OpenAI's apps do).
+  tool set cannot create a project: use a project made in QualCoder, or
+  switch project creation on as INSTALL.md shows (its steps for OpenAI's
+  apps do).
 - **Projects** from QualCoder 3.8.2 and the 4.0 beta work (see "Three
-  commitments" below). A project from a QualCoder older than 3.8 must
-  be opened once in QualCoder 3.8 or newer, which updates it as it
-  opens, and closed again before Exegete can change it (the
-  oldest formats cannot even be read before that).
+  commitments" below). For a project made in an older QualCoder, see "A
+  project you already have", below.
 
 ### Claude Desktop, with one click
+
+This is the easiest start, in three steps.
 
 1. **Get Claude Desktop**, the Claude app you install on your computer
    (macOS or Windows), not Claude in a web browser or on a phone:
@@ -196,8 +268,7 @@ local models: read it before you use participant data.
    [Releases page](https://github.com/nicotem/exegete/releases)
    and take the release at the top (every release of this alpha is
    marked Pre-release). Under its Assets, download the file whose name
-   ends in `.mcpb` (for example `exegete-0.14.1-alpha.mcpb`), not
-   "Source code".
+   starts with `exegete-` and ends in `.mcpb`, not "Source code".
 3. **Install it.** Double-click the file (if Claude does not open, drag
    the file onto Claude's window). Claude Desktop shows its usual
    warning to install only extensions whose developer you trust: click
@@ -205,8 +276,13 @@ local models: read it before you use participant data.
    needs (a minute or two, online). No Terminal, no configuration file.
 
 To check: start a new conversation, click "+", then Connectors:
-Exegete is listed. Claude asks before it uses a tool; "Allow
-once" keeps it asking ("What it does", below, says why that matters).
+Exegete is listed. Claude asks before it uses a tool; "Allow once"
+keeps it asking ("What it does that QualCoder does not", below, says
+why that matters). Before any participants' data, also check two
+things in Claude. Computer use should be off (Settings, General). No
+folder that holds your projects or transcripts should be connected to
+it (the newer Claude app lists connected folders under "Trusted
+folders"). "Where your data goes", above, says why.
 
 The extension is not signed by its developer; a computer or Claude
 account managed by your university or employer may refuse it.
@@ -215,121 +291,121 @@ says what you will see then, and what the extension's two settings do.
 
 ### ChatGPT's desktop app and Codex (OpenAI)
 
+These apps have no one-click extension, and until a safer setting has
+been tested, this route is for practice and for data that is not
+sensitive. Codex opens files on your computer by itself ("Where your
+data goes", above).
+
 By OpenAI's documentation, its apps that run on your computer can
 start Exegete there: the ChatGPT desktop app (macOS, Windows, or Linux
 in preview) and Codex, OpenAI's command line and editor extension. The
 desktop app, the command line and the editor extension read one
 settings file. ChatGPT in a web browser cannot start Exegete: it runs
-on OpenAI's computers and reaches only tools on the internet. (OpenAI
-also offers a tunnel that connects the web to a program on your
-computer; it is made for developers and IT teams, and this project does
-not recommend it for a project with participants' data. Enterprise
-workspaces have one more case, which OpenAI does not document for tools
-like Exegete: INSTALL.md says more.)
+on OpenAI's computers and reaches only tools on the internet. A phone,
+or another computer, can use the Exegete on your computer through
+OpenAI's Remote. This project suggests leaving Remote off on a computer
+where Exegete works on participants' data (INSTALL.md says where to
+check). The steps:
 
-ChatGPT's phone app cannot start Exegete either, but by OpenAI's
-documentation it can use it through your computer. OpenAI's Remote,
-set up in the ChatGPT desktop app on a Mac or Windows computer, lets
-the phone, or another Mac or Windows computer where OpenAI offers it,
-start and approve work that the computer runs, and "MCP servers,
-skills, browser access, and Computer Use come from that host's
-configuration" (OpenAI,
-<https://learn.chatgpt.com/docs/remote-connections>, read on 30
-September 2026). So a phone or computer paired with that computer can
-use the Exegete set up there, and show participants' words. This
-project has not tried it, and suggests leaving Remote off on a computer
-where Exegete works on participants' data. To check, look under
-Settings, Connections in the desktop app, and remove any device paired
-there: a pairing lasts, and signing out of ChatGPT does not remove
-it.
-
-These apps have no one-click extension, and until a safer setting has
-been tested, this route is for practice and for data that is not
-sensitive ("Where your data goes", above). The steps:
-
-1. **Install Exegete** by the Terminal route (a few typed commands).
-2. **Add Exegete to the settings file**, with the lines that make the
+1. **Turn off training first**, before any use with Exegete, practice
+   included. Turn off "Improve the model for everyone" in ChatGPT's
+   Settings, Data controls, or choose "Do not train on my content" in
+   OpenAI's Privacy Portal (either is enough, by OpenAI's Help Center).
+   Codex's "Include environments" is a separate setting (PRIVACY.md
+   says more).
+2. **Install Exegete** by the Terminal route (a few typed commands).
+3. **Add Exegete to the settings file**, with the lines that make the
    app ask you before every change Exegete makes. Without them, Codex
-   asks only before a tool that changes or deletes something, and runs
-   without asking the tools that add to your project (importing a
-   text, applying approved codings) and the one that sends the real
-   names in your pseudonym list to OpenAI.
-3. **Restart the app**, select Codex from the ChatGPT dropdown in the
-   desktop app (OpenAI documents this kind of tool there), and keep the
-   app's permissions on "Ask for approval".
-4. **Give Codex a folder of its own.** Make an empty folder for these
-   chats (INSTALL.md suggests `exegete-chats` in your home folder; for
-   the desktop app, make it in Finder or File Explorer, where on
-   Windows typing `%USERPROFILE%` in the address bar opens your home
-   folder) and open it as Codex's place to work; on the command line,
-   start `codex` inside it. Never give it your home folder, Documents,
-   your projects folder or a folder with transcripts. The folder keeps
-   your study's files out of the place Codex works in; it does not stop
-   Codex reading them, or searching other folders for them ("Where your
-   data goes", above).
+   runs without asking you the tools that add to your project
+   (importing a text, applying approved codings). It also runs without
+   asking the one that sends the real names in your pseudonym list to
+   OpenAI.
+4. **Restart the app**, select Codex from the ChatGPT dropdown in the
+   desktop app, and keep the app's permissions on "Ask for approval".
+5. **Give Codex a folder of its own**: an empty folder for these chats,
+   opened as its place to work, never your home folder, Documents, your
+   projects folder or a folder with transcripts. It keeps your study's
+   files out of the place Codex works in; it does not stop Codex reading
+   them, or searching other folders for them.
 
 [INSTALL.md, "ChatGPT's desktop app and Codex"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-app-and-codex-experimental)
-has each step, which OpenAI plans include these apps, and what to do if
-Exegete does not start. This route is Experimental: it follows OpenAI's
-documentation, read on 30 September 2026, and has not yet been tried by
-this project. What the assistant reads goes to OpenAI ("Where your data
-goes", above).
+has each step in full, which OpenAI plans include these apps, and what
+to do if Exegete does not start. This route is Experimental: it follows
+OpenAI's documentation, read on 30 September 2026, and has not yet been
+tried by this project. What the assistant reads goes to OpenAI.
 
 ### A first session
 
-**A first project.** Creating a project is Experimental (new in 0.14,
-and few people have used it yet). With the extension's settings as they
-come, ask the assistant, for example: "Create a new QualCoder project
-called Practice." It is made in QualCoder 4.0's format, in the
-extension's "Folder for projects" (with OpenAI's apps, the folder in
-your settings entry): by default a folder called "QualCoder projects"
-in your home folder (the one named after you), not in Documents, which
-iCloud or OneDrive may sync. QualCoder 3.8.2 opens it too, but shows a
-code made under another code as an ordinary code; before you move such
-a project between 3.8.2 and 4.0, read
-["Opening it in QualCoder" in TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental).
-The assistant asks for the coder name you use in QualCoder (in QualCoder's
-Project menu, Settings, where it says "Current coder"; on a Mac it may
-be under the QualCoder menu instead), so that what is coded through the
-conversation is kept apart from what you code in QualCoder; if you do
-not use QualCoder yet, say so, and the project is still created.
+This part sets up a practice project, then a real one. Practise with
+text that is not from a participant: a page you write yourself, or a
+published text you may use. Anything you paste or attach goes to the
+AI's maker in full (to Anthropic with Claude, to OpenAI with ChatGPT's
+desktop app or Codex).
+
+**A first project.** Creating a project is Experimental (few people
+have used it yet). With the extension's settings as they come, ask the
+assistant, for example: "Create a new QualCoder project called
+Practice." It is made in QualCoder 4.0's format, in the extension's
+"Folder for projects" (with OpenAI's apps, the folder in your settings
+entry). By default that is a folder called "QualCoder projects" in your
+home folder (the one named after you), not in Documents, which iCloud
+or OneDrive may sync.
+
+**Two coder names.** QualCoder records a coder name with what is
+coded, and Exegete uses two. The first is your own, the one QualCoder
+records with what you code there. The assistant asks for it when it
+makes the project (in QualCoder: Project menu, Settings, "Current
+coder"; on a Mac it may be under the QualCoder menu instead). If you do
+not use QualCoder yet, say so, and the project is still created. The
+second, which the other documents call the AI coder name, is a separate
+name you choose for each project. Exegete writes under it what is done
+through the conversation, the codings you approve included. The
+assistant asks for it the first time something is to be written under
+it. So what is coded through the conversation stays apart from what you
+code in QualCoder.
 [TOOLS.md, "Starting a project from the conversation"](https://github.com/nicotem/exegete/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental)
 has the rules.
 
-To see it in QualCoder: Project, Open Project, and choose
+**To see it in QualCoder:** Project, Open Project, and choose
 `Practice.qda` in that folder (on a Mac, Finder's Go menu, Home, opens
-your home folder). Practise with text that is not from a participant: a
-page you write yourself, or a published text you may use. Anything you
-paste or attach goes to the AI provider in full (to Anthropic with
-Claude, to OpenAI with ChatGPT's desktop app or Codex; "Where your data
-goes", above).
+your home folder). QualCoder 3.8.2 opens it too, but shows a code made
+under another code as an ordinary code. Before you move such a project
+between 3.8.2 and 4.0, read
+["Opening it in QualCoder" in TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#starting-a-project-from-the-conversation-experimental).
 
 **A project you already have.** Try the assistant on a practice
 project first. For a real study, ask the assistant to copy your project
-into its folder for projects and to work on the copy: your original is not
-touched, and QualCoder opens the copy like any other project. With an
-assistant that opens files by itself, such as Codex, the path you give
-it lets it read the original too ("Where your data goes", above).
+into its folder for projects and to work on the copy. Your original is
+not touched, and QualCoder opens the copy like any other project. With
+an assistant that opens files by itself, such as Codex, the path you
+give it lets it read the original too ("Where your data goes", above).
+A project from a QualCoder older than 3.8 must first be opened once in
+QualCoder 3.8 or newer, which updates it as it opens. Close it again
+before Exegete changes it (the oldest formats cannot even be read
+before that).
 
-**One program at a time.** Before the assistant changes a project, close
-that project in QualCoder. With QualCoder 3.8.2 an open project is
-detected and the change is refused; the 4.0 beta cannot be detected, so
-there only you can make sure. An open 4.0 window shows the assistant's
-changes only once the project is opened again.
+**One program at a time.** QualCoder and Exegete both read and write
+the same project, so they take turns. Before the assistant changes a
+project, close that project in QualCoder. With QualCoder 3.8.2 an open
+project is detected and the change is refused; the 4.0 beta cannot be
+detected, so there only you can make sure. An open 4.0 window shows the
+assistant's changes only once the project is opened again.
 
 ### Other assistants, and updates
 
-**Other assistants.** Claude Code, LM Studio (fully local) and other
-MCP hosts (assistants that can use MCP tools), and Claude Desktop set
-up by hand, take the Terminal route:
+**Other assistants.** Claude Code, LM Studio and other MCP hosts
+(assistants that can use MCP tools), and Claude Desktop set up by hand,
+take the Terminal route:
 [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)
-has each. Claude Code opens files by itself, outside Exegete ("Where
-your data goes", above): never start it in your home folder or in a
-folder that holds a study, and for participants' data use Claude
-Desktop's chat with the extension instead.
+has each. LM Studio can run an AI model on your own computer, so that
+nothing goes to an outside provider (Experimental: no local model has
+yet been evaluated with Exegete). Claude Code opens files by itself,
+outside Exegete ("Where your data goes", above). Never start it in your
+home folder or in a folder that holds a study, and for participants'
+data use Claude Desktop's chat with the extension instead.
 
 **Updating.** Updates are manual, and Exegete does not look for
-new versions itself: look at the Releases page now and then (with a
+new versions itself. Look at the Releases page now and then (with a
 GitHub account, Watch, then Custom, then Releases, sends you a notice
 of each). Install the newer `.mcpb` the same way; on the Terminal
 route, which OpenAI's apps take too,
@@ -341,31 +417,39 @@ says what changed and what you may change.
 
 ## What it does that QualCoder does not
 
-QualCoder has AI features of its own: in 3.8.2 an AI chat, and an AI
-search that finds passages for you to code; in the 4.0 beta, an
-assistant that changes the project from inside QualCoder's window,
-within the AI permission you set there. In Exegete the work happens in
+This section says what Exegete adds to QualCoder; if you have not used
+QualCoder, read it as what Exegete does beyond their shared work.
+
+QualCoder has AI features of its own. In 3.8.2 there is an AI chat,
+and an AI search that finds passages for you to code. In the 4.0 beta
+there is an assistant that changes the project from inside QualCoder's
+window, within the AI permission you set there. In Exegete the work happens in
 the conversation, with QualCoder closed, and QualCoder opens the same
 project whenever you like, one program at a time. Beside the work the
 two programs share (the table under "Three commitments" compares them
 row by row), Exegete adds:
 
-- **Suggestions that wait for your decision.** Each suggested coding is
-  checked to quote the file's text word for word and recorded with the
-  assistant's reading of it (explicit or interpretive); the assistant is
-  told to bring it to you with the passage, that reading and its
-  reason. Suggested codings, and proposed codes, wait in a review list
-  outside the project and are written only once approved in the
-  conversation. The assistant passes your decisions on:
-  Exegete records the approval the assistant reports and cannot
+- **Suggestions that wait for your decision.** Each suggested coding
+  quotes the file's text word for word, and Exegete checks that those
+  words are in the file; whether the code fits them stays your
+  judgement. Each is recorded with the assistant's reading of it:
+  explicit (the passage states what the code names) or interpretive
+  (the code rests on what the passage implies rather than on what it
+  says). The assistant is told to bring each one to you with the
+  passage, that reading and its reason. Suggested codings, and proposed
+  codes, wait in a review list outside the project and are written only
+  once approved in the conversation.
+- **Your approval, and its limit.** The assistant passes your decisions
+  on: Exegete records the approval the assistant reports and cannot
   tell whether you gave it. So keep your assistant asking before each
-  change ("allow once" in Claude, and answering each prompt in Codex,
-  for the tools that decide and write:
-  `update_suggestion_status`, `update_proposal_status`, `apply_codings`
-  and `create_proposed_codes`), and before anything is applied, check
-  that the counts it shows (approved, rejected, pending) match what you
-  said. If they do not, say so and refuse `apply_codings` until they do:
-  no coding is written before it runs.
+  change. Never allow for the whole conversation the steps that record
+  your decisions and write what you approved
+  ([INSTALL.md, "Approving the AI's suggestions"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-are-the-safeguard)
+  names them): choose "allow once" in Claude, and answer each prompt
+  in Codex. Before any coding is applied, check that the counts the
+  approval step shows (approved, rejected, pending) match what you said.
+  If they do not, say so, and do not let the assistant apply the codings
+  until they do: no coding is written before that step.
 - **A preview before the larger changes.** Merging or deleting codes
   and categories, replacing names in stored text, and restoring or
   pruning backups each show first what would change, and go ahead only
@@ -384,27 +468,39 @@ row by row), Exegete adds:
 
 ## Three commitments
 
-**Compatibility with QualCoder.** Exegete reads and writes
-projects from QualCoder 3.8.2, the current release (project format v14),
-from the QualCoder 4.0 beta (format v17), and in the formats between
-(QualCoder's own format numbers; you need not know them). What a
-project supports is read from the project itself, not from a version
-number, and a project in a newer format is not written to until
-Exegete has been checked against it. Where QualCoder has a rule,
-Exegete follows it, and any departure is named with its reason.
+They are this project's promises about your work: your project stays a
+QualCoder project, in QualCoder's format, that QualCoder opens. The
+second of the three, symmetry, is an aim, not yet a fact.
+
+**Compatibility with QualCoder.** Exegete reads and writes projects
+from QualCoder 3.8.2, from the QualCoder 4.0 beta, and in the formats
+between. What a project supports is read from the project itself, not
+from a version number, and a project in a newer format is not written
+to until Exegete has been checked against it. Where QualCoder has a
+rule, Exegete follows it, and any departure is named with its reason.
 [TOOLS.md, "Supported QualCoder versions"](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)
-has the detail, including what differs with the 4.0 beta.
+has the detail, including the formats' own numbers and what differs
+with the 4.0 beta.
+
+It is not QualCoder, and it is not made or endorsed by QualCoder's
+developers (QualCoder is free software by Colin Curtain and
+contributors). It is a separate program that reads and writes QualCoder
+project files; it contains a small number of routines and values taken
+from QualCoder so that its results match QualCoder's exactly, and
+[NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE) lists
+them, with where each comes from.
 
 **Symmetry: the same work in either place, as a commitment.** The aim
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
-directions, and each release moves rows. Checked on 29 September 2026,
-this program's 0.14.0 (then called qualcoder-mcp) against QualCoder
-3.8.2 and the 4.0-Beta pre-release:
+directions, and each release moves rows. In the table, each row is a
+task, and the right-hand column says what you can do from the
+conversation today. Checked on 1 October 2026, Exegete 0.14.2 against
+QualCoder 3.8.2 and the 4.0-Beta pre-release:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
-| Create a project | Yes | Yes, in the extension's default tool set (Experimental; from 0.14) |
+| Create a project | Yes | Yes, in the extension's default tool set (Experimental) |
 | Import sources | Text, documents, PDFs, images, audio, video | Text the assistant hands over |
 | Code text, including a PDF's text | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, or an area of a PDF page | Yes | No |
@@ -418,14 +514,13 @@ this program's 0.14.0 (then called qualcoder-mcp) against QualCoder
 | AI suggestions for coding | 3.8.2: an AI search finds passages, which you code; 4.0 beta: its assistant codes as it works, within the AI permission you set (read only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
 
 **Interoperability.** Work on a project in QualCoder and from the
-conversation, one at a time: close the project in QualCoder before the
-assistant changes it. Exegete refuses to write while a released
-QualCoder (3.8.2) has the project open; the 4.0 beta leaves no reliable
-sign, so there it can only warn, and an open 4.0 window shows
-Exegete's changes only after the project is opened again.
-QualCoder's own export (Project, Export, REFI-QDA Project export)
-writes the exchange file other analysis packages read. If you edit
-transcripts in QualCoder 3.8.2's coding view, read
+conversation, one program at a time ("One program at a time", above,
+says how). Exegete refuses to write while a released QualCoder (3.8.2)
+has the project open; the 4.0 beta leaves no reliable sign, so there it
+can only warn. QualCoder's own export (Project, Export,
+REFI-QDA Project export) writes the exchange file other analysis
+packages read. If you edit transcripts in QualCoder 3.8.2's coding
+view, read
 [its edit-mode caution](https://github.com/nicotem/exegete/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution)
 first: in that version, leaving edit mode after changing a text can
 delete codings near its new end, whether or not Exegete is used.
@@ -458,17 +553,19 @@ program at a time.
 
 ## Read next
 
-- [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md):
-  every way to install and set up, choosing your AI host, updating, and
-  what to do when it does not start.
-- [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md):
-  every tool, what it reads and writes, how the tools follow QualCoder's
-  conventions, and example requests.
+- [PRIVACY.md, "Before you use real participant data, check these"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#before-you-use-real-participant-data-check-these):
+  a short list of the questions your ethics committee or data
+  protection officer will ask. The rest of PRIVACY.md is the full
+  reference on where your data goes.
 - [AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md)
   and [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md):
-  the coding loop, with example conversations.
-- [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md):
-  where your data goes, in full.
+  the coding loop in detail, with example conversations.
+- [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md):
+  every way to install, for another assistant or if the one-click
+  install fails; updating; and what to do when Exegete does not start.
+- [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md):
+  the reference: every tool, what it reads and writes, how the tools
+  follow QualCoder's conventions, and example requests.
 - [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md):
   what changed in each release.
 - [CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md):
@@ -511,6 +608,6 @@ Nothing changes for anyone who installs and runs the server. The licence's condi
 
 ## Acknowledgements
 
-- [QualCoder](https://github.com/ccbogel/QualCoder) by Dr. Colin Curtain and Dr. Kai Dröge ([homepage](https://qualcoder.wordpress.com/))
+- [QualCoder](https://github.com/ccbogel/QualCoder) by Dr Colin Curtain and Dr Kai Dröge ([homepage](https://qualcoder.wordpress.com/))
 - [Model Context Protocol](https://modelcontextprotocol.io/) by Anthropic
 - [Claude Desktop](https://claude.ai/download) by Anthropic

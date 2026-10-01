@@ -64,22 +64,35 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     v0.14 line this test first pinned is gone with the section it sat
     in."""
     readme = _doc("README.md")
+    install = _doc("INSTALL.md")
     assert "**Qualcoder** with at least one project created" not in readme
     assert "otherwise at least one project made in QualCoder is needed" \
         not in readme
     stages = readme[readme.index("### What you need, at each stage"):
                     readme.index("### Claude Desktop, with one click")]
     assert "QualCoder is not needed to start." in stages
-    assert ("Leave the extension's \"Tool set\" setting as it comes "
-            "(`lifecycle`): with it you can create a project") in stages
-    assert ("The other two choices, `full` and `core`, cannot create a "
-            "project") in stages
+    flat = " ".join(stages.split())
+    # v0.14.2, the README review: what a tool set is, said before the
+    # instruction; the value a reader sees, `lifecycle`, named; the other
+    # two values' names are INSTALL.md's (pinned below and in its own
+    # one-click section)
+    assert ("A tool set is the group of Exegete's tools your assistant is "
+            "given. Leave the extension's \"Tool set\" setting as it comes "
+            "(`lifecycle`): with it you can create a project") in flat
+    assert "The other two choices cannot create a project." in flat
     assert ("**QualCoder is recommended from the start, and needed** to "
             "bring in documents (Word, PDF, images, audio, video)") in stages
     assert "Exegete imports only text the assistant hands it" \
-        in stages
-    assert "Its standard tool set, `full`, cannot create a project" \
-        in stages
+        in flat
+    assert "Its standard tool set cannot create a project" in flat
+    for name in ("`full`", "`core`"):
+        assert name not in stages, name
+    one_click = install[install.index("## Claude Desktop: the one-click "
+                                      "extension"):
+                        install.index("## Choosing your AI host")]
+    assert ("`lifecycle` (the default) gives every tool, creating a new "
+            "project included; `full` every tool except creating a "
+            "project; `core` a smaller set") in " ".join(one_click.split())
     install = _doc("INSTALL.md")
     assert "**Qualcoder installed** with at least one project created" \
         not in install

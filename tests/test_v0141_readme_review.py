@@ -146,11 +146,21 @@ def _flat_quotes(name):
 
 
 def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
+    """v0.14.2, the README review: the quotation moved to PRIVACY.md's
+    rung 1, which quotes it with its address and the exceptions; the
+    README keeps the settings address, what Model Improvement does in
+    plain words, and the check before participants' data."""
     readme = _flat("README.md")
     quoted = "unless you opt out of training through your account settings"
-    assert ("(Anthropic's consumer terms allow training on your "
-            f'conversations "{quoted}"; PRIVACY.md quotes them, with the '
-            "exceptions)") in readme
+    assert quoted not in readme
+    data = readme[readme.index("## Where your data goes"):
+                  readme.index("## Start here")]
+    assert ("3. On a personal Claude plan (Free, Pro or Max), open "
+            "https://claude.ai/settings/data-privacy-controls and look at "
+            "the Model Improvement setting. While it is on, Anthropic may "
+            "use your conversations to train its models (PRIVACY.md quotes "
+            "the terms, with their exceptions): decide before you use "
+            "participants' data.") in data
     assert "unless you opt out there" not in readme
     # The quoted words are PRIVACY.md's own quotation of the Consumer Terms
     privacy = _flat_quotes("PRIVACY.md")
@@ -174,9 +184,10 @@ def test_the_three_commitments():
         assert heading in section, heading
     assert ("It is not yet a fact: today the two differ in both "
             "directions") in section
-    dated = section.index("Checked on 29 September 2026, this program's "
-                          "0.14.0 (then called qualcoder-mcp) against "
-                          "QualCoder 3.8.2 and the 4.0-Beta pre-release:")
+    # v0.14.2, the README review: every row checked again, and re-dated
+    dated = section.index("Checked on 1 October 2026, Exegete 0.14.2 "
+                          "against QualCoder 3.8.2 and the 4.0-Beta "
+                          "pre-release:")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table
@@ -357,6 +368,10 @@ DOCS = ("README.md", "TOOLS.md", "INSTALL.md", "CONTRIBUTING.md",
 # but the documents name the new address, and a link this check skips
 # is a link nobody checks.
 BLOB = "https://github.com/nicotem/exegete/blob/main/"
+# v0.14.2, the README review: "Before you start" links three of the
+# README's own sections by this address (a relative "#anchor" would not
+# work on PyPI), and the check reads their anchors as it reads a file's
+README_ANCHOR = "https://github.com/nicotem/exegete#"
 OLD_ADDRESS = "https://github.com/nicotem/qualcoder_mcp"
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 
@@ -390,6 +405,10 @@ def _broken(text, name):
     for target in LINK.findall(_prose(text)):
         if target.startswith(OLD_ADDRESS):
             broken.append(target)
+            continue
+        if target.startswith(README_ANCHOR):
+            if target[len(README_ANCHOR):] not in _anchors("README.md"):
+                broken.append(target)
             continue
         if target.startswith(BLOB):
             target = target[len(BLOB):]
@@ -437,3 +456,9 @@ def test_the_link_check_would_notice():
                    "releases)", "README.md")
     assert not _broken(f"[a]({BLOB}INSTALL.md#coming-from-qualcoder-mcp)",
                        "README.md")
+    # The README's own sections, by their absolute address (v0.14.2)
+    assert not _broken(f"[a]({README_ANCHOR}start-here)", "TOOLS.md")
+    assert not _broken(f"[a]({README_ANCHOR}where-your-data-goes)",
+                       "README.md")
+    assert _broken(f"[a]({README_ANCHOR}no-such-section)", "README.md")
+    assert _broken(f"[a]({README_ANCHOR}start)", "README.md")

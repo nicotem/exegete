@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 v0.14.2, in progress: the assistant's brief, provisional; the rules a
 model must not miss within the 2,048 characters Claude Code shows of a
-tool description; and fixes from the checks of 0.14.1.
+tool description; fixes from the checks of 0.14.1; and the README,
+rewritten for readers new to Exegete.
 
 ### Added: the assistant's brief (provisional)
 
@@ -163,6 +164,64 @@ tool description; and fixes from the checks of 0.14.1.
   users `uvx exegete@latest --check-transition`, since uv otherwise
   reruns a copy it fetched before, and names what the check now says;
   "This comes first. Quit your AI host first" says "first" once.
+
+### Changed: the README, rewritten for readers new to Exegete
+
+- README.md is rewritten for a researcher who has not met Exegete,
+  QualCoder or MCP before: each section opens with what it is for,
+  explains before it instructs, and follows each warning with an
+  action. What it promised stays: the introduction, the example
+  requests, what Exegete covers and what still needs QualCoder, the
+  three commitments and the dated table, the facts on QualCoder's own
+  MCP server and the paragraph after them, the account of assistants
+  that open files by themselves, and the line on Cohen's kappa keep
+  their words or their substance.
+- The first screen ends with "Before you start", a short list: an early
+  version by one researcher, independent of QualCoder's developers;
+  which computer; that the AI behind the assistant runs on its maker's
+  computers; where to begin, with links to three sections; and where to
+  ask.
+- A new section, "How it works": the assistant app and the AI behind
+  it; Exegete, which has no AI of its own (a test checks that its one
+  dependency is the MCP library and that its source imports no model
+  client or network library); the project, and the two ways a text
+  comes in; when anything is written; and why Exegete cannot tell
+  whether an approval was the researcher's. "What it is not" is split,
+  its words unchanged: its first sentence ends this section, and the
+  rest sits beside the compatibility commitment.
+- "Where your data goes" opens with a short version, then lists the
+  settings to check before participants' data, with the third
+  condition PRIVACY.md gives (no other extension that reads files).
+  Turning off OpenAI's training setting is now the first of the steps
+  for OpenAI's apps, before any use, practice included, and no longer
+  sits beside the advice on participants' data. The one-click route's
+  check names computer use and connected folders.
+- Moved out, because the files named already say it: the makers' terms
+  in their own words, the dates of the archived pages, how far Codex
+  reads on each operating system, Claude Code's read-only commands and
+  the folder of Codex's session files (PRIVACY.md); phones and OpenAI's
+  Remote in detail, the tunnel for developers, enterprise workspaces,
+  Codex's defaults and how to make its folder (INSTALL.md); the four
+  tools to keep approving one at a time (INSTALL.md and TOOLS.md, which
+  the README links); the project formats' numbers (TOOLS.md). Projects
+  from a QualCoder older than 3.8 moved, within the README, to "A
+  project you already have".
+- Leftovers from earlier releases removed: "new in 0.14", "from 0.14"
+  in the table, an example file name with a version in it, and "then
+  called qualcoder-mcp" in the table's date line. The sentence naming
+  QualCoder 3.8.2 as "Latest" now carries the date it was checked,
+  because the README is frozen into each extension and PyPI upload. The
+  table of what each program does was checked again on 1 October 2026
+  against this release and QualCoder's releases, and re-dated.
+- The README does not describe the assistant's brief while the brief
+  is provisional; TOOLS.md and INSTALL.md do.
+- Tests: the pins on the README's words moved with their text; new
+  pins for the first screen, "How it works", the first line of "Start
+  here", the two coder names, the commitments' opening and the date
+  beside "Latest"; two sweeps of the README, one for labels tied to a
+  release (no "NEW") and one for words that make counts sound like
+  findings; and the link check now reads the README's own sections at
+  their absolute address.
 
 ### Measured
 

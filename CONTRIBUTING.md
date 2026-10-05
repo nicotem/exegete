@@ -97,8 +97,9 @@ behaviour has a test that fails without it, that the edge cases of the
 matched upstream behaviour are covered, and that the tests are
 Windows-safe and encoding-safe. The security review looks at write
 paths, file and symlink handling, what a tool result discloses into the
-AI conversation, and what a hostile project folder or a hostile model
-input could make the server do. Findings from both are fixed and
+AI conversation, and what a hostile project folder, a hostile model
+input or a hostile network response (the version file of the check for
+new versions) could make the server do or put into the conversation. Findings from both are fixed and
 re-verified before the merge, and behaviour changes that come out of them
 are recorded in the CHANGELOG. The maintainer runs both reviews; expect
 them to take longer than the CI, and expect requests for more tests
@@ -136,8 +137,9 @@ rather than fewer.
 - **Disclosure is existence-only.** A tool result may say that
   something exists (a private note on a row, a hidden coder's row, a
   count), never what it contains or whose it is. If a change alters what
-  leaves the project into the conversation, `PRIVACY.md` changes in the
-  same pull request.
+  leaves the project into the conversation, or anything Exegete sends
+  beyond this computer (an address it contacts, what a request carries,
+  when it is made), `PRIVACY.md` changes in the same pull request.
 - **No tool argument named `session_id`.** Some MCP middleware strips
   that name before the call reaches the server; the session tools use
   `coding_session_id`. Check new argument names against other

@@ -145,6 +145,9 @@ def _isolate_home(tmp_path, _sandbox_patch):
     for spellings in _names.SETTINGS.values():
         for name in spellings:
             _sandbox_patch.delenv(name, raising=False)
+    # And the settings with one spelling only (the update check)
+    for name in _names.NEW_ONLY_SETTINGS.values():
+        _sandbox_patch.delenv(name, raising=False)
     assert Path.home().resolve() == home.resolve()
     assert _database.default_workspace().resolve().is_relative_to(
         tmp_path.resolve())
@@ -489,6 +492,85 @@ def _restore_tool_registry():
     tools.clear()
     tools.update(before)
     server.mcp._mcp_server.instructions = instructions
+
+
+@pytest.fixture(autouse=True)
+def _isolate_update_check(_sandbox_patch):
+    """Each test starts with a run that knows nothing about the check
+    for new versions (updates.py keeps what main() learnt in the module),
+    and with the version file at an address on this computer where
+    nothing listens, so a check a test sets off fails at once, and
+    locally, rather than reaching GitHub."""
+    from exegete import updates
+    updates.reset_for_tests()
+    _sandbox_patch.setattr(updates, "VERSION_FILE_URL",
+                           "http://127.0.0.1:9/latest.json")
+    yield
+    # A check a test set off finishes inside the test's own sandbox
+    if updates._run.thread is not None:
+        updates._run.thread.join(updates.DEADLINE + 2)
+    updates.reset_for_tests()
+
+
+_LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def _is_loopback(host) -> bool:
+    if host is None:
+        return True
+    text = host.decode("ascii", "replace") if isinstance(host, bytes) \
+        else str(host)
+    return text in _LOOPBACK_HOSTS or text.startswith("127.")
+
+
+class NetworkRefused(OSError):
+    """A test reached for the network beyond this computer."""
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _no_test_reaches_the_network():
+    """No test reaches beyond this computer (the check for new versions,
+    the owner's ruling of 5 October 2026, is the first code in the
+    package that can). A name lookup or a connection to anything but
+    this computer is refused in this process, so a test of the check
+    must bring its own server on 127.0.0.1. Servers this suite starts
+    as subprocesses do not inherit it: they check nothing unless a test
+    switches the check on, and even then not before the week the
+    disclosure note promises has passed."""
+    import socket
+    real_getaddrinfo = socket.getaddrinfo
+    real_connect = socket.socket.connect
+    real_connect_ex = socket.socket.connect_ex
+
+    def getaddrinfo(host, *args, **kwargs):
+        if not _is_loopback(host):
+            raise NetworkRefused(f"the test suite looks up no name ({host})")
+        return real_getaddrinfo(host, *args, **kwargs)
+
+    def _check(sock, address):
+        if sock.family in (socket.AF_INET, socket.AF_INET6) and \
+                not _is_loopback(address[0]):
+            raise NetworkRefused(
+                f"the test suite connects to nothing beyond this computer "
+                f"({address[0]})")
+
+    def connect(self, address):
+        _check(self, address)
+        return real_connect(self, address)
+
+    def connect_ex(self, address):
+        _check(self, address)
+        return real_connect_ex(self, address)
+
+    socket.getaddrinfo = getaddrinfo
+    socket.socket.connect = connect
+    socket.socket.connect_ex = connect_ex
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = real_getaddrinfo
+        socket.socket.connect = real_connect
+        socket.socket.connect_ex = real_connect_ex
 
 
 @pytest.fixture(autouse=True)

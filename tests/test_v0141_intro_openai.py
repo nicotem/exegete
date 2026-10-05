@@ -923,7 +923,7 @@ class TestTheStepsANewcomerCanGetWrong:
 
     def test_a_first_session_speaks_to_any_assistant(self):
         first = _between(_flat("README.md"), "### A first session",
-                         "### Other assistants, and updates")
+                         "### Other assistants")
         assert re.findall(r"\bClaude\b(?! Desktop)", first) == \
             ["Claude"], "only 'to Anthropic with Claude' names Claude"
         for words in ("ask the assistant, for example",

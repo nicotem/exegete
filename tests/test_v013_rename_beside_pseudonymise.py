@@ -145,7 +145,7 @@ def test_the_documents_count_the_tools_the_server_registers():
     before, so a tool added without them would have left both stale."""
     import asyncio
     count = len(asyncio.run(server.mcp.list_tools()))
-    assert count == 73
+    assert count == 74
     # v0.14's release preparation: the default when configured by hand;
     # the desktop extension's own default is `lifecycle`
     assert f"(the default when you configure the server yourself, " \

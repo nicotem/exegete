@@ -89,7 +89,7 @@ def _projects_dir() -> Path:
 def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
-EXPECTED_TOOLS = 73
+EXPECTED_TOOLS = 74
 EXPECTED_CONCRETE_RESOURCES = 7   # six data resources + exegete://guidance/methods (0.12)
 EXPECTED_RESOURCE_TEMPLATES = 3
 EXPECTED_RESOURCES_TOTAL = 10

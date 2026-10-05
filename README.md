@@ -66,8 +66,16 @@ in an issue.
 
 ## Where your data goes
 
-Exegete runs on your computer, has no online service of its own
-and sends nothing anywhere itself. What the assistant reads through it
+Exegete runs on your computer and has no online service of its own.
+Apart from what the assistant reads through it (below), it sends one
+thing itself, and only while that is switched on: a request to its
+website, which GitHub hosts, at most once a week and when you ask, to
+learn whether a newer version exists. It carries nothing from your
+projects; GitHub records your computer's internet address. It is on in
+the Claude Desktop extension unless you switch it off, and off on the
+Terminal route unless you switch it on ([PRIVACY.md, "Checking for new
+versions"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#checking-for-new-versions)).
+What the assistant reads through it
 (passages, codes, memos, names) becomes part of the conversation and
 goes to the AI provider behind your assistant: Anthropic for Claude
 Desktop and Claude's other apps, OpenAI for ChatGPT's desktop app and
@@ -211,7 +219,7 @@ once" keeps it asking ("What it does", below, says why that matters).
 The extension is not signed by its developer; a computer or Claude
 account managed by your university or employer may refuse it.
 [INSTALL.md, "Claude Desktop: the one-click extension"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#claude-desktop-the-one-click-extension-recommended)
-says what you will see then, and what the extension's two settings do.
+says what you will see then, and what the extension's three settings do.
 
 ### ChatGPT's desktop app and Codex (OpenAI)
 
@@ -317,7 +325,7 @@ detected and the change is refused; the 4.0 beta cannot be detected, so
 there only you can make sure. An open 4.0 window shows the assistant's
 changes only once the project is opened again.
 
-### Other assistants, and updates
+### Other assistants
 
 **Other assistants.** Claude Code, LM Studio (fully local) and other
 MCP hosts (assistants that can use MCP tools), and Claude Desktop set
@@ -328,14 +336,37 @@ your data goes", above): never start it in your home folder or in a
 folder that holds a study, and for participants' data use Claude
 Desktop's chat with the extension instead.
 
-**Updating.** Updates are manual, and Exegete does not look for
-new versions itself: look at the Releases page now and then (with a
-GitHub account, Watch, then Custom, then Releases, sends you a notice
-of each). Install the newer `.mcpb` the same way; on the Terminal
-route, which OpenAI's apps take too,
+### Keeping Exegete up to date
+
+New versions fix problems and add what researchers ask for, so it is
+worth keeping up. With the Claude Desktop extension, you do not have
+to remember to look:
+
+- **Exegete tells you.** Once a week at most, and when Claude checks
+  for you, it fetches a small file from its website to see whether a
+  newer version exists, and Claude tells you once when one does.
+  Nothing from your projects is sent; GitHub, which hosts the website,
+  records your computer's internet address. To switch it off: Claude
+  Desktop's Settings, Extensions, Exegete, "Tell me when a new version
+  is out".
+  [PRIVACY.md, "Checking for new versions"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#checking-for-new-versions)
+  says exactly what is sent.
+- **Ask at any time.** Ask "Is Exegete up to date?" or "How do I
+  update Exegete?". Exegete answers with the version you have, the
+  newest one, and the steps for your computer.
+- **Updating takes a minute or two**, and your projects stay as they
+  are: download the newer file, open it, click Install, and restart
+  Claude Desktop.
+  [The install and update page](https://nicotem.github.io/exegete/update/)
+  shows each step.
+
+**Updating.** Updates are never installed by themselves; on the
+Terminal route, which OpenAI's apps take too,
 [INSTALL.md, "Updating the MCP Server"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#updating-the-mcp-server)
-has the one command. An update never touches your projects. If you
-used this program as qualcoder-mcp, nothing you set up stops working:
+has the one command, and Exegete's check is off unless you switch it on
+(`EXEGETE_UPDATE_CHECK=on`). An update never touches your projects. If
+you used this program as qualcoder-mcp, nothing you set up stops
+working:
 [INSTALL.md, "Coming from qualcoder-mcp"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp)
 says what changed and what you may change.
 

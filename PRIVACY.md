@@ -12,7 +12,11 @@ advice.
 process started by your MCP client (Claude Desktop, Claude Code, or any
 other). It adds **no telemetry, no analytics, and no separate cloud
 path** of its own. It opens your QualCoder project database read-only
-by default, and nothing in this server ever "phones home".
+by default. The one thing it fetches from the internet itself, while
+switched on, is a small public file that says whether a newer version
+of Exegete exists, and it sends nothing from your projects to get it
+("Checking for new versions", below, says exactly what is sent, and
+how to switch it off).
 
 **But the results of tool calls enter your Claude conversation.** That
 is the entire point of an MCP server, and it has a consequence you
@@ -52,7 +56,10 @@ What stays local, always, unless a sync service copies the folder it is in:
 - the server's own folder, `~/.exegete` (before 0.14.1,
   `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
   the session files, the secret, the pointer and the run manifests
-  below. At the first start of 0.14.1 or later an existing
+  below, and `update_check.json` (when Exegete last checked for a new
+  version, what it found, which versions it has told you about, and
+  the newest version that has run here; nothing from your projects;
+  "Checking for new versions" says more). At the first start of 0.14.1 or later an existing
   `~/.qualcoder_mcp` is renamed to `~/.exegete` whole, in one step on
   the same disk: the move never copies or duplicates the secret, and
   the files keep their owner-only modes. A link named
@@ -241,8 +248,10 @@ cannot put an arbitrary number in front of you, and `returned` (this
 page) and `has_more` are computed here on every page.
 
 What leaves your machine through this server: **only what tools return
-into the conversation**, but for qualitative research, that can be the
-most sensitive content you hold. An assistant that opens files by
+into the conversation**, and, while checking for new versions is on,
+one request for a public file that carries nothing from your projects
+("Checking for new versions"). For qualitative research, what tools
+return can be the most sensitive content you hold. An assistant that opens files by
 itself can send more, outside this server: the next section says which
 do.
 
@@ -905,13 +914,19 @@ is already commercial-terms coverage; no API key is needed.
 ### Rung 4: fully local models (Experimental)
 
 The rung where the third-party-processor question disappears: model
-inference and every operation of Exegete happen on your machine. LM
+inference and every operation of Exegete happen on your machine,
+provided its check for new versions stays off, as it is on this route
+unless you switch it on ("Checking for new versions", below). LM
 Studio's documentation states (quoted 2026-08-17,
 <https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
 entirely offline" and that "Nothing you enter into LM Studio when
 chatting with LLMs leaves your device". That is the vendor's statement,
 not our certification: verify offline operation yourself (disconnect
-and work) and record it as a data-management-plan evidence point.
+and work), check that the host's entry sets `EXEGETE_UPDATE_CHECK` to
+`off` (Exegete's log says at each start whether checking is on), and
+record both as data-management-plan evidence points. Disconnecting
+shows that the work needs no network; it does not show that nothing
+tries to connect, because a check that fails says nothing.
 
 The trade is stated plainly: a narrower workflow with more supervision,
 the reduced core toolset required (`EXEGETE_TOOLSET=core`), and,
@@ -940,6 +955,81 @@ local)".
 - All quotes above were pulled 2026-08-17. Terms change; the linked
   pages govern. The Privacy Center now lives at privacy.claude.com
   (older privacy.anthropic.com links redirect there).
+
+## Checking for new versions
+
+**What it does.** While it is switched on, Exegete fetches one small
+file, <https://nicotem.github.io/exegete/latest.json>: at most once a
+week on its own, and at most once a day when the assistant checks for
+you, which your assistant normally asks your permission for (INSTALL.md,
+"What hosts do with the tools' read and write marks"). The file holds
+four values: the newest version, its date, whether it is an important
+update, and the file's format. Exegete writes every sentence and link
+it shows you itself; nothing from the file but those values reaches the
+conversation.
+
+**When it is on.** In the Claude Desktop extension, it is on unless you
+switch it off: Settings, Extensions, Exegete, "Tell me when a new
+version is out". At its first start, Exegete tells you about the check
+through the assistant, and makes its first check no sooner than seven
+days later, so you can switch it off first. On the Terminal route, it
+is off unless the app that starts Exegete sets `EXEGETE_UPDATE_CHECK`
+to `on`. Exegete's log says at every start whether it is on.
+
+**What it sends.** An ordinary request for that file, identified only
+as "Exegete": nothing from your projects, no names, no version number,
+no identifier that Exegete creates or reads, no cookie. Like any web
+request, it shows your computer's internet address (IP address), which
+data-protection law may treat as personal data, and the time to the
+company that hosts the file, GitHub. GitHub, "What is GitHub Pages?",
+<https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages>
+(read on 5 October 2026 through GitHub's own source for its
+documentation, github/docs, since docs.github.com could not be opened
+where this was written): "When a GitHub Pages site is visited, the
+visitor's IP address is logged and stored for security purposes,
+regardless of whether the visitor has signed into GitHub or not."
+GitHub's privacy statement,
+<https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement>
+("Effective date: April 27, 2026", read the same way on the same day),
+says that "It applies to the Personal Data that GitHub, Inc. or GitHub
+B.V., processes as the “Data Controller” when you interact with
+websites, applications, and services that display this Statement"; that
+"We collect data about your interactions with the Services, such as IP
+address, device information, session details, date and time of
+requests, device type and ID, operating system and application version,
+information related to your contributions to repositories, and
+performance of specific features or Services"; and that "We transfer
+Personal Data from the European Union, the United Kingdom, and
+Switzerland to countries that the European Commission has not
+recognized as having an adequate level of data protection." The linked
+pages govern. Your network (your university's, for example) and its
+name servers also see that your computer asked for nicotem.github.io, a
+name that is Exegete's.
+
+**What this project receives.** Nothing: the site has no counter,
+analytics or log of this project's own.
+
+**What it keeps.** In Exegete's own folder (`~/.exegete`), a file
+`update_check.json`: when it last tried, the newest version it found,
+the versions it has already told you about, the newest version that has
+run on this computer, and when it told you about the check itself.
+Nothing from your projects.
+
+**What enters the conversation.** Notes for the assistant to pass on,
+each once: that the check exists (at the first start), that a newer
+version is out, and that an update worked. When you ask, the answer
+gives the installed and newest versions, how Exegete was installed, and
+the steps, with any folder written from your home folder (`$HOME`).
+These go to your AI provider like any other tool answer.
+
+**Switching it off.** When it is off, Exegete itself makes no
+connection, including when you ask whether it is up to date. Installing
+or updating the extension still downloads what it needs, as INSTALL.md
+says; that is Claude Desktop's work, not Exegete's. Blocking
+nicotem.github.io at your network stops the request reaching GitHub,
+but Exegete still tries, at most once a week, and your network still
+sees the name; switching it off stops the attempts. Blocked, Exegete
+says nothing about new versions.
 
 ## OpenAI's apps: the ChatGPT desktop app and Codex (Experimental)
 

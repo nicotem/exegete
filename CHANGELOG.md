@@ -7,7 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+Exegete can now tell researchers when a new version is out, in the
+conversation, and says how to install it for the way it was installed.
+Updates are still never installed by themselves.
+
+### Added: the check for new versions
+
+- **New versions announced in the conversation.** While switched on,
+  Exegete fetches a small public file from its website (GitHub Pages,
+  `https://nicotem.github.io/exegete/latest.json`), at most once a
+  week on its own and at most once a day when asked, to learn whether a
+  newer version exists. The first successful tool answer after one is
+  found carries a note for the assistant to pass on, once per version,
+  as the answer's last field (`exegete_notice`), so that a host which
+  reads only a tool's structured content sees it too. The file holds
+  four values (a format number, the newest version, its date and
+  whether it is important) and no text: every sentence and every link
+  Exegete shows is its own. The request carries nothing from the
+  researcher's projects and is identified only as "Exegete". Every
+  failure (offline, a proxy, a certificate, a redirect, a malformed or
+  oversized file, no answer within eight seconds) ends as "could not
+  check" and one log line naming the kind of failure only.
+- **Told before anything connects.** In the desktop extension the new
+  setting "Tell me when a new version is out" is on unless switched
+  off. The first answer after the first start of this version carries
+  a note saying what the check sends and how to switch it off, and the
+  first check waits at least seven days after it, for a new
+  installation and an update alike. On the Terminal route
+  `EXEGETE_UPDATE_CHECK` is off unless set. Switched off, Exegete makes
+  no connection, not even when asked. The log says at every start
+  whether checking is on. PRIVACY.md, "Checking for new versions", says
+  what is sent and kept, with GitHub's own words on what it records.
+- **`check_for_updates`**: the installed and newest versions with their
+  dates, and numbered steps for the way Exegete was installed: the
+  extension's download link and how to restart Claude Desktop, or the
+  exact command, with the version pinned, for pip, pipx, uv tool or a
+  copy of the source, written from the home folder (`$HOME`). It is
+  not marked read-only, since it records the check, so hosts ask
+  before it runs where they ask at all; it is not in `core`.
+- **A note after an update**, once, saying that the update worked and
+  what is new, in words written into the release (`release.py`), never
+  fetched.
+- **Two settings with one spelling only**: `EXEGETE_UPDATE_CHECK`, and
+  `EXEGETE_INSTALLED_AS`, the desktop extension's own mark, which lets
+  the steps fit the extension. An unrecognised value of either never
+  stops the server.
+
+### Changed
+
+- `openWorldHint` is true for one tool, `check_for_updates`; every
+  other tool still works on this computer's files and nothing else.
+- The desktop extension's manifest lists its privacy policies:
+  PRIVACY.md's section on the check, and GitHub's privacy statement.
+- README has a section of its own, "Keeping Exegete up to date"; its
+  sentence on what Exegete sends anywhere itself, and the matching
+  sentences of PRIVACY.md and INSTALL.md, now name the check.
+  QUICKSTART says to quit the client before updating a copy of the
+  source, as INSTALL.md always did.
+- The test suite refuses any name lookup or connection beyond this
+  computer, so a test of the check brings its own server on
+  127.0.0.1.
+
+### Measured
+
+- Serialised tool JSON as it stands with `check_for_updates`: full =
+  195,975 characters (about 49.0k tokens at chars/4) over 74 tools,
+  core = 64,804 (about 16.2k) over 21, unchanged, and the opt-in
+  lifecycle set = 198,554 (about 49.6k) over 75, measured on Python
+  3.13.14 with mcp 1.30.0 in an environment built from `uv.lock`
+  (`uv sync --frozen --extra dev`); on Python 3.11.15, built the same
+  way, 205,683, 68,096 and 208,402. The new tool adds 709 characters
+  to `full` and `lifecycle` and none to `core`; the same method in the
+  same environments gives 0.14.1's published figures exactly on
+  0.14.1's tree.
 
 ## [0.14.1-alpha] - 2026-10-01
 

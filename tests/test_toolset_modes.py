@@ -32,9 +32,9 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 73
+EXPECTED_FULL = 74                # 73, plus check_for_updates
 EXPECTED_CORE = 21
-EXPECTED_LIFECYCLE = 74          # full plus create_project (v0.14)
+EXPECTED_LIFECYCLE = 75          # full plus create_project (v0.14)
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -155,7 +155,7 @@ class TestToolsetResolution:
 
 class TestLifecycleToolset:
     """`lifecycle` (v0.14): the full set plus create_project, registered
-    only in that mode, so every count taken at import stays 73."""
+    only in that mode, so every count taken at import stays 74."""
 
     def test_membership_is_full_plus_create_project(self):
         full = {t.name for t in asyncio.run(server.mcp.list_tools())}
@@ -361,7 +361,7 @@ class TestLifecycleModeEndToEnd:
 
     def test_lifecycle_mode_creates_a_project_over_stdio(self, tmp_path):
         """Started with QUALCODER_MCP_TOOLSET=lifecycle, the server lists
-        74 tools and creates a project in its workspace, which it then
+        75 tools and creates a project in its workspace, which it then
         has selected (the real transport, the real start-up path)."""
         project = _build_project(tmp_path)
         home = tmp_path / "home"
@@ -429,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 195_266          # 73 tools, Python 3.13.5, mcp 1.30.0
+    FULL_MEASURED = 195_975          # 74 tools, Python 3.13, mcp 1.30.0
     CORE_MEASURED = 64_804           # 21 tools, same environment
-    FULL_MEASURED_310 = 204_974      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 205_683      # the same tree on Python 3.11
     CORE_MEASURED_310 = 68_096
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 197_845     # 74 tools, same environment
-    LIFECYCLE_MEASURED_310 = 207_693
+    LIFECYCLE_MEASURED = 198_554     # 75 tools, same environment
+    LIFECYCLE_MEASURED_310 = 208_402
 
     # Why two per cent, away from the reference environment.
     #
@@ -462,9 +462,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "195,266"
+    FULL_CHARS = "195,975"
     CORE_CHARS = "64,804"
-    FULL_ROUNDED = "195,000"
+    FULL_ROUNDED = "196,000"
     CORE_ROUNDED = "65,000"
     FULL_TOKENS = "49k"
     CORE_TOKENS = "16k"
@@ -496,8 +496,17 @@ class TestThePublishedSchemaBudget:
         the Unreleased one alone and 0.14.0's figure is history
         (`_v0140_entry`). From the release on, the current entry is
         0.14.1's, under an Unreleased heading that says nothing yet.
+        The check for new versions adds a tool, so the current entry is
+        the Unreleased one alone again, and 0.14.1's figure is history
+        (`_v0141_entry`).
         """
-        return cls._read("CHANGELOG.md").split("## [0.14.0")[0]
+        return cls._read("CHANGELOG.md").split("## [0.14.1")[0]
+
+    @classmethod
+    def _v0141_entry(cls):
+        """The 0.14.1 entry, whose figure is history and stays put."""
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [0.14.1"):text.index("## [0.14.0")]
 
     @classmethod
     def _v0140_entry(cls):
@@ -616,12 +625,13 @@ class TestThePublishedSchemaBudget:
         entry = self._current_entry()
         assert f"full = {self.FULL_CHARS} characters" in entry
         assert f"core = {self.CORE_CHARS}" in entry
-        assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
-        # The environment, by path: this repository holds two, at
-        # different interpreters, and a version alone does not say which
-        # was used.
-        assert "repository's own `venv/`" in entry
-        assert "Python 3.11.13" in entry and "`.venv/`" in entry
+        assert f"with mcp {self.REFERENCE_MCP}" in entry
+        # The environment: its interpreter, and how it was built, since
+        # a version alone does not say which environment was used (the
+        # check for new versions was measured in environments built from
+        # the lock file, which give 0.14.1's figures exactly on its tree)
+        assert "Python 3.13." in entry and "built from `uv.lock`" in entry
+        assert "Python 3.11." in entry and "built the same way" in entry
 
     def test_each_entry_carries_one_measurement_of_its_own(self):
         """The 0.12 entry used to state two, a batch apart, both in the
@@ -630,6 +640,10 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0141 = self._v0141_entry()
+        assert v0141.count("Serialised tool") == 1
+        assert "full = 195,266 characters" in v0141
+        assert self.FULL_CHARS not in v0141
         v0140 = self._v0140_entry()
         assert v0140.count("Serialised tool") == 1
         assert "full = 195,325 characters" in v0140
@@ -653,8 +667,8 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "198,000"
-    LIFECYCLE_TOKENS = "49k"
+    LIFECYCLE_ROUNDED = "199,000"
+    LIFECYCLE_TOKENS = "50k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):
         # v0.14.1: the README's measurement block moved to TOOLS.md

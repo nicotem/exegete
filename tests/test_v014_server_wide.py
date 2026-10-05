@@ -85,6 +85,11 @@ EXPECTED_HINTS = {
     # AI provider: marked as not read-only so that hosts ask before it
     # runs, as the owner's v0.13 ruling intends (the lead's correction)
     "read_pseudonym_list": (False, False, True, False),
+    # Changes nothing in a project, but fetches Exegete's version file
+    # from the network and records the check: the one tool reaching
+    # beyond the computer (the owner's ruling of 5 October 2026), not
+    # read-only so that hosts ask before it runs
+    "check_for_updates": (False, False, True, True),
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
@@ -229,9 +234,13 @@ class TestToolAnnotations:
                        "`read_pseudonym_list`"):
             assert needed in section, needed
 
-    def test_no_tool_claims_the_open_world(self):
-        for name, tool in _listed("lifecycle").items():
-            assert tool.annotations.openWorldHint is False, name
+    def test_one_tool_alone_claims_the_open_world(self):
+        # check_for_updates, which fetches Exegete's version file (the
+        # owner's ruling of 5 October 2026); every other tool works on
+        # this computer's files and nothing else
+        open_world = sorted(name for name, tool in _listed("lifecycle")
+                            .items() if tool.annotations.openWorldHint)
+        assert open_world == ["check_for_updates"]
 
 
 class TestUnknownArgumentsRefused:
@@ -394,6 +403,8 @@ NOT_TOOLS = {
     "save_requested": "a value of pseudonymise_source's retention record",
     "write_support": "a key of get_project_summary's schema block",
     "set_at": "a key of the AI coder name's record",
+    "update_check": "the check for new versions' state file, "
+                    "update_check.json, and the extension's setting",
 }
 
 
@@ -717,6 +728,9 @@ async def call_every_tool(client, root, lock_check=False):
     folder = made["project_path"]
     run.folder = Path(folder)
     await run("get_current_project", {})
+    # Off, as on the Terminal route by default: it answers without
+    # connecting to anything (the owner's ruling of 5 October 2026)
+    await run("check_for_updates", {})
     await run("set_project_ai_coder_name", {"name": "AI-Test"})
     await run("import_text_file", {"filename": "int1.txt",
                                    "content": TEXT_1,
@@ -1827,6 +1841,8 @@ class TestHiddenCodersOnTheCodebook:
 # QualCoder lock does not stop them, each with the reason.
 NOT_PROJECT_WRITES = {
     "select_project": "changes the selection only",
+    "check_for_updates": "may record a check for new versions in the "
+                         "state folder, never touches a project",
     "create_project": "makes a new project, never an open one",
     "set_project_ai_coder_name": "writes its settings file beside the "
                                  "database, as its description says",

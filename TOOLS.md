@@ -578,18 +578,18 @@ no longer listed, until v1.0.
 Claude can use these tools to analyse your data. The full toolset
 (the default when you configure the server yourself,
 `EXEGETE_TOOLSET=full`; the Claude Desktop extension defaults to
-`lifecycle`) registers 73 tools; the argument lists below name every
+`lifecycle`) registers 74 tools; the argument lists below name every
 argument each tool declares, and each tool's own description says what
 each one does.
 
 > **Creating projects (Experimental):** with
 > `EXEGETE_TOOLSET=lifecycle` the server registers the full set
-> plus `create_project`, 74 tools. The Claude Desktop extension's tool
+> plus `create_project`, 75 tools. The Claude Desktop extension's tool
 > set setting defaults to `lifecycle`, so creating projects is on there;
 > configured by hand, the server defaults to `full`, so that researchers
 > opt in to a tool that makes folders on their disk; it is not in `core`
 > either. Measured as below, the
-> `lifecycle` definitions run to about 198,000 characters, roughly 49k
+> `lifecycle` definitions run to about 199,000 characters, roughly 50k
 > tokens.
 
 > **Reduced toolset for local models (Experimental):** with
@@ -603,10 +603,10 @@ each one does.
 > set_project_ai_coder_name,
 > copy_project_to_workspace, delete_coding, list_backups.
 > Required for local models, optional elsewhere; unknown values fail
-> loudly at startup. Measured for 0.14 (the
+> loudly at startup. Measured for this release (the
 > serialised tool definitions: name, description and input schema, the
-> same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 195,000 characters for `full`, roughly 49k
+> same method as the CHANGELOG, under Python 3.13 with mcp 1.30.0), the
+> definitions run to about 196,000 characters for `full`, roughly 49k
 > tokens at four characters per token, and about 65,000 characters for
 > `core`, roughly 16k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -621,6 +621,9 @@ each one does.
 - `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (the `lifecycle` toolset only): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in the server's workspace or an existing folder, then selects it. Asks for the researcher's own QualCoder coder name (or an explicit "not known") after every other check; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
 - `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `exegete.json`); refuses the researcher's own coder name, QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
 - `read_pseudonym_list()` - **Sends real names to the AI provider**: returns the entries of the project's own `pseudonyms.json` (the researcher's reverse key), for use only when the researcher asks to see or check the list; each call writes one log line with the count and no name. In the full and lifecycle tool sets (so in the Claude Desktop extension by default), not in core. QualCoder's Pseudonyms dialog (the button in Manage Files) shows the same list without sending it anywhere. **Deprecated, removed in v0.15** (its answer says so)
+
+**Keeping Exegete up to date:**
+- `check_for_updates()` - Whether a newer version of Exegete exists, and how to install it: the installed version and its date, the newest version and its date, and numbered steps for the way Exegete was installed (the desktop extension's download link, or the exact command for pip, pipx, uv tool or a copy of the source), with the install and update page. **The only tool that reaches beyond this computer**: while checking is on (the extension's setting "Tell me when a new version is out", or `EXEGETE_UPDATE_CHECK` on the Terminal route) it fetches Exegete's version file from GitHub, at most once a day; switched off, it makes no connection. Not marked read-only, since it records the check, so hosts ask before it runs where they ask at all. In the full and lifecycle tool sets, not in core. The weekly check and the one-time notes are in [PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)
 
 **Core Data Analysis:**
 - `search_files(pattern, search_filename, search_content, search_memo, case_sensitive, limit, exclude_code_ids, cursor, max_matches_per_file)` - Find files by name, content, or memo with smart clarification workflow; `exclude_code_ids` hides content matches that are already coded under those codes, and `cursor` walks the results page by page. A PDF with no usable text (no text layer, or a PDF QualCoder 3.8.2 stored as the file itself) is not content-searched and is counted and named as not searched, so finding nothing there is not a "not found"; a search of any PDF covers its text layer only. `search_memo` is deprecated, removed in v0.15: `search_memos` searches file memos and every other kind of note
@@ -794,7 +797,10 @@ For AI-assisted coding with direct database writes:
 5. 🔒 **Verify in QualCoder** - Open project after AI coding to confirm results
 
 **General Safety:**
-- 🔒 The server runs locally and adds no cloud path of its own, but
+- 🔒 The server runs locally and adds no cloud path of its own (its
+  one connection, while switched on, is a check for new versions that
+  carries nothing from your projects: PRIVACY.md, "Checking for new
+  versions"), but
   tool results enter the conversation and are transmitted to whichever
   AI provider your host uses (none, with a fully local host). **See
   [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)** for what this means for research data.

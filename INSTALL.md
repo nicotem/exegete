@@ -28,7 +28,7 @@ arrives with v0.14; earlier releases have none.
    with its usual warning to install only extensions whose developer you
    trust; click Install, and Install again when Claude says it needs to
    fetch a few dependencies. The first install takes a minute or two.
-4. **Look at its two settings** (Settings, Extensions, Exegete).
+4. **Look at its three settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
    - **Tool set**: `lifecycle` (the default) gives every tool, creating
      a new project included; `full` every tool except creating a
@@ -43,6 +43,15 @@ arrives with v0.14; earlier releases have none.
      sync service keeps, and not one inside a QualCoder project.
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
+   - **Tell me when a new version is out**: on unless you switch it
+     off. Once a week at most, and when you ask, Exegete fetches a
+     small file from its website on GitHub to see whether a newer
+     version exists; nothing from your projects is sent, and GitHub
+     records your computer's internet address. It first checks at
+     least seven days after installation, and the first time the
+     assistant uses Exegete it is told to say so. Switched off,
+     Exegete itself makes no connection
+     ([PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)).
 5. **Check it works**: in a new conversation, the "+" button, then
    Connectors, lists Exegete with its tools switched on. Ask
    "Using the Exegete tools, is a project open?" and allow the
@@ -459,8 +468,9 @@ spellings with different values (after the usual tidying: spaces, the
 tool set's letter case and a leading `~` do not count), the server
 does not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
-desktop extension sets both spellings of its three settings itself,
-always to the same value.
+desktop extension sets both spellings of these three settings itself,
+always to the same value. The two settings of the check for new
+versions, below, are new and have one spelling only.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -471,10 +481,10 @@ always to the same value.
   tools and a few others answered "No Qualcoder project selected" until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 73 tools;
+- `EXEGETE_TOOLSET`: `full` (default) registers 74 tools;
   `core` registers the 21-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
-  registers the full set plus `create_project`, 74 tools, so that a
+  registers the full set plus `create_project`, 75 tools, so that a
   study can be started from the conversation (TOOLS.md, "Starting a
   project from the conversation"). Configured by hand, creating
   projects stays out of the default set, so that researchers opt in to
@@ -550,6 +560,18 @@ always to the same value.
   variable. Setting it to `1` lets those writes proceed; every write
   result then carries a warning. Use it only with backups you trust, and
   verify the results in QualCoder.
+- `EXEGETE_UPDATE_CHECK`: whether Exegete checks for new versions, at
+  most once a week on its own and at most once a day when asked
+  ([PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)
+  says what is sent). `on`, `true` or `1` switches it on; `off`, `false`
+  or `0` off, in any letter case. On the Terminal route, unset means
+  off; the desktop extension sets it from its setting "Tell me when a
+  new version is out", where unset means on. An unrecognised value
+  means off, and the log says so once; it never stops the server. The
+  log says at every start whether checking is on.
+- `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
+  `extension`), so that the update steps Exegete gives fit the way it
+  was installed. Do not set it yourself.
 
 ---
 
@@ -688,11 +710,10 @@ parameters. We have not evaluated specific models with this server;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** This server exposes 73 tools by
+**Step 3. Use the core toolset.** This server exposes 74 tools by
 default, and the serialised tool definitions alone measure about
-195,000 characters, roughly 49k tokens (measured for 0.14 under
-Python 3.13.5 with mcp 1.30.0, in the
-repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
+196,000 characters, roughly 49k tokens (measured under Python 3.13 with
+mcp 1.30.0, in an environment built from `uv.lock`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
 that rewrites the researcher's text has to say in its own definition
 what it rewrites, what it leaves behind and what the backup then
@@ -729,7 +750,8 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
       "command": "/Users/YOUR_USERNAME/exegete-venv/bin/exegete",
       "env": {
         "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda",
-        "EXEGETE_TOOLSET": "core"
+        "EXEGETE_TOOLSET": "core",
+        "EXEGETE_UPDATE_CHECK": "off"
       }
     }
   }
@@ -738,8 +760,9 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
 
 With a source (git) install, use `"command":
 "/path/to/exegete/venv/bin/python"` with `"args": ["-m",
-"exegete.server"]` and the same `env` block. Replace the paths
-with your own; if the file already has other entries under
+"exegete.server"]` and the same `env` block. The last line keeps
+Exegete's check for new versions off; it is off when unset too, and
+writing it down documents it. Replace the paths with your own; if the file already has other entries under
 `mcpServers`, add only the `"exegete"` block. LM Studio loads the
 server when you save.
 
@@ -754,7 +777,9 @@ will be updated when it has been verified).
 
 **Step 7. Verify offline (recommended for data-governance records).**
 Disconnect from the network and work. Model inference, chats, and all
-Exegete's operations are local; LM Studio states it needs the
+Exegete's operations are local (Exegete's check for new versions is off
+on this route, as Step 5's entry sets it; its log says so at every
+start); LM Studio states it needs the
 internet only for model search/downloads, runtime downloads, and update
 checks (<https://lmstudio.ai/docs/app/offline>). A note that you
 verified this yourself is good evidence for a data-management plan.
@@ -766,7 +791,8 @@ a narrower workflow than with Claude: use the core toolset, work one
 document or one code at a time, and verify codings as you go. Long
 transcripts should be worked in sections. Multi-step batch operations
 (recode across a project, cross-case reports) are not realistic
-targets for local models today. Nothing leaves your machine; the
+targets for local models today. Nothing leaves your machine through
+Exegete while its check for new versions is off; the
 trade-off is that you supervise more, and until an evaluation exists,
 treat every result as needing review.
 
@@ -1129,7 +1155,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 198,000 characters with `lifecycle`; TOOLS.md says how that
+  (about 199,000 characters with `lifecycle`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1144,7 +1170,9 @@ MCP defines: whether it only reads (`readOnlyHint`); for a tool that
 writes, whether it can replace or remove something that already exists
 (`destructiveHint`) and whether calling it twice the same way changes
 nothing more (`idempotentHint`); and whether it reaches anything beyond
-this computer (`openWorldHint`, never, for this server). The tools
+this computer (`openWorldHint`: only `check_for_updates`, which
+fetches Exegete's version file while checking is on; every other tool,
+never). The tools
 that only read are marked so, and so are the writing tools that can
 replace or remove work (renames, memos, deletions, merges, restores,
 exports with `overwrite`). The marks are hints: MCP tells hosts to
@@ -1502,7 +1530,11 @@ Create a case-code matrix
 
 ## Updating the MCP Server
 
-Updates are manual (a new release does not install itself).
+Updates are manual (a new release does not install itself). With the
+extension, Exegete tells you when one is out unless you switched that
+off; ask "How do I update Exegete?" for the steps. On the Terminal
+route the check is off unless you set `EXEGETE_UPDATE_CHECK` to `on`
+("Environment variables the server reads").
 
 **Desktop extension**: download the newer `.mcpb` and install it as
 before; Claude replaces the old one.
@@ -1912,9 +1944,13 @@ If you want to remove the MCP server:
    JSON file per run: the pseudonyms applied, the replacement spans, the
    row ids and offsets of the rows the run moved and, since v0.13, where
    each pseudonym now sits in the notes it rewrote; never an original
-   name). Nothing else is stored there, except, if an older copy of the
-   server ever made a folder of its own under the earlier name,
-   `old_folder_noted`, one line that lets the log say so only once.
+   name), and the record of the check for new versions
+   (`update_check.json`: when it last tried, what it found, which
+   versions it has told you about and the newest version that has run
+   here; nothing from your projects). Nothing else is stored there,
+   except, if an older copy of the server ever made a folder of its own
+   under the earlier name, `old_folder_noted`, one line that lets the
+   log say so only once.
 
 Uninstalling does not touch your QualCoder projects. Note that the
 server does write to projects when you use its coding tools (after

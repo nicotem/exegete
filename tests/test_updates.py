@@ -365,9 +365,13 @@ class TestShellPaths:
                                   "python.exe", windows=True) == \
             "$HOME\\exegete-venv\\Scripts\\python.exe"
 
-    @pytest.mark.parametrize("name", ['a"b', "a'b", "a`b", "a$b", "a!b",
-                                      "a\\b", "a\u202eb", "a\nb",
-                                      "a\u201cb", "a\u201db"])
+    @pytest.mark.parametrize("name", [
+        'a"b', "a'b", "a`b", "a$b", "a!b",
+        pytest.param("a\\b", marks=pytest.mark.skipif(
+            sys.platform == "win32",
+            reason="a backslash separates folders on Windows, so no "
+                   "folder name holds one")),
+        "a\u202eb", "a\nb", "a\u201cb", "a\u201db"])
     def test_a_path_no_quoting_can_carry_gets_no_command(self, name):
         assert updates.shell_path(Path.home() / name / "python",
                                   windows=False) is None

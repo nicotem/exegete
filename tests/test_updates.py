@@ -284,8 +284,6 @@ class TestTheFetch:
         assert failed.value.kind == updates.NOT_ALLOWED
 
     def test_the_real_address_is_https_on_the_project_site(self):
-        assert updates.VERSION_FILE_URL != \
-            "https://nicotem.github.io/exegete/latest.json"  # conftest's
         import importlib
         source = (REPO / "src" / "exegete" / "updates.py").read_text(
             encoding="utf-8")
@@ -368,10 +366,20 @@ class TestShellPaths:
             "$HOME\\exegete-venv\\Scripts\\python.exe"
 
     @pytest.mark.parametrize("name", ['a"b', "a'b", "a`b", "a$b", "a!b",
-                                      "a\\b", "a‮b", "a\nb"])
+                                      "a\\b", "a\u202eb", "a\nb",
+                                      "a\u201cb", "a\u201db"])
     def test_a_path_no_quoting_can_carry_gets_no_command(self, name):
         assert updates.shell_path(Path.home() / name / "python",
                                   windows=False) is None
+
+    @pytest.mark.parametrize("name", [
+        'a"b', "a'b", "a`b", "a$b", "a\u201c; calc; \u201db",
+        "a\u201eb", "a\u2018b", "a\u2019b", "a\u202eb"])
+    def test_powershell_gets_no_command_for_its_quotes_either(self, name):
+        # PowerShell reads curly quotes as quotes: a folder named
+        # a\u201c; calc; \u201db would close the string and run calc
+        assert updates.shell_path(Path.home() / name / "python.exe",
+                                  windows=True) is None
 
 
 # ---------------------------------------------------------------------------
@@ -557,7 +565,7 @@ class TestTheNotes:
         updates.update_state(updates._raise_highest(
             updates.parse_installed("0.0.1")), NOW)
         installed = updates.parse_published(
-            release.VERSION.replace("-alpha", "a0"))
+            str(PackagingVersion(release.VERSION)))
         _started({}, version=installed.pep440())
         text = updates.due_note(True, NOW).text
         assert release.SUMMARY in text
@@ -777,3 +785,123 @@ class TestTheRelease:
         assert release.SUMMARY.isprintable()
         assert 0 < len(release.SUMMARY) <= 300
         assert "http" not in release.SUMMARY
+
+
+# ---------------------------------------------------------------------------
+# The review's findings, kept (each failed before its fix)
+# ---------------------------------------------------------------------------
+
+class TestRestartsAndFailures:
+
+    def test_an_update_note_not_yet_given_survives_a_restart(self):
+        # Claude Desktop starts the new version at install, then the
+        # researcher quits and reopens it: no answer in between
+        updates.update_state(updates._raise_highest(
+            updates.parse_installed("0.14.2a0")), NOW)
+        updates.update_state(updates._disclose(NOW), NOW)
+        _started(version="0.15.0a0")
+        updates.after_call(NOW)          # a call with no note given
+        updates.reset_for_tests()
+        _started(version="0.15.0a0")
+        assert updates.due_note(True, NOW).key == "after update"
+
+    def test_a_first_session_is_never_taken_for_an_update(self):
+        # Off, on a computer where Exegete never ran: the session's own
+        # call makes the state folder
+        _started({})
+        assert updates.due_note(True, NOW) is None
+        preview_tokens.state_home().mkdir(parents=True)
+        updates.after_call(NOW)
+        updates.reset_for_tests()
+        _started({})
+        assert updates.due_note(True, NOW) is None
+
+    def test_a_corrupt_record_is_not_taken_for_an_update(self):
+        _state_path().parent.mkdir(parents=True)
+        _state_path().write_text("{not json", encoding="utf-8")
+        _started({})
+        assert updates.due_note(True, NOW) is None
+
+    def test_a_start_writes_nothing(self):
+        preview_tokens.state_home().mkdir(parents=True)
+        for environ in ({}, None):
+            updates.reset_for_tests()
+            _started(environ)
+            assert list(preview_tokens.state_home().iterdir()) == []
+
+    def test_unwritable_state_still_checks_once_a_week(self, site,
+                                                       monkeypatch):
+        def refuse(*args, **kwargs):
+            raise OSError("no space left on device")
+        monkeypatch.setattr(updates.tempfile, "mkstemp", refuse)
+        _started()
+        updates.mark_given(updates.due_note(True, NOW), NOW)
+        assert not _state_path().exists()
+        later = NOW + WEEK
+        for n in range(4):
+            updates._maybe_check_in_background(later + n)
+            if updates._run.thread is not None:
+                updates._run.thread.join(5)
+        assert len(site.requests) == 1
+        _answer(later + 60)              # asked within the day: no fetch
+        assert len(site.requests) == 1
+
+    def test_an_asked_check_waits_for_a_running_one(self, site):
+        site.delay = 0.5
+        _started()
+        updates.mark_given(updates.due_note(True, NOW), NOW)
+        updates._maybe_check_in_background(NOW + WEEK)
+        answer = _answer(NOW + WEEK + 1)
+        assert answer["newest_version"] == "0.15.0-alpha"
+        assert len(site.requests) == 1
+
+    def test_a_git_copy_started_under_the_old_name_is_a_git_copy(
+            self, monkeypatch, tmp_path):
+        monkeypatch.setattr(updates, "_source_folder", lambda: tmp_path)
+        assert updates.detect_route("qualcoder-mcp", {}) == updates.SOURCE
+
+    def test_a_git_copy_stays_on_its_branch(self, monkeypatch):
+        monkeypatch.setattr(updates, "_source_folder",
+                            lambda: Path.home() / "exegete")
+        steps = updates._terminal_steps(
+            updates.SOURCE, updates.parse_published("0.15.0a0"), False)
+        assert "git merge --ff-only v0.15.0-alpha" in steps[1]
+        assert "checkout" not in steps[1]
+
+
+class TestTheHookOnRealAnswers:
+
+    def _call(self, name, arguments=None):
+        return asyncio.run(server.mcp.call_tool(name, arguments or {}))
+
+    def test_a_tools_own_refusal_carries_no_note(self):
+        _started()
+        content, _ = self._call("get_project_summary")
+        body = json.loads(content[0].text)
+        assert "error" in body and "exegete_notice" not in body
+        assert updates.due_note(True, NOW).key == "disclosure"
+
+    def test_a_validation_error_carries_no_note_and_stays_an_error(self):
+        from mcp.server.fastmcp.exceptions import ToolError
+        _started()
+        with pytest.raises(ToolError):
+            self._call("select_project", {})
+        assert updates.due_note(True, NOW).key == "disclosure"
+
+    def test_a_failing_check_never_fails_a_tool(self, monkeypatch):
+        _started()
+
+        def broken(*args, **kwargs):
+            raise RuntimeError("anything")
+        monkeypatch.setattr(updates, "due_note", broken)
+        content, _ = self._call("explain_ai_coding_tools")
+        assert "exegete_notice" not in content[0].text
+        assert json.loads(content[0].text)
+
+    def test_a_start_that_fails_never_stops_the_server(self, monkeypatch):
+        def broken(*args, **kwargs):
+            raise PermissionError("cannot search the home folder")
+        monkeypatch.setattr(updates, "start", broken)
+        monkeypatch.setattr(server.mcp, "run", lambda **kwargs: None)
+        monkeypatch.setattr(server, "_settle_state_folder", lambda: None)
+        server.main([])

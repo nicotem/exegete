@@ -353,7 +353,8 @@ to remember to look:
   says exactly what is sent.
 - **Ask at any time.** Ask "Is Exegete up to date?" or "How do I
   update Exegete?". Exegete answers with the version you have, the
-  newest one, and the steps for your computer.
+  newest one (from its first check on, a week after it first tells you
+  about the check), and the steps for your computer.
 - **Updating takes a minute or two**, and your projects stay as they
   are: download the newer file, open it, click Install, and restart
   Claude Desktop.

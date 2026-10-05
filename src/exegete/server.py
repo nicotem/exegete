@@ -657,19 +657,33 @@ class _ExegeteMCP(FastMCP):
         # successful answer as its last field, `exegete_notice`, so that
         # it reaches the structured content too, which is all some hosts
         # read. check_for_updates says these things itself.
-        note = (None if tool is None or tool.name == updates.TOOL_NAME
-                else updates.due_note(
-                    updates.TOOL_NAME in self._tool_manager._tools))
-        if note is None:
-            return await super().call_tool(name, arguments)
-        raw = await self._tool_manager.call_tool(
-            name, arguments, context=self.get_context(),
-            convert_result=False)
-        joined = updates.attach(raw, note)
-        if joined is not None:
-            updates.mark_given(note)
-            raw = joined
-        return tool.fn_metadata.convert_result(raw)
+        # Nothing about the check may fail a tool: each step that could
+        # raise is read as "no note".
+        try:
+            note = (None if tool is None or tool.name == updates.TOOL_NAME
+                    else updates.due_note(
+                        updates.TOOL_NAME in self._tool_manager._tools))
+        except Exception as error:
+            logger.debug("No note for this answer: %s", error_label(error))
+            note = None
+        try:
+            if note is None:
+                return await super().call_tool(name, arguments)
+            raw = await self._tool_manager.call_tool(
+                name, arguments, context=self.get_context(),
+                convert_result=False)
+            try:
+                joined = updates.attach(raw, note)
+                if joined is not None:
+                    updates.mark_given(note)
+                    raw = joined
+            except Exception as error:
+                logger.debug("The note was not added: %s",
+                             error_label(error))
+            return tool.fn_metadata.convert_result(raw)
+        finally:
+            # The version that runs here, once its state folder exists
+            updates.after_call()
 
     async def read_resource(self, uri):
         # The earlier scheme is rewritten before matching, templates
@@ -18962,7 +18976,13 @@ def main(argv: Optional[List[str]] = None, *,
     # after the state folder is settled, since it keeps its record there,
     # and never for --version or --check-transition. It logs whether it is
     # on, and checks in the background only when a week has passed.
-    updates.start(_package_version, started_as)
+    try:
+        updates.start(_package_version, started_as)
+    except Exception as error:
+        # It never stops the server: without it, nothing is checked
+        logger.warning("The check for new versions could not start (%s); "
+                       "nothing will be checked in this run.",
+                       error_label(error))
 
     # Run the server using stdio transport
     mcp.run(transport="stdio")

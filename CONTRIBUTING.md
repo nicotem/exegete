@@ -289,6 +289,20 @@ upgrade through the old name never brings unfinished work; any tag
 other than `v<version>` or `v<version>.devN` stops the workflow before
 it builds anything (`scripts/release_version.py`).
 
+## The check for new versions
+
+Every installed copy fetches `https://nicotem.github.io/exegete/latest.json`
+(`src/exegete/updates.py`) and follows no redirect, so that address is
+permanent: never rename or delete the `nicotem` account, the `exegete`
+repository or its Pages site, and never set a custom domain on this
+Pages site or on the account's own one (GitHub would then redirect, and
+every copy would stop hearing of new versions). The file keeps
+`"format": 1`; a change it cannot keep is published beside it under
+another name. Each release updates `src/exegete/release.py` (the
+version, its date and the summary the note after an update shows) with
+`pyproject.toml` and the CHANGELOG heading; tests hold the three
+together.
+
 ## Licence
 
 From v0.13, Exegete (then called qualcoder-mcp) is licensed under the GNU Lesser General

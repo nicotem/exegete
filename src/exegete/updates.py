@@ -374,7 +374,8 @@ def fetch(url: Optional[str] = None, deadline: Optional[float] = None
 # Shared by every Exegete on the computer (the extension and a Terminal
 # copy may both run), so each write re-reads the file under the lock and
 # changes it only in ways that merge: maxima, unions, the earliest
-# disclosure.
+# disclosure. The lock is this process's: two copies writing in the same
+# instant can lose one change, which at worst repeats a notice once.
 # ---------------------------------------------------------------------------
 
 _LOCK = threading.RLock()
@@ -616,6 +617,9 @@ def detect_route(started_as: Optional[str] = None, environ=None,
     if (env_settings.installed_as(environ) or "").strip().lower() == \
             EXTENSION:
         return EXTENSION
+    # A git copy is updated as a git copy, under either name
+    if prefix is None and _source_folder() is not None:
+        return SOURCE
     if started_as:
         return OLD_NAME
     root = Path(sys.prefix if prefix is None else prefix)
@@ -625,8 +629,6 @@ def detect_route(started_as: Optional[str] = None, environ=None,
         return UV_TOOL
     if kind == "pipx":
         return PIPX
-    if prefix is None and _source_folder() is not None:
-        return SOURCE
     parts = [part.lower() for part in root.parts]
     if "archive-v0" in parts and "uv" in " ".join(parts):
         return UVX
@@ -641,8 +643,11 @@ def detect_route(started_as: Optional[str] = None, environ=None,
 # does not), so the account name stays out of the conversation.
 # ---------------------------------------------------------------------------
 
-_POSIX_REFUSED = set("'\"`$!\\")
-_WINDOWS_REFUSED = set("'\"`$")
+# Curly quotes too: PowerShell reads \u201c, \u201d and \u201e as double
+# quotes, and \u2018 to \u201b as single ones
+_CURLY = "\u201c\u201d\u201e\u2018\u2019\u201a\u201b"
+_POSIX_REFUSED = set("'\"`$!\\" + _CURLY)
+_WINDOWS_REFUSED = set("'\"`$" + _CURLY)
 
 
 def shell_path(path: Path, windows: bool) -> Optional[str]:
@@ -757,8 +762,10 @@ def _terminal_steps(route: str, new: Version, windows: bool
         return [
             _QUIT_HOST,
             f'In {shell}, go to the copy\'s folder (cd "{place}"), then '
-            f"run git fetch --tags, then git checkout v{new.display()}, "
-            f"then {_command(windows, python, '-m pip install -e .')}",
+            f"run git fetch --tags, then git merge --ff-only "
+            f"v{new.display()} (it stays on its branch, and refuses if the "
+            f"copy has changes of its own), then "
+            f"{_command(windows, python, '-m pip install -e .')}",
             _REOPEN_HOST,
         ]
     else:
@@ -786,9 +793,15 @@ class _Run:
         self.given: set = set()
         self.thread: Optional[threading.Thread] = None
         self.windows = os.name == "nt"
+        # What this run itself set, kept in memory as well as in the
+        # state file: if the file cannot be written (a full disk, a
+        # Windows sharing violation), the limits still hold for this run
+        self.memory: Dict[str, Any] = {}
 
 
 _run = _Run()
+# One fetch at a time in this process, asked or in the background
+_FETCHING = threading.Lock()
 
 
 def reset_for_tests() -> None:
@@ -797,12 +810,45 @@ def reset_for_tests() -> None:
     _run = _Run()
 
 
+def _local_date(timestamp: float) -> date:
+    """The date the researcher's own clock shows at `timestamp`."""
+    return datetime.fromtimestamp(timestamp).date()
+
+
+def _current_state(now: float, folder: Optional[Path] = None
+                   ) -> Dict[str, Any]:
+    """The state file, with what this run set laid over it where the
+    file is older or lacks it."""
+    state = read_state(now, folder)
+    memory = _run.memory
+    mine = memory.get("last_attempt")
+    if mine is not None and mine > state.get("last_attempt", -1):
+        state["last_attempt"] = mine
+        if memory.get("newest") is not None:
+            state["newest"] = memory["newest"]
+        if "last_error" in memory:
+            if memory["last_error"] is None:
+                state.pop("last_error", None)
+            else:
+                state["last_error"] = memory["last_error"]
+    if state.get("disclosed_at") is None and \
+            memory.get("disclosed_at") is not None:
+        state["disclosed_at"] = memory["disclosed_at"]
+        state["first_check_after"] = memory["first_check_after"]
+    if memory.get("announced"):
+        state["announced"] = list(dict.fromkeys(
+            memory["announced"] + state.get("announced", [])))
+    return state
+
+
 def start(installed_version: str, started_as: Optional[str] = None,
           now: Optional[float] = None, environ=None) -> None:
     """Called once by main(), after the state folder is settled and
     before the server serves: log whether checking is on, decide which
-    notes are due, record the version that runs here, and start the
-    weekly check if it is due."""
+    notes are due, and start the weekly check if it is due. Nothing is
+    written here: the version that runs is recorded when a note is
+    given or after a tool call (after_call), so a start that is never
+    used changes nothing, and a note due is never lost to one."""
     now = time.time() if now is None else now
     with _LOCK:
         _run.started = True
@@ -814,19 +860,20 @@ def start(installed_version: str, started_as: Optional[str] = None,
     logger.info("Checking for new versions: %s", "on" if _run.on else "off")
     if _run.installed is None:
         return
-    existed = state_home().exists()
-    state = read_state(now) if existed else {}
+    folder = state_home()
+    existed = os.path.isdir(folder)
+    state = read_state(now, folder) if existed else {}
     highest = state.get("highest_version_run")
     if highest is not None:
         _run.after_update = _run.installed.key() > highest.key()
         _run.recorded = not _run.after_update
     else:
-        # Exegete ran here before (its folder exists) but recorded no
-        # version: an update from 0.14.1 or earlier. With checking on,
-        # the disclosure says what is new that matters most.
-        _run.after_update = existed and not _run.on
-    if existed and not _run.recorded:
-        _record_version(now)
+        # Exegete ran here before (its folder exists) without ever
+        # keeping this record: an update from 0.14.1 or earlier. With
+        # checking on, the disclosure says what is new that matters most.
+        ran_before = existed and not os.path.exists(
+            _state_file(folder))
+        _run.after_update = ran_before and not _run.on
     _maybe_check_in_background(now)
 
 
@@ -834,6 +881,22 @@ def _record_version(now: float) -> None:
     if _run.installed is not None and \
             update_state(_raise_highest(_run.installed), now) is not None:
         _run.recorded = True
+
+
+def after_call(now: Optional[float] = None) -> None:
+    """After every tool call: record the version that runs here once
+    its state folder exists (a first session's own call may be what
+    makes it), unless a note about an update is still to be given.
+    Never raises."""
+    try:
+        if not _run.started or _run.recorded or _run.after_update or \
+                _run.installed is None:
+            return
+        if os.path.isdir(state_home()):
+            _record_version(time.time() if now is None else now)
+    except Exception as error:
+        logger.debug("Could not record the version that runs here: %s",
+                     type(error).__name__)
 
 
 def _check_due(state: Dict[str, Any], now: float) -> bool:
@@ -846,21 +909,39 @@ def _check_due(state: Dict[str, Any], now: float) -> bool:
     return last is None or now - last >= CHECK_EVERY
 
 
-def check_now(now: Optional[float] = None,
-              folder: Optional[Path] = None) -> Dict[str, Any]:
+def check_now(now: Optional[float] = None, folder: Optional[Path] = None,
+              wait: bool = True,
+              reuse_within: Optional[float] = None) -> Dict[str, Any]:
     """Fetch and record the version file now; returns the new state.
-    Never raises."""
+    One fetch at a time: a background check that finds one running
+    gives up, and an asked one waits for it and, with `reuse_within`,
+    uses its result. Never raises."""
     now = time.time() if now is None else now
     folder = state_home() if folder is None else folder
+    if not _FETCHING.acquire(timeout=DEADLINE + 2 if wait else 0):
+        return _current_state(now, folder)
     try:
-        published = parse_version_file(fetch(), _today(now))
-        error = None
-    except CheckFailed as failure:
-        published, error = None, failure.kind
-        logger.info("The check for new versions could not be made: %s",
-                    error)
-    return (update_state(_attempted(now, published, error), now, folder)
-            or read_state(now, folder))
+        if reuse_within is not None:
+            last = _current_state(now, folder).get("last_attempt")
+            if last is not None and now - last < reuse_within:
+                return _current_state(now, folder)
+        with _LOCK:
+            _run.memory["last_attempt"] = int(now)
+        try:
+            published = parse_version_file(fetch(), _today(now))
+            error = None
+        except CheckFailed as failure:
+            published, error = None, failure.kind
+            logger.info("The check for new versions could not be made: %s",
+                        error)
+        with _LOCK:
+            if published is not None:
+                _run.memory["newest"] = published
+            _run.memory["last_error"] = error
+        update_state(_attempted(now, published, error), now, folder)
+        return _current_state(now, folder)
+    finally:
+        _FETCHING.release()
 
 
 def _maybe_check_in_background(now: float) -> None:
@@ -868,10 +949,10 @@ def _maybe_check_in_background(now: float) -> None:
         if _run.thread is not None and _run.thread.is_alive():
             return
         folder = state_home()
-        if not _check_due(read_state(now, folder), now):
+        if not _check_due(_current_state(now, folder), now):
             return
         _run.thread = threading.Thread(target=check_now,
-                                       args=(now, folder),
+                                       args=(now, folder, False),
                                        name="exegete-weekly-check",
                                        daemon=True)
         _run.thread.start()
@@ -900,7 +981,7 @@ def _notice_text(published: Published, tool_available: bool) -> str:
 
 
 def _disclosure_text(now: float, tool_available: bool) -> str:
-    first = spoken_date(_today(now + FIRST_CHECK_WAIT))
+    first = spoken_date(_local_date(now + FIRST_CHECK_WAIT))
     when_asked = ", and when they ask," if tool_available else ""
     switch = _switch_off_words(_run.route).replace(
         "To switch it off", "To switch it off before then or at any time")
@@ -939,14 +1020,11 @@ def due_note(tool_available: bool, now: Optional[float] = None
              ) -> Optional[Note]:
     """The note the next successful tool answer should carry, or None.
     Cheap when nothing is due; also starts the weekly check when a
-    server has run for a week, and records the version here once the
-    state folder exists."""
+    server has run for a week."""
     if not _run.started or _run.installed is None:
         return None
     now = time.time() if now is None else now
-    if not _run.recorded and state_home().exists():
-        _record_version(now)
-    state = read_state(now) if (_run.on or _run.after_update) else {}
+    state = _current_state(now) if (_run.on or _run.after_update) else {}
     if _run.on and state.get("disclosed_at") is None and \
             "disclosure" not in _run.given:
         return Note("disclosure", _disclosure_text(now, tool_available))
@@ -970,12 +1048,25 @@ def mark_given(note: Note, now: Optional[float] = None) -> None:
     with _LOCK:
         _run.given.add(note.key)
     if note.key == "disclosure":
+        with _LOCK:
+            _run.memory.setdefault("disclosed_at", int(now))
+            _run.memory.setdefault("first_check_after",
+                                   int(now + FIRST_CHECK_WAIT))
         update_state(_disclose(now), now)
-        if not _run.recorded:
+        if not _run.recorded and not _run.after_update:
             _record_version(now)
+    elif note.key == "after update":
+        # Recorded only now that it has been given: a start that never
+        # reached a tool answer leaves it due for the next one
+        _run.after_update = False
+        _record_version(now)
     elif note.key.startswith("new version:"):
         version = parse_published(note.key.split(":", 1)[1])
         if version is not None:
+            with _LOCK:
+                _run.memory["announced"] = [version.pep440()] + [
+                    v for v in _run.memory.get("announced", [])
+                    if v != version.pep440()]
             update_state(_announce(version), now)
 
 
@@ -1077,7 +1168,7 @@ def tool_answer(now: Optional[float] = None,
         return done("Exegete cannot tell which version this is (it is "
                     "running from a copy that was not installed), so it "
                     f"cannot compare it with the newest. See {UPDATE_PAGE}.")
-    state = read_state(now)
+    state = _current_state(now)
     prefix = ""
     if state.get("disclosed_at") is None:
         # The disclosure, said to the researcher in the answer itself
@@ -1089,18 +1180,19 @@ def tool_answer(now: Optional[float] = None,
                   "Nothing from your projects is sent; GitHub records your "
                   "computer's internet address and the time. "
                   + _switch_off_words(_run.route) + " ")
-        state = read_state(now)
+        state = _current_state(now)
     first = state.get("first_check_after")
     if first is None or now < first:
-        day = spoken_date(_today(first if first is not None
-                                 else now + FIRST_CHECK_WAIT))
+        day = spoken_date(_local_date(first if first is not None
+                                      else now + FIRST_CHECK_WAIT))
         return done(prefix + f"Exegete's first check for new versions will "
                     f"be on {day}, as it says when this version is first "
                     f"used; until then it makes no connection. {have} You "
                     f"can look yourself at {UPDATE_PAGE}.")
     last = state.get("last_attempt")
-    if last is None or now - last >= ASKED_REUSE:
-        state = check_now(now)
+    # A check still running is waited for, and its answer used
+    if _FETCHING.locked() or last is None or now - last >= ASKED_REUSE:
+        state = check_now(now, reuse_within=ASKED_REUSE)
     if state.get("last_error") is not None:
         return done(f"Exegete could not reach its website to check for a "
                     f"newer version ({state['last_error']}). The computer "
@@ -1132,6 +1224,10 @@ def tool_answer(now: Optional[float] = None,
     # The researcher has now been told: the notice is not repeated
     with _LOCK:
         _run.given.add(f"new version:{newest.version.pep440()}")
+    with _LOCK:
+        _run.memory["announced"] = [newest.version.pep440()] + [
+            v for v in _run.memory.get("announced", [])
+            if v != newest.version.pep440()]
     update_state(_announce(newest.version), now)
     when = spoken_date(newest.released)
     second = ("It fixes a problem that could affect your projects: the page "

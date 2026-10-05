@@ -1010,10 +1010,12 @@ name that is Exegete's.
 analytics or log of this project's own.
 
 **What it keeps.** In Exegete's own folder (`~/.exegete`), a file
-`update_check.json`: when it last tried, the newest version it found,
-the versions it has already told you about, the newest version that has
-run on this computer, and when it told you about the check itself.
-Nothing from your projects.
+`update_check.json`: when it last tried and, if that failed, the kind
+of failure; the newest version it found; the versions it has already
+told you about; when it told you about the check itself and the date
+of its first check; and the newest version of Exegete that has run on
+this computer, which it keeps even with checking off (so that it can
+say once that an update worked). Nothing from your projects.
 
 **What enters the conversation.** Notes for the assistant to pass on,
 each once: that the check exists (at the first start), that a newer

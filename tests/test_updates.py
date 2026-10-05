@@ -874,7 +874,11 @@ class TestTheHookOnRealAnswers:
     def _call(self, name, arguments=None):
         return asyncio.run(server.mcp.call_tool(name, arguments or {}))
 
-    def test_a_tools_own_refusal_carries_no_note(self):
+    def test_a_tools_own_refusal_carries_no_note(self, monkeypatch):
+        # No project selected, whatever an earlier test left behind: with
+        # one, get_project_summary reconnects and answers.
+        monkeypatch.setattr(server, "db", None)
+        monkeypatch.setattr(server, "current_project_path", None)
         _started()
         content, _ = self._call("get_project_summary")
         body = json.loads(content[0].text)

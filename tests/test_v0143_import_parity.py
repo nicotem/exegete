@@ -1,13 +1,18 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """0.14.3 (provisional): the text Exegete's import stores is QualCoder
-4.0's, to the character (the import and reading design, Parts 4 and 10).
+4.0's, PDF to the character, and every other format with the named
+departures only (the owner's ruling of 6 October 2026: better text where
+QualCoder's readers lose or garble content; TOOLS.md lists them).
 
 The expected outcomes in `tests/fixtures/import_expected.json` were
 recorded by `scripts/qualcoder_parity.py` from QualCoder's own extraction
 functions at the pinned commit (9bddf17), run without its interface on
-the documents `import_fixtures.py` builds, with the library and Python
-versions the record names. Every difference is one of the named
-departures below, each with its reason; anything else fails.
+the documents `import_fixtures.py` builds and keeps, with the library and
+Python versions the record names. The proof that nothing else differs:
+given no departures, Exegete's readers give QualCoder's text exactly;
+and for every document, each difference between QualCoder's text and
+Exegete's is listed below with the departure that makes it, so that
+QualCoder's text with those differences, and only those, is Exegete's.
 
 When QUALCODER_SOURCE names a QualCoder source tree (CI's parity gate,
 and its watch on QualCoder's newest code), the outcomes are also
@@ -33,7 +38,9 @@ EXPECTED = json.loads((Path(__file__).parent / "fixtures" /
 FIXTURES = import_fixtures.all_fixtures()
 OPTIONAL = import_fixtures.optional_part_installed()
 
-# Where Exegete departs from QualCoder, on purpose (design Part 4).
+# Where QualCoder stores no text of the file's (noise, or a failure) and
+# Exegete refuses it or reads it (design Part 4, and the named departures
+# that read what QualCoder cannot).
 DEPARTURES = {
     # QualCoder expands the entity; Exegete refuses any declaration.
     "entities.docx": {"refused": "xml_entities"},
@@ -41,9 +48,6 @@ DEPARTURES = {
     "entities.epub": {"refused": "xml_entities"},
     # QualCoder finds no text and stores the raw archive as the text.
     "picture_only.docx": {"refused": "no_text"},
-    # The same, for an OpenDocument file not saved by LibreOffice: its
-    # own refusal, with the way round.
-    "no_sequence_decls.odt": {"refused": "odt_not_libreoffice"},
     # QualCoder's import fails with an error of the zip library.
     "not_a_zip.docx": {"refused": "not_an_archive"},
     # Files not saved as UTF-8 are held back, with steps to save them so
@@ -61,6 +65,25 @@ DEPARTURES = {
     "cp1252_declared.html": {"held": "not_utf8_web"},
     "cp1252_plain.html": {"held": "not_utf8_web"},
     "cp1252_in_comment.html": {"held": "not_utf8_web"},
+    # An OpenDocument file not saved by LibreOffice: QualCoder finds no
+    # text and stores the raw archive; Exegete reads it.
+    "no_sequence_decls.odt": {"text": "Text QualCoder cannot find.\n\n",
+                              "departure": "odt_any_program"},
+    "textedit.odt": {"text": "Hello\tworld\n\nSecond   line\n\n",
+                     "departure": "odt_any_program"},
+    "pretty.odt": {"text": "\n\nInterview\n\n\n\nQ: Why did you\nleave?"
+                           "\n\n\n\n=== TABLE ===\n\nName:\n\n\n\n=== END "
+                           "TABLE ===\n\n",
+                   "departure": "odt_any_program"},
+    "pandoc.odt": {"text": "\n\nInterview\n\n\n\nQ: Why did you\nleave? Pat"
+                           " said so.\n\n\n\n=== TABLE ===\n\nName:\n\n\n\n"
+                           "Ana\n\n\n\nx\n\n\n\ny\n\n\n\n=== END TABLE ===\n"
+                           "\nFootnote 1: The clinic.\n\nFooter: 1\n\n",
+                   "departure": "odt_any_program"},
+    # RTF writes an emoji in two halves: QualCoder's import fails on the
+    # insert; Exegete joins them. One half alone neither can store.
+    "emoji.rtf": {"text": "Smile \U0001F600 ok.\n", "departure": "rtf_emoji"},
+    "half_emoji.rtf": {"refused": "unstorable_rtf"},
     # QualCoder takes a subtitle file only as a recording's transcript,
     # which keeps all but one of the byte-order marks at its start; as a
     # document, every one goes, since QualCoder's text view hides the
@@ -68,12 +91,156 @@ DEPARTURES = {
     "boms.srt": {"text": "1\n00:00:01,000 --> 00:00:02,000\nHi.\n",
                  "recorded_text_differs": True},
 }
+
+# Where QualCoder stores the file's text and Exegete's is better: every
+# difference, with the departure that makes it, as (departure,
+# QualCoder's words, Exegete's words). Applied in order to QualCoder's
+# text, each QualCoder's words found exactly once (AFTER: added at the
+# end), they give Exegete's text exactly.
+AFTER = None
+DIFFERENCES = {
+    "features.docx": [
+        ("word_line_breaks", "First paragraph,after",
+         "First paragraph,\nafter"),
+        ("word_tab_stops", "\n\n\t\tTab stops defined here.",
+         "\n\nTab stops defined here."),
+        ("word_tab_stops", "\n\n\t\n\n\tChanged properties.",
+         "\n\nChanged properties."),
+        ("word_text_boxes", "OuterIn a box\n\nIn a box", "Outer\n\nIn a box"),
+        ("word_tracked_changes", "Moved.\n\nMoved.", "Moved."),
+        ("word_notes", AFTER, "\n\nFootnote 1: A footnote.\n\nComment 1: A "
+                              "comment.\n\nHeader: Header text"),
+    ],
+    "breaks.docx": [
+        ("word_line_breaks", "thank youInterviewer", "thank you\nInterviewer"),
+        ("word_line_breaks", "Column onecolumn two", "Column one\ncolumn two"),
+        ("word_line_breaks", "Twobreaks", "Two\n\nbreaks"),
+        ("word_hyphens_tabs", "a wellknown name", "a well-known name"),
+        ("word_hyphens_tabs", "NameDate", "Name\tDate"),
+    ],
+    "text_box.docx": [
+        ("word_text_boxes", "Before the boxBoxed wordsand moreBoxed wordsand "
+                            "more and after it.\n\nBoxed words\n\nand more\n"
+                            "\nBoxed words\n\nand more",
+         "Before the box and after it.\n\nBoxed words\n\nand more"),
+    ],
+    "tracked.docx": [
+        ("word_tracked_changes", "Kept \tnew", "Kept new"),
+        ("word_tracked_changes", "\n\nA moved sentence.\n\nMiddle.",
+         "\n\nMiddle."),
+    ],
+    "notes.docx": [
+        ("word_notes", AFTER, "\n\nFootnote 1: First, by its place.\n\nIts "
+                              "second paragraph.\n\nFootnote 2: Second, by "
+                              "its place.\n\nFootnote 3: Not referred to.\n\n"
+                              "Endnote 1: An endnote.\n\nComment 1: Check "
+                              "the year.\n\nComment 2: Not anchored.\n\n"
+                              "Header: Interview 12\n\nFooter: Page 1"),
+    ],
+    "libreoffice.docx": [
+        ("word_line_breaks", "leave?Pat:", "leave?\nPat:"),
+        ("word_text_boxes", "Outer wordsIn a boxIn a box after the box.\n\n"
+                            "In a box\n\nIn a box",
+         "Outer words after the box.\n\nIn a box"),
+        ("word_hyphens_tabs", "non-breakinghyphen", "non-breaking-hyphen"),
+        ("word_notes", AFTER, "\n\nFootnote 1: The clinic in town.\n\n"
+                              "Endnote 1: End note text.\n\nComment 1: "
+                              "Check the date.\n\nHeader: Interview 12, "
+                              "header\n\nFooter: Footer words"),
+    ],
+    "features.odt": [
+        ("odt_spaces", "words,spaced", "words,   spaced"),
+        ("odt_tabs", "spaced,tabbed", "spaced,\ttabbed"),
+        ("odt_line_breaks", "tabbedand broken", "tabbed\nand broken"),
+        ("odt_notes", "<office:annotation><dc:creator>Ann</dc:creator><dc:"
+                      "date>2026-01-01T10:00:00</dc:date>Note text\n\n"
+                      "</office:annotation>", ""),
+        ("odt_notes", "1</text:note-citation>Footnote\n\n</text:note-body>"
+                      "</text:note>", ""),
+        ("odt_markup", "&#233;", "é"),
+        ("odt_markup", "</x:odd>", ""),
+        ("odt_notes", AFTER, "Footnote 1: Footnote\n\nComment 1: Note text"
+                             "\n\n"),
+    ],
+    "notes.odt": [
+        ("odt_notes", "i</text:note-citation>An endnote.\n\n</text:note-"
+                      "body></text:note>", ""),
+        ("odt_notes", "1</text:note-citation>A footnote,\n\nin two "
+                      "paragraphs.\n\n</text:note-body></text:note>", ""),
+        ("odt_markup", "<svg:title>A frame</svg:title><svg:desc>Its "
+                       "description</svg:desc>", ""),
+        ("odt_text_boxes", "Outer wordsIn a box", "Outer words\n\nIn a box"),
+        ("odt_markup", "</draw:text-box>", ""),
+        ("odt_markup", "&#128512;", "\U0001F600"),
+        ("odt_markup", "&#x263A;", "\u263A"),
+        ("odt_notes", AFTER, "Footnote 1: A footnote,\n\nin two paragraphs."
+                             "\n\nEndnote 1: An endnote.\n\nHeader: "
+                             "Interview 12\n\nFooter: Page 1\n\n"),
+    ],
+    "libreoffice.odt": [
+        ("odt_tabs", "Q:Why", "Q:\tWhy"),
+        ("odt_line_breaks", "leave?Pat:", "leave?\nPat:"),
+        ("odt_notes", "1</text:note-citation>The clinic in town.\n\n</text:"
+                      "note-body></text:note>", ""),
+        ("odt_notes", '<office:annotation office:name="__Annotation__26_'
+                      '4050117056" loext:resolved="false"><dc:creator>Ann '
+                      "Editor</dc:creator><dc:date>2026-01-01T10:00:00</dc:"
+                      "date>Check the date.\n\n</office:annotation>", ""),
+        ("odt_markup", '<office:annotation-end office:name="__Annotation__'
+                       '26_4050117056"/>', ""),
+        ("odt_notes", "i</text:note-citation>End note text.\n\n</text:note-"
+                      "body></text:note>", ""),
+        ("odt_text_boxes", "Outer wordsIn a box", "Outer words\n\nIn a box"),
+        ("odt_markup", "</draw:text-box>", ""),
+        ("odt_spaces", "Café well spaced", "Café well  spaced"),
+        ("odt_notes", AFTER, "Footnote 1: The clinic in town.\n\nEndnote 1: "
+                             "End note text.\n\nComment 1: Check the date."
+                             "\n\nHeader: Interview 12, header\n\nFooter: "
+                             "Footer words\n\n"),
+    ],
+    "notes.rtf": [
+        ("rtf_deleted", "Kept gone words", "Kept words"),
+        ("rtf_notes", AFTER, "Text box: In a box\nFootnote 1: A café note.\n"
+                             "Endnote 1: A last note.\nComment 1: A comment."
+                             "\nHeader: Interview 12\nFooter: Page 1\n"),
+    ],
+    "libreoffice.rtf": [
+        ("rtf_deleted", "We gone moved", "We moved"),
+        ("rtf_notes", AFTER, "Text box: In a box\nFootnote 1: The clinic in "
+                             "town.\nEndnote 1: End note text.\nComment 1: "
+                             "Check the date.\nHeader: Interview 12, header"
+                             "\nFooter: Footer words\n"),
+    ],
+    "page.html": [
+        ("web_blocks", "TwoBlock oneBlock twoABLine",
+         "Two\nBlock one\nBlock two\nA\nB\nLine"),
+    ],
+    "blocks.html": [
+        ("web_blocks", "Speaker list \nInside", "Speaker list\n \nInside"),
+        ("web_blocks", " Name:Role AnaNurse \nOneAfter the list.QuotedLast.",
+         " Name:\nRole\n Ana\nNurse\n \nOne\nAfter the list.\nQuoted\n"
+         "Last."),
+    ],
+    "blocks.epub": [
+        ("web_blocks", " Speaker one Speaker two Name: Ana \nA",
+         " Speaker one\n Speaker two\n Name:\n Ana\n \nA"),
+    ],
+}
+# The departures each format may have.
+FORMAT_DEPARTURES = {
+    doc_readers.WORD: doc_readers.WORD_DEPARTURES,
+    doc_readers.OPENDOCUMENT: doc_readers.ODT_DEPARTURES,
+    doc_readers.RTF: doc_readers.RTF_DEPARTURES,
+    doc_readers.WEB: doc_readers.WEB_DEPARTURES,
+    doc_readers.EPUB: doc_readers.WEB_DEPARTURES,
+}
 # Files both programs refuse, with Exegete's code for the refusal.
 BOTH_REFUSE = {"empty.txt": "empty", "damaged.pdf": "damaged",
                "password.pdf": "pdf_password"}
 # Whose text depends on a library's guess or reading: compared with the
 # record only at the library version it was recorded with.
 DEPENDS_ON = {"book.epub": "ebooklib", "entities.epub": "ebooklib",
+              "blocks.epub": "ebooklib",
               "three_pages.pdf": "pymupdf", "scanned.pdf": "pymupdf",
               "notes.pdf": "pymupdf"}
 
@@ -82,13 +249,15 @@ def _kind(name: str) -> str:
     return doc_readers.FORMATS["." + name.rsplit(".", 1)[1]]
 
 
-def _ours(name: str, through_process: bool = False) -> dict:
+def _ours(name: str, through_process: bool = False,
+          departures=None) -> dict:
     data = FIXTURES[name]
     try:
         if through_process:
             result = import_reading.read_in_process(_kind(name), data)
         else:
-            result = doc_readers.read_document(_kind(name), data)
+            result = doc_readers.read_document(_kind(name), data,
+                                               departures=departures)
     except doc_readers.ReadRefused as refused:
         return {"refused": refused.code}
     except import_reading.ReadFailed as failed:
@@ -105,6 +274,20 @@ def _same_library(name: str) -> bool:
     except metadata.PackageNotFoundError:
         return False
     return installed == EXPECTED["versions"].get(library)
+
+
+def with_differences(name: str, qualcoders: str) -> str:
+    """QualCoder's text with the named differences for `name`, and only
+    those: each QualCoder's words must be found exactly once."""
+    text = qualcoders
+    for departure, theirs, ours in DIFFERENCES.get(name, []):
+        assert departure in FORMAT_DEPARTURES[_kind(name)], (name, departure)
+        if theirs is AFTER:
+            text += ours
+            continue
+        assert text.count(theirs) == 1, (name, departure, theirs)
+        text = text.replace(theirs, ours)
+    return text
 
 
 def _check(name: str, recorded: dict, ours: dict) -> None:
@@ -135,7 +318,7 @@ def _check(name: str, recorded: dict, ours: dict) -> None:
     if not _same_library(name):
         assert "text" in ours, (name, ours)
         return
-    assert ours.get("text") == recorded["text"], name
+    assert ours.get("text") == with_differences(name, recorded["text"]), name
 
 
 NAMES = sorted(FIXTURES)
@@ -148,14 +331,86 @@ def test_every_fixture_has_a_recorded_outcome():
 
 
 @pytest.mark.parametrize("name", NAMES)
-def test_the_stored_text_is_qualcoders(name):
+def test_the_stored_text_is_qualcoders_with_the_named_differences(name):
     _check(name, EXPECTED["files"][name], _ours(name))
+
+
+@pytest.mark.parametrize("name", [n for n in NAMES if n not in DEPARTURES
+                                  and n not in BOTH_REFUSE])
+def test_given_no_departures_the_readers_are_qualcoders(name):
+    """With every departure switched off, each reader gives QualCoder's
+    text to the character: so Exegete's text is QualCoder's reading with
+    the named steps, and nothing else."""
+    recorded = EXPECTED["files"][name]
+    if not _same_library(name):
+        pytest.skip("recorded with another release of the library")
+    ours = _ours(name, departures=doc_readers.AS_QUALCODER)
+    assert ours.get("text") == recorded["text"], name
+
+
+@pytest.mark.parametrize("name", sorted(DIFFERENCES))
+def test_the_preview_names_each_departure_that_changed_the_text(name):
+    """The reader's signs, which the preview turns into its lines, name
+    every departure the file's text shows, and no other."""
+    signs = _ours(name)["result"]["signs"]
+    named = {departure for departure, _t, _o in DIFFERENCES[name]}
+    assert {code for code in signs if code in doc_readers.DEPARTURES} \
+        == named, name
+
+
+def test_every_pdf_is_qualcoders_to_the_character():
+    """PDF has no departures: QualCoder re-reads a PDF and compares."""
+    assert not [n for n in DIFFERENCES if n.endswith(".pdf")]
+    assert not [n for n, d in DEPARTURES.items()
+                if n.endswith(".pdf") and "text" in d]
+
+
+def test_every_departure_is_shown_by_a_test_document():
+    shown = {d for changes in DIFFERENCES.values() for d, _t, _o in changes}
+    shown |= {d["departure"] for d in DEPARTURES.values()
+              if "departure" in d}
+    assert shown == set(doc_readers.DEPARTURES)
+
+
+# Each departure's line in TOOLS.md's departures section, by the words
+# that open it.
+TOOLS_LINES = {
+    "word_line_breaks": "A line break inside a Word paragraph",
+    "word_tab_stops": "Tab stops set on a Word paragraph",
+    "word_text_boxes": "A Word text box",
+    "word_tracked_changes": "Text moved or deleted with Word's tracked",
+    "word_hyphens_tabs": "A non-breaking hyphen",
+    "word_notes": "Word's footnotes, endnotes, comments, headers",
+    "odt_spaces": "Runs of spaces in OpenDocument",
+    "odt_tabs": "A tab in OpenDocument",
+    "odt_line_breaks": "A line break inside an OpenDocument paragraph",
+    "odt_text_boxes": "An OpenDocument text box",
+    "odt_notes": "OpenDocument footnotes, endnotes and comments",
+    "odt_markup": "Markup in OpenDocument",
+    "odt_any_program": "An OpenDocument file not saved by LibreOffice",
+    "rtf_deleted": "Text deleted with RTF's tracked",
+    "rtf_notes": "RTF footnotes, endnotes, comments, headers",
+    "rtf_emoji": "An emoji in RTF",
+    "web_blocks": "Blocks and table cells in web pages and EPUB",
+}
+
+
+def test_every_departure_has_its_line_in_tools_md():
+    tools = (Path(__file__).parent.parent / "TOOLS.md").read_text(
+        encoding="utf-8")
+    section = tools.split("## Document import: where it departs from "
+                          "QualCoder")[1].split("\n## ")[0]
+    assert set(TOOLS_LINES) == set(doc_readers.DEPARTURES)
+    missing = [code for code, words in TOOLS_LINES.items()
+               if f"| {words}" not in section]
+    assert not missing
 
 
 @pytest.mark.parametrize("name", ["features.docx", "features.odt",
                                   "escapes.rtf", "page.html", "crlf.txt",
                                   "talk.srt", "cp1252_declared.html",
-                                  "entities.docx", "not_a_zip.docx"]
+                                  "entities.docx", "not_a_zip.docx",
+                                  "notes.docx", "notes.rtf", "emoji.rtf"]
                          + (["book.epub", "notes.pdf", "password.pdf"]
                             if OPTIONAL else []))
 def test_the_same_through_the_reading_process(name):
@@ -174,7 +429,8 @@ def test_a_pdfs_notes_and_markups_as_qualcoder_records_them():
                     reason="QUALCODER_SOURCE names no QualCoder tree")
 def test_against_a_live_qualcoder_tree():
     """CI's gate (at the pinned commit) and watch (on QualCoder's newest
-    code): QualCoder's own functions run afresh on every fixture."""
+    code): QualCoder's own functions run afresh on every fixture, and
+    Exegete's text is theirs with the named differences only."""
     sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
     import qualcoder_parity
     fresh = qualcoder_parity.run(Path(os.environ["QUALCODER_SOURCE"]))

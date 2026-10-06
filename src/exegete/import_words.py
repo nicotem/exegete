@@ -8,7 +8,7 @@ PDF object's, and an error message would carry them. Each warning says
 what the researcher will see, what to do, and why.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Sequence
 
 COPY_A_PATH = (
     "To copy a file's or folder's place: on a Mac, select it in Finder, "
@@ -112,13 +112,6 @@ FILE_REFUSALS = {
     "no_text": "No text was found in this file. QualCoder would store the "
                "file's own codes as its text, which is noise; Exegete does "
                "not import it.",
-    "odt_not_libreoffice": "QualCoder cannot find the text in this "
-                           "OpenDocument file, because it was not saved by "
-                           "LibreOffice (pandoc and the Mac's TextEdit write "
-                           "it differently); QualCoder would store the "
-                           "file's own codes as its text. Open it in "
-                           "LibreOffice and save it again as .odt, or save "
-                           "it as Word (.docx), then import that.",
     "empty": "This file is empty.",
     "pdf_password": "This PDF is protected by a password. Save a copy "
                     "without the password (in Preview or Acrobat), then "
@@ -126,11 +119,11 @@ FILE_REFUSALS = {
     "unstorable": "This file holds a character a project cannot store "
                   "(QualCoder's import fails on it too). Open it in its "
                   "own app and save a fresh copy.",
-    "unstorable_rtf": "It holds an emoji, or another character RTF writes "
-                      "in two halves, which neither QualCoder nor Exegete "
-                      "can store (QualCoder's import fails on it). Save it "
-                      "as Word (.docx) in its app, or remove the emoji, "
-                      "then import that.",
+    "unstorable_rtf": "It holds half of a character RTF writes in two "
+                      "halves (an emoji, say) without the other half, which "
+                      "a project cannot store (QualCoder's import fails on "
+                      "it too). Save it as Word (.docx) in its app, or "
+                      "remove that character, then import that.",
     "too_long": "Its text is {characters} characters long, over Exegete's "
                 "limit of {limit}. Import long books and reports in "
                 "QualCoder.",
@@ -206,83 +199,118 @@ HELD_BACK = {
     "not_read_in_time": "Not read in time; ask again for these.",
 }
 
-TO_WORD_TEXT = ("Way round: in Word, choose File, Save As, Plain Text, "
-                "\"Unicode (UTF-8)\", and import the .txt.")
-LIBREOFFICE_TO_WORD = ("Way round: in LibreOffice, choose File, Save As, "
-                       "Word, and import the .docx (QualCoder's Word "
-                       "reading leaves comments and notes out and keeps "
-                       "tabs).")
-ACCEPT_CHANGES = ("Way round: accept or reject all changes, save, then "
-                  "import.")
-COPY_INTO_TEXT = ("To code them, copy them into the document's own text "
-                  "first, then import it.")
 # Said once for a file whose text a warning changes: why the import does
 # not mend what QualCoder's way of reading does, and why the ways round
 # are chosen as they are.
 WHY_AS_QUALCODER = (SAME_READING + " Each way round gives a file QualCoder "
                     "reads the same way too.")
+# Said instead when Exegete's reading of the file departs from
+# QualCoder's (the departures' lines say how).
+WHY_DEPARTED = ("Where Exegete reads this file better than QualCoder's "
+                "own import would, the lines for information say how.")
+READS_OTHERWISE = "qualcoder_reads_otherwise"
 WHY_SUBTITLES = ("QualCoder imports a subtitle file only as a recording's "
                  "transcript, so it has no reading of this document to "
                  "agree with.")
 
 
-def why_line(subtitles: bool) -> str:
+def why_line(subtitles: bool, codes: Sequence[str] = ()) -> str:
     """The line said once for a file whose text a warning changes."""
-    return WHY_SUBTITLES if subtitles else WHY_AS_QUALCODER
+    if subtitles:
+        return WHY_SUBTITLES
+    if READS_OTHERWISE in codes:
+        return WHY_DEPARTED
+    return WHY_AS_QUALCODER
 
 
 # Sign code -> (group, words). Group "changes" changes what the
 # researcher will read; "information" does not.
 WARNINGS = {
-    "word_line_break": ("changes",
+    # Where Exegete reads the file better than QualCoder's own import
+    # (the named departures; TOOLS.md lists them): information, since
+    # the text is the better for them.
+    "word_line_breaks": ("information",
         "Lines that end without a new paragraph (Shift and Return in "
-        "Word) come in joined to the next line's words, as in \"thank "
-        "youInterviewer\". " + TO_WORD_TEXT),
-    "word_tab_stops": ("changes",
-        "Tab stops set on a paragraph come in as tab characters at its "
-        "start. " + TO_WORD_TEXT),
-    "word_text_box": ("changes",
-        "Text in text boxes comes in more than once (up to four times). "
-        + TO_WORD_TEXT),
-    "word_tracked_changes": ("changes",
-        "It has tracked changes: insertions come in as if accepted, and "
-        "deletions are left out. " + ACCEPT_CHANGES),
-    "word_moved_text": ("changes",
-        "It has text moved with tracked changes, which comes in twice. "
-        + ACCEPT_CHANGES),
-    "word_table": ("changes",
-        "Each table cell comes in as a paragraph of its own. "
-        + TO_WORD_TEXT),
-    "word_headers_footers": ("changes",
-        "Headers and footers are left out. " + COPY_INTO_TEXT),
-    "word_footnotes": ("changes",
-        "Footnotes and endnotes are left out. " + COPY_INTO_TEXT),
-    "word_comments": ("changes",
-        "Comments are left out. " + COPY_INTO_TEXT),
-    "odt_comments": ("changes",
-        "Comments leave markup in the text, their author and date among "
-        "it, as in \"<dc:creator>Ana</dc:creator>\". "
-        + LIBREOFFICE_TO_WORD),
-    "odt_notes": ("changes",
-        "Footnotes leave markup in the text, as in "
-        "\"<text:note-citation>1</text:note-citation>\". "
-        + LIBREOFFICE_TO_WORD),
-    "odt_tabs": ("changes",
-        "Tabs are lost, as in \"Q:Why\" for \"Q:<tab>Why\". "
-        + LIBREOFFICE_TO_WORD),
-    "odt_spaces": ("changes",
-        "Runs of spaces are lost. " + LIBREOFFICE_TO_WORD),
-    "odt_line_breaks": ("changes",
-        "Lines that end without a new paragraph come in joined to the "
-        "next line's words. " + LIBREOFFICE_TO_WORD),
-    "odt_tables": ("changes",
-        "Tables come in between \"=== TABLE ===\" lines, each cell on a "
-        "line of its own. " + LIBREOFFICE_TO_WORD),
-    "web_blocks": ("changes",
-        "Blocks and table cells run together, as in \"Name:Ana\" for a "
-        "table of two cells. Way round: open the page in a word "
-        "processor, save it as a Word document (.docx), and import "
-        "that."),
+        "Word) keep their line break. QualCoder's own import would join "
+        "the words either side, as in \"thank youInterviewer\"."),
+    "word_tab_stops": ("information",
+        "Tab stops set on a paragraph add nothing to its text. "
+        "QualCoder's own import would put a tab character at the "
+        "paragraph's start for each one."),
+    "word_text_boxes": ("information",
+        "Text in a text box comes in once, after the paragraph it belongs "
+        "to. QualCoder's own import would repeat it, up to four times."),
+    "word_tracked_changes": ("information",
+        "Text moved with tracked changes comes in once, at its new place, "
+        "and deleted tabs are left out. QualCoder's own import would keep "
+        "moved text at both places."),
+    "word_hyphens_tabs": ("information",
+        "Non-breaking hyphens and positioned tabs are kept. QualCoder's "
+        "own import would leave them out and join the words, as in "
+        "\"wellknown\" for \"well-known\"."),
+    "word_notes": ("information",
+        "Its footnotes, endnotes, comments, headers and footers ({count} "
+        "in all) come after the document's text, each labelled, as in "
+        "\"Footnote 1: ...\"; comments' authors and dates are left out. "
+        "QualCoder's own import would leave them all out."),
+    "word_revisions": ("information",
+        "It has tracked changes, read as if accepted (insertions in, "
+        "deletions out), as QualCoder reads them. To read it another way, "
+        "accept or reject the changes in Word first."),
+    "odt_spaces": ("information",
+        "Runs of spaces are kept. QualCoder's own import would keep only "
+        "the first space of each run."),
+    "odt_tabs": ("information",
+        "Tabs are kept. QualCoder's own import would leave them out, as "
+        "in \"Q:Why\" for \"Q:<tab>Why\"."),
+    "odt_line_breaks": ("information",
+        "Lines that end without a new paragraph keep their line break. "
+        "QualCoder's own import would join the words either side."),
+    "odt_text_boxes": ("information",
+        "Text in a text box starts on a line of its own. QualCoder's own "
+        "import would join it to the words before it."),
+    "odt_notes": ("information",
+        "Its footnotes, endnotes, comments, headers and footers ({count} "
+        "in all) come after the document's text, each labelled, as in "
+        "\"Footnote 1: ...\"; comments' authors and dates are left out. "
+        "QualCoder's own import would leave notes and comments inside the "
+        "sentence with their markup (a comment's author and date among "
+        "it), and headers and footers out."),
+    "odt_markup": ("information",
+        "Markup QualCoder's own import would leave in the text is taken "
+        "out: other programs' tags, and character codes such as "
+        "\"&#233;\", which are read as the letters they stand for."),
+    "odt_any_program": ("information",
+        "It was not saved by LibreOffice (pandoc and the Mac's TextEdit "
+        "write OpenDocument differently). QualCoder's own import would "
+        "find no text in it and store the file's own codes instead."),
+    "odt_tables": ("information",
+        "Tables come in between \"=== TABLE ===\" and \"=== END TABLE "
+        "===\" lines, each cell a paragraph of its own, as QualCoder marks "
+        "them."),
+    "rtf_deleted": ("information",
+        "Text deleted with tracked changes is left out. QualCoder's own "
+        "import would keep it."),
+    "rtf_notes": ("information",
+        "Its footnotes, endnotes, comments, headers, footers and text "
+        "boxes ({count} in all) come after the document's text, each "
+        "labelled, as in \"Footnote 1: ...\"; comments' authors and "
+        "dates are left out. QualCoder's own import would leave them all "
+        "out."),
+    "rtf_emoji": ("information",
+        "It holds emoji ({count}), which RTF writes in two halves; each "
+        "comes in as one character. QualCoder's own import would fail on "
+        "this file."),
+    "web_blocks": ("information",
+        "Blocks and table cells start on lines of their own. QualCoder's "
+        "own import would run them together, as in \"Name:Ana\" for a "
+        "table of two cells."),
+    READS_OTHERWISE: ("information",
+        "So QualCoder's own import of this file would store other text: "
+        "if the same file is also imported in QualCoder, codings made on "
+        "one copy will not line up on the other. In this project both "
+        "programs read the text Exegete stores, and agree on every "
+        "coding."),
     "pdf_scanned": ("changes",
         "This PDF is pictures of pages, with no words Exegete can read; "
         "only QualCoder's area coding works on it. QualCoder imports it "

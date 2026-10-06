@@ -491,15 +491,16 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         out.append((group, words.say(words.WARNINGS, code, **numbers)))
         item.warning_codes.append(code)
 
-    for code in ("word_line_break", "word_tab_stops", "word_text_box",
-                 "word_tracked_changes", "word_moved_text", "word_table",
-                 "word_headers_footers", "word_footnotes", "word_comments",
-                 "odt_comments", "odt_notes", "odt_tabs", "odt_spaces",
-                 "odt_line_breaks", "odt_tables", "web_blocks",
-                 "pdf_scanned", "pandoc_wrapped", "pandoc_tables",
-                 "pandoc_notes", "subtitles"):
+    for code in (doc_readers.WORD_DEPARTURES + ("word_revisions",)
+                 + doc_readers.ODT_DEPARTURES + ("odt_tables",)
+                 + doc_readers.RTF_DEPARTURES + doc_readers.WEB_DEPARTURES
+                 + ("pdf_scanned", "pandoc_wrapped", "pandoc_tables",
+                    "pandoc_notes", "subtitles")):
         if signs.get(code):
-            add(code)
+            add(code, count=signs[code])
+    if any(signs.get(code) for code in doc_readers.DEPARTURES):
+        # Said once, after the departures' own lines.
+        add(words.READS_OTHERWISE)
     if characters > ctx.max_characters // 2:
         add("near_limit", characters=characters, limit=ctx.max_characters)
     for code in ("astral", "invisible"):
@@ -652,7 +653,8 @@ def file_entry(item: Item) -> Dict[str, Any]:
                    if group == "information"]
     if changes:
         entry["changes_what_you_will_read"] = changes
-        entry["why"] = words.why_line(item.kind == doc_readers.SUBTITLES)
+        entry["why"] = words.why_line(item.kind == doc_readers.SUBTITLES,
+                                      item.warning_codes)
     if information:
         entry["for_information"] = information
     if item.real_place:

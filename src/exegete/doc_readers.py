@@ -53,6 +53,29 @@ MAX_ARCHIVE_DIRECTORY = MAX_ARCHIVE_ENTRIES * (46 + 1024)
 
 BOM = "\ufeff"
 
+# Where Exegete reads better than QualCoder (the owner's ruling of 6
+# October 2026): each departure from QualCoder's way of reading has a
+# name, and TOOLS.md gives each one a line with an example. A reader
+# given none of them reads as QualCoder 4.0 does, to the character (the
+# parity tests check it on every test document); PDF has none, since
+# QualCoder re-reads a PDF and compares. What QualCoder's reading leaves
+# out comes after the document's text, each part labelled, so that the
+# text QualCoder does read keeps its place.
+WORD_DEPARTURES = ("word_line_breaks", "word_tab_stops", "word_text_boxes",
+                   "word_tracked_changes", "word_hyphens_tabs", "word_notes")
+ODT_DEPARTURES = ("odt_spaces", "odt_tabs", "odt_line_breaks",
+                  "odt_text_boxes", "odt_notes", "odt_markup",
+                  "odt_any_program")
+RTF_DEPARTURES = ("rtf_deleted", "rtf_notes", "rtf_emoji")
+WEB_DEPARTURES = ("web_blocks",)
+DEPARTURES = frozenset(WORD_DEPARTURES + ODT_DEPARTURES + RTF_DEPARTURES
+                       + WEB_DEPARTURES)
+AS_QUALCODER: frozenset = frozenset()
+
+
+def _departures(chosen) -> frozenset:
+    return DEPARTURES if chosen is None else frozenset(chosen)
+
 
 class ReadRefused(Exception):
     """A file this reader will not read, with Exegete's own reason code
@@ -206,84 +229,284 @@ def _universal_newlines(text: str) -> str:
 # Overflow answer, whose share-alike licence is not Exegete's)
 # ---------------------------------------------------------------------------
 
+# Elements that start and end on a line of their own (web_blocks), where
+# QualCoder's rules run them together; p, br, li and h1 to h3 have
+# QualCoder's own line breaks.
+_BLOCKS = frozenset((
+    "address", "article", "aside", "blockquote", "caption", "center", "dd",
+    "details", "dialog", "dir", "div", "dl", "dt", "fieldset", "figcaption",
+    "figure", "footer", "form", "h4", "h5", "h6", "header", "hgroup", "hr",
+    "legend", "main", "menu", "nav", "ol", "pre", "section", "summary",
+    "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul"))
+
+
 class _WebPageText(HTMLParser):
     """A new line at p, br, li and h1 to h3 (and at the end of p); runs
     of white space folded to one space; script and style left out; a
     self-closed br always a new line. Character references are turned
     into characters by the parser itself (its default since Python 3.5),
-    before the white space is folded, as in QualCoder."""
+    before the white space is folded, as in QualCoder. With web_blocks,
+    a block and a table cell also start and end on a line of their own:
+    a line break goes in only where the text does not already end with
+    one (spaces aside), so nothing QualCoder's rules give is taken out."""
 
     _NEW_LINE = ("p", "br", "li", "h1", "h2", "h3")
 
-    def __init__(self):
+    def __init__(self, departures=AS_QUALCODER):
         super().__init__()
         self.parts: List[str] = []
         self.hidden = False
+        self.blocks = "web_blocks" in departures
+        self.added = 0
+
+    def _line(self):
+        if self.hidden:
+            return
+        for part in reversed(self.parts):
+            kept = part.rstrip(" ")
+            if kept:
+                if not kept.endswith("\n"):
+                    self.parts.append("\n")
+                    self.added += 1
+                return
 
     def handle_starttag(self, tag, attrs):
         if tag in self._NEW_LINE and not self.hidden:
             self.parts.append("\n")
         elif tag in ("script", "style"):
             self.hidden = True
+        elif self.blocks and tag in _BLOCKS:
+            self._line()
 
     def handle_startendtag(self, tag, attrs):
         if tag == "br":
             self.parts.append("\n")
+        elif self.blocks and tag in _BLOCKS:
+            self._line()
 
     def handle_endtag(self, tag):
         if tag == "p":
             self.parts.append("\n")
         elif tag in ("script", "style"):
             self.hidden = False
+        elif self.blocks and tag in _BLOCKS:
+            self._line()
 
     def handle_data(self, data):
         if data and not self.hidden:
             self.parts.append(re.sub(r"\s+", " ", data))
 
 
-def web_page_text(markup: str) -> str:
-    """The text QualCoder's `html_to_text` gives for `markup`."""
-    parser = _WebPageText()
+def web_page_text(markup: str, departures=None,
+                  seen: Optional[Dict[str, int]] = None) -> str:
+    """The text QualCoder's `html_to_text` gives for `markup`, with the
+    named departures (all of them unless others are given)."""
+    parser = _WebPageText(_departures(departures))
     try:
         parser.feed(markup)
         parser.close()
     except Exception:
         pass
+    if parser.added and seen is not None:
+        seen["web_blocks"] = seen.get("web_blocks", 0) + parser.added
     return re.sub(r" +", " ", "".join(parser.parts))
 
 
-def read_web_page(raw: bytes) -> Tuple[str, str]:
+def read_web_page(raw: bytes, departures=None,
+                  seen: Optional[Dict[str, int]] = None) -> Tuple[str, str]:
     """(text, character set). Read as QualCoder reads a web page, as
-    UTF-8, whatever character set the page declares. A page that is not
-    UTF-8 throughout is refused (`not_utf8_web`), never read by its
-    declaration or a guess (a named departure: QualCoder keeps the bytes
-    that are not UTF-8 as escapes, and its import fails when its text
-    holds any; a declaration can be wrong)."""
+    UTF-8, whatever character set the page declares, with the named
+    departures. A page that is not UTF-8 throughout is refused
+    (`not_utf8_web`), never read by its declaration or a guess (a named
+    departure: QualCoder keeps the bytes that are not UTF-8 as escapes,
+    and its import fails when its text holds any; a declaration can be
+    wrong)."""
     try:
         decoded = raw.decode("utf-8")
     except UnicodeDecodeError:
         raise ReadRefused("not_utf8_web") from None
-    return web_page_text(_universal_newlines(decoded)), "utf-8"
+    return (web_page_text(_universal_newlines(decoded), departures, seen),
+            "utf-8")
 
 
 # ---------------------------------------------------------------------------
 # RTF: QualCoder's reader, striprtf, on the file read as Latin-1
-# (manage_files.py 3250-3260)
+# (manage_files.py 3250-3260), with the named departures as steps around
+# it
 # ---------------------------------------------------------------------------
 
-def read_rtf(raw: bytes) -> str:
+_RTF_TOKEN = re.compile(
+    r"\\bin(-?\d{1,10}) ?|\\([a-zA-Z]{1,32})(-?\d{1,10})? ?|\\'[0-9a-fA-F]{2}"
+    r"|\\[^a-zA-Z]|[{}]|[\r\n]+|[^\\{}\r\n]+", re.S)
+# The parts QualCoder's reader leaves out, by the control word that
+# opens their group, and how each is labelled.
+_RTF_PARTS = {"shptxt": "Text box", "footnote": "Footnote",
+              "annotation": "Comment", "header": "Header",
+              "headerl": "Header", "headerr": "Header", "headerf": "Header",
+              "footer": "Footer", "footerl": "Footer", "footerr": "Footer",
+              "footerf": "Footer"}
+_RTF_ORDER = ("Text box", "Footnote", "Endnote", "Comment", "Header",
+              "Footer")
+
+
+def _rtf_groups(text: str) -> List[Tuple[int, int, List[Tuple[str, str]]]]:
+    """Every group's start and end, with the control words that open it
+    (before any text or inner group), outermost groups last. Binary data
+    (\\binN) is stepped over."""
+    groups = []
+    stack: List[Tuple[int, List[Tuple[str, str]], List[bool]]] = []
+    at = 0
+    while at < len(text):
+        match = _RTF_TOKEN.match(text, at)
+        if match is None:          # cannot happen: every character matches
+            break
+        token = match.group(0)
+        at = match.end()
+        if match.group(1) is not None:
+            at += max(0, int(match.group(1)))
+        elif token == "{":
+            if stack:
+                stack[-1][2][0] = True
+            stack.append((match.start(), [], [False]))
+        elif token == "}":
+            if stack:
+                start, words, _done = stack.pop()
+                groups.append((start, at, words))
+        elif match.group(2) is not None:
+            if stack and not stack[-1][2][0]:
+                stack[-1][1].append((match.group(2), match.group(3) or ""))
+        elif token == "\\*":
+            if stack and not stack[-1][2][0]:
+                stack[-1][1].append(("*", ""))
+        elif token[0] in "\r\n":
+            continue
+        elif stack and (token[0] == "\\" or token.strip()):
+            stack[-1][2][0] = True
+    return groups
+
+
+def _outermost(spans: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+    kept: List[Tuple[int, int]] = []
+    for start, end in sorted(spans):
+        if kept and start < kept[-1][1]:
+            continue
+        kept.append((start, end))
+    return kept
+
+
+def _cut(text: str, spans: List[Tuple[int, int]]) -> str:
+    """`text` with each group in `spans` made an empty group, which
+    striprtf reads as it read the group it replaces (a control word
+    before it still ends there, and nothing is written)."""
+    out, at = [], 0
+    for start, end in spans:
+        out.append(text[at:start])
+        out.append("{}")
+        at = end
+    out.append(text[at:])
+    return "".join(out)
+
+
+def _rtf_wrapper(text: str) -> Tuple[str, str]:
+    """What a part taken out of the document needs to read as it reads in
+    it: the code page and default font, and the font table."""
+    head = text[:4096]
+    words = "".join(re.findall(r"\\(?:ansicpg|deff)-?\d{1,10}", head))
+    table = ""
+    start = re.search(r"\{[^{}]*\\fonttbl", text)
+    if start:
+        depth = 0
+        for brace in re.finditer(r"(?<!\\)[{}]", text[start.start():]):
+            depth += 1 if brace.group() == "{" else -1
+            if depth == 0:
+                table = text[start.start():start.start() + brace.end()]
+                break
+    return "{\\rtf1\\ansi" + words + table, "}"
+
+
+def _join_halves(text: str) -> Tuple[str, int]:
+    """An emoji, or another character beyond the first 65,536, which RTF
+    writes as two \\u escapes, made one character (rtf_emoji)."""
+    pairs = re.compile("[\ud800-\udbff][\udc00-\udfff]")
+    found = len(pairs.findall(text))
+    if not found:
+        return text, 0
+    return pairs.sub(lambda m: m.group(0).encode(
+        "utf-16-le", "surrogatepass").decode("utf-16-le"), text), found
+
+
+def read_rtf(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
+    """The text and signs of an RTF file: what striprtf gives for it, as
+    QualCoder reads it; with the departures, text deleted with tracked
+    changes left out (rtf_deleted), the parts striprtf leaves out after
+    the text, each labelled (rtf_notes), and emoji joined (rtf_emoji)."""
     from striprtf.striprtf import rtf_to_text
+    departures = _departures(departures)
+    source = _universal_newlines(raw.decode("latin-1"))
+    seen: Dict[str, int] = {}
+    if "rtf_deleted" in departures:
+        deleted = _outermost([(s, e) for s, e, words in _rtf_groups(source)
+                              if any(word == "deleted" and arg != "0"
+                                     for word, arg in words)])
+        if deleted:
+            source = _cut(source, deleted)
+            seen["rtf_deleted"] = len(deleted)
+    parts: Dict[str, List[str]] = {label: [] for label in _RTF_ORDER}
+    taken: List[Tuple[int, int, str]] = []
+    if "rtf_notes" in departures:
+        for start, end, words in _rtf_groups(source):
+            names = [w for w, _arg in words if w != "*"]
+            if names and names[0] in _RTF_PARTS:
+                label = _RTF_PARTS[names[0]]
+                if label == "Footnote" and "ftnalt" in names:
+                    label = "Endnote"
+                taken.append((start, end, label))
+        spans = _outermost([(s, e) for s, e, _l in taken])
+        taken = [t for t in sorted(taken) if (t[0], t[1]) in spans]
+        before, after = _rtf_wrapper(source)
+        for start, end, _label in taken:
+            group = source[start:end]
+            inner = re.sub(r"^\{(?:\\\*\s*)?\\[a-zA-Z]+-?\d* ?", "{",
+                           group, count=1)
+            try:
+                part = rtf_to_text(before + inner + after)
+            except Exception:
+                raise ReadRefused("no_text") from None
+            parts[_label].append(part.strip(" \t\r\n"))
+        source = _cut(source, spans)
     try:
-        return rtf_to_text(_universal_newlines(raw.decode("latin-1")))
+        text = rtf_to_text(source)
     except Exception:
         # QualCoder then stores the RTF's own markup as its text, which
         # is noise; refused instead (a named departure).
         raise ReadRefused("no_text") from None
+    items: List[str] = []
+    for label in _RTF_ORDER:
+        found = parts[label]
+        if label == "Text box":
+            items += [f"{label}: {t}" for t in found if t]
+        elif label in ("Header", "Footer"):
+            unique = [t for i, t in enumerate(found) if t and t not in
+                      found[:i]]
+            items += [f"{label}: {t}" for t in unique]
+        else:
+            items += [f"{label} {n}: {t}" for n, t in enumerate(found, 1)
+                      if t]
+    if items:
+        if text and not text.endswith("\n"):
+            text += "\n"
+        text += "".join(item + "\n" for item in items)
+        seen["rtf_notes"] = len(items)
+    if "rtf_emoji" in departures:
+        text, joined = _join_halves(text)
+        if joined:
+            seen["rtf_emoji"] = joined
+    return text, seen
 
 
 # ---------------------------------------------------------------------------
-# Word: QualCoder's walk over word/document.xml (docx.py 85-110), copied
-# as it stands with its notice, parsing through defusedxml
+# Word: QualCoder's walk over word/document.xml (docx.py 85-110), with the
+# named departures as switches; parsing through defusedxml
 # ---------------------------------------------------------------------------
 #
 # Part of Python's docx module - http://github.com/mikemaccana/python-docx
@@ -313,40 +536,91 @@ def read_rtf(raw: bytes) -> str:
 #
 # 2022 Modified by Colin Curtain to import docx only (QualCoder).
 # 2026 Exegete: the same walk, the tree parsed with defusedxml, which
-# refuses entity declarations, instead of the standard parser.
+# refuses entity declarations, instead of the standard parser; and the
+# named departures, each a switch: given none, the walk is QualCoder's.
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+MC_NS = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+_BREAK = None      # a line break, in a paragraph's pieces
 
 
-def getdocumenttext(document):
+def _word_walk(root, departures, inside_paragraph):
+    """root.iter(), in the same order, less what the departures leave
+    out: deleted and moved-away text (word_tracked_changes); inside a
+    paragraph, its properties, where tab stops are defined
+    (word_tab_stops), and the text boxes it holds, whose paragraphs the
+    walk reaches on their own (word_text_boxes); and, of the two forms
+    Word stores for a drawing such as a text box, all but the first
+    (word_text_boxes)."""
+    pruned = set()
+    if "word_tracked_changes" in departures:
+        pruned.update((W_NS + "moveFrom", W_NS + "del"))
+    if inside_paragraph:
+        if "word_tab_stops" in departures:
+            pruned.add(W_NS + "pPr")
+        if "word_text_boxes" in departures:
+            pruned.add(W_NS + "txbxContent")
+    one_form = "word_text_boxes" in departures
+    stack = [root]
+    while stack:
+        element = stack.pop()
+        yield element
+        children = list(element)
+        if one_form and element.tag == MC_NS + "AlternateContent":
+            choices = [c for c in children if c.tag == MC_NS + "Choice"]
+            if choices:
+                children = choices[:1]
+        stack.extend(reversed([c for c in children
+                               if c.tag not in pruned]))
+
+
+def getdocumenttext(document, departures=AS_QUALCODER, counts=None):
     """ Return the raw text of a document, as a list of paragraphs. """
 
     paratextlist = []
     # Compile a list of all paragraph (p) elements
     paralist = []
-    for element in document.iter():
+    for element in _word_walk(document, departures, False):
         # Find p (paragraph) elements
         if element.tag == W_NS + 'p':
             paralist.append(element)
+    breaks = "word_line_breaks" in departures
+    marks = "word_hyphens_tabs" in departures
     # Since a single sentence might be spread over multiple text elements,
     # iterate through each paragraph, appending all text (t) children to
     # that paragraphs text.
     for para in paralist:
-        paratext = u''
+        pieces = []
         # Loop through each paragraph
-        for element in para.iter():
+        for element in _word_walk(para, departures, True):
             # Find t (text) elements
             if element.tag == W_NS + 't':
                 if element.text:
-                    paratext = paratext + element.text
+                    pieces.append(element.text)
             elif element.tag == W_NS + 'tab':
-                paratext = paratext + '\t'
+                pieces.append('\t')
+            elif breaks and element.tag in (W_NS + 'br', W_NS + 'cr'):
+                pieces.append(_BREAK)
+            elif marks and element.tag == W_NS + 'noBreakHyphen':
+                pieces.append('-')
+            elif marks and element.tag == W_NS + 'ptab':
+                pieces.append('\t')
+        # A break at a paragraph's start or end adds nothing, so a
+        # paragraph of breaks alone is empty, as QualCoder has it.
+        while pieces and pieces[0] is _BREAK:
+            pieces.pop(0)
+        while pieces and pieces[-1] is _BREAK:
+            pieces.pop()
+        paratext = "".join("\n" if p is _BREAK else p for p in pieces)
         # Add our completed paragraph text to the list of paragraph text
         if not len(paratext) == 0:
             paratextlist.append(paratext)
+            if counts is not None:
+                counts["word_line_breaks"] = counts.get(
+                    "word_line_breaks", 0) + pieces.count(_BREAK)
     return paratextlist
 
-# (End of the code copied from QualCoder's docx.py.)
+# (End of the code taken from QualCoder's docx.py.)
 
 
 def _parse_xml(data: bytes):
@@ -364,77 +638,133 @@ def _parse_xml(data: bytes):
         raise ReadRefused("damaged") from None
 
 
-def _word_has_text(archive: Archive, name: str, skip_types=()) -> bool:
-    """Whether a part such as a header or the footnotes holds any text a
-    reader would see (Word's separator footnotes are not text). Only
-    for a warning: QualCoder never reads these parts, so one that cannot
-    be read (too large, malformed, declaring entities) gives no warning
-    and refuses nothing."""
+def _word_part(archive: Archive, name: str):
+    """A part's tree, None when the file has no such part. A part that
+    is read and cannot be (too large, malformed, declaring entities)
+    refuses the file, as the document's own part does."""
     try:
-        root = _parse_xml(archive.read(name))
-    except (KeyError, ReadRefused):
-        return False
-    for child in list(root):
-        kind = child.get(W_NS + "type")
-        if kind in skip_types:
+        data = archive.read(name)
+    except KeyError:
+        return None
+    return _parse_xml(data)
+
+
+_NOTE_SEPARATORS = ("separator", "continuationSeparator",
+                    "continuationNotice")
+_WORD_NOTES = (("word/footnotes.xml", "footnote", "footnoteReference",
+                "Footnote"),
+               ("word/endnotes.xml", "endnote", "endnoteReference",
+                "Endnote"),
+               ("word/comments.xml", "comment", "commentReference",
+                "Comment"))
+
+
+def _part_number(name: str) -> int:
+    digits = re.sub(r"\D", "", name.rsplit("/", 1)[-1])
+    return int(digits) if digits else 0
+
+
+def _word_notes(archive: Archive, document, departures) -> List[str]:
+    """What QualCoder leaves out of a Word file, in this order, each
+    labelled: footnotes, endnotes and comments, numbered in the order
+    the document refers to them (those it does not refer to after);
+    then each header and footer whose text is not an earlier one's.
+    A comment's author and date are left out."""
+    referred: Dict[str, List[str]] = {}
+    for element in _word_walk(document, departures, False):
+        tag = element.tag[len(W_NS):] if element.tag.startswith(W_NS) \
+            else ""
+        if tag.endswith("Reference"):
+            referred.setdefault(tag, []).append(element.get(W_NS + "id"))
+    items = []
+    for part, tag, reference, label in _WORD_NOTES:
+        root = _word_part(archive, part)
+        if root is None:
             continue
-        for element in child.iter(W_NS + "t"):
-            if element.text and element.text.strip():
-                return True
-    return False
+        notes: Dict[str, str] = {}
+        for note in root:
+            if note.tag != W_NS + tag:
+                continue
+            if note.get(W_NS + "type") in _NOTE_SEPARATORS:
+                continue
+            text = "\n\n".join(getdocumenttext(note, departures))
+            notes.setdefault(note.get(W_NS + "id"), text.strip(" \t"))
+        order = [i for i in dict.fromkeys(referred.get(reference, []))
+                 if i in notes]
+        order += [i for i in notes if i not in order]
+        for number, note_id in enumerate(order, 1):
+            if notes[note_id]:
+                items.append(f"{label} {number}: {notes[note_id]}")
+    for kind, label in (("header", "Header"), ("footer", "Footer")):
+        names = sorted((n for n in archive.names()
+                        if re.fullmatch(rf"word/{kind}\d*\.xml", n)),
+                       key=_part_number)
+        seen = set()
+        for name in names:
+            root = _word_part(archive, name)
+            text = "\n\n".join(getdocumenttext(root, departures)) \
+                .strip(" \t")
+            if text and text not in seen:
+                seen.add(text)
+                items.append(f"{label}: {text}")
+    return items
 
 
-def read_word(raw: bytes) -> Tuple[str, Dict[str, int]]:
-    """The text and the warning counts of a Word file."""
+def _has_text(element) -> bool:
+    return any(t.text for t in element.iter(W_NS + "t"))
+
+
+def read_word(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
+    """The text and the signs of a Word file: QualCoder's paragraphs
+    joined by a blank line, then what QualCoder leaves out (word_notes)
+    after another."""
+    departures = _departures(departures)
     archive = Archive(raw)
     try:
         document = _parse_xml(archive.read("word/document.xml"))
     except KeyError:
         raise ReadRefused("not_this_format") from None
-    text = "\n\n".join(getdocumenttext(document))
     seen: Dict[str, int] = {}
+    paragraphs = getdocumenttext(document, departures, seen)
+    text = "\n\n".join(paragraphs)
+    if "word_notes" in departures:
+        notes = _word_notes(archive, document, departures)
+        if notes:
+            text = "\n\n".join(([text] if text else []) + notes)
+            seen["word_notes"] = len(notes)
 
     def count(code, n=1):
-        if n:
+        if n and (code not in DEPARTURES or code in departures):
             seen[code] = seen.get(code, 0) + n
 
     for element in document.iter():
         tag = element.tag
-        if tag == W_NS + "br":
-            if element.get(W_NS + "type") in (None, "textWrapping"):
-                count("word_line_break")
-        elif tag == W_NS + "cr":
-            count("word_line_break")
-        elif tag == W_NS + "tabs":
-            count("word_tab_stops")
-        elif tag == W_NS + "txbxContent":
-            count("word_text_box")
-        elif tag in (W_NS + "ins", W_NS + "del", W_NS + "pPrChange",
-                     W_NS + "rPrChange"):
+        if tag == W_NS + "pPr":
+            count("word_tab_stops",
+                  sum(1 for _ in element.iter(W_NS + "tab")))
+        elif tag == W_NS + "txbxContent" and _has_text(element):
+            count("word_text_boxes")
+        elif tag == W_NS + "moveFrom" and _has_text(element):
             count("word_tracked_changes")
-        elif tag in (W_NS + "moveFrom", W_NS + "moveTo"):
-            count("word_moved_text")
-        elif tag == W_NS + "tbl":
-            count("word_table")
-    parts = archive.names()
-    if any(_word_has_text(archive, name) for name in parts
-           if re.fullmatch(r"word/(header|footer)\d*\.xml", name)):
-        count("word_headers_footers")
-    if any(_word_has_text(archive, name,
-                          ("separator", "continuationSeparator",
-                           "continuationNotice"))
-           for name in ("word/footnotes.xml", "word/endnotes.xml")):
-        count("word_footnotes")
-    if _word_has_text(archive, "word/comments.xml"):
-        count("word_comments")
+        elif tag == W_NS + "del":
+            count("word_tracked_changes",
+                  sum(1 for _ in element.iter(W_NS + "tab")))
+        elif tag in (W_NS + "noBreakHyphen", W_NS + "ptab"):
+            count("word_hyphens_tabs")
+        if tag in (W_NS + "ins", W_NS + "del", W_NS + "moveFrom",
+                   W_NS + "moveTo", W_NS + "pPrChange", W_NS + "rPrChange"):
+            count("word_revisions")
+    if not seen.get("word_line_breaks"):
+        seen.pop("word_line_breaks", None)
     return text, seen
 
 
 # ---------------------------------------------------------------------------
-# OpenDocument: QualCoder's string recipe over content.xml, exactly, with
-# no XML parser (convert_odt_to_text, manage_files.py 3415-3467). Taken
-# from QualCoder (LGPL-3.0): the sequence of replacements and the tag
-# rule are QualCoder's; see NOTICE.
+# OpenDocument: QualCoder's string recipe over content.xml, with no XML
+# parser (convert_odt_to_text, manage_files.py 3415-3467), and the named
+# departures as steps before and after it. Taken from QualCoder
+# (LGPL-3.0): the sequence of replacements and the tag rule are
+# QualCoder's; see NOTICE.
 # ---------------------------------------------------------------------------
 
 _ODT_REPLACEMENTS = (
@@ -466,20 +796,93 @@ _ODT_ENTITIES = (("&apos;", "'"), ("&quot;", '"'), ("&gt;", ">"),
                  ("&lt;", "<"), ("&amp;", "&"))
 
 
-def odt_recipe(content: bytes) -> str:
-    """QualCoder's text for a content.xml. QualCoder turns the bytes into
-    their printed form and back, which gives the bytes decoded as UTF-8
-    between two quote marks it never reaches; decoded directly here. A
-    content.xml that is not UTF-8 makes QualCoder's import fail."""
-    try:
-        data = content.decode("utf-8")
-    except UnicodeDecodeError:
-        raise ReadRefused("damaged") from None
-    start = data.find("</text:sequence-decls>")
-    end = data.find("</office:text>")
-    if start == -1 or end == -1:
-        return ""
-    data = data[start + 22: end]
+def _odt_empty(name: str) -> "re.Pattern":
+    """An empty element, self-closed or not, with any attributes."""
+    return re.compile(rf"<{name}(?:\s[^>]*?)?(?:/>|>\s*</{name}>)")
+
+
+_ODT_TAB = _odt_empty("text:tab")
+_ODT_LINE_BREAK = _odt_empty("text:line-break")
+_ODT_SPACE = re.compile(r"<text:s(\s[^>]*?)?(?:/>|>\s*</text:s>)")
+_ODT_SPACE_COUNT = re.compile(r"""text:c\s*=\s*["'](\d{1,9})["']""")
+# More spaces than this in one run are layout, not text, and a hostile
+# file could ask for billions.
+_ODT_MAX_SPACES = 100
+_ODT_TEXT_BOX = re.compile(r"<draw:text-box(?=[\s/>])")
+_ODT_DESCRIPTION = re.compile(
+    r"<(svg:title|svg:desc)(?:\s[^>]*)?>.*?</\1>", re.S)
+_ODT_ANY_TAG = re.compile(r"<[^>]*>")
+_ODT_REFERENCE = re.compile(
+    r"&(#[0-9]{1,7}|#[xX][0-9A-Fa-f]{1,6}|apos|quot|gt|lt|amp);")
+_ODT_NAMED = {"apos": "'", "quot": '"', "gt": ">", "lt": "<", "amp": "&"}
+_ODT_ANNOTATION = re.compile(
+    r"<office:annotation(?:\s[^>]*)?>(.*?)</office:annotation>", re.S)
+_ODT_COMMENT_META = re.compile(
+    r"<(dc:creator|dc:date|meta:date-string)(?:\s[^>]*)?>.*?</\1>", re.S)
+_ODT_NOTE = re.compile(r"<text:note(\s[^>]*)?>(.*?)</text:note>", re.S)
+_ODT_NOTE_BODY = re.compile(
+    r"<text:note-body(?:\s[^>]*)?>(.*)</text:note-body>", re.S)
+_ODT_HEADER_FOOTER = re.compile(
+    r"<style:((header|footer)(?:-left|-first)?)(\s[^>]*)?>(.*?)"
+    r"</style:\1>", re.S)
+# What an OpenDocument file not saved by LibreOffice holds before its
+# text (LibreOffice writes it before the part QualCoder starts after).
+_ODT_DECLARATIONS = re.compile(
+    r"<(text:tracked-changes|text:variable-decls|text:sequence-decls|"
+    r"text:user-field-decls|text:dde-connection-decls|office:forms|"
+    r"table:calculation-settings|table:content-validations|"
+    r"table:label-ranges)(?:\s[^>]*?)?(?:/>|>.*?</\1>)", re.S)
+_ODT_LAYOUT = re.compile(r">[ \t]*\r?\n\s*<")
+
+
+def _free_marks(data: str, count: int) -> List[str]:
+    """Characters `data` does not hold, to mark places through the
+    recipe."""
+    marks: List[str] = []
+    point = 0xF0000
+    while len(marks) < count:
+        if chr(point) not in data:
+            marks.append(chr(point))
+        point += 1
+    return marks
+
+
+def _odt_reference(match) -> str:
+    name = match.group(1)
+    if name in _ODT_NAMED:
+        return _ODT_NAMED[name]
+    point = int(name[2:], 16) if name[1] in "xX" else int(name[1:])
+    if (point in (0x9, 0xA, 0xD) or 0x20 <= point <= 0xD7FF
+            or 0xE000 <= point <= 0xFFFD or 0x10000 <= point <= 0x10FFFF):
+        return chr(point)
+    return match.group(0)      # not a character XML allows: as typed
+
+
+def _odt_spaces(match) -> str:
+    found = _ODT_SPACE_COUNT.search(match.group(1) or "")
+    count = int(found.group(1)) if found else 1
+    return " " * max(1, min(count, _ODT_MAX_SPACES))
+
+
+def _odt_steps(data: str, departures, marks, seen) -> str:
+    """QualCoder's replacements and tag rule over `data`, with the
+    departures' steps before and after them."""
+    line_mark, box_mark = marks
+
+    def step(code, pattern, repl, text):
+        if code not in departures:
+            return text
+        text, n = pattern.subn(repl, text)
+        if n and seen is not None and code != "odt_text_boxes":
+            seen[code] = seen.get(code, 0) + n
+        return text
+
+    data = step("odt_tabs", _ODT_TAB, "\t", data)
+    data = step("odt_spaces", _ODT_SPACE, _odt_spaces, data)
+    data = step("odt_line_breaks", _ODT_LINE_BREAK, line_mark, data)
+    data = step("odt_text_boxes", _ODT_TEXT_BOX,
+                box_mark + "<draw:text-box", data)
+    data = step("odt_markup", _ODT_DESCRIPTION, "", data)
     for old, new in _ODT_REPLACEMENTS:
         data = data.replace(old, new)
     # A tag starting with one of the three prefixes is dropped up to the
@@ -498,39 +901,165 @@ def odt_recipe(content: bytes) -> str:
             break
         at = close + 1
     text = "".join(out)
-    for old, new in _ODT_ENTITIES:
-        text = text.replace(old, new)
+    if "odt_markup" in departures:
+        # Every tag left (other programs' parts, closing tags QualCoder's
+        # list does not name), then every character reference in one
+        # pass, which reads the five QualCoder reads as it does.
+        text = step("odt_markup", _ODT_ANY_TAG, "", text)
+        numeric = []
+
+        def reference(match):
+            out = _odt_reference(match)
+            if out != match.group(0) and match.group(1)[0] == "#":
+                numeric.append(1)
+            return out
+
+        text = _ODT_REFERENCE.sub(reference, text)
+        if numeric and seen is not None:
+            seen["odt_markup"] = seen.get("odt_markup", 0) + len(numeric)
+    else:
+        for old, new in _ODT_ENTITIES:
+            text = text.replace(old, new)
+    if "odt_text_boxes" in departures:
+        glued = len(re.findall(f"(?<!\n){box_mark}", text))
+        if glued and seen is not None:
+            seen["odt_text_boxes"] = seen.get("odt_text_boxes", 0) + glued
+        text = re.sub(f"(?<!\n){box_mark}", "\n", text).replace(box_mark, "")
     return text
 
 
-def read_opendocument(raw: bytes) -> Tuple[str, Dict[str, int]]:
+def _odt_paragraphs(text: str, line_mark: str) -> str:
+    """QualCoder's doubling of every line break (load_file_text 3243);
+    a line break inside a paragraph (odt_line_breaks) stays single."""
+    return text.replace("\n", "\n\n").replace(line_mark, "\n")
+
+
+def odt_recipe(content: bytes, departures=AS_QUALCODER,
+               seen: Optional[Dict[str, int]] = None,
+               styles: Optional[bytes] = None
+               ) -> Tuple[str, List[str], str]:
+    """QualCoder's text for a content.xml, before load_file_text doubles
+    its line breaks; what QualCoder leaves out (odt_notes), each
+    labelled; and the character that marks a line break inside a
+    paragraph (odt_line_breaks), which the doubling leaves single. QualCoder turns the bytes into their printed form and back,
+    which gives the bytes decoded as UTF-8 between two quote marks it
+    never reaches; decoded directly here. A content.xml that is not UTF-8
+    makes QualCoder's import fail."""
+    try:
+        data = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise ReadRefused("damaged") from None
+    start = data.find("</text:sequence-decls>")
+    end = data.find("</office:text>")
+    if end != -1 and start == -1 and "odt_any_program" in departures:
+        # Not saved by LibreOffice (pandoc, the Mac's TextEdit): read from
+        # the start of the text, its declarations left out, and the line
+        # breaks and indents a program lays its XML out with dropped.
+        opening = data.find("<office:text")
+        start = data.find(">", opening) + 1 if opening != -1 else -1
+        if start <= 0 or start > end:
+            return "", [], ""
+        data = _ODT_LAYOUT.sub("><", _ODT_DECLARATIONS.sub(
+            "", data[start:end])).strip()
+        if seen is not None:
+            seen["odt_any_program"] = 1
+    elif start == -1 or end == -1:
+        return "", [], ""
+    else:
+        data = data[start + 22: end]
+    marks = _free_marks(data, 2)
+    notes: List[str] = []
+    if "odt_notes" in departures:
+        comments: List[str] = []
+        footnotes: List[str] = []
+        endnotes: List[str] = []
+
+        def note_text(fragment: str) -> str:
+            return _odt_paragraphs(_odt_steps(
+                fragment, departures, marks, None), marks[0]).strip(
+                    "\n \t")
+
+        def take_comment(match):
+            comments.append(note_text(
+                _ODT_COMMENT_META.sub("", match.group(1))))
+            return ""
+
+        def take_note(match):
+            body = _ODT_NOTE_BODY.search(match.group(2))
+            kind = (endnotes if re.search(
+                r"""text:note-class\s*=\s*["']endnote""",
+                match.group(1) or "") else footnotes)
+            kind.append(note_text(body.group(1) if body else ""))
+            return ""
+
+        data = _ODT_ANNOTATION.sub(take_comment, data)
+        data = _ODT_NOTE.sub(take_note, data)
+        for label, found in (("Footnote", footnotes),
+                             ("Endnote", endnotes), ("Comment", comments)):
+            notes += [f"{label} {number}: {text}"
+                      for number, text in enumerate(found, 1) if text]
+        notes += _odt_headers_footers(styles, departures)
+        if notes and seen is not None:
+            seen["odt_notes"] = len(notes)
+    return _odt_steps(data, departures, marks, seen), notes, marks[0]
+
+
+def _odt_headers_footers(styles: Optional[bytes], departures) -> List[str]:
+    """The headers and footers of styles.xml's master pages, each whose
+    text is not an earlier one's, and none set not to show."""
+    if not styles:
+        return []
+    try:
+        data = styles.decode("utf-8")
+    except UnicodeDecodeError:
+        raise ReadRefused("damaged") from None
+    start = data.find("<office:master-styles")
+    end = data.find("</office:master-styles>")
+    if start == -1 or end == -1:
+        return []
+    found: Dict[str, List[str]] = {"header": [], "footer": []}
+    for match in _ODT_HEADER_FOOTER.finditer(data, start, end):
+        if re.search(r"""style:display\s*=\s*["']false""",
+                     match.group(3) or ""):
+            continue
+        marks = _free_marks(match.group(4), 2)
+        text = _odt_paragraphs(_odt_steps(match.group(4), departures,
+                                          marks, None), marks[0]) \
+            .strip("\n \t")
+        if text and text not in found[match.group(2)]:
+            found[match.group(2)].append(text)
+    return ([f"Header: {t}" for t in found["header"]]
+            + [f"Footer: {t}" for t in found["footer"]])
+
+
+def read_opendocument(raw: bytes, departures=None
+                      ) -> Tuple[str, Dict[str, int]]:
+    departures = _departures(departures)
     archive = Archive(raw)
     try:
         content = archive.read("content.xml")
     except KeyError:
         raise ReadRefused("not_this_format") from None
-    if (b"</office:text>" in content
-            and b"</text:sequence-decls>" not in content):
-        # QualCoder's recipe starts after a part LibreOffice always
-        # writes and pandoc and the Mac's own converter do not: it finds
-        # no text, and stores the file's own bytes (a named departure:
-        # refused, with the way round).
-        raise ReadRefused("odt_not_libreoffice")
-    text = odt_recipe(content).replace("\n", "\n\n")
+    # QualCoder's recipe starts after a part LibreOffice always writes
+    # and pandoc and the Mac's own converter do not: without
+    # odt_any_program it finds no text in such a file, as QualCoder does
+    # (which then stores the file's own bytes).
+    styles = None
+    if "odt_notes" in departures:
+        try:
+            styles = archive.read("styles.xml")
+        except KeyError:
+            styles = None
     seen: Dict[str, int] = {}
-    for code, marker in (("odt_comments", b"<office:annotation"),
-                         ("odt_notes", b"<text:note "),
-                         ("odt_tabs", b"<text:tab"),
-                         ("odt_spaces", b"<text:s"),
-                         ("odt_line_breaks", b"<text:line-break"),
-                         ("odt_tables", b"<table:table ")):
-        found = content.count(marker)
-        if code == "odt_spaces":
-            found = len(re.findall(rb"<text:s[ />]", content))
-        elif code == "odt_tabs":
-            found = len(re.findall(rb"<text:tab[ />]", content))
-        if found:
-            seen[code] = found
+    body, notes, line_mark = odt_recipe(content, departures, seen, styles)
+    text = _odt_paragraphs(body, line_mark) if line_mark else body
+    if notes:
+        if text and not text.endswith("\n"):
+            text += "\n\n"
+        text += "".join(note + "\n\n" for note in notes)
+    tables = len(re.findall(rb"<table:table table:name=", content))
+    if tables:
+        seen["odt_tables"] = tables
     return text, seen
 
 
@@ -563,7 +1092,11 @@ def _counted_epub_reader(epub, archive: "Archive"):
     return CountedReader
 
 
-def read_epub(raw: bytes) -> str:
+def read_epub(raw: bytes, departures=None,
+              seen: Optional[Dict[str, int]] = None) -> str:
+    """QualCoder's reading of an EPUB (extract_epub_fulltext), each
+    chapter through the web page rules with their departures."""
+    departures = _departures(departures)
     archive = Archive(raw)
     archive.check_whole()
     import ebooklib
@@ -608,14 +1141,15 @@ def read_epub(raw: bytes) -> str:
         except Exception:
             raise ReadRefused("damaged") from None
         try:
+            # EbookLib writes every body out as UTF-8 (lxml's serialiser),
+            # so this never fails on a chapter EbookLib could read; no
+            # character set is guessed.
             chapter = body.decode("utf-8")
         except UnicodeDecodeError:
-            # EbookLib writes each chapter's body out as UTF-8, so this
-            # is a damaged book; QualCoder's import fails here too.
             raise ReadRefused("damaged") from None
         except AttributeError:
             continue
-        text += web_page_text(chapter) + "\n\n"
+        text += web_page_text(chapter, departures, seen) + "\n\n"
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     if text and text[0] == BOM:
         text = text[1:]
@@ -760,16 +1294,13 @@ def pandoc_layout_signs(text: str) -> List[str]:
 # One document, as QualCoder's load_file_text reads it (3213-3349)
 # ---------------------------------------------------------------------------
 
-def _web_signs(raw: bytes) -> Dict[str, int]:
-    found = len(re.findall(rb"<(?:div|td|th)\b", raw[:MAX_ARCHIVE_PART],
-                           re.IGNORECASE))
-    return {"web_blocks": found} if found else {}
-
-
-def read_document(kind: str, raw: bytes) -> Dict[str, Any]:
-    """The text QualCoder 4.0's import would store for a file of `kind`
-    with these bytes (pseudonyms aside, which the server applies), and
-    what the preview says about it.
+def read_document(kind: str, raw: bytes, departures=None
+                  ) -> Dict[str, Any]:
+    """The text Exegete stores for a file of `kind` with these bytes
+    (pseudonyms aside, which the server applies), and what the preview
+    says about it: QualCoder 4.0's import's text, with the named
+    departures (all of them unless others are given; given none, the
+    text is QualCoder's).
 
     Returns a dict: text, charset (for plain text and web pages, the
     UTF-8 they were read as), signs (warning code to count), and for a
@@ -783,16 +1314,15 @@ def read_document(kind: str, raw: bytes) -> Dict[str, Any]:
     markups = 0
     text = ""
     if kind == WORD:
-        text, signs = read_word(raw)
+        text, signs = read_word(raw, departures)
     elif kind == OPENDOCUMENT:
-        text, signs = read_opendocument(raw)
+        text, signs = read_opendocument(raw, departures)
     elif kind == RTF:
-        text = read_rtf(raw)
+        text, signs = read_rtf(raw, departures)
     elif kind == EPUB:
-        text = read_epub(raw)
+        text = read_epub(raw, departures, signs)
     elif kind == WEB:
-        text, charset = read_web_page(raw)
-        signs = _web_signs(raw)
+        text, charset = read_web_page(raw, departures, signs)
     elif kind == PDF:
         text, notes, markups = read_pdf(raw)
     elif kind not in PLAIN_FORMATS:

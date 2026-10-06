@@ -357,21 +357,38 @@ class TestArchivesAndWords:
 
     def test_an_opendocument_file_not_saved_by_libreoffice(self, project,
                                                           folder):
+        """Read (a named departure: QualCoder finds no text in it and
+        stores the file's own bytes), and the preview says so."""
         (folder / "pandoc.odt").write_bytes(
             import_fixtures.ODT["no_sequence_decls.odt"]())
-        preview = _call(paths=[str(folder)])
-        reason = preview["refused"][0]["reason"]
-        assert "not saved by LibreOffice" in reason
-        assert "save it again as .odt" in reason
-        assert "No text was found" not in reason
+        preview, done = _both([str(folder)])
+        (entry,) = preview["files"]
+        assert any("not saved by LibreOffice" in line
+                   for line in entry["for_information"])
+        assert import_words.WARNINGS[import_words.READS_OTHERWISE][1] \
+            in entry["for_information"]
+        assert done["success"] is True
+        ((_i, _n, text, _m),) = _rows(project)
+        assert text == "Text QualCoder cannot find.\n\n"
 
     def test_an_rtf_file_with_an_emoji(self, project, folder):
-        # U+1F600, as RTF writers put it: two escapes, one per half
+        """An emoji, which RTF writes as two escapes, one per half, comes
+        in as one character (QualCoder's import fails on the file)."""
         (folder / "e.rtf").write_bytes(
             rb"{\rtf1\ansi Hi \u-10179?\u-8704? there\par}")
+        preview, done = _both([str(folder)])
+        (entry,) = preview["files"]
+        assert any("It holds emoji (1)" in line
+                   for line in entry["for_information"])
+        ((_i, _n, text, _m),) = _rows(project)
+        assert text == "Hi \U0001F600 there\n"
+
+    def test_an_rtf_file_with_half_an_emoji(self, project, folder):
+        (folder / "e.rtf").write_bytes(
+            rb"{\rtf1\ansi Hi \u-10179? there\par}")
         preview = _call(paths=[str(folder)])
         reason = preview["refused"][0]["reason"]
-        assert "holds an emoji" in reason
+        assert "half of a character" in reason
         assert "Save it as Word (.docx)" in reason
 
     def test_a_subtitle_file_loses_every_mark_at_its_start(self, project,
@@ -391,14 +408,20 @@ class TestArchivesAndWords:
         ((_i, _n, text, _m),) = _rows(project)
         assert text == "A\x00B and a tab\there\n"
 
-    @pytest.mark.parametrize("code", ["word_tab_stops", "word_table",
-                                      "word_headers_footers",
-                                      "word_footnotes", "word_comments",
-                                      "web_blocks", "pdf_scanned"])
+    @pytest.mark.parametrize("code", ["pdf_scanned"])
     def test_each_warning_gives_a_way_round(self, code):
         group, words = import_words.WARNINGS[code]
         assert group == "changes"
-        assert "Way round" in words or "copy them into" in words
+        assert "Way round" in words
+
+    @pytest.mark.parametrize("code", sorted(doc_readers.DEPARTURES))
+    def test_each_departure_says_what_qualcoder_would_do(self, code):
+        """Where Exegete reads better than QualCoder, the preview says so
+        for information (the text is the better for it) and says what
+        QualCoder's own import would store instead."""
+        group, words = import_words.WARNINGS[code]
+        assert group == "information"
+        assert "QualCoder's own import would" in words
 
     @pytest.mark.skipif(not OPTIONAL, reason="needs the optional part")
     def test_after_a_pdf_the_answer_says_what_a_mismatch_means(

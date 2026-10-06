@@ -135,7 +135,113 @@ def word(body: str, extra: Dict[str, bytes] = None, prologue: str = "",
     return _zip(parts)
 
 
+# Each of the named departures for Word, one document each (TOOLS.md,
+# "Document import: where it departs from QualCoder").
+BREAKS_BODY = (
+    '<w:p><w:r><w:br w:type="page"/></w:r>' + _r("After a page break.")
+    + "</w:p>"
+    "<w:p><w:r><w:t>thank you</w:t><w:cr/><w:t>Interviewer: next</w:t>"
+    "</w:r></w:p>"
+    "<w:p><w:r><w:br/></w:r></w:p>"
+    '<w:p><w:r><w:t>Column one</w:t><w:br w:type="column"/>'
+    "<w:t>column two</w:t></w:r></w:p>"
+    "<w:p><w:r><w:t>Two</w:t><w:br/><w:br/><w:t>breaks</w:t><w:br/>"
+    "</w:r></w:p>"
+    "<w:p><w:r><w:t>a well</w:t><w:noBreakHyphen/><w:t>known name</w:t>"
+    "</w:r></w:p>"
+    '<w:p><w:r><w:t>Name</w:t><w:ptab w:relativeTo="margin" '
+    'w:alignment="right" w:leader="none"/><w:t>Date</w:t></w:r></w:p>'
+    "<w:p><w:r><w:t>Soft</w:t><w:softHyphen/><w:t>hyphen</w:t></w:r>"
+    "</w:p>"
+)
+
+_WPS = "http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+_MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+# A text box as Word and LibreOffice write it: its drawing, and a copy
+# for older readers.
+TEXT_BOX_BODY = (
+    f'<w:p xmlns:mc="{_MC}" xmlns:wps="{_WPS}">' + _r("Before the box")
+    + '<w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:drawing>'
+    "<wps:wsp><wps:txbx><w:txbxContent><w:p>" + _r("Boxed words")
+    + "</w:p><w:p>" + _r("and more") + "</w:p></w:txbxContent></wps:txbx>"
+    "</wps:wsp></w:drawing></mc:Choice><mc:Fallback><w:pict><v:shape "
+    'xmlns:v="urn:schemas-microsoft-com:vml"><v:textbox><w:txbxContent>'
+    "<w:p>" + _r("Boxed words") + "</w:p><w:p>" + _r("and more")
+    + "</w:p></w:txbxContent></v:textbox></v:shape></w:pict></mc:Fallback>"
+    "</mc:AlternateContent></w:r>" + _r(" and after it.") + "</w:p>"
+    + "<w:p>" + _r("Next paragraph.") + "</w:p>"
+)
+
+TRACKED_BODY = (
+    "<w:p>" + _r("Kept ")
+    + '<w:del w:id="1" w:author="A"><w:r><w:tab/><w:delText>gone'
+    "</w:delText></w:r></w:del>"
+    + '<w:ins w:id="2" w:author="A">' + _r("new") + "</w:ins>"
+    + _r(" words.") + "</w:p>"
+    '<w:p><w:moveFrom w:id="3" w:author="A">' + _r("A moved sentence.")
+    + "</w:moveFrom></w:p>"
+    + "<w:p>" + _r("Middle.") + "</w:p>"
+    '<w:p><w:moveTo w:id="4" w:author="A">' + _r("A moved sentence.")
+    + "</w:moveTo></w:p>"
+)
+
+
+def _part(root: str, inner: str) -> bytes:
+    return (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            f'<w:{root} xmlns:w="{W}">{inner}</w:{root}>').encode("utf-8")
+
+
+NOTES_BODY = (
+    "<w:p>" + _r("The clinic")
+    + '<w:r><w:footnoteReference w:id="3"/></w:r>' + _r(" was far")
+    + '<w:r><w:footnoteReference w:id="2"/></w:r>' + _r(".") + "</w:p>"
+    + '<w:p><w:commentRangeStart w:id="5"/>' + _r("We moved")
+    + '<w:commentRangeEnd w:id="5"/><w:r><w:commentReference w:id="5"/>'
+    "</w:r>" + _r(" in 2019")
+    + '<w:r><w:endnoteReference w:id="2"/></w:r>' + _r(".") + "</w:p>"
+)
+NOTES_PARTS = {
+    "word/footnotes.xml": _part(
+        "footnotes",
+        '<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/>'
+        '</w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator"'
+        ' w:id="0"><w:p><w:r><w:continuationSeparator/></w:r></w:p>'
+        '</w:footnote><w:footnote w:id="2"><w:p><w:r><w:footnoteRef/></w:r>'
+        + _r(" Second, by its place.") + '</w:p></w:footnote>'
+        '<w:footnote w:id="3"><w:p><w:r><w:footnoteRef/></w:r><w:r><w:tab/>'
+        "</w:r>" + _r("First, by its place.") + "</w:p><w:p>"
+        + _r("Its second paragraph.") + '</w:p></w:footnote>'
+        '<w:footnote w:id="4"><w:p>' + _r("Not referred to.")
+        + "</w:p></w:footnote>"),
+    "word/endnotes.xml": _part(
+        "endnotes",
+        '<w:endnote w:type="separator" w:id="0"><w:p><w:r><w:separator/>'
+        '</w:r></w:p></w:endnote><w:endnote w:id="2"><w:p>'
+        "<w:r><w:endnoteRef/></w:r>" + _r(" An endnote.")
+        + "</w:p></w:endnote>"),
+    "word/comments.xml": _part(
+        "comments",
+        '<w:comment w:id="7" w:author="Ann Editor" w:date="2026-01-01T10:00:'
+        '00Z"><w:p>' + _r("Not anchored.") + '</w:p></w:comment>'
+        '<w:comment w:id="5" w:author="Ann Editor" w:date="2026-01-01T10:00:'
+        '00Z"><w:p><w:r><w:annotationRef/></w:r>' + _r("Check the year.")
+        + "</w:p></w:comment>"),
+    "word/header1.xml": _part("hdr", "<w:p>" + _r("Interview 12")
+                              + "</w:p>"),
+    "word/header2.xml": _part("hdr", "<w:p>" + _r("Interview 12")
+                              + "</w:p>"),
+    "word/header3.xml": _part("hdr", "<w:p></w:p>"),
+    "word/footer1.xml": _part("ftr", "<w:p><w:r><w:ptab "
+                              'w:alignment="center" w:relativeTo="margin" '
+                              'w:leader="none"/></w:r>' + _r("Page 1")
+                              + "</w:p>"),
+}
+
 WORD = {
+    "breaks.docx": lambda: word(BREAKS_BODY),
+    "text_box.docx": lambda: word(TEXT_BOX_BODY),
+    "tracked.docx": lambda: word(TRACKED_BODY),
+    "notes.docx": lambda: word(NOTES_BODY, NOTES_PARTS),
     "features.docx": lambda: word(WORD_BODY, {
         "word/footnotes.xml": FOOTNOTES, "word/comments.xml": COMMENTS,
         "word/header1.xml": HEADER}),
@@ -157,7 +263,9 @@ _ODT_NS = ('xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
            'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
            'xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" '
            'xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" '
-           'xmlns:dc="http://purl.org/dc/elements/1.1/"')
+           'xmlns:dc="http://purl.org/dc/elements/1.1/" '
+           'xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-'
+           'compatible:1.0"')
 
 
 def _content(body: str, with_decls: bool = True) -> bytes:
@@ -200,7 +308,61 @@ def odt(content: bytes) -> bytes:
                  "content.xml": content})
 
 
+# Notes, comments, a text box and character references, with headers
+# and footers in styles.xml, as LibreOffice places them.
+ODT_NOTES_BODY = (
+    '<text:p>The clinic<text:note text:id="ftn1" text:note-class="endnote">'
+    "<text:note-citation>i</text:note-citation><text:note-body><text:p>"
+    "An endnote.</text:p></text:note-body></text:note> was far"
+    '<text:note text:id="ftn2" text:note-class="footnote"><text:note-'
+    "citation>1</text:note-citation><text:note-body><text:p>A footnote,"
+    "</text:p><text:p>in two paragraphs.</text:p></text:note-body>"
+    "</text:note>.</text:p>"
+    '<text:p>Outer words<draw:frame text:anchor-type="as-char" '
+    'draw:name="Frame1"><svg:title>A frame</svg:title><svg:desc>Its '
+    "description</svg:desc><draw:text-box><text:p>In a box</text:p>"
+    "</draw:text-box></draw:frame> after the box.</text:p>"
+    "<text:p>Emoji &#128512; and &#x263A;, a bad one &#0; kept.</text:p>"
+)
+ODT_STYLES = (
+    '<?xml version="1.0" encoding="UTF-8"?><office:document-styles '
+    'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+    'xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" '
+    'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
+    "<office:master-styles><style:master-page style:name=\"Standard\">"
+    "<style:header><text:p>Interview 12</text:p></style:header>"
+    "<style:header-left><text:p>Interview 12</text:p></style:header-left>"
+    "<style:footer><text:p>Page <text:page-number>1</text:page-number>"
+    "</text:p></style:footer></style:master-page>"
+    '<style:master-page style:name="Other"><style:header '
+    'style:display="false"><text:p>Hidden header</text:p></style:header>'
+    "</style:master-page></office:master-styles></office:document-styles>"
+).encode("utf-8")
+
+# Not saved by LibreOffice: no sequence declarations, and laid out on
+# lines, as pandoc writes it.
+ODT_PRETTY = (
+    f'<?xml version="1.0" encoding="utf-8" ?>\n<office:document-content '
+    f'{_ODT_NS}>\n<office:body>\n<office:text>\n<text:tracked-changes>'
+    "<text:changed-region text:id=\"c1\"><text:deletion><office:change-"
+    "info><dc:creator>Ann</dc:creator></office:change-info><text:p>gone"
+    "</text:p></text:deletion></text:changed-region></text:tracked-changes>"
+    "\n<office:forms />\n"
+    '<text:h text:outline-level="1">Interview</text:h>\n'
+    "<text:p>Q: Why did you<text:line-break />leave?</text:p>\n"
+    '<table:table table:name="Table1">\n  <table:table-header-rows>\n'
+    "    <table:table-row>\n      <table:table-cell>\n        <text:p>"
+    "Name:</text:p>\n      </table:table-cell>\n    </table:table-row>\n"
+    "  </table:table-header-rows>\n</table:table>\n</office:text>\n"
+    "</office:body>\n</office:document-content>\n"
+).encode("utf-8")
+
 ODT = {
+    "notes.odt": lambda: _zip({
+        "mimetype": b"application/vnd.oasis.opendocument.text",
+        "META-INF/manifest.xml": ODT_MANIFEST,
+        "content.xml": _content(ODT_NOTES_BODY), "styles.xml": ODT_STYLES}),
+    "pretty.odt": lambda: odt(ODT_PRETTY),
     "features.odt": lambda: odt(_content(ODT_BODY)),
     "no_sequence_decls.odt": lambda: odt(_content(
         "<text:p>Text QualCoder cannot find.</text:p>", with_decls=False)),
@@ -218,6 +380,25 @@ RTF = {
                     b"Tab\\tafter.\\par}"),
     "raw_utf8.rtf": ("{\\rtf1\\ansi\\deff0 José typed as UTF-8."
                      "\\par}").encode("utf-8"),
+    # What striprtf leaves out, and a tracked deletion it keeps.
+    "notes.rtf": (b"{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl"
+                  b"{\\f0 Times;}}\r\n"
+                  b"{\\header\\pard\\plain Interview 12\\par}"
+                  b"{\\headerf\\pard\\plain Interview 12\\par}"
+                  b"{\\footer\\pard\\plain Page 1\\par}\r\n"
+                  b"\\pard Kept {\\deleted\\revauthdel1 gone }words"
+                  b"{\\super\\chftn{\\*\\footnote\\pard\\plain\\chftn"
+                  b"\\tab A caf\\'e9 note.}}.\\par\r\n"
+                  b"Endnote here{\\super\\chftn{\\*\\footnote\\ftnalt"
+                  b"\\pard\\plain\\chftn A last note.}}.\\par\r\n"
+                  b"{\\*\\atnid A}{\\*\\atnauthor Ann}\\chatn{\\*"
+                  b"\\annotation{\\*\\atnref 0}\\pard\\plain A comment.}"
+                  b"Commented.\\par\r\n"
+                  b"Box {\\shp{\\*\\shpinst{\\sp{\\sn shapeType}{\\sv 202}}"
+                  b"{\\shptxt In a box\\par}}}after.\\par}"),
+    # An emoji, written in two halves as RTF writes it, and one half alone.
+    "emoji.rtf": b"{\\rtf1\\ansi Smile \\u-10179?\\u-8704? ok.\\par}",
+    "half_emoji.rtf": b"{\\rtf1\\ansi Half \\u-10179? of it.\\par}",
 }
 
 
@@ -242,6 +423,15 @@ HTML = {
                           "</body></html>").encode("cp1252"),
     "cp1252_in_comment.html": (b"<html><body><!-- caf\xe9 --><p>Plain "
                                b"text.</p></body></html>"),
+    # Blocks laid out on lines; paragraphs inside blocks, which gain
+    # nothing; a table with a heading row.
+    "blocks.html": (b"<html><body>\n<section>\n  <h4>Speaker list</h4>\n"
+                    b"  <div><p>Inside a block.</p></div>\n"
+                    b"  <table>\n    <tr><th>Name:</th><th>Role</th></tr>"
+                    b"\n    <tr><td>Ana</td><td>Nurse</td></tr>\n"
+                    b"  </table>\n</section>\n<ul><li>One</li></ul>After "
+                    b"the list.<blockquote>Quoted</blockquote><hr/>Last."
+                    b"\n</body></html>\n"),
 }
 
 
@@ -291,6 +481,11 @@ EPUB = {
         "ch2.xhtml": _chapter("\ufeff<p>Second chapter, café.</p>"),
         "extra.xhtml": _chapter("<p>Outside the spine.</p>"),
     }, ["ch2", "ch1", "ch2"]),
+    "blocks.epub": lambda: epub({
+        "ch1.xhtml": _chapter("<div>Speaker one</div><div>Speaker two</div>"
+                              "<table><tr><td>Name:</td><td>Ana</td></tr>"
+                              "</table><p>A paragraph.</p>"),
+    }, ["ch1"]),
     "entities.epub": lambda: epub({
         "ch1.xhtml": _chapter("<p>&x;</p>", prologue=(
             '<!DOCTYPE html [<!ENTITY x "expanded">]>')),
@@ -356,6 +551,17 @@ PDF = {
 }
 
 
+# Documents written by other programs, kept as they wrote them, since the
+# shape of a file depends on its maker: LibreOffice 25.2 made the Word,
+# OpenDocument, RTF and web page files from documents/source.fodt
+# (soffice --headless --convert-to), pandoc 3.7 made pandoc.odt from
+# documents/source.md, and the Mac's textutil (TextEdit's converter) made
+# textedit.odt from a two-line text file.
+DOCUMENTS_FOLDER = Path(__file__).parent / "fixtures" / "documents"
+DOCUMENTS = ("libreoffice.docx", "libreoffice.odt", "libreoffice.rtf",
+             "libreoffice.html", "pandoc.odt", "textedit.odt")
+
+
 def optional_part_installed() -> bool:
     try:
         import ebooklib  # noqa: F401
@@ -373,6 +579,8 @@ def all_fixtures(optional: bool = None) -> Dict[str, bytes]:
     out: Dict[str, bytes] = dict(TEXT)
     out.update(RTF)
     out.update(HTML)
+    for name in DOCUMENTS:
+        out[name] = (DOCUMENTS_FOLDER / name).read_bytes()
     for table in (WORD, ODT) + ((EPUB, PDF) if optional else ()):
         for name, make in table.items():
             out[name] = make()

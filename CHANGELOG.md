@@ -139,8 +139,8 @@ change before it is released.
   subtitle files (.srt, .vtt) into the open project from the
   researcher's computer, by their paths or a folder's, and PDF and EPUB
   with an optional part (below). Exegete reads each document on the
-  computer, the way QualCoder 4.0's own import reads it, so a project
-  imported by either program looks the same to both; the documents'
+  computer, the way QualCoder 4.0's own import reads it and better where
+  QualCoder's reading loses or garbles content (below); the documents'
   text never passes through the conversation.
 - Two steps, as Exegete's other changes that matter: the first call
   writes nothing and answers with a preview (a summary line, the names
@@ -157,25 +157,53 @@ change before it is released.
   failure after the backup takes the batch back and names the backup.
   Claude Code asks before both calls
   (`anthropic/requiresUserInteraction`).
-- The text is QualCoder 4.0's, to the character, checked against
-  QualCoder's own extraction functions on every test document
-  (`scripts/qualcoder_parity.py`, `tests/test_v0143_import_parity.py`).
-  QualCoder's Word reader is copied with its MIT notice and parses
-  through defusedxml; OpenDocument follows QualCoder's string recipe
-  with no parser; RTF uses striprtf, as QualCoder does; web pages follow
-  QualCoder's rules, written afresh.
+- Better text than QualCoder's readers (the owner's decision of 6
+  October 2026), each departure a line of TOOLS.md with an example. In
+  Word files, a line break inside a paragraph stays a line break (where
+  QualCoder joins the words either side), tab stops set on a paragraph
+  add no tabs, a text box comes once (QualCoder repeats it up to four
+  times), moved text once, and non-breaking hyphens and positioned tabs
+  are kept; footnotes, endnotes, comments, headers and footers come
+  after the text, each labelled ("Footnote 1: ..."), comments' authors
+  and dates left out. In OpenDocument files, runs of spaces, tabs and
+  line breaks are kept, a text box starts on a line of its own, notes
+  and comments leave the sentence they sat in with their markup and come
+  after the text as in Word, with headers and footers, other markup is
+  taken out and character codes read, and a file not saved by
+  LibreOffice (pandoc's, TextEdit's) is read, where QualCoder finds no
+  text. In RTF files, text deleted with tracked changes is left out,
+  notes, comments, headers, footers and text boxes come after the text,
+  and an emoji (two halves in RTF) is one character, where QualCoder's
+  import fails. In web pages and EPUB chapters, blocks and table cells
+  start on lines of their own. What QualCoder's reading leaves out comes
+  after the text, so the text it does read keeps its place. A PDF's text
+  is QualCoder's to the character, since QualCoder 4.0 re-reads a PDF
+  and compares. The preview names each departure a file shows, for
+  information, and that within the project both programs read the text
+  Exegete stores.
+- The proof, against QualCoder's own extraction functions
+  (`scripts/qualcoder_parity.py`, `tests/test_v0143_import_parity.py`):
+  with every departure switched off, Exegete's readers give QualCoder's
+  text to the character on every test document; and on every test
+  document, each difference from QualCoder's text is listed with the
+  departure that makes it, and nothing else differs. The test documents
+  include files written by LibreOffice, pandoc and TextEdit. QualCoder's
+  Word walk is kept with its MIT notice, each departure a switch on it,
+  and parses through defusedxml, in every part it reads; OpenDocument
+  follows QualCoder's string recipe with no parser, each departure a
+  step before or after it; RTF uses striprtf, as QualCoder does; web
+  pages follow QualCoder's rules, written afresh.
 - Named departures, each with its reason in TOOLS.md: a file in which
   no text is found is refused, where QualCoder stores its raw bytes; a
   file declaring XML entities is refused; a file not saved as UTF-8 is
   held back (below); a UTF-8 file whose accents came out wrong in the
   file itself is held back until it is corrected; subtitle files come
   in as documents, with every byte-order mark at their start removed;
-  an OpenDocument file not saved by LibreOffice, and an RTF file
-  holding an emoji, are refused with the way round; originals are
-  always copied, never linked, and keep their internet-origin mark;
-  per-format size limits, archive limits and time and memory limits;
-  the AI coder name owns the rows and their attribute values, as the
-  owner decided.
+  an RTF file holding half of an emoji without the other half is
+  refused with the way round; originals are always copied, never
+  linked, and keep their internet-origin mark; per-format size limits,
+  archive limits and time and memory limits; the AI coder name owns the
+  rows and their attribute values, as the owner decided.
 - The project's pseudonyms list is applied to the stored text by
   default, as QualCoder's import does (never to PDFs, nor to the
   originals); an empty list counts as none; a list Exegete cannot use

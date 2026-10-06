@@ -764,8 +764,9 @@ v14) are unaffected.
 ## Bringing documents in (provisional, 0.14.3)
 
 `import_documents` reads documents on your computer, by their paths,
-the way QualCoder's own import reads them. The documents' text does not
-pass through the conversation on the way in. What does reach the AI
+the way QualCoder's own import reads them, and better where QualCoder's
+reading loses or garbles content (TOOLS.md lists how). The documents'
+text does not pass through the conversation on the way in. What does reach the AI
 provider, and what does not:
 
 | Step | Sent to the AI provider | Not sent |
@@ -774,7 +775,7 @@ provider, and what does not:
 | The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's name | the text |
 | Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
 
-Six cautions:
+Seven cautions:
 
 - **File names travel everywhere** (in the paths, the answers and every
   later read), so a participant's name in a file's name reaches the
@@ -815,6 +816,16 @@ Six cautions:
 - **A file imported by mistake** stays in every backup taken after it,
   since a backup copies the whole project. Restoring the backup taken
   just before the import takes it back while nothing else has changed.
+- **More of a document comes in than in QualCoder**: a Word,
+  OpenDocument or RTF file's footnotes, endnotes, comments, headers and
+  footers (and an RTF file's text boxes) come after its text, where
+  QualCoder's import leaves them out. So a comment a transcriber or a
+  colleague left, or a header naming the interview's date and place,
+  becomes part of the text the assistant reads. The names list is
+  applied to these parts as to the rest; comments' authors and dates
+  are left out. If a document's comments are not meant to be read, you
+  could delete them, or save a copy without them, in its own app before
+  importing; the preview says when a file has such parts.
 
 Each document is read in a separate, short-lived process with a time
 limit and a memory cap, handed the file's bytes rather than its path;

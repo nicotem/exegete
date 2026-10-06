@@ -243,8 +243,9 @@ class TestTheSettings:
         scripts = PYPROJECT["project"]["scripts"]
         # --frozen (fix round 1): each start installs exactly the lock,
         # never re-resolving it against a tester's own uv settings.
-        # --extra pdf-epub (0.14.3, provisional, decision 1): the
-        # optional part for PDF and EPUB import, switched on here
+        # --extra pdf-epub (0.14.3, the owner's decision of 6 October
+        # 2026): the optional part for PDF and EPUB import, switched on
+        # here
         assert config["args"] == ["run", "--frozen", "--extra",
                                   *EXTENSION_EXTRAS, "--directory",
                                   "${__dirname}", *scripts]

@@ -11770,9 +11770,10 @@ def _converted_documents_help() -> Dict[str, Any]:
         "title": "Bringing in a document converted by another tool, such "
                  "as a pandoc server",
         "why": "Exegete reads Word, OpenDocument, RTF, web page, Markdown, "
-               "plain text and subtitle files itself, as QualCoder does, so "
-               "both programs store the same text. A converter gives other "
-               "text, so a converted file comes in as a .txt of its own.",
+               "plain text and subtitle files itself, as QualCoder does and "
+               "better where QualCoder's reading loses or garbles content "
+               "(TOOLS.md lists how). A converter gives other text, so a "
+               "converted file comes in as a .txt of its own.",
         "steps": [
             "Convert file to file: the original in, a .txt out, in a folder "
             "outside the project. Always give an output file: without one, "
@@ -11796,8 +11797,10 @@ def _converted_documents_help() -> Dict[str, Any]:
             "private files from the computer.",
             "Do not convert .html or .epub files: Exegete reads them itself "
             "(EPUB with the optional part).",
-            "Never convert to .odt: QualCoder stores a pandoc-made .odt as "
-            "noise, and Exegete refuses it. Pandoc cannot read PDF."],
+            "Never convert to .odt: QualCoder's own import finds no text "
+            "in a pandoc-made .odt and stores the file's own codes, so the "
+            "two programs would read the same file differently; a .txt "
+            "reads the same in both. Pandoc cannot read PDF."],
         "defaults_file": place if place is not None else (
             "not available: the file in Exegete's package is missing or "
             "has been changed, so it is not named. Reinstall Exegete."),

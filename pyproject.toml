@@ -77,12 +77,14 @@ Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 # PDF and EPUB come in through the two libraries QualCoder 4.0 itself
 # reads them with, PyMuPDF and EbookLib, as this optional part, switched
 # on in the Claude Desktop extension, so that a PDF's stored text is
-# QualCoder's to the character. Both are AGPL-3.0, so an install with
-# this part is, as a whole, under the AGPL's terms, as QualCoder's own
-# installs are; Exegete's own code stays LGPL, and a PyPI install without
-# the part is untouched. lxml (which EbookLib needs) at 6.1.0 or newer,
-# the release that fixed its latest advisory; PyMuPDF at 1.26.7 or
-# newer, for the same reason.
+# QualCoder's to the character (QualCoder re-reads a PDF and compares),
+# and an EPUB's is QualCoder's with Exegete's named departures
+# (TOOLS.md). Both are AGPL-3.0, so an install with this part is, as a
+# whole, under the AGPL's terms, as QualCoder's own installs are;
+# Exegete's own code stays LGPL, and a PyPI install without the part is
+# untouched. lxml (which EbookLib needs) at 6.1.0 or newer, the release
+# that fixed its latest advisory; PyMuPDF at 1.26.7 or newer, for the
+# same reason.
 pdf-epub = [
     "pymupdf>=1.26.7",
     "ebooklib>=0.20",

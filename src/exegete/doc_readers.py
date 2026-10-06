@@ -85,13 +85,18 @@ def zip_entry_count(data: bytes) -> int:
     directory = struct.unpack_from("<I", data, at + 12)[0]
     locator = at - 20
     if locator >= 0 and data[locator:locator + 4] == _ZIP64_LOCATOR:
+        # zipfile reads the zip64 record from just before the locator,
+        # whatever offset the locator gives; an archive whose locator
+        # points elsewhere (at a decoy record declaring a small
+        # directory, say) is refused, so the record checked here is the
+        # one zipfile will use.
         offset = struct.unpack_from("<Q", data, locator + 8)[0]
-        if (offset + 56 <= len(data)
-                and data[offset:offset + 4] == _ZIP64_EOCD):
-            count = struct.unpack_from("<Q", data, offset + 32)[0]
-            directory = struct.unpack_from("<Q", data, offset + 40)[0]
-        else:
+        record = locator - 56
+        if (record < 0 or offset != record
+                or data[record:record + 4] != _ZIP64_EOCD):
             raise ReadRefused("not_an_archive")
+        count = struct.unpack_from("<Q", data, record + 32)[0]
+        directory = struct.unpack_from("<Q", data, record + 40)[0]
     if directory > MAX_ARCHIVE_DIRECTORY:
         raise ReadRefused("archive_too_many_entries",
                           limit=MAX_ARCHIVE_ENTRIES)
@@ -586,8 +591,10 @@ def read_opendocument(raw: bytes) -> Tuple[str, Dict[str, int]]:
 # (helpers.py 382-422), each chapter through the web page rules
 # ---------------------------------------------------------------------------
 
-_ENTITY_MARKERS = (b"<!ENTITY", "<!ENTITY".encode("utf-16-le"),
-                   "<!ENTITY".encode("utf-16-be"))
+# The declaration in every encoding an XML parser reads by itself (lxml,
+# under EbookLib, reads UTF-32 as well as UTF-8 and UTF-16).
+_ENTITY_MARKERS = tuple("<!ENTITY".encode(name) for name in (
+    "utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"))
 
 
 def _counted_epub_reader(epub, archive: "Archive"):

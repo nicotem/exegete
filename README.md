@@ -137,7 +137,10 @@ suggest them for participants' data.
 Text you paste or attach in the conversation goes to the AI's maker in
 full. A document you bring in through Exegete, or import in QualCoder,
 goes only as far as the assistant later reads it ("How it works",
-above).
+above). Exegete's preview of an import sends the documents' names,
+sizes, lengths and warnings, never their text (provisional; the table in
+[PRIVACY.md, "Bringing documents in"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#bringing-documents-in-provisional-0143)
+lists what goes).
 
 **Assistants that open files by themselves.** Some assistants can also
 open files on your computer by themselves, with tools of their own and

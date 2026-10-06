@@ -62,7 +62,12 @@ otherwise, and may change before it is released.
   text or name (`rename_file`, `pseudonymise_source`, which with
   `rewrite_memos` clears the whole project's pages, and
   `restore_backup`); preview pages an hour after they were written;
-  everything a week after, when the server starts.
+  everything a week after, when the server starts; a temporary file
+  an interrupted copy left beside an original's copy goes after ten
+  minutes, as one beside a page does. An original of another type is
+  refused in words that say it is not one of the types Exegete copies
+  for reading (a project QualCoder 3.8.2 made can hold one, since 3.8.2
+  imports any file it can read as plain text).
 - Opening is narrow: only files Exegete has just written into the
   reading folder; never a shell, never Python's `webbrowser` module,
   never `qlmanage`; only the document and media types QualCoder
@@ -167,7 +172,9 @@ otherwise, and may change before it is released.
   a name from the names list that the guessed reading does not, the
   file is held back, naming that set, since the list would not replace
   that name. This holds whatever the guess: a Polish or Turkish file is
-  often guessed to be Windows Western.
+  often guessed to be Windows Western. The preview says that QualCoder
+  may guess differently, since it does not fix charset-normalizer's
+  release.
 - The batch goes in together or not at all: a file the preview read as
   ready that reads otherwise at the import (out of time or memory, say)
   stops the whole import, naming the file; a file the preview held back
@@ -176,16 +183,22 @@ otherwise, and may change before it is released.
 - Limits that hold whatever a file declares: every part EbookLib reads
   from an EPUB counts towards the 100 MB, each time it is read (a
   chapter listed thirty times is thirty reads), and is checked for
-  entity declarations whatever its name; an archive's directory larger
-  than 10,000 entries could need is refused before it is parsed.
+  entity declarations whatever its name and in every encoding an XML
+  parser reads by itself (UTF-32 too); an archive's directory larger
+  than 10,000 entries could need is refused before it is parsed, and so
+  is an archive whose zip64 locator points away from the record Python's
+  zipfile reads.
 - A project whose folder of originals is a link stops the import (the
   copies would land outside the project, where its backups do not
   reach), as it already stopped the reading tool.
 - In a project QualCoder 3.8.2 made (no sub-codes column), each PDF's
-  preview says that 3.8.2 shows it but will not let its text be coded;
-  the switch had looked at coder visibility, which 3.8.2 projects have
-  too. After a PDF is imported, the answer says what to do if QualCoder
-  4.0 reports a text mismatch, which another PyMuPDF release can cause.
+  preview says that 3.8.2's PDF view shows it but will not let it be
+  coded there (its Code text window can); the switch had looked at
+  coder visibility, which 3.8.2 projects have too. TOOLS.md lists what
+  else differs in a 3.8.2 project, and names LaTeX files, which
+  QualCoder 4.0 imports linked and Exegete does not import. After a PDF
+  is imported, the answer says what to do if QualCoder 4.0 reports a
+  text mismatch, which another PyMuPDF release can cause.
 - Every document is read in a separate, short-lived process: started
   isolated, handed the file's bytes rather than a path, answering in
   plain data, its error output dropped, with a time limit and a memory

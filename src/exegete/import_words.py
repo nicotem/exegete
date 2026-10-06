@@ -327,8 +327,8 @@ WARNINGS = {
         "Its character set was guessed as {charset}; QualCoder may guess "
         "differently."),
     "charset_guessed_check": ("changes",
-        "Its character set was guessed as {charset}, as QualCoder guesses "
-        "it. " + _DOUBTFUL_GUESS),
+        "Its character set was guessed as {charset}; QualCoder may guess "
+        "differently. " + _DOUBTFUL_GUESS),
     # The same for a web page whose text is not UTF-8, which QualCoder
     # does not guess for: its import fails on such a page.
     "web_charset_guessed": ("information",
@@ -356,8 +356,9 @@ WARNINGS = {
         "have offered to code them; Exegete codes nothing without your "
         "approval, one by one."),
     "qc382_pdf": ("information",
-        "QualCoder 3.8.2 will show this PDF but will not let you code "
-        "its text; QualCoder 4.0 will; Exegete can."),
+        "QualCoder 3.8.2's PDF view shows this PDF but will not let you "
+        "code it there (its Code text window can); QualCoder 4.0's PDF "
+        "view can."),
 }
 
 

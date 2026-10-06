@@ -56,10 +56,10 @@ COPY_NOTE = ("This is a copy for reading: changes to it go nowhere. It "
 # project, could act when double-clicked, read-only or not, so Exegete
 # neither copies nor shows it.
 NOT_A_DOCUMENT_TYPE = (
-    "This original is not one of the document or media types QualCoder "
-    "imports, so Exegete neither copies nor shows it: a file of another "
-    "type, such as a program or a shortcut, could act when opened. Ask "
-    "whoever made the project what the file is.")
+    "This original is not one of the document or media types Exegete "
+    "copies for reading, so Exegete neither copies nor shows it: a file "
+    "of another type, such as a program or a shortcut, could act when "
+    "opened. Ask whoever made the project what the file is.")
 
 
 def copied_type(name: str) -> bool:

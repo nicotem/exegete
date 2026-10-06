@@ -414,6 +414,18 @@ def sweep(now: Optional[float] = None) -> int:
                     if item.name.startswith(TEMP_PREFIX):
                         removed += _remove_if_older(Path(item.path), now,
                                                     TEMP_LIFETIME)
+                    elif (item.name == ORIGINAL
+                          and item.is_dir(follow_symlinks=False)):
+                        # An interrupted copy of an original is left in
+                        # the original's own folder, one level down.
+                        try:
+                            copies = list(os.scandir(item.path))
+                        except OSError:
+                            copies = []
+                        for copy in copies:
+                            if copy.name.startswith(TEMP_PREFIX):
+                                removed += _remove_if_older(
+                                    Path(copy.path), now, TEMP_LIFETIME)
                 removed += _remove_if_older(path, now, LIFETIME,
                                             newest_inside=True)
                 continue

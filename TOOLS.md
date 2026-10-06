@@ -684,20 +684,35 @@ the reason:
 | The names list | applied entry by entry; a backslash in a pseudonym read as a pattern | applied in one pass, longest first, each pseudonym written literally; a list Exegete cannot use stops the import | one pass never rewrites a pseudonym it has written |
 | PDFs, and file names, holding listed names | imported | held back (a PDF comes in with `import_pdfs_with_listed_names`; a file name is renamed first) | the names list's promise |
 | PDF highlights and underlines | offered to be coded at import | counted in the preview, not coded | every coding needs the researcher's approval |
-| The file's memo | empty, PDF notes apart | also `memo` and a named character set, before the PDF notes | what the researcher asked to record |
+| The file's memo | empty, PDF notes apart | also `memo` and a named character set, before the PDF notes; the PDF notes' heading is always "PDF annotations:", where QualCoder writes it in its interface language | what the researcher asked to record |
 | The file's owner | the researcher's coder name | the AI coder name, on the row and its attribute values | Exegete's rule for every write (provisional, decision 5) |
 | QualCoder's search and AI indexes | written at import | left to QualCoder's next opening of the project | QualCoder rebuilds both itself |
 | A PDF's text | read with the PyMuPDF release QualCoder has | read with the release Exegete has (the extension pins 1.28.2, the release the parity tests pass with); another release can read some PDFs differently, and QualCoder 4.0 may then report a text mismatch and offer to restructure, which moves codings | the import's answer names the release and says to take a backup and check before accepting |
 | Folders | no folder import | a folder's own supported files, in name order; its subfolders named, not opened | one place to name |
+| LaTeX (`.tex`) | imported linked, never copied, its text made from the markup | not imported: refused by path, and counted among a folder's other files | it needs a reader of its own, and QualCoder keeps no copy in the project for Exegete to hold |
 
 **In a project QualCoder 3.8.2 made** (schema v14, no sub-codes
 column), more differs, because the table above compares with QualCoder
-4.0: 3.8.2 shows a PDF Exegete imported but will not let its text be
-coded in its PDF view (the preview says so for each PDF); Windows line
-endings are removed where 3.8.2 kept them; an EPUB is read in reading
-order, without the navigation page 3.8.2 includes; and the names list
-is applied with each name written literally where 3.8.2 read it as a
-pattern.
+4.0. Exegete stores 4.0's text, which 3.8.2 shows as stored, so nothing
+is misaligned; but:
+
+- 3.8.2's PDF view shows a PDF Exegete imported and will not let it be
+  coded there (its Code text window can); the preview says so for each
+  PDF;
+- Windows and old Mac line endings become ordinary line breaks, where
+  3.8.2 kept them;
+- byte-order marks at a file's start are removed, where 3.8.2 can keep
+  one;
+- a PDF's notes join the file's memo, which 3.8.2 leaves empty;
+- a PDF with no text layer is stored as its page breaks, where 3.8.2
+  stores the PDF file's own bytes as its text;
+- an EPUB is read in reading order, without the navigation page 3.8.2
+  includes;
+- 3.8.2 imports any file it can read as plain text (subtitle and LaTeX
+  files among them), so the subtitle row's "taken only as a recording's
+  transcript" is 4.0's way, not 3.8.2's;
+- the names list is applied with each name written literally, where
+  3.8.2 read it as a pattern.
 
 Every document is read in a separate, short-lived process with a time
 limit and a memory cap, and every refusal and warning is in Exegete's

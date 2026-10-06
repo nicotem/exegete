@@ -118,11 +118,21 @@ def _guess(data: bytes) -> str:
     return charset
 
 
+def _read_rightly(data: bytes) -> bool:
+    """Whether the installed charset-normalizer reads these Windows
+    Western bytes as a Western set would. Decided here, not by
+    `doubtful_guess`, so that a test the guard should fail is never
+    skipped by the guard itself."""
+    import codecs
+    return codecs.lookup(_guess(data)).name in {"cp1252", "iso8859-1",
+                                                "iso8859-15"}
+
+
 class TestAGuessedCharacterSet:
 
     def test_a_listed_name_the_guess_garbles_holds_the_file_back(
             self, project, folder):
-        if not doc_import.doubtful_guess(_guess(INTERVIEW)):
+        if _read_rightly(INTERVIEW):
             pytest.skip("this charset-normalizer reads the file rightly")
         _names_list(project, [("Hélène", "Participant A"),
                               ("José", "Participant B")])
@@ -164,7 +174,7 @@ class TestAGuessedCharacterSet:
         assert doc_import.doubtful_guess(charset) is doubtful
 
     def test_a_doubtful_guess_needs_a_look(self, project, folder):
-        if not doc_import.doubtful_guess(_guess(FRENCH)):
+        if _read_rightly(FRENCH):
             pytest.skip("this charset-normalizer reads the file rightly")
         (folder / "French notes.txt").write_bytes(FRENCH)
         preview = _call(paths=[str(folder)])
@@ -212,7 +222,7 @@ class TestQualCoder382Projects:
             import_fixtures.all_fixtures(True)["three_pages.pdf"])
         preview = _call(paths=[str(folder)])
         lines = preview["files"][0].get("for_information", [])
-        said = any("QualCoder 3.8.2 will show this PDF" in line
+        said = any("QualCoder 3.8.2's PDF view shows this PDF" in line
                    for line in lines)
         assert said is warned, preview
 

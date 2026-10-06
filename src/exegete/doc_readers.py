@@ -7,8 +7,14 @@ text QualCoder's own import would store for it, with the warning codes
 the import's preview turns into plain words. The rules are QualCoder
 4.0's, at the pinned commit 9bddf17 (src/qualcoder/manage_files.py
 unless another file is named); the departures are named where they are
-made, and in TOOLS.md. Only `read_document` is called from outside, and
+made, and in TOOLS.md. A document is read by `read_document`, called
 only inside the reading process (import_reading), never in the server.
+The server uses this module's names and small helpers, and reads in one
+place: the names check of a plain text file or a web page read by a
+guessed or a named character set (doc_import) runs `reading_text` on
+the bytes as each common character set decodes them, which for a web
+page is Python's own HTML parser, and only for a file the reading
+process has already read within its limits.
 
 Nothing here touches the disk or the network. A refusal is a
 `ReadRefused` carrying one of Exegete's own codes and numbers, never a

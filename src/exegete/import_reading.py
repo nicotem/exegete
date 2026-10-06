@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The reading process: each document is read in a separate, short-lived
 Python process, so that a hostile or broken file cannot reach the server
-itself (0.14.3, provisional; the design's Part 5).
+itself (0.14.3, provisional; the design's Part 5). The one exception is
+the names check of a file read by a guessed or a named character set,
+which decodes its bytes again in the server, and parses a web page's
+markup again with Python's own HTML parser, once per common character
+set, after this process has read it within its limits (doc_readers'
+`reading_text`).
 
 The contract, and why each part matters:
 

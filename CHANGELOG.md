@@ -9,13 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
-## [0.14.2-alpha] - 2026-10-02
+## [0.14.2-alpha] - 2026-10-07
 
 v0.14.2: the assistant's brief, provisional; the rules a model must
 not miss within the 2,048 characters Claude Code shows of a tool
-description; fixes from the checks of 0.14.1; and the README,
-rewritten to say plainly what Exegete does, for newcomers and for
-advanced users.
+description; fixes from the checks of 0.14.1; the README, rewritten
+to say plainly what Exegete does, for newcomers and for advanced
+users, and opening with the woven lockup; and QualCoder 4.0, released
+on 2 October 2026, named as what Exegete is verified against. 4.0
+keeps the project format Exegete already wrote, so only words
+changed, in the documents and in two messages.
 
 ### Added: the assistant's brief (provisional)
 
@@ -435,7 +438,8 @@ advanced users.
   package and the rules they most often miss: point `HOME` (and
   `USERPROFILE`) at a scratch folder, since that is what protects the
   server's own folder; commit with an explicit identity; and where the
-  2,048-character rule's listed exceptions are.
+  2,048-character rule's listed exceptions are. CONTRIBUTING.md's map
+  of the package now lists `path_identity.py` and `transition.py`.
 - Tests: the pins moved with their words, and new ones hold each of
   these sentences (`tests/test_v0142_docs.py`,
   `tests/test_v0142_qc40_release.py`, and the refusal's words in

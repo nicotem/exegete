@@ -280,44 +280,69 @@ class TestHostileFilesStayCheap:
     """The readers' own scans go forwards only: a file of openings with
     no closing, or of many small parts, costs one pass, not one pass per
     opening (the reading process's time limit is the last guard, not the
-    first)."""
+    first). Each is timed against an ordinary file of about the same
+    size, read the same way, so the test holds on a slow computer: one
+    pass costs about what the ordinary file costs, a pass per opening
+    hundreds of times more."""
 
-    def _quick(self, read):
+    def _cheap(self, hostile, ordinary):
         start = time.perf_counter()
-        result = read()
-        assert time.perf_counter() - start < 2
+        ordinary()
+        usual = time.perf_counter() - start
+        start = time.perf_counter()
+        result = hostile()
+        spent = time.perf_counter() - start
+        assert spent < 10 * usual + 0.5, (spent, usual)
         return result
+
+    @staticmethod
+    def _odt(body: str) -> bytes:
+        return import_fixtures.odt(import_fixtures._content(body))
 
     def test_opendocument_openings_with_no_closing(self):
         for opening in ("<office:annotation>", '<text:note text:id="n">',
                         "<svg:title>"):
-            body = "<text:p>a" + opening * 20000 + "b</text:p>"
-            data = import_fixtures.odt(import_fixtures._content(body))
-            assert self._quick(lambda: _text(
-                doc_readers.OPENDOCUMENT, data)) == "ab\n\n"
+            hostile = self._odt("<text:p>a" + opening * 20000 + "b</text:p>")
+            ordinary = self._odt("<text:p>a" + "x" * len(opening) * 20000
+                                 + "b</text:p>")
+            assert self._cheap(
+                lambda: _text(doc_readers.OPENDOCUMENT, hostile),
+                lambda: _text(doc_readers.OPENDOCUMENT, ordinary)) \
+                == "ab\n\n"
 
     def test_opendocument_declarations_with_no_closing(self):
-        content = (
-            '<?xml version="1.0"?><office:document-content '
-            'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"'
-            ' xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
-            "<office:body><office:text>" + "<office:forms>" * 20000
-            + "<text:p>Words.</text:p></office:text></office:body>"
-            "</office:document-content>").encode("utf-8")
-        self._quick(lambda: _text(doc_readers.OPENDOCUMENT,
-                                  import_fixtures.odt(content)))
+        def content(middle):
+            return import_fixtures.odt((
+                '<?xml version="1.0"?><office:document-content xmlns:office='
+                '"urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+                'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
+                "<office:body><office:text>" + middle
+                + "<text:p>Words.</text:p></office:text></office:body>"
+                "</office:document-content>").encode("utf-8"))
+        hostile = content("<office:forms>" * 20000)
+        ordinary = content("<text:p>" + "x" * 14 * 20000 + "</text:p>")
+        self._cheap(lambda: _text(doc_readers.OPENDOCUMENT, hostile),
+                    lambda: _text(doc_readers.OPENDOCUMENT, ordinary))
 
     def test_opendocument_headers_with_no_closing(self):
-        styles = ("<office:master-styles>" + "<style:header>" * 20000
-                  + "</office:master-styles>").encode("utf-8")
-        data = import_fixtures._zip({
-            "mimetype": b"application/vnd.oasis.opendocument.text",
-            "content.xml": import_fixtures._content("<text:p>W.</text:p>"),
-            "styles.xml": styles})
-        assert self._quick(lambda: _text(
-            doc_readers.OPENDOCUMENT, data)) == "W.\n\n"
+        def with_styles(styles):
+            return import_fixtures._zip({
+                "mimetype": b"application/vnd.oasis.opendocument.text",
+                "content.xml": import_fixtures._content(
+                    "<text:p>W.</text:p>"),
+                "styles.xml": ("<office:master-styles>" + styles
+                               + "</office:master-styles>").encode("utf-8")})
+        hostile = with_styles("<style:header>" * 20000)
+        ordinary = with_styles("<style:header><text:p>" + "x" * 14 * 20000
+                               + "</text:p></style:header>")
+        assert self._cheap(
+            lambda: _text(doc_readers.OPENDOCUMENT, hostile),
+            lambda: _text(doc_readers.OPENDOCUMENT, ordinary)) == "W.\n\n"
 
     def test_a_web_page_of_many_spaces_then_blocks(self):
-        page = ("<html><body>" + "<b> </b>" * 20000 + "<div></div>" * 20000
-                + "Last.</body></html>").encode("utf-8")
-        self._quick(lambda: _text(doc_readers.WEB, page))
+        def page(inline):
+            return ("<html><body>" + inline * 20000 + "<div></div>" * 20000
+                    + "Last.</body></html>").encode("utf-8")
+        hostile, ordinary = page("<b> </b>"), page("<b>x</b>")
+        self._cheap(lambda: _text(doc_readers.WEB, hostile),
+                    lambda: _text(doc_readers.WEB, ordinary))

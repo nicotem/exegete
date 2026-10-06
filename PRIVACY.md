@@ -970,11 +970,12 @@ conversation.
 
 **When it is on.** In the Claude Desktop extension, it is on unless you
 switch it off: Settings, Extensions, Exegete, "Tell me when a new
-version is out". At its first start, Exegete tells you about the check
-through the assistant, and makes its first check no sooner than seven
-days later, so you can switch it off first. On the Terminal route, it
-is off unless the app that starts Exegete sets `EXEGETE_UPDATE_CHECK`
-to `on`. Exegete's log says at every start whether it is on.
+version is out". The first time the assistant uses Exegete with the
+check on, Exegete tells you about the check through the assistant, and
+makes its first check no sooner than seven days later, so you can
+switch it off first. On the Terminal route, it is off unless the app
+that starts Exegete sets `EXEGETE_UPDATE_CHECK` to `on`. Exegete's log
+says at every start whether it is on.
 
 **What it sends.** An ordinary request for that file, identified only
 as "Exegete": nothing from your projects, no names, no version number,
@@ -1018,11 +1019,12 @@ this computer, which it keeps even with checking off (so that it can
 say once that an update worked). Nothing from your projects.
 
 **What enters the conversation.** Notes for the assistant to pass on,
-each once: that the check exists (at the first start), that a newer
-version is out, and that an update worked. When you ask, the answer
-gives the installed and newest versions, how Exegete was installed, and
-the steps, with any folder written from your home folder (`$HOME`).
-These go to your AI provider like any other tool answer.
+each once: that the check exists (the first time Exegete is used),
+that a newer version is out, and that an update worked. When you ask,
+the answer gives the installed and newest versions, how Exegete was
+installed, and the steps, with any folder in your home folder written
+from it (`$HOME`); a folder outside your home folder is written in
+full. These go to your AI provider like any other tool answer.
 
 **Switching it off.** When it is off, Exegete itself makes no
 connection, including when you ask whether it is up to date. Installing

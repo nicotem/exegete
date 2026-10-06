@@ -611,9 +611,9 @@ def _source_folder() -> Optional[Path]:
 
 def detect_route(started_as: Optional[str] = None, environ=None,
                  prefix: Optional[str] = None) -> str:
-    """How this copy was installed, in the order the design gives: the
-    extension's own mark, the old name, uv tool or pipx, a git copy,
-    uvx, a virtual environment; otherwise unknown."""
+    """How this copy was installed, checked in this order: the
+    extension's own mark, a git copy (under either name), the old name,
+    uv tool or pipx, uvx, a virtual environment; otherwise unknown."""
     if (env_settings.installed_as(environ) or "").strip().lower() == \
             EXTENSION:
         return EXTENSION

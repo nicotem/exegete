@@ -34,8 +34,8 @@ Updates are still never installed by themselves.
   a note saying what the check sends and how to switch it off, and the
   first check waits at least seven days after it, for a new
   installation and an update alike. On the Terminal route
-  `EXEGETE_UPDATE_CHECK` is off unless set. Switched off, Exegete makes
-  no connection, not even when asked. The log says at every start
+  `EXEGETE_UPDATE_CHECK` is off unless set to `on`. Switched off,
+  Exegete makes no connection, not even when asked. The log says at every start
   whether checking is on. PRIVACY.md, "Checking for new versions", says
   what is sent and kept, with GitHub's own words on what it records.
 - **`check_for_updates`**: the installed and newest versions with their

@@ -571,7 +571,8 @@ versions, below, are new and have one spelling only.
   log says at every start whether checking is on.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
-  was installed. Do not set it yourself.
+  was installed. It also makes checking on by default, as the
+  extension's setting is. Do not set it yourself.
 
 ---
 
@@ -1195,6 +1196,11 @@ and in every answer, and v0.15 removes it (QualCoder's Pseudonyms
 dialog, the button in Manage Files, shows the list without sending it
 anywhere).
 
+`check_for_updates` is not marked read-only either: it records each
+check in Exegete's own folder, so a host that asks before a tool runs
+asks before it. It is in the `full` and `lifecycle` tool sets, not in
+`core`.
+
 What each host does, from Anthropic's pages as read on 27 September
 2026 ("Choose a permission mode" and the MCP page on code.claude.com;
 "Get started with Claude Cowork" on support.claude.com):
@@ -1532,9 +1538,11 @@ Create a case-code matrix
 
 Updates are manual (a new release does not install itself). With the
 extension, Exegete tells you when one is out unless you switched that
-off; ask "How do I update Exegete?" for the steps. On the Terminal
-route the check is off unless you set `EXEGETE_UPDATE_CHECK` to `on`
-("Environment variables the server reads").
+off; ask "How do I update Exegete?" for the steps (with the
+`lifecycle` or `full` tool set; with `core`, which has no check tool,
+the notice links the update page). On the Terminal route the check is
+off unless you set `EXEGETE_UPDATE_CHECK` to `on` ("Environment
+variables the server reads").
 
 **Desktop extension**: download the newer `.mcpb` and install it as
 before; Claude replaces the old one.
@@ -1554,6 +1562,11 @@ or in PowerShell on Windows:
 ```powershell
 $HOME\exegete-venv\Scripts\pip install --upgrade exegete
 ```
+
+`uv tool upgrade exegete` keeps a version that was pinned when Exegete
+was installed, as the steps Exegete gives pin one (`uv tool install
+--force "exegete==<version>"`); to move on from such a pin, run those
+steps again with the newer version.
 
 **Git (contributor) install**, when new versions are released. First
 **fully quit your MCP client** (Claude Desktop: Cmd+Q; Claude Code: end
@@ -1945,9 +1958,12 @@ If you want to remove the MCP server:
    row ids and offsets of the rows the run moved and, since v0.13, where
    each pseudonym now sits in the notes it rewrote; never an original
    name), and the record of the check for new versions
-   (`update_check.json`: when it last tried, what it found, which
-   versions it has told you about and the newest version that has run
-   here; nothing from your projects). Nothing else is stored there,
+   (`update_check.json`: when it last tried and, if that failed, the
+   kind of failure, what it found, which versions it has told you
+   about, when it told you about the check and the date of its first
+   check, and the newest version that has run here, which it keeps even
+   with checking off; nothing from your projects). Nothing else is
+   stored there,
    except, if an older copy of the server ever made a folder of its own
    under the earlier name, `old_folder_noted`, one line that lets the
    log say so only once.

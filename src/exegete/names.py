@@ -44,9 +44,10 @@ OLD_SPELLINGS_UNTIL = "v1.0"
 # The settings that never had an earlier spelling (the check for new
 # versions, the owner's ruling of 5 October 2026): kept apart from
 # SETTINGS, whose pairs end at v1.0, and read only through
-# env_settings.new_only. `installed_as` is the desktop extension's own
-# mark, set in its manifest so that the update steps fit the way Exegete
-# was installed; nobody sets it by hand.
+# env_settings.update_check and env_settings.installed_as.
+# `installed_as` is the desktop extension's own mark, set in its manifest
+# so that the update steps fit the way Exegete was installed; nobody sets
+# it by hand.
 NEW_ONLY_SETTINGS = {
     "update_check": "EXEGETE_UPDATE_CHECK",
     "installed_as": "EXEGETE_INSTALLED_AS",

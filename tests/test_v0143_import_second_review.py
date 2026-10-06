@@ -240,7 +240,11 @@ class TestALongNameKeepsItsEnding:
         assert copy.suffix == ending, copy.name
         assert len(copy.name) <= 120
         assert copy.read_bytes() == b"the original"
-        asked = json.dumps(_no_window_opens)
+        # On Windows the folder is shown by a helper run with Exegete's
+        # own Python, whose path ends in ".exe"; what matters is every
+        # other thing the system was asked to open or show.
+        asked = json.dumps([[part for part in call if part != sys.executable]
+                            for call in _no_window_opens])
         for program in (".exe", ".terminal", ".lnk"):
             assert not copy.name.endswith(program)
             assert f'{program}"' not in asked

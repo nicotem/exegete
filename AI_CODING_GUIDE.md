@@ -28,8 +28,8 @@ qualcoder-mcp), in the conversational workflow.
    (`update_suggestion_status`)
 4. **Claude** writes only the approved suggestions to the database
    (`apply_codings`), after re-validating each one, creating a backup,
-   and checking QualCoder's lock file (a released QualCoder 3.x is
-   refused; a QualCoder 4.0 window writes no lock file and is detected
+   and checking QualCoder's lock file (a project open in QualCoder 3.x
+   is refused; a QualCoder 4.0 window writes no lock file and is detected
    only heuristically, so confirm yourself that none has the project
    open)
 5. **You** open the project in QualCoder and see the codings
@@ -49,7 +49,7 @@ reports against what you said.
   say "Copy my project 'Interview Study' to the workspace"
   (`copy_project_to_workspace`), then open the copy with `select_project`
 - **QualCoder closed** for the project you are writing to. Writes are
-  refused while a released QualCoder (3.x) has the project open (its
+  refused while QualCoder 3.x has the project open (its
   `project_in_use.lock` heartbeat); QualCoder 4.0 writes no lock file,
   so there the server can only report that the project appears to be
   open (`qualcoder_gui_signals`, a heuristic that can miss an idle
@@ -59,8 +59,8 @@ reports against what you said.
   through `create_proposed_codes`), and the codebook tools
   (`create_code`, `rename_code`, `move_code_to_category`, ...) edit it
   from the conversation
-- A project schema from v14 (QualCoder 3.8.x) through v17 (the
-  QualCoder 4.0-Beta pre-release); see "Supported QualCoder versions"
+- A project schema from v14 (QualCoder 3.8.x) through v17 (QualCoder
+  4.0); see "Supported QualCoder versions"
   in TOOLS.md. Older projects: open them once in QualCoder 3.8 or
   newer, which updates them as they open
 
@@ -190,7 +190,7 @@ approval of each suggestion.
   v17; older projects are refused (open and save them in QualCoder 3.8
   once to upgrade), and schemas newer than v17 refuse writes until this
   server has been verified against them
-- Writes are refused while a released QualCoder (3.x) has the project
+- Writes are refused while QualCoder 3.x has the project
   open (its lock file), and the server holds the project lock itself
   during its own writes; QualCoder 4.0 writes no lock file, so for it
   the server only warns on heuristics (`qualcoder_gui_signals`)

@@ -53,7 +53,7 @@ the full path: use that one.
 
 QualCoder 3.x marks an open project with a `project_in_use.lock`
 heartbeat file, and this server respects it: **every write operation is
-refused while a released QualCoder has the project open** ("This project
+refused while QualCoder 3.x has the project open** ("This project
 is open in QualCoder (user ...). Close the project in QualCoder, then
 retry."). Reads still work, with a warning that data may change
 underneath.

@@ -216,17 +216,23 @@ def test_no_document_says_qualcoders_server_has_no_external_transport():
 
 def test_the_upstream_server_is_stated_as_dated_fact():
     readme, tools = _flat("README.md"), _flat("TOOLS.md")
+    # v0.14.2: QualCoder 4.0 came out on 2 October 2026 with the server
+    # in it, so the facts were checked again, against the release
     for text in (readme, tools):
-        assert "(checked 29 September 2026)" in text
+        assert "(checked 6 October 2026)" in text
         assert "[#1571](https://github.com/ccbogel/QualCoder/pull/1571)" \
             in text
         assert "10 September 2026" in text
         assert "off by default" in text
-        assert "in no release yet" in text
-        assert ("proposes that QualCoder release an official MCP server "
-                "with QualCoder 4.0's final release") in text
+        assert "QualCoder 4.0, released on 2 October 2026" in text
+        assert "\"allow external MCP access\"" in text
+        assert "called experimental there" in text
+        for gone in ("in no release yet", "with QualCoder 4.0's final "
+                     "release", "(checked 29 September 2026)"):
+            assert gone not in text, gone
     assert "merged on 10 September 2026 as commit `0160ece`" in tools
-    assert "(`master`, at `c21e191` on 29 September 2026)" in tools
+    assert "(tag `4.0` at `b95e021`)" in tools
+    assert "`c21e191`" not in tools
     # The old positioning and the claim #1571 made stale are gone
     for text in (readme, tools):
         assert "is the external MCP surface for QualCoder projects" \
@@ -237,8 +243,8 @@ def test_the_upstream_server_is_stated_as_dated_fact():
 
 def _stance(readme):
     """The paragraph after the dated facts, up to the next section."""
-    facts = readme.index("**QualCoder's own MCP server** (checked 29 "
-                         "September 2026).")
+    facts = readme.index("**QualCoder's own MCP server** (checked 6 "
+                         "October 2026).")
     after = readme.index("gives the commits these facts were read at.",
                          facts)
     return readme[after:readme.index("## For advanced users", after)]
@@ -281,14 +287,19 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
 
 def test_a_project_from_the_conversation_stays_in_one_qualcoder():
     # The owner's decision of 29 September: 3.8.2 stays recommended, and
-    # TOOLS.md no longer sends such a project to 4.0
+    # TOOLS.md no longer sends such a project to 4.0. v0.14.2: QualCoder
+    # 4.0 is now the release marked "Latest", so the README names 3.8.2
+    # first, with the reason that still holds, and 4.0 beside it
     tools = _flat("TOOLS.md")
     opening = tools[tools.index("**Opening it in QualCoder.**"):
                     tools.index("**The project memo**")]
     assert ("Keep such a project in one QualCoder: moving it between 3.8.2 "
             "and 4.0 is what changes it.") in opening
     assert "Work on such a project in QualCoder 4.0." not in opening
-    assert '3.8.2, the release marked "Latest"' in _flat("README.md")
+    assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
+            "3.8.2 or 4.0. Exegete works with both, but can tell that "
+            "QualCoder has a project open only with 3.8.2 (below).") \
+        in _flat("README.md")
 
 
 # ---------------------------------------------------------------------------

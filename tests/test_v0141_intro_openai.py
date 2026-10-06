@@ -1652,8 +1652,7 @@ class TestTheSmallerPoints:
         assert ("- Before participants' data, go through [the five checks]"
                 "(https://github.com/nicotem/exegete#where-your-data-goes)"
                 ": Manual keeps Claude asking; the checks keep your files "
-                "out of its reach, and your conversations out of training.") \
-            in one_click
+                "out of its reach and switch training off.") in one_click
         assert ("connected folders may be listed under \"Trusted "
                 "folders\"") in _readme_data()
         assert "also check two things" not in one_click

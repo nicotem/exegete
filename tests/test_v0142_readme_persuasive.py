@@ -121,6 +121,9 @@ def _tools(mode="lifecycle"):
 # ChatGPT's Free and Go plans as OpenAI's page gives them, so that the
 # sentence says no more than the page. Raised again, with the same
 # advice: 32,137.
+# The judge's second verdict of 6 October 2026 (QualCoder 4.0's release,
+# which the README still called a beta, and the line that promised to keep
+# conversations out of training) fits within it: 32,098.
 README_LIMIT = 32_200
 
 

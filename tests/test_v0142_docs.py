@@ -12,8 +12,10 @@ chat is suggested for participants' data; Claude Code's file tools in
 auto mode; Claude's Manual and Auto modes; OpenAI's training step first
 in INSTALL.md too; PRIVACY.md's exception for deleting `exegete.json`,
 its Team and Enterprise rung, computer use's screenshots, and the two
-questions its checklist gains; and no release labels at the top of the
-two coding guides or in TOOLS.md's section on the brief.
+questions its checklist gains; no release labels at the top of the
+two coding guides or in TOOLS.md's section on the brief; and QualCoder
+4.0, released on 2 October 2026, named as a release wherever the
+documents still called it a beta.
 """
 
 import os
@@ -419,8 +421,7 @@ def test_the_check_after_installing_is_a_short_list():
                           "five checks](https://github.com/nicotem/exegete"
                           "#where-your-data-goes): Manual keeps Claude "
                           "asking; the checks keep your files out of its "
-                          "reach, and your conversations out of training. "), \
-        check
+                          "reach and switch training off. "), check
     assert check.count(" - ") == 3
     assert not re.findall(r"(?<![\w.])(\d)\. ", check)
     data = _between(_flat("README.md"), "Before you use participants' data "
@@ -838,3 +839,93 @@ def test_the_release_label_check_would_notice():
     for kept in ("is deprecated and goes in v0.15", "Python 3.10 or newer",
                  "QualCoder 3.8.2 and the 4.0 beta"):
         assert not RELEASE_LABEL.search(kept), kept
+
+
+# ---------------------------------------------------------------------------
+# QualCoder 4.0, released on 2 October 2026: no longer called a beta
+# ---------------------------------------------------------------------------
+
+QC_DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "SUPPORT.md",
+                "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
+# Said while 4.0 was a beta and wrong since its release; and "a released
+# QualCoder (3.x)" for the versions with a lock file, a group 4.0, released
+# and with none, would now seem to belong to
+NO_LONGER_TRUE = ("The 4.0 beta cannot be detected", "is a test version",
+                  "in no release yet", "with QualCoder 4.0's final release",
+                  "Because QualCoder 4.0 is a pre-release",
+                  "re-verified against the final release",
+                  "the 4.0-Beta pre-release builds",
+                  "a released QualCoder", "released QualCoder version",
+                  "the 4.0-Beta at the top of the page",
+                  "3.8.2 is the release marked", "3.8.2, the release marked",
+                  "the latest stable release (", "Reports > Code retrieval")
+# Where the beta is history: the comparison table, dated, and TOOLS.md's
+# record of what was verified when
+BETA_AS_HISTORY = ("README.md", "TOOLS.md")
+
+
+def test_qualcoder_4_0_is_named_as_released():
+    readme = _flat("README.md")
+    get = _between(readme, "**Get QualCoder too**",
+                   "### ChatGPT's desktop app")
+    assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
+            "3.8.2 or 4.0. Exegete works with both, but can tell that "
+            "QualCoder has a project open only with 3.8.2 (below). 3.8.2 "
+            "is listed just below 4.0, the release marked \"Latest\" when "
+            "this was checked, on 6 October 2026.") in get
+    one = _between(readme, "**One program at a time.**",
+                   "### Other assistants")
+    assert ("With QualCoder 3.8.2, an open project is detected and the "
+            "change refused. In QualCoder 4.0 it cannot be detected, so "
+            "there only you can make sure;") in one
+    assert ("Exegete reads and writes projects from QualCoder 3.8.2 to "
+            "4.0, reading what each supports") in readme
+    install = _flat("INSTALL.md")
+    assert ("Projects from QualCoder 3.8.x and 4.0 work (project schemas "
+            "v14 through v17)") in install
+    assert ("4.0 is at the top of the page, the release marked \"Latest\" "
+            "when this was checked, on 6 October 2026, and 3.8.2 just below "
+            "it. Exegete works with both, but can tell that QualCoder has a "
+            "project open only with 3.8.2, whose lock file shows it.") \
+        in install
+    assert ("for Windows, Linux and Macs with Apple Silicon (M1 or later): "
+            "QualCoder offers none for older Intel Macs") in install
+    tools = _flat("TOOLS.md")
+    assert ("QualCoder 4.0 was released on 2 October 2026 (tag `4.0` at "
+            "`b95e021`).") in tools
+    assert "a full re-check is still to come" in tools
+    assert ("QualCoder 3.x signals \"project open\" through a lock file, "
+            "which Exegete honours; QualCoder 4.0 uses no lock file") \
+        in tools
+    assert "Analysis > Code retrieval in 4.0" in tools
+    for name in QC_DOCUMENTS:
+        text = _flat(name)
+        for words in NO_LONGER_TRUE:
+            assert words not in text, (name, words)
+        if name not in BETA_AS_HISTORY:
+            assert "4.0-Beta" not in text and "4.0 beta" not in text, name
+
+
+def test_the_no_longer_true_check_would_notice():
+    # The sentences as they stood before QualCoder 4.0's release
+    for old in ("The 4.0 beta cannot be detected, so there only you can "
+                "make sure",
+                "The \"4.0-Beta\" is a test version, whose open project "
+                "Exegete cannot detect.",
+                "It is in no release yet; its author, kaixxx, proposes",
+                "refused while a released QualCoder version (3.x) has the "
+                "project open",
+                "whether a released QualCoder has it open (`qualcoder_open`)",
+                "(3.8.2 is the release marked \"Latest\"; the 4.0-Beta at "
+                "the top of the page is a test version)",
+                "QualCoder 3.8.2, the latest stable release (project schema "
+                "v14)",
+                "Reports > Coding reports in 3.8.2, Reports > Code retrieval "
+                "in 4.0"):
+        assert any(words in old for words in NO_LONGER_TRUE), old
+    for kept in ("In QualCoder 4.0 it cannot be detected",
+                 "It is in QualCoder 4.0, released on 2 October 2026",
+                 "refused while QualCoder 3.x has the project open",
+                 "the latest stable release until 2 October 2026 (project "
+                 "schema v14)"):
+        assert not any(words in kept for words in NO_LONGER_TRUE), kept

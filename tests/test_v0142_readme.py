@@ -356,15 +356,18 @@ def test_the_commitments_open_with_what_they_promise():
 
 def test_latest_carries_the_date_it_was_checked():
     """The README is frozen into each extension and PyPI upload, so the
-    "Latest" badge it names carries the day it was checked; the table of
-    the two programs was checked the same day."""
+    "Latest" badge it names carries the day it was checked, and the table
+    of the two programs carries its own date. (The two were checked the
+    same day until QualCoder 4.0 came out, on 2 October 2026: the
+    download step was checked again on 6 October; the table keeps the day
+    its rows were checked.)"""
     readme = _readme()
     dated = re.findall(r"\"Latest\" when this was checked, on (\d{1,2} \w+ "
                        r"\d{4})\.", readme)
     assert len(dated) == 1 and readme.count("\"Latest\"") == 1
-    assert ("3.8.2, the release marked \"Latest\" when this was checked, on "
-            f"{dated[0]}.") in readme
-    assert f"Checked on {dated[0]}, Exegete " in readme
+    assert ("3.8.2 is listed just below 4.0, the release marked \"Latest\" "
+            f"when this was checked, on {dated[0]}.") in readme
+    assert re.search(r"Checked on \d{1,2} \w+ \d{4}, Exegete ", readme)
 
 
 # ---------------------------------------------------------------------------

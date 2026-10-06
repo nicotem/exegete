@@ -251,7 +251,7 @@ advanced users.
   included (INSTALL.md, "What You'll Need"); how to hear of a new
   release (INSTALL.md, the one-click section); Codex's and Claude Code's
   reach in detail, and where Cowork runs (PRIVACY.md); the history of
-  the MIT releases (NOTICE). README.md is now about 32,140 characters,
+  the MIT releases (NOTICE). README.md is now about 32,100 characters,
   against 31,975 in 0.14.1, and its sentences are shorter.
 - The README now says plainly that Exegete is free, open-source
   software, under QualCoder's own licence (LGPL-3.0-or-later), and what
@@ -286,8 +286,8 @@ advanced users.
   Code. The positioning paragraph is shorter, every fact in it kept.
 - Leftovers from earlier releases are gone ("new in 0.14", "from 0.14"
   in the table, an example file name with a version in it), and the
-  sentence naming QualCoder 3.8.2 as "Latest" carries the date it was
-  checked, because the README is frozen into each extension and PyPI
+  sentence naming the QualCoder release marked "Latest" carries the
+  date it was checked, because the README is frozen into each extension and PyPI
   upload. The brief is named, provisional, among the advanced features;
   TOOLS.md and INSTALL.md describe it.
 - Tests: the pins on the README's words moved with their text; two
@@ -377,6 +377,21 @@ advanced users.
   are gone from the opening of AI_CODING_GUIDE.md and
   AI_CODING_WORKFLOW.md, from TOOLS.md's section on the brief and from
   INSTALL.md's one-click section.
+- QualCoder 4.0 came out on 2 October 2026, and the documents no
+  longer call it a beta. The README offers 3.8.2 or 4.0, with the date
+  4.0 was seen marked "Latest", and says why the choice matters:
+  Exegete works with both, but can tell that QualCoder has a project
+  open only with 3.8.2, whose lock file shows it, and an open project
+  in QualCoder 4.0 cannot be detected; INSTALL.md says the same, with
+  each release's downloads. Where the documents said that writes are
+  refused while "a released QualCoder (3.x)" has the project open, they
+  now say QualCoder 3.x, since 4.0 is released and keeps no lock file.
+  QualCoder's own MCP server, said to be in no release, is in 4.0, off
+  by default and called experimental (the README and TOOLS.md, checked
+  6 October 2026). TOOLS.md says what a first re-check against the
+  release found and that a full one is still to come, and puts 4.0's
+  "Code retrieval" in its Analysis menu, where it is. Exegete's code
+  does not change: 4.0 keeps the project format (schema v17).
 - Tests: the pins moved with their words, and new ones hold each of
   these sentences (`tests/test_v0142_docs.py`).
 

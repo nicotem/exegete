@@ -48,24 +48,26 @@ Through these tools an AI assistant can:
 - **Coder comparison** (`compare_coders`): per-code agreement between two coders, with QualCoder's own coefficient and Cohen's kappa side by side
 - **QualCoder's conventions**: `#####` private memo sections are never sent to the AI through Exegete (an assistant that opens a project's files by itself reads every memo whole: [PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)), reads follow QualCoder's per-coder visibility (on projects with that capability: QualCoder 3.8.2 and 4.0, schema v14 and later), and AI work is written under one coder name that you choose per project (see "Working alongside QualCoder 4.0" below)
 
-You can work with read-only analysis OR use write-enabled tools. The database is opened read-only by default; every write is preceded by an automatic backup, verified against QualCoder's format, and refused while a released QualCoder version (3.x) has the project open, which its lock file signals. QualCoder 4.0 (the 4.0-Beta pre-release) writes no lock file, so for it the server can only warn on best-effort heuristics; never write while any QualCoder window has the same project open (see "Supported QualCoder versions" below).
+You can work with read-only analysis OR use write-enabled tools. The database is opened read-only by default; every write is preceded by an automatic backup, verified against QualCoder's format, and refused while QualCoder 3.x has the project open, which its lock file signals. QualCoder 4.0 writes no lock file, so for it the server can only warn on best-effort heuristics; never write while any QualCoder window has the same project open (see "Supported QualCoder versions" below).
 
 ## Supported QualCoder versions
 
 > Exegete is ground-truthed against QualCoder 3.8.2, the latest stable
-> release (project schema v14), and additionally verified against the QualCoder
+> release until 2 October 2026 (project schema v14), and additionally verified against the QualCoder
 > 4.0-Beta pre-release (version string "QualCoder 4.0 Beta", built from the
 > QualCoder development tree) at commit `9bddf17`, whose projects use schema v17. Project schemas v14 through v17 are
 > supported for reading and writing. Support is determined by inspecting the
 > project database itself (capability probes), not by version numbers, so
 > projects migrated by either QualCoder version work interchangeably.
 >
-> Because QualCoder 4.0 is a pre-release, its behaviour may change before the
-> final release. Claims about 4.0 compatibility are valid as of commit `9bddf17`
-> (2026-08-25) and will be re-verified against the final release. One known
-> limitation: released
-> QualCoder versions signal "project open" through a lock file, which Exegete
-> honours; the 4.0-Beta pre-release builds no longer use a lock file, so Exegete
+> QualCoder 4.0 was released on 2 October 2026 (tag `4.0` at `b95e021`).
+> Claims about 4.0 compatibility are valid as of commit `9bddf17`
+> (2026-08-25). A first re-check against the release (6 October 2026) found
+> the same project schema (v17), the same format for a new project, and the
+> same backups, private memo sections, "AI Agent" coder name, reports,
+> merges and deletes; a full re-check is still to come. One known
+> limitation: QualCoder 3.x signals "project open" through a lock file,
+> which Exegete honours; QualCoder 4.0 uses no lock file, so Exegete
 > falls back to best-effort heuristics there (reported as
 > `qualcoder_gui_signals` by `select_project`, `get_current_project`,
 > `analyze_for_coding` and the `restore_backup` preview:
@@ -79,19 +81,20 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > do not run Exegete writes while any QualCoder window has the same
 > project open.
 >
-> Two facts about how the tools relate (checked 29 September 2026).
+> Two facts about how the tools relate (checked 6 October 2026).
 > QualCoder 4.0 ships its own embedded AI assistant, built on an MCP
 > server inside QualCoder. In the 4.0-Beta pre-release (3 September 2026,
 > tag `4.0-Beta` at `2c3ef57`), as at the pinned commit `9bddf17` before
-> it, that server serves only QualCoder's own window. QualCoder's pull request
+> it, that server served only QualCoder's own window. QualCoder's pull request
 > [#1571](https://github.com/ccbogel/QualCoder/pull/1571) ("External MCP
 > server access", by kaixxx), merged on 10 September 2026 as commit
-> `0160ece`, adds a setting in QualCoder, off by default, that opens that
+> `0160ece`, added a setting in QualCoder, off by default, that opens that
 > server to MCP hosts on the same computer (a listener on `127.0.0.1`)
-> while QualCoder runs, for the project open in QualCoder. It is on
-> QualCoder's development branch (`master`, at `c21e191` on 29 September
-> 2026) and in no release yet; its author proposes that QualCoder release
-> an official MCP server with QualCoder 4.0's final release. And an open
+> while QualCoder runs, for the project open in QualCoder. It is in
+> QualCoder 4.0, released on 2 October 2026 (tag `4.0` at `b95e021`): the
+> setting is "allow external MCP access", under AI Integration in
+> QualCoder's settings, off by default and called experimental there.
+> And an open
 > QualCoder 4.0 window will not display changes this server writes (its
 > views refresh through an internal event bus only), so they appear after
 > the project is closed and reopened in QualCoder.
@@ -336,7 +339,7 @@ visibility" section says what is and is not re-read). Passing an
 explicit `coder` argument reads that coder's rows from the full data
 instead. File exports keep reading the full data, as QualCoder's own
 reports do: QualCoder's own coding report does the same in both pinned
-builds (Reports > Coding reports in 3.8.2, Reports > Code retrieval in
+builds (Reports > Coding reports in 3.8.2, Analysis > Code retrieval in
 4.0) and lists a hidden coder's segments, because it reads the base
 `code_text` table (`report_codes.py:1712-1724` at `9bddf17`,
 `:1504-1515` at the 3.8.2 tag); only the coding screen reads through
@@ -420,7 +423,7 @@ Claude can help you code your qualitative data with a conversational approval wo
 
 ### Conversational Workflow
 
-**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/QualCoder projects/`), otherwise `~/Documents/Exegete projects/` unless the host sets another with `EXEGETE_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while a released QualCoder (3.x) has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them the server can only warn on heuristics: make sure no QualCoder window has the project open before any write.
+**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/QualCoder projects/`), otherwise `~/Documents/Exegete projects/` unless the host sets another with `EXEGETE_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while QualCoder 3.x has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them the server can only warn on heuristics: make sure no QualCoder window has the project open before any write.
 
 ### Quick Start Example
 
@@ -534,7 +537,7 @@ approved again, reopened and edited, or the passage recorded again);
 - **Verified Writes**: Suggestions are checked against the file text when
   recorded AND before writing; sessions only apply to the project they
   were created in
-- **QualCoder-Aware**: Writes are refused while a released QualCoder (3.x)
+- **QualCoder-Aware**: Writes are refused while QualCoder 3.x
   has the project open (its `project_in_use.lock` heartbeat is respected).
   QualCoder 4.0 builds write no lock file, so for them the server reports
   best-effort heuristics (`qualcoder_gui_signals`), re-verifies the file
@@ -661,7 +664,7 @@ each one does.
 - `read_brief()` - The assistant's brief (provisional): how this server expects the assistant to work with you. Its description asks the assistant to call it once at the start of every conversation about a project; it returns the full brief, or in the `core` set the short version, and reads nothing from the project. In every tool set (see "What the assistant is told" above)
 - `list_available_projects(search_directories)` - Discover QualCoder projects on your system
 - `select_project(project_path)` - Open/switch to a different project (reports `qualcoder_gui_signals` and remembers the selection for the recovery hint)
-- `get_current_project()` - Show which project is open, whether a released QualCoder has it open (`qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name
+- `get_current_project()` - Show which project is open, whether QualCoder 3.x has it open (its lock file, `qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name
 - `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (the `lifecycle` toolset only): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in the server's workspace or an existing folder, then selects it. Asks for the researcher's own QualCoder coder name (or an explicit "not known") after every other check; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
 - `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `exegete.json`); refuses the researcher's own coder name, QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
 - `read_pseudonym_list()` - **Sends real names to the AI provider**: returns the entries of the project's own `pseudonyms.json` (the researcher's reverse key), for use only when the researcher asks to see or check the list; each call writes one log line with the count and no name. In the full and lifecycle tool sets (so in the Claude Desktop extension by default), not in core. QualCoder's Pseudonyms dialog (the button in Manage Files) shows the same list without sending it anywhere. **Deprecated, removed in v0.15** (its answer says so)

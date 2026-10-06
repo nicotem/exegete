@@ -164,21 +164,22 @@ Before starting, make sure you have:
   `.qda`, with a `data.qda` database file inside; know where it is),
   unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
   variables the server reads", below), which lets the assistant create
-  one in the conversation. Projects from QualCoder 3.8.x and from the
-  QualCoder 4.0-Beta pre-release work (project schemas v14 through
-  v17); see "Supported QualCoder versions" in
+  one in the conversation. Projects from QualCoder 3.8.x and 4.0 work
+  (project schemas v14 through v17); see "Supported QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
 - ✅ **QualCoder itself**, recommended, and needed to bring in
   documents (Word, PDF, images, audio, video) and any text you would
   rather not pass through the conversation (this server imports only
   text the assistant hands it), to see the coding in the text, to code
   images, audio, video or an area of a PDF page, and for graphs:
-  https://github.com/ccbogel/QualCoder/releases (3.8.2 is the release
-  marked "Latest"; the 4.0-Beta at the top of the page is a test
-  version). 3.8.2's downloads are further down that page, for Windows,
-  Ubuntu and Macs with Apple Silicon (M1 or later): QualCoder offers
-  none for older Intel Macs, and its notes there say how to open it the
-  first time
+  https://github.com/ccbogel/QualCoder/releases. 4.0 is at the top of
+  the page, the release marked "Latest" when this was checked, on
+  6 October 2026, and 3.8.2 just below it. Exegete works with both,
+  but can tell that QualCoder has a project open only with 3.8.2,
+  whose lock file shows it. Each release's downloads are under its
+  notes, in Assets, for Windows, Linux and Macs with Apple Silicon (M1
+  or later): QualCoder offers none for older Intel Macs, and its notes
+  there say how to open it the first time
 
 ---
 

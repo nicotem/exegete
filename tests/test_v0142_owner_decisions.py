@@ -10,7 +10,8 @@ Pinned here:
   model for everyone" and Codex's separate "Include environments") and
   the exception for a rated reply (README, INSTALL.md, PRIVACY.md), and
   where Claude Desktop is set up (INSTALL.md's one-click section,
-  QUICKSTART.md), with where what Claude reads goes;
+  QUICKSTART.md), with where what Claude reads goes, and a summary of
+  the checks that promises no more than they do;
 - the warning about practising, explained and not prescribed, where a
   reader meets Codex and Claude Code (README, INSTALL.md, PRIVACY.md,
   QUICKSTART.md), with what a folder of their own does not do and that
@@ -105,6 +106,31 @@ def test_the_readme_gives_both_makers_the_same_advice():
     for gone in ("check the Model Improvement setting", "practice included",
                  "Turn off training first"):
         assert gone not in readme, gone
+
+
+def test_the_summary_promises_no_more_than_the_checks_do():
+    """The judge of 6 October 2026: the line after the one-click steps
+    said the checks keep "your conversations out of training", which
+    switching training off does not quite do. Anthropic's Consumer Terms
+    still allow training on a rated reply and on a conversation flagged
+    for safety review, as PRIVACY.md quotes them; the line now says what
+    the checks do."""
+    readme = _flat("README.md")
+    one_click = _between(readme, "### Claude Desktop, with one click",
+                         "**Get QualCoder too**")
+    assert one_click.rstrip().endswith(
+        "Manual keeps Claude asking; the checks keep your files out of its "
+        "reach and switch training off.")
+    # (PRIVACY.md quotes OpenAI's "opted out of training", a quotation,
+    # not a promise)
+    for document in DOCUMENTS:
+        text = _flat(document).lower()
+        for promise in ("conversations out of training", "never used for "
+                        "training", "never trains on"):
+            assert promise not in text, (document, promise)
+    # the exceptions are still there for a reader who looks
+    assert RATED.format(maker="Anthropic") in _plain(readme)
+    assert "flagged for safety review" in _flat("PRIVACY.md")
 
 
 def test_install_and_privacy_give_the_same_advice():

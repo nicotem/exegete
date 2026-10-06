@@ -286,12 +286,13 @@ listed. Then:
 - Before participants' data, go through
   [the five checks](https://github.com/nicotem/exegete#where-your-data-goes):
   Manual keeps Claude asking; the checks keep your files out of its
-  reach, and your conversations out of training.
+  reach and switch training off.
 
 **Get QualCoder too**, to see your coding in the text:
-[download](https://github.com/ccbogel/QualCoder/releases) 3.8.2, the
-release marked "Latest" when this was checked, on 1 October 2026. The
-"4.0-Beta" is a test version, whose open project Exegete cannot detect.
+[download](https://github.com/ccbogel/QualCoder/releases) 3.8.2 or
+4.0. Exegete works with both, but can tell that QualCoder has a
+project open only with 3.8.2 (below). 3.8.2 is listed just below 4.0,
+the release marked "Latest" when this was checked, on 6 October 2026.
 
 ### ChatGPT's desktop app and Codex (OpenAI)
 
@@ -350,9 +351,9 @@ QualCoder 3.8 must first be opened once in 3.8 or newer.
 
 **One program at a time.** Before the assistant changes a project,
 close that project in QualCoder. With QualCoder 3.8.2, an open project
-is detected and the change refused. The 4.0 beta cannot be detected, so
-there only you can make sure; an open 4.0 window shows the changes
-only once the project is opened again.
+is detected and the change refused. In QualCoder 4.0 it cannot be
+detected, so there only you can make sure; an open 4.0 window shows
+the changes only once the project is opened again.
 
 ### Other assistants, and updates
 
@@ -377,7 +378,7 @@ Coming from qualcoder-mcp?
 ## Three commitments
 
 **Compatibility with QualCoder.** Exegete reads and writes projects
-from QualCoder 3.8.2 to the 4.0 beta, reading what each supports from
+from QualCoder 3.8.2 to 4.0, reading what each supports from
 the project itself, and does not write to a project in a newer format
 until it has been checked against it. Where QualCoder has a rule,
 Exegete follows it, and names any departure with its reason
@@ -417,15 +418,14 @@ other packages read. Before you edit transcripts in QualCoder 3.8.2's
 coding view, read
 [its edit-mode caution](https://github.com/nicotem/exegete/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution).
 
-**QualCoder's own MCP server** (checked 29 September 2026). QualCoder
-4.0's assistant works through an MCP server built into QualCoder, which
-in the 4.0-Beta pre-release (3 September 2026) serves only QualCoder's
-own window. Pull request
-[#1571](https://github.com/ccbogel/QualCoder/pull/1571), merged on 10
-September 2026, adds a setting, off by default, that opens it to MCP
-hosts on the same computer while QualCoder runs, for its open project.
-It is in no release yet; its author, kaixxx, proposes that QualCoder
-release an official MCP server with QualCoder 4.0's final release.
+**QualCoder's own MCP server** (checked 6 October 2026). QualCoder
+4.0's assistant works through an MCP server built into QualCoder. Pull
+request [#1571](https://github.com/ccbogel/QualCoder/pull/1571), by
+kaixxx, merged on 10 September 2026, added a setting, off by default,
+that opens it to MCP hosts on the same computer while QualCoder runs,
+for its open project. It is in QualCoder 4.0, released on 2 October
+2026, as "allow external MCP access" in QualCoder's settings, called
+experimental there.
 [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)
 gives the commits these facts were read at.
 

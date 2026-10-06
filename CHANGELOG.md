@@ -38,9 +38,14 @@ otherwise, and may change before it is released.
   images and PDF pages, audio and video codings) counted; suggestions
   awaiting a decision counted. A coding is placed where its stored
   passage matches the text, at its positions read as characters or,
-  failing that, as QualCoder's editor counts them (an emoji as two);
-  the paragraph mark QualCoder stores for a line break inside a coded
-  passage matches the line break in the text.
+  failing that, as QualCoder's text coder counts them (an emoji as two
+  characters, a Windows line break as one, a byte-order mark at the
+  start as none), so that codings QualCoder 3.8.2 made in the plain text
+  files it imported with Windows line endings or a byte-order mark are
+  drawn on their own words; the paragraph mark QualCoder stores for a
+  line break inside a coded passage matches the line break in the
+  text, whatever its form, and Windows and old Mac line breaks show as
+  line breaks.
   Safe by structure: project data only in escaped text and quoted
   attributes, colours checked, selectors by number, a content security
   policy that allows no script, fetch, form or base address, and no
@@ -76,6 +81,14 @@ otherwise, and may change before it is released.
   imports (a web page that was a project's original is only shown); and
   with no screen (an SSH session, Linux without a desktop) nothing
   opens and the answer gives the place.
+- Reading without codes: `without_codes=true` on
+  `open_file_for_reading` writes the page with the file's text alone,
+  for a fresh reading (no codings, no list of codes, no annotations and
+  no switches; the file's memo kept, its private part left out with a
+  line saying so), and on `analyze_file_with_coding` gives the
+  assistant the text and the file's details alone, with counts of the
+  codings and annotations it left out, so that it can say whether the
+  file has any without seeing them. Nothing in the project changes.
 - The assistant's brief gains one line under Privacy: use
   `open_file_for_reading` when the researcher wants to read a whole
   file, and never open, read or look at what it opens.
@@ -94,11 +107,18 @@ otherwise, and may change before it is released.
   fits one part reads as before. The file resource's later parts are at
   `exegete://files/{file_id}/from/{start}`; a case's excerpts are cut
   to one answer's size, each saying where its text continues.
-- Every coding whose stored passage is not the text at its positions
-  (usually one made in QualCoder after an emoji) is marked
-  `stored_passage_differs` in `analyze_file_with_coding`, never moved;
-  the paragraph mark QualCoder stores for a line break inside a coded
-  passage is read as that line break, so such a coding is not marked.
+- A coding made in QualCoder is found in `analyze_file_with_coding` by
+  QualCoder's own count of positions, as on the reading page (an emoji
+  as two characters, a Windows line break as one, a byte-order mark at
+  the start as none), and gives its words' place in the text as
+  `text_start` and `text_end` beside its stored positions, which are
+  never moved; the answer tells the assistant to quote it from there,
+  so a quote after an emoji, or in a transcript QualCoder 3.8.2 imported
+  with Windows line endings, is the passage the researcher coded. The
+  paragraph mark QualCoder stores for a line break inside a coded
+  passage is read as that line break, whatever its form. A coding whose
+  stored passage neither count finds is marked `stored_passage_differs`,
+  never moved.
 - `import_text_file`'s description says first that its text passes
   through the conversation, points to `import_documents` for a document
   on the computer, and gives the 1,000,000-character limit.
@@ -236,16 +256,16 @@ otherwise, and may change before it is released.
 
 ### Measured
 
-- Serialised tool JSON: full = 200,396 characters (about 50.1k tokens
-  at chars/4) over 76 tools, core = 66,952 (about 16.7k) over 23, and
-  the opt-in lifecycle set = 202,975 (about 50.7k) over 77, measured on
+- Serialised tool JSON: full = 200,818 characters (about 50.2k tokens
+  at chars/4) over 76 tools, core = 67,374 (about 16.8k) over 23, and
+  the opt-in lifecycle set = 203,397 (about 50.8k) over 77, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 210,244, 70,328 and 212,963.
-  `open_file_for_reading`'s own entry is 1,355 characters on 3.13, and
+  Python 3.11.13 (the `.venv/`), 210,682, 70,766 and 213,401.
+  `open_file_for_reading`'s own entry is 1,630 characters on 3.13, and
   `import_documents`' 2,707 (2,709 with its separator; it is in the
   standard and lifecycle sets, not in core); the rest of the growth is
-  `start` on `analyze_file_with_coding` and the two descriptions changed
-  above.
+  `start` and `without_codes` on `analyze_file_with_coding` and the two
+  descriptions changed above.
 
 ## [0.14.2-alpha] - 2026-10-02
 

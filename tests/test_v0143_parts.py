@@ -118,7 +118,11 @@ class TestTheTool:
         assert len(raw) < MAX_ANSWER * 1.2
         assert len(answer["part_text"]) < 20_000
 
-    def test_a_passage_that_differs_is_flagged(self, setup_server):
+    def test_a_coding_after_an_emoji_says_where_its_words_are(
+            self, setup_server):
+        """QualCoder's count found it (third parity check, finding 1):
+        not flagged, and its words' place given beside the stored
+        positions, which are never moved."""
         folder = server._current_project_folder()
         text = "Before 😀 after the emoji."
         sql(folder, "INSERT INTO source (id, name, fulltext, owner, date) "
@@ -130,9 +134,27 @@ class TestTheTool:
             (index + 1, index + 6))         # QualCoder's count
         answer = json.loads(host("analyze_file_with_coding", file_id=62))
         (segment,) = answer["coded_segments"]
-        assert segment["stored_passage_differs"] is True
+        assert "stored_passage_differs" not in segment
         assert segment["position_start"] == index + 1      # never moved
-        assert "emoji" in answer["stored_passage_note"]
+        assert (segment["text_start"], segment["text_end"]) == \
+            (index, index + 5)
+        assert "emoji" in answer["qualcoder_positions_note"]
+        assert "stored_passage_note" not in answer
+
+    def test_a_passage_that_differs_is_flagged(self, setup_server):
+        folder = server._current_project_folder()
+        text = "Before 😀 after the emoji."
+        sql(folder, "INSERT INTO source (id, name, fulltext, owner, date) "
+            "VALUES (62, 'e.txt', ?, 'TestCoder', '2026-10-01')", (text,))
+        sql(folder, "INSERT INTO code_text (ctid, cid, fid, seltext, pos0, "
+            "pos1, owner, date, memo, important) VALUES (620, 1, 62, "
+            "'later', 3, 8, 'TestCoder', '2026-10-01', '', 0)")
+        answer = json.loads(host("analyze_file_with_coding", file_id=62))
+        (segment,) = answer["coded_segments"]
+        assert segment["stored_passage_differs"] is True
+        assert segment["position_start"] == 3              # never moved
+        assert "text_start" not in segment
+        assert "QualCoder counts" in answer["stored_passage_note"]
 
 
 class TestTheResources:

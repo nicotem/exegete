@@ -499,6 +499,7 @@ Explorer. What reaches the AI provider:
 | A reading copy (the default) | the file's id, the page's place on your computer (which includes the project's and the file's names), and counts of codings, codes, annotations and notes | the text, the memos |
 | The original, or the original in its folder | the file's id, its name and the place of the read-only copy | its contents |
 | The whole text in the chat (`analyze_file_with_coding` and the file and case resources, unchanged) | the text, a part at a time, with its codings | |
+| The whole text in the chat without codes (`analyze_file_with_coding` with `without_codes=true`) | the text, a part at a time, and the file's details, with counts of the codings and annotations left out | the codings, the codes, the annotations |
 
 To talk about a passage you have read on the page, copy a few words of
 it into the conversation: those words go to the provider, like anything
@@ -508,7 +509,9 @@ The page itself never reaches out: it holds no script, fetches nothing
 (its own content security policy forbids it) and links to nothing
 outside itself, and a web address in a document stays plain text. The
 private part of every memo (from `#####`) is left out of it, and the
-page says so. The copy of an original is not pseudonymised, as in
+page says so. Asked without codes, for a fresh reading, the page holds
+the text and the file's memo alone, its private part left out in the
+same way. The copy of an original is not pseudonymised, as in
 QualCoder, which applies the pseudonyms list to the stored text only.
 
 Three cautions:

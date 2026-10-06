@@ -25,11 +25,18 @@ name after it), reimplemented here, and adds, each a named departure:
   video codings), counted;
 - each coding placed where its stored passage matches the text, at its
   positions read as characters or, failing that, as QualCoder's editor
-  counts them (an emoji as two), and counted by which reading placed it;
+  counts them (an emoji as two, a Windows line break as one, a
+  byte-order mark at the start as none; `parts.Positions`), and counted
+  by which reading placed it;
+- a Windows or old Mac line break in the stored text (QualCoder 3.8.2
+  kept them) shown as the line break QualCoder shows, never as a mark;
 - each coding also marked so that pandoc reads it as a Word comment
   named after its code, which changes nothing in the browser;
 - the private part of every memo (from `#####`) left out, with a line
-  saying so (decision 7).
+  saying so (decision 7);
+- without codes (the owner's decision of 1 October 2026), the text
+  alone for a fresh reading: no codings, codes, annotations or
+  switches; the file's memo kept, its private part left out as above.
 
 Safe by structure, since a project can come from someone else: project
 data goes only into HTML text and quoted attributes, every character
@@ -40,14 +47,13 @@ no script, no fetch, no form and no base address; nothing links outside
 the page.
 """
 
-import bisect
 import html
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .memo_privacy import split_public_private_memo
-from .parts import stored_passages
+from .parts import Positions  # noqa: F401 (the shared reading)
 from .reading_folder import PAGE_MARK
 
 POLICY = ("default-src 'none'; style-src 'unsafe-inline'; "
@@ -98,6 +104,7 @@ def contrast(first: str, second: str) -> float:
     return (max(a, b) + 0.05) / (min(a, b) + 0.05)
 
 
+_LINE_BREAK = re.compile("\r\n|\r|\n")
 _PICTURES = {i: chr(0x2400 + i) for i in range(32) if i not in (9, 10)}
 _PICTURES[0x7F] = "␡"
 
@@ -112,56 +119,6 @@ def esc(value: Any) -> str:
         text = "".join("\ufffd" if 0xD800 <= ord(c) <= 0xDFFF else c
                        for c in text)
     return html.escape(text, quote=True)
-
-
-class Positions:
-    """The two readings of a stored position: as characters (Exegete),
-    and as UTF-16 units, QualCoder's editor's count, in which a
-    character beyond U+FFFF (an emoji) counts twice."""
-
-    def __init__(self, text: str):
-        self.text = text
-        self.wide = [i for i, c in enumerate(text) if ord(c) > 0xFFFF]
-
-    def from_units(self, unit: int) -> Optional[int]:
-        """The character index at UTF-16 offset `unit`, or None when the
-        offset falls inside a character or past the end."""
-        if not self.wide:
-            return unit if 0 <= unit <= len(self.text) else None
-        low, high = max(0, unit - len(self.wide)), unit
-        while low <= high:
-            middle = (low + high) // 2
-            value = middle + bisect.bisect_left(self.wide, middle)
-            if value == unit:
-                return middle if middle <= len(self.text) else None
-            if value < unit:
-                low = middle + 1
-            else:
-                high = middle - 1
-        return None
-
-    def place(self, start: Any, end: Any,
-              stored: Optional[str]) -> Tuple[int, int, str]:
-        """(start, end, reading): 'stored' when the passage matches at
-        its positions as characters, 'second' when it matches at them as
-        UTF-16 units, 'unchecked' when no passage is stored, 'neither'
-        (drawn at its positions as characters) otherwise."""
-        length = len(self.text)
-        try:
-            p0, p1 = int(start), int(end)
-        except (TypeError, ValueError):
-            return 0, 0, "neither"
-        c0, c1 = max(0, min(p0, length)), max(0, min(p1, length))
-        if not stored:
-            return c0, c1, "unchecked"
-        passages = stored_passages(stored)
-        if self.text[c0:c1] in passages:
-            return c0, c1, "stored"
-        u0, u1 = self.from_units(p0), self.from_units(p1)
-        if u0 is not None and u1 is not None and \
-                self.text[u0:u1] in passages:
-            return u0, u1, "second"
-        return c0, c1, "neither"
 
 
 class Coding:
@@ -248,8 +205,8 @@ def render_text(text: str, codings: List[Coding],
         a_ends.setdefault(note.end, []).append(note)
     cuts = {0, len(text)} | set(starts) | set(ends) | set(a_starts) | \
         set(a_ends)
-    cuts |= {i for i, c in enumerate(text) if c == "\n"}
-    cuts |= {i + 1 for i, c in enumerate(text) if c == "\n"}
+    for found in _LINE_BREAK.finditer(text):
+        cuts |= {found.start(), found.end()}
     bounds = sorted(b for b in cuts if 0 <= b <= len(text))
     out = ['<p>']
     active: List[Coding] = []
@@ -280,8 +237,11 @@ def render_text(text: str, codings: List[Coding],
         if index + 1 == len(bounds):
             break
         piece = text[here:bounds[index + 1]]
-        if piece == "\n":
-            out.append("</p>\n<p>")
+        if piece in ("\n", "\r", "\r\n"):
+            # A Windows line break a coding cuts in two (one drawn at
+            # characters it does not match) still ends one paragraph
+            if not (piece == "\n" and here and text[here - 1] == "\r"):
+                out.append("</p>\n<p>")
         elif piece:
             out.append(_run(piece, active, open_notes > 0))
     out.append("</p>")
@@ -465,8 +425,14 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
                suggestions_pending: int = 0,
                suggestions_approved: int = 0,
                no_text_reason: Optional[str] = None,
-               version: str = "") -> Tuple[str, Dict[str, Any]]:
-    """The page, and the counts the reading tool's answer gives."""
+               version: str = "",
+               without_codes: bool = False) -> Tuple[str, Dict[str, Any]]:
+    """The page, and the counts the reading tool's answer gives. Without
+    codes, the text alone for a fresh reading: no codings, codes,
+    annotations or switches, the file's memo kept."""
+    left_out = (len(segments), len(annotations))
+    if without_codes:
+        segments, annotations = (), ()
     codings, marks, notes, memo, counts = prepare(
         text, segments, annotations, file_memo)
     style, weak = code_style(codings)
@@ -475,10 +441,22 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
     counts["fills_shown_as_underlines_for_contrast"] = weak
     counts["suggestions_awaiting_a_decision"] = suggestions_pending
     not_drawn = {k: v for k, v in (not_drawn or {}).items() if v}
-    facts = [f"Written at {_when(written_at)}. This page shows the codings "
-             f"as they were then; to see newer ones, ask for the file "
-             f"again, then reload this page."]
-    facts.append(coder_note or "Codings by every coder are shown.")
+    if without_codes:
+        counts.update({"without_codes": True,
+                       "codings_left_out": left_out[0],
+                       "annotations_left_out": left_out[1]})
+        facts = [f"Written at {_when(written_at)}. This page shows the "
+                 f"file's text without its codings, codes and "
+                 f"annotations, for a fresh reading; to see them, ask for "
+                 f"the file again with its codings, then reload this "
+                 f"page."]
+        suggestions_pending = suggestions_approved = 0
+        not_drawn = {}
+    else:
+        facts = [f"Written at {_when(written_at)}. This page shows the "
+                 f"codings as they were then; to see newer ones, ask for "
+                 f"the file again, then reload this page."]
+        facts.append(coder_note or "Codings by every coder are shown.")
     if suggestions_pending:
         facts.append(f"{_plural(suggestions_pending, 'suggestion', 'suggestions')} for this file "
                       f"await your decision; suggestions are not drawn here.")
@@ -492,7 +470,9 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
     if counts["codings_placed_by_second_reading"]:
         facts.append(f"{_plural(counts['codings_placed_by_second_reading'], 'coding is', 'codings are')} "
                      f"placed by QualCoder's way of counting positions, in "
-                     f"which an emoji counts as two characters.")
+                     f"which an emoji counts as two characters, a Windows "
+                     f"line break as one and a byte-order mark at the "
+                     f"start as none.")
     if counts["codings_matching_neither_reading"]:
         facts.append(f"{_plural(counts['codings_matching_neither_reading'], 'coding', 'codings')}' "
                      f"stored passages differ from the text where they "
@@ -518,28 +498,31 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         '<a class="skip" href="#text">Skip to the text</a>',
         f'<header><h1><bdi>{esc(file_name)}</bdi></h1>',
         f"<p>Project: <bdi>{esc(project_name)}</bdi>. File {int(file_id)}, "
-        f"{_plural(counts['codings_drawn'], 'coding', 'codings')}, "
-        f"{_plural(code_count, 'code', 'codes')}.</p>",
+        + ("its text without codings." if without_codes else
+           f"{_plural(counts['codings_drawn'], 'coding', 'codings')}, "
+           f"{_plural(code_count, 'code', 'codes')}.") + "</p>",
         '<ul class="facts">' + "".join(f"<li>{f}</li>" for f in facts)
         + "</ul>",
         '<p class="for-you">This page is for you. To talk about a passage, '
         "copy a few words of it into the conversation; those words go to "
         "the AI provider. It is not meant to be read by an AI assistant."
         "</p></header>",
-        '<nav class="controls" aria-label="What the page shows">'
-        "<fieldset><legend>Show</legend>"
-        '<input type="radio" name="mode" id="mode-codings" checked> '
-        '<label for="mode-codings">with codings</label> '
-        '<input type="radio" name="mode" id="mode-text"> '
-        '<label for="mode-text">text only</label></fieldset>',
     ]
-    if rows:
+    if not without_codes:
         parts.append(
-            "<table><caption>Codes on this page (untick one to hide it)"
-            "</caption><thead><tr><th>Code</th><th>Category</th>"
-            "<th>Codings</th><th>Where</th></tr></thead><tbody>"
-            f"{rows}</tbody></table>")
-    parts.append("</nav>")
+            '<nav class="controls" aria-label="What the page shows">'
+            "<fieldset><legend>Show</legend>"
+            '<input type="radio" name="mode" id="mode-codings" checked> '
+            '<label for="mode-codings">with codings</label> '
+            '<input type="radio" name="mode" id="mode-text"> '
+            '<label for="mode-text">text only</label></fieldset>')
+        if rows:
+            parts.append(
+                "<table><caption>Codes on this page (untick one to hide "
+                "it)</caption><thead><tr><th>Code</th><th>Category</th>"
+                "<th>Codings</th><th>Where</th></tr></thead><tbody>"
+                f"{rows}</tbody></table>")
+        parts.append("</nav>")
     parts.append(f'<main id="text">{render_text(text, codings, marks)}'
                  "</main>")
     if memo or notes:

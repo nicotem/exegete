@@ -6196,21 +6196,31 @@ def get_project_summary() -> str:
     return _ai_json(summary, indent=2)
 
 
-# A coding whose stored passage is not the text at its positions (v0.14.3):
-# usually one made in QualCoder after an emoji, which QualCoder's editor
-# counts as two characters. Flagged, never moved: other tools use the
-# positions as stored.
+# A coding made in QualCoder whose positions are in its editor's count
+# (v0.14.3): an emoji counts as two, a Windows line break as one, a
+# byte-order mark at the start as none (parts.Positions). Its words are
+# found by that count and given beside the stored positions, which are
+# never moved: other tools use the positions as stored.
+QUALCODER_POSITIONS_NOTE = (
+    "Codings with text_start and text_end were made in QualCoder, which "
+    "counts positions differently (an emoji as two characters, a Windows "
+    "line break as one, a byte-order mark at the start as none): their "
+    "passage stands from text_start to text_end of this text. Quote it "
+    "from there; position_start and position_end are as stored, for "
+    "naming the coding to other tools.")
+# A coding whose stored passage is found by neither count (v0.14.3).
 STORED_PASSAGE_NOTE = (
     "Codings marked stored_passage_differs have a stored passage that is "
-    "not the text at their positions, usually because QualCoder counts an "
-    "emoji as two characters. Quote the text at the positions, not the "
+    "not the text at their positions, counted either as characters or as "
+    "QualCoder counts them. Quote the text at the positions, not the "
     "stored passage, and say so if it matters.")
 
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 @_with_guidance(GROUNDING_READ, before="Args:")
-def analyze_file_with_coding(file_id: int, start: int = 0) -> str:
+def analyze_file_with_coding(file_id: int, start: int = 0,
+                             without_codes: bool = False) -> str:
     """Return a text file's whole text with its coded segments.
 
     Read a file this way before suggesting codings for it, or to answer a
@@ -6222,6 +6232,7 @@ def analyze_file_with_coding(file_id: int, start: int = 0) -> str:
     Args:
         file_id: The numeric ID of the file to analyse
         start: Where the part begins, in characters (default 0)
+        without_codes: true for the text alone, for a fresh reading
 
     Returns:
         JSON object with:
@@ -6297,19 +6308,54 @@ def analyze_file_with_coding(file_id: int, start: int = 0) -> str:
             "and codings written here may render shifted or unhighlighted "
             "in the QualCoder editor. Reports and exports are unaffected."
         )
-    _in_parts(result, file_id, start)
+    if without_codes:
+        _leave_out_codes(result)
+    _in_parts(result, file_id, start, without_codes)
     return _ai_json(result, indent=2)
 
 
-def _in_parts(result: Dict[str, Any], file_id: int, start: int) -> None:
-    """Cut a whole-file read to one part (v0.14.3, provisional), and flag
-    every coding whose stored passage differs from the text at its
-    positions. A file that fits one part reads as before, flags apart."""
+# Reading without codes (v0.14.3, provisional; the owner's decision of 1
+# October 2026): a fresh reading meets nothing of the coding already
+# done. The file's memo describes the file and stays.
+WITHOUT_CODES_NOTE = (
+    "This is the file's text without its codings, codes and annotations, "
+    "for a fresh reading; the file's memo is kept. Tell the researcher "
+    "that you read it this way. Without without_codes, the codings come "
+    "as usual.")
+
+
+def _leave_out_codes(result: Dict[str, Any]) -> None:
+    """A whole-file read without codes: every coding, code and
+    annotation left out, and counted."""
+    segments = result.pop("coded_segments", None) or []
+    annotations = result.pop("annotations", None) or []
+    for key in ("codes_used", "codings_not_shown", "coder_visibility"):
+        result.pop(key, None)
+    result["statistics"] = {
+        "text_length": len(result.get("full_text") or "")}
+    result["without_codes"] = {
+        "codings_left_out": len(segments),
+        "annotations_left_out": len(annotations),
+        "note": WITHOUT_CODES_NOTE}
+
+
+def _in_parts(result: Dict[str, Any], file_id: int, start: int,
+              without_codes: bool = False) -> None:
+    """Cut a whole-file read to one part (v0.14.3, provisional). Each
+    coding found by QualCoder's count gets the place of its words
+    (`text_start`, `text_end`); each found by neither count is flagged.
+    A file that fits one part reads as before, these apart."""
     whole = result.get("full_text") or ""
     segments = result.get("coded_segments") or []
+    positions = parts.Positions(whole)
     for segment in segments:
-        if parts.passage_differs(whole, segment):
+        p0, p1, reading = parts.place_segment(whole, segment, positions)
+        if reading == "second":
+            segment["text_start"], segment["text_end"] = p0, p1
+        elif reading == "neither":
             segment["stored_passage_differs"] = True
+    if any("text_start" in s for s in segments):
+        result["qualcoder_positions_note"] = QUALCODER_POSITIONS_NOTE
     if any(s.get("stored_passage_differs") for s in segments):
         result["stored_passage_note"] = STORED_PASSAGE_NOTE
     end = parts.choose_end(whole, start, segments)
@@ -6317,12 +6363,16 @@ def _in_parts(result: Dict[str, Any], file_id: int, start: int) -> None:
         return
     result.pop("full_text", None)
     result["part_text"] = whole[start:end]
-    result["coded_segments"] = parts.overlapping(segments, start, end)
-    result["annotations"] = parts.overlapping(
-        result.get("annotations") or [], start, end)
+    if "coded_segments" in result:
+        result["coded_segments"] = parts.overlapping(segments, start, end)
+    if "annotations" in result:
+        result["annotations"] = parts.overlapping(
+            result.get("annotations") or [], start, end)
+    again = ", without_codes=true" if without_codes else ""
     result["part"] = parts.part_block(
         start, end, len(whole),
-        f"call analyze_file_with_coding(file_id={file_id}, start={end}).")
+        f"call analyze_file_with_coding(file_id={file_id}, start={end}"
+        f"{again}).")
 
 
 # ============================================================================
@@ -6372,7 +6422,8 @@ def _forget_reading_copies(file_ids: Optional[Sequence[int]] = None
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
-def open_file_for_reading(file_id: int, show: str = "reading_copy") -> str:
+def open_file_for_reading(file_id: int, show: str = "reading_copy",
+                          without_codes: bool = False) -> str:
     """Let the researcher read a whole file on their own computer; its text
     does not pass through the conversation. Call this only when the
     researcher asks to read or see a file.
@@ -6380,7 +6431,8 @@ def open_file_for_reading(file_id: int, show: str = "reading_copy") -> str:
     show="reading_copy" (the default) writes a web page with the file's
     full text and its codings (each passage in its code's colour and
     named), a list of the codes, and the annotations and the public part
-    of memos as notes, then opens it in the researcher's browser.
+    of memos as notes, then opens it in the researcher's browser;
+    with without_codes=true, the text alone, for a fresh reading.
     show="original" opens a read-only copy of the document as it was
     imported, in its own app. show="in_folder" shows that copy in Finder
     or File Explorer (on a Mac, the space bar then gives Quick Look).
@@ -6393,6 +6445,8 @@ def open_file_for_reading(file_id: int, show: str = "reading_copy") -> str:
     Args:
         file_id: The file's numeric id
         show: "reading_copy" (default), "original" or "in_folder"
+        without_codes: true for a page with no codings, codes or
+            annotations (default false); an original never has codings
     """
     if show not in reading.SHOW_CHOICES:
         return json.dumps({"error": "show must be 'reading_copy', "
@@ -6446,7 +6500,8 @@ def open_file_for_reading(file_id: int, show: str = "reading_copy") -> str:
             not_drawn={"region": counts.get("region", 0),
                        "audio_video": counts.get("audio_video", 0)},
             suggestions_pending=pending, suggestions_approved=approved,
-            no_text_reason=no_text, version=_package_version)
+            no_text_reason=no_text, version=_package_version,
+            without_codes=bool(without_codes))
         result.update({"shown": "reading_copy", "location": str(path),
                        "counts": page_counts})
         result.update(reading.present(

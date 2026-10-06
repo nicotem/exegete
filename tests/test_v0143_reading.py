@@ -499,7 +499,7 @@ class TestWhatTheAssistantIsTold:
             assert flat.index(rule) + len(rule) < 2048
         assert flat.index("Call this only when") < 200
         if sys.version_info[:2] == (3, 13):
-            assert len(text) == 997
+            assert len(text) == 1187        # with without_codes
 
     def test_in_every_tool_set(self):
         for mode in ("full", "core", "lifecycle"):

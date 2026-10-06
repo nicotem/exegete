@@ -592,6 +592,35 @@ Native first, as on any computer:
    pandoc server, file to file) it becomes a Word file with one comment
    per coding, named after its code.
 
+**Codings made in QualCoder** are drawn where QualCoder draws them.
+QualCoder's text coder counts positions its own way: an emoji as two
+characters, a Windows line break as one, and a byte-order mark at the
+start of the text as none. Exegete's own import stores neither of the
+last two, but QualCoder 3.8.2 kept Windows line breaks in the plain
+text files it imported (a transcript saved on Windows usually has
+them), and one byte-order mark of a file that began with several, and
+both stay when QualCoder 4.0 opens the project. Each
+coding is drawn where its stored passage matches the text, counted as
+characters or, failing that, as QualCoder counts; the page says how
+many were placed the second way, and draws with a dotted underline any
+whose passage neither count finds. Windows and old Mac line breaks show
+as line breaks, as in QualCoder. The whole-file read
+(`analyze_file_with_coding`) uses the same count, and gives such a
+coding's place in the text beside its stored positions, so the
+assistant quotes the words you coded.
+
+**Reading without codes.** For a fresh reading, with nothing of the
+coding already done in view, ask for a file without its codes
+(`without_codes=true`). The page then shows the text alone: no
+codings, no list of codes, no annotations and no switches; the file's
+memo stays, as it describes the file, with its private part left out
+as above. The assistant can read a file the same way: the whole-file
+read with `without_codes=true` gives the text and the file's details,
+and only counts the codings and annotations it leaves out, so it can
+tell you whether the file has any without seeing them. Nothing in the
+project changes: the codings are still there when you ask for the file
+with them.
+
 Linked originals (QualCoder's `docs:` paths, which point outside the
 project) are not opened: QualCoder's Manage files opens them. Only an
 original of a type QualCoder imports (documents, pictures, audio and
@@ -817,8 +846,8 @@ never a coder hidden in QualCoder). A known value with nothing in scope
 still answers empty, and that answer is a finding.
 
 **Rich Transcript Analysis:**
-- `analyze_file_with_coding(file_id, start)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3, provisional): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding whose stored passage is not the text at its positions (usually one made in QualCoder after an emoji, which QualCoder counts as two characters) is marked `stored_passage_differs`, never moved
-- `open_file_for_reading(file_id, show)` - **Let the researcher read a whole file on their own computer** (provisional, v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). See "Reading a whole file" below
+- `analyze_file_with_coding(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3, provisional): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
+- `open_file_for_reading(file_id, show, without_codes)` - **Let the researcher read a whole file on their own computer** (provisional, v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). `without_codes=true` writes the page with the text alone, for a fresh reading. See "Reading a whole file" below
 
 **Attributes & Demographics:**
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)

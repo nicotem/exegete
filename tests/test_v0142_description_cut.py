@@ -425,8 +425,9 @@ class TestTheRulesSitWithinTheCut:
 WORDS = {
     "add_annotation": (1697, 1406, "eb754cae1fd5fd0c"),
     "add_journal_entry": (1137, 943, "c3a73ee84df3096d"),
-    # v0.14.3 (provisional): reads in parts, the `start` argument
-    "analyze_file_with_coding": (2235, 1832, "3439e33c120d8ae9"),
+    # v0.14.3 (provisional): reads in parts, the `start` argument, and
+    # the `without_codes` argument (reading without codes)
+    "analyze_file_with_coding": (2299, 1882, "ba92df2789339118"),
     "analyze_for_coding": (6101, 4958, "c774dca8502c1ab6"),
     "apply_codings": (2627, 2152, "f9afa83a8784cd88"),
     "cleanup_old_sessions": (842, 684, "e2e05fad8d2357ea"),

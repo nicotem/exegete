@@ -19,6 +19,7 @@ deliberately on the high side for both, so English text gets about
 """
 
 import bisect
+import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # The budget for one answer, in estimated tokens, leaving room under
@@ -62,11 +63,13 @@ def overlapping(items: Sequence[Dict[str, Any]], start: int, end: int,
                 begin: str = "position_start",
                 finish: str = "position_end") -> List[Dict[str, Any]]:
     """The items (codings, annotations) that touch [start, end): those
-    overlapping it, and an empty one inside it."""
+    overlapping it, and an empty one inside it. A coding placed by
+    QualCoder's count belongs where its words are (`text_start`)."""
     chosen = []
     for item in items:
         try:
-            p0, p1 = int(item.get(begin)), int(item.get(finish))
+            p0 = int(item.get("text_start", item.get(begin)))
+            p1 = int(item.get("text_end", item.get(finish)))
         except (TypeError, ValueError):
             continue
         if p0 < end and p1 > start or (p0 == p1 and start <= p0 < end):
@@ -149,30 +152,113 @@ def start_problem(start: Any, length: int) -> Optional[str]:
     return None
 
 
-def stored_passages(stored: str) -> Tuple[str, ...]:
-    """The texts a coding's stored passage stands for: itself, and, for
-    a coding made in QualCoder, the same with each paragraph mark
-    (U+2029) read as a line break. QualCoder stores the passage as Qt's
-    selectedText() gives it, which writes a line break inside the
-    selection as that mark (code_text.py 4869-4871, stored unchanged at
-    4898-4902, QualCoder 9bddf17); the server's check of a suggestion's
-    passage allows it the same way."""
-    return (stored, stored.replace("\u2029", "\n"))
+_LINE_BREAK = re.compile("\r\n|\r|\n")
 
 
-def passage_differs(text: str, segment: Dict[str, Any]) -> bool:
-    """Whether a coding's stored passage differs from the text at its
-    positions (QualCoder counts an emoji as two; see the reading copy),
-    a paragraph mark in it read as a line break."""
-    stored = segment.get("text")
-    if not stored:
-        return False
-    try:
-        p0, p1 = int(segment.get("position_start")), \
-            int(segment.get("position_end"))
-    except (TypeError, ValueError):
-        return True
-    return text[p0:p1] not in stored_passages(stored)
+def same_passage(stored: str, actual: str) -> bool:
+    """Whether a coding's stored passage is `actual`, a stretch of the
+    text: the same characters, or, for a coding made in QualCoder, the
+    same with every line break written as the paragraph mark U+2029.
+    QualCoder stores the passage as Qt's selectedText() gives it, which
+    writes each line break inside the selection, Windows ("\\r\\n"),
+    old Mac ("\\r") or plain ("\\n"), as that mark (code_text.py
+    4869-4871, stored unchanged at 4898-4902, QualCoder 9bddf17)."""
+    return actual == stored or _LINE_BREAK.sub("\u2029", actual) == stored
+
+
+class Positions:
+    """The two readings of a stored position: as characters (Exegete's
+    count), and as QualCoder's text coder counts it. QualCoder's editor,
+    a Qt text widget holding the stored text, counts a character beyond
+    U+FFFF (an emoji) as two, a Windows line break ("\\r\\n") as one,
+    and a byte-order mark at the very start as none (Qt drops it when
+    the text is handed over); everything else as one. QualCoder 3.8.2
+    stored a plain text file's Windows line endings as they were, and
+    kept one mark of a file that began with several, so its projects
+    hold such texts; QualCoder 4.0 keeps them when it opens the project.
+    Observed in QualCoder 3.8.2's and 4.0's own text coders (the third
+    parity check, 6 October 2026), not taken from their code."""
+
+    def __init__(self, text: str):
+        self.text = text
+        # Where the count departs from one a character: (index, width)
+        self.where: List[int] = []
+        self.shift: List[int] = []    # the departure up to and with it
+        running = 0
+        for index, char in enumerate(text):
+            if char > "\uffff":
+                width = 2
+            elif (index == 0 and char == "\ufeff") or (
+                    char == "\n" and index and text[index - 1] == "\r"):
+                width = 0
+            else:
+                continue
+            running += width - 1
+            self.where.append(index)
+            self.shift.append(running)
+
+    def units(self, index: int) -> int:
+        """QualCoder's position for the character index `index`."""
+        before = bisect.bisect_left(self.where, index)
+        return index + (self.shift[before - 1] if before else 0)
+
+    def from_units(self, unit: int) -> Optional[int]:
+        """The character index at QualCoder's position `unit` (after any
+        character the count passes over, so after a mark at the start
+        and after a whole Windows line break), or None when the position
+        falls inside an emoji or outside the text."""
+        length = len(self.text)
+        if unit < 0 or unit > self.units(length):
+            return None
+        if not self.where:
+            return unit
+        low, high = 0, length
+        while low < high:           # the last index whose count <= unit
+            middle = (low + high + 1) // 2
+            if self.units(middle) <= unit:
+                low = middle
+            else:
+                high = middle - 1
+        return low if self.units(low) == unit else None
+
+    def place(self, start: Any, end: Any,
+              stored: Optional[str]) -> Tuple[int, int, str]:
+        """(start, end, reading): 'stored' when the passage matches at
+        its positions as characters, 'second' when it matches at them as
+        QualCoder counts them, 'unchecked' when no passage is stored,
+        'neither' (at its positions as characters) otherwise."""
+        length = len(self.text)
+        try:
+            p0, p1 = int(start), int(end)
+        except (TypeError, ValueError):
+            return 0, 0, "neither"
+        c0, c1 = max(0, min(p0, length)), max(0, min(p1, length))
+        if not stored:
+            return c0, c1, "unchecked"
+        if same_passage(stored, self.text[c0:c1]):
+            return c0, c1, "stored"
+        u0, u1 = self.from_units(p0), self.from_units(p1)
+        if u0 is not None and u1 is not None and \
+                same_passage(stored, self.text[u0:u1]):
+            return u0, u1, "second"
+        return c0, c1, "neither"
+
+
+def place_segment(text: str, segment: Dict[str, Any],
+                  positions: Optional[Positions] = None
+                  ) -> Tuple[int, int, str]:
+    """Where a coding's passage stands in `text`, and by which reading
+    (Positions.place)."""
+    return (positions or Positions(text)).place(
+        segment.get("position_start"), segment.get("position_end"),
+        segment.get("text"))
+
+
+def passage_differs(text: str, segment: Dict[str, Any],
+                    positions: Optional[Positions] = None) -> bool:
+    """Whether a coding's stored passage is found at neither reading of
+    its positions."""
+    return place_segment(text, segment, positions)[2] == "neither"
 
 
 def tuple_span(segment: Dict[str, Any]) -> Tuple[int, int]:

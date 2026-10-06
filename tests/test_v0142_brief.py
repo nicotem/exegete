@@ -494,10 +494,11 @@ class TestTheSizes:
     # The figures without read_brief, measured on Python 3.13.5 with mcp
     # 1.30.0: 0.14.1's were 195,266, 64,804 and 197,845; v0.14.3
     # (provisional) moves them by the reading tool's entry, the `start`
-    # argument on analyze_file_with_coding and the two descriptions it
-    # changes, import_text_file's pointer to import_documents among them
-    # (tests/test_v0142_description_cut.py pins those)
-    BEFORE = {"full": 197_220, "core": 66_485, "lifecycle": 199_799}
+    # and `without_codes` arguments on analyze_file_with_coding and the
+    # two descriptions it changes, import_text_file's pointer to
+    # import_documents among them (tests/test_v0142_description_cut.py
+    # pins those)
+    BEFORE = {"full": 197_642, "core": 66_907, "lifecycle": 200_221}
 
     @staticmethod
     def _entry(tool):

@@ -290,6 +290,12 @@ advanced users.
   date it was checked, because the README is frozen into each extension and PyPI
   upload. The brief is named, provisional, among the advanced features;
   TOOLS.md and INSTALL.md describe it.
+- The README opens with the woven lockup: the braided ring with an E
+  in its eye, the E the first letter of the name Exegete, which is
+  woven across the ring. It sits on its own light tile as before, so
+  that it reads on a dark page too, and keeps its address in
+  `docs/brand/`, so 0.14.1's page on PyPI shows it as well. The
+  extension's icon stays the ring with the E.
 - Tests: the pins on the README's words moved with their text; two
   sweeps keep out labels tied to a release and words that make counts
   sound like findings; the link check reads the README's own sections
@@ -300,7 +306,9 @@ advanced users.
   PRIVACY.md, the tool-set table against the server and the measurement
   below, the advanced section's tool names and arguments against the
   server, how it is tested against the CI workflow, the map against the
-  files, "What comes next" as plans, and the badges.
+  files, "What comes next" as plans, and the badges. The lockup's pins
+  (`tests/test_v0142_woven_lockup.py`) hold its description, its tile
+  and a PNG of the same shape, shown at half size.
 
 ### Changed: the other documents, beside the README
 

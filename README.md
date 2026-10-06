@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/nicotem/exegete/main/docs/brand/exegete-lockup.png" alt="The Exegete mark, a braided ring, beside the name Exegete" width="324"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/nicotem/exegete/main/docs/brand/exegete-lockup.png" alt="The Exegete mark: a braided ring with an E in its eye, the first letter of the name Exegete, which is woven across the ring" width="173"></p>
 
 # Exegete
 

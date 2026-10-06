@@ -1115,8 +1115,10 @@ class TestTheProcessList:
 
     def test_the_real_process_list_holds_this_process(self):
         # on Windows this runs the PowerShell command itself, so a mistake
-        # in it shows here rather than as "could not be read"
-        rows = transition._process_table()
+        # in it shows here rather than as "could not be read". A busy
+        # Windows runner can miss the 20-second limit once (CI, 6 October
+        # 2026), so it is asked twice; a mistake in the command fails both.
+        rows = transition._process_table() or transition._process_table()
         assert rows is not None
         mine = [row for row in rows if row[0] == os.getpid()]
         assert len(mine) == 1 and mine[0][1] == os.getppid()

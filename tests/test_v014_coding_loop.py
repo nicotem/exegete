@@ -16,6 +16,7 @@ Most calls go through FastMCP's own `call_tool`, the path a host takes
 
 import asyncio
 import json
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -126,7 +127,9 @@ class TestSupportIsRequired:
         assert rec["confidence_ignored"] == 1
         stored = session_file(sid).read_text()
         assert "confidence" not in stored
-        assert "0.95" not in stored
+        # 0.95 as a value of its own: the file's timestamps run to the
+        # microsecond, and one such as 13:57:10.953421 holds "0.95" too
+        assert not re.search(r"(?<![\d.])0\.95(?!\d)", stored)
         assert '"reading": "explicit"' in stored
 
 

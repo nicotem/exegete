@@ -543,9 +543,11 @@ folder; and any backup of the whole disk, such as Time Machine or
 File History, that copies those folders. Exegete tidies
 the reading folder itself: a file's page and copy go whenever Exegete
 changes that file's text or name (renaming, pseudonymising, restoring a
-backup over the project), and anything there goes a week after it was
-written, when the server next starts. A page written before you
-pseudonymised a file would otherwise keep the real names. A study with
+backup over the project), a page left for a file deleted in QualCoder
+goes when a new file takes its number, and anything there goes a week
+after it was written, when the server next starts. A page written
+before you pseudonymised a file would otherwise keep the real names; a
+file deleted or renamed in QualCoder keeps its page until then. A study with
 a date for deleting its data should include the reading folder, which
 can be deleted at any time.
 
@@ -787,7 +789,11 @@ Seven cautions:
   name only if you say so for that import
   (`import_file_names_with_listed_names`), and the name then reaches
   the provider whenever an answer names the file. Renaming the file
-  first is the way to keep the name out.
+  first is the way to keep the name out. A subfolder, and the real place
+  a link leads to, are shown with any part holding a listed name
+  replaced by words saying so. While the names list cannot be used (a
+  name typed with a space at its end, say), the import is stopped and
+  its preview still shows no file name holding a name from it.
 - **A folder's preview is a listing**: given any folder your account can
   read, it returns the names and sizes of the documents in it, before
   any import.
@@ -800,9 +806,18 @@ Seven cautions:
   save a copy as UTF-8 in Word, TextEdit or Notepad, and is never read
   by a guess, by a set you name, or by the set a web page declares.
   Read any of those ways, a listed name can come out with other letters
-  ("Agnès" as "Agnčs"), which the list would then not replace. So the
-  names are looked for, and replaced, in the text exactly as it is
-  stored.
+  ("Agnès" as "Agnčs"), which the list would then not replace. So is a
+  file saved as UTF-16 or UTF-32 without the mark that names it, which
+  reads as UTF-8 with an invisible character beside each letter, and a
+  file whose letters came out wrong in the file itself ("WÄ…sik" for
+  "Wąsik"), in any script; a garbled letter at a word's end can still
+  be missed when it is the only one in a file. So the names are looked
+  for, and replaced, in the text exactly as it is stored. Two limits
+  remain, as in QualCoder: an RTF file is read by the code page it
+  declares, so a wrong declaration changes letters; and a name typed
+  with a separate accent mark (as some Mac programs write "é") is not
+  replaced when the list has the accented letter, or the other way
+  round.
 - **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
   can read any file your account can, originals included. Exegete's
   descriptions ask the assistant to give paths and never to open a
@@ -819,11 +834,13 @@ Seven cautions:
 - **More of a document comes in than in QualCoder**: a Word,
   OpenDocument or RTF file's footnotes, endnotes, comments, headers and
   footers (and an RTF file's text boxes) come after its text, where
-  QualCoder's import leaves them out. So a comment a transcriber or a
+  QualCoder's import leaves them out (an OpenDocument file's notes and
+  comments it keeps inside the sentence, with their markup and a
+  comment's author and date). So a comment a transcriber or a
   colleague left, or a header naming the interview's date and place,
   becomes part of the text the assistant reads. The names list is
-  applied to these parts as to the rest; comments' authors and dates
-  are left out. If a document's comments are not meant to be read, you
+  applied to these parts as to the rest; comments' authors, initials
+  and dates are left out. If a document's comments are not meant to be read, you
   could delete them, or save a copy without them, in its own app before
   importing; the preview says when a file has such parts.
 

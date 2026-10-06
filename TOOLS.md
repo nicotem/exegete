@@ -689,7 +689,7 @@ with every later request, until the host shortens the conversation.
 ## Document import: where it departs from QualCoder (provisional)
 
 `import_documents` (0.14.3, provisional) reads each document the way
-QualCoder 4.0's own import reads it (QualCoder 4.0 at commit `9bddf17`),
+QualCoder 4.0's own import reads it,
 and better where QualCoder's way of reading loses or garbles content,
 in the ways listed first below and only those (the owner's decision of
 6 October 2026). A PDF's text is QualCoder's to the character, since
@@ -699,7 +699,8 @@ the tests check two things against them: with none of these departures,
 Exegete's readers give QualCoder's text to the character; and every
 difference between QualCoder's text and Exegete's, on every test
 document, is one of the lines below. So within one project both
-programs read the text Exegete stores and agree on every coding; a file
+programs read the text Exegete stores (after an emoji, QualCoder's text
+coder shows codings shifted, as in any file holding one); a file
 imported separately by each program can come in with different text,
 and codings made on one copy do not then line up on the other. The
 preview says, file by file, which of these lines apply.
@@ -712,15 +713,15 @@ the text QualCoder does read keeps its place.
 |---|---|---|
 | A line break inside a Word paragraph (Shift and Return), or a column or page break | joins the words either side: `thank youInterviewer` | a line break: `thank you` ends one line and `Interviewer` starts the next; at a paragraph's start or end, nothing |
 | Tab stops set on a Word paragraph | a tab character at the paragraph's start for each one: `<tab><tab>Tab stops defined here.` | nothing: `Tab stops defined here.` |
-| A Word text box | its text inside the paragraph that holds it, then again after it, and twice more from the copy Word keeps for older programs: `Before the boxBoxed words and after it.` | once, as paragraphs of its own after that paragraph: `Before the box and after it.`, then `Boxed words` |
+| A Word text box | its text inside the paragraph that holds it, then again after it, and twice more from the copy Word keeps for older programs: `Before the boxBoxed words and after it.` | once, as paragraphs of its own after that paragraph: `Before the box and after it.`, then `Boxed words`; other content Word stores in two forms is read as QualCoder reads it, so an emoji Word writes as an extension element, with the character as its second form, comes in once |
 | Text moved or deleted with Word's tracked changes | moved text at both places, and a deleted tab kept: `Kept <tab>new words.` | read as accepted: moved text once, at its new place, and nothing deleted: `Kept new words.` |
 | A non-breaking hyphen, or a positioned tab, in Word | left out, joining the words: `a wellknown name`, `NameDate` | kept: `a well-known name`, `Name<tab>Date` |
-| Word's footnotes, endnotes, comments, headers and footers | left out | after the text, each a paragraph: `Footnote 1: ...`, `Endnote 1: ...`, `Comment 1: ...`, then `Header: ...` and `Footer: ...`; notes and comments numbered in the order the text refers to them (Word may show endnotes as i, ii); a header or footer repeating an earlier one's text left out; comments' authors and dates left out |
+| Word's footnotes, endnotes, comments, headers and footers | left out | after the text, each a paragraph: `Footnote 1: ...`, `Endnote 1: ...`, `Comment 1: ...`, then `Header: ...` and `Footer: ...`; notes and comments numbered in the order the text refers to them (Word may show endnotes as i, ii), one nothing refers to after the rest, and one referred to only from text deleted with tracked changes left out with that text; a header or footer repeating an earlier one's text left out; comments' authors and dates left out |
 | Runs of spaces in OpenDocument | all but the first space dropped: `words,spaced` | kept: `words,   spaced` |
 | A tab in OpenDocument | left out: `Q:Why` | kept: `Q:<tab>Why` |
 | A line break inside an OpenDocument paragraph | joins the words either side: `leave?Pat:` | a line break: `leave?` ends one line and `Pat:` starts the next |
 | An OpenDocument text box | joined to the words before it: `Outer wordsIn a box` | on a line of its own: `Outer words`, then `In a box` |
-| OpenDocument footnotes, endnotes and comments, and the headers and footers in its styles | notes and comments inside the sentence with their markup, a comment's author and date among it: `was far.1</text:note-citation>The clinic in town.`; headers and footers left out | taken out of the sentence (`was far.`) and placed after the text, as for Word |
+| OpenDocument footnotes, endnotes and comments, and the headers and footers in its styles | notes and comments inside the sentence with their markup, a comment's author and date among it: `was far.1</text:note-citation>The clinic in town.`; headers and footers left out | taken out of the sentence (`was far.`) and placed after the text, as for Word; a comment's author, initials and date left out |
 | Markup in OpenDocument that QualCoder's recipe leaves | in the text: `</draw:text-box>`, `<svg:title>A frame</svg:title>`, and character codes such as `&#233;` | taken out, and character codes read as their letters: `é`; a code for a character XML does not allow kept as typed |
 | An OpenDocument file not saved by LibreOffice (pandoc's, the Mac's TextEdit's) | no text found, so the file's own bytes stored as its text | read, its declarations and the line breaks laying out its XML left out: `Hello<tab>world` |
 | Text deleted with RTF's tracked changes | kept: `We gone moved quickly.` | left out: `We moved quickly.` |
@@ -734,7 +735,12 @@ cell a paragraph; in OpenDocument between `=== TABLE ===` and
 insertions and deletions in Word and OpenDocument, as accepted; and
 whatever a header or footer shows, a page number among it, as the file
 last showed it. List numbers and bullets, which Word draws rather than
-stores, are in neither program's text.
+stores, are in neither program's text. Lost in both programs, and not
+mended yet: the line breaks inside a web page's `<pre>` block (its lines
+run together, a space between them), Word's symbols (`w:sym`) and
+equations, and raw 8-bit bytes in an RTF file outside its escapes,
+which RTF's own rule does not allow (read as Latin-1, whatever code page
+the file declares).
 
 **Other departures**, with the reason:
 
@@ -744,7 +750,8 @@ stores, are in neither program's text.
 | An RTF file holding half of a character RTF writes in two halves (an emoji, say) without the other half | the import fails on the insert, leaving the copy | refused, with the way round (save it as Word, or remove that character) | neither program can store the half alone |
 | A plain text, Markdown or subtitle file not saved as UTF-8 (a UTF-16 file among them) | its character set guessed (charset-normalizer), else read as Windows Western or Latin-1, and stored as read, rightly or not | held back, with steps to save a copy as UTF-8 in Word, TextEdit or Notepad; nothing is guessed, and no character set can be named | a guessed or a chosen character set can read accented letters as others (a Polish or Turkish file is often guessed to be Western), and a name from the list written with other letters is not replaced; saved as UTF-8, the file reads the same way in both programs (the owner's decision of 6 October 2026) |
 | A web page not saved as UTF-8, whatever character set it declares | read as UTF-8; the import fails when the page's text holds bytes that are not UTF-8, and goes ahead when they lie only in what it drops (a comment, a script) | held back, with steps to save a copy as UTF-8, or as a Word document; never read by its declaration, which can be wrong | the same: a page declaring the wrong set would come in with its letters wrong and a listed name unreplaced |
-| Accents that came out wrong in a UTF-8 file itself ("Ã©" for "é") | stored as they are | held back until the file is corrected | a garbled name escapes the pseudonyms list |
+| A plain text, Markdown, subtitle or web page file whose text holds a NUL character: the sign of UTF-16 or UTF-32 saved without the mark that names it, which is valid UTF-8 byte for byte | stored as read, a NUL beside each letter (`M\0a\0r\0i\0a`), a web page with all its markup; its text view shows nothing after the first NUL | held back, with the same steps to save a copy as UTF-8 | no text saved as UTF-8 holds a NUL, and a listed name written with NULs between its letters is not replaced, though an assistant reads it all the same |
+| Letters that came out wrong in the file itself, in any script and any format but PDF (`Ã©` for `é`, `Ä…` for `ą`, `Ð˜` for `И`: a UTF-8 file once opened in the wrong character set and saved again); and an RTF file holding raw UTF-8 bytes, which QualCoder's way of reading RTF garbles so | stored as they are | held back until the file is corrected (an RTF file: saved as Word), whether or not the project has a names list. Correct text that writes the same pairs is let through (a closing quotation mark after a capital, as in Portuguese `«IRMÃ»` or Danish `»PÅ«`), so a garbled letter at a word's end in one of those forms is missed when it is the only one in a file | a garbled name escapes the names list, and an assistant reads it all the same |
 | XML entity declarations (Word, in any part Exegete reads: the document, its notes, comments, headers and footers; EPUB) | expanded, or imported with stray text | refused | safety |
 | Word's XML | the standard parser | defusedxml, which gives the same tree for ordinary documents | safety |
 | Subtitle files (`.srt`, `.vtt`) | taken only as a recording's transcript | imported as text documents, as they stand, every byte-order mark at the start removed | Exegete does not import media yet; the preview says such a document cannot later become a recording's transcript; a mark left at the start is hidden by QualCoder's text view, which would show every coding a character early |
@@ -754,8 +761,8 @@ stores, are in neither program's text.
 | File names | as on the disk | Exegete's name rules, one Unicode form; a name differing only in letter case from one in the folder of originals refused | names that look the same compare the same |
 | Errors and batches | some files stop the batch and leave their copy | the batch goes in together or not at all: a file that reads otherwise at the import than at the preview stops it, named; files held back or refused at the preview are skipped, unread | one clear outcome |
 | Limits | none | per-format file sizes (8 MB plain text, Markdown and subtitles; 32 MB web pages and RTF; 100 MB Word, OpenDocument, EPUB and PDF), 10,000 entries and 25 MB a part (100 MB in all, a part read twice counted twice) inside an archive, 1,000,000 characters of text, 60 seconds and 1 GB of memory to read a file, five minutes a batch, 50 files a batch | hostile and huge files; Exegete may refuse a file QualCoder would import, and says so |
-| The names list | applied entry by entry; a backslash in a pseudonym read as a pattern | applied in one pass, longest first, each pseudonym written literally; a list Exegete cannot use stops the import | one pass never rewrites a pseudonym it has written |
-| PDFs, and file names, holding listed names | imported | held back. A PDF whose text or notes hold names from the list (by the list's own rule) comes in with `import_pdfs_with_listed_names`. A file whose own name holds one, found as Exegete finds a name inside a name (in any letter case, across any separator, inside a longer word: `maria_interview.docx`, `MariaB.docx`), is referred to by its position only; renaming it first is the advice, and it comes in under that name with `import_file_names_with_listed_names`. Each argument is set only on the researcher's word | the names list's promise |
+| The names list | applied entry by entry; a backslash in a pseudonym read as a pattern | applied in one pass, longest first, each pseudonym written literally; a list Exegete cannot use stops the import, and its preview then shows no file or folder name holding a name from it (every name, when the list cannot be read at all) | one pass never rewrites a pseudonym it has written |
+| PDFs, and file names, holding listed names | imported | held back. A PDF whose text or notes hold names from the list (by the list's own rule) comes in with `import_pdfs_with_listed_names`. A file whose own name holds one, found as Exegete finds a name inside a name (in any letter case, across any separator, inside a longer word: `maria_interview.docx`, `MariaB.docx`), is referred to by its position only (its place among the folder's documents of the kinds Exegete imports, in A to Z order), and so is a step of a link's real place that holds one; renaming it first is the advice, and it comes in under that name with `import_file_names_with_listed_names`. Each argument is set only on the researcher's word | the names list's promise |
 | PDF highlights and underlines | offered to be coded at import | counted in the preview, not coded | every coding needs the researcher's approval |
 | The file's memo | empty, PDF notes apart | also `memo`, before the PDF notes; the PDF notes' heading is always "PDF annotations:", where QualCoder writes it in its interface language | what the researcher asked to record |
 | The file's owner | the researcher's coder name | the AI coder name, on the row and its attribute values | Exegete's rule for every write, as the owner decided on 6 October 2026: it records who brought the file in, on the researcher's word |

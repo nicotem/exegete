@@ -78,8 +78,10 @@ before it is released.
   Tidied: a file's page and copy go whenever Exegete changes the file's
   text or name (`rename_file`, `pseudonymise_source`, which with
   `rewrite_memos` clears the whole project's pages, and
-  `restore_backup`); preview pages an hour after they were written;
-  everything a week after, when the server starts; a temporary file
+  `restore_backup`), and a page left for a file deleted in QualCoder
+  when a new file takes its number (QualCoder gives a new file the
+  highest number plus one); everything a week after, when the server
+  starts; a temporary file
   an interrupted copy left beside an original's copy goes after ten
   minutes, as one beside a page does. An original of another type is
   refused in words that say it is not one of the types Exegete copies
@@ -177,22 +179,25 @@ before it is released.
   times), moved text once, and non-breaking hyphens and positioned tabs
   are kept; footnotes, endnotes, comments, headers and footers come
   after the text, each labelled ("Footnote 1: ..."), comments' authors
-  and dates left out. In OpenDocument files, runs of spaces, tabs and
-  line breaks are kept, a text box starts on a line of its own, notes
-  and comments leave the sentence they sat in with their markup and come
-  after the text as in Word, with headers and footers, other markup is
-  taken out and character codes read, and a file not saved by
-  LibreOffice (pandoc's, TextEdit's) is read, where QualCoder finds no
-  text. In RTF files, text deleted with tracked changes is left out,
-  notes, comments, headers, footers and text boxes come after the text,
-  and an emoji (two halves in RTF) is one character, where QualCoder's
-  import fails. In web pages and EPUB chapters, blocks and table cells
-  start on lines of their own. What QualCoder's reading leaves out comes
-  after the text, so the text it does read keeps its place. A PDF's text
-  is QualCoder's to the character, since QualCoder 4.0 re-reads a PDF
-  and compares. The preview names each departure a file shows, for
-  information, and that within the project both programs read the text
-  Exegete stores.
+  and dates left out, and a note or comment referred to only from text
+  deleted with tracked changes left out with that text; an emoji Word
+  writes as an extension element comes in once, as in QualCoder. In
+  OpenDocument files, runs of spaces, tabs and line breaks are kept, a
+  text box starts on a line of its own, notes and comments leave the
+  sentence they sat in with their markup and come after the text as in
+  Word (a comment's author, initials and date left out), with headers
+  and footers, other markup is taken out and character codes read, and a
+  file not saved by LibreOffice (pandoc's, TextEdit's) is read, where
+  QualCoder finds no text. In RTF files, text deleted with tracked
+  changes is left out, notes, comments, headers, footers and text boxes
+  come after the text, and an emoji (two halves in RTF) is one
+  character, where QualCoder's import fails. In web pages and EPUB
+  chapters, blocks and table cells start on lines of their own. What
+  QualCoder's reading leaves out comes after the text, so the text it
+  does read keeps its place. A PDF's text is QualCoder's to the
+  character, since QualCoder 4.0 re-reads a PDF and compares. The
+  preview names each departure a file shows, for information, and that
+  within the project both programs read the text Exegete stores.
 - The proof, against QualCoder's own extraction functions
   (`scripts/qualcoder_parity.py`, `tests/test_v0143_import_parity.py`):
   with every departure switched off, Exegete's readers give QualCoder's
@@ -205,45 +210,58 @@ before it is released.
   follows QualCoder's string recipe with no parser, each departure a
   step before or after it; RTF uses striprtf, as QualCoder does; web
   pages follow QualCoder's rules, written afresh.
-- Named departures, each with its reason in TOOLS.md: a file in which
-  no text is found is refused, where QualCoder stores its raw bytes; a
-  file declaring XML entities is refused; a file not saved as UTF-8 is
-  held back (below); a UTF-8 file whose accents came out wrong in the
-  file itself is held back until it is corrected; subtitle files come
-  in as documents, with every byte-order mark at their start removed;
-  an RTF file holding half of an emoji without the other half is
-  refused with the way round; originals are always copied, never
-  linked, and keep their internet-origin mark; per-format size limits,
-  archive limits and time and memory limits; the AI coder name owns the
-  rows and their attribute values, as the owner decided.
+- Named departures, each with its reason in TOOLS.md: a file in which no
+  text is found is refused, where QualCoder stores its raw bytes; a file
+  declaring XML entities is refused; a file not saved as UTF-8 is held
+  back (below); a file whose letters came out wrong in the file itself,
+  in any script and any format but PDF ("Ã©" for "é", "Ä…" for "ą", "Ð˜"
+  for "И"), is held back until it is corrected, and so is an RTF file
+  holding raw UTF-8 bytes, which QualCoder's way of reading RTF garbles
+  so; subtitle files come in as documents, with every byte-order mark at
+  their start removed; an RTF file holding half of an emoji without the
+  other half is refused with the way round; originals are always copied,
+  never linked, and keep their internet-origin mark; per-format size
+  limits, archive limits and time and memory limits; the AI coder name
+  owns the rows and their attribute values, as the owner decided.
 - The project's pseudonyms list is applied to the stored text by
   default, as QualCoder's import does (never to PDFs, nor to the
   originals); an empty list counts as none; a list Exegete cannot use
   stops the import, and turning the list off is never offered as the way
-  round. A PDF holding listed names is held back unless the researcher
-  says so (`import_pdfs_with_listed_names`). A file whose own name holds
-  a listed name, found in any letter case, across any separator or
-  inside a longer word (`maria_interview.docx`, `MariaB.docx`), is held
-  back and referred to only by its position, with the advice to rename
+  round; its preview then shows no file or folder name holding a name
+  from it, since QualCoder's Pseudonyms dialog saves lists Exegete
+  cannot use (a name with a space at its end, a chain, an emoji in a
+  pseudonym) and the names in them are names all the same (every name is
+  hidden when the list cannot be read at all). A PDF holding listed
+  names is held back unless the researcher says so
+  (`import_pdfs_with_listed_names`). A file whose own name holds a
+  listed name, found in any letter case, across any separator or inside
+  a longer word (`maria_interview.docx`, `MariaB.docx`), is held back
+  and referred to only by its position (among the folder's documents of
+  the kinds Exegete imports, in A to Z order), with the advice to rename
   it; it comes in under that name only if the researcher says so
   (`import_file_names_with_listed_names`). A folder's subfolders and
-  other files are named by the same rule, hidden when they hold a
-  listed name.
-- Files not saved as UTF-8 (plain text, Markdown and subtitle files,
-  and web pages whatever character set they declare) are held back,
-  with plain steps to save a copy as UTF-8 in Word, TextEdit or Notepad
-  (for a web page, or as a Word document); nothing is guessed, and no
+  other files are named by the same rule, hidden when they hold a listed
+  name, and so is a step of the real place a link leads to.
+- Files not saved as UTF-8 (plain text, Markdown and subtitle files, and
+  web pages whatever character set they declare) are held back, with
+  plain steps to save a copy as UTF-8 in Word, TextEdit or Notepad (for
+  a web page, or as a Word document); nothing is guessed, and no
   character set can be named (the owner's decision of 6 October 2026).
   Read by a guess, by a set the researcher names or by the set a page
   declares, accented letters can come out as others, and a listed name
   written with other letters is not replaced: a Polish or Turkish file
   guessed as Western, a set chosen to read the names that read the rest
   of the text wrongly, and a page declaring the wrong set all let a name
-  through or stored the wrong letters. The names list is now applied
-  to, and its names looked for in, the text exactly as it is stored.
-  QualCoder guesses instead; a file saved as UTF-8 reads the same way in
-  both programs. charset-normalizer, QualCoder's guesser, is not one of
-  Exegete's libraries.
+  through or stored the wrong letters. The names list is now applied to,
+  and its names looked for in, the text exactly as it is stored. A file
+  saved as UTF-16 or UTF-32 without the byte-order mark that names it,
+  which is valid UTF-8 byte for byte with a NUL beside each letter, is
+  held back too, with the same steps: no text saved as UTF-8 holds a
+  NUL, and a listed name written with NULs between its letters is not
+  replaced. QualCoder guesses instead, and stores such a file as read; a
+  file saved as UTF-8 has the same letters in both programs.
+  charset-normalizer, QualCoder's guesser, is not one of Exegete's
+  libraries.
 - The batch goes in together or not at all: a file the preview read as
   ready that reads otherwise at the import (out of time or memory, say)
   stops the whole import, naming the file; a file the preview held back

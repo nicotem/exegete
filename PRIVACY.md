@@ -488,8 +488,11 @@ convention controls only what enters the AI conversation through this
 server. An assistant that opens the database by itself reads every memo
 whole ("Assistants that open files by themselves", above). The QualCoder
 4.0 behaviour described in this section and the next two was verified
-against QualCoder master at commit 9bddf17 (pulled 2026-08-25, when 4.0
-was in beta); TOOLS.md and CHANGELOG.md carry the same pin. The coder
+against QualCoder 4.0, released on 2 October 2026; the line numbers
+cited from QualCoder's code are those of its development tree at
+commit 9bddf17 (25 August 2026), where the same behaviour was first
+checked (TOOLS.md, "Supported QualCoder versions", says what was
+checked again at the release). The coder
 visibility section was also verified against the 3.8.2 tag, which
 already creates the `coder_names` table, its `visibility` column and
 the four views (schema v14).

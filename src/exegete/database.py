@@ -41,8 +41,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 5000
 # Schemas verified for reading AND writing: v14 (QualCoder 3.8.x) through
-# v17 (unreleased QualCoder master, version string "QualCoder 4.0 Beta",
-# pinned commit 9bddf17). The version string is INFORMATIONAL: the write
+# v17 (QualCoder 4.0, released 2 October 2026, tag 4.0 at b95e021). The
+# release writes v17 exactly as the 4.0-Beta and the August master commit
+# 9bddf17 did (the QualCoder 4.0 format check of 6 October 2026); the line
+# citations in this code stay at 9bddf17 (CONTRIBUTING.md) until they are
+# re-read. The version string is INFORMATIONAL: the write
 # gate and every version-dependent recipe key on capability probes (column
 # and table existence, SchemaCapabilities below), exactly as upstream's own
 # migration ladder does (master __main__.py:2296-2346). The one place the
@@ -52,7 +55,11 @@ MAX_LIMIT = 5000
 # semantic change.
 SUPPORTED_DB_VERSIONS = ['v14', 'v15', 'v16', 'v17']
 MAX_VERIFIED_SCHEMA = 17
-VERIFIED_MASTER_COMMIT = "9bddf17"
+# The QualCoder this server is verified against, as researchers are told it
+# (the owner's ruling of 6 October 2026: the release, not a commit), and the
+# commit of its tag, which the create-project oracle was made from.
+VERIFIED_QUALCODER = "QualCoder 4.0"
+VERIFIED_QUALCODER_COMMIT = "b95e021"
 _VERSION_STRING_RE = re.compile(r"^v(\d+)$")
 # Environment override for the forward guard (v18+/unparseable versions);
 # the earlier spelling is read too, until v1.0 (env_settings).
@@ -3210,8 +3217,8 @@ class QualcoderDatabase:
             return (False,
                     f"This project reports database schema '{version}', "
                     f"newer than the schemas this server is verified "
-                    f"against (v14 through v{MAX_VERIFIED_SCHEMA}, "
-                    f"QualCoder master commit {VERIFIED_MASTER_COMMIT}). "
+                    f"against (v14 through v{MAX_VERIFIED_SCHEMA}, up to "
+                    f"{VERIFIED_QUALCODER}). "
                     f"Writes are refused to protect the data. Set "
                     f"{ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
                     f"environment to override at your own risk.",
@@ -3221,8 +3228,8 @@ class QualcoderDatabase:
     def _unknown_schema_warning(self) -> str:
         return (f"WARNING: this project reports database schema "
                 f"'{self.db_version or 'unknown'}', newer than the verified "
-                f"ceiling (v{MAX_VERIFIED_SCHEMA}, QualCoder master commit "
-                f"{VERIFIED_MASTER_COMMIT}); writes proceeded only because "
+                f"ceiling (v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); "
+                f"writes proceeded only because "
                 f"{env_settings.read('allow_unknown_schema').name}=1 is "
                 f"set. Verify results in "
                 f"QualCoder and keep backups.")

@@ -53,19 +53,30 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 ## Supported QualCoder versions
 
 > Exegete is ground-truthed against QualCoder 3.8.2, the latest stable
-> release until 2 October 2026 (project schema v14), and additionally verified against the QualCoder
-> 4.0-Beta pre-release (version string "QualCoder 4.0 Beta", built from the
-> QualCoder development tree) at commit `9bddf17`, whose projects use schema v17. Project schemas v14 through v17 are
+> release until 2 October 2026 (project schema v14), and verified against
+> QualCoder 4.0, released on 2 October 2026 (tag `4.0` at `b95e021`,
+> version string "QualCoder 4.0"), whose projects use schema v17. Project schemas v14 through v17 are
 > supported for reading and writing. Support is determined by inspecting the
 > project database itself (capability probes), not by version numbers, so
 > projects migrated by either QualCoder version work interchangeably.
 >
-> QualCoder 4.0 was released on 2 October 2026 (tag `4.0` at `b95e021`).
-> Claims about 4.0 compatibility are valid as of commit `9bddf17`
-> (2026-08-25). A first re-check against the release (6 October 2026) found
-> the same project schema (v17), the same format for a new project, and the
-> same backups, private memo sections, "AI Agent" coder name, reports,
-> merges and deletes; a full re-check is still to come. One known
+> Before its release, 4.0 was checked in its development tree, at commit
+> `9bddf17` (25 August 2026), and the line numbers this document and
+> Exegete's code cite from QualCoder are still those of that commit. A
+> full re-check against the release (6 October 2026) found the same
+> project schema (v17) and the same format for a new project (the format
+> tests now compare every project Exegete creates with one made by 4.0's
+> own New Project); and the same backups, private memo sections, coder
+> visibility, "AI Agent" coder name, reports, merges and deletes, and the
+> same fix for the 3.8.2 edit-mode caution (below). Exegete's tools wrote to a project 4.0
+> made, and 4.0 opened Exegete's new and edited projects with no message,
+> upgrade or repair. One change: 4.0 now checks that it can write to a
+> project before opening it, so if Exegete is writing it waits up to five
+> seconds for the write to end (Exegete's writes usually take well under
+> a second); after that it says "The project database could not be
+> opened." and changes nothing, and trying again works. Not yet re-read:
+> the line citations into QualCoder's own MCP server, a file much changed
+> in the release. One known
 > limitation: QualCoder 3.x signals "project open" through a lock file,
 > which Exegete honours; QualCoder 4.0 uses no lock file, so Exegete
 > falls back to best-effort heuristics there (reported as
@@ -81,11 +92,11 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > do not run Exegete writes while any QualCoder window has the same
 > project open.
 >
-> Two facts about how the tools relate (checked 6 October 2026).
+> Four facts about how the tools relate (checked 6 October 2026).
 > QualCoder 4.0 ships its own embedded AI assistant, built on an MCP
 > server inside QualCoder. In the 4.0-Beta pre-release (3 September 2026,
-> tag `4.0-Beta` at `2c3ef57`), as at the pinned commit `9bddf17` before
-> it, that server served only QualCoder's own window. QualCoder's pull request
+> tag `4.0-Beta` at `2c3ef57`), as in the development tree before it,
+> that server served only QualCoder's own window. QualCoder's pull request
 > [#1571](https://github.com/ccbogel/QualCoder/pull/1571) ("External MCP
 > server access", by kaixxx), merged on 10 September 2026 as commit
 > `0160ece`, added a setting in QualCoder, off by default, that opens that
@@ -94,7 +105,16 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > QualCoder 4.0, released on 2 October 2026 (tag `4.0` at `b95e021`): the
 > setting is "allow external MCP access", under AI Integration in
 > QualCoder's settings, off by default and called experimental there.
-> And an open
+> That server calls itself `qualcoder-mcp`, Exegete's name until
+> 0.14.0, and the Claude Desktop extension QualCoder's source can build
+> (`tools/mcpb/build_mcpb.py` at the tag) is named `qualcoder`, a name an
+> earlier Exegete setup may also use for its own entry:
+> [INSTALL.md, "Coming from qualcoder-mcp"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp)
+> says how to keep the two apart. QualCoder's AI permission setting (Read-only, Sandboxed, the
+> default, or Full access, stored in `~/.qualcoder/config.ini`, not in
+> the project) governs QualCoder's own assistant and that server, not
+> Exegete: Exegete does not read it, so Read-only in QualCoder does not
+> stop Exegete's writes. And an open
 > QualCoder 4.0 window will not display changes this server writes (its
 > views refresh through an internal event bus only), so they appear after
 > the project is closed and reopened in QualCoder.
@@ -288,7 +308,8 @@ project itself. This server follows them, so a project touched by both
 tools behaves coherently. Each feature below is detected by probing the
 project database (tables, columns, views), never by version string;
 pre-4.0 projects behave as before. Parity claims were verified against
-QualCoder master at commit `9bddf17`.
+QualCoder 4.0, and cite its code at commit `9bddf17` (see "Supported
+QualCoder versions").
 
 **Private memo sections (`#####`).** Memo text from the first `#####`
 marker onward is the researcher's private zone. Every tool and resource

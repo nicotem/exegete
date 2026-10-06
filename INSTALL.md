@@ -609,11 +609,12 @@ always to the same value.
 
 - `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release
-  is verified against (v14 through v17, QualCoder master commit
-  `9bddf17`) are refused to protect the data, and the refusal names this
-  variable. Setting it to `1` lets those writes proceed; every write
-  result then carries a warning. Use it only with backups you trust, and
-  verify the results in QualCoder.
+  is verified against (v14 through v17, up to QualCoder 4.0) are
+  refused to protect the data, and the refusal names this variable.
+  Setting it to `1` lets those writes proceed; every write result then
+  carries a warning. Exegete cannot know what a newer format changed, so
+  it is worth having backups you trust and checking the results in
+  QualCoder.
 
 ---
 
@@ -1748,7 +1749,14 @@ yet, and the first start after the update moves the server's own folder
   every tool twice and need a second set of "always allow" rules. If
   you do rename the entry, Claude Code names the tools after it
   (`mcp__exegete__...`), and permissions you gave under the old name
-  must be given again.
+  must be given again. If you also set up QualCoder 4.0's own MCP
+  server
+  ([TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)),
+  take care with its name: it calls itself `qualcoder-mcp`, this
+  server's former name, and the extension QualCoder's source can build
+  is named `qualcoder`. Added to the same host under the name
+  `qualcoder`, it could replace this server's entry or be mistaken for
+  it; a name of its own, such as `qualcoder-app`, keeps the two apart.
 - **The settings.** The variables now start `EXEGETE_` (for example
   `EXEGETE_TOOLSET`); the earlier `QUALCODER_MCP_...` spellings and
   `QUALCODER_PROJECT_PATH` are still read until v1.0, and the log says

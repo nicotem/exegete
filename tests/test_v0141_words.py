@@ -189,6 +189,9 @@ SHIPPED_LEDGER = [
     (r"list the old `qualcoder-mcp` beside",
      "what an old environment's pip list shows"),
     (r"its `qualcoder` script", "QualCoder's own script"),
+    (r"calls itself [`\"]qualcoder-mcp[`\"]",
+     "QualCoder 4.0's own MCP server, which calls itself by the earlier "
+     "name (the owner's ruling of 6 October 2026: said plainly)"),
 ]
 
 

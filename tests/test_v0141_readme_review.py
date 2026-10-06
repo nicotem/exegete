@@ -191,10 +191,11 @@ def test_the_three_commitments():
         assert heading in section, heading
     assert ("It is not yet a fact: today the two differ in both "
             "directions") in section
-    # v0.14.2, the README review: every row checked again, and re-dated
-    dated = section.index("Checked on 1 October 2026, Exegete 0.14.2 "
-                          "against QualCoder 3.8.2 and the 4.0-Beta "
-                          "pre-release:")
+    # v0.14.2, the README review: every row checked again, and re-dated;
+    # then checked against QualCoder 4.0, released on 2 October 2026 (the
+    # owner's ruling of 6 October 2026: the release, not the beta)
+    dated = section.index("Checked on 6 October 2026, Exegete 0.14.2 "
+                          "against QualCoder 3.8.2 and 4.0:")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table

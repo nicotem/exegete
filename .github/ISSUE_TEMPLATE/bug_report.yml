@@ -41,8 +41,8 @@ body:
     id: qualcoder-version
     attributes:
       label: QualCoder version
-      description: A stable release (3.8.x) or the 4.0-Beta pre-release. For a pre-release build, add the git commit if you know it.
-      placeholder: e.g. 3.8.2, or 4.0 Beta at commit 9bddf17
+      description: A release (3.8.x or 4.0). For a build from QualCoder's source, add the git commit if you know it.
+      placeholder: e.g. 3.8.2 or 4.0
     validations:
       required: true
   - type: input
@@ -82,7 +82,7 @@ body:
     id: qualcoder-open
     attributes:
       label: Was the project open in QualCoder at the time?
-      description: Writes are refused while a released QualCoder (3.x) has the project open; the 4.0-Beta pre-release writes no lock file and can only be detected heuristically.
+      description: Writes are refused while QualCoder 3.x has the project open, which its lock file shows; QualCoder 4.0 writes no lock file, so an open project there can only be guessed at.
       options:
         - "No"
         - "Yes"

@@ -858,10 +858,17 @@ NO_LONGER_TRUE = ("The 4.0 beta cannot be detected", "is a test version",
                   "a released QualCoder", "released QualCoder version",
                   "the 4.0-Beta at the top of the page",
                   "3.8.2 is the release marked", "3.8.2, the release marked",
-                  "the latest stable release (", "Reports > Code retrieval")
-# Where the beta is history: the comparison table, dated, and TOOLS.md's
-# record of what was verified when
-BETA_AS_HISTORY = ("README.md", "TOOLS.md")
+                  "the latest stable release (", "Reports > Code retrieval",
+                  # the owner's ruling of 6 October 2026: researchers are
+                  # told the release Exegete is verified against, not the
+                  # August development commit, and the re-check is done
+                  "a full re-check is still to come",
+                  "Claims about 4.0 compatibility are valid as of",
+                  "verified against QualCoder master",
+                  "QualCoder master commit")
+# Where the beta is history: TOOLS.md's record of what was verified when
+# (the README's comparison table, re-dated on 6 October 2026, names 4.0)
+BETA_AS_HISTORY = ("TOOLS.md",)
 
 
 def test_qualcoder_4_0_is_named_as_released():
@@ -891,9 +898,11 @@ def test_qualcoder_4_0_is_named_as_released():
     assert ("for Windows, Linux and Macs with Apple Silicon (M1 or later): "
             "QualCoder offers none for older Intel Macs") in install
     tools = _flat("TOOLS.md")
-    assert ("QualCoder 4.0 was released on 2 October 2026 (tag `4.0` at "
-            "`b95e021`).") in tools
-    assert "a full re-check is still to come" in tools
+    assert ("verified against QualCoder 4.0, released on 2 October 2026 "
+            "(tag `4.0` at `b95e021`,") in tools
+    assert ("A full re-check against the release (6 October 2026) found "
+            "the same project schema (v17) and the same format for a new "
+            "project") in tools
     assert ("QualCoder 3.x signals \"project open\" through a lock file, "
             "which Exegete honours; QualCoder 4.0 uses no lock file") \
         in tools
@@ -921,10 +930,25 @@ def test_the_no_longer_true_check_would_notice():
                 "QualCoder 3.8.2, the latest stable release (project schema "
                 "v14)",
                 "Reports > Coding reports in 3.8.2, Reports > Code retrieval "
-                "in 4.0"):
+                "in 4.0",
+                "A first re-check against the release (6 October 2026) found "
+                "the same project schema (v17), the same format for a new "
+                "project, and the same backups, private memo sections, \"AI "
+                "Agent\" coder name, reports, merges and deletes; a full "
+                "re-check is still to come.",
+                "Claims about 4.0 compatibility are valid as of commit "
+                "`9bddf17` (2026-08-25).",
+                "Parity claims were verified against QualCoder master at "
+                "commit `9bddf17`.",
+                "is verified against (v14 through v17, QualCoder master "
+                "commit `9bddf17`) are refused"):
         assert any(words in old for words in NO_LONGER_TRUE), old
     for kept in ("In QualCoder 4.0 it cannot be detected",
                  "It is in QualCoder 4.0, released on 2 October 2026",
+                 "is verified against (v14 through v17, up to QualCoder "
+                 "4.0) are refused",
+                 "Parity claims were verified against QualCoder 4.0, and "
+                 "cite its code at commit `9bddf17`",
                  "refused while QualCoder 3.x has the project open",
                  "the latest stable release until 2 October 2026 (project "
                  "schema v14)"):

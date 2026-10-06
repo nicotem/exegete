@@ -357,10 +357,9 @@ def test_the_commitments_open_with_what_they_promise():
 def test_latest_carries_the_date_it_was_checked():
     """The README is frozen into each extension and PyPI upload, so the
     "Latest" badge it names carries the day it was checked, and the table
-    of the two programs carries its own date. (The two were checked the
-    same day until QualCoder 4.0 came out, on 2 October 2026: the
-    download step was checked again on 6 October; the table keeps the day
-    its rows were checked.)"""
+    of the two programs carries its own date. (QualCoder 4.0 came out on
+    2 October 2026: the download step and the table were both checked
+    again on 6 October.)"""
     readme = _readme()
     dated = re.findall(r"\"Latest\" when this was checked, on (\d{1,2} \w+ "
                        r"\d{4})\.", readme)

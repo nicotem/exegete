@@ -394,8 +394,8 @@ them, with where each comes from.
 **Symmetry: the same work in either place, as a commitment.** The aim
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
-directions. Checked on 1 October 2026, Exegete 0.14.2 against
-QualCoder 3.8.2 and the 4.0-Beta pre-release:
+directions. Checked on 6 October 2026, Exegete 0.14.2 against
+QualCoder 3.8.2 and 4.0:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
@@ -409,7 +409,7 @@ QualCoder 3.8.2 and the 4.0-Beta pre-release:
 | REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, being withdrawn (removed in 0.15) |
 | Comparing two coders | Per code, with a figure QualCoder labels Kappa | The same figure, and Cohen's kappa beside it; set against the AI coder name it is not agreement between independent coders |
 | Pseudonyms | Applied when a file is imported | Also applied to text already coded |
-| AI suggestions for coding | 3.8.2: an AI search finds passages, which you code; 4.0 beta: its assistant codes as it works, within the AI permission you set (read only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
+| AI suggestions for coding | 3.8.2: an AI search finds passages, which you code; 4.0: its assistant codes as it works, within the AI permission you set (read only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
 
 **Interoperability.** Work on a project in QualCoder and from the
 conversation, one program at a time (above); QualCoder's own export
@@ -425,7 +425,13 @@ kaixxx, merged on 10 September 2026, added a setting, off by default,
 that opens it to MCP hosts on the same computer while QualCoder runs,
 for its open project. It is in QualCoder 4.0, released on 2 October
 2026, as "allow external MCP access" in QualCoder's settings, called
-experimental there.
+experimental there. The server calls itself "qualcoder-mcp", Exegete's
+former name, and the extension QualCoder's source can build is named
+"qualcoder", a name an earlier Exegete setup may also use
+([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp)
+says how to keep the two apart). QualCoder's AI permission setting
+(Read-only, for example) governs its own assistant and that server,
+not Exegete.
 [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)
 gives the commits these facts were read at.
 

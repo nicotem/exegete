@@ -251,7 +251,7 @@ advanced users.
   included (INSTALL.md, "What You'll Need"); how to hear of a new
   release (INSTALL.md, the one-click section); Codex's and Claude Code's
   reach in detail, and where Cowork runs (PRIVACY.md); the history of
-  the MIT releases (NOTICE). README.md is now about 32,100 characters,
+  the MIT releases (NOTICE). README.md is now about 32,560 characters,
   against 31,975 in 0.14.1, and its sentences are shorter.
 - The README now says plainly that Exegete is free, open-source
   software, under QualCoder's own licence (LGPL-3.0-or-later), and what
@@ -396,12 +396,44 @@ advanced users.
   now say QualCoder 3.x, since 4.0 is released and keeps no lock file.
   QualCoder's own MCP server, said to be in no release, is in 4.0, off
   by default and called experimental (the README and TOOLS.md, checked
-  6 October 2026). TOOLS.md says what a first re-check against the
-  release found and that a full one is still to come, and puts 4.0's
-  "Code retrieval" in its Analysis menu, where it is. Exegete's code
-  does not change: 4.0 keeps the project format (schema v17).
+  6 October 2026). TOOLS.md puts 4.0's "Code retrieval" in its Analysis
+  menu, where it is. Exegete's code does not change: 4.0 keeps the
+  project format (schema v17).
+- QualCoder 4.0, the release, is now named as what Exegete is verified
+  against, wherever a researcher reads it: the README's comparison
+  table, checked again on 6 October 2026 against 3.8.2 and 4.0;
+  TOOLS.md, which says what a full re-check against the release found
+  (the same schema, the same format for a new project, backups, private
+  memo sections, coder visibility, the "AI Agent" coder name, reports,
+  merges and deletes; Exegete's tools on a project 4.0 made; 4.0
+  opening Exegete's projects without a message) and the one change
+  (4.0 waits up to five seconds for an Exegete write before opening a
+  project, then says it could not be opened, changing nothing);
+  INSTALL.md's expert override; PRIVACY.md; the bug report form; and the
+  refusal and warning for a project newer than v17, which said "QualCoder
+  master commit 9bddf17" and now say "up to QualCoder 4.0". The August
+  development commit stays only in the line citations to QualCoder's
+  code, which TOOLS.md explains. The format tests' oracle was made again
+  by 4.0's own New Project at the release tag; it differs from the one
+  made at the August commit only in the date and the "about" line.
+- The paragraph on QualCoder's own MCP server (README and TOOLS.md)
+  keeps the tone decided on 29 September and gains two facts: the
+  server calls itself "qualcoder-mcp", Exegete's former name, and the
+  extension QualCoder's source can build is named "qualcoder", a name an
+  earlier Exegete setup may also use, so INSTALL.md's advice to keep an
+  earlier "qualcoder" entry now says how to keep the two apart; and
+  QualCoder's AI permission setting (Read-only, for example) governs
+  QualCoder's own assistant and that server, not Exegete. The tool
+  descriptions' "released QualCoder (3.x)" is left for v0.15.
+- A short CLAUDE.md gives AI coding agents the commands, a map of the
+  package and the rules they most often miss: point `HOME` (and
+  `USERPROFILE`) at a scratch folder, since that is what protects the
+  server's own folder; commit with an explicit identity; and where the
+  2,048-character rule's listed exceptions are.
 - Tests: the pins moved with their words, and new ones hold each of
-  these sentences (`tests/test_v0142_docs.py`).
+  these sentences (`tests/test_v0142_docs.py`,
+  `tests/test_v0142_qc40_release.py`, and the refusal's words in
+  `tests/test_v17_support.py`).
 
 ### Measured
 

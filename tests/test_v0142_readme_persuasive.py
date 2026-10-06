@@ -124,7 +124,16 @@ def _tools(mode="lifecycle"):
 # The judge's second verdict of 6 October 2026 (QualCoder 4.0's release,
 # which the README still called a beta, and the line that promised to keep
 # conversations out of training) fits within it: 32,098.
-README_LIMIT = 32_200
+# The woven lockup's longer alt text brought it to 32,164. The owner's
+# ruling of 6 October 2026 on QualCoder 4.0 adds two facts to the
+# paragraph on QualCoder's own MCP server: that it calls itself
+# "qualcoder-mcp", Exegete's former name, beside an extension named
+# "qualcoder", with a link to INSTALL.md's advice; and that QualCoder's AI
+# permission setting does not govern Exegete. They take about 420
+# characters; the comparison table, re-dated against 4.0 rather than the
+# beta, gives back about 25. The limit is raised by what that needs and
+# no more: 32,561.
+README_LIMIT = 32_561
 
 
 def test_the_readme_stays_short():

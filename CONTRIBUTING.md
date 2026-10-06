@@ -128,8 +128,10 @@ rather than fewer.
   "QualCoder does X" in a comment, docstring, CHANGELOG entry or
   document names the upstream file and line at the pinned commit
   (currently QualCoder master `9bddf17`, version string "QualCoder 4.0
-  Beta"; see `VERIFIED_MASTER_COMMIT` in `database.py`). When the pin
-  moves, the claims are re-verified and re-cited, not carried forward.
+  Beta", whose project format the release keeps). What researchers are
+  told Exegete is verified against is the release itself, QualCoder 4.0
+  (`VERIFIED_QUALCODER` in `database.py`). When the pin moves, the
+  claims are re-verified and re-cited, not carried forward.
 - **Heuristics are phrased as heuristics.** A result that reports a
   guess (a project that "appears to be open" in QualCoder) says so.
   Never word a heuristic as a certainty.

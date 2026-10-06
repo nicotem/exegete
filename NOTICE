@@ -55,8 +55,8 @@ How to read an entry. "Here" is the file in this repository and the
 functions, classes or names that carry the item. "From" is the
 QualCoder file and lines, under src/qualcoder/ in QualCoder's master
 branch at commit 9bddf17f86aa457aff72c3a38dbc10a37f296ad2 unless marked
-3.8.2 (the release tag) or given as at the root of QualCoder's
-repository. "Author", where given, is what QualCoder's file header or
+3.8.2 (the release tag), given as at the 4.0 tag (the release of 2
+October 2026), or given as at the root of QualCoder's repository. "Author", where given, is what QualCoder's file header or
 git history records for those lines; how a git identity maps to a
 person is for the QualCoder project to confirm. "Why" is the reason the
 item was copied.
@@ -664,12 +664,12 @@ QualCoder projects.
     Here: tests/fixtures/qc40_new_project.json.
     Here: tests/test_v014_create_project_format.py,
     TestTheOracleItself.test_the_fixture_is_four_point_zero_s_project.
-    From: the project QualCoder 4.0's own New Project (__main__.py,
-    lines 1745-1896) wrote at the verified commit, recorded as facts
-    (objects, columns, indexes, header fields, first rows and what the
-    views return); it holds no QualCoder source text. The test pins
-    the fixture's counts and its project row, whose about value
-    QualCoder takes from app.py, line 108.
+    From: the project QualCoder 4.0's own New Project (at the 4.0 tag,
+    __main__.py, lines 2141-2330) wrote, recorded as facts (objects,
+    columns, indexes, header fields, first rows and what the views
+    return); it holds no QualCoder source text. The test pins the
+    fixture's counts and its project row, whose about value QualCoder
+    takes from app.py, line 119 at the same tag.
     Why: the format tests compare every project this server creates
     with it.
 

@@ -16,11 +16,14 @@ key, NOT NULL and default, the unique groups, the views' behaviour and
 the first rows. `tests/test_v014_create_project_format.py` compares all
 of them with a project QualCoder 4.0 created, from a committed fixture.
 
-The format followed is the newest downloadable QualCoder 4.0 (the
-owner's ruling of 2026-09-25): the "4.0-Beta" pre-release of 2026-09-03
-writes exactly what the verified commit writes, so both are named by
-one constant, `database.VERIFIED_MASTER_COMMIT`. It is re-checked at
-each of this server's releases while 4.0 is in beta.
+The format followed is QualCoder 4.0's (the owner's ruling of
+2026-09-25), released on 2 October 2026 (tag 4.0 at b95e021): it writes
+exactly what the "4.0-Beta" pre-release and the August commit 9bddf17
+wrote, and the oracle fixture was made by the release's own New Project
+(`database.VERIFIED_QUALCODER_COMMIT`). At each of this server's
+releases, New Project and the upgrade ladder of QualCoder's newest
+release are compared with 4.0's; the ceiling moves only when a schema
+label above v17 appears.
 """
 
 import datetime
@@ -35,7 +38,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 from . import names
 from .database import (
     MAX_FILE_NAME_BYTES,
-    VERIFIED_MASTER_COMMIT,
+    VERIFIED_QUALCODER_COMMIT,
     _sqlite_ro_uri,
     documents_name_key,
     file_name_rule,
@@ -43,7 +46,7 @@ from .database import (
 
 # The schema label a new project carries, and the build that writes it.
 SCHEMA_VERSION = "v17"
-FORMAT_COMMIT = VERIFIED_MASTER_COMMIT
+FORMAT_COMMIT = VERIFIED_QUALCODER_COMMIT
 
 # The project folder's contents, in the order QualCoder makes them.
 DATABASE_FILE = "data.qda"

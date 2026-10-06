@@ -1,12 +1,9 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The reading process: each document is read in a separate, short-lived
 Python process, so that a hostile or broken file cannot reach the server
-itself (0.14.3, provisional; the design's Part 5). The one exception is
-the names check of a file read by a guessed or a named character set,
-which decodes its bytes again in the server, and parses a web page's
-markup again with Python's own HTML parser, once per common character
-set, after this process has read it within its limits (doc_readers'
-`reading_text`).
+itself (0.14.3, provisional; the design's Part 5). The server reads no
+document itself: plain text and web pages are read as UTF-8 alone, so
+the names check searches the text this process returns, as stored.
 
 The contract, and why each part matters:
 
@@ -112,8 +109,7 @@ def child_main() -> None:
 def _read(header: Dict[str, Any], raw: bytes) -> Dict[str, Any]:
     from . import doc_readers
     try:
-        result = doc_readers.read_document(
-            str(header["kind"]), raw, header.get("encoding"))
+        result = doc_readers.read_document(str(header["kind"]), raw)
     except doc_readers.ReadRefused as refused:
         return {"ok": False, "refusal": refused.code,
                 "numbers": {k: v for k, v in refused.numbers.items()
@@ -252,15 +248,14 @@ def reader_command() -> list:
     return [sys.executable, "-I", "-c", _CHILD_CODE, _package_parent()]
 
 
-def read_in_process(kind: str, data: bytes, encoding: Optional[str] = None,
-                    max_characters: int = 0,
+def read_in_process(kind: str, data: bytes, max_characters: int = 0,
                     timeout: float = READ_TIMEOUT_SECONDS,
                     memory_cap: int = MEMORY_CAP_BYTES) -> Dict[str, Any]:
     """Read one document's bytes in a reading process and return
     `doc_readers.read_document`'s answer, checked; or raise ReadFailed
     with Exegete's own reason code."""
-    header = json.dumps({"kind": kind, "encoding": encoding,
-                         "size": len(data), "memory": int(memory_cap),
+    header = json.dumps({"kind": kind, "size": len(data),
+                         "memory": int(memory_cap),
                          "max_characters": int(max_characters)},
                         ensure_ascii=True).encode("ascii") + b"\n"
     workdir = tempfile.mkdtemp(prefix="exegete-reader-")
@@ -390,5 +385,4 @@ def _checked_answer(raw: bytes) -> Dict[str, Any]:
             "notes": [{"page": n["page"], "content": n["content"]}
                       for n in notes],
             "charset": charset,
-            "charset_guessed": bool(result.get("charset_guessed")),
             "words": len(text.split()), "characters": len(text)}

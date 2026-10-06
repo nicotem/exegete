@@ -6,8 +6,7 @@ Pinned here: an archive's zip64 record is the one Python's zipfile
 reads, so a locator pointing at a decoy cannot pass the early check of
 the directory, and an honest zip64 archive still reads; entity
 declarations in UTF-32 refuse an EPUB; a folder of originals that is a
-file stops the import; a hold for a guessed character set names the
-guess; the words for QualCoder 3.8.2's PDF view, for a guessed set and
+file stops the import; the words for QualCoder 3.8.2's PDF view and
 for an original of another type; the reading folder's sweep reaches an
 original's own folder; and the import's older guards, each through the
 tool: the batch of 50, a letter-case clash, two files of one name, the
@@ -184,31 +183,6 @@ def test_a_folder_of_originals_that_is_a_file_stops_the_import(project,
     assert documents.read_bytes() == b"not a folder"
 
 
-# An English interview saved as Windows Western text, which
-# charset-normalizer (3.5.1 and 3.5.2) guesses to be Central European.
-INTERVIEW = ("\n".join([
-    "Interviewer: Could you tell me about the clinic?",
-    "P1: My neighbour Hélène took me, usually. Her cousin José too.",
-    "Interviewer: How did you find the staff?",
-    "P1: Mostly kind. The nurse always remembered our names."] * 12)
-    + "\n").encode("cp1252")
-
-
-def test_a_hold_for_a_guessed_set_names_the_guess(project, folder):
-    import codecs
-    _text, guess, guessed = doc_readers.decode_plain(INTERVIEW)
-    assert guessed
-    if codecs.lookup(guess).name in {"cp1252", "iso8859-1", "iso8859-15"}:
-        pytest.skip("this charset-normalizer reads the file rightly")
-    _names_list(project, [("Hélène", "Participant A")])
-    (folder / "P01.txt").write_bytes(INTERVIEW)
-    preview = _call(paths=[str(folder)])
-    reason = preview["held_back"][0]["reason"]
-    assert (f"guessed as {doc_import.charset_words(guess)}, and read that "
-            f"way") in reason
-    assert "read as Windows Western (cp1252), it finds them" in reason
-
-
 class TestWords:
 
     def test_qualcoder_382_s_pdf_view(self):
@@ -217,11 +191,6 @@ class TestWords:
         assert "QualCoder 3.8.2's PDF view shows this PDF" in words
         assert "(its Code text window can)" in words
         assert "will not let you code its text" not in words
-
-    def test_a_doubtful_guess_says_qualcoder_may_guess_differently(self):
-        _group, words = import_words.WARNINGS["charset_guessed_check"]
-        assert "QualCoder may guess differently" in words
-        assert "as QualCoder guesses it" not in words
 
     def test_an_original_of_another_type(self, project, _no_window_opens):
         # QualCoder 3.8.2 imports any file it can read as plain text, a

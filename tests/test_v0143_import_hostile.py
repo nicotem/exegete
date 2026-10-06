@@ -102,23 +102,6 @@ class TestArchives:
         assert "IGNORE" not in str(caught.value)
 
 
-class TestTheEncodingArgument:
-
-    @pytest.mark.parametrize("name", ["zlib", "base64", "rot13",
-                                      "unicode_escape", "not-a-codec"])
-    def test_anything_but_a_character_set_is_refused(self, name):
-        assert doc_readers.named_encoding(name) is None
-
-    def test_a_character_set_is_accepted(self):
-        assert doc_readers.named_encoding("CP1252") == "cp1252"
-
-    def test_refused_before_any_file_is_read(self, setup_server, tmp_path):
-        (tmp_path / "a.txt").write_bytes(b"x")
-        answer = json.loads(server.import_documents(
-            paths=[str(tmp_path / "a.txt")], encoding="zlib"))
-        assert "nothing was read" in answer["error"]
-
-
 class TestTheDescription:
 
     def _served(self, mode):

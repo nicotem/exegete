@@ -443,18 +443,18 @@ def _args_pseudonymise_source(kwargs):
 
 def _args_import_documents(kwargs):
     """The arguments that decide what a document import brings in (0.14.3,
-    provisional): the paths as given, the two switches, the character set
-    named and the memo. All of them are already in the conversation, so
-    the public bind is plain. What the files hold, the project's names
-    and its folder of originals, and the names list, are the state the
-    token's MAC covers (the server's fingerprint), never the bind."""
-    encoding = kwargs.get("encoding")
+    provisional): the paths as given, the three switches and the memo.
+    All of them are already in the conversation, so the public bind is
+    plain. What the files hold, the project's names and its folder of
+    originals, and the names list, are the state the token's MAC covers
+    (the server's fingerprint), never the bind."""
     return {"paths": [str(p) for p in kwargs["paths"]],
             "apply_project_pseudonyms": bool(
                 kwargs["apply_project_pseudonyms"]),
             "import_pdfs_with_listed_names": bool(
                 kwargs["import_pdfs_with_listed_names"]),
-            "encoding": None if encoding is None else str(encoding),
+            "import_file_names_with_listed_names": bool(
+                kwargs["import_file_names_with_listed_names"]),
             "memo": str(kwargs.get("memo") or "")}
 
 

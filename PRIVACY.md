@@ -778,30 +778,30 @@ Six cautions:
 
 - **File names travel everywhere** (in the paths, the answers and every
   later read), so a participant's name in a file's name reaches the
-  provider. Name files by pseudonym or number before importing. With a
-  names list, a file whose name holds a listed name is held back, and
-  is referred to only by its position.
+  provider. Naming files by pseudonym or number before importing keeps
+  it out. With a names list, a file whose name holds a listed name (in
+  any letter case, across any separator, or inside a longer word, so
+  that `maria_interview.docx` and `MariaB.docx` are caught) is held
+  back, and is referred to only by its position; it comes in under that
+  name only if you say so for that import
+  (`import_file_names_with_listed_names`), and the name then reaches
+  the provider whenever an answer names the file. Renaming the file
+  first is the way to keep the name out.
 - **A folder's preview is a listing**: given any folder your account can
   read, it returns the names and sizes of the documents in it, before
   any import.
 - **What is not pseudonymised**: the originals (copied unchanged into
   the project's folder of originals, as QualCoder does), a PDF's text
   and its notes. A PDF holding names from your list is held back unless
-  you say so for that import. A plain text file or a web page whose
-  character set is guessed, or read by the one you name, can come in
-  with a listed name's letters changed ("Agnès" read as "Agnčs"),
-  which the list would then not replace. Exegete reads such a file
-  again in the character sets European documents are most often saved
-  in (Windows Western, Central European, Baltic and Turkish, ISO Latin
-  2 and Mac Roman), a web page as its text reads (so a name its source
-  splits with a line break or markup is still found); when one of them
-  finds a listed name the reading in hand does not, the file is held
-  back, and the preview names the character set that reads every
-  listed name, or says that none does (then save the file as UTF-8).
-  The character set you name applies to every file in the call that is
-  not UTF-8, so name it for one file at a time; a file it reads wrongly
-  is checked and held back the same way. A name changed in a character
-  set outside that list is not caught.
+  you say so for that import (`import_pdfs_with_listed_names`). Plain
+  text, Markdown, subtitle files and web pages are read as UTF-8 alone:
+  a file saved in another character set is held back, with steps to
+  save a copy as UTF-8 in Word, TextEdit or Notepad, and is never read
+  by a guess, by a set you name, or by the set a web page declares.
+  Read any of those ways, a listed name can come out with other letters
+  ("Agnès" as "Agnčs"), which the list would then not replace. So the
+  names are looked for, and replaced, in the text exactly as it is
+  stored.
 - **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
   can read any file your account can, originals included. Exegete's
   descriptions ask the assistant to give paths and never to open a

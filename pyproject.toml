@@ -52,14 +52,15 @@ dependencies = [
     # (verified empirically in a fresh venv). Lifting the cap is an
     # explicit migration project, not a routine bump.
     "mcp>=1.17.0,<2",
-    # Document import (0.14.3, provisional). charset-normalizer guesses a
-    # plain text file's character set, as QualCoder's own import does;
-    # defusedxml parses the XML inside Word files and refuses entity
-    # declarations; striprtf is QualCoder's RTF reader, pinned exactly
-    # because the stored text must not change under a researcher with a
-    # new release (it had seven releases in two years). Each has a wheel
-    # or is pure Python on every computer the extension supports.
-    "charset-normalizer>=3.4",
+    # Document import (0.14.3). defusedxml parses the XML inside Word
+    # files and refuses entity declarations; striprtf is QualCoder's RTF
+    # reader, pinned exactly because the stored text must not change
+    # under a researcher with a new release (it had seven releases in two
+    # years). Each has a wheel or is pure Python on every computer the
+    # extension supports. Plain text and web pages are read as UTF-8
+    # alone, and any other is held back with steps to save it so (the
+    # owner's decision of 6 October 2026: no guessing), so QualCoder's
+    # character set guesser, charset-normalizer, is not among them.
     "defusedxml>=0.7.1",
     "striprtf==0.0.33",
 ]
@@ -72,19 +73,26 @@ Changelog = "https://github.com/nicotem/exegete/blob/main/CHANGELOG.md"
 Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 
 [project.optional-dependencies]
-# PDF and EPUB import (0.14.3, provisional, the owner's decision): the two
-# libraries QualCoder 4.0 itself reads them with, so the stored text is
+# PDF and EPUB import (0.14.3). The owner decided on 6 October 2026 that
+# PDF and EPUB come in through the two libraries QualCoder 4.0 itself
+# reads them with, PyMuPDF and EbookLib, as this optional part, switched
+# on in the Claude Desktop extension, so that a PDF's stored text is
 # QualCoder's to the character. Both are AGPL-3.0, so an install with
 # this part is, as a whole, under the AGPL's terms, as QualCoder's own
-# installs are; installs without it are untouched. lxml (which EbookLib
-# needs) at 6.1.0 or newer, the release that fixed its latest advisory;
-# PyMuPDF at 1.26.7 or newer, for the same reason.
+# installs are; Exegete's own code stays LGPL, and a PyPI install without
+# the part is untouched. lxml (which EbookLib needs) at 6.1.0 or newer,
+# the release that fixed its latest advisory; PyMuPDF at 1.26.7 or
+# newer, for the same reason.
 pdf-epub = [
     "pymupdf>=1.26.7",
     "ebooklib>=0.20",
     "lxml>=6.1.0",
 ]
 dev = [
+    # QualCoder's own character set guesser, for scripts/qualcoder_parity.py
+    # alone, which runs QualCoder's import functions to record what they
+    # store; never part of Exegete's import.
+    "charset-normalizer>=3.4",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "xmlschema>=3.0.0",

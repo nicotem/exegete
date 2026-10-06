@@ -9,19 +9,15 @@ the import's preview turns into plain words. The rules are QualCoder
 unless another file is named); the departures are named where they are
 made, and in TOOLS.md. A document is read by `read_document`, called
 only inside the reading process (import_reading), never in the server.
-The server uses this module's names and small helpers, and reads in one
-place: the names check of a plain text file or a web page read by a
-guessed or a named character set (doc_import) runs `reading_text` on
-the bytes as each common character set decodes them, which for a web
-page is Python's own HTML parser, and only for a file the reading
-process has already read within its limits.
+The server uses this module's names and small helpers only, and reads
+no document itself. Plain text and web pages are read as UTF-8 alone:
+nothing is guessed (the owner's decision of 6 October 2026).
 
 Nothing here touches the disk or the network. A refusal is a
 `ReadRefused` carrying one of Exegete's own codes and numbers, never a
 library's message, which a hostile document could fill.
 """
 
-import codecs
 import io
 import posixpath
 import re
@@ -173,64 +169,29 @@ class Archive:
 
 
 # ---------------------------------------------------------------------------
-# Plain text: QualCoder's character set rule (text_decoding.py 8-34)
+# Plain text: UTF-8 only (the owner's decision of 6 October 2026)
 # ---------------------------------------------------------------------------
-
-# Encodings a researcher may not name: they turn bytes into text by a
-# rule that is not a character set.
-_NOT_A_CHARACTER_SET = frozenset({
-    "unicode_escape", "raw_unicode_escape", "undefined", "idna",
-    "punycode"})
-
-
-def named_encoding(name: Any) -> Optional[str]:
-    """The canonical name of an encoding a researcher named, or None when
-    it is not a text encoding Python knows (a compression codec such as
-    zlib or base64 is not one)."""
-    if not isinstance(name, str) or not name.strip() or len(name) > 64:
-        return None
-    try:
-        info = codecs.lookup(name.strip())
-    except (LookupError, ValueError):
-        return None
-    if not getattr(info, "_is_text_encoding", True):
-        return None
-    if info.name.replace("-", "_") in _NOT_A_CHARACTER_SET:
-        return None
-    return info.name
+#
+# QualCoder decodes a plain text file as UTF-8 with a byte-order mark,
+# then as UTF-8, then by charset-normalizer's guess, then as cp1252 or
+# Latin-1 (text_decoding.py 8-34). Exegete takes the first two steps
+# alone and holds back every other file, with steps to save it as UTF-8
+# (a named departure): a guess can read accented letters as others, and
+# a name from the list written with other letters is not replaced.
 
 
-def decode_plain(raw: bytes, encoding: Optional[str] = None
-                 ) -> Tuple[str, str, bool]:
-    """(text, character set, guessed) as QualCoder decodes a plain text
-    file: UTF-8 with a byte-order mark, then UTF-8, then
-    charset-normalizer's best guess, then cp1252, then Latin-1. A
-    character set the researcher named takes the guess's place (a named
-    departure: QualCoder stores the guess); it is never used for a file
-    that decodes as UTF-8."""
+def decode_utf8(raw: bytes) -> Tuple[str, str]:
+    """(text, character set) for a plain text file, as QualCoder's first
+    two steps decode it: UTF-8 with a byte-order mark, then UTF-8. Any
+    other file is refused (`not_utf8`); nothing is guessed."""
     if not raw:
-        return "", "empty", False
+        return "", "empty"
     for name in ("utf-8-sig", "utf-8"):
         try:
-            return raw.decode(name), name, False
+            return raw.decode(name), name
         except UnicodeDecodeError:
             pass
-    if encoding is not None:
-        try:
-            return raw.decode(encoding), encoding, False
-        except (UnicodeDecodeError, LookupError):
-            raise ReadRefused("named_encoding_does_not_fit") from None
-    from charset_normalizer import from_bytes
-    best = from_bytes(raw).best()
-    if best is not None:
-        return str(best), (best.encoding or "unknown"), True
-    for name in ("cp1252", "latin-1"):
-        try:
-            return raw.decode(name), name, True
-        except UnicodeDecodeError:
-            pass
-    return (raw.decode("utf-8", errors="backslashreplace"),
-            "utf-8(backslashreplace)", True)
+    raise ReadRefused("not_utf8")
 
 
 def _universal_newlines(text: str) -> str:
@@ -291,49 +252,18 @@ def web_page_text(markup: str) -> str:
     return re.sub(r" +", " ", "".join(parser.parts))
 
 
-_DECLARED_CHARSET = re.compile(
-    rb"""<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9._:-]{1,40})""",
-    re.IGNORECASE)
-
-
-def _has_escaped_bytes(text: str) -> bool:
-    return any("\udc80" <= ch <= "\udcff" for ch in text)
-
-
-def read_web_page(raw: bytes, encoding: Optional[str] = None
-                  ) -> Tuple[str, str, bool]:
-    """(text, character set, guessed). Read as QualCoder reads a web page
-    (as UTF-8, keeping the bytes that are not as escapes); only when its
-    text still holds such bytes, which is where QualCoder's import fails,
-    is it decoded by its declared character set, else by the plain text
-    rule (a named departure)."""
-    text = web_page_text(_universal_newlines(
-        raw.decode("utf-8", "surrogateescape")))
-    if not _has_escaped_bytes(text):
-        return text, "utf-8", False
-    declared = _DECLARED_CHARSET.search(raw[:4096])
-    name = named_encoding(declared.group(1).decode("ascii")) \
-        if declared else None
-    if name is not None:
-        try:
-            return (web_page_text(_universal_newlines(raw.decode(name))),
-                    name, False)
-        except UnicodeDecodeError:
-            pass
-    decoded, charset, guessed = decode_plain(raw, encoding)
-    return web_page_text(_universal_newlines(decoded)), charset, guessed
-
-
-def reading_text(kind: str, decoded: str) -> str:
-    """The text a plain text file or a web page of `kind` gives once its
-    bytes are decoded as `decoded`, as `read_document` would store it
-    (names aside): for a web page its page text, so that a name the
-    page's source splits with a line break, extra spaces or markup is
-    whole, as in the stored text."""
-    if kind == WEB:
-        decoded = web_page_text(_universal_newlines(decoded))
-    text = _universal_newlines(decoded)
-    return text[1:] if text[:1] == BOM else text
+def read_web_page(raw: bytes) -> Tuple[str, str]:
+    """(text, character set). Read as QualCoder reads a web page, as
+    UTF-8, whatever character set the page declares. A page that is not
+    UTF-8 throughout is refused (`not_utf8_web`), never read by its
+    declaration or a guess (a named departure: QualCoder keeps the bytes
+    that are not UTF-8 as escapes, and its import fails when its text
+    holds any; a declaration can be wrong)."""
+    try:
+        decoded = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise ReadRefused("not_utf8_web") from None
+    return web_page_text(_universal_newlines(decoded)), "utf-8"
 
 
 # ---------------------------------------------------------------------------
@@ -680,9 +610,9 @@ def read_epub(raw: bytes) -> str:
         try:
             chapter = body.decode("utf-8")
         except UnicodeDecodeError:
-            # QualCoder's import fails here; decoded by the plain text
-            # rule instead (a named departure).
-            chapter = decode_plain(body)[0]
+            # EbookLib writes each chapter's body out as UTF-8, so this
+            # is a damaged book; QualCoder's import fails here too.
+            raise ReadRefused("damaged") from None
         except AttributeError:
             continue
         text += web_page_text(chapter) + "\n\n"
@@ -808,29 +738,6 @@ def garbled(text: str) -> int:
     return len(_GARBLED.findall(text))
 
 
-def _script(char: str) -> Optional[str]:
-    """'latin' or 'other' for a letter, None for anything else."""
-    if not char.isalpha():
-        return None
-    if ord(char) < 0x250 or 0x1E00 <= ord(char) <= 0x1EFF:
-        return "latin"
-    return "other"
-
-
-def mixed_script_words(text: str, limit: int = 1000) -> int:
-    """Words that mix Latin letters with letters of another script, the
-    sign of a guessed character set gone wrong ("cafﻠ" for "café");
-    counted only for a guess, since real text can mix scripts."""
-    found = 0
-    for word in re.findall(r"[^\W\d_]{2,}", text):
-        scripts = {_script(ch) for ch in word} - {None}
-        if len(scripts) > 1:
-            found += 1
-            if found >= limit:
-                break
-    return found
-
-
 def pandoc_layout_signs(text: str) -> List[str]:
     """The marks pandoc's plain text writer leaves (S5's list): lines
     broken at 72 characters, ruled tables, numbered note markers with
@@ -859,18 +766,19 @@ def _web_signs(raw: bytes) -> Dict[str, int]:
     return {"web_blocks": found} if found else {}
 
 
-def read_document(kind: str, raw: bytes, encoding: Optional[str] = None
-                  ) -> Dict[str, Any]:
+def read_document(kind: str, raw: bytes) -> Dict[str, Any]:
     """The text QualCoder 4.0's import would store for a file of `kind`
     with these bytes (pseudonyms aside, which the server applies), and
     what the preview says about it.
 
-    Returns a dict: text, charset, charset_guessed, signs (warning code
-    to count), and for a PDF its notes and highlight count. Raises
-    ReadRefused for a file this reader will not read.
+    Returns a dict: text, charset (for plain text and web pages, the
+    UTF-8 they were read as), signs (warning code to count), and for a
+    PDF its notes and highlight count. Raises ReadRefused for a file
+    this reader will not read, `not_utf8` or `not_utf8_web` for one that
+    is not UTF-8.
     """
     signs: Dict[str, int] = {}
-    charset, guessed = None, False
+    charset: Optional[str] = None
     notes: List[Dict[str, Any]] = []
     markups = 0
     text = ""
@@ -883,7 +791,7 @@ def read_document(kind: str, raw: bytes, encoding: Optional[str] = None
     elif kind == EPUB:
         text = read_epub(raw)
     elif kind == WEB:
-        text, charset, guessed = read_web_page(raw, encoding)
+        text, charset = read_web_page(raw)
         signs = _web_signs(raw)
     elif kind == PDF:
         text, notes, markups = read_pdf(raw)
@@ -891,7 +799,7 @@ def read_document(kind: str, raw: bytes, encoding: Optional[str] = None
         raise ReadRefused("not_supported")
 
     if text == "" and kind in PLAIN_FORMATS:
-        text, charset, guessed = decode_plain(raw, encoding)
+        text, charset = decode_utf8(raw)
         # QualCoder's plain text step removes one byte-order mark here;
         # its transcript route, which subtitles follow, does not
         # (import_transcription_from_file 2484-2505).
@@ -934,8 +842,6 @@ def read_document(kind: str, raw: bytes, encoding: Optional[str] = None
     if kind == SUBTITLES:
         signs["subtitles"] = 1
     found = garbled(text)
-    if guessed:
-        found += mixed_script_words(text)
     if found and kind != PDF:
         signs["garbled"] = found
     astral = sum(1 for ch in text if ord(ch) > 0xFFFF)
@@ -946,6 +852,6 @@ def read_document(kind: str, raw: bytes, encoding: Optional[str] = None
         signs["invisible"] = invisible
     if text.strip() == "" and kind != PDF:
         signs["spaces_only"] = 1
-    return {"text": text, "charset": charset, "charset_guessed": guessed,
-            "signs": signs, "notes": notes, "words": len(text.split()),
+    return {"text": text, "charset": charset, "signs": signs,
+            "notes": notes, "words": len(text.split()),
             "characters": len(text)}

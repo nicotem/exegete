@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import import_fixtures  # noqa: E402
-from exegete import doc_readers, import_reading  # noqa: E402
+from exegete import doc_import, doc_readers, import_reading  # noqa: E402
 
 EXPECTED = json.loads((Path(__file__).parent / "fixtures" /
                        "import_expected.json").read_text(encoding="utf-8"))
@@ -46,17 +46,21 @@ DEPARTURES = {
     "no_sequence_decls.odt": {"refused": "odt_not_libreoffice"},
     # QualCoder's import fails with an error of the zip library.
     "not_a_zip.docx": {"refused": "not_an_archive"},
-    # QualCoder cannot store the text (it holds bytes that are not UTF-8)
-    # and its import stops; Exegete decodes by the declared character
-    # set, else by the plain text rule.
-    "cp1252_declared.html": {"text": "\nCafé – résumé\n"},
-    # With no declared set, the plain text rule's guess: Windows Central
-    # European at the recorded charset-normalizer, which garbles "à" and
-    # "è" (pinned to the character, so a change of guess shows; the
-    # preview names such a guess among what changes the text).
-    "cp1252_plain.html": {"decoded": "\nGarçon, ŕ la façon, trčs élégant."
-                                     "\n\nEncore une fois, trčs élégant."
-                                     "\n"},
+    # Files not saved as UTF-8 are held back, with steps to save them so
+    # (the owner's decision of 6 October 2026): nothing is guessed.
+    # QualCoder guesses a plain text file's character set, here storing
+    # "Cafķ" for "Café" and "ŕ" for "à", and the UTF-16 file rightly.
+    "cp1252.txt": {"held": "not_utf8"},
+    "latin1.txt": {"held": "not_utf8"},
+    "utf16.txt": {"held": "not_utf8"},
+    # A web page: QualCoder reads it as UTF-8 whatever it declares, and
+    # its import fails when the page's text holds bytes that are not
+    # UTF-8; it imports a page whose such bytes lie only in what it
+    # drops (a comment here). Exegete holds back every page that is not
+    # UTF-8 throughout.
+    "cp1252_declared.html": {"held": "not_utf8_web"},
+    "cp1252_plain.html": {"held": "not_utf8_web"},
+    "cp1252_in_comment.html": {"held": "not_utf8_web"},
     # QualCoder takes a subtitle file only as a recording's transcript,
     # which keeps all but one of the byte-order marks at its start; as a
     # document, every one goes, since QualCoder's text view hides the
@@ -69,11 +73,7 @@ BOTH_REFUSE = {"empty.txt": "empty", "damaged.pdf": "damaged",
                "password.pdf": "pdf_password"}
 # Whose text depends on a library's guess or reading: compared with the
 # record only at the library version it was recorded with.
-DEPENDS_ON = {"cp1252.txt": "charset-normalizer",
-              "latin1.txt": "charset-normalizer",
-              "utf16.txt": "charset-normalizer",
-              "cp1252_plain.html": "charset-normalizer",
-              "book.epub": "ebooklib", "entities.epub": "ebooklib",
+DEPENDS_ON = {"book.epub": "ebooklib", "entities.epub": "ebooklib",
               "three_pages.pdf": "pymupdf", "scanned.pdf": "pymupdf",
               "notes.pdf": "pymupdf"}
 
@@ -112,21 +112,19 @@ def _check(name: str, recorded: dict, ours: dict) -> None:
         wanted = DEPARTURES[name]
         # It is a departure because QualCoder stores noise, fails, or
         # (for entities) stores text from the declarations, or (for a
-        # subtitle file) because Exegete takes it as a document.
+        # subtitle file) because Exegete takes it as a document, or
+        # because the file is not UTF-8, which Exegete holds back.
         assert ("text" not in recorded or recorded.get("noise")
-                or name.startswith("entities")
+                or name.startswith("entities") or "held" in wanted
                 or wanted.get("recorded_text_differs")), (name, recorded)
-        if "refused" in wanted:
+        if "held" in wanted:
+            # The reader refuses it with a code the import holds back.
+            assert wanted["held"] in doc_import.HELD_WHEN_READ
+            assert ours.get("refused") == wanted["held"], (name, ours)
+        elif "refused" in wanted:
             assert ours.get("refused") == wanted["refused"], (name, ours)
-        elif "text" in wanted:
-            assert ours.get("text") == wanted["text"], (name, ours)
         else:
-            assert "text" in ours, (name, ours)
-            assert not any("\udc80" <= c <= "\udcff" for c in ours["text"])
-            if _same_library(name):
-                assert ours["text"] == wanted["decoded"], (name, ours)
-            else:
-                assert "ç" in ours["text"]          # "ç", decoded
+            assert ours.get("text") == wanted["text"], (name, ours)
         return
     if name in BOTH_REFUSE:
         assert "refused" in recorded, (name, recorded)

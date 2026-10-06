@@ -8,7 +8,7 @@ PDF object's, and an error message would carry them. Each warning says
 what the researcher will see, what to do, and why.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 COPY_A_PATH = (
     "To copy a file's or folder's place: on a Mac, select it in Finder, "
@@ -123,8 +123,6 @@ FILE_REFUSALS = {
     "pdf_password": "This PDF is protected by a password. Save a copy "
                     "without the password (in Preview or Acrobat), then "
                     "import that.",
-    "named_encoding_does_not_fit": "This file does not read as the "
-                                   "character set named ({encoding}).",
     "unstorable": "This file holds a character a project cannot store "
                   "(QualCoder's import fails on it too). Open it in its "
                   "own app and save a fresh copy.",
@@ -144,23 +142,57 @@ FILE_REFUSALS = {
     "not_supported": "Exegete does not import this kind of file.",
 }
 
+# Saving a copy as UTF-8, in the apps researchers have: what a hold of a
+# file that is not UTF-8 suggests (the owner's decision of 6 October
+# 2026: no guessing, and plain steps instead).
+_WHY_NOT_UTF8 = (
+    "so it is held back rather than read by a guess: a wrong guess reads "
+    "accented letters as others, and a name from your list written with "
+    "other letters would not be replaced. Saved as UTF-8, it reads the "
+    "same way in QualCoder too.")
+_CHECK_ACCENTS = ("checking first that its accents look right (if they "
+                  "do not, the app read it wrongly: choose another "
+                  "encoding when you open it)")
+
 HELD_BACK = {
     "names_in_file_name": "This file's own name holds a name from your "
-                          "names list, so it is not shown here. Rename "
-                          "the file on your computer, then ask again.",
+                          "names list, so it is not shown here. You could "
+                          "rename the file on your computer, then ask "
+                          "again; or, if the name may stay, say so for "
+                          "this import (import_file_names_with_listed_"
+                          "names), and it comes in under that name, which "
+                          "then reaches the AI provider whenever an answer "
+                          "names the file.",
     "pdf_listed_names": "This PDF names {names} of the people in your "
                         "list, {count} times. Names in a PDF are never "
                         "replaced, here or in QualCoder; if the assistant "
                         "reads this file, it reads those names. It comes "
                         "in only if you say so for this import "
                         "(import_pdfs_with_listed_names).",
-    "garbled": "Its accented letters came out wrong (\"Ã©\" for \"é\", or "
-               "letters from another alphabet), so the character set is "
-               "probably not the one guessed, and names in it would escape "
-               "your names list. Name the character set (for example "
-               "cp1252, Windows Western, or mac_roman) with the encoding "
-               "argument and ask again, or open the file in its own app "
-               "and save it as UTF-8.",
+    "not_utf8": "It is not saved as UTF-8, the one form of text Exegete "
+                "reads, " + _WHY_NOT_UTF8 + " You could save a copy as "
+                "UTF-8 and import that, " + _CHECK_ACCENTS + ": in Word, "
+                "open it (if Word asks which encoding to use, pick the "
+                "one whose preview reads right), then choose File, Save "
+                "As, Plain Text, and "
+                "\"Unicode (UTF-8)\" in the window that follows; in "
+                "TextEdit on a Mac, open it, then choose File, Duplicate "
+                "and File, Save, with \"Unicode (UTF-8)\" as the plain "
+                "text encoding; in Notepad on Windows, open it, then "
+                "choose File, Save As, with UTF-8 as the encoding.",
+    "not_utf8_web": "This web page is not saved as UTF-8, the one form of "
+                    "text Exegete reads (whatever character set the page "
+                    "declares, since a declaration can be wrong), "
+                    + _WHY_NOT_UTF8 + " You could save a copy as UTF-8 "
+                    "and import that, " + _CHECK_ACCENTS + ": in Word, "
+                    "open the page, then choose File, Save As, Word "
+                    "Document (.docx), and import the .docx; in Notepad "
+                    "on Windows, open it, then choose File, Save As, with "
+                    "UTF-8 as the encoding; in TextEdit on a Mac, first "
+                    "tick \"Display HTML files as HTML code\" in its "
+                    "settings (Open and Save), open the page, then choose "
+                    "File, Duplicate and File, Save, with \"Unicode "
+                    "(UTF-8)\" as the plain text encoding.",
     "garbled_rtf": "Its accented letters came out wrong (\"Ã©\" for "
                    "\"é\"), as QualCoder's way of reading RTF gives for "
                    "this file, and names in it would escape your names "
@@ -171,34 +203,6 @@ HELD_BACK = {
                      "for \"é\") in the file itself, and names in it would "
                      "escape your names list. Open it in its own app, "
                      "correct them, save it, then ask again.",
-    "charset_names": "Its character set was guessed as {charset}, and "
-                     "read that way, names from your list come out with "
-                     "other letters (as in \"Agnčs\" for \"Agnès\"), "
-                     "so the list would not replace them; read as "
-                     "{found}, it finds them. Name that character set "
-                     "with the encoding argument (encoding=\"{encoding}\") "
-                     "and ask again for this file alone, since the "
-                     "argument applies to every file in the call that is "
-                     "not UTF-8; or open the file in its own app and save "
-                     "it as UTF-8.",
-    "charset_names_named": "It was read as {charset}, the character set "
-                           "named, and read that way, names from your "
-                           "list come out with other letters (as in "
-                           "\"Agnčs\" for \"Agnès\"), so the list would "
-                           "not replace them; read as {found}, it finds "
-                           "them. The encoding argument applies to every "
-                           "file in the call that is not UTF-8: ask again "
-                           "for this file alone with "
-                           "encoding=\"{encoding}\", or open the file in "
-                           "its own app and save it as UTF-8.",
-    "charset_names_no_set": "Read as {charset}, names from your list come "
-                            "out with other letters (as in \"Agnčs\" for "
-                            "\"Agnès\"), so the list would not replace "
-                            "them, and none of the character sets "
-                            "European documents are most often saved in "
-                            "reads all of them rightly. Open the file in "
-                            "its own app, save it as UTF-8, then ask "
-                            "again.",
     "not_read_in_time": "Not read in time; ask again for these.",
 }
 
@@ -217,52 +221,15 @@ COPY_INTO_TEXT = ("To code them, copy them into the document's own text "
 # are chosen as they are.
 WHY_AS_QUALCODER = (SAME_READING + " Each way round gives a file QualCoder "
                     "reads the same way too.")
-WHY_GUESSED = (SAME_READING + " Saving the file as UTF-8 gives a file "
-               "QualCoder reads the same way too; naming the character set "
-               "does not, since QualCoder keeps its own guess.")
 WHY_SUBTITLES = ("QualCoder imports a subtitle file only as a recording's "
                  "transcript, so it has no reading of this document to "
                  "agree with.")
-# A web page whose text is not UTF-8: QualCoder's import fails on it, so
-# Exegete reads it by its declared character set, or a named or guessed
-# one.
-WHY_WEB = ("QualCoder cannot import this web page (its text is not "
-           "UTF-8), so there is no QualCoder reading to agree with. "
-           "Saving the page as UTF-8 gives a file both programs read the "
-           "same way.")
-WHY_WEB_GUESSED = (WHY_WEB + " If its accents look wrong, name the "
-                   "character set and ask again (encoding=\"cp1252\" for a "
-                   "page saved on Windows).")
 
 
-def why_line(subtitles: bool, codes: List[str],
-             web: Optional[str] = None) -> str:
-    """The line said once for a file whose text a warning changes. `web`
-    is "guessed" or "read" for a web page QualCoder cannot import (its
-    text is not UTF-8), read by a guessed character set or by its
-    declared or named one."""
-    if subtitles:
-        return WHY_SUBTITLES
-    if web == "guessed":
-        return WHY_WEB_GUESSED
-    if web:
-        return WHY_WEB
-    if "charset_guessed_check" in codes:
-        return WHY_GUESSED
-    return WHY_AS_QUALCODER
+def why_line(subtitles: bool) -> str:
+    """The line said once for a file whose text a warning changes."""
+    return WHY_SUBTITLES if subtitles else WHY_AS_QUALCODER
 
-
-# A guessed character set of one byte a letter that is not Western:
-# what can go wrong, and the way round for each family of languages.
-_DOUBTFUL_GUESS = (
-    "Such a guess is often wrong (an ordinary Western European file "
-    "saved on Windows is often read as Central European), and then every "
-    "accented letter reads as another (\"è\" as \"č\", \"ã\" as "
-    "\"ă\"). Way round: name the character set the file was saved in and "
-    "ask again (encoding=\"cp1252\" for Western European text saved on "
-    "Windows, \"mac_roman\" for a file from an old Mac, and \"cp1250\", "
-    "\"cp1257\" or \"cp1254\" for Central European, Baltic or Turkish "
-    "text saved on Windows), or save the file as UTF-8 in its own app.")
 
 # Sign code -> (group, words). Group "changes" changes what the
 # researcher will read; "information" does not.
@@ -343,26 +310,6 @@ WARNINGS = {
     "near_limit": ("changes",
         "Its text is {characters} characters long, more than half "
         "Exegete's limit of {limit}."),
-    "charset_guessed": ("information",
-        "Its character set was guessed as {charset}; QualCoder may guess "
-        "differently."),
-    "charset_guessed_check": ("changes",
-        "Its character set was guessed as {charset}; QualCoder may guess "
-        "differently. " + _DOUBTFUL_GUESS),
-    # The same for a web page whose text is not UTF-8, which QualCoder
-    # does not guess for: its import fails on such a page.
-    "web_charset_guessed": ("information",
-        "Its character set was guessed as {charset}. QualCoder cannot "
-        "import this web page, since its text is not UTF-8."),
-    "web_charset_guessed_check": ("changes",
-        "Its character set was guessed as {charset}. " + _DOUBTFUL_GUESS),
-    # A web page read by the character set it declares, or by one named.
-    "web_not_utf8": ("information",
-        "QualCoder cannot import this web page, since its text is not "
-        "UTF-8."),
-    "charset_named": ("information",
-        "It was read as {charset}, the character set named; the memo "
-        "records it."),
     "astral": ("information",
         "It holds emoji or other rare characters ({count}); after the "
         "first of them, QualCoder shows codings shifted."),
@@ -383,6 +330,11 @@ WARNINGS = {
         "QualCoder 3.8.2's PDF view shows this PDF but will not let you "
         "code it there (its Code text window can); QualCoder 4.0's PDF "
         "view can."),
+    "listed_name_in_file_name": ("information",
+        "Its own name holds a name from your names list, and it comes in "
+        "under that name, as you said: the name reaches the AI provider "
+        "whenever an answer names the file, and the project's copy of "
+        "the original keeps it."),
 }
 
 

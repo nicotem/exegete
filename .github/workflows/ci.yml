@@ -372,7 +372,7 @@ jobs:
       - name: Fetch the wheelhouse for the offline tests
         shell: bash
         run: |
-          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "charset-normalizer>=3.4" "defusedxml>=0.7.1" "striprtf==0.0.33" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "defusedxml>=0.7.1" "striprtf==0.0.33" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
           pip download --dest "$RUNNER_TEMP/wheelhouse" --no-deps --only-binary=:all: "qualcoder-mcp==0.14.0a0"
 
       # RENAME_TESTS_MUST_RUN turns a skip into a failure, so this job

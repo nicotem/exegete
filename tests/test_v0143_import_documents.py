@@ -203,14 +203,12 @@ class TestTheImport:
         assert "correct transcripts before you start coding" in lines
         assert "AI coder name" in lines
 
-    def test_a_memo_and_a_named_character_set(self, project, folder):
-        (folder / "w.txt").write_bytes("Café crème.\n".encode("cp1252"))
-        _p, done = _both([str(folder)], encoding="cp1252",
-                         memo="Converted from w.docx")
+    def test_a_memo(self, project, folder):
+        (folder / "w.txt").write_bytes("Café crème.\n".encode("utf-8"))
+        _p, done = _both([str(folder)], memo="Converted from w.docx")
         ((_i, _n, text, _m, memo, _o),) = _rows(project)
         assert text == "Café crème.\n"
-        assert memo == ("Converted from w.docx\n\nRead as cp1252, the "
-                        "character set named at import.")
+        assert memo == "Converted from w.docx"
 
     def test_a_memo_with_the_private_marker_is_refused(self, project,
                                                       folder):
@@ -376,14 +374,14 @@ class TestTheNamesList:
 
 class TestHeldBack:
 
-    def test_garbled_accents_until_a_character_set_is_named(self, project,
-                                                            folder):
+    def test_a_file_not_in_utf8(self, project, folder):
         # UTF-8 with one stray byte: QualCoder's guess garbles every
-        # accent; naming the character set is the way round.
+        # accent; saving the file as UTF-8 is the way round.
         data = "José and Renée\n".encode("utf-8") * 20 + b"\x81\n"
         (folder / "t.txt").write_bytes(data)
         preview = _call(paths=[str(folder)])
         assert preview["held_back"][0]["file"] == "t.txt", preview
+        assert "save a copy as UTF-8" in preview["held_back"][0]["reason"]
         assert "preview_token" not in preview
 
     def test_an_rtf_with_raw_accents_is_held_back(self, project, folder):

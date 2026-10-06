@@ -552,7 +552,6 @@ name = "exegete"
 version = "0.14.2a0"
 source = { editable = "." }
 dependencies = [
-    { name = "charset-normalizer" },
     { name = "defusedxml" },
     { name = "mcp" },
     { name = "striprtf" },
@@ -561,6 +560,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "build" },
+    { name = "charset-normalizer" },
     { name = "hypothesis" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -576,7 +576,7 @@ pdf-epub = [
 [package.metadata]
 requires-dist = [
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
-    { name = "charset-normalizer", specifier = ">=3.4" },
+    { name = "charset-normalizer", marker = "extra == 'dev'", specifier = ">=3.4" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "ebooklib", marker = "extra == 'pdf-epub'", specifier = ">=0.20" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },

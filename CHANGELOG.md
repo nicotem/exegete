@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Provisional: what follows is built to the recommended answers of the
-import and reading design of 1 October 2026, until the owner decides
-otherwise, and may change before it is released.
+The owner decided the questions of the import and reading design on 6
+October 2026: as recommended, except that the stored text is to be
+better than QualCoder's where its readers lose or garble content (a
+PDF's stays identical), and with one new rule, that files not saved as
+UTF-8 are held back. What follows is built to those decisions, and may
+change before it is released.
 
 ### Added (provisional): reading a whole file on your own computer
 
@@ -163,48 +166,44 @@ otherwise, and may change before it is released.
   QualCoder's rules, written afresh.
 - Named departures, each with its reason in TOOLS.md: a file in which
   no text is found is refused, where QualCoder stores its raw bytes; a
-  file declaring XML entities is refused; a web page QualCoder cannot
-  store is read by its declared character set, and its preview says
-  that QualCoder cannot import it, whatever set it was read by (never
-  that QualCoder reads it the same way), with the way round for a
-  guessed one (name the character set); a file whose accents came
-  out garbled is held back until the researcher names the character set
-  (`encoding`) or fixes the file; subtitle files come in as documents,
-  with every byte-order mark at their start removed; an OpenDocument
-  file not saved by LibreOffice, and an RTF file holding an emoji, are
-  refused with the way round; originals are always copied, never
-  linked, and keep their internet-origin mark; per-format size limits,
-  archive limits and time and memory limits; the AI coder name owns the
-  rows (decision 5).
+  file declaring XML entities is refused; a file not saved as UTF-8 is
+  held back (below); a UTF-8 file whose accents came out wrong in the
+  file itself is held back until it is corrected; subtitle files come
+  in as documents, with every byte-order mark at their start removed;
+  an OpenDocument file not saved by LibreOffice, and an RTF file
+  holding an emoji, are refused with the way round; originals are
+  always copied, never linked, and keep their internet-origin mark;
+  per-format size limits, archive limits and time and memory limits;
+  the AI coder name owns the rows and their attribute values, as the
+  owner decided.
 - The project's pseudonyms list is applied to the stored text by
   default, as QualCoder's import does (never to PDFs, nor to the
   originals); an empty list counts as none; a list Exegete cannot use
   stops the import, and turning the list off is never offered as the way
   round. A PDF holding listed names is held back unless the researcher
-  says so (`import_pdfs_with_listed_names`); a file whose own name holds
-  a listed name is held back and referred to only by its position.
-- A plain text file or web page whose character set is guessed: an
-  ordinary Western European file saved on Windows is often guessed to
-  be Central European or Baltic, which reads every "è" as "č" with no
-  other sign (QualCoder makes the same guess, and stores the same
-  text). Such a guess is now among what changes the text, with the way
-  round (name the character set, or save the file as UTF-8, with the
-  sets for Central European, Baltic and Turkish text as well as Western
-  and old Mac files); and when the file, read in one of the character
-  sets European documents are most often saved in (Windows Western,
-  Central European, Baltic and Turkish, ISO Latin 2, Mac Roman), holds
-  a name from the names list that the guessed reading does not, the
-  file is held back, since the list would not replace that name. The
-  hold names the set that reads every listed name any of these
-  readings finds, or says that none does (then the way round is to
-  save the file as UTF-8). This holds whatever the guess: a Polish or
-  Turkish file is often guessed to be Windows Western. A web page is
-  read for this as its text reads, so a name its source splits with a
-  line break, extra spaces or markup is found. A set the researcher
-  names is checked the same way, since the encoding argument applies to
-  every file in the call that is not UTF-8, and the hold says to ask
-  again for that file alone. The preview says that QualCoder may guess
-  differently, since it does not fix charset-normalizer's release.
+  says so (`import_pdfs_with_listed_names`). A file whose own name holds
+  a listed name, found in any letter case, across any separator or
+  inside a longer word (`maria_interview.docx`, `MariaB.docx`), is held
+  back and referred to only by its position, with the advice to rename
+  it; it comes in under that name only if the researcher says so
+  (`import_file_names_with_listed_names`). A folder's subfolders and
+  other files are named by the same rule, hidden when they hold a
+  listed name.
+- Files not saved as UTF-8 (plain text, Markdown and subtitle files,
+  and web pages whatever character set they declare) are held back,
+  with plain steps to save a copy as UTF-8 in Word, TextEdit or Notepad
+  (for a web page, or as a Word document); nothing is guessed, and no
+  character set can be named (the owner's decision of 6 October 2026).
+  Read by a guess, by a set the researcher names or by the set a page
+  declares, accented letters can come out as others, and a listed name
+  written with other letters is not replaced: a Polish or Turkish file
+  guessed as Western, a set chosen to read the names that read the rest
+  of the text wrongly, and a page declaring the wrong set all let a name
+  through or stored the wrong letters. The names list is now applied
+  to, and its names looked for in, the text exactly as it is stored.
+  QualCoder guesses instead; a file saved as UTF-8 reads the same way in
+  both programs. charset-normalizer, QualCoder's guesser, is not one of
+  Exegete's libraries.
 - The batch goes in together or not at all: a file the preview read as
   ready that reads otherwise at the import (out of time or memory, say)
   stops the whole import, naming the file; a file the preview held back
@@ -243,9 +242,10 @@ otherwise, and may change before it is released.
   the first conversion), named by the import's description.
 - The optional part `pdf-epub` (PyMuPDF and EbookLib, the libraries
   QualCoder 4.0 reads PDF and EPUB with, AGPL-licensed) is switched on in
-  the Claude Desktop extension (decision 1, provisional; if the owner
-  says nothing, the release ships without it). New libraries in every
-  install: charset-normalizer, defusedxml, and striprtf pinned exactly.
+  the Claude Desktop extension, as the owner decided on 6 October 2026;
+  an install with it is, as a whole, under the AGPL's terms, and
+  Exegete's own code stays LGPL. New libraries in every install:
+  defusedxml, and striprtf pinned exactly.
 
 ### Fixed
 
@@ -256,13 +256,13 @@ otherwise, and may change before it is released.
 
 ### Measured
 
-- Serialised tool JSON: full = 200,818 characters (about 50.2k tokens
+- Serialised tool JSON: full = 200,899 characters (about 50.2k tokens
   at chars/4) over 76 tools, core = 67,374 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 203,397 (about 50.8k) over 77, measured on
+  the opt-in lifecycle set = 203,478 (about 50.9k) over 77, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 210,682, 70,766 and 213,401.
+  Python 3.11.13 (the `.venv/`), 210,763, 70,766 and 213,482.
   `open_file_for_reading`'s own entry is 1,630 characters on 3.13, and
-  `import_documents`' 2,707 (2,709 with its separator; it is in the
+  `import_documents`' 2,788 (2,790 with its separator; it is in the
   standard and lifecycle sets, not in core); the rest of the growth is
   `start` and `without_codes` on `analyze_file_with_coding` and the two
   descriptions changed above.

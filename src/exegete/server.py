@@ -9968,7 +9968,7 @@ def _reading_folder_root() -> Optional[Path]:
 
 
 def _import_context(project_folder: Path, apply_pseudonyms: bool,
-                    pdfs_with_names: bool, encoding: Optional[str],
+                    pdfs_with_names: bool, file_names_with_names: bool,
                     memo: str):
     state, count, compiled, canonical, names_stop = _import_names_list(
         apply_pseudonyms, project_folder)
@@ -9992,7 +9992,8 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
         # v14, with the coder visibility of every project from v14 on,
         # so visibility cannot tell the two apart.
         qc382=caps is not None and not caps.has_supercid,
-        encoding=encoding, pdfs_with_listed_names=pdfs_with_names,
+        pdfs_with_listed_names=pdfs_with_names,
+        file_names_with_listed_names=file_names_with_names,
         max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo)
     return ctx, names_stop
 
@@ -10022,7 +10023,7 @@ def _import_backup_note(project_folder: Path, adding_bytes: int):
                           "several files in at once keeps backups few."}
 
 
-def _import_arguments_error(paths, encoding, memo) -> Optional[str]:
+def _import_arguments_error(paths, memo) -> Optional[str]:
     if (not isinstance(paths, list) or not paths
             or len(paths) > doc_import.MAX_PATHS):
         return (f"paths must be a list of 1 to {doc_import.MAX_PATHS} full "
@@ -10032,9 +10033,6 @@ def _import_arguments_error(paths, encoding, memo) -> Optional[str]:
                 or len(given) > 4096 or "\x00" in given):
             return ("Each of paths must be a full path to a file or a "
                     "folder; nothing was done.")
-    if encoding is not None and doc_readers.named_encoding(encoding) is None:
-        return ("encoding must name a text encoding, such as cp1252 "
-                "(Windows Western), mac_roman or latin_1; nothing was read.")
     if not isinstance(memo, str):
         return "memo must be text; nothing was done."
     if len(memo) > doc_import.MAX_MEMO:
@@ -10059,6 +10057,10 @@ IMPORT_DONE_LINES = {
     "pdf_names": ("A PDF brought in names people from your list: its names "
                   "will reach the AI provider on every later read, search or "
                   "coding excerpt of that file."),
+    "file_name_names": ("A file came in under a name that holds a name from "
+                        "your list, as you said: that name reaches the AI "
+                        "provider whenever an answer names the file, and "
+                        "the project's copy of the original keeps it."),
     "prune": ("The project's backups now take about {size} MB; "
               "prune_backups removes old ones."),
     "pdf_release": ("QualCoder 4.0 checks a PDF's stored text against its "
@@ -10079,14 +10081,14 @@ def import_documents(
     preview_token: Optional[str] = None,
     apply_project_pseudonyms: bool = True,
     import_pdfs_with_listed_names: bool = False,
-    encoding: Optional[str] = None,
+    import_file_names_with_listed_names: bool = False,
     memo: str = ""
 ) -> str:
     """Bring documents from the researcher's computer into the open project, read here as QualCoder's own import reads them; their text never passes through the conversation. Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part.
 
     Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (a summary line, names, sizes, lengths, warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, each original is copied into the project and its text stored.
 
-    Refused, or kept out of the batch, with the reason: while QualCoder has the project open; anything in the project, Exegete's own folders, a hidden folder or a link; other file types; files over the limits; names already in the project. The project's pseudonyms list, if any, is applied to the stored text (never to PDFs, nor to the originals). Set apply_project_pseudonyms=false or import_pdfs_with_listed_names=true only when the researcher has said so for this import, never to get past a refusal.
+    Refused or kept out, with the reason: while QualCoder has the project open; anything in the project, Exegete's own folders, a hidden folder or a link; other file types; files over the limits; text not in UTF-8 (with steps to re-save it); names already in the project. The project's pseudonyms list, if any, is applied to the stored text (never to PDFs, nor to the originals); PDFs and file names holding its names are kept out. Change apply_project_pseudonyms, import_pdfs_with_listed_names or import_file_names_with_listed_names only when the researcher has said so for this import, never to get past a refusal.
 
     Never paste a document's text into a tool, or open it with this app's own tools first: give its path. For typed text, use import_text_file; for a document converted by another tool, see explain_ai_coding_tools('converted_documents').
 
@@ -10095,10 +10097,10 @@ def import_documents(
         preview_token: from the preview, for the import
         apply_project_pseudonyms: default true; false only on the researcher's word
         import_pdfs_with_listed_names: default false; true only on the researcher's word
-        encoding: a character set the researcher names (e.g. cp1252), used for every file in the call that is not UTF-8: give it for one file at a time
+        import_file_names_with_listed_names: default false; true only on the researcher's word
         memo: a note for every file (e.g. its source); at most 10,000 characters
     """
-    error = _import_arguments_error(paths, encoding, memo)
+    error = _import_arguments_error(paths, memo)
     if error is None:
         marker = private_marker_refusal(memo, "memo")
         if marker is not None:
@@ -10108,12 +10110,11 @@ def import_documents(
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({"error": _no_project_message()}, indent=2)
-    encoding = (None if encoding is None
-                else doc_readers.named_encoding(encoding))
     project_folder = _current_project_folder()
     ctx, names_stop = _import_context(
         project_folder, apply_project_pseudonyms,
-        import_pdfs_with_listed_names, encoding, memo)
+        import_pdfs_with_listed_names, import_file_names_with_listed_names,
+        memo)
     stops = []
     gate = _write_gate_error()
     if gate is not None:
@@ -10130,7 +10131,9 @@ def import_documents(
         "import_documents", paths=paths,
         apply_project_pseudonyms=apply_project_pseudonyms,
         import_pdfs_with_listed_names=import_pdfs_with_listed_names,
-        encoding=encoding, memo=memo)
+        import_file_names_with_listed_names=(
+            import_file_names_with_listed_names),
+        memo=memo)
     if preview_token is None:
         return _import_documents_preview(paths, ctx, stops, token_args)
     if stops:
@@ -10165,7 +10168,8 @@ def _import_documents_preview(paths, ctx, stops, token_args) -> str:
                  "apply_project_pseudonyms"],
              "import_pdfs_with_listed_names": token_args[
                  "import_pdfs_with_listed_names"],
-             "encoding": token_args["encoding"],
+             "import_file_names_with_listed_names": token_args[
+                 "import_file_names_with_listed_names"],
              "memo": token_args["memo"]},
             state_preview=result.fingerprint(ctx))
     except PreviewSecretUnavailable:
@@ -10319,6 +10323,8 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     if any(i.kind == doc_readers.PDF and i.numbers.get("listed_count")
            for i in taken):
         lines.append(IMPORT_DONE_LINES["pdf_names"])
+    if any(i.listed_name_in_name for i in taken):
+        lines.append(IMPORT_DONE_LINES["file_name_names"])
     if any(i.kind == doc_readers.PDF for i in taken):
         lines.append(IMPORT_DONE_LINES["pdf_release"].format(
             version=answer.get("pymupdf_version") or "unknown"))

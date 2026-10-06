@@ -12,7 +12,11 @@ server's usual write discipline (the gate, the lock, the backup, one
 transaction).
 
 The text is QualCoder 4.0's (doc_readers); what is not QualCoder's is a
-named departure, listed in TOOLS.md.
+named departure, listed in TOOLS.md. Plain text and web pages are read
+as UTF-8 alone, and a file that is not UTF-8 is held back with steps to
+save it so: nothing is guessed (the owner's decision of 6 October 2026),
+so the names list is applied to, and checked in, the text as it is
+stored.
 """
 
 import hashlib
@@ -64,6 +68,7 @@ class Item:
     position: str
     name: str = ""
     hide_name: bool = False
+    listed_name_in_name: bool = False   # let through on the researcher's word
     size: int = 0
     digest: str = ""
     status: str = "ready"          # ready, refused, held, skipped, later
@@ -102,8 +107,8 @@ class Context:
     names_list_canonical: Any = None
     optional_available: frozenset = frozenset()   # PDF, EPUB readable
     qc382: bool = False
-    encoding: Optional[str] = None
     pdfs_with_listed_names: bool = False
+    file_names_with_listed_names: bool = False
     max_characters: int = 1_000_000
     reader: Callable[..., Dict[str, Any]] = import_reading.read_in_process
     budget_seconds: float = BATCH_SECONDS
@@ -132,14 +137,16 @@ def shown_name(name: str, limit: int = 120) -> str:
 
 
 def name_holds_listed_name(compiled: Any, name: str) -> bool:
-    """Whether a file's name holds a name from the list, by the list's
-    own rule with underscores, hyphens and dots also counted as
-    separators (so `Maria_interview.docx` is caught)."""
-    if compiled is None:
-        return False
-    from . import pseudonymise as pseudo
-    spaced = name.replace("_", " ").replace("-", " ").replace(".", " ")
-    return bool(pseudo.find_replacements(compiled, spaced))
+    """Whether a file's (or a folder's) name holds a name from the list,
+    by Exegete's one rule for a name inside a name (pseudonymise's
+    `carries_a_name`): in any letter case, across any separator, inside
+    a longer word too, so that `Maria_interview.docx`,
+    `maria-interview.docx` and `MariaB.docx` are all caught. Wider than
+    the rule that replaces names in the text, on purpose: a name held
+    back in error costs a rename or the researcher's word; one let
+    through reaches the AI provider in every answer that names the
+    file."""
+    return compiled is not None and compiled.carries_a_name(name)
 
 
 @dataclass
@@ -366,10 +373,16 @@ def prepare(item: Item, ctx: Context, seen_keys: set,
     suffix = os.path.splitext(item.disk_name)[1].lower()
     item.name = stored_name(item.disk_name)
     if name_holds_listed_name(ctx.compiled, item.name):
-        item.hide_name = True
-        item.status, item.code = "held", "names_in_file_name"
-        item.pre_code = item.code
-        return None
+        if not ctx.file_names_with_listed_names:
+            # Held back, and referred to by its position only, so that
+            # the name does not reach the provider in the preview.
+            item.hide_name = True
+            item.status, item.code = "held", "names_in_file_name"
+            item.pre_code = item.code
+            return None
+        # The researcher's word: it comes in under its name, and the
+        # preview and the answer say so.
+        item.listed_name_in_name = True
     if item.kind is None:
         _refuse(item, "other_format" if suffix in words.OTHER_FORMATS
                 else "unsupported", suffix=suffix)
@@ -422,160 +435,11 @@ def prepare(item: Item, ctx: Context, seen_keys: set,
     return data
 
 
-_CHARSET_NAMES = {
-    "cp1252": "Windows Western (cp1252)", "windows-1252": "Windows Western "
-    "(cp1252)", "mac_roman": "Mac Roman (mac_roman)", "latin_1": "Western "
-    "(ISO 8859-1)", "iso8859-1": "Western (ISO 8859-1)", "iso8859_15":
-    "Western with the euro (ISO 8859-15)", "utf_16": "UTF-16", "cp1250":
-    "Windows Central European (cp1250)", "cp1251": "Windows Cyrillic "
-    "(cp1251)", "cp1257": "Windows Baltic (cp1257)", "cp775": "DOS Baltic "
-    "(cp775)", "cp1006": "Urdu (cp1006)", "cp1253": "Windows Greek "
-    "(cp1253)", "cp1254": "Windows Turkish (cp1254)", "utf-8": "UTF-8",
-    "utf-8-sig": "UTF-8", "ascii": "ASCII", "iso8859-2": "Central "
-    "European (ISO 8859-2)", "iso8859_2": "Central European (ISO 8859-2)",
-    "iso8859_10": "Nordic (ISO 8859-10)",
-}
-
-
-def charset_words(name: Optional[str]) -> str:
-    if not name:
-        return "unknown"
-    return _CHARSET_NAMES.get(name.lower(), name)
-
-
-# The Western character sets, which read the accented letters of Western
-# European languages as Windows Western (cp1252) does.
-_WESTERN = frozenset({"cp1252", "iso8859-1", "iso8859-15"})
-
-
-def _canonical(charset: Optional[str]) -> Optional[str]:
-    import codecs
-    try:
-        return codecs.lookup(charset or "").name
-    except (LookupError, ValueError):
-        return None
-
-
-def doubtful_guess(charset: Optional[str]) -> bool:
-    """Whether a guessed character set is one byte a letter and not a
-    Western one: for an ordinary Western European file saved on Windows
-    or an old Mac, such a guess (Central European, Baltic) reads every
-    accented letter as another ("è" as "č") without any other sign."""
-    name = _canonical(charset)
-    if name is None or name in _WESTERN:
-        return False
-    try:
-        return len(bytes(range(256)).decode(name, "replace")) == 256
-    except (LookupError, ValueError):
-        return False
-
-
-# The character sets of one byte a letter that European documents are
-# commonly saved in, as the encoding argument names them: Windows
-# Western, Central European, Baltic and Turkish, ISO Latin 2 and Mac
-# Roman. A file read by a guessed or a named character set is read each
-# of these ways for the names list.
-OTHER_READINGS = ("cp1252", "cp1250", "cp1257", "cp1254", "iso8859-2",
-                  "mac_roman")
-
-
-def _entries_found(compiled: Any, text: str) -> frozenset:
-    """The names-list entries `text` holds (only which, not where, so a
-    text dense with names costs no more memory than one without)."""
-    every = len(compiled.mapping.entries)
-    found: set = set()
-    for match in compiled.pattern.finditer(text):
-        found.add(compiled.entry_for(match.group(0)))
-        if len(found) == every:
-            break
-    return frozenset(found)
-
-
-def names_escape_the_reading(compiled: Any, data: bytes,
-                             charset: Optional[str],
-                             kind: str = doc_readers.TEXT,
-                             text: Optional[str] = None) -> Optional[str]:
-    """Whether names from the list escape the reading of the file's bytes
-    in `charset`: None when no reading in `OTHER_READINGS` finds a listed
-    name this one does not. Otherwise this reading turned a listed name's
-    letters into others, so the list would not replace it, and the answer
-    is the character set, of `OTHER_READINGS`, whose reading finds every
-    listed name any of these readings finds (the first in the list when
-    several do), or "" when none of them does.
-
-    Each reading is searched as the import would store it: for a web
-    page, the page's text (tags dropped, character references turned
-    into characters, white space folded), where a name split by a line
-    break or by markup in the page's source is whole. `text` is this
-    reading's text when the caller has it."""
-    name = _canonical(charset)
-    if name is None or data.isascii():
-        return None
-    own = data.decode(name, "replace")
-    readings: List[Tuple[str, frozenset]] = []
-    for other in OTHER_READINGS:
-        if _canonical(other) == name:
-            continue
-        decoded = data.decode(other, "replace")
-        if decoded == own:
-            continue
-        found = _entries_found(compiled,
-                               doc_readers.reading_text(kind, decoded))
-        if found:
-            readings.append((other, found))
-    if not readings:
-        return None
-    if text is None:
-        text = doc_readers.reading_text(kind, own)
-    here = _entries_found(compiled, text)
-    every = here.union(*(found for _other, found in readings))
-    if here == every:
-        return None
-    for other, found in readings:
-        if found == every:
-            return other
-    return ""
-
-
-def _hold_for_names(item: Item, ctx: Context, data: bytes,
-                    result: Dict[str, Any]) -> bool:
-    """Hold the file back when another reading of its bytes finds listed
-    names that the guessed or named one does not, naming the character
-    set that reads them all, or saying that none does; whether it was
-    held. Asked again with that set, the file passes this check, since
-    that set's reading finds every name the others find."""
-    charset = result.get("charset")
-    other = names_escape_the_reading(ctx.compiled, data, charset,
-                                     item.kind, result["text"])
-    if other is None:
-        return False
-    if other == "":
-        code = "charset_names_no_set"
-    elif result.get("charset_guessed"):
-        code = "charset_names"
-    else:
-        code = "charset_names_named"
-    item.status, item.code = "held", code
-    item.numbers["charset"] = charset_words(charset)
-    item.numbers["found"] = charset_words(other)
-    item.numbers["encoding"] = other
-    return True
-
-
-def _named_reading(result: Dict[str, Any], ctx: Context) -> bool:
-    """Whether the file was read by the character set the researcher
-    named (a file that decodes as UTF-8 never is, nor a web page read by
-    the set it declares, unless that is the set named)."""
-    return (ctx.encoding is not None and not result.get("charset_guessed")
-            and result.get("charset") == ctx.encoding)
-
-
-def evaluate(item: Item, result: Dict[str, Any], ctx: Context,
-             data: Optional[bytes] = None) -> None:
+def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
     """What the import does with one file's text: holds it back, or
-    applies the names list and gathers its warnings and memo. `data` is
-    the file's bytes, for the check of a guessed character set against
-    the names list."""
+    applies the names list and gathers its warnings and memo. The text is
+    the one that will be stored (UTF-8 alone, for plain text and web
+    pages), so the names found in it are the names there are."""
     from . import pseudonymise as pseudo
     item.read = result
     text = result["text"]
@@ -595,25 +459,12 @@ def evaluate(item: Item, result: Dict[str, Any], ctx: Context,
                 item.status, item.code = "held", "pdf_listed_names"
                 return
     elif signs.get("garbled"):
-        if item.kind == doc_readers.RTF:
-            code = "garbled_rtf"
-        elif result["charset_guessed"] or (
-                ctx.encoding is not None and result["charset"] == ctx.encoding):
-            code = "garbled"
-        else:
-            code = "garbled_fixed"
-        item.status, item.code = "held", code
-        return
-    elif (data is not None and ctx.compiled is not None
-          and (result.get("charset_guessed") or _named_reading(result, ctx))
-          and _hold_for_names(item, ctx, data, result)):
-        # Nothing looks garbled, but the guess has changed the letters
-        # of a listed name, which the list would then not replace
-        # (charset-normalizer reads much Western text as Central
-        # European, and Polish or Turkish as Western; QualCoder makes
-        # the same guess). A named set is checked the same way: it
-        # applies to every file in the call that is not UTF-8, so a set
-        # named for one file can be the wrong one for another.
+        # Letters that came out wrong in the file itself ("Ã©" for "é"),
+        # or in QualCoder's way of reading RTF: a name among them would
+        # escape the list.
+        item.status = "held"
+        item.code = ("garbled_rtf" if item.kind == doc_readers.RTF
+                     else "garbled_fixed")
         return
     elif ctx.compiled is not None:
         replacements = pseudo.find_replacements(ctx.compiled, text)
@@ -651,21 +502,6 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
             add(code)
     if characters > ctx.max_characters // 2:
         add("near_limit", characters=characters, limit=ctx.max_characters)
-    charset = result.get("charset")
-    if result.get("charset_guessed"):
-        code = ("charset_guessed_check" if doubtful_guess(charset)
-                else "charset_guessed")
-        if web_reading(item, result):
-            code = "web_" + code
-        add(code, charset=charset_words(charset))
-    elif ctx.encoding is not None and charset == ctx.encoding:
-        add("charset_named", charset=charset_words(charset))
-    if web_reading(item, result) == "read" and not any(
-            group == "changes" for group, _text in out):
-        # A web page read by its declared or a named character set,
-        # which QualCoder's import fails on; when a warning changes the
-        # text, the why line says so instead (said once either way).
-        add("web_not_utf8")
     for code in ("astral", "invisible"):
         if signs.get(code):
             add(code, count=signs[code])
@@ -677,44 +513,34 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         add("pdf_markups", count=signs["pdf_markups"])
     if item.kind == doc_readers.PDF and ctx.qc382:
         add("qc382_pdf")
+    if item.listed_name_in_name:
+        add("listed_name_in_file_name")
     return out
 
 
-def web_reading(item: Item, result: Dict[str, Any]) -> Optional[str]:
-    """For a web page whose text is not UTF-8, which QualCoder's import
-    fails on (it reads every page as UTF-8): "guessed" when its
-    character set was guessed, else "read" (declared, or named). None
-    for any other file."""
-    if item.kind != doc_readers.WEB or result.get("charset") in (
-            None, "utf-8"):
-        return None
-    return "guessed" if result.get("charset_guessed") else "read"
-
-
 def _memo(item: Item, result: Dict[str, Any], ctx: Context) -> str:
-    """The file's memo: the memo argument and a named character set,
-    then the PDF's notes after a blank line, as QualCoder orders them."""
-    parts = []
-    if ctx.memo:
-        parts.append(ctx.memo)
-    if (ctx.encoding is not None and not result.get("charset_guessed")
-            and result.get("charset") == ctx.encoding):
-        parts.append(f"Read as {ctx.encoding}, the character set named at "
-                     f"import.")
-    memo = "\n\n".join(parts)
+    """The file's memo: the memo argument, then the PDF's notes after a
+    blank line, as QualCoder orders them."""
+    memo = ctx.memo or ""
     if result["notes"]:
         notes = doc_readers.pdf_notes_memo(result["notes"])
         memo = memo + "\n\n" + notes if memo else notes
     return memo
 
 
+# What the reader refuses that the import holds back, with the steps to
+# a file it reads: one not saved as UTF-8.
+HELD_WHEN_READ = frozenset({"not_utf8", "not_utf8_web"})
+
+
 def _read_one(item: Item, data: bytes, ctx: Context) -> None:
-    encoding = ctx.encoding if item.kind in (
-        doc_readers.PLAIN_FORMATS | {doc_readers.WEB}) else None
     try:
-        result = ctx.reader(item.kind, data, encoding=encoding,
+        result = ctx.reader(item.kind, data,
                             max_characters=ctx.max_characters)
     except import_reading.ReadFailed as failed:
+        if failed.code in HELD_WHEN_READ:
+            item.status, item.code = "held", failed.code
+            return
         numbers = dict(failed.numbers)
         if "limit" in numbers and failed.code.startswith("archive_part") \
                 or failed.code == "archive_too_large":
@@ -723,11 +549,9 @@ def _read_one(item: Item, data: bytes, ctx: Context) -> None:
             numbers["seconds"] = int(import_reading.READ_TIMEOUT_SECONDS)
         if failed.code == "reader_memory":
             numbers["limit_mb"] = import_reading.MEMORY_CAP_BYTES // MB
-        if failed.code == "named_encoding_does_not_fit":
-            numbers["encoding"] = ctx.encoding
         _refuse(item, failed.code, before_reading=False, **numbers)
         return
-    evaluate(item, result, ctx, data)
+    evaluate(item, result, ctx)
 
 
 def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
@@ -784,10 +608,7 @@ def refusal_words(item: Item) -> str:
     if code in words.HELD_BACK:
         return words.say(words.HELD_BACK, code,
                          names=numbers.get("listed_names"),
-                         count=numbers.get("listed_count"),
-                         charset=numbers.get("charset"),
-                         found=numbers.get("found"),
-                         encoding=numbers.get("encoding"))
+                         count=numbers.get("listed_count"))
     numbers.setdefault("format", {
         doc_readers.WORD: "Word", doc_readers.OPENDOCUMENT: "OpenDocument",
         doc_readers.EPUB: "EPUB"}.get(item.kind, "document"))
@@ -819,9 +640,9 @@ def file_entry(item: Item) -> Dict[str, Any]:
         "size_kb": round(item.size / 1024, 1),
         "words": len(item.text.split()),
     }
-    if result.get("charset"):
-        entry["character_set"] = charset_words(result.get("charset")) + (
-            ", guessed" if result.get("charset_guessed") else "")
+    if result.get("charset") in ("utf-8", "utf-8-sig"):
+        # Plain text and web pages: the one character set read.
+        entry["character_set"] = "UTF-8"
     if item.kind != doc_readers.PDF and item.replacements:
         entry["names_replaced"] = item.replacements
     if item.numbers.get("listed_count"):
@@ -831,9 +652,7 @@ def file_entry(item: Item) -> Dict[str, Any]:
                    if group == "information"]
     if changes:
         entry["changes_what_you_will_read"] = changes
-        entry["why"] = words.why_line(item.kind == doc_readers.SUBTITLES,
-                                      item.warning_codes,
-                                      web_reading(item, result))
+        entry["why"] = words.why_line(item.kind == doc_readers.SUBTITLES)
     if information:
         entry["for_information"] = information
     if item.real_place:

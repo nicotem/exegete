@@ -2,10 +2,8 @@
 """0.14.3 (provisional): safeguards of the document import and the
 reading tool, added after their first review.
 
-Pinned here: a guessed character set that changes a listed name's
-letters holds the file back, and any doubtful guess is among what
-changes the text; the per-PDF line on QualCoder 3.8.2 appears in a
-project 3.8.2 made; an EPUB chapter listed many times counts each time
+Pinned here: the per-PDF line on QualCoder 3.8.2 appears in a project
+3.8.2 made; an EPUB chapter listed many times counts each time
 it is unpacked; an approved batch goes in together or not at all; only
 originals of the types QualCoder imports are copied and shown, and never
 in the reading copy's place; a folder of originals that is a link stops
@@ -27,8 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import import_fixtures  # noqa: E402
 import exegete.server as server  # noqa: E402
 from exegete import (doc_import, doc_readers, import_paths,  # noqa: E402
-                     import_words, new_project, pseudonymise, reading,
-                     reading_folder)
+                     import_words, new_project, reading, reading_folder)
 from exegete.database import QualcoderDatabase  # noqa: E402
 
 OPTIONAL = import_fixtures.optional_part_installed()
@@ -81,12 +78,6 @@ def _rows(project):
         con.close()
 
 
-def _names_list(project, entries):
-    (project / "pseudonyms.json").write_text(json.dumps(
-        [{"original": o, "pseudonym": p} for o, p in entries]),
-        encoding="utf-8")
-
-
 def _word(text: str) -> bytes:
     return import_fixtures.word(f"<w:p>{import_fixtures._r(text)}</w:p>")
 
@@ -97,95 +88,6 @@ def _reopen(project):
     except Exception:
         pass
     server.db = QualcoderDatabase(project)
-
-
-# An English interview saved as Windows Western text, naming two people
-# with accented names; charset-normalizer (at the locked 3.5.1) guesses
-# Windows Central European for it, which reads "è" as "č".
-INTERVIEW_LINES = [
-    "Interviewer: Could you tell me about the clinic?",
-    "P1: My neighbour Hélène took me, usually. Her cousin José too.",
-    "Interviewer: How did you find the staff?",
-    "P1: Mostly kind. The nurse always remembered our names."]
-INTERVIEW = ("\n".join(INTERVIEW_LINES * 12) + "\n").encode("cp1252")
-FRENCH = ("Hélène a dit: à la façon d'être, très élégant, après la "
-          "fête.\n" * 20).encode("cp1252")
-
-
-def _guess(data: bytes) -> str:
-    _text, charset, guessed = doc_readers.decode_plain(data)
-    assert guessed
-    return charset
-
-
-def _read_rightly(data: bytes) -> bool:
-    """Whether the installed charset-normalizer reads these Windows
-    Western bytes as a Western set would. Decided here, not by
-    `doubtful_guess`, so that a test the guard should fail is never
-    skipped by the guard itself."""
-    import codecs
-    return codecs.lookup(_guess(data)).name in {"cp1252", "iso8859-1",
-                                                "iso8859-15"}
-
-
-class TestAGuessedCharacterSet:
-
-    def test_a_listed_name_the_guess_garbles_holds_the_file_back(
-            self, project, folder):
-        if _read_rightly(INTERVIEW):
-            pytest.skip("this charset-normalizer reads the file rightly")
-        _names_list(project, [("Hélène", "Participant A"),
-                              ("José", "Participant B")])
-        (folder / "P01.txt").write_bytes(INTERVIEW)
-        preview = _call(paths=[str(folder)])
-        assert "preview_token" not in preview, preview
-        assert preview["summary"] == "0 files ready; 1 held back."
-        reason = preview["held_back"][0]["reason"]
-        assert "names from your list come out with other letters" in reason
-        assert 'encoding=\\"cp1252\\"' in json.dumps(reason)
-        assert "Hélène" not in json.dumps(preview, ensure_ascii=False)
-        # Named, the character set reads the names, and the list
-        # replaces every one of them.
-        _p, done = _both([str(folder)], encoding="cp1252")
-        assert done["success"] is True
-        assert done["names_replaced"] == 24
-        ((_i, _n, text, _m),) = _rows(project)
-        assert text.count("Participant A") == 12
-        assert "Hél" not in text
-
-    def test_the_check_reads_the_bytes_both_ways(self):
-        compiled = pseudonymise.Compiled(pseudonymise.validate_mapping(
-            [{"original": "Hélène", "pseudonym": "Participant A"}],
-            "exact", may_echo_names=False))
-        assert doc_import.names_escape_the_reading(compiled, INTERVIEW,
-                                                   "cp1250")
-        assert not doc_import.names_escape_the_reading(
-            compiled, INTERVIEW, "cp1252")
-        plain = "Nobody listed here, café.\n".encode("cp1252")
-        assert not doc_import.names_escape_the_reading(compiled, plain,
-                                                       "cp1250")
-
-    @pytest.mark.parametrize("charset, doubtful", [
-        ("cp1250", True), ("cp1257", True), ("cp775", True),
-        ("mac_roman", True), ("cp1251", True), ("cp1252", False),
-        ("windows-1252", False), ("latin_1", False), ("iso8859_15", False),
-        ("utf_16", False), ("big5", False), ("no-such-set", False)])
-    def test_which_guesses_are_doubtful(self, charset, doubtful):
-        assert doc_import.doubtful_guess(charset) is doubtful
-
-    def test_a_doubtful_guess_needs_a_look(self, project, folder):
-        if _read_rightly(FRENCH):
-            pytest.skip("this charset-normalizer reads the file rightly")
-        (folder / "French notes.txt").write_bytes(FRENCH)
-        preview = _call(paths=[str(folder)])
-        assert preview["summary"] == ("1 file ready; 1 needs a look before "
-                                      "you say yes.")
-        entry = preview["files"][0]
-        changes = " ".join(entry["changes_what_you_will_read"])
-        assert "Its character set was guessed as" in changes
-        assert 'encoding="cp1252"' in changes
-        assert entry["why"] == import_words.WHY_GUESSED
-        assert "for_information" not in entry
 
 
 def _as_made_by_qualcoder(project, version):

@@ -31,6 +31,11 @@ from pathlib import Path
 
 import pytest
 
+try:
+    import tomllib
+except ModuleNotFoundError:          # Python 3.10
+    import tomli as tomllib
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -323,7 +328,6 @@ class TestNoGuessing:
             source = path.read_text(encoding="utf-8")
             assert "charset_normalizer" not in source, path
             assert "from_bytes(" not in source, path
-        import tomllib
         with open(REPO / "pyproject.toml", "rb") as handle:
             project = tomllib.load(handle)["project"]
         assert not any(d.startswith("charset-normalizer")

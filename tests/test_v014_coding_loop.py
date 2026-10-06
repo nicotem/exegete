@@ -16,8 +16,10 @@ Most calls go through FastMCP's own `call_tool`, the path a host takes
 
 import asyncio
 import json
+import re
 import sqlite3
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -25,6 +27,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+import exegete.sessions as sessions_module
 from exegete.sessions import (AICodingSession, CodingSuggestion,
                                     SessionManager)
 
@@ -87,6 +90,22 @@ def approve_and_apply(sid, guids):
     return call("apply_codings", coding_session_id=sid, create_backup=False)
 
 
+# A session file's timestamps run to the microsecond, and this one holds
+# the characters "0.95" (a CI run met it by chance on 6 October 2026)
+CLOCK_HOLDING_THE_NUMBER = datetime(2026, 10, 6, 13, 57, 10, 953421)
+
+
+def fix_the_clock(monkeypatch, moment):
+    """The server and the sessions read `moment` as the time now."""
+    class Fixed(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return moment if tz is None else moment.replace(tzinfo=tz)
+
+    monkeypatch.setattr(server, "datetime", Fixed)
+    monkeypatch.setattr(sessions_module, "datetime", Fixed)
+
+
 # =============================================================================
 # 1. THE CONFIDENCE SCORE REPLACED (owner ruling 21)
 # =============================================================================
@@ -119,15 +138,24 @@ class TestSupportIsRequired:
         assert [r["reading"] for r in rec["recorded"]] == [
             "explicit", "interpretive"]
 
-    def test_a_number_sent_beside_the_label_is_not_kept(self, setup_server):
+    @pytest.mark.parametrize("clock", [None, CLOCK_HOLDING_THE_NUMBER],
+                             ids=["real-clock", "clock-at-13-57-10-953421"])
+    def test_a_number_sent_beside_the_label_is_not_kept(
+            self, setup_server, monkeypatch, clock):
+        if clock is not None:
+            fix_the_clock(monkeypatch, clock)
         sid = new_session()
         rec = record(sid, item(confidence=0.95))
         assert rec["recorded_count"] == 1
         assert rec["confidence_ignored"] == 1
         stored = session_file(sid).read_text()
         assert "confidence" not in stored
-        assert "0.95" not in stored
+        # 0.95 as a value of its own: the file's timestamps run to the
+        # microsecond, and one such as 13:57:10.953421 holds "0.95" too
+        assert not re.search(r"(?<![\d.])0\.95(?!\d)", stored)
         assert '"reading": "explicit"' in stored
+        if clock is not None:          # the time reached the file as set
+            assert "13:57:10.953421" in stored
 
 
 class TestTheLabelOnTheWayToTheProject:

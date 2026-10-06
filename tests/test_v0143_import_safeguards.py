@@ -399,14 +399,17 @@ class TestArchivesAndWords:
         ((_i, _n, text, _m),) = _rows(project)
         assert text == "1\n00:00:01,000 --> 00:00:02,000\nHi.\n"
 
-    def test_a_file_of_nul_characters_comes_in_as_qualcoder_reads_it(
-            self, project, folder):
+    def test_a_file_holding_a_nul_character_is_held_back(self, project,
+                                                        folder):
+        """QualCoder stores it as read; no text saved as UTF-8 holds a
+        NUL, which is the sign of UTF-16 or UTF-32 without its mark."""
         (folder / "nul_chars.txt").write_bytes(
             import_fixtures.TEXT["nul_chars.txt"])
-        _p, done = _both([str(folder)])
-        assert done["success"] is True
-        ((_i, _n, text, _m),) = _rows(project)
-        assert text == "A\x00B and a tab\there\n"
+        preview = _call(paths=[str(folder)])
+        assert preview["summary"] == "0 files ready; 1 held back."
+        assert preview["held_back"][0]["reason"] == \
+            import_words.HELD_BACK["nul_characters"]
+        assert _rows(project) == []
 
     @pytest.mark.parametrize("code", ["pdf_scanned"])
     def test_each_warning_gives_a_way_round(self, code):

@@ -349,8 +349,10 @@ class TestTheNamesList:
         preview, done = _both([str(folder)])
         text = json.dumps(preview) + json.dumps(done)
         assert "Maria" not in text
-        assert preview["held_back"][0]["file"] == \
-            "the first file in the folder given as path 1"
+        assert preview["held_back"][0]["file"] == (
+            "the first document in the folder given as path 1, counting "
+            "only the kinds Exegete imports, in A to Z order (P10 before "
+            "P2)")
         assert [r[1] for r in _rows(project)] == ["P02.txt"]
 
     @pytest.mark.skipif(not OPTIONAL, reason="needs the optional part")
@@ -362,7 +364,7 @@ class TestTheNamesList:
         preview = _call(paths=[str(folder)])
         held = preview["held_back"][0]
         assert held["file"] == "notes.pdf"
-        assert "names 1 of the people in your list, 2 times" in held["reason"]
+        assert "names 1 person from your list, 2 times" in held["reason"]
         assert "preview_token" not in preview
         _p, done = _both([str(folder)], import_pdfs_with_listed_names=True)
         ((_i, _n, text, _m, memo, _o),) = _rows(project)

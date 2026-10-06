@@ -16,7 +16,7 @@ COPY_A_PATH = (
     "right-click it and choose Copy as path. Then paste it.")
 
 SAME_READING = ("QualCoder reads the file the same way, so both programs "
-                "agree on every coding.")
+                "read the same text.")
 
 PATH_REFUSALS = {
     "missing": "There is no file or folder at this place on your "
@@ -109,6 +109,13 @@ FILE_REFUSALS = {
                     "documents do not use and attacks do, so Exegete does "
                     "not read it (QualCoder imports it). Open it in its own "
                     "app and save a fresh copy.",
+    "epub_character_set": "Part of this EPUB declares a character set "
+                          "that writes its markup in other bytes (UTF-7, "
+                          "say), which EPUB does not allow and which could "
+                          "hide what Exegete checks for, so Exegete does "
+                          "not read it (QualCoder imports it). You could "
+                          "convert it again (EPUB to EPUB, in Calibre, "
+                          "say), then import that.",
     "no_text": "No text was found in this file. QualCoder would store the "
                "file's own codes as its text, which is noise; Exegete does "
                "not import it.",
@@ -141,11 +148,39 @@ FILE_REFUSALS = {
 _WHY_NOT_UTF8 = (
     "so it is held back rather than read by a guess: a wrong guess reads "
     "accented letters as others, and a name from your list written with "
-    "other letters would not be replaced. Saved as UTF-8, it reads the "
-    "same way in QualCoder too.")
+    "other letters would not be replaced. Saved as UTF-8, its letters "
+    "read the same way in QualCoder too.")
 _CHECK_ACCENTS = ("checking first that its accents look right (if they "
                   "do not, the app read it wrongly: choose another "
                   "encoding when you open it)")
+_STEPS_TEXT = (
+    ": in Word, open it (if Word asks which encoding to use, pick the one "
+    "whose preview reads right), then choose File, Save As, Plain Text, "
+    "and \"Unicode (UTF-8)\" in the window that follows; in TextEdit on a "
+    "Mac, open it, then choose File, Duplicate and File, Save, with "
+    "\"Unicode (UTF-8)\" as the plain text encoding; in Notepad on "
+    "Windows, open it, then choose File, Save As, with UTF-8 as the "
+    "encoding.")
+_STEPS_WEB = (
+    ": in Word, open the page, then choose File, Save As, Word Document "
+    "(.docx), and import the .docx; in Notepad on Windows, open it, then "
+    "choose File, Save As, with UTF-8 as the encoding; in TextEdit on a "
+    "Mac, first tick \"Display HTML files as HTML code\" in its settings "
+    "(Open and Save), open the page, then choose File, Duplicate and "
+    "File, Save, with \"Unicode (UTF-8)\" as the plain text encoding.")
+# A file whose text holds NUL characters: most often UTF-16 or UTF-32
+# saved without the byte-order mark that names it, which reads as UTF-8
+# with a NUL beside every letter.
+_WHY_NUL = (
+    "Its text holds NUL characters, invisible characters that no text "
+    "saved as UTF-8 holds: most often the sign of a file saved as UTF-16 "
+    "or UTF-32 (\"Unicode\") without the mark at its start that says so. "
+    "Read as it stands, it would come in with a NUL beside each letter, "
+    "and a name from your list written that way would not be replaced, "
+    "so it is held back rather than read by a guess. You could save a "
+    "copy as UTF-8 and import that, checking first that its text reads "
+    "right (if it shows gaps or odd characters between the letters, "
+    "choose UTF-16, or \"Unicode\", as the encoding when you open it)")
 
 HELD_BACK = {
     "names_in_file_name": "This file's own name holds a name from your "
@@ -156,46 +191,38 @@ HELD_BACK = {
                           "names), and it comes in under that name, which "
                           "then reaches the AI provider whenever an answer "
                           "names the file.",
-    "pdf_listed_names": "This PDF names {names} of the people in your "
-                        "list, {count} times. Names in a PDF are never "
-                        "replaced, here or in QualCoder; if the assistant "
-                        "reads this file, it reads those names. It comes "
-                        "in only if you say so for this import "
+    "pdf_listed_names": "This PDF names {people} from your list, "
+                        "{times}. Names in a PDF are never replaced, here "
+                        "or in QualCoder; if the assistant reads this "
+                        "file, it reads those names. It comes in only if "
+                        "you say so for this import "
                         "(import_pdfs_with_listed_names).",
     "not_utf8": "It is not saved as UTF-8, the one form of text Exegete "
                 "reads, " + _WHY_NOT_UTF8 + " You could save a copy as "
-                "UTF-8 and import that, " + _CHECK_ACCENTS + ": in Word, "
-                "open it (if Word asks which encoding to use, pick the "
-                "one whose preview reads right), then choose File, Save "
-                "As, Plain Text, and "
-                "\"Unicode (UTF-8)\" in the window that follows; in "
-                "TextEdit on a Mac, open it, then choose File, Duplicate "
-                "and File, Save, with \"Unicode (UTF-8)\" as the plain "
-                "text encoding; in Notepad on Windows, open it, then "
-                "choose File, Save As, with UTF-8 as the encoding.",
+                "UTF-8 and import that, " + _CHECK_ACCENTS + _STEPS_TEXT,
     "not_utf8_web": "This web page is not saved as UTF-8, the one form of "
                     "text Exegete reads (whatever character set the page "
                     "declares, since a declaration can be wrong), "
                     + _WHY_NOT_UTF8 + " You could save a copy as UTF-8 "
-                    "and import that, " + _CHECK_ACCENTS + ": in Word, "
-                    "open the page, then choose File, Save As, Word "
-                    "Document (.docx), and import the .docx; in Notepad "
-                    "on Windows, open it, then choose File, Save As, with "
-                    "UTF-8 as the encoding; in TextEdit on a Mac, first "
-                    "tick \"Display HTML files as HTML code\" in its "
-                    "settings (Open and Save), open the page, then choose "
-                    "File, Duplicate and File, Save, with \"Unicode "
-                    "(UTF-8)\" as the plain text encoding.",
-    "garbled_rtf": "Its accented letters came out wrong (\"Ã©\" for "
-                   "\"é\"), as QualCoder's way of reading RTF gives for "
-                   "this file, and names in it would escape your names "
-                   "list. Open it in Word or LibreOffice and save it as a "
-                   "Word document (.docx), then import that; QualCoder "
-                   "reads that file the same way.",
-    "garbled_fixed": "Its text holds letters that came out wrong (\"Ã©\" "
-                     "for \"é\") in the file itself, and names in it would "
-                     "escape your names list. Open it in its own app, "
-                     "correct them, save it, then ask again.",
+                    "and import that, " + _CHECK_ACCENTS + _STEPS_WEB,
+    "nul_characters": _WHY_NUL + _STEPS_TEXT,
+    "nul_characters_web": _WHY_NUL.replace(
+        "Its text holds", "This web page's text holds", 1) + _STEPS_WEB,
+    "garbled_rtf": "Its letters came out wrong (\"Ã©\" for \"é\"), as "
+                   "QualCoder's way of reading RTF gives for this file, "
+                   "and a name written that way would escape a names "
+                   "list, though the assistant would still read it. Open "
+                   "it in Word or LibreOffice and save it as a Word "
+                   "document (.docx), then import that: its letters read "
+                   "rightly in QualCoder too.",
+    "garbled_fixed": "Its text holds letters that came out wrong in the "
+                     "file itself (\"Ã©\" for \"é\", \"Ä…\" for \"ą\", "
+                     "\"Ð˜\" for \"И\"), as happens when a file is opened "
+                     "once in the wrong character set and saved again. A "
+                     "name written that way would escape a names list, "
+                     "though the assistant would still read it. Open it "
+                     "in its own app, correct them, save it, then ask "
+                     "again.",
     "not_read_in_time": "Not read in time; ask again for these.",
 }
 
@@ -309,8 +336,7 @@ WARNINGS = {
         "So QualCoder's own import of this file would store other text: "
         "if the same file is also imported in QualCoder, codings made on "
         "one copy will not line up on the other. In this project both "
-        "programs read the text Exegete stores, and agree on every "
-        "coding."),
+        "programs read the text Exegete stores."),
     "pdf_scanned": ("changes",
         "This PDF is pictures of pages, with no words Exegete can read; "
         "only QualCoder's area coding works on it. QualCoder imports it "
@@ -348,10 +374,10 @@ WARNINGS = {
         "Its text is only spaces and blank lines, as QualCoder would "
         "store it."),
     "pdf_notes": ("information",
-        "Its {count} notes join the file's memo, as QualCoder adds them; "
+        "Its notes ({count}) join the file's memo, as QualCoder adds them; "
         "names in them are not replaced."),
     "pdf_markups": ("information",
-        "It has {count} highlight or underline marks. QualCoder would "
+        "It has highlight or underline marks ({count}). QualCoder would "
         "have offered to code them; Exegete codes nothing without your "
         "approval, one by one."),
     "qc382_pdf": ("information",

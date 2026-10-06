@@ -54,7 +54,11 @@ ORDINALS = ("first", "second", "third", "fourth", "fifth", "sixth",
 
 
 def ordinal(n: int) -> str:
-    return ORDINALS[n - 1] if 1 <= n <= len(ORDINALS) else f"{n}th"
+    if 1 <= n <= len(ORDINALS):
+        return ORDINALS[n - 1]
+    suffix = ("th" if 10 <= n % 100 <= 20
+              else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th"))
+    return f"{n}{suffix}"
 
 
 @dataclass
@@ -102,7 +106,12 @@ class Context:
     documents_listing: List[str]
     refused_places: Sequence[Tuple[str, Optional[Path]]]
     compiled: Any = None                     # the names list, compiled
-    names_list: str = "none"                 # none, empty, entries, off
+    # What file and folder names are checked against, when it is not the
+    # compiled list: a list Exegete cannot use still holds names (as far
+    # as they can be read; every name counts as holding one when none
+    # can), so that the preview of an import it stops shows none of them.
+    name_check: Any = None
+    names_list: str = "none"         # none, empty, entries, off, unusable
     names_list_entries: int = 0
     names_list_canonical: Any = None
     optional_available: frozenset = frozenset()   # PDF, EPUB readable
@@ -147,6 +156,33 @@ def name_holds_listed_name(compiled: Any, name: str) -> bool:
     through reaches the AI provider in every answer that names the
     file."""
     return compiled is not None and compiled.carries_a_name(name)
+
+
+def _name_check(ctx: "Context") -> Any:
+    return ctx.name_check if ctx.name_check is not None else ctx.compiled
+
+
+class EveryName:
+    """A names list that cannot be read at all: every file and folder
+    name is taken to hold a name from it, so the preview shows none."""
+
+    @staticmethod
+    def carries_a_name(value: Any) -> bool:
+        return isinstance(value, str) and bool(value)
+
+
+class OriginalsOnly:
+    """The names of a list Exegete cannot use (a name with a space at its
+    end, a pseudonym the engine refuses, a chain), read for the one
+    question of whether a file's or folder's name holds one, by the same
+    wide reading as for a usable list."""
+
+    def __init__(self, forms: Sequence[str]):
+        from .pseudonymise import NameDetector
+        self.detector = NameDetector(forms)
+
+    def carries_a_name(self, value: Any) -> bool:
+        return self.detector.contains(value)
 
 
 @dataclass
@@ -221,7 +257,29 @@ def _supported_suffixes() -> List[str]:
 
 
 def _hidden_in_listing(name: str, ctx: Context) -> bool:
-    return name_holds_listed_name(ctx.compiled, stored_name(name))
+    return name_holds_listed_name(_name_check(ctx), stored_name(name))
+
+
+HIDDEN_STEP = "(a name from your names list)"
+
+
+def shown_place(place: Optional[str], ctx: Context) -> Optional[str]:
+    """A place on the computer (where a link leads) as the preview may
+    show it: each step that holds a name from the list replaced by
+    words saying so."""
+    if not place:
+        return place
+    check = _name_check(ctx)
+    if check is None:
+        return place
+    windows = "\\" in place and "/" not in place
+    steps = place.replace("\\", "/").split("/")
+    hidden = [bool(step) and name_holds_listed_name(check, stored_name(step))
+              for step in steps]
+    if not any(hidden):
+        return place
+    return ("\\" if windows else "/").join(
+        HIDDEN_STEP if hide else step for step, hide in zip(steps, hidden))
 
 
 def gather(paths: Sequence[str], ctx: Context) -> Survey:
@@ -235,6 +293,7 @@ def gather(paths: Sequence[str], ctx: Context) -> Survey:
         except import_paths.PathRefused as refused:
             survey.path_refusals.append({"given": given, "code": refused.code})
             continue
+        place = shown_place(walked.real_place, ctx)
         if not walked.is_folder:
             order += 1
             disk_name = walked.path.name
@@ -244,7 +303,7 @@ def gather(paths: Sequence[str], ctx: Context) -> Survey:
                 kind=doc_readers.FORMATS.get(
                     os.path.splitext(disk_name)[1].lower()),
                 position=f"the file given as path {given}",
-                real_place=walked.real_place))
+                real_place=place))
             continue
         try:
             listing = import_paths.list_folder(
@@ -254,7 +313,7 @@ def gather(paths: Sequence[str], ctx: Context) -> Survey:
             survey.path_refusals.append({"given": given, "code": refused.code})
             continue
         folder = {"given": given, "files": list(listing.files),
-                  "real_place": walked.real_place,
+                  "real_place": place,
                   "subfolders": [], "other_formats": [],
                   "links": [], "not_files": [],
                   "hidden_skipped": listing.hidden_skipped,
@@ -266,19 +325,21 @@ def gather(paths: Sequence[str], ctx: Context) -> Survey:
                 order=order, given=given, path=walked.path / name,
                 disk_name=name,
                 kind=doc_readers.FORMATS.get(os.path.splitext(name)[1].lower()),
-                position=f"the {ordinal(index)} file in the folder given as "
-                         f"path {given}",
-                real_place=walked.real_place))
+                position=f"the {ordinal(index)} document in the folder "
+                         f"given as path {given}, counting only the kinds "
+                         f"Exegete imports, in A to Z order (P10 before "
+                         f"P2)",
+                real_place=place))
         for key, names in (("links", listing.links),
                            ("not_files", listing.not_files),
                            ("other_formats", listing.other_formats)):
             for name in names:
                 folder[key].append(
-                    "(a name from your names list)"
+                    HIDDEN_STEP
                     if _hidden_in_listing(name, ctx) else shown_name(name))
         for name, count in listing.subfolders:
             folder["subfolders"].append({
-                "name": ("(a name from your names list)"
+                "name": (HIDDEN_STEP
                          if _hidden_in_listing(name, ctx)
                          else shown_name(name)),
                 "supported_files": count})
@@ -372,7 +433,12 @@ def prepare(item: Item, ctx: Context, seen_keys: set,
     from .database import documents_name_key, file_name_problem
     suffix = os.path.splitext(item.disk_name)[1].lower()
     item.name = stored_name(item.disk_name)
-    if name_holds_listed_name(ctx.compiled, item.name):
+    check = _name_check(ctx)
+    if isinstance(check, EveryName):
+        # A names list that cannot be read: the import is stopped, and no
+        # file is shown by its name.
+        item.hide_name = True
+    elif name_holds_listed_name(check, item.name):
         if not ctx.file_names_with_listed_names:
             # Held back, and referred to by its position only, so that
             # the name does not reach the provider in the preview.
@@ -531,7 +597,8 @@ def _memo(item: Item, result: Dict[str, Any], ctx: Context) -> str:
 
 # What the reader refuses that the import holds back, with the steps to
 # a file it reads: one not saved as UTF-8.
-HELD_WHEN_READ = frozenset({"not_utf8", "not_utf8_web"})
+HELD_WHEN_READ = frozenset({"not_utf8", "not_utf8_web", "nul_characters",
+                            "nul_characters_web"})
 
 
 def _read_one(item: Item, data: bytes, ctx: Context) -> None:
@@ -607,9 +674,12 @@ def refusal_words(item: Item) -> str:
     if code in ("permission", "unreadable", "not_a_file"):
         return words.PATH_REFUSALS[code]
     if code in words.HELD_BACK:
-        return words.say(words.HELD_BACK, code,
-                         names=numbers.get("listed_names"),
-                         count=numbers.get("listed_count"))
+        people = numbers.get("listed_names") or 0
+        times = numbers.get("listed_count") or 0
+        return words.say(
+            words.HELD_BACK, code,
+            people=f"{people} {'person' if people == 1 else 'people'}",
+            times="once" if times == 1 else f"{times} times")
     numbers.setdefault("format", {
         doc_readers.WORD: "Word", doc_readers.OPENDOCUMENT: "OpenDocument",
         doc_readers.EPUB: "EPUB"}.get(item.kind, "document"))
@@ -627,7 +697,14 @@ def names_list_line(ctx: Context) -> str:
                 "names are replaced.")
     if ctx.names_list == "off":
         return ("The project's list of names is not applied to this "
-                "import, as asked: the real names are stored.")
+                "import, as asked: the real names are stored, and PDFs "
+                "and file names holding names from it are not held back.")
+    if ctx.names_list == "unusable":
+        return ("The project's list of names cannot be used as it stands "
+                "(what stops the import says why), so nothing is imported "
+                "until it is corrected. Meanwhile every file and folder "
+                "whose name may hold a name from it is shown by its "
+                "position only.")
     return (f"The project's list of names ({ctx.names_list_entries} "
             f"entries) is applied to the text as it comes in (never to "
             f"PDFs, nor to the originals).")

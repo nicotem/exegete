@@ -202,19 +202,32 @@ class Archive:
 # alone and holds back every other file, with steps to save it as UTF-8
 # (a named departure): a guess can read accented letters as others, and
 # a name from the list written with other letters is not replaced.
+#
+# A file saved as UTF-16 or UTF-32 without the byte-order mark that names
+# it can be valid UTF-8 too, byte for byte: each letter of Latin, Greek or
+# Cyrillic script, and each space, comes with one zero byte (UTF-16) or
+# three (UTF-32), which UTF-8 reads as the NUL character. QualCoder stores
+# that text ("M\0a\0r\0i\0a"), and a listed name in it is not replaced.
+# No text saved as UTF-8 holds a NUL, so a file whose text holds one is
+# held back with the same steps (`nul_characters`, a named departure);
+# nothing is guessed.
 
 
 def decode_utf8(raw: bytes) -> Tuple[str, str]:
     """(text, character set) for a plain text file, as QualCoder's first
     two steps decode it: UTF-8 with a byte-order mark, then UTF-8. Any
-    other file is refused (`not_utf8`); nothing is guessed."""
+    other file is refused (`not_utf8`), and so is one whose text holds a
+    NUL character (`nul_characters`); nothing is guessed."""
     if not raw:
         return "", "empty"
     for name in ("utf-8-sig", "utf-8"):
         try:
-            return raw.decode(name), name
+            text = raw.decode(name)
         except UnicodeDecodeError:
-            pass
+            continue
+        if "\x00" in text:
+            raise ReadRefused("nul_characters")
+        return text, name
     raise ReadRefused("not_utf8")
 
 
@@ -324,11 +337,16 @@ def read_web_page(raw: bytes, departures=None,
     (`not_utf8_web`), never read by its declaration or a guess (a named
     departure: QualCoder keeps the bytes that are not UTF-8 as escapes,
     and its import fails when its text holds any; a declaration can be
-    wrong)."""
+    wrong). A page whose text holds a NUL character, the sign of UTF-16
+    or UTF-32 without its byte-order mark, is refused too
+    (`nul_characters_web`): read as UTF-8, its markup would be stored as
+    its text and a listed name in it would not be replaced."""
     try:
         decoded = raw.decode("utf-8")
     except UnicodeDecodeError:
         raise ReadRefused("not_utf8_web") from None
+    if "\x00" in decoded:
+        raise ReadRefused("nul_characters_web")
     return (web_page_text(_universal_newlines(decoded), departures, seen),
             "utf-8")
 
@@ -548,14 +566,52 @@ MC_NS = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
 _BREAK = None      # a line break, in a paragraph's pieces
 
 
-def _word_walk(root, departures, inside_paragraph):
+_DRAWING_TAGS = frozenset((W_NS + "drawing", W_NS + "pict",
+                           W_NS + "txbxContent"))
+
+
+def _first_forms(root) -> set:
+    """The mc:AlternateContent blocks in `root` of which only the first
+    form is read (word_text_boxes), by id: those holding a drawing, such
+    as a text box, which Word stores in two forms, and those whose first
+    form holds text of its own. A block whose text is only in its other
+    forms (an emoji Word writes as an extension element, w16se:symEx,
+    with the character itself as the fallback) is read whole, as
+    QualCoder reads it. One pass over the tree, and each element marked
+    at most once, however deep the blocks are nested."""
+    parent = {}
+    for element in root.iter():
+        for child in element:
+            parent[child] = element
+    drawing: set = set()
+    text: set = set()
+
+    def mark(element, marked):
+        while element is not None and id(element) not in marked:
+            marked.add(id(element))
+            element = parent.get(element)
+
+    for element in root.iter():
+        if element.tag in _DRAWING_TAGS:
+            mark(element, drawing)
+        elif element.tag == W_NS + "t" and element.text:
+            mark(element, text)
+    firsts = set()
+    for block in root.iter(MC_NS + "AlternateContent"):
+        choices = [c for c in block if c.tag == MC_NS + "Choice"]
+        if choices and (id(block) in drawing or id(choices[0]) in text):
+            firsts.add(id(block))
+    return firsts
+
+
+def _word_walk(root, departures, inside_paragraph, firsts=frozenset()):
     """root.iter(), in the same order, less what the departures leave
     out: deleted and moved-away text (word_tracked_changes); inside a
     paragraph, its properties, where tab stops are defined
     (word_tab_stops), and the text boxes it holds, whose paragraphs the
     walk reaches on their own (word_text_boxes); and, of the two forms
     Word stores for a drawing such as a text box, all but the first
-    (word_text_boxes)."""
+    (word_text_boxes; `firsts`, from `_first_forms`, names the blocks)."""
     pruned = set()
     if "word_tracked_changes" in departures:
         pruned.update((W_NS + "moveFrom", W_NS + "del"))
@@ -570,10 +626,10 @@ def _word_walk(root, departures, inside_paragraph):
         element = stack.pop()
         yield element
         children = list(element)
-        if one_form and element.tag == MC_NS + "AlternateContent":
-            choices = [c for c in children if c.tag == MC_NS + "Choice"]
-            if choices:
-                children = choices[:1]
+        if (one_form and element.tag == MC_NS + "AlternateContent"
+                and id(element) in firsts):
+            children = [c for c in children
+                        if c.tag == MC_NS + "Choice"][:1]
         stack.extend(reversed([c for c in children
                                if c.tag not in pruned]))
 
@@ -582,9 +638,11 @@ def getdocumenttext(document, departures=AS_QUALCODER, counts=None):
     """ Return the raw text of a document, as a list of paragraphs. """
 
     paratextlist = []
+    firsts = (_first_forms(document) if "word_text_boxes" in departures
+              else frozenset())
     # Compile a list of all paragraph (p) elements
     paralist = []
-    for element in _word_walk(document, departures, False):
+    for element in _word_walk(document, departures, False, firsts):
         # Find p (paragraph) elements
         if element.tag == W_NS + 'p':
             paralist.append(element)
@@ -596,7 +654,7 @@ def getdocumenttext(document, departures=AS_QUALCODER, counts=None):
     for para in paralist:
         pieces = []
         # Loop through each paragraph
-        for element in _word_walk(para, departures, True):
+        for element in _word_walk(para, departures, True, firsts):
             # Find t (text) elements
             if element.tag == W_NS + 't':
                 if element.text:
@@ -668,14 +726,37 @@ def _part_number(name: str) -> int:
     return int(digits) if digits else 0
 
 
+def _references_in_deleted_text(document) -> Dict[str, set]:
+    """The notes and comments referred to from text deleted or moved away
+    with tracked changes, by the reference's tag: one pass, forwards."""
+    found: Dict[str, set] = {}
+    removed = (W_NS + "del", W_NS + "moveFrom")
+    stack = [(document, False)]
+    while stack:
+        element, deleted = stack.pop()
+        deleted = deleted or element.tag in removed
+        if deleted and element.tag.startswith(W_NS) \
+                and element.tag.endswith("Reference"):
+            found.setdefault(element.tag[len(W_NS):], set()).add(
+                element.get(W_NS + "id"))
+        stack.extend((child, deleted) for child in element)
+    return found
+
+
 def _word_notes(archive: Archive, document, departures) -> List[str]:
     """What QualCoder leaves out of a Word file, in this order, each
     labelled: footnotes, endnotes and comments, numbered in the order
     the document refers to them (those it does not refer to after);
     then each header and footer whose text is not an earlier one's.
-    A comment's author and date are left out."""
+    A comment's author and date are left out. With tracked changes read
+    as accepted (word_tracked_changes), a note or comment referred to
+    only from deleted or moved-away text goes with that text."""
     referred: Dict[str, List[str]] = {}
-    for element in _word_walk(document, departures, False):
+    deleted = (_references_in_deleted_text(document)
+               if "word_tracked_changes" in departures else {})
+    firsts = (_first_forms(document) if "word_text_boxes" in departures
+              else frozenset())
+    for element in _word_walk(document, departures, False, firsts):
         tag = element.tag[len(W_NS):] if element.tag.startswith(W_NS) \
             else ""
         if tag.endswith("Reference"):
@@ -695,7 +776,8 @@ def _word_notes(archive: Archive, document, departures) -> List[str]:
             notes.setdefault(note.get(W_NS + "id"), text.strip(" \t"))
         order = [i for i in dict.fromkeys(referred.get(reference, []))
                  if i in notes]
-        order += [i for i in notes if i not in order]
+        gone = deleted.get(reference, set()) - set(order)
+        order += [i for i in notes if i not in order and i not in gone]
         for number, note_id in enumerate(order, 1):
             if notes[note_id]:
                 items.append(f"{label} {number}: {notes[note_id]}")
@@ -819,7 +901,8 @@ _ODT_REFERENCE = re.compile(
     r"&(#[0-9]{1,7}|#[xX][0-9A-Fa-f]{1,6}|apos|quot|gt|lt|amp);")
 _ODT_NAMED = {"apos": "'", "quot": '"', "gt": ">", "lt": "<", "amp": "&"}
 _ODT_ANNOTATION = re.compile(r"<(office:annotation)(\s[^>]*)?>")
-_ODT_COMMENT_META = re.compile(r"<(dc:creator|dc:date|meta:date-string)"
+_ODT_COMMENT_META = re.compile(r"<(dc:creator|dc:date|meta:date-string|"
+                               r"meta:creator-initials)"
                                r"(\s[^>]*)?>")
 _ODT_NOTE = re.compile(r"<(text:note)(\s[^>]*)?>")
 _ODT_NOTE_BODY = re.compile(
@@ -1107,6 +1190,53 @@ def read_opendocument(raw: bytes, departures=None
 # under EbookLib, reads UTF-32 as well as UTF-8 and UTF-16).
 _ENTITY_MARKERS = tuple("<!ENTITY".encode(name) for name in (
     "utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"))
+# A part declaring a character set that writes the declaration above in
+# other bytes (UTF-7, iconv's JAVA form, EBCDIC), or starting as EBCDIC
+# or as UCS-4 in an unusual byte order, which the parser detects by
+# itself, could hide an entity declaration from the markers; such a part
+# refuses the book (`epub_character_set`). EPUB allows UTF-8 and UTF-16
+# only; a part declaring a set that writes ASCII as ASCII (ISO 8859-1,
+# say) is read as before.
+_XML_ENCODING = re.compile(
+    r"\A\s*<\?xml\s[^>]{0,200}?encoding\s*=\s*[\"']([^\"'>]{0,40})[\"']")
+_UNICODE_SETS = frozenset(("utf8", "utf16", "utf16le", "utf16be", "utf32",
+                           "utf32le", "utf32be"))
+_OTHER_XML_STARTS = (b"\x4c\x6f\xa7\x94", b"\x00\x00\x3c\x00",
+                     b"\x00\x3c\x00\x00")
+
+
+def _hides_the_markers(name: str) -> bool:
+    """Whether a declared character set can write the entity declaration
+    in bytes other than the markers': one that writes characters as
+    escapes or in base 64 (UTF-7, iconv's JAVA and C99 forms), one that
+    writes ASCII in other bytes (EBCDIC), and any set Python does not
+    know."""
+    key = re.sub(r"[^a-z0-9]", "", name.lower())
+    if key in _UNICODE_SETS:
+        return False
+    if any(form in key for form in ("utf7", "java", "c99", "cxx")):
+        return True
+    try:
+        return ("<!ENTITY".encode(name.strip()) != b"<!ENTITY"
+                or b"<!ENTITY".decode(name.strip()) != "<!ENTITY")
+    except Exception:
+        return True
+
+
+def _declares_another_set(data: bytes) -> bool:
+    """Whether an EPUB part starts as EBCDIC or as UCS-4 in an unusual
+    byte order, or its XML declaration (read in UTF-8, UTF-16 or UTF-32)
+    names a set that hides the markers."""
+    head = data[:1024]
+    if head.startswith(_OTHER_XML_STARTS):
+        return True
+    for codec in ("utf-8", "utf-16-le", "utf-16-be", "utf-32-le",
+                  "utf-32-be"):
+        found = _XML_ENCODING.match(
+            head.decode(codec, "ignore").lstrip(BOM))
+        if found and _hides_the_markers(found.group(1)):
+            return True
+    return False
 
 
 def _counted_epub_reader(epub, archive: "Archive"):
@@ -1122,6 +1252,8 @@ def _counted_epub_reader(epub, archive: "Archive"):
             data = archive.read(posixpath.normpath(name))
             if any(marker in data for marker in _ENTITY_MARKERS):
                 raise ReadRefused("xml_entities")
+            if _declares_another_set(data):
+                raise ReadRefused("epub_character_set")
             return data
 
     return CountedReader
@@ -1289,12 +1421,66 @@ def pdf_notes_memo(notes: List[Dict[str, Any]]) -> str:
 # Signs read in the text itself
 # ---------------------------------------------------------------------------
 
-# A wrong character set: UTF-8's two-byte forms read as Windows Western
-# or Latin-1 ("Ã©" for "é", "â€™" for "’"), or the replacement character.
+# A wrong character set, in any script: UTF-8 read once as Windows
+# Western or Latin-1 and saved again ("Ã©" for "é", "Ä…" for "ą", "Ð˜"
+# for "И", "â€™" for "’"), or the replacement character. A character UTF-8
+# writes in two bytes, read that way, becomes the lead byte's letter (Â to
+# Û) and one of the 64 characters a following byte (0x80 to 0xBF) reads
+# as; three bytes, a letter from à to ï and two of those; four, one from ð
+# to ô and three. A C1 control (U+0080 to U+009F) is a sign on its own:
+# no text typed and saved as UTF-8 holds one.
+#
+# Wide on purpose, so that Polish, Czech, Turkish, Greek, Russian, Hebrew,
+# Arabic and Asian names are caught as well as Western ones; narrowed
+# where correct text writes the same pairs. The lead letters left out
+# (É, Ê, Ë, Í, Ü, Ý, Þ, ß) end words in correct text and would only ever
+# stand for garbled phonetic signs or the Syriac, Thaana and N'Ko
+# scripts. A following character that correct text writes after a word
+# (a closing quotation mark, a dash, an ellipsis, a no-break space, a
+# superscript number: "IRMÃ»" in Portuguese, "PÅ…" in Swedish,
+# "MALMÖ–LUND") is a sign only when a letter other than a capital A to Z
+# follows it, as one does inside a garbled word ("WÄ…sik"); a garbled
+# letter at a word's end in one of those forms is missed, and is rarely
+# alone in a file. A closing «
+# (Danish and German quotation marks, »PÅ«) is such a character too, but
+# never after Ã, where it is a garbled ë ("ZoÃ«").
+_AFTER_BYTE = ("\u0080-\u00bf"                    # Latin-1, 0x80 to 0xBF
+               # Windows Western, 0x80 to 0x9F
+               "\u20ac\u201a\u0192\u201e\u2026\u2020\u2021\u02c6\u2030"
+               "\u0160\u2039\u0152\u017d\u2018\u2019\u201c\u201d\u2022"
+               "\u2013\u2014\u02dc\u2122\u0161\u203a\u0153\u017e\u0178")
+_AFTER_A_WORD = ("\u00a0\u00bb\u00b9\u00b3\u00ae\u00b4\u00b0\u00b7"
+                 "\u2019\u201d\u201c\u2018\u203a\u2039\u2026\u2013")
+
+
+def _garbled_classes(after_a_word: str) -> Tuple[str, str]:
+    """(strict, loose): a following character that is a sign by itself,
+    and one that is a sign only before a letter."""
+    return ("(?:(?![" + after_a_word + "])[" + _AFTER_BYTE + "])",
+            "[" + after_a_word + "]")
+
+
+_STRICT_A, _LOOSE_A = _garbled_classes(_AFTER_A_WORD)
+_STRICT, _LOOSE = _garbled_classes(_AFTER_A_WORD + "\u00ab")
+_ANY = "[" + _AFTER_BYTE + "]"
+_LETTER = r"(?=[^\W\d_A-Z])"
 _GARBLED = re.compile(
     "\ufffd"
-    "|[\u00c2\u00c3][\u0080-\u00bf\u0152\u0153\u0160\u0161\u0178\u017d\u017e\u0192\u02c6\u02dc\u2013\u2014\u2018\u2019\u201a\u201c\u201d\u201e\u2020\u2021\u2022\u2026\u2030\u2039\u203a\u20ac\u2122]"
-    "|\u00e2\u20ac[\u0080-\u00bf\u2122\u0153\u0161\u017e\u02dc\u201c\u201d\u2019\u2018\u201a\u201e\u2020\u2021\u2022\u2026\u2030\u2039\u203a\u00a6\u00a2\u00a1\u00a0\u00b9\u00a8\u00a9\u00ae\u00b0\u00b1\u00b3]")
+    # Two bytes: Western (Ã), Latin-1's own signs (Â), Central European
+    # (Ä, Å), Latin Extended-B (Æ, Ç, È), combining accents (Ì), Greek
+    # (Î, Ï), Cyrillic (Ð to Ô), Armenian (Õ, Ö), Hebrew (×), Arabic
+    # (Ø to Û).
+    "|\u00c3(?:" + _STRICT_A + "|" + _LOOSE_A + _LETTER + ")"
+    "|[\u00c2\u00c4-\u00c8\u00cc\u00ce-\u00db](?:" + _STRICT + "|" + _LOOSE
+    + _LETTER + ")"
+    # Three bytes (Asian and Indic scripts, punctuation such as "’")
+    "|[\u00e0-\u00ef](?:" + _STRICT + _ANY + "|" + _LOOSE + _STRICT + "|"
+    + _LOOSE + _LOOSE + _LETTER + ")"
+    # Four bytes (emoji)
+    "|[\u00f0-\u00f4](?:" + _STRICT + _ANY + _ANY + "|" + _LOOSE + _STRICT
+    + _ANY + "|" + _LOOSE + _LOOSE + _STRICT + "|" + _LOOSE + _LOOSE
+    + _LOOSE + _LETTER + ")"
+    "|[\u0080-\u009f]")
 _SURROGATE = re.compile("[\ud800-\udfff]")
 _INVISIBLE = re.compile("[\u0000-\u0008\u000b-\u001f\u007f-\u009f]")
 _GRID_RULE = re.compile(r"^[ \t]*\+(?:[-=:]+\+){1,}[ \t]*$", re.M)

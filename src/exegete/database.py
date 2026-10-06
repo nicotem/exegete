@@ -1223,7 +1223,7 @@ PDF_HEADER_WINDOW = 1024
 PDF_PROBLEM_MESSAGES = {
     PDF_NO_TEXT_LAYER: (
         "This PDF has no text layer (a scanned PDF, or pages that are "
-        "images): QualCoder stored no text for it, so there is nothing "
+        "images): no text was stored for it, so there is nothing "
         "here to read, search or code as text. QualCoder can code it only "
         "by drawing regions in its PDF view. To code its words, run OCR "
         "on the PDF outside this server (this server bundles none) and "

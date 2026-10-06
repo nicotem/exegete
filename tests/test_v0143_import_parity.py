@@ -65,6 +65,11 @@ DEPARTURES = {
     "cp1252_declared.html": {"held": "not_utf8_web"},
     "cp1252_plain.html": {"held": "not_utf8_web"},
     "cp1252_in_comment.html": {"held": "not_utf8_web"},
+    # Text holding a NUL character, the sign of UTF-16 or UTF-32 saved
+    # without its byte-order mark (valid UTF-8 byte for byte, a NUL beside
+    # each letter, so a listed name in it is not replaced): QualCoder
+    # stores it as read; Exegete holds it back, with the same steps.
+    "nul_chars.txt": {"held": "nul_characters"},
     # An OpenDocument file not saved by LibreOffice: QualCoder finds no
     # text and stores the raw archive; Exegete reads it.
     "no_sequence_decls.odt": {"text": "Text QualCoder cannot find.\n\n",

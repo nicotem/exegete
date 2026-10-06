@@ -82,10 +82,9 @@ your own browser, and read-only copies of the documents it opens for
 you. They are copies: deleting them changes nothing in any project, and
 you can delete this whole folder at any time.
 
-Exegete also deletes them itself: a page showing a document's text
-before it is imported, once the import is done or after an hour; a
-file's page and copy, when Exegete changes that file's text or name;
-everything here, a week after it was written.
+Exegete also deletes them itself: a file's page and copy, when Exegete
+changes that file's text or name; everything here, a week after it was
+written.
 
 This folder is not synced and is not indexed by the computer's search.
 A page holds a whole file's text: to keep one, save it elsewhere from

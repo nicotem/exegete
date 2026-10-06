@@ -9837,6 +9837,9 @@ def import_text_file(
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
                 committed = True
+                # A new file can take the id of one deleted in QualCoder:
+                # no page written for that file stands for this one.
+                _forget_reading_copies([result["id"]])
             except DatabaseLockedError as e:
                 # The same two post-backup routes as `_perform_write`'s,
                 # answered here so the backup is named (v0.13 A5, QA
@@ -9922,27 +9925,60 @@ def _import_owner_stop() -> Optional[str]:
 
 
 def _import_names_list(apply: bool, folder: Path):
-    """(state, entries, compiled, canonical, stop) for the project's names
-    list. An empty list counts as none, as in QualCoder; a list the engine
-    cannot use stops the import, and turning pseudonyms off is never
-    offered as the way round."""
+    """(state, entries, compiled, canonical, stop, name_check) for the
+    project's names list. An empty list counts as none, as in QualCoder; a
+    list the engine cannot use stops the import, and turning pseudonyms
+    off is never offered as the way round. Such a list still holds names
+    (QualCoder's Pseudonyms dialog saves a name with a space at its end,
+    a pseudonym with an emoji, or a chain, which Exegete refuses), so its
+    names are read for the file-name check alone (`name_check`), and when
+    none can be read every name is hidden: the preview of an import the
+    list stops shows no listed name either."""
     if not apply:
-        return "off", 0, None, None, None
+        return "off", 0, None, None, None, None
     if not os.path.lexists(str(folder / PSEUDONYMS_JSON_NAME)):
-        return "none", 0, None, None, None
+        return "none", 0, None, None, None, None
+    entries = None
     try:
         entries, _encoding = read_project_pseudonyms(folder)
         if not entries:
-            return "empty", 0, None, None, None
+            return "empty", 0, None, None, None, None
         validated = pseudo.validate_mapping(entries, "exact",
                                             may_echo_names=False)
     except FileNotFoundError:
-        return "none", 0, None, None, None
+        return "none", 0, None, None, None, None
     except (ValueError, OSError, RuntimeError) as e:
-        return "none", 0, None, None, _pseudonyms_json_error(
-            e, IMPORT_DOCUMENTS_ADVICE_NAMES)
+        return ("unusable", 0, None, None,
+                _pseudonyms_json_error(e, IMPORT_DOCUMENTS_ADVICE_NAMES),
+                _unusable_names_check(entries))
     return ("entries", len(validated.entries), pseudo.Compiled(validated),
-            pseudo.canonical_mapping(validated), None)
+            pseudo.canonical_mapping(validated), None, None)
+
+
+def _unusable_names_check(entries):
+    """What file and folder names are checked against when the names list
+    cannot be used: the names in it, each trimmed, that can be read as
+    names (originals and variants of at least the list's shortest), or,
+    when there are none, every name."""
+    forms = []
+    for entry in entries if isinstance(entries, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        values = [entry.get("original")]
+        variants = entry.get("variants")
+        if isinstance(variants, list):
+            values += variants
+        for value in values:
+            if isinstance(value, str):
+                value = value.strip()
+                if len(value) >= pseudo.MIN_ORIGINAL_CHARS:
+                    forms.append(value)
+    if forms:
+        try:
+            return doc_import.OriginalsOnly(forms)
+        except Exception:
+            pass
+    return doc_import.EveryName()
 
 
 def _optional_formats_available() -> frozenset:
@@ -9970,8 +10006,8 @@ def _reading_folder_root() -> Optional[Path]:
 def _import_context(project_folder: Path, apply_pseudonyms: bool,
                     pdfs_with_names: bool, file_names_with_names: bool,
                     memo: str):
-    state, count, compiled, canonical, names_stop = _import_names_list(
-        apply_pseudonyms, project_folder)
+    (state, count, compiled, canonical, names_stop,
+     name_check) = _import_names_list(apply_pseudonyms, project_folder)
     db = get_db()
     rows = db.conn.execute("SELECT name, mediapath FROM source").fetchall()
     caps = getattr(db, "capabilities", None)
@@ -9984,7 +10020,8 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
             ("state_folder", preview_tokens_state_home()),
             ("state_folder", preview_tokens_old_state_home()),
             ("reading_folder", _reading_folder_root())],
-        compiled=compiled, names_list=state, names_list_entries=count,
+        compiled=compiled, name_check=name_check, names_list=state,
+        names_list_entries=count,
         names_list_canonical=canonical,
         optional_available=_optional_formats_available(),
         # A project QualCoder 4.0 has not opened: no sub-codes column
@@ -10240,6 +10277,11 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                 write_db.conn.commit()
                 committed = True
                 doc_import.forget_outcomes(preview_token)
+                # QualCoder gives a new file the highest id plus one, so
+                # an id can be one a file deleted in QualCoder had: a page
+                # written for that file must not stand for the new one.
+                _forget_reading_copies([item.numbers["file_id"]
+                                        for item in taken])
             except doc_import.BatchFailed as e:
                 failure = doc_import.BATCH_FAILURES.get(
                     e.code, doc_import.BATCH_FAILURES["not_copied"])

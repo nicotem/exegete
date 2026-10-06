@@ -15,6 +15,7 @@ import json
 import os
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -237,8 +238,12 @@ class TestTheRulesInDetail:
             "ACommented.\nComment 1: Note.\n"
 
     def test_rtf_binary_data_is_stepped_over(self):
-        data = (rb"{\rtf1\ansi Before {\*\objdata \bin4 {}{}}after."
-                rb"{\*\footnote Note.}\par}")
+        """Bytes after \\binN are data, even when they look like a
+        footnote's group."""
+        fake = rb"{\*\footnote X}"
+        data = (rb"{\rtf1\ansi Before {\*\objdata \bin"
+                + str(len(fake)).encode() + b" " + fake
+                + rb"}after.{\*\footnote Note.}\par}")
         assert _text(doc_readers.RTF, data) == \
             "Before after.\nFootnote 1: Note.\n"
 
@@ -269,3 +274,50 @@ def test_the_converted_documents_topic_says_what_exegete_does_now():
     assert "Exegete refuses it" not in said
     assert "both programs store the same text" not in said
     assert "finds no text in a pandoc-made .odt" in said
+
+
+class TestHostileFilesStayCheap:
+    """The readers' own scans go forwards only: a file of openings with
+    no closing, or of many small parts, costs one pass, not one pass per
+    opening (the reading process's time limit is the last guard, not the
+    first)."""
+
+    def _quick(self, read):
+        start = time.perf_counter()
+        result = read()
+        assert time.perf_counter() - start < 2
+        return result
+
+    def test_opendocument_openings_with_no_closing(self):
+        for opening in ("<office:annotation>", '<text:note text:id="n">',
+                        "<svg:title>"):
+            body = "<text:p>a" + opening * 20000 + "b</text:p>"
+            data = import_fixtures.odt(import_fixtures._content(body))
+            assert self._quick(lambda: _text(
+                doc_readers.OPENDOCUMENT, data)) == "ab\n\n"
+
+    def test_opendocument_declarations_with_no_closing(self):
+        content = (
+            '<?xml version="1.0"?><office:document-content '
+            'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"'
+            ' xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
+            "<office:body><office:text>" + "<office:forms>" * 20000
+            + "<text:p>Words.</text:p></office:text></office:body>"
+            "</office:document-content>").encode("utf-8")
+        self._quick(lambda: _text(doc_readers.OPENDOCUMENT,
+                                  import_fixtures.odt(content)))
+
+    def test_opendocument_headers_with_no_closing(self):
+        styles = ("<office:master-styles>" + "<style:header>" * 20000
+                  + "</office:master-styles>").encode("utf-8")
+        data = import_fixtures._zip({
+            "mimetype": b"application/vnd.oasis.opendocument.text",
+            "content.xml": import_fixtures._content("<text:p>W.</text:p>"),
+            "styles.xml": styles})
+        assert self._quick(lambda: _text(
+            doc_readers.OPENDOCUMENT, data)) == "W.\n\n"
+
+    def test_a_web_page_of_many_spaces_then_blocks(self):
+        page = ("<html><body>" + "<b> </b>" * 20000 + "<div></div>" * 20000
+                + "Last.</body></html>").encode("utf-8")
+        self._quick(lambda: _text(doc_readers.WEB, page))

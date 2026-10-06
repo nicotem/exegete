@@ -1,16 +1,17 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Reading a document's text the way QualCoder 4.0 reads it (0.14.3,
-provisional).
+"""Reading a document's text the way QualCoder 4.0 reads it, and better
+where QualCoder's readers lose or garble content (0.14.3, provisional).
 
 Each function here takes the file's bytes, never a path, and gives the
-text QualCoder's own import would store for it, with the warning codes
-the import's preview turns into plain words. The rules are QualCoder
-4.0's, at the pinned commit 9bddf17 (src/qualcoder/manage_files.py
-unless another file is named); the departures are named where they are
-made, and in TOOLS.md. A document is read by `read_document`, called
-only inside the reading process (import_reading), never in the server.
-The server uses this module's names and small helpers only, and reads
-no document itself. Plain text and web pages are read as UTF-8 alone:
+text Exegete stores for it, with the warning codes the import's preview
+turns into plain words. The rules are QualCoder 4.0's, at the pinned
+commit 9bddf17 (src/qualcoder/manage_files.py unless another file is
+named), with the named departures (DEPARTURES, each a switch: given
+none, a reader's text is QualCoder's); the other departures are named
+where they are made, and all are in TOOLS.md. A document is read by
+`read_document`, called only inside the reading process
+(import_reading), never in the server. The server uses this module's
+names and small helpers only, and reads no document itself. Plain text and web pages are read as UTF-8 alone:
 nothing is guessed (the owner's decision of 6 October 2026).
 
 Nothing here touches the disk or the network. A refusal is a
@@ -258,21 +259,24 @@ class _WebPageText(HTMLParser):
         self.hidden = False
         self.blocks = "web_blocks" in departures
         self.added = 0
+        # Whether the text so far ends a line, spaces aside (or is
+        # empty), kept as it grows, so a block's check costs nothing.
+        self.at_line_start = True
+
+    def _add(self, part: str) -> None:
+        self.parts.append(part)
+        kept = part.rstrip(" ")
+        if kept:
+            self.at_line_start = kept.endswith("\n")
 
     def _line(self):
-        if self.hidden:
-            return
-        for part in reversed(self.parts):
-            kept = part.rstrip(" ")
-            if kept:
-                if not kept.endswith("\n"):
-                    self.parts.append("\n")
-                    self.added += 1
-                return
+        if not self.hidden and not self.at_line_start:
+            self._add("\n")
+            self.added += 1
 
     def handle_starttag(self, tag, attrs):
         if tag in self._NEW_LINE and not self.hidden:
-            self.parts.append("\n")
+            self._add("\n")
         elif tag in ("script", "style"):
             self.hidden = True
         elif self.blocks and tag in _BLOCKS:
@@ -280,13 +284,13 @@ class _WebPageText(HTMLParser):
 
     def handle_startendtag(self, tag, attrs):
         if tag == "br":
-            self.parts.append("\n")
+            self._add("\n")
         elif self.blocks and tag in _BLOCKS:
             self._line()
 
     def handle_endtag(self, tag):
         if tag == "p":
-            self.parts.append("\n")
+            self._add("\n")
         elif tag in ("script", "style"):
             self.hidden = False
         elif self.blocks and tag in _BLOCKS:
@@ -294,7 +298,7 @@ class _WebPageText(HTMLParser):
 
     def handle_data(self, data):
         if data and not self.hidden:
-            self.parts.append(re.sub(r"\s+", " ", data))
+            self._add(re.sub(r"\s+", " ", data))
 
 
 def web_page_text(markup: str, departures=None,
@@ -809,30 +813,57 @@ _ODT_SPACE_COUNT = re.compile(r"""text:c\s*=\s*["'](\d{1,9})["']""")
 # file could ask for billions.
 _ODT_MAX_SPACES = 100
 _ODT_TEXT_BOX = re.compile(r"<draw:text-box(?=[\s/>])")
-_ODT_DESCRIPTION = re.compile(
-    r"<(svg:title|svg:desc)(?:\s[^>]*)?>.*?</\1>", re.S)
+_ODT_DESCRIPTION = re.compile(r"<(svg:title|svg:desc)(\s[^>]*)?>")
 _ODT_ANY_TAG = re.compile(r"<[^>]*>")
 _ODT_REFERENCE = re.compile(
     r"&(#[0-9]{1,7}|#[xX][0-9A-Fa-f]{1,6}|apos|quot|gt|lt|amp);")
 _ODT_NAMED = {"apos": "'", "quot": '"', "gt": ">", "lt": "<", "amp": "&"}
-_ODT_ANNOTATION = re.compile(
-    r"<office:annotation(?:\s[^>]*)?>(.*?)</office:annotation>", re.S)
-_ODT_COMMENT_META = re.compile(
-    r"<(dc:creator|dc:date|meta:date-string)(?:\s[^>]*)?>.*?</\1>", re.S)
-_ODT_NOTE = re.compile(r"<text:note(\s[^>]*)?>(.*?)</text:note>", re.S)
+_ODT_ANNOTATION = re.compile(r"<(office:annotation)(\s[^>]*)?>")
+_ODT_COMMENT_META = re.compile(r"<(dc:creator|dc:date|meta:date-string)"
+                               r"(\s[^>]*)?>")
+_ODT_NOTE = re.compile(r"<(text:note)(\s[^>]*)?>")
 _ODT_NOTE_BODY = re.compile(
     r"<text:note-body(?:\s[^>]*)?>(.*)</text:note-body>", re.S)
 _ODT_HEADER_FOOTER = re.compile(
-    r"<style:((header|footer)(?:-left|-first)?)(\s[^>]*)?>(.*?)"
-    r"</style:\1>", re.S)
+    r"<(style:(header|footer)(?:-left|-first)?)(\s[^>]*)?>")
 # What an OpenDocument file not saved by LibreOffice holds before its
 # text (LibreOffice writes it before the part QualCoder starts after).
 _ODT_DECLARATIONS = re.compile(
     r"<(text:tracked-changes|text:variable-decls|text:sequence-decls|"
     r"text:user-field-decls|text:dde-connection-decls|office:forms|"
     r"table:calculation-settings|table:content-validations|"
-    r"table:label-ranges)(?:\s[^>]*?)?(?:/>|>.*?</\1>)", re.S)
+    r"table:label-ranges)(\s[^>]*)?>")
 _ODT_LAYOUT = re.compile(r">[ \t]*\r?\n\s*<")
+
+
+def _take_elements(data: str, opening: "re.Pattern", keep=None):
+    """`data` with each element `opening` finds taken out, up to the
+    first closing tag of its name after it (a self-closed one alone),
+    scanning forwards only, so a file of openings with no closing costs
+    one pass. `keep(match, inner)` is called with each element taken out
+    and its inner text; it gives what goes in the element's place, ""
+    when it gives nothing. An opening with no closing after it, and all
+    that follows, are left as they are."""
+    out: List[str] = []
+    at = 0
+    while True:
+        match = opening.search(data, at)
+        if match is None:
+            break
+        if match.group(0).endswith("/>"):
+            inner_end = end = match.end()
+        else:
+            close = f"</{match.group(1)}>"
+            inner_end = data.find(close, match.end())
+            if inner_end == -1:
+                break
+            end = inner_end + len(close)
+        out.append(data[at:match.start()])
+        if keep is not None:
+            out.append(keep(match, data[match.end():inner_end]) or "")
+        at = end
+    out.append(data[at:])
+    return "".join(out)
 
 
 def _free_marks(data: str, count: int) -> List[str]:
@@ -882,7 +913,11 @@ def _odt_steps(data: str, departures, marks, seen) -> str:
     data = step("odt_line_breaks", _ODT_LINE_BREAK, line_mark, data)
     data = step("odt_text_boxes", _ODT_TEXT_BOX,
                 box_mark + "<draw:text-box", data)
-    data = step("odt_markup", _ODT_DESCRIPTION, "", data)
+    if "odt_markup" in departures:
+        before = data
+        data = _take_elements(data, _ODT_DESCRIPTION)
+        if data != before and seen is not None:
+            seen["odt_markup"] = seen.get("odt_markup", 0) + 1
     for old, new in _ODT_REPLACEMENTS:
         data = data.replace(old, new)
     # A tag starting with one of the three prefixes is dropped up to the
@@ -959,8 +994,8 @@ def odt_recipe(content: bytes, departures=AS_QUALCODER,
         start = data.find(">", opening) + 1 if opening != -1 else -1
         if start <= 0 or start > end:
             return "", [], ""
-        data = _ODT_LAYOUT.sub("><", _ODT_DECLARATIONS.sub(
-            "", data[start:end])).strip()
+        data = _ODT_LAYOUT.sub("><", _take_elements(
+            data[start:end], _ODT_DECLARATIONS)).strip()
         if seen is not None:
             seen["odt_any_program"] = 1
     elif start == -1 or end == -1:
@@ -979,21 +1014,19 @@ def odt_recipe(content: bytes, departures=AS_QUALCODER,
                 fragment, departures, marks, None), marks[0]).strip(
                     "\n \t")
 
-        def take_comment(match):
+        def take_comment(match, inner):
             comments.append(note_text(
-                _ODT_COMMENT_META.sub("", match.group(1))))
-            return ""
+                _take_elements(inner, _ODT_COMMENT_META)))
 
-        def take_note(match):
-            body = _ODT_NOTE_BODY.search(match.group(2))
+        def take_note(match, inner):
+            body = _ODT_NOTE_BODY.search(inner)
             kind = (endnotes if re.search(
                 r"""text:note-class\s*=\s*["']endnote""",
-                match.group(1) or "") else footnotes)
+                match.group(2) or "") else footnotes)
             kind.append(note_text(body.group(1) if body else ""))
-            return ""
 
-        data = _ODT_ANNOTATION.sub(take_comment, data)
-        data = _ODT_NOTE.sub(take_note, data)
+        data = _take_elements(data, _ODT_ANNOTATION, take_comment)
+        data = _take_elements(data, _ODT_NOTE, take_note)
         for label, found in (("Footnote", footnotes),
                              ("Endnote", endnotes), ("Comment", comments)):
             notes += [f"{label} {number}: {text}"
@@ -1018,16 +1051,18 @@ def _odt_headers_footers(styles: Optional[bytes], departures) -> List[str]:
     if start == -1 or end == -1:
         return []
     found: Dict[str, List[str]] = {"header": [], "footer": []}
-    for match in _ODT_HEADER_FOOTER.finditer(data, start, end):
+
+    def take(match, inner):
         if re.search(r"""style:display\s*=\s*["']false""",
                      match.group(3) or ""):
-            continue
-        marks = _free_marks(match.group(4), 2)
-        text = _odt_paragraphs(_odt_steps(match.group(4), departures,
-                                          marks, None), marks[0]) \
-            .strip("\n \t")
+            return
+        marks = _free_marks(inner, 2)
+        text = _odt_paragraphs(_odt_steps(inner, departures, marks, None),
+                               marks[0]).strip("\n \t")
         if text and text not in found[match.group(2)]:
             found[match.group(2)].append(text)
+
+    _take_elements(data[start:end], _ODT_HEADER_FOOTER, take)
     return ([f"Header: {t}" for t in found["header"]]
             + [f"Footer: {t}" for t in found["footer"]])
 

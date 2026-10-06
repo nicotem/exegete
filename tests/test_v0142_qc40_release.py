@@ -79,9 +79,80 @@ def test_the_documents_name_the_release_as_verified():
             "through v17, up to QualCoder 4.0) are refused to protect the "
             "data") in install
     privacy = _flat("PRIVACY.md")
-    assert ("The QualCoder 4.0 behaviour described in this section and the "
-            "next two was verified against QualCoder 4.0, released on 2 "
-            "October 2026;") in privacy
+    assert ("What they say of QualCoder is verified against QualCoder 4.0, "
+            "released on 2 October 2026.") in privacy
+
+
+def test_privacy_says_what_its_verification_covers():
+    """QA round 1 of the QualCoder 4.0 round, major 1: PRIVACY's line
+    named the release as verified for everything its sections say of
+    QualCoder, but nobody had read QualCoder's own AI server again at the
+    release, and one of those statements was false there. The line now
+    names the sections it covers (it said "this section and the next
+    two", which had stopped matching them) and says what was checked at
+    the release and how."""
+    privacy = _read("PRIVACY.md")
+    note = _between(_flat("PRIVACY.md"), "This note covers three sections:",
+                    "The coder visibility section was also verified")
+    assert ("this one, \"Coder visibility\" and \"Backups, project copies, "
+            "and the `ai_data/` folder\" below.") in note
+    assert "this section and the next two" not in _flat("PRIVACY.md")
+    # the note sits in the memo section, and the two it names are
+    # headings further down
+    memo_section = _between(privacy, "## Keeping notes private from the AI",
+                            "\n## ")
+    assert "This note covers three sections:" in " ".join(memo_section.split())
+    headings = [line[3:] for line in privacy.splitlines()
+                if line.startswith("## ")]
+    here = next(i for i, h in enumerate(headings)
+                if h.startswith("Keeping notes private from the AI"))
+    for name in ("Coder visibility",
+                 "Backups, project copies, and the `ai_data/` folder"):
+        found = [i for i, h in enumerate(headings) if h.startswith(name)]
+        assert len(found) == 1 and found[0] > here, name
+    for words in (
+            "The code behind the private memo marker, the coder-visibility "
+            "table and its views, and QualCoder's backups is the same there "
+            "as in its development tree at commit 9bddf17 (25 August 2026), "
+            "where they were first checked, and the line numbers cited from "
+            "QualCoder's code are still that commit's.",
+            "What these sections say of QualCoder's own assistant and AI "
+            "server, whose code changed a good deal in the release, was read "
+            "again in the released code on 6 October 2026, and one statement "
+            "was corrected: what QualCoder's server answers about an "
+            "annotation (under \"Coder visibility\").",
+            "TOOLS.md, \"Supported QualCoder versions\", says what else was "
+            "checked at the release."):
+        assert words in note, words
+
+
+def test_privacy_tells_qualcoder_s_annotation_answer_as_it_is():
+    """QualCoder 4.0, tag 4.0: `annotations_update` answers with anid, fid,
+    pos0, pos1, memo, owner and date (ai_mcp_server.py:2324-2336) and
+    `annotations_delete` with anid, fid, pos0, pos1 and owner (:2370-2380);
+    its coding tools answer with ids, an update adding the public note and
+    the date (:2657-2667, :2986-2994). PRIVACY said
+    the override's ids-only answer was "as QualCoder's AI server does",
+    written when its development tree (9bddf17) had no annotation tools.
+    Exegete's own answer is pinned in test_qc40_visibility.py
+    (TestWriteEchoesRedactHiddenTargets)."""
+    writes = _between(_flat("PRIVACY.md"),
+                      "**Writes that target an existing row by id**",
+                      "The token-gated cascades")
+    assert "as QualCoder's AI server does" not in writes
+    for words in (
+            "With the override, the result echoes ids only (update_annotation "
+            "also echoes back the public note text the AI itself just "
+            "supplied), never the hidden coder's name, code, span or text.",
+            "QualCoder 4.0's own AI server answers the same way about a "
+            "coding but not about an annotation: its update and delete of an "
+            "annotation answer with the annotation's position and its "
+            "owner's name as well (`ai_mcp_server.py:2324-2336` and "
+            "`:2370-2380` at tag `4.0`).",
+            "This server keeps to ids there too, so that the override, which "
+            "is there to change a hidden coder's row, does not also tell the "
+            "conversation whose the row is or where it lies."):
+        assert words in writes, words
 
 
 def test_tools_says_what_the_full_re_check_found():

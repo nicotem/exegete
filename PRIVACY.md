@@ -486,16 +486,24 @@ convention, whichever QualCoder made the project:
 The private zone stays in your project database on disk; this
 convention controls only what enters the AI conversation through this
 server. An assistant that opens the database by itself reads every memo
-whole ("Assistants that open files by themselves", above). The QualCoder
-4.0 behaviour described in this section and the next two was verified
-against QualCoder 4.0, released on 2 October 2026; the line numbers
-cited from QualCoder's code are those of its development tree at
-commit 9bddf17 (25 August 2026), where the same behaviour was first
-checked (TOOLS.md, "Supported QualCoder versions", says what was
-checked again at the release). The coder
-visibility section was also verified against the 3.8.2 tag, which
-already creates the `coder_names` table, its `visibility` column and
-the four views (schema v14).
+whole ("Assistants that open files by themselves", above).
+
+This note covers three sections: this one, "Coder visibility" and
+"Backups, project copies, and the `ai_data/` folder" below. What they
+say of QualCoder is verified against QualCoder 4.0, released on
+2 October 2026. The code behind the private memo marker, the
+coder-visibility table and its views, and QualCoder's backups is the
+same there as in its development tree at commit 9bddf17 (25 August
+2026), where they were first checked, and the line numbers cited from
+QualCoder's code are still that commit's. What these sections say of
+QualCoder's own assistant and AI server, whose code changed a good deal
+in the release, was read again in the released code on 6 October 2026,
+and one statement was corrected: what QualCoder's server answers about
+an annotation (under "Coder visibility"). TOOLS.md, "Supported
+QualCoder versions", says what else was checked at the release. The
+coder visibility section was also verified against the 3.8.2 tag,
+which already creates the `coder_names` table, its `visibility` column
+and the four views (schema v14).
 
 ## Attribution: the AI coder name is yours to choose
 
@@ -582,9 +590,16 @@ project has the coder-visibility capability:
   REFUSE unless the caller passes `allow_hidden_coder=true`; the
   refusal says only that the row belongs to a coder currently hidden
   in QualCoder, never who or how many. With the override, the result
-  echoes ids only (as QualCoder's AI server does; update_annotation
-  also echoes back the public note text the AI itself just supplied),
-  never the hidden coder's name, code, span or text. The token-gated
+  echoes ids only (update_annotation also echoes back the public note
+  text the AI itself just supplied), never the hidden coder's name,
+  code, span or text. QualCoder 4.0's own AI server answers the same
+  way about a coding but not about an annotation: its update and
+  delete of an annotation answer with the annotation's position and
+  its owner's name as well (`ai_mcp_server.py:2324-2336` and
+  `:2370-2380` at tag `4.0`). This server keeps to ids there too, so
+  that the override, which is there to change a hidden coder's row,
+  does not also tell the conversation whose the row is or where it
+  lies. The token-gated
   cascades (delete_code, delete_category, merge_codes, merge_category)
   report in their preview how many affected codings belong to hidden
   coders, as a count, and name every OTHER owner whose codings the

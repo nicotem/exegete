@@ -416,6 +416,12 @@ advanced users.
   code, which TOOLS.md explains. The format tests' oracle was made again
   by 4.0's own New Project at the release tag; it differs from the one
   made at the August commit only in the date and the "about" line.
+  PRIVACY.md names the three sections its note on this covers and says
+  what was checked at the release. Reading QualCoder's own AI server
+  again there corrected one sentence: with the override, Exegete
+  answers about a hidden coder's annotation with ids only, where
+  QualCoder 4.0's own server also gives the annotation's position and
+  its owner's name (PRIVACY.md had said the two answer alike).
 - The paragraph on QualCoder's own MCP server (README and TOOLS.md)
   keeps the tone decided on 29 September and gains two facts: the
   server calls itself "qualcoder-mcp", Exegete's former name, and the

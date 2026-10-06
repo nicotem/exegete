@@ -9516,7 +9516,12 @@ class QualcoderDatabase:
         if not visible:
             # Hidden coder's row (coder visibility): echo ids plus the
             # public text the AI itself just supplied, never the row's
-            # owner, span or file name (S-MAJ; upstream echoes ids only)
+            # owner, span or file name (S-MAJ). A deliberate departure:
+            # QualCoder 4.0's own server answers an annotation's update
+            # and delete with its position and owner as well
+            # (ai_mcp_server.py:2324-2336, 2370-2380 at tag 4.0; the
+            # 9bddf17 pin had no annotation tools); PRIVACY.md, "Coder
+            # visibility", gives the reason
             result = {"annotation_id": existing["annotation_id"],
                       "file_id": existing["file_id"],
                       "memo": public_memo, "date": date_str,

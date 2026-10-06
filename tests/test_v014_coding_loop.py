@@ -93,6 +93,9 @@ def approve_and_apply(sid, guids):
 # A session file's timestamps run to the microsecond, and this one holds
 # the characters "0.95" (a CI run met it by chance on 6 October 2026)
 CLOCK_HOLDING_THE_NUMBER = datetime(2026, 10, 6, 13, 57, 10, 953421)
+# ...and this one "0.85", the number of a session from an earlier release
+# (a CI run met it by chance later the same day, at 22:17:10.852926)
+CLOCK_HOLDING_THE_OLD_NUMBER = datetime(2026, 10, 6, 22, 17, 10, 852926)
 
 
 def fix_the_clock(monkeypatch, moment):
@@ -233,8 +236,12 @@ class TestSessionsFromEarlierReleases:
         assert "**Reading:** not given (recorded before v0.14)" in out
         assert "0.85" not in out
 
+    @pytest.mark.parametrize("clock", [None, CLOCK_HOLDING_THE_OLD_NUMBER],
+                             ids=["real-clock", "clock-at-22-17-10-852926"])
     def test_it_applies_the_reason_alone_and_forgets_the_number(
-            self, setup_server, qualcoder_db_path):
+            self, setup_server, qualcoder_db_path, monkeypatch, clock):
+        if clock is not None:
+            fix_the_clock(monkeypatch, clock)
         sid, path = self._old_session(qualcoder_db_path)
         out = call("apply_codings", coding_session_id=sid,
                    create_backup=False)
@@ -244,7 +251,12 @@ class TestSessionsFromEarlierReleases:
         assert memo == "old reason"
         saved = path.read_text()
         assert "confidence" not in saved       # min_confidence included
-        assert "0.85" not in saved
+        # 0.85 as a value of its own, as for 0.95 above: the file's
+        # timestamps run to the microsecond, and one such as
+        # 22:17:10.852926 holds "0.85" too
+        assert not re.search(r"(?<![\d.])0\.85(?!\d)", saved)
+        if clock is not None:          # the time reached the file as set
+            assert "22:17:10.852926" in saved
 
     def test_memos_already_in_the_project_are_never_rewritten(
             self, setup_server, qualcoder_db_path):

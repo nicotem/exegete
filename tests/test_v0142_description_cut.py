@@ -502,8 +502,9 @@ WORDS = {
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to
 # keep: read_brief, the assistant's brief (tests/test_v0142_brief.py pins
-# its description)
-NEW_IN_0142 = {"read_brief"}
+# its description), and check_for_updates, the check for new versions
+# (pull request #11; tests/test_updates.py pins its rules, first)
+NEW_IN_0142 = {"read_brief", "check_for_updates"}
 
 
 def _fingerprint(description):

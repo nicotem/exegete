@@ -197,11 +197,20 @@ def _model_or_network_uses(source):
     return uses
 
 
+# The check for new versions (pull request #11, the owner's ruling 60 of
+# 6 October 2026) is the one module that reaches the network, for one
+# file, Exegete's version file, with the standard library; it imports no
+# model's client and asks no model
+NETWORK_MODULE = "src/exegete/updates.py"
+NETWORK_ONLY = ("socket", "ssl", "urllib.request")
+
+
 def test_it_has_no_ai_of_its_own():
     """"It has no AI of its own" (README, "How it works"): its one
     dependency is the MCP library, and nothing in its source imports a
-    model's client or a network library, or asks the host's model through
-    MCP's sampling call. The day that changes, this fails."""
+    model's client or asks the host's model through MCP's sampling call;
+    a network library only in the check for new versions, which the
+    README names. The day that changes, this fails."""
     with open(REPO / "pyproject.toml", "rb") as handle:
         dependencies = tomllib.load(handle)["project"]["dependencies"]
     assert [re.match(r"[A-Za-z0-9_.-]+", d).group(0) for d in dependencies] \
@@ -210,9 +219,17 @@ def test_it_has_no_ai_of_its_own():
     for path in sorted((REPO / "src").rglob("*.py")):
         uses = _model_or_network_uses(path.read_text(encoding="utf-8"))
         if uses:
-            found[str(path.relative_to(REPO))] = uses
+            found[str(path.relative_to(REPO)).replace("\\", "/")] = uses
+    network = found.pop(NETWORK_MODULE, [])
     assert found == {}
+    assert network and all(
+        any(name == m or name.startswith(m + ".") for m in NETWORK_ONLY)
+        for name in network), network
     assert "It has no AI of its own." in _readme()
+    assert ("All it sends itself is a request, at most once a week while "
+            "switched on, for a file that says whether a newer version "
+            "exists, with nothing from your projects") in " ".join(
+                _readme().split())
 
 
 def test_the_no_ai_check_would_notice():

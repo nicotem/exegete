@@ -15,10 +15,87 @@ v0.14.2: the assistant's brief, provisional; the rules a model must
 not miss within the 2,048 characters Claude Code shows of a tool
 description; fixes from the checks of 0.14.1; the README, rewritten
 to say plainly what Exegete does, for newcomers and for advanced
-users, and opening with the woven lockup; and QualCoder 4.0, released
-on 2 October 2026, named as what Exegete is verified against. 4.0
+users, and opening with the woven lockup; QualCoder 4.0, released
+on 2 October 2026, named as what Exegete is verified against (4.0
 keeps the project format Exegete already wrote, so only words
-changed, in the documents and in two messages.
+changed, in the documents and in two messages); and the check for new
+versions, which tells researchers when a new version is out and how
+to install it, though updates are still never installed by
+themselves.
+
+### Added: the check for new versions
+
+From pull request #11, with the code review's two findings fixed.
+
+- **New versions announced in the conversation.** While switched on,
+  Exegete fetches a small public file from its website (GitHub Pages,
+  `https://nicotem.github.io/exegete/latest.json`), at most once a
+  week on its own and at most once a day when asked, to learn whether a
+  newer version exists. The next successful tool answer after one is
+  found carries a note for the assistant to pass on, once per version,
+  as a field of the answer (`exegete_notice`), so that a host which
+  reads only a tool's structured content sees it too. The file holds
+  four values (a format number, the newest version, its date and
+  whether it is important) and no text: every sentence and every link
+  Exegete shows is its own. The request carries nothing from the
+  researcher's projects and is identified only as "Exegete". Every
+  failure (offline, a proxy, a certificate, a redirect, a malformed or
+  oversized file, no answer within eight seconds) ends as "could not
+  check" and one log line naming the kind of failure only.
+- **Where the note goes.** A note counts as given once it is added to
+  an answer, so it goes first in the answer, before the tool's own
+  text, and only into an answer of at most 20,000 characters (about
+  5,000 tokens): a host that cuts a long answer keeps its start, and a
+  short answer is read whole. A longer answer, such as a whole
+  transcript, leaves the note for the next shorter one.
+- **Told before anything connects.** In the desktop extension the new
+  setting "Tell me when a new version is out" is on unless switched
+  off. The first such answer after this version first starts carries
+  a note saying what the check sends and how to switch it off, and the
+  first check waits at least seven days after it, for a new
+  installation and an update alike. On the Terminal route
+  `EXEGETE_UPDATE_CHECK` is off unless set to `on`. Switched off,
+  Exegete makes no connection, not even when asked. The log says at
+  every start whether checking is on. PRIVACY.md, "Checking for new
+  versions", says what is sent and kept, with GitHub's own words on
+  what it records.
+- **`check_for_updates`**: the installed and newest versions with their
+  dates, and numbered steps for the way Exegete was installed: the
+  extension's download link and how to restart Claude Desktop; the
+  exact command, with the version pinned, for pip, pipx, uv tool or a
+  copy of the source, written from the home folder (`$HOME`); or, for
+  a copy uvx starts, the version to name in the app's entry for
+  Exegete, since uvx keeps running the copy it fetched first. A copy
+  started as `uvx qualcoder-mcp` is now treated as uvx, not as the old
+  name in a virtual environment, which gave it a pip command for uv's
+  cache, where there is no pip. Its description is short, with its
+  rules first: only when the user asks, the steps as returned, and the
+  steps left to the user. It is not marked read-only, since it records
+  the check, so hosts ask before it runs where they ask at all; it is
+  not in `core`.
+- **A note after an update**, once, saying that the update worked and
+  what is new, in words written into the release (`release.py`), never
+  fetched.
+- **Two settings with one spelling only**: `EXEGETE_UPDATE_CHECK`, and
+  `EXEGETE_INSTALLED_AS`, the desktop extension's own mark, which lets
+  the steps fit the extension. An unrecognised value of either never
+  stops the server.
+- `openWorldHint` is true for one tool, `check_for_updates`; every
+  other tool still works on this computer's files and nothing else.
+  The desktop extension's manifest lists its privacy policies:
+  PRIVACY.md's section on the check, and GitHub's privacy statement.
+- The documents say it wherever they said that Exegete sends nothing
+  anywhere itself: README ("Where your data goes" and the paragraph on
+  updating, which now says how Exegete tells you of a new version),
+  PRIVACY.md (its opening, what leaves the computer, the fully local
+  rung, a new section "Checking for new versions" and a new question
+  in the checklist before participants' data), INSTALL.md, TOOLS.md
+  and the extension's description. INSTALL.md's "Updating the MCP
+  Server" gains the uvx route. QUICKSTART says to quit the client
+  before updating a copy of the source, as INSTALL.md always did.
+- The test suite refuses any name lookup or connection beyond this
+  computer, so a test of the check brings its own server on
+  127.0.0.1.
 
 ### Added: the assistant's brief (provisional)
 
@@ -447,15 +524,17 @@ changed, in the documents and in two messages.
 
 ### Measured
 
-- Serialised tool JSON with the brief: full = 195,733 characters (about
-  48.9k tokens at chars/4) over 74 tools, core = 65,271 (about 16.3k)
-  over 22, and the opt-in lifecycle set = 198,312 (about 49.6k) over
-  75, measured on Python 3.13.5 with mcp 1.30.0 in the repository's own
-  `venv/`; on Python 3.11.13 (the `.venv/`), 205,441, 68,563 and
-  208,160. Each grew by `read_brief`'s own entry (467 characters with
-  its separator, in every set, on both interpreters) and by nothing
-  else: every other tool's description keeps the words and the length
-  0.14.1 served (fourteen changed order; see above).
+- Serialised tool JSON with the brief and the check for new versions:
+  full = 196,638 characters (about 49.2k tokens at chars/4) over 75
+  tools, core = 65,271 (about 16.3k) over 22, and the opt-in lifecycle
+  set = 199,217 (about 49.8k) over 76, measured on Python 3.13.5 with
+  mcp 1.30.0 in the repository's own `venv/`; on Python 3.11.13 (the
+  `.venv/`), 206,346, 68,563 and 209,065. Each grew by `read_brief`'s
+  own entry (467 characters with its separator, in every set, on both
+  interpreters), `full` and `lifecycle` by `check_for_updates`' own
+  (905 with its separator, on both interpreters), and by nothing else:
+  every other tool's description keeps the words and the length 0.14.1
+  served (fourteen changed order; see above).
 
 ## [0.14.1-alpha] - 2026-10-01
 

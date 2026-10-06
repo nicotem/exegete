@@ -32,6 +32,9 @@ agent most often gets wrong.
   state folder. `transition.py`: tidying up after the rename.
 - `path_identity.py`: containment checks by folder identity.
 - `refi_export.py`: REFI-QDA. `coder_comparison.py`: coder agreement.
+- `updates.py`: the check for new versions (`check_for_updates` and the
+  notes given once). `release.py`: this release's version, date and
+  summary, updated with each release.
 - CONTRIBUTING.md ("Project structure") has the full map of
   `src/exegete`, and the README's "For advanced users" a short one.
   Tests are in `tests/`, and the build, release and helper scripts in
@@ -51,6 +54,9 @@ agent most often gets wrong.
   Otherwise git makes up an address from the machine's name, prints a
   notice and commits anyway, and that address becomes public once
   pushed.
+- **No test or probe reaches the network.** The suite refuses any
+  connection beyond this computer (`tests/conftest.py`); test the check
+  for new versions against a server of your own on 127.0.0.1.
 - **Never touch a real QualCoder installation, a real project or any AI
   assistant's configuration.** Tests use fixtures and synthetic data
   only.

@@ -154,10 +154,11 @@ Show me the most frequently used codes
 
 ## Updating Later
 
-When a new version is released: `cd` into the cloned folder, run
-`git pull`, then `venv/bin/pip install -e .`, and **fully quit and
-relaunch your Claude client**; new tools only appear after the
-restart. Confirm the installed version with `venv/bin/python -m
+When a new version is released: first **fully quit your Claude
+client**, so that no copy of the server is running while its files
+change; then `cd` into the cloned folder, run `git pull`, then
+`venv/bin/pip install -e .`, and open the client again; new tools only
+appear after the restart. Confirm the installed version with `venv/bin/python -m
 exegete.server --version`, which prints the version and exits
 (`venv/bin/pip show exegete` still works and spells
 `0.14.2-alpha` as `0.14.2a0`). Updates never touch your projects or

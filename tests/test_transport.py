@@ -89,7 +89,7 @@ def _projects_dir() -> Path:
 def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
-EXPECTED_TOOLS = 74              # read_brief joined in v0.14.2
+EXPECTED_TOOLS = 75              # read_brief joined in v0.14.2, check_for_updates with it
 EXPECTED_CONCRETE_RESOURCES = 8   # six data resources + exegete://guidance/methods (0.12) + exegete://guidance/brief (0.14.2)
 EXPECTED_RESOURCE_TEMPLATES = 3
 EXPECTED_RESOURCES_TOTAL = 11

@@ -1022,9 +1022,12 @@ class TestTheStepsANewcomerCanGetWrong:
     def test_updating_covers_the_terminal_route(self):
         readme = _flat("README.md")
         # v0.14.2, the README's first round of checks: shorter; OpenAI's
-        # route says it is the Terminal route
-        assert ("or, on the Terminal route, run [the one command](https://"
-                "github.com/nicotem/exegete/blob/main/INSTALL.md"
+        # route says it is the Terminal route. The check for new versions
+        # (pull request #11): the Terminal route's check is off unless
+        # switched on, and INSTALL.md has its steps, uvx's included
+        assert ("On the Terminal route the check is off unless you set "
+                "`EXEGETE_UPDATE_CHECK=on`; [INSTALL.md has the steps]"
+                "(https://github.com/nicotem/exegete/blob/main/INSTALL.md"
                 "#updating-the-mcp-server)") in readme
         assert ("2. **Then follow [INSTALL.md's steps]" in readme
                 and "by the Terminal route" in _readme_openai())

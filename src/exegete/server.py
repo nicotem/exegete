@@ -22,12 +22,13 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Sequence, Tuple, Callable
 
+import anyio
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp import Context
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from . import env_settings, names, state_folder
+from . import env_settings, names, state_folder, updates
 from .database import (
     QualcoderDatabase,
     sqlite_error_label,
@@ -757,8 +758,10 @@ def _is(value: Any, word: str) -> bool:
 # - idempotentHint (a write only): true only where a second identical
 #   call changes nothing and takes no backup; the class test repeats
 #   each such call and checks it. False is no promise either way.
-# - openWorldHint: false throughout; every tool works on this computer's
-#   files and nothing else.
+# - openWorldHint: false for every tool but one; they work on this
+#   computer's files and nothing else. check_for_updates alone reaches
+#   beyond the computer, to fetch Exegete's version file (the owner's
+#   ruling of 5 October 2026), and carries TOOL_CHECKS_ONLINE.
 # One tool that changes nothing is still not marked read-only:
 # read_pseudonym_list (TOOL_DISCLOSES below says why).
 #
@@ -795,6 +798,15 @@ TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 # refuses it (fix round 1).
 TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
                                  idempotentHint=True, openWorldHint=False)
+# check_for_updates alone (the owner's ruling of 5 October 2026). It
+# changes nothing in a project, but it may fetch a file from the network
+# and records the check in the state folder, so it is not marked
+# read-only: in the hosts' asking modes the researcher is asked before
+# it runs, and in the auto modes it is treated as Exegete's writing tools
+# are. Asked twice within a day, it fetches once.
+TOOL_CHECKS_ONLINE = ToolAnnotations(readOnlyHint=False,
+                                     destructiveHint=False,
+                                     idempotentHint=True, openWorldHint=True)
 
 # Metadata a tool's tools/list entry carries under `_meta` (fix round 1).
 # "anthropic/requiresUserInteraction": true is Anthropic's mark for a tool
@@ -912,7 +924,41 @@ class _ExegeteMCP(FastMCP):
         # text of this server's that names a tool is marked where it is
         # written, before any project text is joined to it, and a test
         # walks every text a core tool can reach to keep it so.
-        return await super().call_tool(name, arguments)
+        #
+        # A note Exegete gives once (a new version, the check's own
+        # disclosure, an update that worked: updates.py) rides on the next
+        # successful answer of ordinary size as its first field,
+        # `exegete_notice`, so that it reaches the structured content too,
+        # which is all some hosts read, and is met before the data
+        # (updates.attach says why). check_for_updates says these things
+        # itself.
+        # Nothing about the check may fail a tool: each step that could
+        # raise is read as "no note".
+        try:
+            note = (None if tool is None or tool.name == updates.TOOL_NAME
+                    else updates.due_note(
+                        updates.TOOL_NAME in self._tool_manager._tools))
+        except Exception as error:
+            logger.debug("No note for this answer: %s", error_label(error))
+            note = None
+        try:
+            if note is None:
+                return await super().call_tool(name, arguments)
+            raw = await self._tool_manager.call_tool(
+                name, arguments, context=self.get_context(),
+                convert_result=False)
+            try:
+                joined = updates.attach(raw, note)
+                if joined is not None:
+                    updates.mark_given(note)
+                    raw = joined
+            except Exception as error:
+                logger.debug("The note was not added: %s",
+                             error_label(error))
+            return tool.fn_metadata.convert_result(raw)
+        finally:
+            # The version that runs here, once its state folder exists
+            updates.after_call()
 
     async def read_resource(self, uri):
         # The earlier scheme is rewritten before matching, templates
@@ -18903,6 +18949,25 @@ def create_project(name: str, directory: Optional[str] = None,
 
 
 # ============================================================================
+# Checking for a new version (the owner's ruling of 5 October 2026)
+# ============================================================================
+
+@mcp.tool(annotations=TOOL_CHECKS_ONLINE)
+async def check_for_updates() -> str:
+    """Call only when the user asks whether Exegete is up to date, how to update it, or which version they have. Give the user the message and the steps as returned, and do not suggest other ways to update, such as GitHub's Releases page. The steps are for the user to follow: the app that started Exegete must be closed while Exegete changes, so do not run them yourself. Returns the installed version and its date, the newest version and its date, numbered steps for this computer, and links. While checking is on, it may fetch Exegete's version file from its website, which GitHub hosts, at most once a day; when checking is switched off in Exegete's settings, it makes no connection and returns the installed version and where to look."""
+    # The fetch runs in a worker thread under updates.DEADLINE, so the
+    # server keeps answering while it waits (every other tool is plain
+    # and runs on the event loop). The guard every tool has, written out:
+    # _tool_guard wraps plain functions only.
+    try:
+        return await anyio.to_thread.run_sync(
+            functools.partial(updates.tool_answer, tool_available=True),
+            abandon_on_cancel=True)
+    except Exception as e:
+        return _error_answer("check_for_updates", e)
+
+
+# ============================================================================
 # Main entry point
 # ============================================================================
 
@@ -19284,6 +19349,18 @@ def main(argv: Optional[List[str]] = None, *,
     # never for --version (state_folder says how, and what happens when
     # the move cannot be made)
     _settle_state_folder()
+
+    # The check for new versions (the owner's ruling of 5 October 2026):
+    # after the state folder is settled, since it keeps its record there,
+    # and never for --version or --check-transition. It logs whether it is
+    # on, and checks in the background only when a week has passed.
+    try:
+        updates.start(_package_version, started_as)
+    except Exception as error:
+        # It never stops the server: without it, nothing is checked
+        logger.warning("The check for new versions could not start (%s); "
+                       "nothing will be checked in this run.",
+                       error_label(error))
 
     # Run the server using stdio transport
     mcp.run(transport="stdio")

@@ -172,9 +172,9 @@ class TestTheToolsAreTheServers:
 
 class TestTheSettings:
 
-    def test_two_settings_and_nothing_secret(self):
+    def test_three_settings_and_nothing_secret(self):
         config = TEMPLATE["user_config"]
-        assert set(config) == {"toolset", "projects_folder"}
+        assert set(config) == {"toolset", "projects_folder", "update_check"}
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
@@ -199,6 +199,22 @@ class TestTheSettings:
         problem = server._workspace_start_problem()
         assert problem.startswith(f"{database.WORKSPACE_ENV} is empty")
 
+    def test_the_update_check_is_a_box_on_by_default_that_says_what_it_sends(
+            self):
+        option = TEMPLATE["user_config"]["update_check"]
+        assert option["type"] == "boolean" and option["default"] is True
+        assert option["title"] == "Tell me when a new version is out"
+        for words in ("which GitHub hosts", "once a week at most",
+                      "Nothing from your projects is sent",
+                      "GitHub records your computer's internet address",
+                      "Exegete itself makes no connection"):
+            assert words in option["description"], words
+        assert TEMPLATE["privacy_policies"] == [
+            "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
+            "#checking-for-new-versions",
+            "https://docs.github.com/en/site-policy/privacy-policies/"
+            "github-general-privacy-statement"]
+
     def test_the_folder_is_a_picker_outside_documents(self):
         option = TEMPLATE["user_config"]["projects_folder"]
         assert option["type"] == "directory"
@@ -220,6 +236,12 @@ class TestTheSettings:
                            ("workspace_required", "1")):
             for name in names.SETTINGS[key]:
                 expected[name] = value
+        # The check for new versions (the owner's ruling of 5 October
+        # 2026): the box, and the extension's own mark, each with one
+        # spelling only
+        expected[names.NEW_ONLY_SETTINGS["update_check"]] = \
+            "${user_config.update_check}"
+        expected[names.NEW_ONLY_SETTINGS["installed_as"]] = "extension"
         assert env == expected
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
@@ -772,6 +794,8 @@ class TestTheDocuments:
         # spellings (names.SETTINGS)
         from exegete import names
         read = {new for new, old in names.SETTINGS.values()}
+        # and the two with one spelling only (the check for new versions)
+        read |= set(names.NEW_ONLY_SETTINGS.values())
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = _section(text, "## Environment variables the server reads")
         documented = set(re.findall(r"^- `(EXEGETE_[A-Z_]+)`", section,

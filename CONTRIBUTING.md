@@ -97,9 +97,10 @@ behaviour has a test that fails without it, that the edge cases of the
 matched upstream behaviour are covered, and that the tests are
 Windows-safe and encoding-safe. The security review looks at write
 paths, file and symlink handling, what a tool result discloses into the
-AI conversation, and what a hostile project folder or a hostile model
-input could make the server do. Findings from both are fixed and
-re-verified before the merge, and behaviour changes that come out of them
+AI conversation, and what a hostile project folder, a hostile model
+input or a hostile network response (the version file of the check for
+new versions) could make the server do or put into the conversation.
+Findings from both are fixed and re-verified before the merge, and behaviour changes that come out of them
 are recorded in the CHANGELOG. The maintainer runs both reviews; expect
 them to take longer than the CI, and expect requests for more tests
 rather than fewer.
@@ -138,8 +139,9 @@ rather than fewer.
 - **Disclosure is existence-only.** A tool result may say that
   something exists (a private note on a row, a hidden coder's row, a
   count), never what it contains or whose it is. If a change alters what
-  leaves the project into the conversation, `PRIVACY.md` changes in the
-  same pull request.
+  leaves the project into the conversation, or anything Exegete sends
+  beyond this computer (an address it contacts, what a request carries,
+  when it is made), `PRIVACY.md` changes in the same pull request.
 - **No tool argument named `session_id`.** Some MCP middleware strips
   that name before the call reaches the server; the session tools use
   `coding_session_id`. Check new argument names against other
@@ -213,7 +215,9 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
 │   │   ├── refi_export.py       # REFI-QDA XML export
-│   │   └── transition.py        # --check-transition: what the move from qualcoder-mcp left
+│   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
+│   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once
+│   │   └── release.py           # This release's version, date and summary, for the note after an update
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
@@ -290,6 +294,24 @@ and uploads `exegete` alone, never the old name's package, so an
 upgrade through the old name never brings unfinished work; any tag
 other than `v<version>` or `v<version>.devN` stops the workflow before
 it builds anything (`scripts/release_version.py`).
+
+## The check for new versions
+
+Every installed copy with checking on fetches
+`https://nicotem.github.io/exegete/latest.json` (`src/exegete/updates.py`)
+and follows no redirect, so that address is permanent: never rename or
+delete the `nicotem` account, the `exegete` repository or its Pages
+site, and never set a custom domain on this
+Pages site or on the account's own one (GitHub would then redirect, and
+every copy would stop hearing of new versions). The file keeps
+`"format": 1`; a change it cannot keep is published beside it under
+another name. Each release updates `src/exegete/release.py` (the
+version, its date and the summary the note after an update shows) with
+`pyproject.toml` and the CHANGELOG heading; tests hold the three
+together. The file, and the update page Exegete's notes point to
+(`https://nicotem.github.io/exegete/update/`), live on the repository's
+`gh-pages` branch; at each release, once its extension file and its
+PyPI upload are published, the maintainer updates both there.
 
 ## Licence
 

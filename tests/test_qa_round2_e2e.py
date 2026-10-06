@@ -85,6 +85,9 @@ EXPECTED_TOOLS = {
     "export_frequencies_csv", "export_case_code_matrix_csv",
     # v0.12 flagship: the one tool that rewrites stored text
     "pseudonymise_source",
+    # the check for new versions (the owner's ruling of 5 October 2026),
+    # full toolset only
+    "check_for_updates",
 }
 
 
@@ -110,7 +113,7 @@ class TestToolSurfaceRegistration:
         tools = asyncio.run(server.mcp.list_tools())
         names = {t.name for t in tools}
         assert names == EXPECTED_TOOLS
-        assert len(names) == 74
+        assert len(names) == 75
 
 
 class TestEndToEndLoop:

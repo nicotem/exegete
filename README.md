@@ -173,12 +173,15 @@ match what you said; if not, say so.
 
 ## Where your data goes
 
-**In short.** Exegete has no online service and sends nothing anywhere
-itself. What the assistant reads through it (passages, codes, memos,
-names) goes to the maker of the AI behind your assistant: Anthropic for
-Claude's apps, OpenAI for ChatGPT's desktop app and Codex, no one with
-a local model. Text you paste or attach goes in full; a document
-imported in QualCoder, only as far as the assistant reads it.
+**In short.** Exegete has no online service. All it sends itself is a
+request, at most once a week while switched on, for a file that says
+whether a newer version exists, with nothing from your projects
+("Updating", below). What the assistant reads through it (passages,
+codes, memos, names) goes to the maker of the AI behind your assistant:
+Anthropic for Claude's apps, OpenAI for ChatGPT's desktop app and
+Codex, no one with a local model. Text you paste or attach goes in
+full; a document imported in QualCoder, only as far as the assistant
+reads it.
 
 Some assistants also open files on your computer by themselves:
 
@@ -369,9 +372,21 @@ names another folder. Claude Code opens files by itself ("Where your
 data goes", above), so for participants' data this project suggests
 Claude Desktop's chat.
 
-**Updating.** Updates are manual and never touch your projects:
-install a newer `.mcpb` the same way, or, on the Terminal route, run
-[the one command](https://github.com/nicotem/exegete/blob/main/INSTALL.md#updating-the-mcp-server).
+**Updating.** Updates are never installed by themselves and never
+touch your projects. In the extension, Exegete tells you when a new
+version is out: at most once a week, and when you ask "Is Exegete up
+to date?", it fetches a small file from its website, which GitHub
+hosts. Nothing from your projects is sent; GitHub records your
+computer's internet address. It tells you about the check first,
+through Claude, and waits a week before checking; to switch it off,
+open Claude Desktop's Settings, Extensions, Exegete, "Tell me when a
+new version is out"
+([PRIVACY.md says what is sent](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#checking-for-new-versions)).
+Once it has checked, ask "How do I update Exegete?" for the steps on
+your computer, or install the newer `.mcpb` the same way. On the
+Terminal route the check is off unless you set
+`EXEGETE_UPDATE_CHECK=on`;
+[INSTALL.md has the steps](https://github.com/nicotem/exegete/blob/main/INSTALL.md#updating-the-mcp-server).
 Coming from qualcoder-mcp?
 [INSTALL.md says how](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp).
 
@@ -451,7 +466,8 @@ project in one program at a time.
 Exegete is a Model Context Protocol (MCP) server, which is why more
 than one assistant can use it. It runs locally over standard input and
 output, in Python 3.10 or newer, with no online service and no
-telemetry. What the assistant reads through it goes to the maker of
+telemetry; its one request of its own is the check for new versions
+("Updating", above). What the assistant reads through it goes to the maker of
 the AI behind it
 ([Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes)).
 It reads a project's SQLite database read-only; each tool that writes
@@ -466,8 +482,8 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `lifecycle` | 75: all, creating a project (Experimental) included | about 198,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | the one-click extension; elsewhere, set `EXEGETE_TOOLSET=lifecycle` |
-| `full` | 74: all but creating a project | about 196,000 characters, 49k tokens | the same | the Terminal route |
+| `lifecycle` | 76: all, creating a project (Experimental) included | about 199,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | the one-click extension; elsewhere, set `EXEGETE_TOOLSET=lifecycle` |
+| `full` | 75: all but creating a project | about 197,000 characters, 49k tokens | the same | the Terminal route |
 | `core` | 22: the coding loop and its safety tools | about 65,000 characters, 16k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every

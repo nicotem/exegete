@@ -243,7 +243,11 @@ class TestTheExtensionSetsBothSpellings:
 
     def test_the_six_entries_and_their_equality(self):
         env = self.TEMPLATE["server"]["mcp_config"]["env"]
-        assert len(env) == 6
+        # Six for the three settings under both spellings, and two more
+        # with one spelling only: the check for new versions
+        assert len(env) == 8
+        assert set(env) - {n for pair in SETTINGS.values() for n in pair} \
+            == set(names.NEW_ONLY_SETTINGS.values())
         for key in ("toolset", "workspace", "workspace_required"):
             new, old = SETTINGS[key]
             assert env[new] == env[old]

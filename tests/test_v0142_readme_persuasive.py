@@ -133,7 +133,15 @@ def _tools(mode="lifecycle"):
 # characters; the comparison table, re-dated against 4.0 rather than the
 # beta, gives back about 25. The limit is raised by what that needs and
 # no more: 32,561.
-README_LIMIT = 32_561
+# The check for new versions (pull request #11, the owner's ruling 60 of
+# 6 October 2026) changes what the README must say: "In short" said that
+# Exegete sends nothing anywhere itself, which is no longer so, and the
+# paragraph on updating now says that the extension tells you of a new
+# version, what that sends, how to switch it off and how to ask for the
+# steps; the advanced reader is told it is the one request of Exegete's
+# own. That takes 978 characters, and the limit is raised by that and no
+# more: 33,539.
+README_LIMIT = 33_539
 
 
 def test_the_readme_stays_short():
@@ -577,7 +585,9 @@ def test_the_advanced_section_rests_on_the_code():
     # service and no telemetry" let an IT reader think the data stays on
     # the computer
     for words in ("in Python 3.10 or newer, with no online service and no "
-                  "telemetry. What the assistant reads through it goes to "
+                  "telemetry; its one request of its own is the check for "
+                  "new versions (\"Updating\", above). What the assistant "
+                  "reads through it goes to "
                   "the maker of the AI behind it ([Where your data goes]"
                   "(https://github.com/nicotem/exegete#where-your-data-goes))",
                   # v0.14.2, the README's first round of checks: what a

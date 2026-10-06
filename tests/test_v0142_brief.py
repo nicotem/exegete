@@ -490,29 +490,37 @@ class TestProvisionalAndHeldBack:
 
 class TestTheSizes:
     """What every request carries grows by read_brief's own entry in the
-    tool list, and by nothing else: every other description is as
+    tool list, by check_for_updates' in `full` and `lifecycle` (pull
+    request #11), and by nothing else: every other description is as
     v0.14.1 served it (tests/test_v0142_description_cut.py pins their
     words; test_toolset_modes.py pins the new totals)."""
 
     # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
     BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
+    # Each new tool's entry on Python 3.13, and the sets it is in
+    NEW = {"read_brief": (465, {"full", "core", "lifecycle"}),
+           "check_for_updates": (903, {"full", "lifecycle"})}
 
     @staticmethod
     def _entry(tool):
         return {"name": tool.name, "description": tool.description or "",
                 "inputSchema": tool.inputSchema}
 
-    def test_the_growth_is_the_new_tools_entry_alone(self):
+    def test_the_growth_is_the_new_tools_entries_alone(self):
         for mode in TOOL_SETS:
             tools, _ = _listed(mode)
             payload = [self._entry(t) for t in tools]
-            others = [e for e in payload if e["name"] != "read_brief"]
-            entry = next(e for e in payload if e["name"] == "read_brief")
+            others = [e for e in payload if e["name"] not in self.NEW]
+            new = {e["name"]: e for e in payload if e["name"] in self.NEW}
+            assert set(new) == {name for name, (_, sets) in self.NEW.items()
+                                if mode in sets}, mode
             grown = len(json.dumps(payload)) - len(json.dumps(others))
-            assert grown == len(json.dumps(entry)) + len(", "), mode
+            assert grown == sum(len(json.dumps(e)) + len(", ")
+                                for e in new.values()), mode
             if sys.version_info[:2] == (3, 13):
                 assert len(json.dumps(others)) == self.BEFORE[mode], mode
-                assert len(json.dumps(entry)) == 465
+                for name, entry in new.items():
+                    assert len(json.dumps(entry)) == self.NEW[name][0], name
 
 
 # ---------------------------------------------------------------------------

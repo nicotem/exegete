@@ -173,3 +173,32 @@ class TestTheReadingPage:
             "open_file_for_reading"].split())
         assert "without_codes" in text
         assert text.index("without_codes") < 2048
+
+
+class TestTheBriefNamesTheOption:
+    """Ruling 55's line on a fresh reading was held back in 0.14.2
+    because it could not be followed: reading a file for coding showed
+    the codings already on it. With the option in place, the brief's
+    line names it, where the old line stood (section 10)."""
+
+    @staticmethod
+    def _section_10():
+        brief = " ".join(server.BRIEF_FULL.split())
+        start = brief.index("## 10. Finding your way in the data")
+        return brief[start:brief.index("## 11.", start)]
+
+    def test_the_line_names_the_whole_file_read_without_codes(self):
+        assert ("When the researcher wants a fresh reading, read the file "
+                "with analyze_file_with_coding(without_codes=true), which "
+                "leaves their codings out, and tell them whether you have "
+                "seen any.") in self._section_10()
+
+    def test_the_line_that_could_not_be_followed_is_gone(self):
+        brief = " ".join(server.BRIEF_FULL.split())
+        assert "do not read their codes first" not in brief
+        assert "shows the codings already on it" not in brief
+
+    def test_the_brief_names_an_argument_the_tool_has(self):
+        import inspect
+        assert "without_codes" in inspect.signature(
+            server.analyze_file_with_coding).parameters

@@ -119,6 +119,31 @@ class TestTheDescription:
                      "never to get past a refusal", "give its path"):
             assert rule in " ".join(description.split()), rule
 
+    @pytest.mark.parametrize("mode", ["full", "lifecycle"])
+    def test_the_text_it_promises_is_the_decided_one(self, mode):
+        """The owner's decision of 6 October 2026: better text than
+        QualCoder's where its readers lose content. The description
+        no longer promises QualCoder's text alone."""
+        flat = " ".join(self._served(mode)["import_documents"].split())
+        assert "as QualCoder's own import reads them" not in flat
+        assert ("Text as QualCoder reads it, plus what it loses (notes, "
+                "comments, headers).") in flat
+
+    @pytest.mark.parametrize("mode", ["full", "lifecycle"])
+    def test_the_rules_come_first(self, mode):
+        """What a model must not miss comes before what it may look up:
+        the paths rule in the opening paragraph, then the two steps and
+        the researcher's word on the three switches, before the
+        refusals and the formats."""
+        flat = " ".join(self._served(mode)["import_documents"].split())
+        opening = flat[:flat.index("Two steps.")]
+        assert "never passes through the conversation" in opening
+        assert "give its path" in opening
+        formats = flat.index("Formats:")
+        refusals = flat.index("Refused or kept out")
+        for rule in ("Only on their word", "never to get past a refusal"):
+            assert flat.index(rule) < refusals < formats, rule
+
     def test_not_in_core(self):
         assert "import_documents" not in self._served("core")
         assert "import_documents" not in server.CORE_TOOLSET

@@ -587,9 +587,9 @@ Each is stated in full by its tool:
 
 - When the task concerns the researcher's existing codes, start from
   them and their coded passages, which may be incomplete. When the
-  researcher wants a fresh reading, do not read their codes first, and
-  tell them whether you have seen any (reading a file for coding shows
-  the codings already on it).
+  researcher wants a fresh reading, read the file with
+  analyze_file_with_coding(without_codes=true), which leaves their
+  codings out, and tell them whether you have seen any.
 - For an overview, use the project summary and the lists of files and
   cases.
 - A search match is a lead, not a reading: read the passage in its
@@ -10084,13 +10084,15 @@ def import_documents(
     import_file_names_with_listed_names: bool = False,
     memo: str = ""
 ) -> str:
-    """Bring documents from the researcher's computer into the open project, read here as QualCoder's own import reads them; their text never passes through the conversation. Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part.
+    """Bring documents from the researcher's computer into the open project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with this app's own tools first: give its path.
 
-    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (a summary line, names, sizes, lengths, warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, each original is copied into the project and its text stored.
+    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, each original is copied into the project and its text stored.
 
-    Refused or kept out, with the reason: while QualCoder has the project open; anything in the project, Exegete's own folders, a hidden folder or a link; other file types; files over the limits; text not in UTF-8 (with steps to re-save it); names already in the project. The project's pseudonyms list, if any, is applied to the stored text (never to PDFs, nor to the originals); PDFs and file names holding its names are kept out. Change apply_project_pseudonyms, import_pdfs_with_listed_names or import_file_names_with_listed_names only when the researcher has said so for this import, never to get past a refusal.
+    Change apply_project_pseudonyms, import_pdfs_with_listed_names or import_file_names_with_listed_names only when the researcher has said so for this import, never to get past a refusal. The pseudonyms list, if any, is applied to the stored text (not to PDFs or originals); PDFs and file names holding its names are kept out.
 
-    Never paste a document's text into a tool, or open it with this app's own tools first: give its path. For typed text, use import_text_file; for a document converted by another tool, see explain_ai_coding_tools('converted_documents').
+    Refused or kept out, with the reason: while QualCoder has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8 (with steps to re-save it); names already in the project.
+
+    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Text as QualCoder reads it, plus what it loses (notes, comments, headers). For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
 
     Args:
         paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)

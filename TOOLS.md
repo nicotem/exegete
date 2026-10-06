@@ -559,13 +559,13 @@ For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://gi
 
 ## Reading a whole file (provisional)
 
-New in 0.14.3, and provisional until the owner's decisions on the import
-and reading design are in. A researcher often needs to read a whole
-interview, not only the passages the assistant quotes. Ask the
-assistant to open a file for you; it calls `open_file_for_reading`, and
-the file opens on your own screen. Its text does not pass through the
-conversation: the assistant is told only where the page or copy is, and
-how many codings, codes and notes it shows.
+New in 0.14.3, and provisional until that release. A researcher often
+needs to read a whole interview, not only the passages the assistant
+quotes. Ask the assistant to open a file for you; it calls
+`open_file_for_reading`, and the file opens on your own screen. Its
+text does not pass through the conversation: the assistant is told
+only where the page or copy is, and how many codings, codes and notes
+it shows.
 
 Native first, as on any computer:
 
@@ -617,9 +617,11 @@ memo stays, as it describes the file, with its private part left out
 as above. The assistant can read a file the same way: the whole-file
 read with `without_codes=true` gives the text and the file's details,
 and only counts the codings and annotations it leaves out, so it can
-tell you whether the file has any without seeing them. Nothing in the
-project changes: the codings are still there when you ask for the file
-with them.
+tell you whether the file has any without seeing them. The assistant's
+brief asks it to read this way when you want a fresh reading, and to
+tell you whether it has seen any of your codes. Nothing in the project
+changes: the codings are still there when you ask for the file with
+them.
 
 Linked originals (QualCoder's `docs:` paths, which point outside the
 project) are not opened: QualCoder's Manage files opens them. Only an
@@ -669,7 +671,7 @@ reaches it four ways:
   text, which Claude Code shows at the start of a session;
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
-  project: it returns the full brief (about 11,900 characters), or in
+  project: it returns the full brief (about 12,000 characters), or in
   the `core` set the short version;
 - the same full brief as the help topic `explain_ai_coding_tools('brief')`
   and the resource `exegete://guidance/brief`;
@@ -928,7 +930,7 @@ still answers empty, and that answer is a finding.
 - `create_proposed_codes(coding_session_id, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first
 
 **Data Import, Cases & Attributes (Write Operations):**
-- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, memo)` - **WRITES TO DATABASE** (provisional, 0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer as QualCoder 4.0's own import reads them, so both programs store the same text; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's pseudonyms list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice). Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so in Word, TextEdit or Notepad; nothing is guessed). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" below. In the full and lifecycle sets, not core
+- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, memo)` - **WRITES TO DATABASE** (provisional, 0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer as QualCoder 4.0's own import reads them, and better where QualCoder's reading loses or garbles content (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's pseudonyms list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice). Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so in Word, TextEdit or Notepad; nothing is guessed). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" below. In the full and lifecycle sets, not core
 - `import_text_file(filename, content, memo, owner, create_backup, case_name, apply_project_pseudonyms)` - **WRITES TO DATABASE** - Add a new text source, optionally linked to a case. The name follows `rename_file`'s rules (at most 200 bytes in UTF-8; no path, control or invisible characters; no name Windows cannot store; not a name already in the project's `documents/` folder). With `apply_project_pseudonyms=true` the project's own `pseudonyms.json` is applied to the text before it is stored, which is what QualCoder does to every text file it imports; default off; `owner` is deprecated, removed in v0.15 (see "The `owner` argument is deprecated" above)
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **WRITES TO DATABASE** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and names it)
 - `create_case(name, memo, create_backup)` - **WRITES TO DATABASE** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)

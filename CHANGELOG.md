@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-The owner decided the questions of the import and reading design on 6
-October 2026: as recommended, except that the stored text is to be
-better than QualCoder's where its readers lose or garble content (a
-PDF's stays identical), and with one new rule, that files not saved as
-UTF-8 are held back. What follows is built to those decisions, and may
-change before it is released.
+For 0.14.3, a release of its own after 0.14.2. The owner decided the
+questions of the import and reading design on 6 October 2026: as
+recommended, except that the stored text is to be better than
+QualCoder's where its readers lose or garble content (a PDF's stays
+identical), and with one new rule, that files not saved as UTF-8 are
+held back. In short: PDF and EPUB through QualCoder 4.0's own libraries,
+as an optional part switched on in the Claude Desktop extension; every
+departure from QualCoder's text named; no guessing of character sets;
+PDFs and file names holding listed names held back, with a way through
+on the researcher's word; imported files under the AI coder name;
+reading pages in a private folder of Exegete's own, tidied; and reading
+without codes. What follows is built to those decisions, and may change
+before it is released.
 
 ### Added (provisional): reading a whole file on your own computer
 
@@ -94,7 +101,12 @@ change before it is released.
   file has any without seeing them. Nothing in the project changes.
 - The assistant's brief gains one line under Privacy: use
   `open_file_for_reading` when the researcher wants to read a whole
-  file, and never open, read or look at what it opens.
+  file, and never open, read or look at what it opens. Its line on a
+  fresh reading now names the way to give one: when the researcher
+  wants a fresh reading, read the file with
+  `analyze_file_with_coding(without_codes=true)`, which leaves their
+  codings out, and tell them whether you have seen any. The full brief
+  is now about 12,000 characters.
 
 ### Changed (provisional): whole-file reads in parts
 
@@ -284,16 +296,19 @@ change before it is released.
 
 ### Measured
 
-- Serialised tool JSON: full = 200,899 characters (about 50.2k tokens
+- Serialised tool JSON: full = 200,865 characters (about 50.2k tokens
   at chars/4) over 76 tools, core = 67,374 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 203,478 (about 50.9k) over 77, measured on
+  the opt-in lifecycle set = 203,444 (about 50.9k) over 77, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 210,763, 70,766 and 213,482.
+  Python 3.11.13 (the `.venv/`), 210,733, 70,766 and 213,452.
   `open_file_for_reading`'s own entry is 1,630 characters on 3.13, and
-  `import_documents`' 2,788 (2,790 with its separator; it is in the
+  `import_documents`' 2,754 (2,756 with its separator; it is in the
   standard and lifecycle sets, not in core); the rest of the growth is
   `start` and `without_codes` on `analyze_file_with_coding` and the two
-  descriptions changed above.
+  descriptions changed above. Both new tools put their rules first, and
+  each whole description fits within the 2,048 characters Claude Code
+  keeps: `open_file_for_reading`'s is 1,187 characters on 3.13 (1,267
+  on 3.11) and `import_documents`' 1,958 (2,006 on 3.11).
 
 ## [0.14.2-alpha] - 2026-10-02
 

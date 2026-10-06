@@ -126,6 +126,18 @@ Replace:
 
 ### 5. Test It Out
 
+**Where what Claude reads goes.** What Claude reads through Exegete
+(passages, codes, memos, names) goes to Anthropic, whose computers run
+the AI behind Claude Desktop. Switch training off before participants'
+data: while it is on, Anthropic may use your conversations to train its
+models. On a personal plan (Free, Pro or Max) it is the Model
+Improvement setting, at https://claude.ai/settings/data-privacy-controls.
+Rating a reply (thumbs up or down) can still let Anthropic train on
+that conversation.
+[Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
+in the README, says the rest: the checks before participants' data, and
+which assistants open files by themselves.
+
 In Claude Desktop, try these prompts:
 
 ```

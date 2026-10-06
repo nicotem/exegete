@@ -8,7 +8,9 @@ Pinned here:
   switch training off before participants' data, with its reason, the
   settings by name (Claude's Model Improvement; ChatGPT's "Improve the
   model for everyone" and Codex's separate "Include environments") and
-  the exception for a rated reply (README, INSTALL.md, PRIVACY.md);
+  the exception for a rated reply (README, INSTALL.md, PRIVACY.md), and
+  where Claude Desktop is set up (INSTALL.md's one-click section,
+  QUICKSTART.md), with where what Claude reads goes;
 - the warning about practising, explained and not prescribed, where a
   reader meets Codex and Claude Code (README, INSTALL.md, PRIVACY.md,
   QUICKSTART.md), with what a folder of their own does not do and that
@@ -21,8 +23,10 @@ Pinned here:
 - one neutral sentence placing QualCoder beside NVivo, ATLAS.ti and
   MAXQDA;
 - what using it costs, dated, with the makers' pages linked, the
-  weekly limits and the ways past a limit, and no claim that a free
-  plan is enough;
+  weekly limits and the ways past a limit, no more than OpenAI's page
+  says of its Free and Go plans, and no claim that a free plan is
+  enough; and, where the README offers Claude Code, that it is not on
+  Claude's Free plan;
 - the brief: the "fresh reading" line held back until the reading tool
   can read a file without its codes (0.14.3), "Do not agree to please"
   kept, and the opening text under 2,000 characters.
@@ -136,6 +140,36 @@ def test_install_and_privacy_give_the_same_advice():
         assert words in item, words
 
 
+def test_the_advice_is_where_claude_desktop_is_set_up():
+    """INSTALL.md's one-click section and QUICKSTART.md set up Claude
+    Desktop; both say where what Claude reads goes and give the training
+    advice in the README's words (the judge, 6 October 2026: QUICKSTART
+    pointed Claude at a real project without either)."""
+    claude_check = _plain(_between(_flat("README.md"),
+                                   "3. **Switch training off**",
+                                   " (PRIVACY.md quotes the terms)"))[3:]
+    one_click = _plain(_between(
+        _flat("INSTALL.md"), "## Claude Desktop: the one-click extension",
+        "**Not signed.**"))
+    quickstart = _plain(_between(_flat("QUICKSTART.md"),
+                                 "### 5. Test It Out",
+                                 "In Claude Desktop, try these prompts:"))
+    for where, text in (("INSTALL, one-click", one_click),
+                        ("QUICKSTART, step 5", quickstart)):
+        assert claude_check in text, where
+        assert ("[Where your data goes](https://github.com/nicotem/exegete"
+                "#where-your-data-goes), in the README, says the rest: the "
+                "checks before participants' data, and which assistants open "
+                "files by themselves.") in text, where
+    assert ("What Claude reads through Exegete (passages, codes, memos, "
+            "names) goes to Anthropic, whose computers run the AI behind "
+            "Claude Desktop.") in quickstart
+    # before the first prompt about the reader's own project
+    flat = _flat("QUICKSTART.md")
+    assert flat.index("goes to Anthropic") < \
+        flat.index("Can you give me a summary of my Qualcoder project?")
+
+
 # ---------------------------------------------------------------------------
 # 2. The warning about practising: explained, never prescribed
 # ---------------------------------------------------------------------------
@@ -224,7 +258,11 @@ PRESCRIBING = ("never start", "never give codex", "never use feedback",
                # an alternative (the judge, 1 October 2026)
                "practice and data that is not sensitive",
                "practice and for data that is not sensitive",
-               "practice and non-sensitive data")
+               "practice and non-sensitive data",
+               # a folder ruled out, and a verdict on a route, without
+               # the reason (the judge, 6 October 2026)
+               "never your home folder",
+               "make this route one for participants' data")
 
 
 def test_no_document_prescribes_where_exegete_may_be_used():
@@ -256,7 +294,12 @@ def test_the_prescribing_check_would_notice():
                 "this project suggests this route for practice and for data "
                 "that is not sensitive",
                 "so this project suggests this route for practice and "
-                "non-sensitive data until a safer setting is tested"):
+                "non-sensitive data until a safer setting is tested",
+                "(`~/claude-exegete`, never your home folder: \"Alternative: "
+                "Claude Code and other MCP clients\", above)",
+                "they do not change what Claude Code reads by itself (step "
+                "2), so they do not make this route one for participants' "
+                "data."):
         assert any(words in old.lower() for words in PRESCRIBING), old
 
 
@@ -389,19 +432,23 @@ def test_the_readme_says_what_it_costs():
     for words in (
             "Exegete costs nothing; your assistant may.",
             # dated, with the makers' pages linked
-            "On 1 October 2026 the makers' pages listed, in US dollars,",
+            "On 6 October 2026 the makers' pages listed, in US dollars,",
             "[Claude's](https://claude.com/pricing) Free plan, Pro at $20 a "
             "month, Max from $100, Team and Enterprise by the seat",
-            # the page's table of features starts at Plus
+            # learn.chatgpt.com/docs/pricing, read 6 October 2026: its
+            # table of features starts at Plus; its Free and Go cards
+            # name the desktop app, "subject to rollout"; where the page
+            # is unclear the README says no more than it (the owner)
             "[ChatGPT's](https://learn.chatgpt.com/docs/pricing) desktop app "
             "for local chats, and Codex's command line, from Plus ($20 a "
-            "month).",
+            "month), with only the desktop app mentioned for Free and Go, "
+            "\"subject to rollout\".",
             # what the limits mean for trying it and for longer work:
-            # claude.com/pricing, read 1 October 2026, "Every plan has
-            # usage limits that reset on a rolling five-hour session
+            # claude.com/pricing, read 1 and 6 October 2026, "Every plan
+            # has usage limits that reset on a rolling five-hour session
             # window, and paid plans add weekly limits on top." and "on
             # paid plans, turn on usage credits"; OpenAI's page, the same
-            # day, "Weekly limits may also apply." and "can purchase
+            # days, "Weekly limits may also apply." and "can purchase
             # additional credits"
             "Plans have usage limits: Claude's reset every five hours, and "
             "its paid plans add weekly limits, which longer work can reach; "
@@ -415,11 +462,31 @@ def test_the_readme_says_what_it_costs():
             "LM Studio is free with a local model; its pages recommend "
             "16 GB of memory or more."):
         assert words in cost, words
-    # the five-hour limit alone, and the plans the feature table does not
-    # list, are gone
+    # the five-hour limit alone is gone, and "from Plus" no longer ends
+    # the sentence, which turned the table's silence on Free and Go into
+    # a "no" (the judge, 6 October 2026)
     for gone in ("(Claude's reset every five hours)",
-                 "you wait or move up a plan", "Free and Go"):
+                 "you wait or move up a plan", "from Plus ($20 a month)."):
         assert gone not in cost, gone
+    # claude.com/pricing, read 6 October 2026: "Claude Code is included
+    # in all paid plans", and its table shows it "No" on Free. Said where
+    # the README offers Claude Code (the judge, 6 October 2026), whose
+    # warning that it opens files by itself is in the same paragraph
+    other = _between(_flat("README.md"), "**Other assistants.**",
+                     "**Updating.**")
+    assert other.startswith("**Other assistants.** Claude Code (not on "
+                            "Claude's Free plan), LM Studio,"), other
+    assert "Claude Code opens files by itself" in other
+    # INSTALL.md reads OpenAI's page the same way, and its table no
+    # longer reads as if a free plan included Claude Code
+    install = _flat("INSTALL.md")
+    assert ("for Free and Go it mentions only the desktop app, \"subject to "
+            "rollout\".") in install
+    row = _between(_read("INSTALL.md"), "| **Claude consumer plans**", "\n")
+    assert row.startswith("| **Claude consumer plans** (claude.ai and Claude "
+                          "Desktop on a Free, Pro or Max plan; Claude Code "
+                          "with a Pro or Max login) |"), row
+    assert "Free/Pro/Max login" not in install
     # It reports the makers' pages; it does not say a free plan is enough
     for claim in ("free plan is enough", "enough for exegete",
                   "works on the free", "free plan works"):

@@ -70,6 +70,16 @@ you're on a Pro or Max plan and your message box still shows "Chat"
 and "Cowork" options, you don't have it yet." Keep the setting on
 Manual. For work on real data, keep Claude asking.
 
+**Switch training off** before participants' data: while it is on,
+Anthropic may use your conversations to train its models. On a
+personal plan (Free, Pro or Max) it is the Model Improvement setting,
+at https://claude.ai/settings/data-privacy-controls. Rating a reply
+(thumbs up or down) can still let Anthropic train on that
+conversation.
+[Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
+in the README, says the rest: the checks before participants' data, and
+which assistants open files by themselves.
+
 **Not signed.** The extension carries no publisher signature. On a
 personal Claude plan it installs like any other extension. If your
 university or employer manages your computer or your Claude account,
@@ -108,7 +118,7 @@ from easiest to most private, and OpenAI's apps:
 
 | Route | What it means | Where to read more |
 |---|---|---|
-| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. It is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
+| **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The easiest path. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. It is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat, until a setting that stops Codex's reads has been tested with Exegete. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
@@ -534,8 +544,9 @@ always to the same value.
   naming the valid values. Resources and prompts are not affected.
   In Claude Desktop, add `"EXEGETE_TOOLSET": "lifecycle"` to the
   server's `env` block; for Claude Code, in the folder you start it in
-  (`~/claude-exegete`, never your home folder: "Alternative: Claude
-  Code and other MCP clients", above):
+  (`~/claude-exegete`: started in your home folder, Claude Code could
+  read any study kept there without asking; "Alternative: Claude Code
+  and other MCP clients", above, says more):
 
   ```bash
   claude mcp add exegete -e EXEGETE_TOOLSET=lifecycle -- ~/Documents/exegete/venv/bin/python -m exegete.server
@@ -612,7 +623,7 @@ always to the same value.
 > recipe is pending verification; steps may be adjusted after that pass.
 
 Running Claude Code with an API key from the Anthropic Console, instead
-of a Free/Pro/Max login, routes your usage through a different set of
+of a Pro or Max login, routes your usage through a different set of
 terms. What that means for research data is laid out in
 [PRIVACY.md](PRIVACY.md) (see "Your governance options"); this section
 is only the mechanics.
@@ -717,7 +728,7 @@ it for up to five years whatever your training setting (PRIVACY.md,
 "Cross-rung cautions"), so in sessions containing participant data this
 project suggests giving none. These settings close
 side channels; they do not change what Claude Code reads by itself
-(step 2), so they do not make this route one for participants' data.
+(step 2).
 
 **5. Governance note.** For unambiguous commercial-terms coverage, use
 an organisational Console account rather than a personal one;
@@ -1931,9 +1942,9 @@ Claude Desktop, after:
 Claude Code: re-register once, under the same name. Claude Code offers
 a server added this way only in the folder where it was added, so run
 `claude mcp remove` in the folder where you added it, and
-`claude mcp add` in the folder you start Claude Code in, never your
-home folder ("Alternative: Claude Code and other MCP clients", above,
-says why):
+`claude mcp add` in the folder you start Claude Code in (started in
+your home folder, it could read any study kept there without asking:
+"Alternative: Claude Code and other MCP clients", above, says more):
 
 ```bash
 claude mcp remove qualcoder

@@ -1273,13 +1273,19 @@ class TestAssistantsOwnFileAccess:
         listed = _between(data, "Before you use participants' data with "
                           "Claude Desktop's chat", "**Private notes and "
                           "names.**")
+        # (the judge, 6 October 2026, after the owner's "warn, don't
+        # prescribe": the second check gives its reason, as the first and
+        # third do, instead of two bare "Do not"s)
         for words in ("1. Keep computer use off (Settings, General)",
-                      "2. Do not connect to it any folder that holds your "
-                      "projects or transcripts (your home folder, Documents "
+                      "2. Keep folders that hold your projects or "
+                      "transcripts unconnected (your home folder, Documents "
                       "or a whole drive included; connected folders may be "
-                      "listed under \"Trusted folders\"). Do not add "
-                      "another extension that reads files either."):
+                      "listed under \"Trusted folders\"), and add no other "
+                      "extension that reads files: Claude reads a connected "
+                      "folder by itself, and such an extension can reach "
+                      "your project too."):
             assert words in listed, words
+        assert "Do not" not in listed
         assert ("| The chat suggested instead: Codex reads well beyond its "
                 "folder without asking, and a setting that stops it is not "
                 "yet tested |") in data
@@ -1489,9 +1495,11 @@ class TestClaudeCodesRoutes:
         recipe = _claude_code_routes()["INSTALL, the API-key recipe"]
         assert "recommended for participant data" not in recipe
         assert "**4. Strict posture (optional).**" in recipe
+        # (the judge, 6 October 2026: the facts, without a verdict on
+        # the route; the recipe's opening gives the suggestion)
         assert ("These settings close side channels; they do not change "
-                "what Claude Code reads by itself (step 2), so they do not "
-                "make this route one for participants' data.") in recipe
+                "what Claude Code reads by itself (step 2).") in recipe
+        assert "make this route one for participants' data" not in recipe
         assert "The key changes the terms, not what Claude Code reads." \
             in recipe
 
@@ -1628,8 +1636,9 @@ class TestTheSmallerPoints:
         # conditions in full, it gives PRIVACY.md's third one too, and
         # repeats the first two where the reader acts, at the one-click
         # check
-        assert "Do not add another extension that reads files either." \
-            in _readme_data()
+        assert ("and add no other extension that reads files: Claude reads "
+                "a connected folder by itself, and such an extension can "
+                "reach your project too.") in _readme_data()
         one_click = _between(_flat("README.md"),
                              "### Claude Desktop, with one click",
                              "### ChatGPT's desktop app and Codex (OpenAI)")
@@ -1643,7 +1652,8 @@ class TestTheSmallerPoints:
         assert ("- Before participants' data, go through [the five checks]"
                 "(https://github.com/nicotem/exegete#where-your-data-goes)"
                 ": Manual keeps Claude asking; the checks keep your files "
-                "out of its reach.") in one_click
+                "out of its reach, and your conversations out of training.") \
+            in one_click
         assert ("connected folders may be listed under \"Trusted "
                 "folders\"") in _readme_data()
         assert "also check two things" not in one_click

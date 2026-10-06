@@ -114,7 +114,14 @@ def _tools(mode="lifecycle"):
 # raising the limit to what the round needs, with this reason, rather
 # than cutting decided wording to fit, and leaving a trim of repeated
 # warnings to a length pass of its own: 31,915.
-README_LIMIT = 32_000
+# The judge of 6 October 2026 held three things for the release, which
+# added about 230 more: the second check before participants' data with
+# its reason instead of two bare "Do not"s, and the one-click checks
+# naming training; that Claude Code is not on Claude's Free plan; and
+# ChatGPT's Free and Go plans as OpenAI's page gives them, so that the
+# sentence says no more than the page. Raised again, with the same
+# advice: 32,137.
+README_LIMIT = 32_200
 
 
 def test_the_readme_stays_short():

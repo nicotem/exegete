@@ -239,14 +239,22 @@ def test_the_older_claude_mcp_lines_say_which_folder():
     install = _flat("INSTALL.md")
     toolset = _between(install, "- `EXEGETE_TOOLSET`:",
                        "- `EXEGETE_WORKSPACE` (v0.14)")
+    # (the judge, 6 October 2026, after the owner's "warn, don't
+    # prescribe": what could go wrong, instead of "never your home folder")
     assert ("for Claude Code, in the folder you start it in "
-            "(`~/claude-exegete`, never your home folder: \"Alternative: "
-            "Claude Code and other MCP clients\", above):") in toolset
+            "(`~/claude-exegete`: started in your home folder, Claude Code "
+            "could read any study kept there without asking; \"Alternative: "
+            "Claude Code and other MCP clients\", above, says more):") \
+        in toolset
     path_b = _between(install, "### Path B: switch to the PyPI install",
                       "claude mcp remove qualcoder")
     assert ("so run `claude mcp remove` in the folder where you added it, "
-            "and `claude mcp add` in the folder you start Claude Code in, "
-            "never your home folder") in path_b
+            "and `claude mcp add` in the folder you start Claude Code in "
+            "(started in your home folder, it could read any study kept "
+            "there without asking: \"Alternative: Claude Code and other MCP "
+            "clients\", above, says more):") in path_b
+    for text in (toolset, path_b):
+        assert "never your home folder" not in text
     uninstall = _between(install, "## Uninstalling", "2. **Remove the "
                          "package**")
     assert ("`claude mcp remove exegete` (or `qualcoder`), in the folder "
@@ -332,7 +340,7 @@ def test_the_chats_three_conditions_travel_with_it():
         assert "transcripts" in text, where
     for where, text in _chat_set_up().items():
         assert "1. Keep computer use off" in text, where
-        assert "Do not add another extension that reads files" in text, where
+        assert "add no other extension that reads files" in text, where
         assert "transcripts" in text, where
     # and the other routes point to them
     rung_two = _between(_flat("PRIVACY.md"), "### Rung 2:", "### Rung 3:")
@@ -411,7 +419,8 @@ def test_the_check_after_installing_is_a_short_list():
                           "five checks](https://github.com/nicotem/exegete"
                           "#where-your-data-goes): Manual keeps Claude "
                           "asking; the checks keep your files out of its "
-                          "reach. "), check
+                          "reach, and your conversations out of training. "), \
+        check
     assert check.count(" - ") == 3
     assert not re.findall(r"(?<![\w.])(\d)\. ", check)
     data = _between(_flat("README.md"), "Before you use participants' data "

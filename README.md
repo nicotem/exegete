@@ -204,10 +204,11 @@ where chat and Cowork are one conversation, below):
 
 1. Keep computer use off (Settings, General): it lets Claude see your
    screen and use other apps.
-2. Do not connect to it any folder that holds your projects or
-   transcripts (your home folder, Documents or a whole drive included;
-   connected folders may be listed under "Trusted folders"). Do not add
-   another extension that reads files either.
+2. Keep folders that hold your projects or transcripts unconnected
+   (your home folder, Documents or a whole drive included; connected
+   folders may be listed under "Trusted folders"), and add no other
+   extension that reads files: Claude reads a connected folder by
+   itself, and such an extension can reach your project too.
 3. **Switch training off** before participants' data: while it is on,
    Anthropic may use your conversations to train its models. On a
    personal plan (Free, Pro or Max) it is the Model Improvement
@@ -244,11 +245,13 @@ project suggests for participants' data. Came straight here? First
 read [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes).
 
 **What it costs.** Exegete costs nothing; your assistant may. On
-1 October 2026 the makers' pages listed, in US dollars,
+6 October 2026 the makers' pages listed, in US dollars,
 [Claude's](https://claude.com/pricing) Free plan, Pro at $20 a month,
 Max from $100, Team and Enterprise by the seat (Enterprise also by
-use); and [ChatGPT's](https://learn.chatgpt.com/docs/pricing) desktop
-app for local chats, and Codex's command line, from Plus ($20 a month).
+use); and
+[ChatGPT's](https://learn.chatgpt.com/docs/pricing) desktop app for
+local chats, and Codex's command line, from Plus ($20 a month), with
+only the desktop app mentioned for Free and Go, "subject to rollout".
 Plans have usage limits: Claude's reset every five hours, and its paid
 plans add weekly limits, which longer work can reach; OpenAI's may also
 be weekly. At a limit you wait, move up a plan or, on a paid plan, pay
@@ -283,7 +286,7 @@ listed. Then:
 - Before participants' data, go through
   [the five checks](https://github.com/nicotem/exegete#where-your-data-goes):
   Manual keeps Claude asking; the checks keep your files out of its
-  reach.
+  reach, and your conversations out of training.
 
 **Get QualCoder too**, to see your coding in the text:
 [download](https://github.com/ccbogel/QualCoder/releases) 3.8.2, the
@@ -353,8 +356,9 @@ only once the project is opened again.
 
 ### Other assistants, and updates
 
-**Other assistants.** Claude Code, LM Studio, other MCP hosts and
-Claude Desktop set up by hand take the Terminal route
+**Other assistants.** Claude Code (not on Claude's Free plan), LM
+Studio, other MCP hosts and Claude Desktop set up by hand take the
+Terminal route
 ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)),
 whose standard tool set cannot create a project unless switched on.
 There, new projects and copies go to `~/Documents/Exegete projects`,

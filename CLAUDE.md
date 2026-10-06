@@ -32,7 +32,8 @@ agent most often gets wrong.
   state folder. `transition.py`: tidying up after the rename.
 - `path_identity.py`: containment checks by folder identity.
 - `refi_export.py`: REFI-QDA. `coder_comparison.py`: coder agreement.
-- README ("For advanced users") and CONTRIBUTING.md have the full map.
+- CONTRIBUTING.md ("Project structure") has the full map, and the
+  README's "For advanced users" a short one.
 
 ## Rules for agents
 

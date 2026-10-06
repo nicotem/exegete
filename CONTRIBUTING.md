@@ -206,6 +206,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── sessions.py          # AI coding session management
 │   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
+│   │   ├── path_identity.py     # Whether a path is inside a folder, by the folder's identity
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector

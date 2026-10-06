@@ -149,9 +149,21 @@ def start_problem(start: Any, length: int) -> Optional[str]:
     return None
 
 
+def stored_passages(stored: str) -> Tuple[str, ...]:
+    """The texts a coding's stored passage stands for: itself, and, for
+    a coding made in QualCoder, the same with each paragraph mark
+    (U+2029) read as a line break. QualCoder stores the passage as Qt's
+    selectedText() gives it, which writes a line break inside the
+    selection as that mark (code_text.py 4869-4871, stored unchanged at
+    4898-4902, QualCoder 9bddf17); the server's check of a suggestion's
+    passage allows it the same way."""
+    return (stored, stored.replace("\u2029", "\n"))
+
+
 def passage_differs(text: str, segment: Dict[str, Any]) -> bool:
     """Whether a coding's stored passage differs from the text at its
-    positions (QualCoder counts an emoji as two; see the reading copy)."""
+    positions (QualCoder counts an emoji as two; see the reading copy),
+    a paragraph mark in it read as a line break."""
     stored = segment.get("text")
     if not stored:
         return False
@@ -160,7 +172,7 @@ def passage_differs(text: str, segment: Dict[str, Any]) -> bool:
             int(segment.get("position_end"))
     except (TypeError, ValueError):
         return True
-    return text[p0:p1] != stored
+    return text[p0:p1] not in stored_passages(stored)
 
 
 def tuple_span(segment: Dict[str, Any]) -> Tuple[int, int]:

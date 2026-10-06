@@ -176,19 +176,19 @@ class TestEveryCommonCharacterSetIsTried:
     def test_the_check_names_the_reading_that_finds_the_names(self):
         compiled = _compiled([("Łukasz Wąsik", "Participant A")])
         polish = _interview(POLISH, "cp1250", times=1)
-        assert doc_import.names_escape_the_guess(compiled, polish,
-                                                 "cp1252") == "cp1250"
-        assert doc_import.names_escape_the_guess(compiled, polish,
-                                                 "cp1250") is None
+        assert doc_import.names_escape_the_reading(compiled, polish,
+                                                   "cp1252") == "cp1250"
+        assert doc_import.names_escape_the_reading(compiled, polish,
+                                                   "cp1250") is None
         # A Western file read rightly as Western is not held back
         # because another reading of it differs.
         western = _compiled([("José Muñoz", "Participant A")])
         spanish = _interview(SPANISH, "cp1252", times=1)
-        assert doc_import.names_escape_the_guess(western, spanish,
-                                                 "cp1252") is None
+        assert doc_import.names_escape_the_reading(western, spanish,
+                                                   "cp1252") is None
         # Names of plain letters read alike every way.
         plain = _compiled([("Jan Kowalski", "Participant A")])
-        assert doc_import.names_escape_the_guess(
+        assert doc_import.names_escape_the_reading(
             plain, "Jan Kowalski, żona\n".encode("cp1250"), "cp1252") is None
 
     def test_the_doubtful_line_gives_a_way_round_beyond_western(self):

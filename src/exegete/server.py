@@ -10040,7 +10040,7 @@ def import_documents(
         preview_token: from the preview, for the import
         apply_project_pseudonyms: default true; false only on the researcher's word
         import_pdfs_with_listed_names: default false; true only on the researcher's word
-        encoding: a character set the researcher names, for guessed files (e.g. cp1252)
+        encoding: a character set the researcher names (e.g. cp1252), used for every file in the call that is not UTF-8: give it for one file at a time
         memo: a note for every file (e.g. its source); at most 10,000 characters
     """
     error = _import_arguments_error(paths, encoding, memo)

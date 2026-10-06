@@ -157,13 +157,13 @@ class TestAGuessedCharacterSet:
         compiled = pseudonymise.Compiled(pseudonymise.validate_mapping(
             [{"original": "Hélène", "pseudonym": "Participant A"}],
             "exact", may_echo_names=False))
-        assert doc_import.names_escape_the_guess(compiled, INTERVIEW,
-                                                 "cp1250")
-        assert not doc_import.names_escape_the_guess(compiled, INTERVIEW,
-                                                     "cp1252")
+        assert doc_import.names_escape_the_reading(compiled, INTERVIEW,
+                                                   "cp1250")
+        assert not doc_import.names_escape_the_reading(
+            compiled, INTERVIEW, "cp1252")
         plain = "Nobody listed here, café.\n".encode("cp1252")
-        assert not doc_import.names_escape_the_guess(compiled, plain,
-                                                     "cp1250")
+        assert not doc_import.names_escape_the_reading(compiled, plain,
+                                                       "cp1250")
 
     @pytest.mark.parametrize("charset, doubtful", [
         ("cp1250", True), ("cp1257", True), ("cp775", True),

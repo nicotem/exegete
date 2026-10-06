@@ -38,7 +38,9 @@ otherwise, and may change before it is released.
   images and PDF pages, audio and video codings) counted; suggestions
   awaiting a decision counted. A coding is placed where its stored
   passage matches the text, at its positions read as characters or,
-  failing that, as QualCoder's editor counts them (an emoji as two).
+  failing that, as QualCoder's editor counts them (an emoji as two);
+  the paragraph mark QualCoder stores for a line break inside a coded
+  passage matches the line break in the text.
   Safe by structure: project data only in escaped text and quoted
   attributes, colours checked, selectors by number, a content security
   policy that allows no script, fetch, form or base address, and no
@@ -94,7 +96,9 @@ otherwise, and may change before it is released.
   to one answer's size, each saying where its text continues.
 - Every coding whose stored passage is not the text at its positions
   (usually one made in QualCoder after an emoji) is marked
-  `stored_passage_differs` in `analyze_file_with_coding`, never moved.
+  `stored_passage_differs` in `analyze_file_with_coding`, never moved;
+  the paragraph mark QualCoder stores for a line break inside a coded
+  passage is read as that line break, so such a coding is not marked.
 - `import_text_file`'s description says first that its text passes
   through the conversation, points to `import_documents` for a document
   on the computer, and gives the 1,000,000-character limit.
@@ -141,9 +145,9 @@ otherwise, and may change before it is released.
   no text is found is refused, where QualCoder stores its raw bytes; a
   file declaring XML entities is refused; a web page QualCoder cannot
   store is read by its declared character set, and its preview says
-  that QualCoder cannot import it (never that QualCoder reads it the
-  same way), with the way round for a guessed one (name the character
-  set); a file whose accents came
+  that QualCoder cannot import it, whatever set it was read by (never
+  that QualCoder reads it the same way), with the way round for a
+  guessed one (name the character set); a file whose accents came
   out garbled is held back until the researcher names the character set
   (`encoding`) or fixes the file; subtitle files come in as documents,
   with every byte-order mark at their start removed; an OpenDocument
@@ -170,11 +174,17 @@ otherwise, and may change before it is released.
   sets European documents are most often saved in (Windows Western,
   Central European, Baltic and Turkish, ISO Latin 2, Mac Roman), holds
   a name from the names list that the guessed reading does not, the
-  file is held back, naming that set, since the list would not replace
-  that name. This holds whatever the guess: a Polish or Turkish file is
-  often guessed to be Windows Western. The preview says that QualCoder
-  may guess differently, since it does not fix charset-normalizer's
-  release.
+  file is held back, since the list would not replace that name. The
+  hold names the set that reads every listed name any of these
+  readings finds, or says that none does (then the way round is to
+  save the file as UTF-8). This holds whatever the guess: a Polish or
+  Turkish file is often guessed to be Windows Western. A web page is
+  read for this as its text reads, so a name its source splits with a
+  line break, extra spaces or markup is found. A set the researcher
+  names is checked the same way, since the encoding argument applies to
+  every file in the call that is not UTF-8, and the hold says to ask
+  again for that file alone. The preview says that QualCoder may guess
+  differently, since it does not fix charset-normalizer's release.
 - The batch goes in together or not at all: a file the preview read as
   ready that reads otherwise at the import (out of time or memory, say)
   stops the whole import, naming the file; a file the preview held back
@@ -226,13 +236,13 @@ otherwise, and may change before it is released.
 
 ### Measured
 
-- Serialised tool JSON: full = 200,332 characters (about 50.1k tokens
+- Serialised tool JSON: full = 200,396 characters (about 50.1k tokens
   at chars/4) over 76 tools, core = 66,952 (about 16.7k) over 23, and
-  the opt-in lifecycle set = 202,911 (about 50.7k) over 77, measured on
+  the opt-in lifecycle set = 202,975 (about 50.7k) over 77, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 210,180, 70,328 and 212,899.
+  Python 3.11.13 (the `.venv/`), 210,244, 70,328 and 212,963.
   `open_file_for_reading`'s own entry is 1,355 characters on 3.13, and
-  `import_documents`' 2,643 (2,645 with its separator; it is in the
+  `import_documents`' 2,707 (2,709 with its separator; it is in the
   standard and lifecycle sets, not in core); the rest of the growth is
   `start` on `analyze_file_with_coding` and the two descriptions changed
   above.

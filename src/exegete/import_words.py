@@ -177,8 +177,28 @@ HELD_BACK = {
                      "so the list would not replace them; read as "
                      "{found}, it finds them. Name that character set "
                      "with the encoding argument (encoding=\"{encoding}\") "
-                     "and ask again, or open the file in its own app and "
-                     "save it as UTF-8.",
+                     "and ask again for this file alone, since the "
+                     "argument applies to every file in the call that is "
+                     "not UTF-8; or open the file in its own app and save "
+                     "it as UTF-8.",
+    "charset_names_named": "It was read as {charset}, the character set "
+                           "named, and read that way, names from your "
+                           "list come out with other letters (as in "
+                           "\"Agnčs\" for \"Agnès\"), so the list would "
+                           "not replace them; read as {found}, it finds "
+                           "them. The encoding argument applies to every "
+                           "file in the call that is not UTF-8: ask again "
+                           "for this file alone with "
+                           "encoding=\"{encoding}\", or open the file in "
+                           "its own app and save it as UTF-8.",
+    "charset_names_no_set": "Read as {charset}, names from your list come "
+                            "out with other letters (as in \"Agnčs\" for "
+                            "\"Agnès\"), so the list would not replace "
+                            "them, and none of the character sets "
+                            "European documents are most often saved in "
+                            "reads all of them rightly. Open the file in "
+                            "its own app, save it as UTF-8, then ask "
+                            "again.",
     "not_read_in_time": "Not read in time; ask again for these.",
 }
 
@@ -336,6 +356,10 @@ WARNINGS = {
         "import this web page, since its text is not UTF-8."),
     "web_charset_guessed_check": ("changes",
         "Its character set was guessed as {charset}. " + _DOUBTFUL_GUESS),
+    # A web page read by the character set it declares, or by one named.
+    "web_not_utf8": ("information",
+        "QualCoder cannot import this web page, since its text is not "
+        "UTF-8."),
     "charset_named": ("information",
         "It was read as {charset}, the character set named; the memo "
         "records it."),

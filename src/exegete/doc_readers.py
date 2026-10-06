@@ -318,6 +318,18 @@ def read_web_page(raw: bytes, encoding: Optional[str] = None
     return web_page_text(_universal_newlines(decoded)), charset, guessed
 
 
+def reading_text(kind: str, decoded: str) -> str:
+    """The text a plain text file or a web page of `kind` gives once its
+    bytes are decoded as `decoded`, as `read_document` would store it
+    (names aside): for a web page its page text, so that a name the
+    page's source splits with a line break, extra spaces or markup is
+    whole, as in the stored text."""
+    if kind == WEB:
+        decoded = web_page_text(_universal_newlines(decoded))
+    text = _universal_newlines(decoded)
+    return text[1:] if text[:1] == BOM else text
+
+
 # ---------------------------------------------------------------------------
 # RTF: QualCoder's reader, striprtf, on the file read as Latin-1
 # (manage_files.py 3250-3260)

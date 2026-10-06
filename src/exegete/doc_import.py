@@ -473,57 +473,101 @@ def doubtful_guess(charset: Optional[str]) -> bool:
 # The character sets of one byte a letter that European documents are
 # commonly saved in, as the encoding argument names them: Windows
 # Western, Central European, Baltic and Turkish, ISO Latin 2 and Mac
-# Roman. A guessed file is read each of these ways for the names list.
+# Roman. A file read by a guessed or a named character set is read each
+# of these ways for the names list.
 OTHER_READINGS = ("cp1252", "cp1250", "cp1257", "cp1254", "iso8859-2",
                   "mac_roman")
 
 
-def names_escape_the_guess(compiled: Any, data: bytes,
-                           charset: Optional[str]) -> Optional[str]:
-    """The character set, of `OTHER_READINGS`, in whose reading the
-    file's bytes hold names from the list that the guessed reading does
-    not, or None: the guess turned a listed name's letters into others,
-    so the list would not replace it. Of several, the one finding the
-    most such names, then the first in the list."""
-    from . import pseudonymise as pseudo
+def _entries_found(compiled: Any, text: str) -> frozenset:
+    """The names-list entries `text` holds (only which, not where, so a
+    text dense with names costs no more memory than one without)."""
+    every = len(compiled.mapping.entries)
+    found: set = set()
+    for match in compiled.pattern.finditer(text):
+        found.add(compiled.entry_for(match.group(0)))
+        if len(found) == every:
+            break
+    return frozenset(found)
+
+
+def names_escape_the_reading(compiled: Any, data: bytes,
+                             charset: Optional[str],
+                             kind: str = doc_readers.TEXT,
+                             text: Optional[str] = None) -> Optional[str]:
+    """Whether names from the list escape the reading of the file's bytes
+    in `charset`: None when no reading in `OTHER_READINGS` finds a listed
+    name this one does not. Otherwise this reading turned a listed name's
+    letters into others, so the list would not replace it, and the answer
+    is the character set, of `OTHER_READINGS`, whose reading finds every
+    listed name any of these readings finds (the first in the list when
+    several do), or "" when none of them does.
+
+    Each reading is searched as the import would store it: for a web
+    page, the page's text (tags dropped, character references turned
+    into characters, white space folded), where a name split by a line
+    break or by markup in the page's source is whole. `text` is this
+    reading's text when the caller has it."""
     name = _canonical(charset)
     if name is None or data.isascii():
         return None
-    guessed = data.decode(name, "replace")
-    in_guess: Optional[set] = None
-    best, most = None, 0
+    own = data.decode(name, "replace")
+    readings: List[Tuple[str, frozenset]] = []
     for other in OTHER_READINGS:
         if _canonical(other) == name:
             continue
-        reading = data.decode(other, "replace")
-        if reading == guessed:
+        decoded = data.decode(other, "replace")
+        if decoded == own:
             continue
-        found = {r.entry for r in pseudo.find_replacements(compiled,
-                                                           reading)}
-        if not found:
-            continue
-        if in_guess is None:
-            in_guess = {r.entry for r in
-                        pseudo.find_replacements(compiled, guessed)}
-        missed = len(found - in_guess)
-        if missed > most:
-            best, most = other, missed
-    return best
+        found = _entries_found(compiled,
+                               doc_readers.reading_text(kind, decoded))
+        if found:
+            readings.append((other, found))
+    if not readings:
+        return None
+    if text is None:
+        text = doc_readers.reading_text(kind, own)
+    here = _entries_found(compiled, text)
+    every = here.union(*(found for _other, found in readings))
+    if here == every:
+        return None
+    for other, found in readings:
+        if found == every:
+            return other
+    return ""
 
 
 def _hold_for_names(item: Item, ctx: Context, data: bytes,
-                    charset: Optional[str]) -> bool:
+                    result: Dict[str, Any]) -> bool:
     """Hold the file back when another reading of its bytes finds listed
-    names the guessed one does not, naming that reading's character
-    set; whether it was held."""
-    other = names_escape_the_guess(ctx.compiled, data, charset)
+    names that the guessed or named one does not, naming the character
+    set that reads them all, or saying that none does; whether it was
+    held. Asked again with that set, the file passes this check, since
+    that set's reading finds every name the others find."""
+    charset = result.get("charset")
+    other = names_escape_the_reading(ctx.compiled, data, charset,
+                                     item.kind, result["text"])
     if other is None:
         return False
-    item.status, item.code = "held", "charset_names"
+    if other == "":
+        code = "charset_names_no_set"
+    elif result.get("charset_guessed"):
+        code = "charset_names"
+    else:
+        code = "charset_names_named"
+    item.status, item.code = "held", code
     item.numbers["charset"] = charset_words(charset)
     item.numbers["found"] = charset_words(other)
     item.numbers["encoding"] = other
     return True
+
+
+def _named_reading(result: Dict[str, Any], ctx: Context) -> bool:
+    """Whether the file was read by the character set the researcher
+    named (a file that decodes as UTF-8 never is, nor a web page read by
+    the set it declares, unless that is the set named)."""
+    return (ctx.encoding is not None and not result.get("charset_guessed")
+            and result.get("charset") == ctx.encoding)
 
 
 def evaluate(item: Item, result: Dict[str, Any], ctx: Context,
@@ -561,13 +605,15 @@ def evaluate(item: Item, result: Dict[str, Any], ctx: Context,
         item.status, item.code = "held", code
         return
     elif (data is not None and ctx.compiled is not None
-          and result.get("charset_guessed")
-          and _hold_for_names(item, ctx, data, result.get("charset"))):
+          and (result.get("charset_guessed") or _named_reading(result, ctx))
+          and _hold_for_names(item, ctx, data, result)):
         # Nothing looks garbled, but the guess has changed the letters
         # of a listed name, which the list would then not replace
         # (charset-normalizer reads much Western text as Central
         # European, and Polish or Turkish as Western; QualCoder makes
-        # the same guess).
+        # the same guess). A named set is checked the same way: it
+        # applies to every file in the call that is not UTF-8, so a set
+        # named for one file can be the wrong one for another.
         return
     elif ctx.compiled is not None:
         replacements = pseudo.find_replacements(ctx.compiled, text)
@@ -614,6 +660,12 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         add(code, charset=charset_words(charset))
     elif ctx.encoding is not None and charset == ctx.encoding:
         add("charset_named", charset=charset_words(charset))
+    if web_reading(item, result) == "read" and not any(
+            group == "changes" for group, _text in out):
+        # A web page read by its declared or a named character set,
+        # which QualCoder's import fails on; when a warning changes the
+        # text, the why line says so instead (said once either way).
+        add("web_not_utf8")
     for code in ("astral", "invisible"):
         if signs.get(code):
             add(code, count=signs[code])

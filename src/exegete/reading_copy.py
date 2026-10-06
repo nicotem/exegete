@@ -47,6 +47,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .memo_privacy import split_public_private_memo
+from .parts import stored_passages
 from .reading_folder import PAGE_MARK
 
 POLICY = ("default-src 'none'; style-src 'unsafe-inline'; "
@@ -153,11 +154,12 @@ class Positions:
         c0, c1 = max(0, min(p0, length)), max(0, min(p1, length))
         if not stored:
             return c0, c1, "unchecked"
-        if self.text[c0:c1] == stored:
+        passages = stored_passages(stored)
+        if self.text[c0:c1] in passages:
             return c0, c1, "stored"
         u0, u1 = self.from_units(p0), self.from_units(p1)
         if u0 is not None and u1 is not None and \
-                self.text[u0:u1] == stored:
+                self.text[u0:u1] in passages:
             return u0, u1, "second"
         return c0, c1, "neither"
 

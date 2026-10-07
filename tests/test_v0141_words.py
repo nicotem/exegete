@@ -268,8 +268,13 @@ class TestInstallSaysHowToMove:
 
     def test_the_extension(self):
         section = self._coming_from()
-        for words in ("it updates the extension you have, with its two "
-                      "settings, rather than adding a second one",
+        # v0.14.2, the check for new versions: the extension has a third
+        # setting, so the sentence says the settings chosen are kept and
+        # the third is added (the port's truth check, round 1)
+        for words in ("it updates the extension you have, with the settings "
+                      "you chose, rather than adding a second one (0.14.2 "
+                      "adds a third, \"Tell me when a new version is out\", "
+                      "on unless you switch it off)",
                       "may take longer and needs the internet",
                       "Claude may ask again before it uses each tool"):
             assert words in section, words

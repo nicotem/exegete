@@ -1151,7 +1151,7 @@ def test_install_says_the_extension_tells_of_new_versions():
     assert "does not look for new versions" not in section
     assert updating == (
         "**Updating**: download the newer `.mcpb` and install it the same "
-        "way. Exegete tells you, through Claude, when a newer version is "
+        "way. Exegete asks Claude to tell you when a newer version is "
         "out, unless you switch that off (the third setting, above); with "
         "a GitHub account, Watch, then Custom, then Releases, on the "
         "repository's page also sends you a notice of each. ")

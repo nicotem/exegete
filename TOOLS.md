@@ -166,8 +166,8 @@ the names it has used, which is what makes a later comparison between
 two models possible. A model name is a good answer for exactly that
 reason.
 
-Quick picks if you have no preference: `AI Coding Assistant` (this
-server's built-in default, and what every project coded with v0.11 and
+Quick picks if you have no preference: `AI Coding Assistant`
+(Exegete's built-in default, and what every project coded with v0.11 and
 earlier already holds) and `AI Agent`, the exact name QualCoder 4.0's
 built-in assistant writes under, which groups Exegete's work and
 the built-in assistant's under one coder in QualCoder's per-coder
@@ -307,7 +307,7 @@ tools plus `create_project`.
 
 QualCoder 4.0's AI subsystem defines conventions that live in the
 project itself. Exegete follows them, so a project touched by both
-tools behaves coherently. Each feature below is detected by probing the
+programs behaves coherently. Each feature below is detected by probing the
 project database (tables, columns, views), never by version string;
 pre-4.0 projects behave as before. Parity claims were verified against
 QualCoder 4.0, and cite its code at commit `9bddf17` (see "Supported
@@ -386,8 +386,8 @@ project open, so a restored project without one is normal. The project
 database itself is copied with SQLite's own online backup (since
 0.14; QualCoder copies it as a file), so a backup or copy taken while
 QualCoder is writing holds what was last committed, and the database's
-journal and WAL files are never copied: QualCoder's ignore set misses
-them, and a backup that carried a journal read differently on
+journal and WAL files are never copied: QualCoder's ignore set does
+not match them, and a backup that carried a journal read differently on
 different platforms. `list_backups` marks a backup that holds them
 `unclean` and `restore_backup` refuses it. If QualCoder keeps the
 database locked for more than about 15 seconds, no backup is taken and

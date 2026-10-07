@@ -456,10 +456,10 @@ convention, whichever program made the project, Exegete or QualCoder:
   after it were dropped without a word, so a note that began with it was
   emptied or, for an annotation, deleted. This departs from QualCoder's
   own AI server, which drops the marker silently; the refusal is there
-  because the silent drop destroyed notes. Code and category names and
-  coder names copied into provenance notes are neutralised, so the AI
-  can never create, read, replace, or delete a private zone through a
-  memo write.
+  because Exegete's own earlier silent drop emptied or deleted notes.
+  Code and category names and coder names copied into provenance
+  notes are neutralised, so the AI can never create, read, replace,
+  or delete a private zone through a memo write.
 - **Whole-row deletes** are the one qualification to that sentence.
   Tools that remove an entire row remove any private note on it
   together with the row: delete_coding and delete_annotation (single
@@ -485,8 +485,8 @@ convention, whichever program made the project, Exegete or QualCoder:
 - **The exception, deliberately**: exported FILES (the REFI-QDA
   `.qdpx` and codebook files, and the coded-segments report file
   written by export_coded_segments_report) keep memos in full, private
-  zone included, because QualCoder's own exports do and export parity
-  governs. The export tools say so in their descriptions.
+  zone included, because QualCoder's own exports do, and Exegete keeps
+  its exports the same. The export tools say so in their descriptions.
   export_code_report, despite its name, returns JSON into the
   conversation rather than writing a file, so it strips like every
   other read. Treat exported files with the same care as the project

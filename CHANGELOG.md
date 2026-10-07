@@ -11,19 +11,19 @@ Nothing yet.
 
 ## [0.14.2-alpha] - 2026-10-07
 
-v0.14.2: the assistant's brief, provisional; the rules a model must
-not miss within the 2,048 characters Claude Code shows of a tool
-description; fixes from the checks of 0.14.1; the README, rewritten
-to say plainly what Exegete does, for newcomers and for advanced
-users, and opening with the woven lockup; QualCoder 4.0, released
-on 2 October 2026, named as what Exegete is verified against (4.0
-keeps the project format Exegete already wrote, so only words
-changed, in the documents and in two messages); how Exegete
-describes itself, as a qualitative analysis application whose
-projects keep QualCoder's format and conventions, everywhere it
-speaks; and the check for new versions, which tells researchers when
-a new version is out and how to install it, though updates are still
-never installed by themselves.
+v0.14.2: the assistant's brief, provisional; the rules a model must not
+miss within the 2,048 characters Claude Code shows of a tool
+description; fixes from the checks of 0.14.1; the README, rewritten to
+say plainly what Exegete does, for newcomers and for advanced users, and
+opening with the woven lockup; QualCoder 4.0, released on 2 October
+2026, named as what Exegete is verified against (4.0 keeps the format of
+its beta, schema v17, which Exegete was built against, so only words
+changed, in the documents and in two messages); how Exegete describes
+itself, as a qualitative analysis application whose projects keep
+QualCoder's format and conventions, everywhere it speaks; and the check
+for new versions, which tells researchers when a new version is out and
+how to install it, though updates are still never installed by
+themselves.
 
 ### Added: the check for new versions
 
@@ -189,32 +189,37 @@ matches its own) still names it.
 - **The help, the prompts and the messages.** The help's overview is
   "AI-assisted coding in Exegete", and its notes on evidence describe
   Exegete's discipline as its own (NOTICE keeps the credit to
-  QualCoder's assistant brief). The four prompts and the project
-  resource say "this project". 25 messages change: "No project
-  selected" in five places; an empty search for projects offers
-  `search_directories` or a new project, instead of asking the
-  researcher to make one in QualCoder; `apply_codings` ends by saying
-  that the codings are in the project and can be read back, and that
-  QualCoder, if the researcher uses it, shows them highlighted in the
-  text; the questions about coder names ask for the researcher's own
-  coder name, not "the one they use in QualCoder"; the private-note
+  QualCoder's assistant brief). The four prompts say "this project", and
+  the project resource "the current project". Messages change: "No
+  project selected" in five places; an empty search for projects says
+  what it searched (the folders given, each three levels deep, or the
+  usual places) and offers other folders or a new project, instead of
+  asking the researcher to make one in QualCoder; `apply_codings` ends
+  by saying that the codings are in the project and can be read back,
+  and that QualCoder, if the researcher uses it, shows them highlighted
+  in the text; the questions about coder names ask for the researcher's
+  own coder name, not "the one they use in QualCoder"; the private-note
   refusal says that a private note is written outside the conversation
-  (in QualCoder, for example). Answers, and the methods notes, say
-  "Exegete" where they said "this server" or "the server", and the
-  notes' description says that the method literature they list is the
-  one QualCoder's prompts cite, for researchers who want to bring in a
-  method.
+  (in QualCoder, for example); and answers on files whose positions
+  QualCoder's editor counts differently no longer call it "its
+  documented emoji bug": three cite QualCoder's manual (an emoji may
+  take more than one position in its editor), and the pseudonymisation
+  preview says only that the positions are counted differently. Answers,
+  and the methods notes, say "Exegete" where they said "this server" or
+  "the server", and the notes' description says that the method
+  literature they list is the one QualCoder's prompts cite, for
+  researchers who want to bring in a method.
 - **Tool descriptions**, rewritten in 40 of the 74 tools 0.14.1 had,
   each no longer than 0.14.1's, and in `read_brief`: "the project" for
-  "the QualCoder project",
-  "the project's own setting" for "what the user sees in QualCoder",
-  "Exegete" for "this server", the private-note sentence ("what follows
-  it is the researcher's own, not the assistant's to write"), the
-  coder-name argument of `create_project`, and "a departure from
-  QualCoder's own searches" for "a departure in your favour" in
-  `search_coded_text`. Together they make `full` 251 characters
-  shorter and `lifecycle` 273 (on Python 3.13). "MCP backups", which
-  would grow, waits for v0.15 with the backup kind `mcp`.
+  "the QualCoder project", "the project's own setting" for "what the
+  user sees in QualCoder", "Exegete" for "this server", the private-note
+  sentence ("what follows it is the researcher's own, not the
+  assistant's to write"), the coder-name argument of `create_project`,
+  and "a departure from QualCoder's own searches" for "a departure in
+  your favour" in `search_coded_text`. Together they make `full` 251
+  characters shorter and `lifecycle` 273 (on Python 3.13): 237 and 259
+  in 0.14.1's tools, and 14 in `read_brief`'s own entry. "MCP backups",
+  which would grow, waits for v0.15 with the backup kind `mcp`.
 - **The short descriptions.** The command's help (`exegete --help`),
   the note shown when Exegete is started by hand in a terminal, the
   module's own description, NOTICE's first line (in both packages) and
@@ -245,24 +250,27 @@ matches its own) still names it.
   checking the codings in the conversation or in QualCoder, list
   QualCoder as optional, and say "QualCoder's" for "upstream". They say
   "Exegete" wherever a sentence says what it is or does for the
-  researcher, and keep "the server" for host settings, standard input
-  and output, and logs. QUICKSTART says what QualCoder is. CLAUDE.md
-  now opens with what Exegete is, and its rule for coding agents is
-  interoperability: follow QualCoder's formats and conventions, name
-  every departure with its reason, and be better than QualCoder where
-  its behaviour loses or garbles content. The bug report form no longer
-  requires a QualCoder version ("none" is accepted), and "I don't use
-  QualCoder" is among the answers on whether it was open. Three older
-  documents gain the banner that marks them as historical.
-- Tests: the pins moved with their words. New ones hold that the
-  opening text, the brief's first paragraph, the tagline, the command's
-  help and NOTICE's first line say what was decided, that no served
-  text or current document says that Exegete opens or exposes a
-  QualCoder project or misspells QualCoder's name, that no served text
-  or message says "the server" or "this server" except for the program
-  as a process (its working folder, environment and log), and that no
-  tool description is longer than 0.14.1's
-  (`tests/test_v0142_selfrep.py`).
+  researcher, and keep "the server" for the program as it is installed
+  and runs: its host settings and environment, starting and stopping,
+  standard input and output, its log, its own folder and older copies of
+  it. QUICKSTART says what QualCoder is. CLAUDE.md now opens with what
+  Exegete is, and its rule for coding agents is interoperability: follow
+  QualCoder's formats and conventions, name every departure with its
+  reason, and be better than QualCoder where its behaviour loses or
+  garbles content. The bug report form no longer requires a QualCoder
+  version ("none" is accepted), and "I don't use QualCoder" is among the
+  answers on whether it was open. Three older documents gain the banner
+  that marks them as historical.
+- Tests: the pins moved with their words. New ones hold that the opening
+  text, the brief's first paragraph, the tagline, the command's help and
+  NOTICE's first line say what was decided, that no served text or
+  current document says that Exegete opens or exposes a QualCoder
+  project or misspells QualCoder's name, that no served text or message
+  says "the server" or "this server" except for the program as a process
+  (for example its working folder, environment and log), that the
+  sentences in the documents that said "the server" for what Exegete
+  does now say "Exegete", and that no tool description is longer than
+  0.14.1's (`tests/test_v0142_selfrep.py`).
 
 ### Changed: the rules a model must not miss come first in each tool description
 
@@ -298,7 +306,7 @@ matches its own) still names it.
   Claude Code only through `read_brief`) and its pairings
   (`record_suggestions` states them within its cut); four of
   `pseudonymise_source`'s paragraphs (the refusal while QualCoder has
-  the project open, which the server enforces under QualCoder 3.8.2;
+  the project open, which Exegete enforces under QualCoder 3.8.2;
   what the run does not rewrite, which the preview counts; and that the
   backup keeps the real names and the file should be read again, which
   the run's answer says); and, in the Returns sections of
@@ -404,7 +412,7 @@ matches its own) still names it.
   the PyPI version and the licence; no test badge.
 - Back from 0.14.0, redrawn: a diagram of how the parts fit and where
   data goes (the assistant app, the AI model on its maker's computers,
-  Exegete with no AI of its own, the project, QualCoder alongside, one
+  Exegete with no AI of its own, the project, QualCoder (optional), one
   program at a time), with 0.14.0's technical labels (MCP over standard
   input and output; reads read-only, writes after a backup); a diagram
   of a coding's path, from the request through the review list to the
@@ -446,7 +454,7 @@ matches its own) still names it.
   included (INSTALL.md, "What You'll Need"); how to hear of a new
   release (INSTALL.md, the one-click section); Codex's and Claude Code's
   reach in detail, and where Cowork runs (PRIVACY.md); the history of
-  the MIT releases (NOTICE). README.md is now about 32,560 characters,
+  the MIT releases (NOTICE). README.md is now about 34,300 characters,
   against 31,975 in 0.14.1, and its sentences are shorter.
 - The README now says plainly that Exegete is free, open-source
   software, under QualCoder's own licence (LGPL-3.0-or-later), and what
@@ -670,9 +678,10 @@ matches its own) still names it.
   mcp 1.30.0 in the repository's own `venv/`; on Python 3.11.13 (the
   `.venv/`), 206,095, 68,432 and 208,792. Each grew by `read_brief`'s
   own entry (453 characters with its separator, in every set, on both
-  interpreters), `full` and `lifecycle` by `check_for_updates`' own
-  (905 with its separator, on both interpreters), and shrank where
-  descriptions were reworded on how Exegete describes itself (see
+  interpreters), `full` and `lifecycle` by `check_for_updates`' own (905
+  with its separator, on both interpreters), and shrank where 0.14.1's
+  descriptions were reworded on how Exegete describes itself (237
+  characters in `full` and 259 in `lifecycle`, on both interpreters; see
   above); no other description changed: each keeps the words 0.14.1
   served (fourteen changed order; see above), and none is longer.
 

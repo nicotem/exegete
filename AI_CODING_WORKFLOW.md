@@ -893,8 +893,8 @@ not [what it should not]
 
 ### Quality Control
 
-Check your AI coding quality. In the conversation, ask for a random
-sample of the AI coder name's codings and read them against your own
+Check your AI coding quality. In the conversation, ask for a sample
+of the AI coder name's codings and read them against your own
 coding. Or in QualCoder:
 
 ```

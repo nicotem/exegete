@@ -3652,6 +3652,35 @@ def is_relative_folder(text: str, path_class: type = Path) -> bool:
     return not path.is_absolute() and not path.root
 
 
+def _no_projects_message(given: Optional[List[str]],
+                         not_found: List[str]) -> str:
+    """What an empty search says: the folders given (`given`), or the
+    usual places when none were given, and what to do next. Until
+    v0.14.2's last round a search of the folders given also said "No
+    projects found in the usual places", and asked for the folder the
+    researcher had just named."""
+    if not given:
+        return ("No projects found in the usual places (searched.folders). "
+                "Ask the researcher which folder holds their project and "
+                "give it in search_directories, or start a new project with "
+                "create_project.")
+    if not not_found:
+        missing = ""
+    elif len(not_found) < len(given):
+        missing = (f" {len(not_found)} of them "
+                   f"{'does' if len(not_found) == 1 else 'do'} not exist "
+                   f"(searched.not_found).")
+    elif len(given) == 1:
+        missing = " That folder does not exist."
+    else:
+        missing = " None of them exists."
+    return ("No projects found in the folders given, each searched three "
+            "levels deep; the usual places were not searched." + missing
+            + " Check the paths, give other folders in search_directories, "
+            "leave it out to search the usual places, or start a new "
+            "project with create_project.")
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_available_projects(search_directories: Optional[List[str]] = None) -> str:
@@ -3721,10 +3750,9 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
         if not projects:
             return json.dumps({
                 "projects": [],
-                "message": _mark_unregistered(
-                    "No projects found in the usual places. Give "
-                    "search_directories, or start a new project with "
-                    "create_project."),
+                "message": _mark_unregistered(_no_projects_message(
+                    folders if search_directories else None,
+                    searched["not_found"])),
                 "default_search_paths": top_level_only + usual
                 if not search_directories else usual,
                 "searched": searched,
@@ -6249,7 +6277,8 @@ def analyze_file_with_coding(file_id: int) -> str:
         result["position_safety_warning"] = (
             "This file contains \r\n sequences or characters beyond U+FFFF "
             "(e.g. emoji), so QualCoder's GUI uses a different position "
-            "system for it (its documented emoji bug). GUI-created codings "
+            "system for it (QualCoder's manual notes that an emoji may "
+            "take more than one position in its editor). GUI-created codings "
             "here may not align with the text slices shown by Exegete, "
             "and codings written here may render shifted or unhighlighted "
             "in the QualCoder editor. Reports and exports are unaffected."
@@ -8298,8 +8327,9 @@ def record_suggestions(
         result["position_safety_warning"] = (
             f"File(s) {sorted(unsafe_files.values())} contain \r\n sequences "
             f"or characters beyond U+FFFF (e.g. emoji). QualCoder's GUI uses "
-            f"a different position system for such files (its documented "
-            f"emoji bug), so codings on them may render shifted or "
+            f"a different position system for such files (QualCoder's "
+            f"manual notes that an emoji may take more than one position in "
+            f"its editor), so codings on them may render shifted or "
             f"unhighlighted in the QualCoder editor, and GUI-created codings "
             f"there may not verify. Reports and exports are unaffected. "
             f"Relay this to the user before proceeding to approval."
@@ -14713,9 +14743,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         warnings.append(
             f"Warning: file(s) {unsafe} contain \\r\\n sequences or "
             f"characters beyond U+FFFF, so QualCoder's GUI already counts "
-            f"positions in them differently from Exegete (its "
-            f"documented emoji bug). This run does not make that worse and "
-            f"does not fix it.")
+            f"positions in them differently from Exegete. This run does not "
+            f"make that worse and does not fix it.")
     residue = preview.get("residue") or {}
     # Every field count the residue block carries, the twelve notes and
     # every label key from the one table that defines them, so a field
@@ -16231,8 +16260,10 @@ def pseudonymise_source(
             result["position_safety_warning"] = (
                 f"File(s) {unsafe} contain \\r\\n sequences or characters "
                 f"beyond U+FFFF (e.g. emoji), so QualCoder's GUI uses a "
-                f"different position system for them (its documented emoji "
-                f"bug). That was already true before this run and is not "
+                f"different position system for them (QualCoder's manual "
+                f"notes that an emoji may take more than one position in "
+                f"its editor). "
+                f"That was already true before this run and is not "
                 f"made worse by it; GUI-created codings in that file may "
                 f"not align with the slices Exegete reports.")
         return result

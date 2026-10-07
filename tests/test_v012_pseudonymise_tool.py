@@ -7906,7 +7906,8 @@ class TestResultShape:
         try:
             out = preview_of()
             assert out["preview"]["files"][0]["position_safe"] is False
-            assert any("emoji bug" in w for w in out["warnings"])
+            assert any("already counts positions in them differently "
+                       "from Exegete" in w for w in out["warnings"])
             result = execute_from(out)
             assert result["success"] is True
             assert "position_safety_warning" in result

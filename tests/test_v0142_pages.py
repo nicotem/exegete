@@ -350,6 +350,32 @@ def test_the_records_say_the_real_computer_checks_are_open(record):
     assert "none of the checks on a real computer in" in note
     assert ("items 1 to 6 must pass on a real Mac and a real Windows "
             "computer before a release carries the check") in note
-    assert "Whether 0.14.2 waits for them is the owner's decision." in note
+    # v0.14.2's last round: the owner's choice of 7 October (ruling 61)
+    # includes item 6, which the checklist for his sitting had left out
+    assert ("On 7 October 2026 the owner chose to make items 1 to 4 and 6 "
+            "on his Mac, in his check of the brief with the final test "
+            "build of this branch") in note
+    assert ("the Install button's label when Exegete is already installed, "
+            "and whether the settings chosen before (the tool set and the "
+            "folder for projects) survive the update") in note
+    assert "Windows has not been checked by hand yet" in note
+    assert "Whether 0.14.2 waits for them" not in note
     # and the site's change is in the same note, with D3 kept
     assert "never from a branch, as D3 decided" in note
+
+
+def test_item_6_says_how_to_check_it():
+    """v0.14.2's last round: section 13's item 6 says what to note while
+    installing one build over another, since the owner's sitting takes
+    it from there (ruling 61)."""
+    text = " ".join((REPO / "docs" / "update-check" / "design.md")
+                    .read_text(encoding="utf-8").split())
+    section = text[text.index("## 13. To verify on a real computer"):]
+    item = section[section.index(" 6. The install button's label"):
+                   section.index(" 7. Windows app-package")]
+    assert ("To check it: before installing a test build over an earlier "
+            "one, note the tool set and the folder for projects in "
+            "Settings, Extensions, Exegete; while installing, note the "
+            "label of the button the installation screen shows; afterwards, "
+            "before changing anything, look at the same two settings "
+            "again.") in item

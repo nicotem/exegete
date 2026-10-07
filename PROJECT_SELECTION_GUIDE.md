@@ -151,6 +151,14 @@ If auto-discovery doesn't find your projects:
 
 3. **Or switch to Fixed Project mode** (Option 2 above)
 
+### "No projects found in the folders given"
+
+When you name a folder, Exegete searches that folder only (three levels
+deep), not the usual places. The answer says when the folder does not
+exist, which usually means a slip in the path. A project more than
+three levels down is not found; naming the folder just above it finds
+it.
+
 ### "No project currently open"
 
 If you're using auto-discovery and haven't selected a project:

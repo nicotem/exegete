@@ -99,7 +99,7 @@ developer MCP servers are disabled on this device..."), and your IT
 team decides.
 
 **Updating**: download the newer `.mcpb` and install it the same way.
-Exegete tells you, through Claude, when a newer version is out, unless
+Exegete asks Claude to tell you when a newer version is out, unless
 you switch that off (the third setting, above); with a GitHub account,
 Watch, then Custom, then Releases, on the repository's page also sends
 you a notice of each.
@@ -121,7 +121,8 @@ Desktop configured by hand, and for contributors who want the source.
 
 ## Choosing your AI host: data-governance options (Experimental)
 
-Exegete works with any MCP host, over standard input and output.
+Exegete works with any MCP host that can run local servers over
+standard input and output.
 Which AI processes your data, and under which terms, is decided by the
 host you run and the account you sign into, not by Exegete. The terms
 attach to the account and product line, not to the client application. Three routes with Claude,
@@ -360,7 +361,7 @@ details.
 
 1. **Find your .qda project folder**:
    - **Important**: projects are **folders** ending in `.qda` (QualCoder's format), not single files
-   - If you use QualCoder, its Open Project dialog shows where yours is
+   - If you use QualCoder, its recent projects list shows where yours is
    - Each project folder contains a `data.qda` database file inside
    - Common locations:
      - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/` (folder)
@@ -397,7 +398,7 @@ details.
   If the path does not exist the server refuses to start and prints
   "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to the host's log (the path
-  itself is not printed). If the path exists but is not a QualCoder
+  itself is not printed). If the path exists but is not a `.qda`
   project, or its database will not open, the server starts and every
   tool answers that the project set in EXEGETE_PROJECT_PATH could not
   be opened.
@@ -594,8 +595,8 @@ versions, below, are new and have one spelling only.
   from a name the project already has, the next write asks which to use
   rather than re-attributing anything. Declare the model this host runs
   (`"Qwen 3.8 6bit"`), or `AI Agent` to propose the exact name
-  QualCoder 4.0's built-in assistant writes under, which groups this
-  server's work with the assistant's under one coder in QualCoder's
+  QualCoder 4.0's built-in assistant writes under, which groups
+  Exegete's work with the assistant's under one coder in QualCoder's
   per-coder visibility toggle, undo and reports. The value is trimmed
   and must be non-empty, at most 80 characters, single-line plain text
   (no control characters, no line or paragraph separators, and no
@@ -1276,8 +1277,8 @@ safeguard", below, says holds in Codex too.
 - If Codex reports that the server timed out while starting, raise
   `startup_timeout_sec`. If a tool stopped with a timeout, raise
   `tool_timeout_sec`, and before asking again check whether the change
-  was made (ask for the project summary, or the list of backups): the
-  server may have finished it.
+  was made (ask for the project summary, or the list of backups):
+  Exegete may have finished it.
 - An `EXEGETE_TOOLSET` other than `full`, `core` or `lifecycle` stops
   the server at start-up, and so does a relative path in
   `EXEGETE_WORKSPACE`; the error names the setting.
@@ -1494,7 +1495,7 @@ Analyse the transcript for file 1 with all its coding
 
 ### "No projects found in the usual places" (Option A)
 
-The server searches these locations by default:
+Exegete searches these locations by default:
 - the folder `EXEGETE_WORKSPACE` names, when it is set (with the
   desktop extension, its "Folder for projects", by default
   `~/QualCoder projects`), at its top level only
@@ -1507,6 +1508,15 @@ Make sure your `.qda` project folder is in one of these locations, or tell Claud
 ```
 List available projects in ["/path/to/your/projects"]
 ```
+
+### "No projects found in the folders given" (Option A)
+
+When you name folders to search, Exegete searches those folders only,
+each three levels deep, and not the usual places above. The answer says
+when a folder you named does not exist, which usually means a typing
+slip in the path. A project folder deeper than three levels is not
+found either: naming the folder just above it helps. Asking Claude to
+list projects without naming a folder searches the usual places again.
 
 ### "No project selected" (Option A)
 
@@ -1633,8 +1643,8 @@ Before sharing such a file, read it as you would the conversation.
 ### Approving the AI's suggestions: your host's settings are the safeguard
 
 When the assistant suggests codings or new codes, nothing is written to
-your project until each item is marked approved and then applied. The
-server records the approval the assistant reports: it cannot tell
+your project until each item is marked approved and then applied.
+Exegete records the approval the assistant reports: it cannot tell
 whether you gave it. Two things keep that honest. Your host asks before
 each tool call: keep it asking, and when it asks about
 `update_suggestion_status`, `update_proposal_status`, `apply_codings` or

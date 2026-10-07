@@ -578,8 +578,8 @@ Plans, not promises: the order may change with what testers report.
   fuller counts of where names remain after replacing them
 - v0.17: a user manual, and codings placed by the passage they quote,
   even when a quote does not match exactly
-- Later: coding images, audio, video and areas of PDF pages; more work
-  alongside QualCoder 4.0; and what testers ask for
+- Later: coding images, audio, video and areas of PDF pages; more
+  QualCoder 4.0 conventions; and what testers ask for
   ([file yours](https://github.com/nicotem/exegete/issues))
 
 ## Disclaimer

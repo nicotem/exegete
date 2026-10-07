@@ -978,6 +978,47 @@ class TestTextsThatSentTheAssistantNowhere:
         assert answer["projects"] == []
         assert len(answer["searched"]["not_found"]) == 1
 
+    def test_an_empty_search_says_which_folders_it_searched(self, tmp_path):
+        """v0.14.2's last round (the sweep's truth check, finding 1): with
+        folders given, the empty search said "No projects found in the
+        usual places. Give search_directories", although it had searched
+        only the folders given, and asked for the folder the researcher
+        had just named."""
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(empty)]})["message"].split())
+        assert message.startswith(
+            "No projects found in the folders given, each searched three "
+            "levels deep; the usual places were not searched. Check the "
+            "paths, give other folders in search_directories, leave it out "
+            "to search the usual places, or start a new project with "
+            "create_project"), message
+        assert "exist" not in message
+        # a folder that is not there is said to be not there
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(tmp_path / "Nowhere")]})[
+                "message"].split())
+        assert "That folder does not exist." in message, message
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(tmp_path / "Nowhere"),
+                                   str(tmp_path / "Elsewhere")]})[
+                "message"].split())
+        assert "None of them exists." in message, message
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(empty), str(tmp_path / "Nowhere")]})[
+                "message"].split())
+        assert ("1 of them does not exist (searched.not_found)."
+                in message), message
+        # with nothing given, the usual places, and where to go next
+        message = " ".join(host_json("list_available_projects")[
+            "message"].split())
+        assert message.startswith(
+            "No projects found in the usual places (searched.folders). Ask "
+            "the researcher which folder holds their project and give it in "
+            "search_directories, or start a new project with "
+            "create_project"), message
+
     def test_the_usual_places_are_reported_too(self):
         answer = host_json("list_available_projects")
         assert answer["searched"]["instead_of_the_usual_places"] is False

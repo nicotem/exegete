@@ -552,6 +552,95 @@ class TestTheMethodLiteratureIsQualCodersPrompts:
             assert "literature it rests on" not in text
 
 
+class TestTheDocumentsSayExegete:
+    """v0.14.2's last round. The guard above reads what is served and the
+    messages, not the documents, where "the server" is rightly common
+    (host settings, start-up, logs). The sweep's relationship check found
+    five sentences in them that said "the server" for what Exegete does
+    for the researcher, two of them on approval, while the CHANGELOG said
+    the pass was complete; they are pinned here word for word."""
+
+    SAY_EXEGETE = {
+        "AI_CODING_GUIDE.md": (
+            "Claude itself does the analysis through the conversation, and "
+            "Exegete only stores and applies what is marked approved (it "
+            "cannot see who approved it; see above).",),
+        "INSTALL.md": (
+            "Exegete records the approval the assistant reports: it cannot "
+            "tell whether you gave it.",
+            "which groups Exegete's work with the assistant's under one "
+            "coder",
+            "Exegete searches these locations by default:",
+            "check whether the change was made (ask for the project summary, "
+            "or the list of backups): Exegete may have finished it."),
+        "TOOLS.md": (
+            "`AI Coding Assistant` (Exegete's built-in default, and what "
+            "every project coded with v0.11 and earlier already holds)",),
+    }
+    SAID_THE_SERVER = (
+        "the server only stores and applies what is marked approved",
+        "The server records the approval the assistant reports",
+        "groups this server's work",
+        "The server searches these locations",
+        "the server may have finished it",
+        "this server's built-in default",
+    )
+
+    def test_the_sentences_say_exegete(self):
+        for name, sentences in self.SAY_EXEGETE.items():
+            flat = _flat((REPO / name).read_text(encoding="utf-8"))
+            for sentence in sentences:
+                assert sentence in flat, (name, sentence)
+            for old in self.SAID_THE_SERVER:
+                assert old not in flat, (name, old)
+
+    def test_the_changelog_claims_no_more_than_is_true(self):
+        entry = _flat(_changelog_entry())
+        assert ('They say "Exegete" wherever a sentence says what it is or '
+                'does for the researcher, and keep "the server" for the '
+                'program as it is installed and runs: its host settings and '
+                'environment, starting and stopping, standard input and '
+                'output, its log, its own folder and older copies of it.'
+                ) in entry
+        assert 'keep "the server" for host settings, standard input and ' \
+               'output, and logs.' not in entry
+
+    def test_no_message_calls_a_qualcoder_limitation_a_bug(self):
+        """The sweep's relationship check, finding 2: four answers the
+        assistant relays said "its documented emoji bug"; QualCoder's
+        manual documents a limitation, and the answers beside them say
+        the same thing without the label."""
+        found = {where: text for where, text in _messages().items()
+                 if "emoji bug" in text}
+        assert not found, found
+
+    def test_the_smaller_corrections_hold(self):
+        """The sweeps' smaller findings taken in the same round, each a
+        word or a line: what they said is not said again."""
+        gone = {
+            "CHANGELOG.md": ("4.0 keeps the project format Exegete already "
+                             "wrote", "QualCoder alongside, one program",
+                             "about 32,560 characters", "25 messages change",
+                             "which the server enforces"),
+            "PRIVACY.md": ("export parity governs",
+                           "because the silent drop destroyed notes"),
+            "TOOLS.md": ("touched by both tools",
+                         "QualCoder's ignore set misses them"),
+            "INSTALL.md": ("its Open Project dialog shows where yours is",
+                           "is not a QualCoder project",
+                           "Exegete works with any MCP host, over standard",
+                           "Exegete tells you, through Claude, when"),
+            "README.md": ("more work alongside QualCoder 4.0",),
+            "AI_CODING_WORKFLOW.md": ("ask for a random sample",),
+            "AI_CODING_GUIDE.md": ("Exegete rejects any excerpt that is "
+                                   "not",),
+        }
+        for name, phrases in gone.items():
+            flat = _flat((REPO / name).read_text(encoding="utf-8"))
+            for phrase in phrases:
+                assert phrase not in flat, (name, phrase)
+
+
 class TestQualCoderIsOptional:
 
     def test_the_bug_form_does_not_require_a_qualcoder_version(self):

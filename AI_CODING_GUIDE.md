@@ -90,7 +90,7 @@ Ask "Explain the AI coding tools" any time; the built-in
 
 Exegete's analysis tools carry an evidence discipline of their own:
 base every claim on text read through the tools, quote it verbatim
-(Exegete rejects any excerpt that is not
+(Exegete rejects any excerpt the assistant records that is not
 a literal slice of the file), treat a null result as a valid result,
 and judge whether a request is methodologically sound for the study
 before acting (in the four-way vocabulary allow, allow_with_caveat,
@@ -213,8 +213,8 @@ a session. None of this replaces your approval of each suggestion.
 ## FAQ
 
 **Do I need an API key?** No: with Claude Desktop or a Claude login,
-Claude itself does the analysis through the conversation, and the
-server only stores and applies what is marked approved (it cannot see
+Claude itself does the analysis through the conversation, and
+Exegete only stores and applies what is marked approved (it cannot see
 who approved it; see above). (An API-key route and
 a fully local route exist too; see "Choosing your AI host" in
 INSTALL.md.)

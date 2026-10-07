@@ -9,21 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
-## [0.14.2-alpha] - 2026-10-07
+## [0.14.2-alpha] - 2026-10-08
 
-v0.14.2: the assistant's brief, provisional; the rules a model must not
-miss within the 2,048 characters Claude Code shows of a tool
-description; fixes from the checks of 0.14.1; the README, rewritten to
-say plainly what Exegete does, for newcomers and for advanced users, and
-opening with the woven lockup; QualCoder 4.0, released on 2 October
-2026, named as what Exegete is verified against (4.0 keeps the format of
-its beta, schema v17, which Exegete was built against, so only words
-changed, in the documents and in two messages); how Exegete describes
-itself, as a qualitative analysis application whose projects keep
-QualCoder's format and conventions, everywhere it speaks; and the check
-for new versions, which tells researchers when a new version is out and
-how to install it, though updates are still never installed by
-themselves.
+v0.14.2. What a researcher notices first: with the Claude Desktop
+extension, a new setting, "Tell me when a new version is out", on unless
+switched off, and a note in one of Exegete's first answers, for the
+assistant to pass on, saying what the check sends and how to switch it
+off, at least seven days before the first check (on the Terminal routes
+the check is off unless switched on, and updates are still never
+installed by themselves); a new tool, `read_brief`, which the assistant
+is asked to call at the start of every conversation about a project, and
+which gives it Exegete's brief on how to work with the researcher
+(provisional); Exegete describing itself as what it is, a qualitative
+analysis application for working on the researcher's own project, kept
+in QualCoder's format, rather than as a program that opens a QualCoder
+project; a README rewritten for newcomers and advanced users, opening
+with the woven lockup; and QualCoder 4.0, released on 2 October 2026,
+named as what Exegete is verified against (4.0 keeps the format of its
+beta, schema v17, which Exegete was built against, so only words
+changed, in the documents and in two messages). Less visible: the rules
+a model must not miss now come within the 2,048 characters Claude Code
+shows of a tool description, and smaller points are fixed, most of them
+left by the checks of 0.14.1 (pseudonymisation's preview on two people
+who share a name, exports refused inside the project and Exegete's own
+folder however spelled, the AI coder name file beside an earlier one,
+the transition check, and an empty search for projects that says what it
+searched).
 
 ### Added: the check for new versions
 
@@ -640,10 +651,22 @@ matches its own) still names it.
   server's own folder; commit with an explicit identity; and where the
   2,048-character rule's listed exceptions are. CONTRIBUTING.md's map
   of the package now lists `path_identity.py` and `transition.py`.
+- INSTALL.md and PROJECT_SELECTION_GUIDE.md gain a troubleshooting
+  section for an empty search of the folders named, "No projects found
+  in the folders given" (those folders only, three levels deep, not the
+  usual places; a folder named that does not exist; naming the folder
+  just above a deeper project), beside the one for the usual places,
+  now headed with that answer's new words. AI_CODING_WORKFLOW.md's
+  troubleshooting step opens a project from QualCoder's Project menu
+  ("Project > Open Project"), where it said "File > Open Project":
+  QualCoder 3.8.2 and 4.0 have no File menu.
 - Tests: the pins moved with their words, and new ones hold each of
   these sentences (`tests/test_v0142_docs.py`,
   `tests/test_v0142_qc40_release.py`, and the refusal's words in
-  `tests/test_v17_support.py`).
+  `tests/test_v17_support.py`); each troubleshooting heading for an
+  empty search is held to the start of the answer for its case, and no
+  current document gives QualCoder a File menu
+  (`tests/test_v014_server_wide.py`, `tests/test_v0142_docs.py`).
 
 ### CI
 
@@ -663,6 +686,15 @@ matches its own) still names it.
   The suite runs the same check of the site
   (`tests/test_v0142_pages.py`), so a release prepared with the last
   release's site fails before it is tagged.
+- Two tests that failed by chance on CI are steadied (pull request #12,
+  and the same fix in its sibling). Each looked for a number ("0.95",
+  "0.85") anywhere in a saved session file, whose times run to the
+  microsecond, so a time such as 13:57:10.953421 matched; each now looks
+  for the number only as a value of its own, with a second run at the
+  time CI met, which fails under the old check. #12's second change,
+  asking for Windows' list of running programs twice in a test, is not
+  taken: the check itself now gives that list 60 seconds and one retry,
+  and the test 150 seconds on Windows.
 - New pins: actions/upload-pages-artifact v5.0.0 and
   actions/deploy-pages v5.0.1. The others are unchanged:
   actions/checkout v7.0.1, actions/setup-python v7.0.0,
@@ -681,8 +713,8 @@ matches its own) still names it.
   interpreters), `full` and `lifecycle` by `check_for_updates`' own (905
   with its separator, on both interpreters), and shrank where 0.14.1's
   descriptions were reworded on how Exegete describes itself (237
-  characters in `full` and 259 in `lifecycle`, on both interpreters; see
-  above); no other description changed: each keeps the words 0.14.1
+  characters in `full`, 117 in `core` and 259 in `lifecycle`, on both
+  interpreters; see above); no other description changed: each keeps the words 0.14.1
   served (fourteen changed order; see above), and none is longer.
 
 ## [0.14.1-alpha] - 2026-10-01

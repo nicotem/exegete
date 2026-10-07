@@ -1036,8 +1036,8 @@ local)".
 **What it does.** While it is switched on, Exegete fetches one small
 file, <https://nicotem.github.io/exegete/latest.json>: at most once a
 week on its own, and at most once a day when the assistant checks for
-you, which your assistant normally asks your permission for (INSTALL.md,
-"What hosts do with the tools' read and write marks"). The file holds
+you, which hosts that ask before a tool runs ask about (INSTALL.md,
+"What hosts do with the tools' read and write marks", says which do). The file holds
 four values: the newest version, its date, whether it is an important
 update, and the file's format. Exegete writes every sentence and link
 it shows you itself; nothing from the file but those values reaches the
@@ -1047,8 +1047,8 @@ conversation.
 switch it off: Settings, Extensions, Exegete, "Tell me when a new
 version is out". The first time the assistant uses Exegete with the
 check on, Exegete tells you about the check through the assistant (in
-the first answer of 20,000 characters or fewer, so that it is read in
-full), and makes its first check no sooner than seven days later, so
+the first successful answer of 20,000 characters or fewer, so that it
+is read in full), and makes its first check no sooner than seven days later, so
 you can switch it off first. On the Terminal route, it is off unless the app
 that starts Exegete sets `EXEGETE_UPDATE_CHECK` to `on`. Exegete's log
 says at every start whether it is on.
@@ -1083,8 +1083,9 @@ pages govern. Your network (your university's, for example) and its
 name servers also see that your computer asked for nicotem.github.io, a
 name that is Exegete's.
 
-**What this project receives.** Nothing: the site has no counter,
-analytics or log of this project's own.
+**What this project receives.** This project adds no counter,
+analytics or log of its own to the site, and the site's pages load
+nothing from other sites.
 
 **What it keeps.** In Exegete's own folder (`~/.exegete`), a file
 `update_check.json`: when it last tried and, if that failed, the kind
@@ -1097,10 +1098,9 @@ say once that an update worked). Nothing from your projects.
 **What enters the conversation.** Notes for the assistant to pass on,
 each once: that the check exists (the first time Exegete is used),
 that a newer version is out, and that an update worked. Each goes first
-in an answer of 20,000 characters or fewer, and counts as given once
-it is there: whether it reaches you depends on the assistant passing
-it on. When you ask,
-the answer gives the installed and newest versions, how Exegete was
+in a successful answer of 20,000 characters or fewer, and counts as
+given once it is there: whether it reaches you depends on the assistant
+passing it on. When you ask, the answer gives the installed and newest versions, how Exegete was
 installed, and the steps, with any folder in your home folder written
 from it (`$HOME`); a folder outside your home folder is written in
 full. These go to your AI provider like any other tool answer.
@@ -1110,8 +1110,8 @@ connection, including when you ask whether it is up to date. Installing
 or updating the extension still downloads what it needs, as INSTALL.md
 says; that is Claude Desktop's work, not Exegete's. Blocking
 nicotem.github.io at your network stops the request reaching GitHub,
-but Exegete still tries, at most once a week, and your network still
-sees the name; switching it off stops the attempts. Blocked, Exegete
+but Exegete still tries, at most once a week, and when you ask, and
+your network still sees the name; switching it off stops the attempts. Blocked, Exegete
 says nothing about new versions.
 
 ## OpenAI's apps: the ChatGPT desktop app and Codex (Experimental)

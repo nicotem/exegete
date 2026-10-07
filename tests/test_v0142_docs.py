@@ -956,3 +956,41 @@ def test_the_no_longer_true_check_would_notice():
                  "the latest stable release until 2 October 2026 (project "
                  "schema v14)"):
         assert not any(words in kept for words in NO_LONGER_TRUE), kept
+
+
+# ---------------------------------------------------------------------------
+# The check for new versions: the port's checks, round 1 (7 October 2026)
+# ---------------------------------------------------------------------------
+
+def test_privacy_on_the_check_claims_no_more_than_is_known():
+    check = _between(_flat("PRIVACY.md"), "## Checking for new versions",
+                     "## OpenAI's apps")
+    # The note goes only into a successful answer (updates.attach refuses
+    # refusals and answers that are not a JSON object)
+    assert "the first answer of 20,000" not in check
+    assert ("in the first successful answer of 20,000 characters or "
+            "fewer") in check
+    assert ("Each goes first in a successful answer of 20,000 characters "
+            "or fewer") in check
+    # INSTALL.md's section says Claude Desktop's chat is not yet checked,
+    # and Claude Code in auto mode asks a classifier: "normally asks your
+    # permission" claimed more than the section it cites
+    assert "normally asks your permission" not in check
+    assert ("which hosts that ask before a tool runs ask about (INSTALL.md, "
+            "\"What hosts do with the tools' read and write marks\", says "
+            "which do)") in check
+    # Whether GitHub shows a Pages site's owner who fetched a file is not
+    # yet checked (design.md, section 13): say what this project adds
+    assert "**What this project receives.** Nothing" not in check
+    assert ("This project adds no counter, analytics or log of its own to "
+            "the site") in check
+    # A blocked network: asking makes an attempt too
+    assert ("Exegete still tries, at most once a week, and when you ask, "
+            "and your network still sees the name") in check
+
+
+def test_install_on_the_check_names_the_computers_own_python():
+    install = _flat("INSTALL.md")
+    assert ("If every check ends in \"certificate not trusted\", the Python "
+            "that runs Exegete may lack the certificates it needs") in install
+    assert "with its two settings" not in install

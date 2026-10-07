@@ -1019,6 +1019,61 @@ class TestTextsThatSentTheAssistantNowhere:
             "search_directories, or start a new project with "
             "create_project"), message
 
+    def test_the_guides_headings_quote_the_empty_searchs_answers(
+            self, tmp_path):
+        """0.14.2's release preparation (the last truth check, minor 3):
+        INSTALL.md and PROJECT_SELECTION_GUIDE.md each give a
+        troubleshooting section headed with the start of the empty
+        search's answer, one for the usual places and one for the
+        folders given. Each heading must be the start of the answer the
+        code gives for its case, and the new sections must say what the
+        search does: the folders given only, three levels deep, not the
+        usual places, a folder named that does not exist, and the folder
+        just above a deeper project. Until this test, renaming a heading
+        or falsifying a section left every test green."""
+        root = Path(__file__).parent.parent
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        given = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(empty)]})["message"].split())
+        usual = " ".join(host_json("list_available_projects")[
+            "message"].split())
+        missing = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(tmp_path / "Nowhere")]})[
+                "message"].split())
+        for name, suffix in (("INSTALL.md", " (Option A)"),
+                             ("PROJECT_SELECTION_GUIDE.md", "")):
+            text = (root / name).read_text(encoding="utf-8")
+            headings = re.findall(r'^### "(No projects found[^"]*)"'
+                                  + re.escape(suffix) + r"$", text, re.M)
+            assert len(headings) == 2, (name, headings)
+            for heading in headings:
+                assert given.startswith(heading) or \
+                    usual.startswith(heading), (name, heading)
+            assert any(given.startswith(h) for h in headings), name
+            assert any(usual.startswith(h) for h in headings), name
+            heading = next(h for h in headings if given.startswith(h))
+            start = text.index(f'### "{heading}"')
+            section = " ".join(text[start:text.index("\n### ", start + 4)]
+                               .split()).lower()
+            assert "three levels deep" in section, name
+            assert "not the usual places" in section, name
+            assert "does not exist" in section, name
+            assert "naming the folder just above it" in section, name
+        # what the sections say is what the search does
+        assert "each searched three levels deep" in given
+        assert "the usual places were not searched" in given
+        assert "That folder does not exist." in missing
+        deep = tmp_path / "Studies"
+        (deep / "a" / "b" / "c" / "Deep.qda").mkdir(parents=True)
+        (deep / "x" / "y" / "Shallow.qda").mkdir(parents=True)
+        found = host_json("list_available_projects", {
+            "search_directories": [str(deep)]})["projects"]
+        assert [p["name"] for p in found] == ["Shallow"]
+        found = host_json("list_available_projects", {
+            "search_directories": [str(deep / "a" / "b" / "c")]})["projects"]
+        assert [p["name"] for p in found] == ["Deep"]
+
     def test_the_usual_places_are_reported_too(self):
         answer = host_json("list_available_projects")
         assert answer["searched"]["instead_of_the_usual_places"] is False

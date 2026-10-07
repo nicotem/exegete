@@ -994,3 +994,42 @@ def test_install_on_the_check_names_the_computers_own_python():
     assert ("If every check ends in \"certificate not trusted\", the Python "
             "that runs Exegete may lack the certificates it needs") in install
     assert "with its two settings" not in install
+
+
+# ---------------------------------------------------------------------------
+# QualCoder's menus: 0.14.2's release preparation (the last relationship
+# check, finding 5)
+# ---------------------------------------------------------------------------
+
+def _current_markdown():
+    """The top-level documents a researcher reads today: not the
+    CHANGELOG, which is history, nor those marked historical."""
+    return {path.name: path.read_text(encoding="utf-8")
+            for path in sorted(REPO.glob("*.md"))
+            if path.name != "CHANGELOG.md"
+            and "HISTORICAL DOCUMENT" not in path.read_text(encoding="utf-8")}
+
+
+FILE_MENU = re.compile(r"\bFile\s*(?:>|,|→)\s*[A-Z]|\bFile menu\b")
+
+
+def test_no_current_document_gives_qualcoder_a_file_menu():
+    """QualCoder 3.8.2 and 4.0 have no File menu: a project is opened
+    from the Project menu ("Project", "Open Project": ui_main.py,
+    menuProject and actionOpen_Project, in both releases).
+    AI_CODING_WORKFLOW.md's troubleshooting step said "File > Open
+    Project" from October 2025 until 0.14.2."""
+    found = {name: FILE_MENU.findall(text)
+             for name, text in _current_markdown().items()
+             if FILE_MENU.search(text)}
+    assert found == {}
+    workflow = _read("AI_CODING_WORKFLOW.md")
+    step = _between(workflow, "In QualCoder:\n", "Select the `.qda` folder")
+    assert "- Project > Open Project" in step
+
+
+def test_the_file_menu_check_would_notice():
+    assert FILE_MENU.search("In QualCoder:\n- File > Open Project")
+    assert FILE_MENU.search("use QualCoder's File menu")
+    assert not FILE_MENU.search("Project > Open Project; a File is a "
+                                "source")

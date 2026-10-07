@@ -789,7 +789,7 @@ project of the same name in the other folder is an older copy (from an
 earlier install, say): open the one in the workspace.
 
 In QualCoder:
-- File > Open Project
+- Project > Open Project
 - Navigate to the workspace folder
 - Select the `.qda` folder
 

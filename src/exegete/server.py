@@ -10005,7 +10005,7 @@ def _reading_folder_root() -> Optional[Path]:
 
 def _import_context(project_folder: Path, apply_pseudonyms: bool,
                     pdfs_with_names: bool, file_names_with_names: bool,
-                    memo: str):
+                    memo: str, garbled_letters: bool = False):
     (state, count, compiled, canonical, names_stop,
      name_check) = _import_names_list(apply_pseudonyms, project_folder)
     db = get_db()
@@ -10031,6 +10031,7 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
         qc382=caps is not None and not caps.has_supercid,
         pdfs_with_listed_names=pdfs_with_names,
         file_names_with_listed_names=file_names_with_names,
+        files_with_garbled_letters=garbled_letters,
         max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo)
     return ctx, names_stop
 
@@ -10094,6 +10095,10 @@ IMPORT_DONE_LINES = {
     "pdf_names": ("A PDF brought in names people from your list: its names "
                   "will reach the AI provider on every later read, search or "
                   "coding excerpt of that file."),
+    "garbled": ("A file whose letters look garbled came in as it is, as "
+                "you said: a name written with garbled letters is not "
+                "matched by a names list, so it reaches the AI provider "
+                "whenever that file is read."),
     "file_name_names": ("A file came in under a name that holds a name from "
                         "your list, as you said: that name reaches the AI "
                         "provider whenever an answer names the file, and "
@@ -10119,24 +10124,28 @@ def import_documents(
     apply_project_pseudonyms: bool = True,
     import_pdfs_with_listed_names: bool = False,
     import_file_names_with_listed_names: bool = False,
+    import_files_with_garbled_letters: bool = False,
+    show_text: bool = False,
     memo: str = ""
 ) -> str:
     """Bring documents from the researcher's computer into the open project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with this app's own tools first: give its path.
 
-    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, each original is copied into the project and its text stored.
+    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
 
-    Change apply_project_pseudonyms, import_pdfs_with_listed_names or import_file_names_with_listed_names only when the researcher has said so for this import, never to get past a refusal. The pseudonyms list, if any, is applied to the stored text (not to PDFs or originals); PDFs and file names holding its names are kept out.
+    Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The pseudonyms list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
-    Refused or kept out, with the reason: while QualCoder has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8 (with steps to re-save it); names already in the project.
+    Refused or kept out, saying why: while QualCoder has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8 (with steps to re-save it); names already in the project.
 
     Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Text as QualCoder reads it, plus what it loses (notes, comments, headers). For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
 
     Args:
         paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
         preview_token: from the preview, for the import
-        apply_project_pseudonyms: default true; false only on the researcher's word
-        import_pdfs_with_listed_names: default false; true only on the researcher's word
-        import_file_names_with_listed_names: default false; true only on the researcher's word
+        apply_project_pseudonyms: default true
+        import_pdfs_with_listed_names: true on the researcher's word
+        import_file_names_with_listed_names: true on the researcher's word
+        import_files_with_garbled_letters: true on the researcher's word
+        show_text: preview only; opens the garbled-looking files' text on the researcher's screen
         memo: a note for every file (e.g. its source); at most 10,000 characters
     """
     error = _import_arguments_error(paths, memo)
@@ -10153,7 +10162,7 @@ def import_documents(
     ctx, names_stop = _import_context(
         project_folder, apply_project_pseudonyms,
         import_pdfs_with_listed_names, import_file_names_with_listed_names,
-        memo)
+        memo, bool(import_files_with_garbled_letters))
     stops = []
     gate = _write_gate_error()
     if gate is not None:
@@ -10172,9 +10181,13 @@ def import_documents(
         import_pdfs_with_listed_names=import_pdfs_with_listed_names,
         import_file_names_with_listed_names=(
             import_file_names_with_listed_names),
+        import_files_with_garbled_letters=import_files_with_garbled_letters,
         memo=memo)
     if preview_token is None:
-        return _import_documents_preview(paths, ctx, stops, token_args)
+        # show_text is the preview's alone: it writes a page for the
+        # researcher and decides nothing the token binds.
+        return _import_documents_preview(paths, ctx, stops, token_args,
+                                         bool(show_text))
     if stops:
         return json.dumps({"error": " ".join(stops),
                            "nothing_changed": True}, indent=2)
@@ -10182,12 +10195,14 @@ def import_documents(
                                    project_folder)
 
 
-def _import_documents_preview(paths, ctx, stops, token_args) -> str:
+def _import_documents_preview(paths, ctx, stops, token_args,
+                              show_text: bool = False) -> str:
     result = doc_import.survey(paths, ctx)
     adding = sum(i.size for i in result.items if i.status == "ready")
     preview = doc_import.preview_answer(
         result, ctx, stops,
         _import_backup_note(ctx.project_folder, adding))
+    page = _import_page_to_check(result, ctx) if show_text else None
     ready = [i for i in result.items if i.status == "ready"]
     if stops or result.out_of_time or not ready:
         preview["nothing_to_import"] = (
@@ -10195,6 +10210,8 @@ def _import_documents_preview(paths, ctx, stops, token_args) -> str:
             + ("what stops the import comes first above." if stops else
                "no file is ready." if not ready else
                "some files were not read in time."))
+        if page is not None:
+            preview["page_to_check"] = page
         return json.dumps(preview, indent=2, ensure_ascii=False)
     try:
         payload = _issue_preview(
@@ -10209,6 +10226,8 @@ def _import_documents_preview(paths, ctx, stops, token_args) -> str:
                  "import_pdfs_with_listed_names"],
              "import_file_names_with_listed_names": token_args[
                  "import_file_names_with_listed_names"],
+             "import_files_with_garbled_letters": token_args[
+                 "import_files_with_garbled_letters"],
              "memo": token_args["memo"]},
             state_preview=result.fingerprint(ctx))
     except PreviewSecretUnavailable:
@@ -10218,8 +10237,41 @@ def _import_documents_preview(paths, ctx, stops, token_args) -> str:
     # The preview's own order first (what stops it, the summary line, the
     # names list, ...), then the token and how to use it.
     answer = dict(payload.pop("preview"))
+    if page is not None:
+        answer["page_to_check"] = page
     answer.update(payload)
     return json.dumps(answer, indent=2, ensure_ascii=False)
+
+
+def _import_page_to_check(result, ctx):
+    """show_text: the page on which the researcher checks letters that
+    look garbled before deciding (the owner's ruling of 7 October 2026),
+    written into the reading folder's previews and opened; its location
+    and counts, never the text."""
+    from . import import_page
+    files = [item for item in result.items
+             if item.check_text is not None
+             and item.status in ("held", "ready")]
+    if not files:
+        return ("No file in this batch has letters that look garbled, so "
+                "no page was written.")
+    entries = [{"label": item.name or item.disk_name,
+                "seen": import_page.seen_line(item.numbers),
+                "text": item.check_text, "places": item.check_places}
+               for item in files]
+    try:
+        html = import_page.build(entries, reading.now(), _package_version)
+        path = reading_folder.write_page(
+            reading_folder.previews_folder(ctx.project_folder),
+            import_page.PAGE_NAME, html)
+        shown: Dict[str, Any] = {"location": str(path),
+                                 "files": len(entries)}
+        shown.update(reading.present(path, "open", own_page=True))
+    except (reading.ReadingRefusal, reading_folder.ReadingFolderError,
+            OSError) as exc:
+        return {"not_written_because": str(exc)}
+    shown["note"] = import_page.FOR_THE_ASSISTANT
+    return shown
 
 
 def _import_documents_write(paths, ctx, token_args, preview_token,
@@ -10277,6 +10329,13 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                 write_db.conn.commit()
                 committed = True
                 doc_import.forget_outcomes(preview_token)
+                # The preview's page to check letters on has done its
+                # work.
+                try:
+                    reading_folder.forget_previews(project_folder)
+                except Exception as e:
+                    logger.warning("Could not remove the preview page: %s",
+                                   error_label(e))
                 # QualCoder gives a new file the highest id plus one, so
                 # an id can be one a file deleted in QualCoder had: a page
                 # written for that file must not stand for the new one.
@@ -10369,6 +10428,8 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
         lines.append(IMPORT_DONE_LINES["pdf_names"])
     if any(i.listed_name_in_name for i in taken):
         lines.append(IMPORT_DONE_LINES["file_name_names"])
+    if any(i.check_text is not None for i in taken):
+        lines.append(IMPORT_DONE_LINES["garbled"])
     if any(i.kind == doc_readers.PDF for i in taken):
         lines.append(IMPORT_DONE_LINES["pdf_release"].format(
             version=answer.get("pymupdf_version") or "unknown"))

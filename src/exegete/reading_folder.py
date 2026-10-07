@@ -9,9 +9,9 @@ inside it, and every backup copies the whole project folder):
 - reading copies: a web page with a file's whole text and its codings;
 - read-only copies of originals, which the reading tool opens or shows,
   so that the project's own copy is never opened in an editor;
-- preview pages, on which the import shows a batch's text before the
-  researcher approves it (the import writes them through
-  `previews_folder`).
+- preview pages, on which the researcher checks letters that look
+  garbled before deciding whether a file comes in (the import's
+  `show_text` writes them through `previews_folder`; `import_page`).
 
 The folder is private to Exegete and to this account, out of iCloud and
 OneDrive, and not indexed by the computer's search:
@@ -33,8 +33,9 @@ where it is; in it, one folder per file (`file-<id>`, the copy of its
 original in `original` inside, so it never shares a name with the page)
 and `previews`.
 
-Tidying: preview pages go after the import, or an hour after they were
-written; a file's folder goes whenever Exegete changes that file's text
+Tidying: preview pages go after the import, or once they are an hour
+old, when Exegete next tidies the folder (at most every five minutes
+while it writes here, and at each start); a file's folder goes whenever Exegete changes that file's text
 or name; a project's whole subfolder goes when a backup is restored over
 it; and anything older than a week goes when the server starts. A short
 note at the top says what the pages are and that they can be deleted at
@@ -78,13 +79,16 @@ NOTE = """\
 About this folder
 
 Exegete writes pages here so that you can read your project's files in
-your own browser, and read-only copies of the documents it opens for
-you. They are copies: deleting them changes nothing in any project, and
-you can delete this whole folder at any time.
+your own browser, read-only copies of the documents it opens for you,
+and, when an import's preview is asked for one, a page on which to
+check letters that look garbled before a file comes in. They are
+copies: deleting them changes nothing in any project, and you can
+delete this whole folder at any time.
 
 Exegete also deletes them itself: a file's page and copy, when Exegete
-changes that file's text or name; everything here, a week after it was
-written.
+changes that file's text or name; a page for checking letters, after
+the import or once it is an hour old; everything here, a week after it
+was written.
 
 This folder is not synced and is not indexed by the computer's search.
 A page holds a whole file's text: to keep one, save it elsewhere from

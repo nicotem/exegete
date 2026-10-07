@@ -429,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 200_865          # 76 tools, Python 3.13.5, mcp 1.30.0
+    FULL_MEASURED = 201_088          # 76 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 67_374           # 23 tools, same environment
-    FULL_MEASURED_310 = 210_733      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 210_964      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 70_766
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 203_444     # 77 tools, same environment
-    LIFECYCLE_MEASURED_310 = 213_452
+    LIFECYCLE_MEASURED = 203_667     # 77 tools, same environment
+    LIFECYCLE_MEASURED_310 = 213_683
 
     # Why two per cent, away from the reference environment.
     #
@@ -462,7 +462,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "200,865"
+    FULL_CHARS = "201,088"
     CORE_CHARS = "67,374"
     FULL_ROUNDED = "200,000"
     CORE_ROUNDED = "67,000"
@@ -684,7 +684,7 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "203,000"
+    LIFECYCLE_ROUNDED = "204,000"
     LIFECYCLE_TOKENS = "51k"
 
     def test_the_readme_quotes_the_lifecycle_measurement(self):

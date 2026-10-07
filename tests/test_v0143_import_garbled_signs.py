@@ -339,7 +339,11 @@ def test_the_security_gates_eight_files_are_held_back(project, folder):
     preview = _call(paths=[str(folder)])
     assert preview["summary"] == "0 files ready; 8 held back.", preview
     for held in preview["held_back"]:
-        assert held["reason"] == import_words.HELD_BACK["garbled_fixed"]
+        # the warning, with what was seen; the way through on the
+        # researcher's word (ruling 63)
+        assert held["reason"].startswith(
+            import_words.HELD_BACK["garbled_fixed"].split("{")[0])
+        assert "import_files_with_garbled_letters" in held["reason"]
     said = _said(preview)
     for original, _ in LISTED:
         assert original not in said

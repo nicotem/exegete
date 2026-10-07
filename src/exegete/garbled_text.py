@@ -6,7 +6,10 @@ its letters as other characters: "é" becomes "Ã©" through Windows
 Western, "√©" through the Mac's own Western set, "Ă©" through Windows
 Central European; "П" becomes "Рџ" through Windows Cyrillic; "’" becomes
 "â€™" or "‚Äô". A name written that way escapes the names list, so the
-import holds such a file back (`doc_import.evaluate`).
+import warns of such a file and brings it in only on the researcher's
+word (`doc_import.evaluate`; the owner's ruling of 7 October 2026). What
+follows finds signs, not proof: correct text can show one, and a
+garbled file can show none.
 
 How the signs are read. In each set below, every character a byte from
 0x80 to 0xFF stands for either starts a UTF-8 character or continues one.
@@ -43,8 +46,12 @@ The sets: Windows' own (Western, Central European, Cyrillic, Greek,
 Turkish, Hebrew, Arabic, Baltic, Vietnamese), the Mac's (Western,
 Central European, Cyrillic, Greek, Icelandic), DOS's (437, 850, 852,
 866), KOI8-R and KOI8-U, and Shift JIS's half-width katakana ("Agnﾃｨs"
-for "Agnès"). Latin-1 and the ISO sets leave a C1 control character, a
-sign on its own, as is the replacement character. GBK is read too,
+for "Agnès"). Latin-1 reads a Western letter as Windows Western does,
+so it is read back through that set, and leaves a C1 control character
+(a sign on its own, as is the replacement character) where Windows
+Western has a letter or a symbol. The other ISO sets are not read back:
+what they make of a letter ("JosĂŠ" for "José" through ISO 8859-2) is a
+sign only where it holds such a control character. GBK is read too,
 where one character stands for a two-byte UTF-8 one ("Agn猫s"); that is
 how about one Chinese character in seven is written, so GBK's runs need
 a clearer sign (odder by two as written than read back), or three or
@@ -61,10 +68,22 @@ garbled themselves (holding a control character, or LibreOffice's
 autocorrect entry for "Â¢"). Read once through each set, those strings
 were signs 92 to 100 times in a hundred through each single-byte set,
 80 through GBK and 71 through Shift JIS, a string at a time; a whole
-file has many more chances. What is missed is a garbled letter that
-reads as natural where it stands ("ĆØ" for the Italian word "è" through
-Windows Baltic, "Ã" and a no-break space for "à"), when it is the only
-one in its file, and garbled punctuation outside any word.
+file has many more chances. The third checks of 7 October 2026 found
+more on both sides. Missed, however many times it stands in a file: a
+garbled letter that reads as natural where it stands ("ĆØ" for the
+Italian word "è" through Windows Baltic, "Ã" and a no-break space for
+"à"); a garbled capital at a word's start through the Western and
+Central European sets ("Ã–zdemir", "ÄŒapek", "Åšliwa"); single letters
+of a name through Windows Central European ("MĂĽller", "JĂłzef"); most
+garbled letters at a word's start or end through GBK ("Jos茅"), and
+every character UTF-8 writes in three bytes through it ("don鈥檛");
+two marks between letters ("Nguyá»…n"); garbled punctuation outside
+any word. Signs in correct text: Chinese with English words written
+inside it ("这个project太tough了"), a sum straight after an opening
+quotation mark or in a range ("‘£5", "£5–£10"), a capital inside a
+Cyrillic word ("ПриватБанк"), Arabic punctuation typed straight before
+the next word, an ellipsis typed straight before a word, box drawing.
+Hence the researcher's word, after a look at the places marked.
 
 The cost is one scan a set and a few small steps a run, and the same
 run between the same neighbours is weighed once, so a file costs about
@@ -74,10 +93,10 @@ what its length does.
 import bisect
 import re
 import unicodedata
-from typing import Dict, List, Optional, Pattern, Tuple
+from typing import Dict, Iterator, List, NamedTuple, Optional, Pattern, Tuple
 
-# Read back through each of these; Latin-1 and the ISO sets are left to
-# the C1 sign.
+# Read back through each of these; Latin-1 through Windows Western and
+# the C1 sign, the other ISO sets through the C1 sign alone.
 SINGLE_BYTE_SETS = (
     "cp1252", "cp1250", "cp1251", "cp1253", "cp1254", "cp1255", "cp1256",
     "cp1257", "cp1258", "mac_roman", "mac_latin2", "mac_cyrillic",
@@ -343,13 +362,10 @@ def _a_sign(name: str, left: str, run: str, right: str) -> bool:
     return read_back < as_written
 
 
-def garbled(text: str, enough: int = 10) -> int:
-    """The signs of letters that came out wrong in `text`: each C1
-    control and replacement character, and each run that reads back
-    better through another set; counting stops at `enough`."""
-    found = len(_C1_OR_REPLACEMENT.findall(text))
-    if found >= enough or text.isascii():
-        return found
+def _runs(text: str) -> Iterator[Tuple[int, int, str]]:
+    """Each run that reads back better through another set, as (start,
+    end, the set's name), set by set in the order above; a place one set
+    has claimed is not weighed again."""
     seen = set()
     weighed: Dict[Tuple[str, str, str, str], bool] = {}
     length = len(text)
@@ -367,7 +383,66 @@ def garbled(text: str, enough: int = 10) -> int:
                     weighed[key] = sign
             if sign:
                 seen.add(start)
-                found += 1
-                if found >= enough:
-                    return found
+                yield start, end, name
+
+
+def garbled(text: str, enough: int = 10) -> int:
+    """The signs of letters that came out wrong in `text`: each C1
+    control and replacement character, and each run that reads back
+    better through another set; counting stops at `enough`."""
+    found = len(_C1_OR_REPLACEMENT.findall(text))
+    if found >= enough or text.isascii():
+        return found
+    for _place in _runs(text):
+        found += 1
+        if found >= enough:
+            return found
     return found
+
+
+# The sets in the researcher's words, for the preview's warning.
+SET_NAMES = {
+    "cp1252": "Windows Western", "cp1250": "Windows Central European",
+    "cp1251": "Windows Cyrillic", "cp1253": "Windows Greek",
+    "cp1254": "Windows Turkish", "cp1255": "Windows Hebrew",
+    "cp1256": "Windows Arabic", "cp1257": "Windows Baltic",
+    "cp1258": "Windows Vietnamese", "mac_roman": "the Mac's own Western set",
+    "mac_latin2": "the Mac's Central European set",
+    "mac_cyrillic": "the Mac's Cyrillic set",
+    "mac_greek": "the Mac's Greek set",
+    "mac_iceland": "the Mac's Icelandic set", "cp437": "DOS (437)",
+    "cp850": "DOS Western (850)", "cp852": "DOS Central European (852)",
+    "cp866": "DOS Cyrillic (866)", "koi8_r": "KOI8-R", "koi8_u": "KOI8-U",
+    "shift_jis": "Shift JIS (Japanese Windows)",
+    "gbk": "GBK (Chinese Windows)",
+}
+# A control character or the replacement character: no set to name.
+LOST = None
+MAX_PLACES = 1000
+
+
+class Place(NamedTuple):
+    start: int
+    end: int
+    set_name: Optional[str]     # a key of SET_NAMES, or LOST
+    reads_as: str               # what it reads back as ("" when LOST)
+
+
+def places(text: str, limit: int = MAX_PLACES) -> List[Place]:
+    """Where `text` holds the signs `garbled` counts, in the order they
+    stand, at most `limit` of them: each run with the set it reads back
+    through and what it reads back as, and each control or replacement
+    character."""
+    found: List[Place] = []
+    for match in _C1_OR_REPLACEMENT.finditer(text):
+        if len(found) >= limit:
+            break
+        found.append(Place(match.start(), match.end(), LOST, ""))
+    if not text.isascii():
+        for start, end, name in _runs(text):
+            if len(found) >= 2 * limit:
+                break
+            back = text[start:end].encode(name).decode("utf-8")
+            found.append(Place(start, end, name, back))
+    found.sort()
+    return found[:limit]

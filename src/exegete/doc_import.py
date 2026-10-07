@@ -30,7 +30,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import doc_readers, import_paths, import_reading
+from . import doc_readers, garbled_text, import_paths, import_reading
 from . import import_words as words
 
 MAX_PATHS = 50
@@ -85,6 +85,10 @@ class Item:
     warnings: List[Tuple[str, str]] = field(default_factory=list)
     warning_codes: List[str] = field(default_factory=list)
     real_place: Optional[str] = None
+    # Letters that look garbled: the text as it would be stored, and the
+    # places in it, for the page the researcher can check them on.
+    check_text: Optional[str] = None
+    check_places: List[Any] = field(default_factory=list)
 
     pre_code: str = ""             # a refusal decided before reading
 
@@ -118,6 +122,9 @@ class Context:
     qc382: bool = False
     pdfs_with_listed_names: bool = False
     file_names_with_listed_names: bool = False
+    # The researcher's word that files whose letters look garbled come in
+    # as they are (the owner's ruling of 7 October 2026).
+    files_with_garbled_letters: bool = False
     max_characters: int = 1_000_000
     reader: Callable[..., Dict[str, Any]] = import_reading.read_in_process
     budget_seconds: float = BATCH_SECONDS
@@ -524,14 +531,6 @@ def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
             if not ctx.pdfs_with_listed_names:
                 item.status, item.code = "held", "pdf_listed_names"
                 return
-    elif signs.get("garbled"):
-        # Letters that came out wrong in the file itself ("Ã©" for "é"),
-        # or in QualCoder's way of reading RTF: a name among them would
-        # escape the list.
-        item.status = "held"
-        item.code = ("garbled_rtf" if item.kind == doc_readers.RTF
-                     else "garbled_fixed")
-        return
     elif ctx.compiled is not None:
         replacements = pseudo.find_replacements(ctx.compiled, text)
         text = pseudo.apply_replacements(text, replacements)
@@ -540,10 +539,50 @@ def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
         _refuse(item, "too_long", before_reading=False,
                 characters=len(text), limit=ctx.max_characters)
         return
+    if signs.get("garbled"):
+        # Letters that look garbled ("Ã©" for "é"): a name written so
+        # would escape the list. The researcher decides, having been told
+        # what was seen and offered a page to check it on.
+        _garbled_seen(item, result["text"], text)
+        item.code = ("garbled_rtf" if item.kind == doc_readers.RTF
+                     and signs.get("rtf_raw_utf8") else "garbled_fixed")
+        if not ctx.files_with_garbled_letters:
+            item.status = "held"
+            return
+        item.code = ""
     item.text = text
     item.status = "ready"
     item.warnings = _warnings(item, result, signs, ctx, len(text))
     item.memo = _memo(item, result, ctx)
+
+
+def _garbled_seen(item: Item, read: str, stored: str) -> None:
+    """What the preview says of letters that look garbled, and what the
+    page to check them shows: the places in the text as it would be
+    stored (in the text as read, should the names list have changed
+    every one), how many, the first one's line, the sets they read back
+    through."""
+    found = garbled_text.places(stored)
+    item.check_text, item.check_places = stored, found
+    if not found:
+        found = garbled_text.places(read)
+        stored = read
+    if not found:
+        return
+    counted: Dict[str, int] = {}
+    for place in found:
+        if place.set_name is not None:
+            counted[place.set_name] = counted.get(place.set_name, 0) + 1
+    order = sorted(counted, key=lambda name: (-counted[name],
+                                              list(counted).index(name)))
+    item.numbers.update({
+        "where": words.where_phrase(
+            len(found), stored.count("\n", 0, found[0].start) + 1,
+            garbled_text.MAX_PLACES),
+        "sets": words.sets_phrase(
+            [garbled_text.SET_NAMES[name] for name in order[:2]],
+            len(order) > 2),
+        "lost": sum(1 for place in found if place.set_name is None)})
 
 
 def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
@@ -582,6 +621,8 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         add("qc382_pdf")
     if item.listed_name_in_name:
         add("listed_name_in_file_name")
+    if item.check_text is not None:
+        add("garbled_letters", where=item.numbers.get("where", "in places"))
     return out
 
 
@@ -597,6 +638,7 @@ def _memo(item: Item, result: Dict[str, Any], ctx: Context) -> str:
 
 # What the reader refuses that the import holds back, with the steps to
 # a file it reads: one not saved as UTF-8.
+GARBLED = frozenset({"garbled_fixed", "garbled_rtf"})
 HELD_WHEN_READ = frozenset({"not_utf8", "not_utf8_web", "nul_characters",
                             "nul_characters_web"})
 
@@ -673,6 +715,8 @@ def refusal_words(item: Item) -> str:
         return text + " Rename this file on your computer, then ask again."
     if code in ("permission", "unreadable", "not_a_file"):
         return words.PATH_REFUSALS[code]
+    if code in GARBLED:
+        return words.garbled_words(code, numbers)
     if code in words.HELD_BACK:
         people = numbers.get("listed_names") or 0
         times = numbers.get("listed_count") or 0

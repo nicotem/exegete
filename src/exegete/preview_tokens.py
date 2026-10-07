@@ -443,7 +443,7 @@ def _args_pseudonymise_source(kwargs):
 
 def _args_import_documents(kwargs):
     """The arguments that decide what a document import brings in (0.14.3,
-    provisional): the paths as given, the three switches and the memo.
+    provisional): the paths as given, the four switches and the memo.
     All of them are already in the conversation, so the public bind is
     plain. What the files hold, the project's names and its folder of
     originals, and the names list, are the state the token's MAC covers
@@ -455,6 +455,8 @@ def _args_import_documents(kwargs):
                 kwargs["import_pdfs_with_listed_names"]),
             "import_file_names_with_listed_names": bool(
                 kwargs["import_file_names_with_listed_names"]),
+            "import_files_with_garbled_letters": bool(
+                kwargs.get("import_files_with_garbled_letters", False)),
             "memo": str(kwargs.get("memo") or "")}
 
 

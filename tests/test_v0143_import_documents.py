@@ -390,8 +390,11 @@ class TestHeldBack:
         (folder / "r.rtf").write_bytes(
             import_fixtures.RTF["raw_utf8.rtf"])
         preview = _call(paths=[str(folder)])
-        assert "save it as a Word document" in \
-            preview["held_back"][0]["reason"]
+        reason = preview["held_back"][0]["reason"]
+        # what the file holds, and both ways on: a Word copy, or the
+        # researcher's word (ruling 63)
+        assert "saving it from there as a Word document" in reason
+        assert "import_files_with_garbled_letters" in reason
 
 
 class TestRefusedPlaces:

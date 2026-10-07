@@ -506,7 +506,9 @@ class TestTheDocuments:
         tools = _flat("TOOLS.md")
         assert ("import_documents(paths, preview_token, "
                 "apply_project_pseudonyms, import_pdfs_with_listed_names, "
-                "import_file_names_with_listed_names, memo)") in tools
+                "import_file_names_with_listed_names, "
+                "import_files_with_garbled_letters, show_text, "
+                "memo)") in tools
         for said in (
                 "| A plain text, Markdown or subtitle file not saved as "
                 "UTF-8 (a UTF-16 file among them) |",

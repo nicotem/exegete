@@ -72,7 +72,8 @@ What stays local, always, unless a sync service copies the folder it is in:
   The export tools, `create_project` and the workspace setting refuse
   both names, whether or not the old one exists, in every run.
 - the reading folder (provisional, v0.14.3), where Exegete writes the
-  pages and read-only copies it opens for you to read a file:
+  pages and read-only copies it opens for you to read a file, and the
+  page on which you check an import's letters that look garbled:
   `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
   `%LOCALAPPDATA%\Exegete\Reading` on Windows,
   `~/.cache/exegete/reading` on Linux; out of iCloud and OneDrive, not
@@ -539,7 +540,9 @@ document where you keep it; the project (its database, and its own
 folder of originals for imported documents); every backup taken after it
 came in (a file brought in by mistake stays in those backups until they
 are pruned); a reading copy or a copy of the original in the reading
-folder; and any backup of the whole disk, such as Time Machine or
+folder, and the page on which an import's preview shows letters that
+look garbled (`show_text`), which goes after the import or once it is
+an hour old; and any backup of the whole disk, such as Time Machine or
 File History, that copies those folders. Exegete tidies
 the reading folder itself: a file's page and copy go whenever Exegete
 changes that file's text or name (renaming, pseudonymising, restoring a
@@ -773,7 +776,7 @@ provider, and what does not:
 
 | Step | Sent to the AI provider | Not sent |
 |---|---|---|
-| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token | the text; any library's or the document's own messages |
+| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token; with `show_text`, where the page it opens on your screen is | the text, also when that page shows it to you; any library's or the document's own messages |
 | The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's name | the text |
 | Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
 
@@ -808,19 +811,32 @@ Seven cautions:
   Read any of those ways, a listed name can come out with other letters
   ("Agnès" as "Agnčs"), which the list would then not replace. So is a
   file saved as UTF-16 or UTF-32 without the mark that names it, which
-  reads as UTF-8 with an invisible character beside each letter, and a
-  file whose letters came out wrong in the file itself ("WÄ…sik" for
-  "Wąsik", "Agn√®s" for "Agnès"), through any of the common Windows,
-  Mac, DOS and KOI8 character sets, Shift JIS or GBK. A garbled letter
-  that reads naturally where it stands can still be missed when it is
-  the only one in a file, as can a file read through Big5, EUC-KR or
-  EUC-JP (TOOLS.md has the detail). So the names are looked for, and
-  replaced, in the text exactly as it is stored. Two limits
-  remain, as in QualCoder: an RTF file is read by the code page it
-  declares, so a wrong declaration changes letters; and a name typed
-  with a separate accent mark (as some Mac programs write "é") is not
-  replaced when the list has the accented letter, or the other way
-  round.
+  reads as UTF-8 with an invisible character beside each letter. A
+  file whose letters look garbled, as when a file is opened once in the
+  wrong character set and saved again ("WÄ…sik" for "Wąsik", "Agn√®s"
+  for "Agnès"), is held back with a warning that says in how many
+  places, the first one's line and through which character set, never
+  the text. It comes in as it is only if you say so for that import
+  (`import_files_with_garbled_letters`), after checking its letters on
+  a page Exegete opens on your own screen (`show_text`), whose text
+  does not reach the provider. A garbled name may not match the
+  pseudonyms list: it is then not replaced, and reaches the provider
+  whenever the file is read. The warning finds signs, not proof:
+  correct text can show them (Chinese with English words written inside
+  it, a sum straight after an opening quotation mark), and a garbled
+  name can show none, above all a garbled capital at a word's start
+  ("Ã–zdemir" for "Özdemir"), a single garbled letter in a name ("MĂĽller"
+  for "Müller"), or a file garbled on a Chinese or Japanese Windows
+  computer; such a file comes in without a word, and a garbled name in
+  it may not match the pseudonyms list either (TOOLS.md has the
+  detail). So the names are looked for, and replaced, in the text
+  exactly as it is stored. Three limits remain, as in QualCoder: an RTF
+  file is read by the code page it declares, so a wrong declaration
+  changes letters; letters written straight into an RTF file, outside
+  its escapes, are read as Latin-1 whatever code page it declares; and
+  a name typed with a separate accent mark (as some Mac programs write
+  "é") is not replaced when the list has the accented letter, or the
+  other way round.
 - **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
   can read any file your account can, originals included. Exegete's
   descriptions ask the assistant to give paths and never to open a

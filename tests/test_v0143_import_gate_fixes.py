@@ -270,7 +270,11 @@ class TestLettersThatCameOutWrongInAnyScript:
         preview = _call(paths=[str(folder / name)])
         assert preview["summary"] == "0 files ready; 1 held back.", preview
         (held,) = preview["held_back"]
-        assert held["reason"] == import_words.HELD_BACK["garbled_fixed"]
+        # the warning, with what was seen, and the way through on the
+        # researcher's word (ruling 63)
+        assert held["reason"].startswith(
+            import_words.HELD_BACK["garbled_fixed"].split("{")[0])
+        assert "import_files_with_garbled_letters" in held["reason"]
         assert _stored(project) == {}
 
     def test_a_listed_name_garbled_at_a_word_end(self, project, folder):
@@ -281,7 +285,8 @@ class TestLettersThatCameOutWrongInAnyScript:
         (folder / "talk.txt").write_bytes(GARBLED["jose_at_a_word_end.txt"])
         preview = _call(paths=[str(folder)])
         assert preview["held_back"][0]["file"] == "talk.txt"
-        assert "garbled" not in _said(preview)
+        # what was seen is said, never the garbled name itself
+        assert "Jos\u00c3" not in _said(preview)
         assert _stored(project) == {}
 
     def test_an_rtf_file_holding_raw_utf8_bytes(self, project, folder):
@@ -291,8 +296,10 @@ class TestLettersThatCameOutWrongInAnyScript:
             + "Łukasz Wąsik.".encode("utf-8") + b"\\par}")
         preview = _call(paths=[str(folder)])
         assert preview["summary"] == "0 files ready; 1 held back."
-        assert preview["held_back"][0]["reason"] == \
-            import_words.HELD_BACK["garbled_rtf"]
+        assert preview["held_back"][0]["reason"].startswith(
+            import_words.HELD_BACK["garbled_rtf"].split("{")[0])
+        assert "written as UTF-8 straight into the file" in \
+            preview["held_back"][0]["reason"]
 
     @pytest.mark.parametrize("suffix", [".txt", ".md", ".html"])
     def test_correct_text_in_every_script_comes_in(self, project, folder,
@@ -578,7 +585,10 @@ class TestSmallerWords:
 
     def test_the_reading_folders_note_promises_only_what_is_done(self):
         note = " ".join(reading_folder.NOTE.split())
+        # the page to check letters on is built now (the owner's ruling
+        # of 7 October 2026), and the note says when it goes
         assert "before it is imported" not in note
+        assert "a page for checking letters, after the import" in note
         assert "a week after it was written" in note
 
     def test_no_line_promises_more_sameness_than_holds(self):

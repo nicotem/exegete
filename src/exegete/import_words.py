@@ -182,6 +182,51 @@ _WHY_NUL = (
     "right (if it shows gaps or odd characters between the letters, "
     "choose UTF-16, or \"Unicode\", as the encoding when you open it)")
 
+# Letters that look garbled: how to look before deciding.
+_CHECK_ON_SCREEN = (
+    "To check, ask to see the text (show_text): a page opens on your own "
+    "screen with each place marked, and its text does not reach the AI "
+    "provider; or open the file in its own app.")
+# What was seen, in the garbled_fixed words: the character sets the odd
+# characters read back through, and characters standing for letters lost
+# earlier.
+GARBLED_SEEN = {
+    "sets": "they read better as if the file had once been opened in "
+            "another character set ({sets}) and saved again",
+    "lost": "the text holds characters that stand for letters lost "
+            "earlier (the replacement character, or an invisible control "
+            "character)",
+}
+
+
+def where_phrase(count: int, line: int, limit: int) -> str:
+    """Where letters look garbled: "in 1 place, on line 3", "in 2
+    places, the first on line 3"."""
+    if count == 1:
+        return f"in 1 place, on line {line:,}"
+    many = f"{limit:,} places or more" if count >= limit else \
+        f"{count:,} places"
+    return f"in {many}, the first on line {line:,}"
+
+
+def sets_phrase(names: Sequence[str], more: bool) -> str:
+    """One or two sets' names, the commonest first."""
+    said = " or ".join(names)
+    return said + (", among others" if more else "")
+
+
+def garbled_words(code: str, numbers: Dict[str, Any]) -> str:
+    """The words for a file whose letters look garbled, with what was
+    seen: how many places, the first line, the sets."""
+    seen = []
+    if numbers.get("sets"):
+        seen.append(GARBLED_SEEN["sets"].format(sets=numbers["sets"]))
+    if numbers.get("lost"):
+        seen.append(GARBLED_SEEN["lost"])
+    return say(HELD_BACK, code, where=numbers.get("where", "in places"),
+               seen="; and ".join(seen) or GARBLED_SEEN["lost"])
+
+
 HELD_BACK = {
     "names_in_file_name": "This file's own name holds a name from your "
                           "names list, so it is not shown here. You could "
@@ -208,21 +253,38 @@ HELD_BACK = {
     "nul_characters": _WHY_NUL + _STEPS_TEXT,
     "nul_characters_web": _WHY_NUL.replace(
         "Its text holds", "This web page's text holds", 1) + _STEPS_WEB,
-    "garbled_rtf": "Its letters came out wrong (\"Ã©\" for \"é\"), as "
-                   "QualCoder's way of reading RTF gives for this file, "
-                   "and a name written that way would escape a names "
-                   "list, though the assistant would still read it. Open "
-                   "it in Word or LibreOffice and save it as a Word "
-                   "document (.docx), then import that: its letters read "
-                   "rightly in QualCoder too.",
-    "garbled_fixed": "Its text holds what look like letters that came out "
-                     "wrong in the file itself (\"Ã©\" for \"é\", \"Ä…\" "
-                     "for \"ą\", \"Ð˜\" for \"И\"), as happens when a file "
-                     "is opened once in the wrong character set and saved "
-                     "again. A name written that way would escape a names "
-                     "list, though the assistant would still read it. Open "
-                     "it in its own app, correct them, save it, then ask "
-                     "again.",
+    # Letters that look garbled (the owner's ruling of 7 October 2026,
+    # "Warn, and let me decide"): what was seen, never the text; a page
+    # to check them on; and the way through, on the researcher's word.
+    "garbled_rtf": "Some of its letters look garbled, {where} of its "
+                   "text: this RTF file holds "
+                   "letters written as UTF-8 straight into the file, "
+                   "outside RTF's own escapes, and RTF's rule reads each "
+                   "such byte as a letter of its own, in QualCoder as "
+                   "here (\"Ã©\" for \"é\"). A name written that way is "
+                   "not matched by a names list, though the assistant "
+                   "still reads it. " + _CHECK_ON_SCREEN + " If the file "
+                   "reads rightly in Word or LibreOffice, saving it from "
+                   "there as a Word document (.docx) and importing that "
+                   "keeps its letters; or, if they will do as they are, "
+                   "it comes in on your word "
+                   "(import_files_with_garbled_letters).",
+    "garbled_fixed": "Some of its letters look garbled, {where} of its "
+                     "text: {seen}. Garbled "
+                     "letters look like \"Ã©\" for \"é\", \"Ä…\" for "
+                     "\"ą\" or \"Ð˜\" for \"И\", as happens when a "
+                     "file is opened once in the wrong character set and "
+                     "saved again, and a name written that way is not "
+                     "matched by a names list, though the assistant still "
+                     "reads it. This can also be correct text that only "
+                     "looks so: a brand name with a capital inside it, "
+                     "punctuation typed straight before a word, two "
+                     "languages written side by side. " + _CHECK_ON_SCREEN
+                     + " If its letters are right, or will do as they "
+                     "are, it comes in on your word "
+                     "(import_files_with_garbled_letters); if not, "
+                     "correct them in the file's own app, save it, then "
+                     "ask again.",
     "not_read_in_time": "Not read in time; ask again for these.",
 }
 
@@ -293,6 +355,13 @@ WARNINGS = {
     "odt_line_breaks": ("information",
         "Lines that end without a new paragraph keep their line break. "
         "QualCoder's own import would join the words either side."),
+    # A file whose letters look garbled, brought in on the researcher's
+    # word (import_files_with_garbled_letters).
+    "garbled_letters": ("information",
+        "Some of its letters look garbled ({where}); it comes in as it "
+        "is, as you said. A name written with "
+        "garbled letters is not matched by a names list, and reaches the "
+        "AI provider whenever this file is read."),
     "odt_text_boxes": ("information",
         "Text in a text box starts on a line of its own. QualCoder's own "
         "import would join it to the words before it."),

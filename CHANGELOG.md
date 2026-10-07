@@ -15,11 +15,11 @@ identical), and with one new rule, that files not saved as UTF-8 are
 held back. In short: PDF and EPUB through QualCoder 4.0's own libraries,
 as an optional part switched on in the Claude Desktop extension; every
 departure from QualCoder's text named; no guessing of character sets;
-PDFs and file names holding listed names held back, with a way through
-on the researcher's word; imported files under the AI coder name;
-reading pages in a private folder of Exegete's own, tidied; and reading
-without codes. What follows is built to those decisions, and may change
-before it is released.
+PDFs and file names holding listed names, and files whose letters look
+garbled, held back, each with a way through on the researcher's word;
+imported files under the AI coder name; reading pages in a private
+folder of Exegete's own, tidied; and reading without codes. What follows
+is built to those decisions, and may change before it is released.
 
 ### Added (provisional): reading a whole file on your own computer
 
@@ -183,7 +183,9 @@ before it is released.
   deleted with tracked changes left out with that text; an emoji Word
   writes as an extension element comes in once, as in QualCoder. In
   OpenDocument files, runs of spaces, tabs and line breaks are kept, a
-  text box starts on a line of its own, notes and comments leave the
+  text box (a frame, or a shape holding text, as LibreOffice's Insert >
+  Text Box makes and as LibreOffice saves a Word text box) starts on a
+  line of its own, notes and comments leave the
   sentence they sat in with their markup and come after the text as in
   Word (a comment's author, initials and date left out), with headers
   and footers, other markup is taken out and character codes read, and a
@@ -213,16 +215,9 @@ before it is released.
 - Named departures, each with its reason in TOOLS.md: a file in which no
   text is found is refused, where QualCoder stores its raw bytes; a file
   declaring XML entities is refused; a file not saved as UTF-8 is held
-  back (below); a file whose letters came out wrong in the file itself,
-  in any script and any format but PDF ("Ã©" for "é", "Ä…" for "ą", "Ð˜"
-  for "И", "√©" for "é" through a Mac's own set), is held back until it
-  is corrected, and so is an RTF file holding raw UTF-8 bytes, which
-  QualCoder's way of reading RTF garbles so. Each run of characters that
-  a common Windows, Mac, DOS or KOI8 set, Shift JIS or GBK could have
-  made of UTF-8 is read back through it, and counts only where the
-  reading back fits its word better than the text as written, so correct
-  text writing the same characters (an accented name cut off by a long
-  dash inside quotation marks) comes in; subtitle files come in as
+  back (below); a file whose letters look garbled is held back with a
+  warning, and comes in on the researcher's word (below); subtitle files
+  come in as
   documents, with every byte-order mark at their start removed; an RTF
   file holding half of an emoji without the other half is refused with
   the way round; originals are always copied, never linked, and keep
@@ -248,6 +243,38 @@ before it is released.
   (`import_file_names_with_listed_names`). A folder's subfolders and
   other files are named by the same rule, hidden when they hold a listed
   name, and so is a step of the real place a link leads to.
+- Letters that look garbled are the researcher's to decide (the owner's
+  ruling of 7 October 2026, "Warn, and let me decide"). A UTF-8 file
+  once opened in another character set and saved again carries its
+  letters as other characters ("Ã©" for "é", "Ä…" for "ą", "Ð˜" for "И",
+  "√©" for "é" through a Mac's own set), in any script and any format
+  but PDF, and a garbled name may not match the pseudonyms list. Each run
+  of characters that a common Windows, Mac, DOS or KOI8 set, Shift JIS
+  or GBK could have made of UTF-8 is read back through it, and counts
+  where the reading back fits its word better than the text as written.
+  Such a file is held back with a warning that says what was seen (in
+  how many places, the first one's line, the character set they read
+  back through), never the text. `show_text`, on the preview only, opens
+  a page on the researcher's own screen with the text as it would be
+  stored and each place marked with what it would read as; the answer
+  gives the page's location, never the text, and the page goes after the
+  import, or once it is an hour old. The file comes in as it is only with
+  `import_files_with_garbled_letters`, on the researcher's word, the
+  names list applied to the rest, and its line in the preview and the
+  import's answer say that a name written with garbled letters is not
+  matched by a names list. These are signs, not proof: correct text can
+  show them (Chinese with English words written inside it, a sum
+  straight after an opening quotation mark or in a range, a capital
+  inside a Cyrillic word as in "ПриватБанк", Arabic punctuation typed
+  straight before the next word), which no longer keeps a correct file
+  out for good; and garbled text can show none (a garbled capital at a
+  word's start through the Western and Central European sets, a single
+  garbled letter in a name through Windows Central European or ISO
+  8859-2, most garbled letters through GBK). TOOLS.md lists both. An RTF
+  file's warning speaks of letters written as UTF-8 straight into the
+  file only when it holds them (RTF's rule reads such bytes one by one,
+  in QualCoder as in Exegete); for any other RTF file it is the general
+  warning, since QualCoder reads it rightly.
 - Files not saved as UTF-8 (plain text, Markdown and subtitle files, and
   web pages whatever character set they declare) are held back, with
   plain steps to save a copy as UTF-8 in Word, TextEdit or Notepad (for
@@ -320,19 +347,21 @@ before it is released.
 
 ### Measured
 
-- Serialised tool JSON: full = 200,865 characters (about 50.2k tokens
+- Serialised tool JSON: full = 201,088 characters (about 50.3k tokens
   at chars/4) over 76 tools, core = 67,374 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 203,444 (about 50.9k) over 77, measured on
+  the opt-in lifecycle set = 203,667 (about 50.9k) over 77, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 210,733, 70,766 and 213,452.
+  Python 3.11.13 (the `.venv/`), 210,964, 70,766 and 213,683.
   `open_file_for_reading`'s own entry is 1,630 characters on 3.13, and
-  `import_documents`' 2,754 (2,756 with its separator; it is in the
-  standard and lifecycle sets, not in core); the rest of the growth is
-  `start` and `without_codes` on `analyze_file_with_coding` and the two
-  descriptions changed above. Both new tools put their rules first, and
-  each whole description fits within the 2,048 characters Claude Code
-  keeps: `open_file_for_reading`'s is 1,187 characters on 3.13 (1,267
-  on 3.11) and `import_documents`' 1,958 (2,006 on 3.11).
+  `import_documents`' 2,977 (2,979 with its separator; it is in the
+  standard and lifecycle sets, not in core, and its two arguments for
+  letters that look garbled, `import_files_with_garbled_letters` and
+  `show_text`, are in it); the rest of the growth is `start` and
+  `without_codes` on `analyze_file_with_coding` and the two descriptions
+  changed above. Both new tools put their rules first, and each whole
+  description fits within the 2,048 characters Claude Code keeps:
+  `open_file_for_reading`'s is 1,187 characters on 3.13 (1,267 on 3.11)
+  and `import_documents`' 1,983 (2,039 on 3.11).
 
 ## [0.14.2-alpha] - 2026-10-02
 

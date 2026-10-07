@@ -897,6 +897,47 @@ _ODT_SPACE_COUNT = re.compile(r"""text:c\s*=\s*["'](\d{1,9})["']""")
 # file could ask for billions.
 _ODT_MAX_SPACES = 100
 _ODT_TEXT_BOX = re.compile(r"<draw:text-box(?=[\s/>])")
+# LibreOffice's own text box (Insert > Text Box), and a Word text box
+# LibreOffice saves as OpenDocument, is a drawing shape holding its
+# paragraphs directly, with no frame and no draw:text-box.
+_ODT_SHAPE = re.compile(
+    r"<(draw:(?:custom-shape|rect|ellipse|circle|polygon|polyline|path|"
+    r"regular-polygon|caption|connector|line|measure))(?=[\s/>])")
+
+
+def _mark_text_shapes(data: str, box_mark: str) -> str:
+    """`box_mark` before each drawing shape that holds a paragraph, as
+    before a frame's text box, so that its text starts on a line of its
+    own; a shape with no text (a line drawn beside the words) is left as
+    it is. Scans forwards only, past each shape's closing tag, so a file
+    of shapes costs one pass; an opening with no closing, and all that
+    follows it, are left as they are."""
+    out: List[str] = []
+    at = 0
+    while True:
+        match = _ODT_SHAPE.search(data, at)
+        if match is None:
+            break
+        tag_end = data.find(">", match.end())
+        if tag_end == -1:
+            break
+        if data[tag_end - 1] == "/":
+            out.append(data[at:tag_end + 1])
+            at = tag_end + 1
+            continue
+        close = data.find(f"</{match.group(1)}>", tag_end)
+        if close == -1:
+            break
+        out.append(data[at:match.start()])
+        inner = data[tag_end + 1:close]
+        if "<text:p" in inner or "<text:h" in inner:
+            out.append(box_mark)
+        out.append(data[match.start():close])
+        at = close
+    out.append(data[at:])
+    return "".join(out)
+
+
 _ODT_DESCRIPTION = re.compile(r"<(svg:title|svg:desc)(\s[^>]*)?>")
 _ODT_ANY_TAG = re.compile(r"<[^>]*>")
 _ODT_REFERENCE = re.compile(
@@ -998,6 +1039,8 @@ def _odt_steps(data: str, departures, marks, seen) -> str:
     data = step("odt_line_breaks", _ODT_LINE_BREAK, line_mark, data)
     data = step("odt_text_boxes", _ODT_TEXT_BOX,
                 box_mark + "<draw:text-box", data)
+    if "odt_text_boxes" in departures:
+        data = _mark_text_shapes(data, box_mark)
     if "odt_markup" in departures:
         before = data
         data = _take_elements(data, _ODT_DESCRIPTION)
@@ -1041,6 +1084,9 @@ def _odt_steps(data: str, departures, marks, seen) -> str:
         for old, new in _ODT_ENTITIES:
             text = text.replace(old, new)
     if "odt_text_boxes" in departures:
+        # A box at the very start of the text is on a line of its own
+        # already: no line break goes in before it.
+        text = text.lstrip(box_mark)
         glued = len(re.findall(f"(?<!\n){box_mark}", text))
         if glued and seen is not None:
             seen["odt_text_boxes"] = seen.get("odt_text_boxes", 0) + glued
@@ -1431,6 +1477,9 @@ _GRID_RULE = re.compile(r"^[ \t]*\+(?:[-=:]+\+){1,}[ \t]*$", re.M)
 _SIMPLE_RULE = re.compile(r"^[ \t]*-{3,}(?: +-{3,})+[ \t]*$", re.M)
 _NOTE_MARK = re.compile(r"\[\d{1,4}\]")
 _NOTE_LINE = re.compile(r"^\[\d{1,4}\]", re.M)
+# A character UTF-8 writes in two to four bytes, as raw bytes.
+_RAW_UTF8 = re.compile(rb"[\xc2-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}"
+                       rb"|[\xf0-\xf4][\x80-\xbf]{3}")
 
 
 def garbled(text: str) -> int:
@@ -1539,6 +1588,12 @@ def read_document(kind: str, raw: bytes, departures=None
     found = garbled(text)
     if found and kind != PDF:
         signs["garbled"] = found
+        if kind == RTF and _RAW_UTF8.search(raw):
+            # Letters written as UTF-8 straight into the file, outside
+            # RTF's escapes: RTF's rule reads each byte as a letter of
+            # its own (QualCoder's way, which Exegete follows), so the
+            # preview can say where the odd letters come from.
+            signs["rtf_raw_utf8"] = 1
     astral = sum(1 for ch in text if ord(ch) > 0xFFFF)
     if astral:
         signs["astral"] = astral

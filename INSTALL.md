@@ -1212,7 +1212,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 203,000 characters with `lifecycle`; TOOLS.md says how that
+  (about 204,000 characters with `lifecycle`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1324,8 +1324,10 @@ in Claude Code 2.1.199 and later, `read_pseudonym_list` and
 `import_documents`.
 
 Bringing documents in (`import_documents`, provisional, 0.14.3) takes
-two calls: the first only looks and changes nothing; the second brings
-the files in. Allow the second only after reading the preview, allow it
+two calls: the first only looks and changes nothing in the project (if
+letters look garbled, it can open a page on your screen to check them
+on); the second brings the files in. Allow the second only after
+reading the preview, allow it
 once, and never set the import to "always allow": a document's hidden
 instructions could otherwise have an assistant bring in another file
 unasked. PRIVACY.md, "Bringing documents in", says what reaches the AI

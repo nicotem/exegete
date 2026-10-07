@@ -222,7 +222,9 @@ exegete/                     # the clone (its folder's name does not matter)
 ├── scripts/
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
+│   ├── check_pages_site.py     # Checks the update site against this release
 │   └── create_test_project.py  # Test project generator
+├── pages/                   # The update site: latest.json and the update page
 ├── packaging/
 │   ├── desktop-extension/      # The extension's manifest template and its validator
 │   └── pypi-old-name/          # The old name's package, qualcoder-mcp, released until v1.0
@@ -309,9 +311,20 @@ another name. Each release updates `src/exegete/release.py` (the
 version, its date and the summary the note after an update shows) with
 `pyproject.toml` and the CHANGELOG heading; tests hold the three
 together. The file, and the update page Exegete's notes point to
-(`https://nicotem.github.io/exegete/update/`), live on the repository's
-`gh-pages` branch; at each release, once its extension file and its
-PyPI upload are published, the maintainer updates both there.
+(`https://nicotem.github.io/exegete/update/`), live in `pages/`, and
+each release updates both with `release.py` (`latest.json`'s version as
+PyPI spells it, its date, and the page's version, date, summary, links
+and commands); `tests/test_v0142_pages.py` holds them to `release.py`.
+The site is published by `.github/workflows/pages.yml`, deployed from
+GitHub Actions and never from a branch (the owner's decision of 5
+October 2026, `docs/update-check/design.md`, D3): a branch would let
+any token that can push rewrite `latest.json` without a release. Once
+the release is published, with its extension file, and both packages
+are on PyPI, start the workflow by hand from the release's tag. It
+checks the site against the release (`scripts/check_pages_site.py`)
+and that the release is out, and the deploy waits in the
+`github-pages` environment for the owner's approval: the last step of
+each release, and a hold switch for a bad file.
 
 ## Licence
 

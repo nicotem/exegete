@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Install or update Exegete</title>
+<style>
+:root { --bg: #ffffff; --fg: #1d1d1f; --muted: #555a60; --line: #d8dbe0;
+        --box: #f4f5f7; --link: #0b5cad; --button: #0b5cad; --buttonfg: #ffffff; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16171a; --fg: #e8e9eb; --muted: #a4a8ae; --line: #3a3d42;
+          --box: #222428; --link: #7db7ff; --button: #2f7fd6; --buttonfg: #ffffff; }
+}
+body { margin: 0; background: var(--bg); color: var(--fg);
+       font: 17px/1.55 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+main { max-width: 44rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+h1 { font-size: 1.8rem; line-height: 1.25; margin: 0.5rem 0 1rem; }
+h2 { font-size: 1.3rem; margin: 2.2rem 0 0.6rem; padding-top: 1rem;
+     border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; margin: 1.4rem 0 0.4rem; }
+a { color: var(--link); }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em;
+       background: var(--box); padding: 0.05em 0.3em; border-radius: 4px;
+       overflow-wrap: anywhere; }
+pre { background: var(--box); padding: 0.7rem 0.9rem; border-radius: 6px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; overflow-wrap: normal; }
+.download { display: inline-block; margin: 0.6rem 0 0.2rem; padding: 0.7rem 1.1rem;
+            background: var(--button); color: var(--buttonfg); border-radius: 8px;
+            text-decoration: none; font-weight: 600; }
+.note { color: var(--muted); font-size: 0.95rem; }
+li { margin: 0.35rem 0; }
+footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Install or update Exegete</h1>
+
+<p>The newest version is <strong>0.14.2-alpha</strong>, from 7 October 2026.</p>
+
+<p><strong>What's new:</strong> Exegete can now tell you when a new version is
+out, and it gives the assistant a brief on how to work with you. QualCoder 4.0
+is now the version it is checked against.
+<a href="https://github.com/nicotem/exegete/releases/tag/v0.14.2-alpha">The full
+notes for 0.14.2-alpha</a>.</p>
+
+<p><a class="download" href="https://github.com/nicotem/exegete/releases/download/v0.14.2-alpha/exegete-0.14.2-alpha.mcpb">Download Exegete 0.14.2-alpha for Claude Desktop</a></p>
+<p class="note">The file is called exegete-0.14.2-alpha.mcpb. Every version
+before 1.0 is marked "alpha", meaning an early version; the newest alpha is the
+one to use.</p>
+
+<p>Not sure which version you have? Ask Claude: "Is Exegete up to date?"
+(Exegete 0.14.2-alpha or later; not with the tool set <code>core</code>, which
+has no such tool). With Exegete's check switched off, it still tells you the
+version you have, without connecting to anything.</p>
+
+<h2>In Claude Desktop</h2>
+
+<p>It takes a minute or two. Your projects stay as they are, and so do your
+conversations.</p>
+
+<ol>
+<li><strong>Download.</strong> Click the button above. When it has finished,
+your browser shows the file in its list of downloads. Its name starts with
+exegete-0.14.2-alpha.</li>
+<li><strong>Open it.</strong> Click the file there, or double-click it in your
+Downloads folder. Claude Desktop opens and shows Exegete, with the same
+reminder as the first time to install only extensions you trust. Click
+<strong>Install</strong>. If Claude Desktop says it needs to fetch a few
+things, click <strong>Install</strong> again: it takes a minute and needs the
+internet.</li>
+<li><strong>Restart Claude Desktop.</strong> Quit it completely, then open it
+again, so that it starts the new version. Closing its window is not enough.
+  <ul>
+  <li>On a Mac: with Claude Desktop in front, press Cmd and Q together, or
+  choose Quit from the app's menu at the top of the screen.</li>
+  <li>On Windows: at the bottom right of the screen, near the clock, find the
+  Claude Desktop icon (you may need to click the small upward arrow first),
+  right-click it and choose Quit (or Exit).</li>
+  </ul>
+Wait until the Claude Desktop icon has gone, then open the app again. If you
+are not sure it has quit, restarting the computer always works.</li>
+<li><strong>Check.</strong> In a new conversation, ask Claude: "Is Exegete up
+to date?". If Claude asks whether it may use Exegete, allow it. It should
+answer that you have 0.14.2-alpha. The assistant may need to open your project
+again.</li>
+</ol>
+
+<p>Use Exegete on more than one computer? Update it on each one.</p>
+
+<h3>Something went wrong?</h3>
+<ul>
+<li><strong>Nothing happens when I open the file, or another program opens
+it.</strong> Open Claude Desktop's Settings, then Extensions, then Advanced
+settings, click <strong>Install Extension...</strong>, and choose the
+file.</li>
+<li><strong>There are several Exegete files in my Downloads folder.</strong>
+Use the one with 0.14.2-alpha in its name.</li>
+<li><strong>Claude Desktop refuses the extension.</strong> The extension is not
+signed by its developer, and a computer or Claude account managed by your
+university or employer may refuse it. The decision is your IT team's: you
+could send them this page and
+<a href="https://github.com/nicotem/exegete/blob/main/PRIVACY.md">PRIVACY.md</a>,
+which says what Exegete does and sends. The version you have keeps working
+meanwhile.</li>
+<li><strong>Exegete's tools are missing, or the old version still
+answers.</strong> Claude Desktop was not fully quit. Quit it as in step 3,
+wait, and open it again; or restart the computer.</li>
+<li><strong>Anything else:</strong> ask on
+<a href="https://github.com/nicotem/exegete/issues">GitHub Issues</a> (a free
+GitHub account is needed). Say what you did and what Claude showed; never
+include participants' data.</li>
+</ul>
+
+<h3>Hearing about new versions</h3>
+<p>In Claude Desktop, unless you switched it off, Exegete checks whether a
+newer version exists at most once a week, and when you ask, and Claude tells
+you once when it finds one (if Claude passes the note on). Nothing from your
+projects is sent; GitHub, which hosts this site, records your computer's
+internet address. To switch it off: Claude Desktop's Settings, Extensions,
+Exegete, "Tell me when a new version is out".
+<a href="https://github.com/nicotem/exegete/blob/main/PRIVACY.md#checking-for-new-versions">PRIVACY.md,
+"Checking for new versions"</a>, says exactly what is sent. If your network
+blocks the check, Exegete cannot tell you; this page always shows the newest
+version.</p>
+
+<h2>If you installed Exegete with a Terminal</h2>
+
+<p>This is the route of Claude Code, LM Studio, OpenAI's apps and Claude
+Desktop set up by hand. In every case, first quit the app that starts Exegete
+(for example Claude Desktop, Claude Code or LM Studio), so that nothing is
+using it while it changes; then take the step for the way you installed it, in
+Terminal (PowerShell on Windows); then open the app again.</p>
+
+<p>If you have switched Exegete's check on (<code>EXEGETE_UPDATE_CHECK=on</code>),
+you can ask your assistant "How do I update Exegete?" instead: from its first
+check on, at least seven days after it first tells you about the check, the
+answer gives the step for your computer, with your folders filled in. (Not in
+the tool set <code>core</code>, which has no such tool.)</p>
+
+<h3>pip, in a virtual environment</h3>
+<p>Run the environment's own Python, for example:</p>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "exegete==0.14.2a0"</code></pre>
+<p>In PowerShell on Windows:</p>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "exegete==0.14.2a0"</code></pre>
+
+<h3>pipx</h3>
+<pre><code>pipx install --force "exegete==0.14.2a0"</code></pre>
+
+<h3>uv tool</h3>
+<pre><code>uv tool install --force "exegete==0.14.2a0"</code></pre>
+
+<h3>uvx</h3>
+<p>uvx keeps running the version it fetched first until the command names
+another, so there is nothing to type in Terminal. In the app's settings for
+Exegete (its entry for MCP servers), where the command is uvx, change
+<code>exegete</code> (with any version after an @), or
+<code>qualcoder-mcp</code>, Exegete's earlier name, to
+<code>exegete@0.14.2a0</code>. The app fetches the new version the next time it
+starts, which needs the internet that once.</p>
+
+<h3>A copy of the source (git)</h3>
+<p>Go to the copy's folder, then fetch the release and move to it (this stays
+on your branch, and refuses if the copy has changes of its own), then install
+it again with the copy's own Python:</p>
+<pre><code>cd "$HOME/Documents/exegete"
+git fetch --tags
+git merge --ff-only v0.14.2-alpha
+"$HOME/Documents/exegete/venv/bin/python" -m pip install -e .</code></pre>
+<p>In PowerShell on Windows:</p>
+<pre><code>cd "$HOME\Documents\exegete"
+git fetch --tags
+git merge --ff-only v0.14.2-alpha
+&amp; "$HOME\Documents\exegete\venv\Scripts\python.exe" -m pip install -e .</code></pre>
+<p>Use your own folder if the copy is elsewhere.</p>
+
+<h3>Under the earlier name, qualcoder-mcp</h3>
+<p>In a virtual environment, update both names together, with the
+environment's own Python:</p>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "qualcoder-mcp==0.14.2a0" "exegete==0.14.2a0"</code></pre>
+<p>In PowerShell on Windows:</p>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "qualcoder-mcp==0.14.2a0" "exegete==0.14.2a0"</code></pre>
+<p>With pipx or uv tool, move to the new name first:
+<a href="https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp">INSTALL.md,
+"Coming from qualcoder-mcp"</a>, has the steps. The earlier name's last release
+comes with Exegete 1.0, so moving to the new name before then is worth
+doing.</p>
+
+<p>Not sure which way you installed it, or none of these fits?
+<a href="https://github.com/nicotem/exegete/blob/main/INSTALL.md#updating-the-mcp-server">INSTALL.md,
+"Updating the MCP Server"</a>, covers every way.</p>
+
+<footer>
+<p>Exegete is free, open-source software:
+<a href="https://github.com/nicotem/exegete">github.com/nicotem/exegete</a>.
+This page has no analytics, counters or cookies, and loads nothing from other
+sites.</p>
+</footer>
+
+</main>
+</body>
+</html>

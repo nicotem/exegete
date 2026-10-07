@@ -522,6 +522,30 @@ From pull request #11, with the code review's two findings fixed.
   `tests/test_v0142_qc40_release.py`, and the refusal's words in
   `tests/test_v17_support.py`).
 
+### CI
+
+- The update site, `latest.json` and the "Install or update Exegete"
+  page, lives in `pages/` and is published by a workflow of its own,
+  `.github/workflows/pages.yml`: deployed from GitHub Actions and never
+  from a branch, as the owner decided on 5 October 2026, since a branch
+  would let any token that can push rewrite the file every installed
+  copy trusts. It is started by hand from the release's tag. Its first
+  job, with a read-only token and nothing installed, checks the site
+  against the release (`scripts/check_pages_site.py`: the version, date
+  and summary in `release.py`, the links Exegete builds itself, nothing
+  loaded from another site), that the release is published with its
+  extension file and both packages are on PyPI, and that the version
+  file live now is not newer. The deploy waits in the `github-pages`
+  environment for the owner's approval, then reads the live file back.
+  The suite runs the same check of the site
+  (`tests/test_v0142_pages.py`), so a release prepared with the last
+  release's site fails before it is tagged.
+- New pins: actions/upload-pages-artifact v5.0.0 and
+  actions/deploy-pages v5.0.1. The others are unchanged:
+  actions/checkout v7.0.1, actions/setup-python v7.0.0,
+  actions/upload-artifact v7.0.1, actions/download-artifact v8.0.1 and
+  pypa/gh-action-pypi-publish v1.14.2.
+
 ### Measured
 
 - Serialised tool JSON with the brief and the check for new versions:

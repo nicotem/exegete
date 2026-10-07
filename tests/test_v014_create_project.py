@@ -408,8 +408,8 @@ class TestTheCoderName:
         assert answer["coder_name"] is None
         assert answer["coder_name_known"] is False
         assert server.CODER_NAME_NOT_KNOWN_WARNING in answer["warnings"]
-        assert "first opens this project in QualCoder" in \
-            server.CODER_NAME_NOT_KNOWN_WARNING
+        assert ("QualCoder records it when it first opens the project"
+                in server.CODER_NAME_NOT_KNOWN_WARNING)
         assert _stored_coder(answer) == ("", [server.SPEAKER_SYSTEM_CODER])
 
     @pytest.mark.parametrize("value", ["", "   "])
@@ -589,7 +589,7 @@ class TestAfterCreation:
     def test_the_next_steps(self):
         steps = " ".join(create("Steps", coder_name="carol")["next_steps"])
         assert "set_project_ai_coder_name" in steps
-        assert "must differ from the researcher's own QualCoder coder " \
+        assert "must differ from the researcher's own coder " \
                "name, \"carol\"" in steps
         assert "import_text_file" in steps and "parent_code_id" in steps
         steps = " ".join(json.loads(server.create_project(

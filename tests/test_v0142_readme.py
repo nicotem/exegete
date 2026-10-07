@@ -292,12 +292,16 @@ def test_a_first_session_names_both_coder_names():
     names = _between(first, "**Two coder names.**",
                      "**A project you already have.**")
     # v0.14.2, the README's first round of checks: two sentences, and what
-    # to say without QualCoder
-    assert ("When it makes the project, the assistant asks for yours, which "
-            "QualCoder records with what you code there (no QualCoder yet? "
-            "Say so). Before its first write, it asks for the AI coder name, "
-            "kept per project, under which Exegete writes what is done "
-            "through the conversation.") in names
+    # to say without QualCoder; since the owner's ruling of 7 October 2026,
+    # without assuming that the reader uses QualCoder at all
+    assert ("When it makes the project, the assistant asks for your own "
+            "coder name, which the project keeps so that your work and the "
+            "AI's stay apart (QualCoder, if you use it, records your coding "
+            "under it). Not using QualCoder, or no coder name? Say so. Before "
+            "its first write, it asks for the AI coder name, kept per "
+            "project, under which Exegete writes what is done through the "
+            "conversation.") in names
+    assert "no QualCoder yet" not in names
     # the example on the first screen shows the second ask, before the
     # first write (import_text_file asks through _resolve_write_owner)
     example = _between(_read("README.md"), "> **You:** Bring this",

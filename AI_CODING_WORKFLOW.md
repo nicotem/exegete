@@ -1,6 +1,6 @@
 # AI Coding Workflow Guide
 
-Complete guide to using Claude for AI-assisted qualitative coding with the conversational approval workflow.
+Complete guide to coding with Exegete, through a conversation with your assistant and its approval workflow.
 
 ## Table of Contents
 
@@ -47,23 +47,23 @@ the full path: use that one.
 **Before ANY AI coding:**
 1. Copy your project to the workspace
 2. Work only on the workspace copy
-3. Verify results in QualCoder before replacing original
+3. Check the results, in the conversation or in QualCoder, before replacing the original
 
 ### Close QualCoder First
 
 QualCoder 3.x marks an open project with a `project_in_use.lock`
-heartbeat file, and this server respects it: **every write operation is
+heartbeat file, and Exegete respects it: **every write operation is
 refused while QualCoder 3.x has the project open** ("This project
 is open in QualCoder (user ...). Close the project in QualCoder, then
 retry."). Reads still work, with a warning that data may change
 underneath.
 
-QualCoder 4.0 writes no lock file. For it the server can only report
+QualCoder 4.0 writes no lock file. For it Exegete can only report
 that the project appears to be open (`qualcoder_gui_signals` in
 `select_project`, `get_current_project` and `analyze_for_coding`: a
 heuristic that can miss an idle window), so make sure yourself that no
 QualCoder window has the project open before writing. An open 4.0
-window will not show changes written by this server until the project
+window will not show changes written by Exegete until the project
 is closed and reopened there.
 
 ### Backups
@@ -129,13 +129,13 @@ Only suggest a code where the participant says it in so many words
 ```
 
 **What Claude does:**
-1. Asks you three things first, as the server tells it to: what to
+1. Asks you three things first, as Exegete tells it to: what to
    look for (your own codes, topics, people's own words, actions,
    feelings or values, or other, and whether to point out passages no
    code fits), how long a coded passage should be (a phrase, whole
    sentences by default, or a whole answer) and whether a passage may
    carry more than one code. Your answers become the session's
-   instruction; there is no default instruction. The server refuses a
+   instruction; there is no default instruction. Exegete refuses a
    session without an instruction but cannot tell whether it holds your
    answers: check the instruction the session records
    (`get_coding_session_info` shows it)
@@ -271,7 +271,7 @@ Session saved. Ready to apply approved codings when you're ready.
 ```
 
 **Who approves.** Claude records your decisions with
-`update_suggestion_status`. The server writes what is marked approved
+`update_suggestion_status`. Exegete writes what is marked approved
 and cannot tell whether you gave the approval: check that the approved
 count is the number you said yes to, and keep your host asking before
 each tool call ("allow once" for the tools that decide and write). To
@@ -320,10 +320,19 @@ Applying 6 approved codings...
 ✓ Successfully applied 6 codings to database
   Backup: Interview Study_backup_20251029_143045.qda
 
-  You can now open this project in QualCoder to see the results!
+  The codings are in the project now: ask to see them, or open the
+  project in QualCoder.
 ```
 
-### Step 6: Verify in QualCoder
+### Step 6: Check the codings
+
+In the conversation, ask to see what was written:
+
+```
+Show me the codings just applied in Interview Study
+```
+
+In QualCoder, if you use it:
 
 1. Open QualCoder (a QualCoder 4.0 window that already had the project
    open must close and reopen it to show the new codings)
@@ -443,7 +452,8 @@ Apply the codings
 ✓ Backup created: Focus Group Study_backup_20251029_143512.qda
 ✓ Applied 4 codings successfully (ctid 112-115)
 
-Open the project in QualCoder to see your AI-generated codings!
+The codings are in the project now: ask to see them, or open the
+project in QualCoder.
 ```
 
 ### Example 2: Large File with Review
@@ -619,7 +629,7 @@ Analyse files 1-5 for Motivation codes
 Load session abc123 and show me the suggestions
 ```
 
-The server keeps the session in a file of its own
+Exegete keeps the session in a file of its own
 (`~/.exegete/sessions/`), not in the chat:
 - All suggestions
 - Your approvals/rejections
@@ -646,7 +656,7 @@ names.
 **6. Work Iteratively**
 
 1. Do a small test run
-2. Check results in QualCoder
+2. Check the results (ask for the coded passages, or look in QualCoder)
 3. Adjust your instructions based on what you see
 4. Continue with more files
 
@@ -788,11 +798,11 @@ In QualCoder:
 **Problem:** Made changes in QualCoder GUI, Claude doesn't see them.
 
 **Solution:**
-The server reads the project database live, so anything QualCoder has
+Exegete reads the project database live, so anything QualCoder has
 saved is visible on the next tool call; if Claude is repeating an
 earlier answer, ask it to query again. The reverse direction is the
 limitation: a QualCoder 4.0 window does not display changes written by
-this server until the project is closed and reopened there.
+Exegete until the project is closed and reopened there.
 
 ### Want to undo applied codings
 
@@ -883,10 +893,11 @@ not [what it should not]
 
 ### Quality Control
 
-Check your AI coding quality:
+Check your AI coding quality. In the conversation, ask for a random
+sample of the AI coder name's codings and read them against your own
+coding. Or in QualCoder:
 
 ```
-In QualCoder:
 1. Open Code Text view
 2. Filter by the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
 3. Review random sample
@@ -912,7 +923,7 @@ During coding:
 
 After applying:
 - [ ] Backup was created (check path)
-- [ ] Open project in QualCoder
+- [ ] Read the applied codings back, in the conversation or in QualCoder
 - [ ] Verify codings look correct
 - [ ] Owner shows the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
 - [ ] Memos say explicit or interpretive, then the reasoning

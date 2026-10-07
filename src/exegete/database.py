@@ -520,8 +520,8 @@ class UnsupportedSchemaError(RuntimeError):
 # the create-project study's finding 7): not a usable QualCoder project.
 NO_PROJECT_ROW_MESSAGE = (
     "This project's database has no project record (its project table is "
-    "empty), so it is not a usable QualCoder project, and QualCoder itself "
-    "will not open it. If it was left by a project creation that did not "
+    "empty), so it is not a usable project, and neither Exegete nor "
+    "QualCoder will open it. If it was left by a project creation that did not "
     "finish, it may be deleted by hand; otherwise restore it from a "
     "backup.")
 
@@ -1127,14 +1127,14 @@ def workspace_setting_problem() -> Optional[str]:
             return (f"{name} is empty, and this host requires a "
                     f"folder for projects ({required.name}=1): "
                     f"choose one in the host's settings (in Claude Desktop, "
-                    f"the extension's Folder for projects). The server does "
+                    f"the extension's Folder for projects). Exegete does "
                     f"not fall back to ~/Documents, which iCloud or OneDrive "
                     f"may sync.")
         return None
     try:
         given = Path(raw).expanduser()
     except (RuntimeError, ValueError):
-        return (f"{name} is not a folder path this server can "
+        return (f"{name} is not a folder path Exegete can "
                 f"use; check the folder in the host's configuration.")
     if not given.is_absolute():
         return (f"{name} must be a full path or one starting "
@@ -1233,7 +1233,7 @@ PDF_PROBLEM_MESSAGES = {
         "images): QualCoder stored no text for it, so there is nothing "
         "here to read, search or code as text. QualCoder can code it only "
         "by drawing regions in its PDF view. To code its words, run OCR "
-        "on the PDF outside this server (this server bundles none) and "
+        "on the PDF outside Exegete (it bundles none) and "
         "import the result as a text file."),
     PDF_STORED_AS_TEXT: (
         "QualCoder 3.8.2 appears to have stored this PDF file itself as "
@@ -1242,7 +1242,7 @@ PDF_PROBLEM_MESSAGES = {
         "and this file is not searched, coded or linked to a case. To repair it in place, open the file in QualCoder 4.0's "
         "PDF view and accept 'Restructure' (the file keeps its id, "
         "attributes and case links). To code its words, run OCR on the "
-        "PDF outside this server (this server bundles none) and import "
+        "PDF outside Exegete (it bundles none) and import "
         "the result as a text file."),
 }
 
@@ -1285,7 +1285,7 @@ def unusable_pdf_link_refusal(name: Any, problem: str) -> str:
     nothing, as the case's text."""
     return (f"File '{name}' is a PDF with no usable text ({problem}), so "
             f"it is not linked to a case here: a case link covers a "
-            f"file's text, and this file has none this server can use. "
+            f"file's text, and this file has none Exegete can use. "
             f"{PDF_PROBLEM_MESSAGES[problem]} QualCoder itself can still "
             f"link it to the case.")
 
@@ -3072,7 +3072,8 @@ class QualcoderDatabase:
             missing_tables = set(required_tables) - existing_tables
             if missing_tables:
                 raise ValueError(
-                    f"Invalid Qualcoder database: missing tables {missing_tables}"
+                    f"Not a project database in QualCoder's format: "
+                    f"missing tables {missing_tables}"
                 )
         except sqlite3.OperationalError as e:
             if _is_locked_error(e):
@@ -3118,7 +3119,7 @@ class QualcoderDatabase:
                         "versions: %s", _version_for_log(version),
                         SUPPORTED_DB_VERSIONS)
                 else:
-                    logger.info(f"Connected to Qualcoder database version {version}")
+                    logger.info(f"Connected to the project database, version {version}")
         except sqlite3.OperationalError as e:
             if _is_locked_error(e):
                 raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
@@ -3216,7 +3217,7 @@ class QualcoderDatabase:
                 return (True, self._unknown_schema_warning(), True)
             return (False,
                     f"This project reports database schema '{version}', "
-                    f"newer than the schemas this server is verified "
+                    f"newer than the schemas Exegete is verified "
                     f"against (v14 through v{MAX_VERIFIED_SCHEMA}, up to "
                     f"{VERIFIED_QUALCODER}). "
                     f"Writes are refused to protect the data. Set "
@@ -4016,8 +4017,8 @@ class QualcoderDatabase:
         except sqlite3.Error as e:
             _raise_query_error(
                 e, "_row_is_visible",
-                "Could not determine whether this row is visible in "
-                "QualCoder (its coder-visibility view did not answer); "
+                "Could not determine whether this row's coder is hidden "
+                "(the project's coder-visibility view did not answer); "
                 "nothing was changed")
         return row is not None
 
@@ -6046,7 +6047,7 @@ class QualcoderDatabase:
                         f"{len(unusable_pdfs)} PDF source(s) were not "
                         f"content-searched, so finding nothing in them "
                         f"means nothing: {PDF_NO_TEXT_LAYER} is a PDF with "
-                        f"no text layer (OCR it outside this server and "
+                        f"no text layer (OCR it outside Exegete and "
                         f"import the result); {PDF_STORED_AS_TEXT} is a "
                         f"PDF that QualCoder 3.8.2 stored as the file "
                         f"itself, recognised by a heuristic (repair it "
@@ -10429,12 +10430,12 @@ class QualcoderDatabase:
                     and finite_number(value) is None:
                 raise ValueError(
                     f"'{attr_name}' is a numeric attribute and '{value}' "
-                    f"is not a number this server can compare: give "
+                    f"is not a number Exegete can compare: give "
                     f"digits, optionally with a sign, a decimal point or "
                     f"an exponent (\"30\", \"4.5\", \"1e3\"); not "
                     f"\"nan\" or \"inf\", not underscores, not digits "
                     f"outside 0 to 9. QualCoder blanks or reverts a value "
-                    f"that is not a number, with a warning; this server "
+                    f"that is not a number, with a warning; Exegete "
                     f"refuses it, so nothing changes. Pass '' to unset."
                 )
 
@@ -11949,7 +11950,7 @@ class QualcoderDatabase:
             "queries.")
         residue["ai_data_note"] = (
             "QualCoder 4.0's ai_data folder (chat history and the search "
-            "index) is never read or written by this server and is not "
+            "index) is never read or written by Exegete and is not "
             "scanned; it may still hold the previous text.")
         if memo_plan is not None:
             residue["after_rewrite_note"] = self.PSEUDONYMISE_AFTER_REWRITE_NOTE
@@ -12286,7 +12287,7 @@ class QualcoderDatabase:
         "formed a private-part marker in them, which would hide the rest of "
         "the note from every later AI read.")
     PSEUDONYMISE_MEMO_EARLIER_RUNS_NOTE = (
-        "Of the journal rows above, this many are this server's own records "
+        "Of the journal rows above, this many are Exegete's own records "
         "of earlier pseudonymisation runs. Rewriting them changes the "
         "project's record of what those runs applied. This is a heuristic "
         "reading of each entry's first line.")

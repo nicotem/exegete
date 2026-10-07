@@ -40,11 +40,11 @@ body:
   - type: input
     id: qualcoder-version
     attributes:
-      label: QualCoder version
-      description: A release (3.8.x or 4.0). For a build from QualCoder's source, add the git commit if you know it.
-      placeholder: e.g. 3.8.2 or 4.0
+      label: QualCoder version, if you use it
+      description: A release (3.8.x or 4.0), or "none" if you do not use QualCoder. For a build from QualCoder's source, add the git commit if you know it.
+      placeholder: e.g. 3.8.2, 4.0 or none
     validations:
-      required: true
+      required: false
   - type: input
     id: schema-version
     attributes:
@@ -57,7 +57,7 @@ body:
     id: host
     attributes:
       label: MCP host application
-      description: The application that runs the server for you.
+      description: The application that runs Exegete for you.
       options:
         - Claude Desktop, with the one-click extension (.mcpb)
         - Claude Desktop, configured by hand
@@ -87,6 +87,7 @@ body:
         - "No"
         - "Yes"
         - Not sure
+        - I don't use QualCoder
     validations:
       required: false
   - type: dropdown

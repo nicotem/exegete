@@ -183,8 +183,8 @@ def strip_private_memos(value: Any) -> Any:
 # claims audit's item 4).
 MARKER_REFUSED_DESCRIPTION = (
     "Text containing '#####', QualCoder's private-note marker, is refused "
-    "before anything is written or backed up: what follows the marker is "
-    "the researcher's own, written in QualCoder.")
+    "before anything is written or backed up: what follows it is the "
+    "researcher's own, not the assistant's to write.")
 
 
 def private_marker_refusal(text: Any, field: str) -> Optional[str]:
@@ -209,7 +209,8 @@ def private_marker_refusal(text: Any, field: str) -> Optional[str]:
         return None
     return (f"{field} contains QualCoder's private-note marker (five hash "
             f"signs in a row); nothing was written. What follows that "
-            f"marker is the researcher's private note, written in QualCoder "
-            f"and never shown to the assistant, so this server does not "
-            f"write it: send the text without the marker. A note the "
-            f"researcher wants to keep private is written in QualCoder.")
+            f"marker is the researcher's private note, written outside the "
+            f"conversation and never shown to the assistant, so Exegete "
+            f"does not write it: send the text without the marker. The "
+            f"researcher writes a private note themselves, outside the "
+            f"conversation (in QualCoder, for example).")

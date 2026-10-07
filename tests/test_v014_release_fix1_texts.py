@@ -73,10 +73,14 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     # and needed for what "Still needs QualCoder" lists (after what you can
     # do), and the tool set where the extension is installed
     flat = " ".join(readme.split())
-    assert "you do not need QualCoder to start" in flat
-    assert ("**Still needs QualCoder**, which is recommended from the "
-            "start: bringing in documents other than text (Word, PDF, "
-            "images, audio, video)") in flat
+    # Since the owner's ruling of 7 October 2026: what is not in Exegete
+    # yet, and QualCoder from the start only for a study that needs it
+    assert "You do not need QualCoder to start" in flat
+    assert ("**Not in Exegete yet**, and done in QualCoder for now: "
+            "bringing in documents other than text (Word, PDF, images, "
+            "audio, video)") in flat
+    assert ("If your study needs any of these now, get QualCoder from the "
+            "start.") in flat
     assert "| Import sources | Text, documents, PDFs, images, audio, video " \
         "| Text the assistant hands over |" in flat
     one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
@@ -101,8 +105,10 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert ("On this route the default tool set, `full`, has no tool that "
             "creates a project") in needs
     assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
-    assert ("**QualCoder itself**, recommended, and needed to bring in "
-            "documents") in needs
+    # Since the owner's ruling of 7 October 2026: optional, with what it
+    # does that Exegete does not do yet
+    assert ("**QualCoder, optional.** Today it does what Exegete does not "
+            "do yet: bringing in documents") in needs
     # The facts it rests on: the extension's tool set defaults to
     # lifecycle, which alone has create_project (not full, the default
     # configured by hand, and not core), and a file is imported from text
@@ -193,7 +199,7 @@ def test_the_guide_reads_every_suggestion():
         assert gone not in guide, gone
     # the three questions as what Claude is told, the default named
     assert "there is no default instruction." in guide
-    assert ("The server refuses a session without an instruction but "
+    assert ("Exegete refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in guide
     assert ("The instruction is where you say what counts as stated for "
             "your study") in guide
@@ -211,10 +217,10 @@ def test_the_workflow_decides_each_item():
     assert ("All five look good. Show me the Career Satisfaction and "
             "Professional Development suggestions.") in workflow
     assert "Show me 1, 3, 4 and 5 too" in workflow
-    assert ("The server keeps the session in a file of its own "
+    assert ("Exegete keeps the session in a file of its own "
             "(`~/.exegete/sessions/`), not in the chat") in workflow
     assert "there is no default instruction." in workflow
-    assert ("The server refuses a session without an instruction but "
+    assert ("Exegete refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in workflow
 
 

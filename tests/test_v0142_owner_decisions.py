@@ -117,7 +117,7 @@ def test_the_summary_promises_no_more_than_the_checks_do():
     the checks do."""
     readme = _flat("README.md")
     one_click = _between(readme, "### Claude Desktop, with one click",
-                         "**Get QualCoder too**")
+                         "**QualCoder, if you want it.**")
     assert one_click.rstrip().endswith(
         "Manual keeps Claude asking; the checks keep your files out of its "
         "reach and switch training off.")
@@ -193,7 +193,7 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
     # before the first prompt about the reader's own project
     flat = _flat("QUICKSTART.md")
     assert flat.index("goes to Anthropic") < \
-        flat.index("Can you give me a summary of my Qualcoder project?")
+        flat.index("Can you give me a summary of my project?")
 
 
 # ---------------------------------------------------------------------------

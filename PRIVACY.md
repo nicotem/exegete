@@ -3,15 +3,15 @@
 This document explains exactly what happens to your research data when
 you use Exegete (formerly qualcoder-mcp). It is factual and deliberately
 sober: this tool makes the data flow explicit precisely so you can make
-an informed decision, which many AI integrations do not. It is not legal
+an informed decision, which many AI tools do not. It is not legal
 advice.
 
 ## How your data flows
 
-**The server itself runs entirely on your machine.** It is a local
+**Exegete itself runs entirely on your machine.** It is a local
 process started by your MCP client (Claude Desktop, Claude Code, or any
 other). It adds **no telemetry, no analytics, and no separate cloud
-path** of its own. It opens your QualCoder project database read-only
+path** of its own. It opens your project's database read-only
 by default. The one thing it fetches from the internet itself, while
 switched on, is a small public file that says whether a newer version
 of Exegete exists, and it sends nothing from your projects to get it
@@ -39,7 +39,7 @@ assistants do, and what to use for participants' data.
 
 What stays local, always, unless a sync service copies the folder it is in:
 
-- your QualCoder project itself (the `.qda` folder and database)
+- your project itself (the `.qda` folder and its database)
 - automatic backups created before writes, and the safety backup a
   confirmed restore_backup takes first: timestamped
   `<project>_backup_<timestamp>.qda` folders (the safety backup's name
@@ -53,7 +53,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   (each carries the
   same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
-- the server's own folder, `~/.exegete` (before 0.14.1,
+- Exegete's own folder, `~/.exegete` (before 0.14.1,
   `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
   the session files, the secret, the pointer and the run manifests
   below, and `update_check.json` (when Exegete last checked for a new
@@ -69,8 +69,8 @@ What stays local, always, unless a sync service copies the folder it is in:
   where it was, unless an older copy of the server has already written
   at the old path in that instant; then both folders are kept. An older
   copy that makes a folder of its own under the old name (then, or
-  after the link was removed) has a secret of its own there, which this
-  server does not use: it takes from that folder only the session files
+  after the link was removed) has a secret of its own there, which
+  Exegete does not use: it takes from that folder only the session files
   it lacks, says so once in its log, and keeps in `~/.exegete` a
   one-line note (`old_folder_noted`, a digest that names no path) so as
   not to repeat it at every start. INSTALL.md's troubleshooting says
@@ -88,7 +88,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   nothing about your project. Deleting it invalidates outstanding
   preview tokens, which means the next execute asks for a fresh
   preview, and the keyed digests in the run manifests already written
-  can then no longer be checked; nothing else. The server replaces the
+  can then no longer be checked; nothing else. Exegete replaces the
   secret by itself, with the same two effects, when it finds the file
   malformed or, on macOS and Linux, readable by other accounts (after a
   restore or a sync tool widened its mode), and logs that it did. The
@@ -104,7 +104,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   a resource read, before a project is selected (or after the
   connection to the selected one was lost and could not be reopened),
   the error answer names that path as a recovery hint (only while that project still exists on
-  disk; never in a line this server logs), so a
+  disk; never in a line the server logs), so a
   project path chosen in one MCP host or session
   can appear in another host's conversation on the same account.
   Nothing is ever selected automatically from it; only a path with the
@@ -159,7 +159,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   the run instead (`old_fingerprint`, `new_fingerprint`): together with
   the pseudonymised text those confirm a guessed original name, so such
   a record must not be shared, not even as an audit record beside the
-  pseudonymised data. This server never rewrites or re-keys a record
+  pseudonymised data. Exegete never rewrites or re-keys a record
   already written; delete the old ones you do not need. A reader tells
   the two kinds apart by the record's `format` (3 is keyed) and by the
   field names: a field ending `_hmac_sha256` is keyed, an
@@ -197,8 +197,8 @@ tool does, as their content, so the MCP library, which logs with its
 traceback every error a fixed-address resource raises (one with an id
 in its address, such as `exegete://codes/{code_id}`, it answers
 without a line), has none to log; and for an error
-of a kind this server does not expect, which is reported by its kind
-alone. This server's own error texts, which it writes, are answered as
+of a kind Exegete does not expect, which is reported by its kind
+alone. Exegete's own error texts, which it writes, are answered as
 they are; some repeat what the caller supplied, such as a code name that
 is already taken. The rule closes one channel, SQLite's message; it
 does not make a project built to leak safe to open. Python's own
@@ -217,7 +217,7 @@ file-system error in the log is its kind and the system's short name
 for it (for example `PermissionError EACCES`), never the file it names,
 and a project's schema version only when it has QualCoder's form (`v`
 and digits). The results still name what they name, as each tool says.
-All of this is about the lines this server writes, and the MCP
+All of this is about the lines the server writes, and the MCP
 library's own lines beside them, which name the kind of each request
 and carry the caller's own text in two cases: for a prompt called with
 an argument it does not declare, that argument's value; and for a
@@ -245,24 +245,24 @@ and modification time in plain form.
 
 The `returned_so_far` figure in a paged result is carried BY the cursor,
 so it is as trustworthy as the cursor the caller handed back and no
-more: it counts what earlier pages said they returned, not what this
-server has verified. It is bounded on the way in, so a tampered cursor
+more: it counts what earlier pages said they returned, not what
+Exegete has verified. It is bounded on the way in, so a tampered cursor
 cannot put an arbitrary number in front of you, and `returned` (this
 page) and `has_more` are computed here on every page.
 
-What leaves your machine through this server: **only what tools return
+What leaves your machine through Exegete: **only what tools return
 into the conversation**, and, while checking for new versions is on,
 one request for a public file that carries nothing from your projects
 ("Checking for new versions"). For qualitative research, what tools
 return can be the most sensitive content you hold. An assistant that
-opens files by itself can send more, outside this server: the next section says which
+opens files by itself can send more, outside Exegete: the next section says which
 do.
 
 ## Assistants that open files by themselves
 
 Everything above is about what passes through Exegete. Some AI
 assistants can also open files on your computer by themselves, with
-tools of their own: they can read a QualCoder project's files directly,
+tools of their own: they can read a project's files directly,
 its database (`data.qda`) included, without going through Exegete. What
 they read that way goes to their AI provider whole, the private part of
 every memo after `#####` included (the database holds each memo in
@@ -342,7 +342,7 @@ assistant. These pages change often, and the linked pages govern.
   the same day). The same page, read again on 1 October 2026, says how
   to tell: "If you're on a Pro or Max plan and your message box still
   shows "Chat" and "Cowork" options, you don't have it yet." So a
-  QualCoder project, a transcript or your projects folder inside a
+  project, a transcript or your projects folder inside a
   folder connected to Claude is within its reach; kept out of every
   connected folder, with computer use off and no other extension that
   reads files (both below), they stay out of it.
@@ -432,8 +432,8 @@ instead, on whichever plan or terms you use.
 ## Keeping notes private from the AI: the '#####' memo convention
 
 QualCoder (3.8.2 and 4.0) uses a marker for memos: everything from the
-first `#####` onward is a private note. This server honours the
-convention, whichever QualCoder made the project:
+first `#####` onward is a private note. Exegete honours the
+convention, whichever program made the project, Exegete or QualCoder:
 
 - **Reads**: every tool and resource that returns memo content (code,
   category, file, case, attribute-type and coding memos, annotations,
@@ -493,8 +493,8 @@ convention, whichever QualCoder made the project:
   itself.
 
 The private zone stays in your project database on disk; this
-convention controls only what enters the AI conversation through this
-server. An assistant that opens the database by itself reads every memo
+convention controls only what enters the AI conversation through
+Exegete. An assistant that opens the database by itself reads every memo
 whole ("Assistants that open files by themselves", above).
 
 This note covers three sections: this one, "Coder visibility" and
@@ -516,11 +516,11 @@ and the four views (schema v14).
 
 ## Attribution: the AI coder name is yours to choose
 
-Every row this server writes carries one coder name, so AI work stays
-distinguishable from yours in QualCoder (an attribute value it sets on
-a file or a journal entry included, where QualCoder's own edit keeps
-the row's earlier owner). AI rows are never written under
-a name the model chose by itself: the name is set per project by you,
+Every row Exegete writes carries one coder name, so AI work stays
+distinguishable from yours, in Exegete's reads and in QualCoder (an
+attribute value it sets on a file or a journal entry included, where
+QualCoder's own edit keeps the row's earlier owner). AI rows are never
+written under a name the model chose by itself: the name is set per project by you,
 and the model can only ask. The first write that needs a name stops and
 asks; your answer is stored with the project and reported back by the
 project reads. The host's `EXEGETE_AI_CODER_NAME` setting declares
@@ -530,13 +530,13 @@ project's own coder name) is refused, and the `owner` argument of
 `apply_codings` and `import_text_file` can no longer be used to write
 rows under someone else's name.
 
-## Approving AI suggestions: what the server can and cannot see
+## Approving AI suggestions: what Exegete can and cannot see
 
 Suggested codings and proposed codes are written to the project only
 once each item is marked approved (`update_suggestion_status`,
 `update_proposal_status`) and then applied (`apply_codings`,
 `create_proposed_codes`). The mark is set by a tool call the assistant
-makes when it relays your decision. The server records the approval the
+makes when it relays your decision. Exegete records the approval the
 assistant reports and cannot tell whether you gave it: nothing in a tool
 call shows what you said in the conversation. What stands behind the
 mark is your host's own approval of each tool call (keep the host in its
@@ -569,7 +569,7 @@ coder's name.
 QualCoder lets a project hide individual coders' work (a per-coder
 visibility setting stored in the project database). It is not a 4.0
 feature: QualCoder 3.8.2 and 4.0, schema v14 and later, create the
-table, the column and the views, and this server detects them by
+table, the column and the views, and Exegete detects them by
 probing the project database rather than by any version string, so the
 behaviour below follows the capability wherever it is present. When a
 project has the coder-visibility capability:
@@ -585,8 +585,8 @@ project has the coder-visibility capability:
   in both pinned builds it reads the base `code_text` table
   (`report_codes.py:1712-1724` at 9bddf17, `:1504-1515` at the 3.8.2
   tag) and lists a hidden coder's segments, so hiding a coder in
-  QualCoder hides their work from its coding screen and from this
-  server's default reads, not from its reports; this server's file
+  QualCoder hides their work from its coding screen and from
+  Exegete's default reads, not from its reports; Exegete's file
   exports keep that same parity.
   Results disclose when hidden-coder filtering shaped them as a COUNT
   of hidden coders, never their names; the owner of a row that is read
@@ -605,7 +605,7 @@ project has the coder-visibility capability:
   way about a coding but not about an annotation: its update and
   delete of an annotation answer with the annotation's position and
   its owner's name as well (`ai_mcp_server.py:2324-2336` and
-  `:2370-2380` at tag `4.0`). This server keeps to ids there too, so
+  `:2370-2380` at tag `4.0`). Exegete keeps to ids there too, so
   that the override, which is there to change a hidden coder's row,
   does not also tell the conversation whose the row is or where it
   lies. The token-gated
@@ -636,7 +636,7 @@ project has the coder-visibility capability:
   resources. QualCoder shows the
   owner in its code tree and its journal list (`journals.py` 181 at
   9bddf17); its file and case managers show none (`manage_files.py`
-  1974, `cases.py` 371), so on files and cases this server shows what
+  1974, `cases.py` 371), so on files and cases Exegete shows what
   QualCoder's own screens do not. `search_memos` is the exception: it
   returns a note's owner as "(hidden coder)" when that coder is hidden,
   whatever the note is attached to (below).
@@ -697,16 +697,16 @@ project has the coder-visibility capability:
   category row being removed is reported as "(hidden coder)". The
   exported FILE is never affected by this: it carries every coder's
   counts, for parity with QualCoder's own report.
-- **When the capability arrives while this server is connected.**
+- **When the capability arrives while Exegete is connected.**
   QualCoder creates the visibility column and its views when it opens a
-  project, which can be after this server connected to it. Since v0.14
+  project, which can be after Exegete connected to it. Since v0.14
   every read re-reads the declaration from the project when it is made,
   as every decision that puts a coder's NAME into a result already did
   (the pseudonymisation preview's owner breakdown and hidden-row counts,
   the cascade previews' `by_owner` and `discarded_by_owner` lists and
   their masked row owner, the coder comparison's refusal and its hidden
   count, the frequencies export's coder list and the AI coder name
-  setter). So a coder hidden after this server connected is filtered out
+  setter). So a coder hidden after Exegete connected is filtered out
   of the read tools (coded segments, searches, the file view,
   frequencies and the rest of the list above) from the next call on,
   and counted in the hidden-coder count they disclose, without selecting
@@ -744,13 +744,13 @@ source in the project** (QualCoder chunks source fulltext into it for
 retrieval), which matters to anyone sharing or syncing project
 folders.
 
-This server never writes into `ai_data/` (it is QualCoder's own
+Exegete never writes into `ai_data/` (it is QualCoder's own
 territory). Its backups and workspace copies include `ai_data/` whole,
 minus exactly the files QualCoder 4.0's own backups skip
 (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`, `*.sqlite-wal` and
 `*.sqlite-journal`) and, in addition, any `*.lock` file (QualCoder 3.8's
 backups skipped those too, and a copied lock file would make QualCoder
-report the copy as not properly closed). That mirrors upstream behaviour, keeps the
+report the copy as not properly closed). That mirrors QualCoder's own backups, keeps the
 non-regenerable prompt library and chat history safe in every backup,
 and avoids multiplying plaintext copies of your sources across backup
 folders. A restored or copied project without `search.sqlite` is
@@ -787,7 +787,7 @@ one tool reads the backups' contents: `rename_file`, to recognise a
 rename back (a name, or an ending, the file had before; deprecated:
 v0.14 says so when it happens, and v0.15 removes it). Only when one of
 its rules would refuse the new name, it opens the database of the
-project's own backups beside it, this server's `_backup_` copies and
+project's own backups beside it, Exegete's `_backup_` copies and
 QualCoder's `_BKUP_` copies, newest first and at most 200, read-only and
 immutable (nothing is written into a backup, no side file is made; a
 backup with a journal or WAL file beside its database is skipped), once
@@ -802,7 +802,7 @@ logged: the only effect is whether the rename is accepted or refused.
 
 Two further rules touch files on your disk:
 
-- **Symlinks.** Unlike QualCoder's own backups, this server's backups
+- **Symlinks.** Unlike QualCoder's own backups, Exegete's backups
   and workspace copies do not follow a symlink that points outside the
   project folder, or that dangles: such entries are skipped, and the
   result reports how many (and which, up to twenty names) were
@@ -830,15 +830,15 @@ Two further rules touch files on your disk:
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for
   processes that are QualCoder itself: a program whose own name holds
-  "qualcoder" once this server's names (`exegete`, `qualcoder-mcp`,
+  "qualcoder" once Exegete's names (`exegete`, `qualcoder-mcp`,
   `qualcoder_mcp`) are taken out, which covers QualCoder's installers,
   its app and the portable and Linux downloads it publishes, or a Python
   running QualCoder's package (`-m qualcoder`, its `__main__.py`, its
   `qualcoder` script). Since v0.14 a command line that merely mentions
-  QualCoder in its arguments no longer counts, and this server's own
+  QualCoder in its arguments no longer counts, and Exegete's own
   process is left out. Only the NUMBER of
   matches is reported into the conversation; process names, command
-  lines and other users' processes never leave the server, the
+  lines and other users' processes never leave Exegete, the
   filtered matches are held in memory for at most five seconds so that
   back-to-back calls do not rescan, and nothing from the list is
   stored on disk. The other signals in that field come from the
@@ -862,10 +862,10 @@ Two further rules touch files on your disk:
   project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
   selects a project); nothing else: no backup, no `exegete.json`,
-  no entry in QualCoder's recent-project list. The database holds the researcher's QualCoder coder name when
+  no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
   they give it (and QualCoder's speaker coder), and an "about" line
-  naming this server and its version. The coder name is asked for,
-  never read: the server does not open QualCoder's settings file
+  naming Exegete and its version. The coder name is asked for,
+  never read: Exegete does not open QualCoder's settings file
   (`~/.qualcoder/config.ini`, which holds API keys in plain text), and a
   test pins that. To refuse a name already in use, it lists the target
   folder's entries and opens an existing project's database read-only;
@@ -875,7 +875,7 @@ Two further rules touch files on your disk:
 ## Your governance options, from default to fully local (Experimental)
 
 Which terms govern the AI processing is decided by the host you run and
-the account you sign into, not by this server. Four rungs, each with
+the account you sign into, not by Exegete. Four rungs, each with
 what changes and what to check. Discipline note: we quote official
 pages verbatim with their URLs and never characterise terms in our own
 voice; every quote below was pulled on 2026-08-17, terms change, and
@@ -960,7 +960,7 @@ do NOT touch:
 > Gov and Claude for Education"
 
 If your institution already has a Team or Enterprise deployment, using
-this server through Claude Desktop or Claude Code under that account
+Exegete through Claude Desktop or Claude Code under that account
 is already commercial-terms coverage; no API key is needed. The terms
 do not change what Claude Code reads: on this rung as on the others,
 Claude Code opens files by itself, outside Exegete ("Assistants that
@@ -988,7 +988,7 @@ tries to connect, because a check that fails says nothing.
 The trade is stated plainly: a narrower workflow with more supervision,
 the reduced core toolset required (`EXEGETE_TOOLSET=core`), and,
 importantly, **we have not yet evaluated how well any local model
-performs with this server**. That evaluation is pending; until then
+performs with Exegete**. That evaluation is pending; until then
 local-model behaviour is unverified, which is why this rung is marked
 Experimental. Mechanics: the INSTALL.md recipe "LM Studio (fully
 local)".
@@ -1469,12 +1469,12 @@ will ask, and the summary above depends on them:
   - **The backup.** Every run copies the whole project first, and that
     copy holds the text as it was, real names included. Backups sit
     beside the project until you remove them; `list_backups` shows them
-    and `prune_backups` removes this server's own. A project you are
+    and `prune_backups` removes Exegete's own. A project you are
     about to share is not pseudonymised while its backups are beside it.
   - **`pseudonyms.json`**, if you keep one. It is QualCoder's own
     import-time list and it is the reverse key in plain text at the
     project root, so it travels into every backup either tool makes.
-    This server writes it only when asked, in QualCoder's own format,
+    Exegete writes it only when asked, in QualCoder's own format,
     and removes or replaces it only by a restore: `restore_backup` rolls
     the whole folder back, this file with it, so restoring a backup taken
     before a save takes the file out of the project, and restoring one
@@ -1483,14 +1483,14 @@ will ask, and the summary above depends on them:
     the project had stays in the pre-restore safety backup, which
     `prune_backups` can remove; its preview names any backup it would
     remove that holds a `pseudonyms.json` which neither the project nor
-    a backup this server keeps holds, byte for byte, as the only lasting
-    copy this server knows of. QualCoder's own `_BKUP_` backups do not
+    a backup Exegete keeps holds, byte for byte, as the only lasting
+    copy Exegete knows of. QualCoder's own `_BKUP_` backups do not
     count as keeping a copy, because QualCoder deletes them past its
     `backup_num` when a project closes, so a copy in one of them does
     not stop a backup being named; the preview names those that hold a
     copy for now. The approval token signs that set of only copies, so
     a prune whose set changed after its preview (the project's own file
-    removed outside this server, for example) is refused as a changed
+    removed outside Exegete, for example) is refused as a changed
     project and removes nothing, and the execute's note says, in the
     past tense, which backups held the copy.
     Since v0.13 a run on a mapping you typed is refused unless the call
@@ -1532,7 +1532,7 @@ will ask, and the summary above depends on them:
     ordinary chat honours the mark is not documented, and this project
     has not yet checked either in use), so for a project with a pseudonyms file keep the host
     in its asking mode (INSTALL.md, "What hosts do with the tools' read
-    and write marks"). Each call writes one line to this server's log
+    and write marks"). Each call writes one line to the server's log
     with the count and no name. QualCoder's own
     guidance is to remove it and store it securely once the import is
     done (`manage_files.py` at the 9bddf17 pin), and that applies here
@@ -1548,9 +1548,9 @@ will ask, and the summary above depends on them:
     attribute values are never rewritten by the pseudonymisation tool (a
     case or file name is renamed with `rename_case` or `rename_file`,
     below). A note's private part (from its `#####` marker) is carried
-    across unread, so a name there is still there and nothing in this
-    server can report it. A second run with `rewrite_memos` on also
-    rewrites the journal entries this server wrote for earlier runs,
+    across unread, so a name there is still there and nothing in
+    Exegete can report it. A second run with `rewrite_memos` on also
+    rewrites the journal entries Exegete wrote for earlier runs,
     which the preview counts and warns about. **Two people who share a
     name:** one file per call gives each their own pseudonym in the file
     text only. With `rewrite_memos` on, whichever run carries it
@@ -1636,10 +1636,10 @@ will ask, and the summary above depends on them:
     copy), saved graph labels, saved table displays and filters, and
     QualCoder's saved SQL queries. Each rename's result counts the saved
     graph labels, table displays and filters for the case or file it
-    renamed; the saved SQL queries nothing in this server reads. Every
-    backup, this server's session files, QualCoder's search index and
+    renamed; the saved SQL queries nothing in Exegete reads. Every
+    backup, Exegete's session files, QualCoder's search index and
     QualCoder 4.0's AI chat keep the old name too, and
-    so do this server's pseudonymisation journal entries and run records,
+    so do Exegete's pseudonymisation journal entries and run records,
     which keep a file's name as it was at the run unless that name
     carried a name from the mapping (they then name the file by its id),
     though a later run with `rewrite_memos` rewrites the public part of
@@ -1649,9 +1649,9 @@ will ask, and the summary above depends on them:
     the `ai_data/` folder").
   - **QualCoder 4.0's `ai_data/` folder.** Its chat history may quote the
     previous text and its search index still holds it until QualCoder
-    reopens the project and re-indexes. This server never reads or
+    reopens the project and re-indexes. Exegete never reads or
     writes anything in there.
-  - **This server's own session files** in `~/.exegete/sessions/`.
+  - **Exegete's own session files** in `~/.exegete/sessions/`.
     A coding session records the excerpt each suggestion refers to,
     with the file's name and the reason given for it (which may quote
     the passage), and each proposed code with its definition and
@@ -1739,7 +1739,7 @@ will ask, and the summary above depends on them:
   transmits file 7's text through them.
 - **An assistant that opens files by itself can read a project
   whole** (Codex, Claude Code, Cowork in the folders you connect),
-  outside this server; "Assistants that open files by themselves",
+  outside Exegete; "Assistants that open files by themselves",
   above, says which do and what narrows it. For participants' data,
   this project suggests one with no file access of its own, such as
   Claude Desktop's chat with the extension, with computer use off, no
@@ -1747,7 +1747,7 @@ will ask, and the summary above depends on them:
   no other extension that reads files.
 - **Consult your institution's DPO or ethics board** if you are unsure,
   before the analysis, not after.
-- Remember that the server's safety features (read-only default,
+- Remember that Exegete's safety features (read-only default,
   automatic local backups, refuse-while-QualCoder-is-open through the
   lock file QualCoder 3.x writes, and for
   QualCoder 4.0 a best-effort check of this machine's process list that

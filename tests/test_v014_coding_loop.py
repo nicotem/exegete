@@ -879,7 +879,7 @@ class TestComparingCodersSaysWhatItCannotShow:
              "coded_by": "AI Coding Assistant"}]
         assert out["files_coded_by_neither"] == 0
         assert any("not a decision" in n for n in out["notes"])
-        ai_note = next(n for n in out["notes"] if "this server's AI" in n)
+        ai_note = next(n for n in out["notes"] if "One coder is the AI" in n)
         assert "the suggestions the person approved" in ai_note
         assert "every visible coder's codings" in ai_note
         assert "intercoder reliability" in ai_note

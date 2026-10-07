@@ -472,7 +472,8 @@ def test_initialize_carries_methodology_instructions():
     # v0.14.2: the brief's short version, which sends the assistant to
     # read_brief (and so to the methods notes)
     assert instructions.startswith(
-        "Exegete exposes a QualCoder project to this conversation.")
+        "Exegete is a qualitative analysis application for working with "
+        "the researcher on their project, in QualCoder's format.")
     assert "call read_brief once" in instructions
     assert len(instructions) < 2000
     assert "\u2014" not in instructions

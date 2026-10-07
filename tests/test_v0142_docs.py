@@ -412,7 +412,7 @@ def test_the_check_after_installing_is_a_short_list():
                          "click", "### ChatGPT's desktop app and Codex")
     # v0.14.2, the README's first round of checks: a short list after one
     # sentence, the five checks linked last, with why Manual is not enough
-    check = _between(one_click, "To check,", "**Get QualCoder too**")
+    check = _between(one_click, "To check,", "**QualCoder, if you want it.**")
     assert check.startswith("To check, click \"+\" in a new conversation, "
                             "then Connectors: Exegete is listed. Then: - "
                             "When Claude asks to use a tool, choose \"Allow "
@@ -876,7 +876,7 @@ BETA_AS_HISTORY = ("TOOLS.md",)
 
 def test_qualcoder_4_0_is_named_as_released():
     readme = _flat("README.md")
-    get = _between(readme, "**Get QualCoder too**",
+    get = _between(readme, "**QualCoder, if you want it.**",
                    "### ChatGPT's desktop app")
     assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
             "3.8.2 or 4.0. Exegete works with both, but can tell that "
@@ -888,11 +888,11 @@ def test_qualcoder_4_0_is_named_as_released():
     assert ("With QualCoder 3.8.2, an open project is detected and the "
             "change refused. In QualCoder 4.0 it cannot be detected, so "
             "there only you can make sure;") in one
-    assert ("Exegete reads and writes projects from QualCoder 3.8.2 to "
-            "4.0, reading what each supports") in readme
+    assert ("Exegete reads and writes projects in the formats of "
+            "QualCoder 3.8.2 to 4.0, reading what each supports") in readme
     install = _flat("INSTALL.md")
-    assert ("Projects from QualCoder 3.8.x and 4.0 work (project schemas "
-            "v14 through v17)") in install
+    assert ("Projects in the formats of QualCoder 3.8.x and 4.0 work "
+            "(project schemas v14 through v17)") in install
     assert ("4.0 is at the top of the page, the release marked \"Latest\" "
             "when this was checked, on 6 October 2026, and 3.8.2 just below "
             "it. Exegete works with both, but can tell that QualCoder has a "

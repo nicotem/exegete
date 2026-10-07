@@ -108,10 +108,12 @@ class TestTheOpeningText:
         # saw it near 2,060 bytes: both stay under 2,000
         assert len(short) < 2000
         assert len(short.encode("utf-8")) < 2000
-        # v0.14's first sentence, which no other text of the server's
-        # holds, stays for the owner's live check
+        # Its first sentence (the owner's ruling of 7 October 2026), which
+        # no other served text holds, so that the owner's live check can
+        # recognise it (tests/test_v0142_selfrep.py pins the two sentences)
         assert short.startswith(
-            "Exegete exposes a QualCoder project to this conversation. ")
+            "Exegete is a qualitative analysis application for working with "
+            "the researcher on their project, in QualCoder's format. ")
         assert server.BRIEF_START in short
         assert "The rules that matter most:" in short
 
@@ -128,7 +130,7 @@ class TestTheOpeningText:
                 "Read and change the project only through these tools",
                 "An empty result is a result",
                 "Excerpts you record are checked against the file",
-                "which you do only on the researcher's word: the server "
+                "which you do only on the researcher's word: Exegete "
                 "cannot tell who approved",
                 "their answers are the session's instruction, without "
                 "which no session starts",
@@ -178,7 +180,7 @@ class TestItSaysWhatTheToolsDo:
         """The server writes what is marked approved and cannot tell who
         marked it (section 6, rule 4 and both status tools)."""
         full = _flat(server.BRIEF_FULL)
-        assert ("the server writes a suggested coding or a proposed code "
+        assert ("Exegete writes a suggested coding or a proposed code "
                 "only when each item has been marked approved, which you do "
                 "only on the researcher's word." in full)
         assert ("Suggested codings and proposed codes wait in a session "
@@ -222,7 +224,7 @@ class TestTheStartTool:
         text = server.READ_BRIEF_DESCRIPTION
         assert len(text) < 400
         assert text.startswith("Call this once at the start of every "
-                               "conversation about a QualCoder project")
+                               "conversation about a project")
         assert "Call it again if that text has dropped out" in text
         assert "reads nothing from the project" in text
 
@@ -239,7 +241,8 @@ class TestTheStartTool:
             " " + server.BRIEF_START, "")
         assert "read_brief" not in answer
         assert answer.startswith(
-            "Exegete exposes a QualCoder project to this conversation.")
+            "Exegete is a qualitative analysis application for working with "
+            "the researcher on their project, in QualCoder's format.")
         assert "\nThe rules that matter most:\n1. " in answer
 
     def test_it_needs_no_project(self, monkeypatch):
@@ -492,13 +495,17 @@ class TestTheSizes:
     """What every request carries grows by read_brief's own entry in the
     tool list, by check_for_updates' in `full` and `lifecycle` (pull
     request #11), and by nothing else: every other description is as
-    v0.14.1 served it (tests/test_v0142_description_cut.py pins their
-    words; test_toolset_modes.py pins the new totals)."""
+    v0.14.1 served it or, where the rewording of how Exegete describes
+    itself reached it, shorter (tests/test_v0142_description_cut.py pins
+    their words, tests/test_v0142_selfrep.py that none is longer;
+    test_toolset_modes.py pins the new totals)."""
 
     # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
     BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
+    # The same tools as this release serves them, on the same interpreter
+    NOW = {"full": 195_029, "core": 64_687, "lifecycle": 197_586}
     # Each new tool's entry on Python 3.13, and the sets it is in
-    NEW = {"read_brief": (465, {"full", "core", "lifecycle"}),
+    NEW = {"read_brief": (451, {"full", "core", "lifecycle"}),
            "check_for_updates": (903, {"full", "lifecycle"})}
 
     @staticmethod
@@ -518,7 +525,8 @@ class TestTheSizes:
             assert grown == sum(len(json.dumps(e)) + len(", ")
                                 for e in new.values()), mode
             if sys.version_info[:2] == (3, 13):
-                assert len(json.dumps(others)) == self.BEFORE[mode], mode
+                assert len(json.dumps(others)) == self.NOW[mode], mode
+                assert self.NOW[mode] <= self.BEFORE[mode], mode
                 for name, entry in new.items():
                     assert len(json.dumps(entry)) == self.NEW[name][0], name
 

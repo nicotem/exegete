@@ -213,7 +213,7 @@ class TestT1ProbeGateMatrix:
         # The owner's ruling of 6 October 2026: a researcher is told the
         # release Exegete is verified against, not a development commit
         assert VERIFIED_QUALCODER == "QualCoder 4.0"
-        assert ("newer than the schemas this server is verified against "
+        assert ("newer than the schemas Exegete is verified against "
                 "(v14 through v17, up to QualCoder 4.0).") in out["error"]
         for gone in ("9bddf17", "master commit"):
             assert gone not in out["error"], gone

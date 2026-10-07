@@ -17,8 +17,8 @@ helps the next researcher who hits the same thing. [SUPPORT.md](SUPPORT.md)
 has the full policy.
 
 When you report a bug, use the issue template. It asks for the
-Exegete version, the QualCoder version, the project's schema
-version (the `databaseversion` value in the `schema` block that
+Exegete version, the QualCoder version if you use QualCoder, the
+project's schema version (the `databaseversion` value in the `schema` block that
 `get_current_project` returns), your MCP host (Claude Desktop, Claude
 Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`,
 `lifecycle`, or `full` when the variable is not set) and your operating
@@ -56,7 +56,7 @@ is looked at first.
 
    The whole suite must pass, on your platform and on the CI. Every new
    behaviour needs a test that fails without the change, including the
-   edge cases of any upstream behaviour you are matching. Do not add
+   edge cases of any QualCoder behaviour you are matching. Do not add
    skips without a stated reason in the test. One scale test (10k+
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
@@ -94,12 +94,12 @@ is looked at first.
 Nothing is merged on a green CI alone. Every change also goes through a
 QA review and a security review. The QA review checks that each new
 behaviour has a test that fails without it, that the edge cases of the
-matched upstream behaviour are covered, and that the tests are
+matched QualCoder behaviour are covered, and that the tests are
 Windows-safe and encoding-safe. The security review looks at write
 paths, file and symlink handling, what a tool result discloses into the
 AI conversation, and what a hostile project folder, a hostile model
 input or a hostile network response (the version file of the check for
-new versions) could make the server do or put into the conversation.
+new versions) could make Exegete do or put into the conversation.
 Findings from both are fixed and re-verified before the merge, and behaviour changes that come out of them
 are recorded in the CHANGELOG. The maintainer runs both reviews; expect
 them to take longer than the CI, and expect requests for more tests
@@ -125,9 +125,9 @@ rather than fewer.
   `database.py`), the way QualCoder's own migration ladder does. The
   version string is informational, with one exception: the forward
   guard that refuses writes on a schema newer than the verified ceiling.
-- **Parity claims cite the pinned upstream commit.** Any statement that
+- **Parity claims cite the pinned QualCoder commit.** Any statement that
   "QualCoder does X" in a comment, docstring, CHANGELOG entry or
-  document names the upstream file and line at the pinned commit
+  document names QualCoder's file and line at the pinned commit
   (currently QualCoder master `9bddf17`, version string "QualCoder 4.0
   Beta", whose project format the release keeps). What researchers are
   told Exegete is verified against is the release itself, QualCoder 4.0
@@ -187,7 +187,8 @@ rather than fewer.
                │  heuristic open-window checks)
                │
 ┌──────────────▼───────────────┐
-│  QualCoder project database  │
+│  The project database, in    │
+│  QualCoder's format          │
 │  (data.qda, in the .qda      │
 │  project folder)             │
 └──────────────────────────────┘
@@ -263,9 +264,10 @@ The server is built on the
 ## Scope
 
 The design is for general use, principles first. A feature is justified
-on general grounds: parity with QualCoder's own behaviour, general
-mappings that hold for any project, capability probes rather than
-special cases. Requests that fit only one research project, one
+on general grounds: the whole life of a project from the conversation;
+interoperability with QualCoder, its formats and conventions kept and
+every departure named; general mappings that hold for any project;
+capability probes rather than special cases. Requests that fit only one research project, one
 researcher's habits or one MCP host are usually declined or generalised
 first. The same rule applies to the maintainer's own projects.
 
@@ -345,7 +347,7 @@ QualCoder is licensed under LGPL-3.0-or-later as well, and the rule for
 its code is the owner's (2026-09-23):
 
 - **Write our own implementation by default,** and prove parity with
-  tests against QualCoder's source. Cite the upstream file and line you
+  tests against QualCoder's source. Cite QualCoder's file and line you
   matched in the docstring.
 - **Copy QualCoder's code only where identical results cannot be had
   otherwise,** as with the kappa expression, whose floating-point

@@ -523,15 +523,15 @@ def project_name_problem(name: str) -> Optional[str]:
         if rule == "too_long":
             return (f"A project name must be at most {MAX_FILE_NAME_BYTES} "
                     f"bytes in UTF-8 (this one has {detail}): the limit "
-                    f"leaves room for the backup names QualCoder and this "
-                    f"server add beside a project.")
+                    f"leaves room for the backup names QualCoder and "
+                    f"Exegete add beside a project.")
         if rule == "windows_characters" and "|" in name:
             return PIPE_REFUSAL
         return _PROJECT_NAME_TEXT[rule]
     for marker in BACKUP_MARKERS:
         if marker in name:
-            return (f"A project name must not contain '{marker}': this "
-                    f"server's project list hides such folders as backups, "
+            return (f"A project name must not contain '{marker}': "
+                    f"Exegete's project list hides such folders as backups, "
                     f"and QualCoder 4.0 deletes a folder named like "
                     f"another project's '_BKUP_' backup, beyond the newest "
                     f"five, when it closes that project.")
@@ -607,7 +607,7 @@ def check_parent_folder(parent: Path, state_home: Optional[Path],
     # well, for good, whether or not it exists
     if _inside(parent, state_home) or _inside(parent, old_state_home):
         raise Refusal(
-            f"{where} is inside this server's state folder "
+            f"{where} is inside Exegete's state folder "
             f"(~/.exegete, or ~/.qualcoder_mcp, its earlier name), which "
             f"holds its internal state; choose another folder.")
     if _inside(parent, qualcoder_settings):
@@ -885,7 +885,7 @@ def backup_siblings_refusal(found: Sequence[str], stem: str) -> str:
     shown = ", ".join(f"'{name}'" for name in found[:5])
     more = f" and {len(found) - 5} more" if len(found) > 5 else ""
     return (f"The folder already holds {shown}{more}, named like backups "
-            f"of a project called '{stem}'. This server's backup tools "
+            f"of a project called '{stem}'. Exegete's backup tools "
             f"would offer them as the new project's own backups, and could "
             f"restore one in its place; QualCoder 4.0 deletes '_BKUP_' "
             f"folders of a project beyond the newest five when it closes "

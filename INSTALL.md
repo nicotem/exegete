@@ -9,10 +9,10 @@ and what you may change.
 
 ## Claude Desktop: the one-click extension (recommended)
 
-For Claude Desktop on macOS or Windows there is nothing to type: the
-server comes as a desktop extension, one file ending in `.mcpb`, which
-Claude Desktop installs itself. Claude fetches what the server needs
-(a tool called uv, which then fetches Python and the server's own
+For Claude Desktop on macOS or Windows there is nothing to type:
+Exegete comes as a desktop extension, one file ending in `.mcpb`, which
+Claude Desktop installs itself. Claude fetches what Exegete needs (a
+tool called uv, which then fetches Python and Exegete's own
 libraries), so you need no Python, no Terminal and no configuration
 file.
 
@@ -41,7 +41,8 @@ file.
      your home folder), is outside Documents, which iCloud or OneDrive
      may sync; it is made when the first project needs it. Choose
      another with the folder button if you prefer, but not a folder a
-     sync service keeps, and not one inside a QualCoder project.
+     sync service keeps, and not one inside a project (a `.qda`
+     folder).
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
    - **Tell me when a new version is out**: on unless you switch it
@@ -119,17 +120,17 @@ Desktop configured by hand, and for contributors who want the source.
 
 ## Choosing your AI host: data-governance options (Experimental)
 
-This server is host-agnostic stdio MCP. Which AI processes your data,
-and under which terms, is decided by the host you run and the account
-you sign into, not by this server. The terms attach to the account and
-product line, not to the client application. Three routes with Claude,
+Exegete works with any MCP host, over standard input and output.
+Which AI processes your data, and under which terms, is decided by the
+host you run and the account you sign into, not by Exegete. The terms
+attach to the account and product line, not to the client application. Three routes with Claude,
 from easiest to most private, and OpenAI's apps:
 
 | Route | What it means | Where to read more |
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The easiest path. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. It is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
-| **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with Exegete (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat, until a setting that stops Codex's reads has been tested with Exegete. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
@@ -140,11 +141,11 @@ OpenAI's apps goes step by step; guides of that kind for Claude Code
 and LM Studio are considered on request: ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
-**What the assistant is told (provisional).** The server gives the
+**What the assistant is told (provisional).** Exegete gives the
 assistant a brief: how it expects the assistant to work with you
 (TOOLS.md, "What the assistant is told"). Hosts differ in what they
 pass on, so the brief reaches the assistant four ways. A short version
-is the server's opening text: Claude Code shows it (and keeps only the
+is Exegete's opening text: Claude Code shows it (and keeps only the
 first 2,048 characters of any server's opening text; this one is
 shorter), Claude Desktop's chat is reported not to, LM Studio does not
 support it, and whether Cowork shows it is not yet checked. The tool
@@ -167,21 +168,23 @@ Before starting, make sure you have:
   configured by hand (download from: https://claude.ai/download);
   recipes for Claude Code, LM Studio, and OpenAI's ChatGPT desktop app
   and Codex follow further down
-- ✅ **A QualCoder project, or the `lifecycle` tool set.** On this
-  route the default tool set, `full`, has no tool that creates a
-  project, so you need a project made in QualCoder (a folder ending in
-  `.qda`, with a `data.qda` database file inside; know where it is),
-  unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
+- ✅ **A project, or the `lifecycle` tool set.** On this route the
+  default tool set, `full`, has no tool that creates a project, so you
+  need an existing project (a folder ending in `.qda`, made by Exegete
+  or by QualCoder, with a `data.qda` database file inside; know where it
+  is), unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
   variables the server reads", below), which lets the assistant create
-  one in the conversation. Projects from QualCoder 3.8.x and 4.0 work
+  one in the conversation. Projects in the formats of QualCoder 3.8.x
+  and 4.0 work
   (project schemas v14 through v17); see "Supported QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
-- ✅ **QualCoder itself**, recommended, and needed to bring in
-  documents (Word, PDF, images, audio, video) and any text you would
-  rather not pass through the conversation (this server imports only
-  text the assistant hands it), to see the coding in the text, to code
-  images, audio, video or an area of a PDF page, and for graphs:
-  https://github.com/ccbogel/QualCoder/releases. 4.0 is at the top of
+- **QualCoder, optional.** Today it does what Exegete does not do
+  yet: bringing in documents (Word, PDF, images, audio, video) and any
+  text you would rather not pass through the conversation (Exegete
+  imports only text the assistant hands it), reading a whole transcript
+  with its coding highlighted, coding images, audio, video or an area
+  of a PDF page, and graphs. If your study needs any of these now, get
+  it from the start: https://github.com/ccbogel/QualCoder/releases. 4.0 is at the top of
   the page, the release marked "Latest" when this was checked, on
   6 October 2026, and 3.8.2 just below it. Exegete works with both,
   but can tell that QualCoder has a project open only with 3.8.2,
@@ -194,7 +197,7 @@ Before starting, make sure you have:
 
 ## Recommended: Install from PyPI
 
-If you just want to USE the server (no code changes), you don't need
+If you just want to USE Exegete (no code changes), you don't need
 git or this repository at all:
 
 ```bash
@@ -295,7 +298,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 ### Option A: Dynamic Project Selection (Recommended)
 
-**Best for**: People with multiple QualCoder projects
+**Best for**: People with several projects
 
 1. **Find your username**:
    - In Terminal, type: `whoami` and press Enter
@@ -341,7 +344,7 @@ PATH), and leave out `args`:
 }
 ```
 
-**Important**: If you already have other MCP servers configured, add the "exegete" section inside the existing `mcpServers` block, separated by a comma. If one of them is this server under the earlier name (a "qualcoder" section), keep it and do not add an "exegete" section beside it: see ["Coming from qualcoder-mcp"](#coming-from-qualcoder-mcp).
+**Important**: If you already have other MCP servers configured, add the "exegete" section inside the existing `mcpServers` block, separated by a comma. If one of them is Exegete under the earlier name (a "qualcoder" section), keep it and do not add an "exegete" section beside it: see ["Coming from qualcoder-mcp"](#coming-from-qualcoder-mcp).
 
 5. **Save and Close** the configuration file
 
@@ -352,12 +355,11 @@ details.
 
 ### Option B: Fixed Project Path (Simpler)
 
-**Best for**: People with one main QualCoder project
+**Best for**: People with one main project
 
 1. **Find your .qda project folder**:
-   - Open QualCoder
-   - Look at your project and note its location
-   - **Important**: QualCoder projects are **folders** with `.qda` extension, not single files
+   - **Important**: projects are **folders** ending in `.qda` (QualCoder's format), not single files
+   - If you use QualCoder, its Open Project dialog shows where yours is
    - Each project folder contains a `data.qda` database file inside
    - Common locations:
      - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/` (folder)
@@ -413,8 +415,8 @@ details.
 
 3. **Verify it's working**:
    - Open a new conversation
-   - Type: "List my available QualCoder projects" (Option A) or "Give
-     me a summary of my QualCoder project" (Option B)
+   - Type: "List my available projects" (Option A) or "Give me a
+     summary of my project" (Option B)
    - If configured correctly, Claude calls the Exegete tools and
      answers from your project. If it says it has no such tool, the
      server is not connected: see Troubleshooting below
@@ -539,7 +541,7 @@ versions, below, are new and have one spelling only.
   "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to stderr. The project is
   opened by whichever tool comes first (since v0.14; before, the backup
-  tools and a few others answered "No Qualcoder project selected" until
+  tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
 - `EXEGETE_TOOLSET`: `full` (default) registers 75 tools;
@@ -602,9 +604,9 @@ versions, below, are new and have one spelling only.
   exceptions) and must not contain `#####`,
   the QualCoder 4.0 private-memo marker. An invalid value stops the
   server at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
-  stderr. Do not declare your own QualCoder coder name: AI rows would
-  then be indistinguishable from yours in QualCoder, and the setter
-  refuses that name anyway.
+  stderr. Do not declare your own coder name: AI rows would then be
+  indistinguishable from yours, in Exegete's reads and in QualCoder,
+  and the setter refuses that name anyway.
 
   ```json
   "env": {
@@ -779,7 +781,7 @@ like this one work identically.
 > 0.3.17 or newer). The maintainer verified this recipe as functional
 > against LM Studio 0.4.22 on 2026-09-07: the server loads and tool
 > calls complete without breaking. We have not yet evaluated how well
-> any local model performs coding work with this server. Expect to
+> any local model performs coding work with Exegete. Expect to
 > supervise closely and report what you find.
 
 [LM Studio](https://lmstudio.ai) runs open-weight models entirely on
@@ -813,13 +815,13 @@ examples and warn that "Smaller models and models that were not trained
 for tool use may output improperly formatted tool calls"
 (<https://lmstudio.ai/docs/developer/openai-compat/tools>). Community
 reports place the practical minimum for many-tool MCP work around 14B
-parameters. We have not evaluated specific models with this server;
+parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** This server exposes 75 tools by
+**Step 3. Use the core toolset.** Exegete offers 75 tools by
 default, and the serialised tool definitions alone measure about
-197,000 characters, roughly 49k tokens (measured for 0.14.2 under
+196,000 characters, roughly 49k tokens (measured for 0.14.2 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
@@ -893,7 +895,7 @@ checks (<https://lmstudio.ai/docs/app/offline>). A note that you
 verified this yourself is good evidence for a data-management plan.
 
 **What to expect (honest; model quality not yet evaluated).** We have
-not yet evaluated local models with this server, which is why the
+not yet evaluated local models with Exegete, which is why the
 feature is Experimental. From the published evidence on many-tool MCP use, expect
 a narrower workflow than with Claude: use the core toolset, work one
 document or one code at a time, and verify codings as you go. Long
@@ -1304,7 +1306,7 @@ never). The tools
 that only read are marked so, and so are the writing tools that can
 replace or remove work (renames, memos, deletions, merges, restores,
 exports with `overwrite`). The marks are hints: MCP tells hosts to
-treat them as untrusted, and the server's own safeguards (the approval
+treat them as untrusted, and Exegete's own safeguards (the approval
 of each suggestion, the preview before a deletion, the backups) do not
 depend on them.
 
@@ -1430,7 +1432,7 @@ behaviour, not an error. Press Ctrl+C to stop it.
 
 In Claude Desktop, try:
 ```
-List my available QualCoder projects
+List my available projects
 ```
 
 Claude should show you the `.qda` project folders it found. Then:
@@ -1442,7 +1444,7 @@ Select the "MyProject" project
 
 In Claude Desktop, try:
 ```
-Give me a summary of my QualCoder project
+Give me a summary of my project
 ```
 
 Claude should respond with information about your project!
@@ -1489,7 +1491,7 @@ Analyse the transcript for file 1 with all its coding
    - Settings > Developer > Show Logs
    - Look for errors related to "exegete"
 
-### "No Qualcoder projects found" (Option A)
+### "No projects found in the usual places" (Option A)
 
 The server searches these locations by default:
 - the folder `EXEGETE_WORKSPACE` names, when it is set (with the
@@ -1505,16 +1507,16 @@ Make sure your `.qda` project folder is in one of these locations, or tell Claud
 List available projects in ["/path/to/your/projects"]
 ```
 
-### "No Qualcoder project selected" (Option A)
+### "No project selected" (Option A)
 
 With dynamic project selection this is normal at the start of a
-session: the server has no project open until one is selected. The
-error reads "No Qualcoder project selected. Use 'list_available_projects'
+session: Exegete has no project open until one is selected. The
+error reads "No project selected. Use 'list_available_projects'
 to discover projects, then 'select_project' to choose one. Or set
-EXEGETE_PROJECT_PATH environment variable." (`get_current_project`
+EXEGETE_PROJECT_PATH in the host's configuration." (`get_current_project`
 says "No project currently open" instead.) Just select a project:
 ```
-List my available QualCoder projects
+List my available projects
 Select the "ProjectName" project
 ```
 
@@ -1594,7 +1596,7 @@ Developer > Show Logs. LM Studio on macOS persists it into
 `~/Library/Logs/LM Studio/main.log`; search that file for
 `exegete` to find the server's start-up lines (which report the
 toolset mode and the number of tools registered) and any errors. The
-lines this server writes carry no memo text, and since v0.14 no SQLite
+lines the server writes carry no memo text, and since v0.14 no SQLite
 message: a database error is logged by its kind and SQLite's short name
 for it, so a project built to put a note into an error (with a database
 trigger), or a damaged one (with a note that is not UTF-8), no longer
@@ -1749,7 +1751,7 @@ convenience, not proof. The
 [CHANGELOG.md](CHANGELOG.md) say what each release changed.
 
 Updating never touches your data: the server is code-only, and your
-QualCoder projects and backups stay exactly where they are.
+projects and backups stay exactly where they are.
 
 ---
 
@@ -1806,7 +1808,7 @@ yet, and the first start after the update moves the server's own folder
   https://github.com/nicotem/exegete.git` (the old address redirects,
   so this is optional); the folder's own name does not matter.
 - **Keep your entry.** If a host's configuration already has an entry
-  for this server under the name `qualcoder`, keep it, and do not add
+  for Exegete under the name `qualcoder`, keep it, and do not add
   an `exegete` entry beside it: that would start two servers, show
   every tool twice and need a second set of "always allow" rules. If
   you do rename the entry, Claude Code names the tools after it
@@ -1814,10 +1816,10 @@ yet, and the first start after the update moves the server's own folder
   must be given again. If you also set up QualCoder 4.0's own MCP
   server
   ([TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)),
-  take care with its name: it calls itself `qualcoder-mcp`, this
-  server's former name, and the extension QualCoder's source can build
+  take care with its name: it calls itself `qualcoder-mcp`, Exegete's
+  former name, and the extension QualCoder's source can build
   is named `qualcoder`. Added to the same host under the name
-  `qualcoder`, it could replace this server's entry or be mistaken for
+  `qualcoder`, it could replace Exegete's entry or be mistaken for
   it; a name of its own, such as `qualcoder-app`, keeps the two apart.
 - **The settings.** The variables now start `EXEGETE_` (for example
   `EXEGETE_TOOLSET`); the earlier `QUALCODER_MCP_...` spellings and
@@ -1825,7 +1827,7 @@ yet, and the first start after the update moves the server's own folder
   so at each start. If both spellings of one setting are set with
   different values, the server does not start and says which two
   disagree ("Environment variables the server reads" has the rules).
-- **The server's own folder** moves by itself, at the first start, from
+- **Exegete's own folder** moves by itself, at the first start, from
   `~/.qualcoder_mcp` to `~/.exegete`, whole, with everything in it (the
   secret key, sessions, the last-project hint and the privacy run
   records). A link is left under the old name (a junction on Windows),
@@ -1917,7 +1919,7 @@ program was then called qualcoder-mcp; "Coming from qualcoder-mcp",
 above, says what the rename changes).*
 
 **First, the reassurance: upgrading only replaces the SERVER code.**
-It never touches your QualCoder projects (the `.qda` folders) or your
+It never touches your projects (the `.qda` folders) or your
 files under `~/.qualcoder_mcp/` (moved whole to `~/.exegete/` at the
 first start of 0.14.1 or later: the AI-coding session files in
 `sessions/`, the last-used project pointer `mru_project.json`, the
@@ -2062,13 +2064,13 @@ around.
 
 ## Getting Help
 
-- **Problems with this server**: check the Troubleshooting section
+- **Problems with Exegete**: check the Troubleshooting section
   above, then open an issue on
   [GitHub Issues](https://github.com/nicotem/exegete/issues).
   That is the only support channel (email requests receive no reply);
   see [SUPPORT.md](SUPPORT.md). Never paste research data into an
-  issue; a redacted or synthetic example is enough. Include your
-  QualCoder version, the server version, your host (Claude Desktop,
+  issue; a redacted or synthetic example is enough. Include the
+  Exegete version, your QualCoder version if you use it, your host (Claude Desktop,
   Claude Code, LM Studio) and the toolset mode (full, core or
   lifecycle).
 - **MCP Documentation**: https://modelcontextprotocol.io/
@@ -2109,7 +2111,7 @@ If you want to remove the MCP server:
    rm -rf ~/Documents/exegete
    ```
 
-3. **Optionally remove the server's own state**: `~/.exegete/`
+3. **Optionally remove Exegete's own state**: `~/.exegete/`
    (and `~/.qualcoder_mcp`, the link to it left under its earlier name)
    holds the AI-coding session files (`sessions/`), the last-used
    project pointer (`mru_project.json`), the preview-token secret
@@ -2133,8 +2135,8 @@ If you want to remove the MCP server:
    under the earlier name, `old_folder_noted`, one line that lets the
    log say so only once.
 
-Uninstalling does not touch your QualCoder projects. Note that the
-server does write to projects when you use its coding tools (after
+Uninstalling does not touch your projects. Note that Exegete does
+write to projects when you use its coding tools (after
 taking a backup, unless a call asks for none with
 `create_backup=false`), so the changes you approved during use, and the
 backup folders it created next to each project
@@ -2153,7 +2155,7 @@ desktop extension, its "Folder for projects", by default
 
 Now that you're installed, you can:
 
-1. ✅ Explore your QualCoder data with natural language queries
+1. ✅ Explore your project in your own words
 2. ✅ Get AI-assisted thematic analysis
 3. ✅ Discover patterns and relationships in your coding
 4. ✅ Query by demographics and attributes

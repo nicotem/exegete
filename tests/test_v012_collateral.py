@@ -166,7 +166,7 @@ class TestWarnings:
         warning = next(w for w in out["warnings"] if "other coders' work" in w)
         assert warning == (
             f"Warning: 1 of the 1 affected coding(s) were not made under "
-            f"this server's AI coder name(s) ({DEFAULT_AI_CODER_NAME}); they "
+            f"Exegete's AI coder name(s) ({DEFAULT_AI_CODER_NAME}); they "
             f"are other coders' work. Show the user the by_owner breakdown "
             f"and get an explicit go-ahead before executing.")
 

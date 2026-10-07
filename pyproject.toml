@@ -19,12 +19,15 @@ readme = "README.md"
 requires-python = ">=3.10"
 keywords = [
     "qualitative research",
-    "qualcoder",
+    "qualitative data analysis",
+    "qda",
+    "caqdas",
+    "coding",
+    "ai assistant",
     "mcp",
     "model-context-protocol",
     "claude",
-    "qda",
-    "caqdas",
+    "qualcoder",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

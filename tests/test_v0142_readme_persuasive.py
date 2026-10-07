@@ -146,7 +146,15 @@ def _tools(mode="lifecycle"):
 # researcher asks, and the extension has it on unless switched off. The
 # sentence now says both, which takes 88 characters, and the limit is
 # raised by that and no more: 33,627.
-README_LIMIT = 33_627
+# How Exegete describes itself (the owner's ruling of 7 October 2026, on
+# the self-representation proposal): the paragraph on what Exegete is
+# says what you do in it and that it is built to stay interoperable with
+# QualCoder; "Not in Exegete yet" names reading a whole transcript and
+# when to get QualCoder; the coder-name sentence no longer assumes that
+# the reader uses QualCoder; "not an add-on or a remote control" moves
+# into "Three commitments". That takes 676 characters, and the limit is
+# raised by that and no more: 34,303.
+README_LIMIT = 34_303
 
 
 def test_the_readme_stays_short():
@@ -660,7 +668,7 @@ def test_how_it_is_tested_matches_the_workflow():
     flat = _flat(_section("For advanced users", "What comes next"))
     assert ("More than 5,000 automated tests run on Windows, macOS and "
             "Linux, with Python 3.10 and 3.13, on every change pushed; they "
-            "test the server, not a researcher's use of it") in flat
+            "test Exegete, not a researcher's use of it") in flat
     workflow = _read(".github/workflows/ci.yml")
     assert "os: [ubuntu-latest, windows-latest, macos-latest]" in workflow
     assert "python-version: [\"3.10\", \"3.13\"]" in workflow

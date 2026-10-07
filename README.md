@@ -38,11 +38,15 @@ qualitative analysis, of the same kind as NVivo, ATLAS.ti and MAXQDA.
 *An illustration, shortened, with made-up practice text; your
 assistant's words will differ.*
 
-Exegete (formerly qualcoder-mcp) is an application in its own right,
-not an add-on or a remote control for QualCoder: you do not need
-QualCoder to start, or running while you work. It has no window of its
-own: your assistant, such as Claude Desktop, starts it, and its work
-appears in the conversation.
+Exegete (formerly qualcoder-mcp) is a qualitative analysis application
+in its own right, with no window of its own: your assistant, such as
+Claude Desktop, starts it, and you work in the conversation, from
+starting a project to exporting your codebook and coding. It is built
+to stay interoperable with QualCoder: your project is a folder on your
+computer, kept in QualCoder's format and conventions, so you can work
+on it in either program, one at a time. You do not need QualCoder to
+start, or running while you work, though a few things are not in
+Exegete yet (listed below).
 
 - **New here?** [Start here](https://github.com/nicotem/exegete#start-here):
   Claude Desktop, one click, then a practice project.
@@ -94,11 +98,14 @@ never put participant data in an issue.
 - **Go back**: a backup before each change, by default, and a way to
   restore one.
 
-**Still needs QualCoder**, which is recommended from the start: bringing
-in documents other than text (Word, PDF, images, audio, video) and text
-you would rather not pass through the conversation; seeing the coding
-highlighted in the text; coding images, audio, video or an area of a
-PDF page; graphs; and its Reports menu. Bringing in documents, and
+**Not in Exegete yet**, and done in QualCoder for now: bringing in
+documents other than text (Word, PDF, images, audio, video) and text
+you would rather not pass through the conversation; reading a whole
+transcript yourself with its coding highlighted (today the assistant
+reads coded passages back to you); coding images, audio, video or an
+area of a PDF page; graphs; and QualCoder's Reports menu. If your study
+needs any of these now, get QualCoder from the start. Bringing in
+documents, and
 reading a whole file yourself, are in development
 ([What comes next](https://github.com/nicotem/exegete#what-comes-next)).
 
@@ -227,7 +234,7 @@ where chat and Cowork are one conversation, below):
 
 **Private notes and names.** Exegete never passes the part of a memo
 from a `#####` mark onward (QualCoder's mark for a private note) to the
-assistant, whichever QualCoder made the project. The mark works in
+assistant, whichever program made the project. The mark works in
 memos, annotations and journal entries, not in the text of a
 transcript, and exported files keep the whole memo, private part
 included. Replacing names reduces the risk; it does not make anyone
@@ -292,7 +299,8 @@ listed. Then:
   Manual keeps Claude asking; the checks keep your files out of its
   reach and switch training off.
 
-**Get QualCoder too**, to see your coding in the text:
+**QualCoder, if you want it.** To see your coding highlighted in the
+text, open the project in QualCoder:
 [download](https://github.com/ccbogel/QualCoder/releases) 3.8.2 or
 4.0. Exegete works with both, but can tell that QualCoder has a
 project open only with 3.8.2 (below). 3.8.2 is listed just below 4.0,
@@ -334,7 +342,7 @@ Desktop's chat. A folder of their own keeps practice projects apart but
 does not put the study out of reach, and what they open goes to their
 maker, which may train on it while training is on.
 
-Ask the assistant to "Create a new QualCoder project called
+Ask the assistant to "Create a new project in Exegete called
 Practice" (Experimental), then bring in your page as in the example.
 With the extension or OpenAI's steps, the project is made in "QualCoder
 projects", in your home folder: open it in QualCoder (Project, Open
@@ -342,8 +350,10 @@ Project) to see your coding in the text.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).
 
 **Two coder names.** When it makes the project, the assistant asks for
-yours, which QualCoder records with what you code there (no QualCoder
-yet? Say so). Before its first write, it asks for the AI coder name,
+your own coder name, which the project keeps so that your work and the
+AI's stay apart (QualCoder, if you use it, records your coding under
+it). Not using QualCoder, or no coder name? Say so. Before its first
+write, it asks for the AI coder name,
 kept per project, under which Exegete writes what is done through the
 conversation.
 
@@ -394,16 +404,17 @@ Coming from qualcoder-mcp?
 ## Three commitments
 
 **Compatibility with QualCoder.** Exegete reads and writes projects
-from QualCoder 3.8.2 to 4.0, reading what each supports from
-the project itself, and does not write to a project in a newer format
-until it has been checked against it. Where QualCoder has a rule,
+in the formats of QualCoder 3.8.2 to 4.0, reading what each supports
+from the project itself, and does not write to a project in a newer
+format until it has been checked against it. Where QualCoder has a rule,
 Exegete follows it, and names any departure with its reason
 ([TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)).
-It is not QualCoder, and it is not made or endorsed by QualCoder's
-developers (QualCoder is free software by Colin Curtain and
-contributors). It is a separate program that reads and writes QualCoder
-project files; it contains a small number of routines and values taken
-from QualCoder so that its results match QualCoder's exactly, and
+It is not QualCoder, nor an add-on or a remote control for it, and it
+is not made or endorsed by QualCoder's developers (QualCoder is free
+software by Colin Curtain and contributors). It is a separate program
+that reads and writes projects in QualCoder's file format; it contains
+a small number of routines and values taken from QualCoder so that its
+results match QualCoder's exactly, and
 [NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE) lists
 them, with where each comes from.
 
@@ -454,13 +465,13 @@ gives the commits these facts were read at.
 This project welcomes QualCoder's own server, and is ready to
 cooperate with QualCoder's developers. Exegete has an aim of its own:
 that you can run a whole project, from its creation to the finished
-analysis, from the conversation, with QualCoder as a companion that
-opens the same project at any time. That is a direction, not yet a
-fact: today QualCoder is still needed for several things (above). On
-the way there, the commitments above hold: every project stays
-a QualCoder project, in QualCoder's format; Exegete follows QualCoder's
-rules and names any departure with its reason; and you work on a
-project in one program at a time.
+analysis, from the conversation, with QualCoder able to open the same
+project at any stage, one program at a time. That is a direction, not
+yet a fact: today QualCoder is still needed for several things (above).
+On the way there, the commitments above hold: every project keeps
+QualCoder's format and conventions, so you can work on it in either
+program; Exegete follows QualCoder's rules and names any departure
+with its reason; and you work on a project in one program at a time.
 
 ## For advanced users
 
@@ -484,7 +495,7 @@ every tool.
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
 | `lifecycle` | 76: all, creating a project (Experimental) included | about 199,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | the one-click extension; elsewhere, set `EXEGETE_TOOLSET=lifecycle` |
-| `full` | 75: all but creating a project | about 197,000 characters, 49k tokens | the same | the Terminal route |
+| `full` | 75: all but creating a project | about 196,000 characters, 49k tokens | the same | the Terminal route |
 | `core` | 22: the coding loop and its safety tools | about 65,000 characters, 16k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every
@@ -522,8 +533,8 @@ cent more on 3.10 to 3.12.
   `exegete --check-transition` for a move from qualcoder-mcp.
 
 **Tested.** More than 5,000 automated tests run on Windows, macOS and
-Linux, with Python 3.10 and 3.13, on every change pushed; they test the
-server, not a researcher's use of it
+Linux, with Python 3.10 and 3.13, on every change pushed; they test
+Exegete, not a researcher's use of it
 ([CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md)).
 
 **The repository**, each document linked from this page:
@@ -573,7 +584,7 @@ Plans, not promises: the order may change with what testers report.
 
 ## Disclaimer
 
-This software is provided "as is", without warranty of any kind, express or implied. The authors accept no responsibility or liability for any damage, data loss, or other issues arising from the use of this software. Users are solely responsible for ensuring the integrity and backup of their QualCoder projects. Always work on copies of your data, not originals.
+This software is provided "as is", without warranty of any kind, express or implied. The authors accept no responsibility or liability for any damage, data loss, or other issues arising from the use of this software. Users are solely responsible for ensuring the integrity and backup of their projects. Always work on copies of your data, not originals.
 
 ## Licence
 

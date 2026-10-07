@@ -7,8 +7,10 @@ Claude Desktop instead:
 This guide will get you up and running with Exegete (formerly
 qualcoder-mcp), a qualitative analysis application you use in
 conversation with an AI assistant, compatible with QualCoder, in 10
-minutes. It sets Exegete up by hand, in Claude Desktop's settings file;
-README's one-click extension is the easier start.
+minutes. QualCoder is free software for qualitative analysis, of the
+same kind as NVivo, ATLAS.ti and MAXQDA. This guide sets Exegete up by
+hand, in Claude Desktop's settings file; README's one-click extension
+is the easier start.
 
 ## Prerequisites Checklist
 
@@ -31,8 +33,10 @@ README's one-click extension is the easier start.
       Claude Code's reach, and what it opens goes to the AI provider,
       which may train on it while training is on (PRIVACY.md,
       "Assistants that open files by themselves")
-- [ ] At least one QualCoder project (a `.qda` project folder): the
-      setup below cannot create one; the one-click extension can
+- [ ] A project to work on (a `.qda` folder, in QualCoder's format):
+      the standard tool set this setup uses cannot create one; the
+      one-click extension can, and so can this setup with
+      `EXEGETE_TOOLSET=lifecycle` (INSTALL.md)
 
 > Choosing between Claude plans, an API key, or a fully local model?
 > See "Choosing your AI host: data-governance options" in INSTALL.md
@@ -40,7 +44,7 @@ README's one-click extension is the easier start.
 
 ## Installation Steps
 
-### 1. Install the MCP Server
+### 1. Install Exegete
 
 The quickest install is from PyPI (`pip install exegete` in a
 virtual environment, or `pipx install exegete`; see "Recommended:
@@ -65,14 +69,14 @@ source venv/bin/activate
 pip install -e .
 ```
 
-### 2. Find Your Qualcoder Project
+### 2. Find your project
 
 Locate your `.qda` project folder (it's a folder with `.qda` extension, not a single file). Common locations:
 - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/`
 - `~/QualCoder/MyProject/MyProject.qda/`
 
 You can find it by:
-- Opening Qualcoder and checking the recent projects list
+- In QualCoder, if you use it: the recent projects list
 - Searching for `.qda` folders: `find ~ -name "*.qda" -type d 2>/dev/null`
 
 ### 3. Configure Claude Desktop
@@ -122,7 +126,7 @@ Replace:
 
 1. Quit Claude Desktop completely (Cmd+Q)
 2. Reopen Claude Desktop
-3. The MCP should now be connected!
+3. Exegete should now be available in a new conversation.
 
 ### 5. Test It Out
 
@@ -141,7 +145,7 @@ which assistants open files by themselves.
 In Claude Desktop, try these prompts:
 
 ```
-Can you give me a summary of my Qualcoder project?
+Can you give me a summary of my project?
 ```
 
 ```
@@ -189,8 +193,8 @@ You should see it start without errors. Press Ctrl+C to stop.
 
 ### Common Errors
 
-**"No Qualcoder project selected"**
-- The server has no project open. With the fixed-project config above,
+**"No project selected"**
+- Exegete has no project open. With the fixed-project config above,
   make sure the `env` section has `EXEGETE_PROJECT_PATH` and check
   for typos in the variable name; otherwise ask Claude to list and
   select a project (the error also names the last project used on this
@@ -218,7 +222,7 @@ Once it's working:
 
 - Check the [troubleshooting section of INSTALL.md](INSTALL.md#troubleshooting)
 - Review [MCP documentation](https://modelcontextprotocol.io/)
-- Check [Qualcoder documentation](https://github.com/ccbogel/QualCoder/wiki)
+- Check [QualCoder documentation](https://github.com/ccbogel/QualCoder/wiki)
 - Bug reports, questions and feature ideas: [GitHub Issues](https://github.com/nicotem/exegete/issues)
   (the only support channel; support requests by email will not receive a reply; see [SUPPORT.md](SUPPORT.md))
 

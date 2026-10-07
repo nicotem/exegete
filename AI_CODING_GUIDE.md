@@ -23,7 +23,7 @@ qualcoder-mcp), in the conversational workflow.
    automatically when the excerpt is unique in the file
 3. **You** review the suggestions in the chat (`review_suggestions`),
    adjust a span or code where needed (`edit_suggestion`, which also
-   applies the server-computed shorter/longer span alternatives: just
+   applies the shorter/longer span alternatives Exegete computes: just
    say "longer on 3") and approve or reject them
    (`update_suggestion_status`)
 4. **Claude** writes only the approved suggestions to the database
@@ -32,11 +32,12 @@ qualcoder-mcp), in the conversational workflow.
    is refused; a QualCoder 4.0 window writes no lock file and is detected
    only heuristically, so confirm yourself that none has the project
    open)
-5. **You** open the project in QualCoder and see the codings
+5. **You** read the coded passages back in the conversation, or open
+   the project in QualCoder to see them highlighted in the text
 
 Nothing is written until each item is marked approved, every write is
 backed up first by default, and mistakes can be undone (`delete_coding`
-for one coding, `restore_backup` for a whole snapshot). The server
+for one coding, `restore_backup` for a whole snapshot). Exegete
 records the approval Claude reports and cannot tell whether you gave
 it: keep your host asking before each tool call ("allow once" for the
 tools that decide and write), and check the counts the approval step
@@ -44,14 +45,16 @@ reports against what you said.
 
 ## Prerequisites
 
-- The MCP server configured in Claude Desktop (see [INSTALL.md](INSTALL.md))
-- A QualCoder project: work on a copy in the workspace:
-  say "Copy my project 'Interview Study' to the workspace"
+- Exegete installed in your assistant (the one-click extension for
+  Claude Desktop, or [INSTALL.md](INSTALL.md))
+- A project: a new one the assistant creates (the extension's default
+  tool set), or a copy of one you have, in the workspace: say "Copy my
+  project 'Interview Study' to the workspace"
   (`copy_project_to_workspace`), then open the copy with `select_project`
 - **QualCoder closed** for the project you are writing to. Writes are
   refused while QualCoder 3.x has the project open (its
   `project_in_use.lock` heartbeat); QualCoder 4.0 writes no lock file,
-  so there the server can only report that the project appears to be
+  so there Exegete can only report that the project appears to be
   open (`qualcoder_gui_signals`, a heuristic that can miss an idle
   window), and you must make sure no 4.0 window has it open
 - Codes to apply. The supervised loop applies your existing codebook;
@@ -85,9 +88,9 @@ Claude: (backs up, writes, reports the new coding IDs)
 Ask "Explain the AI coding tools" any time; the built-in
 `explain_ai_coding_tools` help covers every step.
 
-The analysis tools carry an evidence discipline in the spirit of the
-rules QualCoder 4.0's own assistant works under: base every claim on
-text read through the tools, quote it verbatim (the server rejects any excerpt that is not
+Exegete's analysis tools carry an evidence discipline of their own:
+base every claim on text read through the tools, quote it verbatim
+(Exegete rejects any excerpt that is not
 a literal slice of the file), treat a null result as a valid result,
 and judge whether a request is methodologically sound for the study
 before acting (in the four-way vocabulary allow, allow_with_caveat,
@@ -95,7 +98,7 @@ reframe_and_ask, refuse, explained to you in plain words). Ask for
 `explain_ai_coding_tools("grounding_rules")` or
 `explain_ai_coding_tools("methodology_vocabulary")`, or read the
 `exegete://guidance/methods` resource, which also cites the method
-literature QualCoder 4.0 ships prompts for. None of this replaces your
+literature it rests on. None of this replaces your
 approval of each suggestion.
 
 ## Tool Reference (current)
@@ -128,7 +131,7 @@ approval of each suggestion.
    out passages no code fits), how long a coded passage should be (a
    phrase, whole sentences by default, or a whole answer) and whether a
    passage may carry more than one code. Your answers become the session's
-   instruction; there is no default instruction. The server refuses a
+   instruction; there is no default instruction. Exegete refuses a
    session without an instruction but cannot tell whether it holds your
    answers: check the instruction the session records
    (`get_coding_session_info` shows it). Be specific ("segments where
@@ -188,12 +191,12 @@ approval of each suggestion.
   read-only afterwards
 - Writes require a project schema from v14 (QualCoder 3.8.x) through
   v17; older projects are refused (open and save them in QualCoder 3.8
-  once to upgrade), and schemas newer than v17 refuse writes until this
-  server has been verified against them
+  once to upgrade), and schemas newer than v17 refuse writes until
+  Exegete has been verified against them
 - Writes are refused while QualCoder 3.x has the project
-  open (its lock file), and the server holds the project lock itself
+  open (its lock file), and Exegete holds the project lock itself
   during its own writes; QualCoder 4.0 writes no lock file, so for it
-  the server only warns on heuristics (`qualcoder_gui_signals`)
+  Exegete only warns on heuristics (`qualcoder_gui_signals`)
 - Memo text from the first `#####` marker onward (QualCoder 4.0's
   private-note convention) is never sent to the AI through Exegete (an
   assistant that opens a project's files by itself reads every memo
@@ -233,8 +236,9 @@ asks, and your answer is stored with the project
 (`set_project_ai_coder_name`; `AI Coding Assistant` is the built-in
 quick pick, and `EXEGETE_AI_CODER_NAME` in the host's
 configuration only declares a name to offer first). See "Choosing the
-AI coder name" in TOOLS.md. AI work stays distinguishable from yours in
-QualCoder, and rows written under an earlier name keep it.
+AI coder name" in TOOLS.md. AI work stays distinguishable from yours,
+in Exegete's reads and in QualCoder, and rows written under an earlier
+name keep it.
 
 **Can I pseudonymise transcripts that are already coded?** Yes:
 `pseudonymise_source` replaces the names you list, as whole words, in
@@ -258,8 +262,8 @@ saved into the project's own `pseudonyms.json` in QualCoder's format
 data: read PRIVACY.md before sending it anywhere.
 
 **What happens to my original project?** Nothing, if you follow the
-workspace workflow: copy first, work on the copy, and compare in
-QualCoder before adopting changes.
+workspace workflow: copy first, work on the copy, and compare, in the
+conversation or in QualCoder, before adopting changes.
 
 **Where are sessions stored?** `~/.exegete/sessions/` as JSON, one
 file per session. `delete_coding_session` removes one;

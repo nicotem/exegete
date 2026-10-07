@@ -887,7 +887,7 @@ class TestVisibilityGuardFailsClosed:
             server.delete_annotation(1),
         ):
             out = self._assert_failed_closed(raw)
-            assert "visible in QualCoder" in out["error"]
+            assert "whether this row's coder is hidden" in out["error"]
             assert "nothing was changed" in out["error"]
         self._rows_intact(visibility_db)
 

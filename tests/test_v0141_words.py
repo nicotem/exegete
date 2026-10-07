@@ -40,7 +40,8 @@ class TestWhatTheServerSays:
 
     def test_the_instructions_begin_with_it(self):
         assert server.SERVER_INSTRUCTIONS.startswith(
-            "Exegete exposes a QualCoder project to this conversation.")
+            "Exegete is a qualitative analysis application for working with "
+            "the researcher on their project, in QualCoder's format.")
 
     def test_the_methods_notes_heading(self):
         assert server.METHODS_GUIDANCE.splitlines()[0] == \
@@ -184,7 +185,7 @@ SHIPPED_LEDGER = [
      "the stand-in kept in the source"),
     (r"old name's package, qualcoder-mcp|`qualcoder-mcp` command and a",
      "the old name's package, for contributors"),
-    (r"this server's names \(`exegete`, `qualcoder-mcp`",
+    (r"Exegete's names \(`exegete`, `qualcoder-mcp`",
      "the server's own process names, which never count as QualCoder"),
     (r"list the old `qualcoder-mcp` beside",
      "what an old environment's pip list shows"),
@@ -322,7 +323,7 @@ class TestFixRoundOneWords:
         return text[first:text.index(end, first)]
 
     @pytest.mark.parametrize("name, start, end", [
-        ("PRIVACY.md", "the server's own folder, `~/.exegete`",
+        ("PRIVACY.md", "Exegete's own folder, `~/.exegete`",
          "- AI-coding session files"),
         ("CHANGELOG.md", "The server's own folder is `~/.exegete`",
          "- The resources' addresses")])

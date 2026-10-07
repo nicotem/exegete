@@ -149,7 +149,7 @@ def test_privacy_tells_qualcoder_s_annotation_answer_as_it_is():
             "annotation answer with the annotation's position and its "
             "owner's name as well (`ai_mcp_server.py:2324-2336` and "
             "`:2370-2380` at tag `4.0`).",
-            "This server keeps to ids there too, so that the override, which "
+            "Exegete keeps to ids there too, so that the override, which "
             "is there to change a hidden coder's row, does not also tell the "
             "conversation whose the row is or where it lies."):
         assert words in writes, words
@@ -224,7 +224,10 @@ def test_the_bug_report_form_names_the_release():
     form = _read(".github/ISSUE_TEMPLATE/bug_report.yml")
     for words in ("4.0-Beta", "4.0 Beta", "9bddf17", "a released QualCoder"):
         assert words not in form, words
-    assert "description: A release (3.8.x or 4.0)." in form
+    # v0.14.2 (the owner's ruling of 7 October 2026): asked only of those
+    # who use QualCoder
+    assert ('description: A release (3.8.x or 4.0), or "none" if you do '
+            'not use QualCoder.') in form
     assert ("Writes are refused while QualCoder 3.x has the project open, "
             "which its lock file shows; QualCoder 4.0 writes no lock file")\
         in form
@@ -288,10 +291,10 @@ def test_install_keeps_the_entry_with_a_word_of_care():
     entry = _between(install, "**Keep your entry.**", "**The settings.**")
     # the advice itself is unchanged
     assert ("keep it, and do not add an `exegete` entry beside it") in entry
-    assert ("take care with its name: it calls itself `qualcoder-mcp`, this "
-            "server's former name, and the extension QualCoder's source can "
+    assert ("take care with its name: it calls itself `qualcoder-mcp`, "
+            "Exegete's former name, and the extension QualCoder's source can "
             "build is named `qualcoder`. Added to the same host under the "
-            "name `qualcoder`, it could replace this server's entry or be "
+            "name `qualcoder`, it could replace Exegete's entry or be "
             "mistaken for it; a name of its own, such as `qualcoder-app`, "
             "keeps the two apart.") in entry
 

@@ -18,10 +18,12 @@ to say plainly what Exegete does, for newcomers and for advanced
 users, and opening with the woven lockup; QualCoder 4.0, released
 on 2 October 2026, named as what Exegete is verified against (4.0
 keeps the project format Exegete already wrote, so only words
-changed, in the documents and in two messages); and the check for new
-versions, which tells researchers when a new version is out and how
-to install it, though updates are still never installed by
-themselves.
+changed, in the documents and in two messages); how Exegete
+describes itself, as a qualitative analysis application whose
+projects keep QualCoder's format and conventions, everywhere it
+speaks; and the check for new versions, which tells researchers when
+a new version is out and how to install it, though updates are still
+never installed by themselves.
 
 ### Added: the check for new versions
 
@@ -106,7 +108,7 @@ From pull request #11, with the code review's two findings fixed.
 
 ### Added: the assistant's brief (provisional)
 
-- The server gives the assistant one brief: how it expects the
+- Exegete gives the assistant one brief: how it expects the
   assistant to work with the researcher. It says what no single tool
   says (work on the project only through these tools, never by opening
   its folder or database; where Exegete sits beside QualCoder; how
@@ -117,10 +119,10 @@ From pull request #11, with the code review's two findings fixed.
   cannot drift. Each tool's own rules are named in a line and left to
   its description.
 - It reaches the assistant four ways, because hosts differ in what they
-  pass on: a short version as the server's opening text (below); a new
+  pass on: a short version as Exegete's opening text (below); a new
   tool, `read_brief`, in every tool set and listed first, whose
   description asks the assistant to call it once at the start of every
-  conversation about a project (it returns the full brief, about 11,500
+  conversation about a project (it returns the full brief, about 12,100
   characters, or in the `core` set the short version, and reads nothing
   from the project); the same full brief as the help topic
   `explain_ai_coding_tools('brief')` and the resource
@@ -147,14 +149,114 @@ From pull request #11, with the code review's two findings fixed.
 
 ### Changed: the opening text
 
-- The server's opening text is now the brief's short version, 1,978
-  characters, within the 2,048 that Claude Code keeps: what the tools
-  are for, to call `read_brief` at the start of every conversation
-  about a project, and the eleven rules that matter most. It keeps its
-  first sentence ("Exegete exposes a QualCoder project to this
-  conversation.") and v0.14's sentence on approval word for word; it no
-  longer names the help topic `methodology_vocabulary` or the methods
-  notes, which the brief names.
+- Exegete's opening text is now the brief's short version, 1,988
+  characters, within the 2,048 that Claude Code keeps: what Exegete is
+  and what its tools are for, to call `read_brief` at the start of every
+  conversation about a project, and the eleven rules that matter most.
+  Its first sentence now says what Exegete is ("Exegete is a qualitative
+  analysis application for working with the researcher on their
+  project, in QualCoder's format.", below); v0.14's sentence on approval
+  is kept, with "Exegete" for "the server". It no longer names the help
+  topic `methodology_vocabulary` or the methods notes, which the brief
+  names.
+
+### Changed: how Exegete describes itself
+
+The owner's decision of 7 October 2026: Exegete follows QualCoder's
+formats and conventions, and the project is the researcher's, so
+Exegete no longer says that it opens or exposes a QualCoder project.
+The project is a folder in QualCoder's format that the researcher can
+work on in Exegete or in QualCoder, one program at a time, and Exegete
+is the subject of its own sentences. Every sentence that is about
+QualCoder itself (its format, its lock, its versions, a result that
+matches its own) still names it.
+
+- **What the assistant is told.** The opening text begins: "Exegete is
+  a qualitative analysis application for working with the researcher
+  on their project, in QualCoder's format. Use its tools to read and
+  search documents and transcripts, codes and coded passages, memos,
+  cases and attributes, and to suggest codings for the researcher to
+  approve." The brief's first paragraph says the same to the assistant
+  (the researcher decides; the assistant reads, searches and suggests
+  through Exegete's tools; the project is theirs), adds "Do not assume
+  that they use QualCoder", and asks the assistant to say plainly when
+  a request needs something Exegete does not do yet. Its section 4,
+  now "The project, Exegete and QualCoder", says that a project may
+  have been made in either program, that the two programs meet only in
+  the project, and what some researchers use QualCoder for, by choice
+  or because Exegete does not do it yet. The brief grows by about 600
+  characters, to about 12,100.
+- **The help, the prompts and the messages.** The help's overview is
+  "AI-assisted coding in Exegete", and its notes on evidence describe
+  Exegete's discipline as its own (NOTICE keeps the credit to
+  QualCoder's assistant brief). The four prompts and the project
+  resource say "this project". 25 messages change: "No project
+  selected" in five places; an empty search for projects offers
+  `search_directories` or a new project, instead of asking the
+  researcher to make one in QualCoder; `apply_codings` ends by saying
+  that the codings are in the project and can be read back, and that
+  QualCoder, if the researcher uses it, shows them highlighted in the
+  text; the questions about coder names ask for the researcher's own
+  coder name, not "the one they use in QualCoder"; the private-note
+  refusal says that a private note is written outside the conversation
+  (in QualCoder, for example). Answers say "Exegete" where they said
+  "this server".
+- **Tool descriptions**, rewritten in 40 of the 74 tools 0.14.1 had,
+  each no longer than 0.14.1's, and in `read_brief`: "the project" for
+  "the QualCoder project",
+  "the project's own setting" for "what the user sees in QualCoder",
+  "Exegete" for "this server", the private-note sentence ("what follows
+  it is the researcher's own, not the assistant's to write"), the
+  coder-name argument of `create_project`, and "a departure from
+  QualCoder's own searches" for "a departure in your favour" in
+  `search_coded_text`. Together they make `full` 251 characters
+  shorter and `lifecycle` 273 (on Python 3.13). "MCP backups", which
+  would grow, waits for v0.15 with the backup kind `mcp`.
+- **The short descriptions.** The command's help (`exegete --help`),
+  the note shown when Exegete is started by hand in a terminal, the
+  module's own description, NOTICE's first line (in both packages) and
+  the old name's PyPI page now carry the tagline: a qualitative
+  analysis application you use in conversation with an AI assistant,
+  compatible with QualCoder. The keywords on PyPI and in the citation
+  lead with what Exegete does, QualCoder last; the citation's abstract
+  says that the researcher works on their project through the
+  conversation and approves what is written, in a project kept in
+  QualCoder's format; the extension's details page says what you do,
+  that your projects are folders in QualCoder's format that you can
+  work on in either program, one at a time, and what QualCoder is.
+- **The README.** Its paragraph on what Exegete is now says what you
+  do in it, from starting a project to exporting your codebook and
+  coding, and that it is built to stay interoperable with QualCoder;
+  "not an add-on or a remote control for QualCoder" moves into "Three
+  commitments". "Still needs QualCoder, which is recommended from the
+  start" becomes "Not in Exegete yet, and done in QualCoder for now",
+  ending "If your study needs any of these now, get QualCoder from the
+  start". "Get QualCoder too" becomes "QualCoder, if you want it"; the
+  first request to try is "Create a new project in Exegete called
+  Practice"; and the paragraph on QualCoder's own server has QualCoder
+  "able to open the same project at any stage, one program at a time"
+  in place of "a companion".
+- **The other documents.** TOOLS, INSTALL, PRIVACY, QUICKSTART, the two
+  coding guides, CONTRIBUTING, SUPPORT and PROJECT_SELECTION_GUIDE call
+  the researcher's project "your project", end the coding loop with
+  checking the codings in the conversation or in QualCoder, list
+  QualCoder as optional, and say "QualCoder's" for "upstream". They say
+  "Exegete" wherever a sentence says what it is or does for the
+  researcher, and keep "the server" for host settings, standard input
+  and output, and logs. QUICKSTART says what QualCoder is. CLAUDE.md
+  now opens with what Exegete is, and its rule for coding agents is
+  interoperability: follow QualCoder's formats and conventions, name
+  every departure with its reason, and be better than QualCoder where
+  its behaviour loses or garbles content. The bug report form no longer
+  requires a QualCoder version ("none" is accepted), and "I don't use
+  QualCoder" is among the answers on whether it was open. Three older
+  documents gain the banner that marks them as historical.
+- Tests: the pins moved with their words. New ones hold that the
+  opening text, the brief's first paragraph, the tagline, the command's
+  help and NOTICE's first line say what was decided, that no served
+  text or current document says that Exegete opens or exposes a
+  QualCoder project or misspells QualCoder's name, and that no tool
+  description is longer than 0.14.1's (`tests/test_v0142_selfrep.py`).
 
 ### Changed: the rules a model must not miss come first in each tool description
 
@@ -556,16 +658,17 @@ From pull request #11, with the code review's two findings fixed.
 ### Measured
 
 - Serialised tool JSON with the brief and the check for new versions:
-  full = 196,638 characters (about 49.2k tokens at chars/4) over 75
-  tools, core = 65,271 (about 16.3k) over 22, and the opt-in lifecycle
-  set = 199,217 (about 49.8k) over 76, measured on Python 3.13.5 with
+  full = 196,387 characters (about 49.1k tokens at chars/4) over 75
+  tools, core = 65,140 (about 16.3k) over 22, and the opt-in lifecycle
+  set = 198,944 (about 49.7k) over 76, measured on Python 3.13.5 with
   mcp 1.30.0 in the repository's own `venv/`; on Python 3.11.13 (the
-  `.venv/`), 206,346, 68,563 and 209,065. Each grew by `read_brief`'s
-  own entry (467 characters with its separator, in every set, on both
+  `.venv/`), 206,095, 68,432 and 208,792. Each grew by `read_brief`'s
+  own entry (453 characters with its separator, in every set, on both
   interpreters), `full` and `lifecycle` by `check_for_updates`' own
-  (905 with its separator, on both interpreters), and by nothing else:
-  every other tool's description keeps the words and the length 0.14.1
-  served (fourteen changed order; see above).
+  (905 with its separator, on both interpreters), and shrank where
+  descriptions were reworded on how Exegete describes itself (see
+  above); no other description changed: each keeps the words 0.14.1
+  served (fourteen changed order; see above), and none is longer.
 
 ## [0.14.1-alpha] - 2026-10-01
 

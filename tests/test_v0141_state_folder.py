@@ -365,7 +365,7 @@ class TestTheGuardsRefuseBothFolders:
         refusal = server._create_project_place_refusal(
             "Study", str(home / folder / "projects"))
         assert isinstance(refusal, str)
-        assert "inside this server's state folder" in refusal
+        assert "inside Exegete's state folder" in refusal
         assert "~/.exegete, or ~/.qualcoder_mcp" in refusal
 
     @pytest.mark.parametrize("folder", [".exegete", ".qualcoder_mcp"])
@@ -374,7 +374,7 @@ class TestTheGuardsRefuseBothFolders:
                            f"~/{folder}/projects")
         problem = server._workspace_start_problem()
         assert problem is not None
-        assert "inside this server's state folder" in problem
+        assert "inside Exegete's state folder" in problem
 
     def test_the_export_refusal_names_the_new_folder(self):
         assert "~/.exegete" in server.STATE_FOLDER_EXPORT_REFUSAL
@@ -512,7 +512,7 @@ class TestBothFoldersSaidOnce:
         assert first.message.startswith(
             "Both ~/.exegete and ~/.qualcoder_mcp are folders")
         assert "0 session file(s)" in first.message
-        assert "that copy's own, which this server does not use" in \
+        assert "that copy's own, which Exegete does not use" in \
             first.message
         assert first.message.endswith(state_folder.ONCE)
         note = new / state_folder.NOTE_FILE
@@ -586,12 +586,12 @@ class TestARunThatCouldNotMoveTheFolder:
         refusal = server._create_project_place_refusal(
             "Study", str(home / folder / "projects"))
         assert isinstance(refusal, str)
-        assert "inside this server's state folder" in refusal
+        assert "inside Exegete's state folder" in refusal
         monkeypatch.setenv(names.SETTINGS["workspace"][0],
                            f"~/{folder}/projects")
         problem = server._workspace_start_problem()
         assert problem is not None
-        assert "inside this server's state folder" in problem
+        assert "inside Exegete's state folder" in problem
 
     def test_the_messages_name_the_folder_in_use(self, old_run):
         home = old_run

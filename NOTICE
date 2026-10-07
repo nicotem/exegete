@@ -1,8 +1,9 @@
 Exegete
 =======
 
-A Model Context Protocol server for QualCoder qualitative data analysis
-projects.
+A qualitative analysis application you use in conversation with an AI
+assistant, compatible with QualCoder. It runs as a Model Context Protocol
+server.
 
 Copyright (C) 2025-2026 Niccolò Tempini
 
@@ -33,8 +34,8 @@ LGPL-3.0-or-later, whatever those releases declared.
 Code derived from QualCoder
 ===========================
 
-Exegete is a separate program that reads and writes the project
-files of QualCoder (https://github.com/ccbogel/QualCoder). It does not
+Exegete is a separate program that reads and writes projects in the
+file format of QualCoder (https://github.com/ccbogel/QualCoder). It does not
 include QualCoder, but it contains a small number of routines and values
 taken from QualCoder so that its results match QualCoder's exactly, and
 it restates facts of QualCoder's file format so that projects stay

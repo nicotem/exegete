@@ -107,7 +107,7 @@ def test_privacy_says_what_a_rename_cannot_reach():
             "displays and filters, and QualCoder's saved SQL queries. Each "
             "rename's result counts the saved graph labels, table displays "
             "and filters for the case or file it renamed; the saved SQL "
-            "queries nothing in this server reads.") in flat
+            "queries nothing in Exegete reads.") in flat
     # Fix round 4, F3B-5: the three lists name the same places.
     unreleased = _flat("CHANGELOG.md").split("## [0.12")[0]
     assert "imported file's stored copy and stored path, saved graph " \
@@ -156,7 +156,7 @@ def test_the_documents_count_the_tools_the_server_registers():
     # v0.14: `full` is no longer every tool once `lifecycle` exists
     assert f"`full` (default) registers {count} tools" in install
     assert f"registers all {count} tools" not in install
-    assert f"This server exposes {count} tools by default" in install
+    assert f"Exegete offers {count} tools by default" in install
 
 
 def test_every_rename_text_keeps_the_house_rules():
@@ -181,13 +181,13 @@ def test_the_records_this_server_keeps_are_named():
     """Fix round 1, S-3: this server's own pseudonymisation journal entry
     and run record keep the file's name as it was at the run."""
     flat = " ".join(server.RENAME_FILE_NOTE.split())
-    assert "this server's pseudonymisation journal entries and run " \
+    assert "Exegete's pseudonymisation journal entries and run " \
            "records, which keep the file's name as it was at the run " \
            "unless that name carried a name from the mapping" in flat
     # Fix round 1, QA-5 (Q10): the backup sentence is pinned too.
     assert "Every backup, including the one just taken, keeps the old " \
-           "name, and so do this server's coding-session files" in flat
-    assert "so do this server's pseudonymisation journal entries and run " \
+           "name, and so do Exegete's coding-session files" in flat
+    assert "so do Exegete's pseudonymisation journal entries and run " \
            "records, which keep a file's name as it was at the run" \
            in _flat("PRIVACY.md")
 

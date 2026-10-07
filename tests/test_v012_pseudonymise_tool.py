@@ -3071,7 +3071,7 @@ class TestTheNoteWarnings:
             "carry a private part this assistant cannot see. Their public "
             "part will be rewritten; the private part is carried across "
             "unchanged and unread, so if a name occurs there it is still "
-            "there, and nothing in this server can tell you whether it does.")
+            "there, and nothing in Exegete can tell you whether it does.")
         _house_rules([text])
         # A note with a private part and no match in its public part is
         # not rewritten, so it is not counted.
@@ -3111,8 +3111,8 @@ class TestTheNoteWarnings:
         out = preview_of(rewrite_memos=True)
         text = self._one(out["warnings"], self.EARLIER)
         assert text == (
-            "Warning: 1 journal entr(ies) this run would rewrite are this "
-            "server's own records of earlier pseudonymisation runs. "
+            "Warning: 1 journal entr(ies) this run would rewrite are "
+            "Exegete's own records of earlier pseudonymisation runs. "
             "Rewriting them changes the project's record of what those runs "
             "applied. If that record matters, run without rewrite_memos and "
             "change those entries by hand.")
@@ -3490,7 +3490,7 @@ class TestTheNoteRewriteIsWritten:
         assert block["journal_entries_from_earlier_runs"] == 1
         assert block["fields"]["journal"]["rows"] == 1
         assert any(w.startswith("Warning: 1 journal entr(ies) this run "
-                                "would rewrite are this server's own "
+                                "would rewrite are Exegete's own "
                                 "records") for w in out["warnings"])
         second = execute_from(out, mapping=onward)
         assert second.get("success") is True, second
@@ -3501,7 +3501,7 @@ class TestTheNoteRewriteIsWritten:
         assert "Alex" not in earlier
         body = query(project, "SELECT jentry FROM journal WHERE name=?",
                      (second["journal_entry"],))[0]["jentry"]
-        assert ("Journal entries rewritten that were this server's own "
+        assert ("Journal entries rewritten that were Exegete's own "
                 "records of earlier runs: 1." in body)
 
     def test_a_note_on_a_row_the_file_rewrite_deletes_is_not_rewritten(
@@ -4211,7 +4211,7 @@ class TestTheRunRecordAndTheJournalOfANoteRewrite:
         assert ("Notes with a private part whose public part was rewritten: "
                 "1. Notes left as they were because a rewrite would have "
                 "formed a private-part marker: 0." in body)
-        assert ("Journal entries rewritten that were this server's own "
+        assert ("Journal entries rewritten that were Exegete's own "
                 "records of earlier runs: 0." in body)
         assert ("This entry was written after the rewrite and was not "
                 "itself rewritten." in body)
@@ -4450,8 +4450,8 @@ class TestKeepingTheMapping:
                 if n.startswith("The mapping you gave")]
         assert note == [
             "The mapping you gave is half of the reverse key for this run; "
-            "the backup is the other half and holds the real names. This "
-            "server does not keep the mapping unless asked. On this run the "
+            "the backup is the other half and holds the real names. "
+            "Exegete does not keep the mapping unless asked. On this run the "
             "call attested that the researcher keeps their own record; make "
             "sure that is true now, because nothing else can say later who "
             "each pseudonym was."]
@@ -4534,8 +4534,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
         mapping_note = [n for n in notes if n.startswith("The mapping you")]
         assert mapping_note == [
             "The mapping you gave is half of the reverse key for this run; "
-            "the backup is the other half and holds the real names. This "
-            "server does not keep the mapping unless asked. On this run it "
+            "the backup is the other half and holds the real names. "
+            "Exegete does not keep the mapping unless asked. On this run it "
             "was saved into the project's own pseudonyms.json (3 entries "
             "added), which QualCoder applies on every later text or "
             "transcript import (not a PDF) and which travels into every "
@@ -5208,8 +5208,8 @@ class TestTheMappingAcrossARestore:
 
     ONLY_COPY = (
         "{subject} a pseudonyms.json that the project "
-        "does not hold now, byte for byte, and that no backup this server "
-        "keeps holds: {names}. Once {pronoun} removed, this server knows of "
+        "does not hold now, byte for byte, and that no backup Exegete "
+        "keeps holds: {names}. Once {pronoun} removed, Exegete knows of "
         "no other lasting copy. It may be the only record of a "
         "pseudonymisation mapping (a pseudonymise_source run's save writes "
         "one, and a restore of an earlier backup leaves it in the "
@@ -5222,8 +5222,8 @@ class TestTheMappingAcrossARestore:
                "pronoun": "they are"}
     DONE = (
         "{subject} a pseudonyms.json that the project does not hold now, "
-        "byte for byte, and that no backup this server keeps holds: "
-        "{names}. This server now knows of no other lasting copy. {pronoun} "
+        "byte for byte, and that no backup Exegete keeps holds: "
+        "{names}. Exegete now knows of no other lasting copy. {pronoun} "
         "may have held the only record of a pseudonymisation mapping (a "
         "pseudonymise_source run's save writes one, and a restore of an "
         "earlier backup leaves it in the pre-restore safety "
@@ -8376,7 +8376,7 @@ class TestTheDescriptionCarriesWhatD1Requires:
         ("private_parts_are_never_read",                 # point 3
          "A note's private part (after QualCoder's marker) is carried "
          "across unchanged and never read, so a name in a private part is "
-         "still there and this server cannot tell you whether one is."),
+         "still there and Exegete cannot tell you whether one is."),
         ("the_wide_counts_do_not_reach_zero",            # point 4
          "The residue's wide counts do not go to zero after a note "
          "rewrite"),
@@ -8385,7 +8385,7 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "which may be added on the execute call."),
         ("a_typed_mapping_must_be_kept",                 # point 6
          "The execute is REFUSED on a typed mapping unless one of these two "
-         "is true: the mapping is half of the reverse key and this server "
+         "is true: the mapping is half of the reverse key and Exegete "
          "does not keep it. With use_project_pseudonyms the file is the "
          "record and neither may be given."),
         ("the_save_preview_confirms_names",      # fix round 1, S-4; 2, RS-1
@@ -8633,19 +8633,19 @@ class TestTheDocumentsTellTheTruth:
         "(a case or file name is renamed with `rename_case` or "
         "`rename_file`, below).",           # the merge with main
         "A note's private part (from its `#####` marker) is carried across "
-        "unread, so a name there is still there and nothing in this server "
+        "unread, so a name there is still there and nothing in Exegete "
         "can report it.",
         "A second run with `rewrite_memos` on also rewrites the journal "
-        "entries this server wrote for earlier runs",
-        "This server writes it only when asked, in QualCoder's own format, "
+        "entries Exegete wrote for earlier runs",
+        "Exegete writes it only when asked, in QualCoder's own format, "
         "and removes or replaces it only by a restore",
         # The merge fix (M3): what a restore and a prune do to it.
         "The restore result says so when the file appears, disappears or "
         "changes, and the one the project had stays in the pre-restore "
         "safety backup, which `prune_backups` can remove; its preview names "
         "any backup it would remove that holds a `pseudonyms.json` which "
-        "neither the project nor a backup this server keeps holds, byte for "
-        "byte, as the only lasting copy this server knows of.",
+        "neither the project nor a backup Exegete keeps holds, byte for "
+        "byte, as the only lasting copy Exegete knows of.",
         # The v0.13 release preparation: the mapping gaps' two refinements.
         "QualCoder's own `_BKUP_` backups do not count as keeping a copy, "
         "because QualCoder deletes them past its `backup_num` when a project "
@@ -8653,7 +8653,7 @@ class TestTheDocumentsTellTheTruth:
         "named;",
         "The approval token signs that set of only copies, so a prune whose "
         "set changed after its preview (the project's own file removed "
-        "outside this server, for example) is refused as a changed project "
+        "outside Exegete, for example) is refused as a changed project "
         "and removes nothing,",
         # Brief 2 fix round 1, Security's ruling (S-1): the departure,
         # named.

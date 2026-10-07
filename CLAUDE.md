@@ -4,6 +4,12 @@ Guidance for Claude Code and other AI coding agents working in this
 repository. People start with CONTRIBUTING.md; this file adds what an
 agent most often gets wrong.
 
+Exegete is a qualitative analysis application used in conversation with
+an AI assistant, compatible with QualCoder: its projects keep
+QualCoder's format and conventions, so a researcher can work on a
+project in either program, one at a time, and its aim is the whole life
+of a project from the conversation. It runs as an MCP server.
+
 ## Commands
 
 - **Install for development** (Python 3.10 or newer):
@@ -24,8 +30,8 @@ agent most often gets wrong.
 - `src/exegete/server.py`: the MCP server, with its tools, resources,
   prompts, help topics and the assistant's brief. Tool sets: `full`,
   `core` and `lifecycle` (`EXEGETE_TOOLSET`).
-- `database.py`: QualCoder's SQLite project (schema v17, as QualCoder
-  4.0 writes it). `new_project.py`: creating a project.
+- `database.py`: the project database, in QualCoder's format (schema
+  v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.
 - `preview_tokens.py`: preview before confirm. `memo_privacy.py`: the
   `#####` private part of memos. `pseudonymise.py`: replacing names.
 - `project_settings.py`: the AI coder name file. `state_folder.py`: the
@@ -68,6 +74,8 @@ agent most often gets wrong.
 - **Documents:** plain UK English, no em dashes. Many sentences in the
   documents are pinned by tests, so move the pin with its sentence.
   Explain risks and suggest alternatives; do not prescribe.
-- **Parity with QualCoder:** follow QualCoder's own behaviour, and name
-  every departure with its reason (CONTRIBUTING.md's rules on parity and
-  citations; NOTICE lists what was taken from QualCoder, and why).
+- **Interoperability with QualCoder:** follow QualCoder's formats and
+  conventions; name every departure, with its reason; be better than
+  QualCoder where its behaviour loses or garbles content
+  (CONTRIBUTING.md's rules on parity and citations; NOTICE lists what
+  was taken from QualCoder, and why).

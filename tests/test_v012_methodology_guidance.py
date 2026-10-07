@@ -214,7 +214,7 @@ class TestMethodsResource:
         assert server.METHODOLOGY_VOCABULARY in body
         assert "10.31235/osf.io/d6e9m" in body
         assert "Friese, S. (2024)" in body
-        assert "This server does not read or reproduce those" in body
+        assert "Exegete does not read or reproduce those" in body
         assert body.startswith("# Methods notes")
 
     def test_registered_as_markdown_resource(self):
@@ -309,10 +309,11 @@ class TestHandshakeInstructions:
         and says who stands behind it.
         """
         # v0.14.2: the sentence is the short version's fourth rule, no
-        # longer its last, and keeps its words
+        # longer its last, and keeps its words, with "Exegete" for "the
+        # server" (the owner's ruling of 7 October 2026)
         assert ("Coding suggestions and code proposals are written to the "
                 "project only when each item has been marked approved, which "
-                "you do only on the researcher's word: the server cannot tell "
+                "you do only on the researcher's word: Exegete cannot tell "
                 "who approved.") in server.SERVER_INSTRUCTIONS
         assert "Nothing is written to the project" not in \
             server.SERVER_INSTRUCTIONS

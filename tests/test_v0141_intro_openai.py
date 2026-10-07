@@ -90,12 +90,21 @@ class TestTheIntroduction:
         # the tagline's and the lede's ("your project stays one that
         # QualCoder opens"), and one program at a time is said where the
         # reader acts on it ("A first session")
-        assert ("Exegete (formerly qualcoder-mcp) is an application in its "
-                "own right, not an add-on or a remote control for "
-                "QualCoder: you do not need QualCoder to start, or running "
-                "while you work. It has no window of its own: your "
-                "assistant, such as Claude Desktop, starts it, and its work "
-                "appears in the conversation.") in opening
+        # v0.14.2, how Exegete describes itself (the owner's ruling of 7
+        # October 2026): what you do in it first, then that it is built to
+        # stay interoperable with QualCoder; "not an add-on or a remote
+        # control" moved into "Three commitments"
+        assert ("Exegete (formerly qualcoder-mcp) is a qualitative analysis "
+                "application in its own right, with no window of its own: "
+                "your assistant, such as Claude Desktop, starts it, and you "
+                "work in the conversation, from starting a project to "
+                "exporting your codebook and coding. It is built to stay "
+                "interoperable with QualCoder: your project is a folder on "
+                "your computer, kept in QualCoder's format and conventions, "
+                "so you can work on it in either program, one at a time. You "
+                "do not need QualCoder to start, or running while you work, "
+                "though a few things are not in Exegete yet (listed "
+                "below).") in opening
         assert "your project stays one that QualCoder opens." in opening
         assert "**One program at a time.**" in _flat("README.md")
         # Not "at any time": one program at a time, as "A first session"
@@ -134,15 +143,18 @@ class TestTheIntroduction:
         # developers". The README's second round of checks: said once, in
         # the positioning paragraph, which already says Exegete has no
         # window of its own ("What it is not" was a second saying)
-        assert ("not an add-on or a remote control for QualCoder: you do "
-                "not need QualCoder to start, or running while you work.") \
-            in opening
+        # v0.14.2 (the owner's ruling of 7 October 2026): "not an add-on
+        # or a remote control" is said where the commitments are
+        assert ("You do not need QualCoder to start, or running while you "
+                "work") in opening
+        assert "not an add-on or a remote control" not in opening
         assert "**What it is not.**" not in _flat("README.md")
         compatibility = _between(readme, "**Compatibility with QualCoder.**",
                                  "**Symmetry:")
-        assert ("It is not QualCoder, and it is not made or endorsed by "
-                "QualCoder's developers (QualCoder is free software by "
-                "Colin Curtain and contributors).") in compatibility
+        assert ("It is not QualCoder, nor an add-on or a remote control "
+                "for it, and it is not made or endorsed by QualCoder's "
+                "developers (QualCoder is free software by Colin Curtain and "
+                "contributors).") in compatibility
         assert ("built by one researcher, independently of QualCoder's "
                 "developers") in opening
         # The kappa headline
@@ -213,15 +225,21 @@ class TestTheIntroduction:
     def test_what_still_needs_qualcoder_is_named_and_true(self):
         # v0.14.2, the README rewritten to persuade: the list, by stage,
         # sits after what you can do, with the download and its date
-        needs = _between(_what_you_can_do(), "**Still needs QualCoder**",
+        # v0.14.2 (the owner's ruling of 7 October 2026): the gap is
+        # Exegete's, and QualCoder is for a study that needs it now
+        needs = _between(_what_you_can_do(), "**Not in Exegete yet**",
                          "**The aim**")
-        assert ("**Still needs QualCoder**, which is recommended from the "
-                "start: bringing in documents other than text (Word, PDF, "
-                "images, audio, video) and text you would rather not pass "
-                "through the conversation; seeing the coding highlighted in "
-                "the text; coding images, audio, video or an area of a PDF "
-                "page; graphs; and its Reports menu.") in needs
-        assert "you do not need QualCoder to start" in _opening()
+        assert ("**Not in Exegete yet**, and done in QualCoder for now: "
+                "bringing in documents other than text (Word, PDF, images, "
+                "audio, video) and text you would rather not pass through "
+                "the conversation; reading a whole transcript yourself with "
+                "its coding highlighted (today the assistant reads coded "
+                "passages back to you); coding images, audio, video or an "
+                "area of a PDF page; graphs; and QualCoder's Reports menu. "
+                "If your study needs any of these now, get QualCoder from "
+                "the start.") in needs
+        assert "recommended from the start" not in needs
+        assert "You do not need QualCoder to start" in _opening()
         assert "lists everything" not in needs
         # Text arrives as content in the call, never as a file path
         import inspect
@@ -611,7 +629,7 @@ class TestServedTextsAreHostNeutral:
 
     def test_the_help_topics_say_the_assistant(self):
         overview = json.loads(server.explain_ai_coding_tools())
-        assert overview["title"] == "AI-Assisted Coding for QualCoder"
+        assert overview["title"] == "AI-assisted coding in Exegete"
         assert overview["description"].startswith(
             "Use an AI assistant to help code your qualitative data. The "
             "assistant can analyse")
@@ -1093,9 +1111,56 @@ class TestTheOtherFirstImpressions:
                         "AI-assisted qualitative analysis of QualCoder "
                         "projects"):
                 assert old not in text, (where, old)
-        assert ("- [ ] At least one QualCoder project (a `.qda` project "
-                "folder): the setup below cannot create one; the one-click "
-                "extension can") in _flat("QUICKSTART.md")
+        assert ("- [ ] A project to work on (a `.qda` folder, in "
+                "QualCoder's format): the standard tool set this setup uses "
+                "cannot create one; the one-click extension can, and so can "
+                "this setup with `EXEGETE_TOOLSET=lifecycle` (INSTALL.md)"
+                ) in _flat("QUICKSTART.md")
+
+    def test_the_texts_the_first_pass_did_not_read(self):
+        """v0.14.2 (the owner's ruling of 7 October 2026): the opening
+        text, the brief's first paragraph, the command's help, NOTICE's
+        first line and the old name's page say what Exegete is, and none
+        of them, nor the first impressions above, says that it opens or
+        exposes a QualCoder project."""
+        notice = _read("NOTICE")
+        old_page = _read("packaging/pypi-old-name/README.md")
+        brief = server.BRIEF_FULL
+        texts = {
+            "opening text": " ".join(server.BRIEF_SHORT.split()),
+            "brief's first paragraph": " ".join(
+                brief[brief.index("\n\n") + 2:brief.index("## 1.")].split()),
+            "the command's help": server._build_arg_parser().description,
+            "NOTICE's first line": " ".join(
+                notice[notice.index("=======") + 7:
+                       notice.index("Copyright")].split()),
+            "the old name's page": " ".join(
+                old_page[:old_page.index("This package is kept")].split()),
+        }
+        for where, text in texts.items():
+            assert re.search(r"qualitative (data )?analysis application",
+                             text), where
+        for where in ("the command's help", "NOTICE's first line",
+                      "the old name's page"):
+            assert "compatible with QualCoder" in texts[where], where
+        assert "in QualCoder's format" in texts["opening text"]
+        assert "in QualCoder's format" in texts["brief's first paragraph"]
+        import exegete
+        with open(REPO / "pyproject.toml", "rb") as handle:
+            summary = tomllib.load(handle)["project"]["description"]
+        texts.update({"PyPI summary": summary,
+                      "package docstring": " ".join(exegete.__doc__.split()),
+                      "module docstring": " ".join(server.__doc__.split())})
+        for where, text in texts.items():
+            for old in ("exposes a QualCoder project",
+                        "opens a QualCoder project",
+                        "writes to QualCoder projects", "outside QualCoder",
+                        "Create a new QualCoder project",
+                        "MCP server for QualCoder",
+                        "the MCP server for QualCoder projects",
+                        "AI-assisted qualitative analysis of QualCoder "
+                        "projects", "Qualcoder"):
+                assert old not in text, (where, old)
 
 
 # ---------------------------------------------------------------------------

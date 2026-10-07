@@ -749,7 +749,7 @@ class TestTwoStepFlow:
     def test_a_malformed_token_says_so(self, setup_server):
         refused = _preview(server.delete_code, 1, preview_token="not a token")
         assert refused["reason"] == "token_malformed"
-        assert "not a token this server issued" in refused["error"]
+        assert "not a token Exegete issued" in refused["error"]
 
     def test_the_refusal_texts_are_count_free_and_name_free(
             self, setup_server, qualcoder_db_path):
@@ -1461,7 +1461,7 @@ class TestWhatTheRefusalSaysWhenATokenDoesNotVerify:
         error = out["error"]
         assert "the project changed since the preview" in error
         assert "preview secret has been rotated" in error
-        assert "not one this server issued for this state" in error
+        assert "not one Exegete issued for this state" in error
         assert "the remedy is the same for all of them" in error
         assert "without preview_token for a fresh preview" in error
         # Count-free and name-free, as every refusal in this server is.

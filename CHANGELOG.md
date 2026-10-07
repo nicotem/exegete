@@ -215,12 +215,18 @@ before it is released.
   declaring XML entities is refused; a file not saved as UTF-8 is held
   back (below); a file whose letters came out wrong in the file itself,
   in any script and any format but PDF ("Ã©" for "é", "Ä…" for "ą", "Ð˜"
-  for "И"), is held back until it is corrected, and so is an RTF file
-  holding raw UTF-8 bytes, which QualCoder's way of reading RTF garbles
-  so; subtitle files come in as documents, with every byte-order mark at
-  their start removed; an RTF file holding half of an emoji without the
-  other half is refused with the way round; originals are always copied,
-  never linked, and keep their internet-origin mark; per-format size
+  for "И", "√©" for "é" through a Mac's own set), is held back until it
+  is corrected, and so is an RTF file holding raw UTF-8 bytes, which
+  QualCoder's way of reading RTF garbles so. Each run of characters that
+  a common Windows, Mac, DOS or KOI8 set, Shift JIS or GBK could have
+  made of UTF-8 is read back through it, and counts only where the
+  reading back fits its word better than the text as written, so correct
+  text writing the same characters (an accented name cut off by a long
+  dash inside quotation marks) comes in; subtitle files come in as
+  documents, with every byte-order mark at their start removed; an RTF
+  file holding half of an emoji without the other half is refused with
+  the way round; originals are always copied, never linked, and keep
+  their internet-origin mark; per-format size
   limits, archive limits and time and memory limits; the AI coder name
   owns the rows and their attribute values, as the owner decided.
 - The project's pseudonyms list is applied to the stored text by

@@ -810,9 +810,12 @@ Seven cautions:
   file saved as UTF-16 or UTF-32 without the mark that names it, which
   reads as UTF-8 with an invisible character beside each letter, and a
   file whose letters came out wrong in the file itself ("WÄ…sik" for
-  "Wąsik"), in any script; a garbled letter at a word's end can still
-  be missed when it is the only one in a file. So the names are looked
-  for, and replaced, in the text exactly as it is stored. Two limits
+  "Wąsik", "Agn√®s" for "Agnès"), through any of the common Windows,
+  Mac, DOS and KOI8 character sets, Shift JIS or GBK. A garbled letter
+  that reads naturally where it stands can still be missed when it is
+  the only one in a file, as can a file read through Big5, EUC-KR or
+  EUC-JP (TOOLS.md has the detail). So the names are looked for, and
+  replaced, in the text exactly as it is stored. Two limits
   remain, as in QualCoder: an RTF file is read by the code page it
   declares, so a wrong declaration changes letters; and a name typed
   with a separate accent mark (as some Mac programs write "é") is not

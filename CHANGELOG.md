@@ -41,7 +41,14 @@ From pull request #11, with the code review's two findings fixed.
   researcher's projects and is identified only as "Exegete". Every
   failure (offline, a proxy, a certificate, a redirect, a malformed or
   oversized file, no answer within eight seconds) ends as "could not
-  check" and one log line naming the kind of failure only.
+  check" and one log line naming the kind of failure only. An attempt
+  is recorded as it starts, so a run stopped during it (a host quit
+  within the eight seconds) still counts it, and the next start does
+  not try again within the week. When the certificate is not trusted,
+  the answer names the computer's own Python as a possible cause (on a
+  Mac, Python from python.org has its certificates only after its
+  Install Certificates step) as well as a network that inspects
+  encrypted connections.
 - **Where the note goes.** A note counts as given once it is added to
   an answer, so it goes first in the answer, before the tool's own
   text, and only into an answer of at most 20,000 characters (about

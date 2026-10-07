@@ -17,6 +17,11 @@ VERSION = "0.14.2-alpha"
 # The release date, as the CHANGELOG heading gives it
 RELEASED = "2026-10-07"
 # One or two plain sentences: what is new for a researcher
-SUMMARY = ("Exegete can now tell you when a new version is out, and it "
-           "gives the assistant a brief on how to work with you. QualCoder "
-           "4.0 is now the version it is checked against.")
+# (0.14.2's note after an update reaches only those whose checking is
+# off: with it on, the note about the check is given instead, so the
+# summary says that the check has to be on)
+SUMMARY = ("Exegete can now tell you when a new version is out, if you "
+           "switch that on (it is on in the Claude Desktop extension unless "
+           "you switch it off), and it gives the assistant a brief on how "
+           "to work with you. QualCoder 4.0 is now the version it is "
+           "checked against.")

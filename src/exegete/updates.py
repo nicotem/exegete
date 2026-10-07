@@ -534,6 +534,19 @@ def _disclose(now: float) -> Callable[[Dict[str, Any]], None]:
     return change
 
 
+def _attempt_starts(now: float) -> Callable[[Dict[str, Any]], None]:
+    """The attempt, written before the fetch: a run stopped during it (a
+    host quit within the eight seconds, on a network that drops the
+    traffic or whose name server never answers) still counts it, so the
+    next start does not try again, and "at most once a week" holds on
+    that network too (the port's security check, round 1)."""
+    def change(state):
+        if state.get("last_attempt") is None or \
+                state["last_attempt"] < int(now):
+            state["last_attempt"] = int(now)
+    return change
+
+
 def _attempted(now: float, published: Optional[Published],
                error: Optional[str]) -> Callable[[Dict[str, Any]], None]:
     def change(state):
@@ -966,6 +979,7 @@ def check_now(now: Optional[float] = None, folder: Optional[Path] = None,
                 return _current_state(now, folder)
         with _LOCK:
             _run.memory["last_attempt"] = int(now)
+        update_state(_attempt_starts(now), now, folder)
         try:
             published = parse_version_file(fetch(), _today(now))
             error = None
@@ -1237,9 +1251,18 @@ def tool_answer(now: Optional[float] = None,
     if _FETCHING.locked() or last is None or now - last >= ASKED_REUSE:
         state = check_now(now, reuse_within=ASKED_REUSE)
     if state.get("last_error") is not None:
+        # A certificate not trusted is as often this computer's Python
+        # as the network: python.org's Python for the Mac has no
+        # certificates until its Install Certificates step is run (the
+        # port's security check, round 1)
+        why = ("The Python that runs Exegete may not have the certificates "
+               "it needs to trust the website (on a Mac, Python from "
+               "python.org gets them from its Install Certificates step), "
+               "or the network may inspect encrypted connections."
+               if state["last_error"] == UNTRUSTED else
+               "The computer may be offline, or the network may block it.")
         return done(f"Exegete could not reach its website to check for a "
-                    f"newer version ({state['last_error']}). The computer "
-                    f"may be offline, or the network may block it. This "
+                    f"newer version ({state['last_error']}). {why} This "
                     f"does not affect anything else Exegete does. {have} "
                     f"You can look yourself at {UPDATE_PAGE}.")
     newest = state.get("newest")
@@ -1298,18 +1321,19 @@ def tool_answer(now: Optional[float] = None,
     if steps is None:
         return done(f"A newer version of Exegete is available: {new} "
                     f"({when}). {second} How to update depends on how "
-                    f"Exegete was installed: {UPDATE_PAGE} shows the way "
-                    f"for Claude Desktop, and INSTALL.md, \"Updating the MCP "
-                    f"Server\", the Terminal route: {INSTALL_UPDATING}.")
+                    f"Exegete was installed: {UPDATE_PAGE} shows each way, "
+                    f"and INSTALL.md, \"Updating the MCP Server\", covers "
+                    f"the Terminal route in full: {INSTALL_UPDATING}.")
     answer["steps"] = steps
     message = (f"A newer version of Exegete is available: {new} ({when}). "
                f"{second} What's new: {UPDATE_PAGE}.")
     if _run.route == OLD_NAME and newest.version.major < 1:
         message += (" qualcoder-mcp is Exegete's earlier name. Its last "
                     "release comes with Exegete 1.0, and its earlier setting "
-                    "names are read only until then, so move to the new name "
-                    "before 1.0: INSTALL.md, \"Coming from qualcoder-mcp\", "
-                    f"has the steps: {INSTALL_COMING_FROM}.")
+                    "names are read only until then, so moving to the new "
+                    "name before 1.0 is worth doing: INSTALL.md, \"Coming "
+                    "from qualcoder-mcp\", has the steps: "
+                    f"{INSTALL_COMING_FROM}.")
     if _run.route == UVX and _run.old_name:
         message += (" The second step also moves this copy to the new name: "
                     "qualcoder-mcp is Exegete's earlier name, and INSTALL.md, "

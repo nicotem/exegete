@@ -633,7 +633,12 @@ versions, below, are new and have one spelling only.
   off; the desktop extension sets it from its setting "Tell me when a
   new version is out", where unset means on. An unrecognised value
   means off, and the log says so once; it never stops the server. The
-  log says at every start whether checking is on.
+  log says at every start whether checking is on. If every check ends
+  in "certificate not trusted", the Python that runs Exegete may lack
+  the certificates it needs: Python from python.org on a Mac gets them
+  from "Install Certificates", in its folder in Applications, which is
+  worth running once. A network that inspects encrypted connections
+  gives the same answer.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
   was installed. It also makes checking on by default, as the
@@ -1762,8 +1767,9 @@ yet, and the first start after the update moves the server's own folder
 (below), which is best done with no older copy running.
 
 - **The Claude Desktop extension.** Download `exegete-<version>.mcpb`
-  and open it: it updates the extension you have, with its two
-  settings, rather than adding a second one. Claude Desktop then lists
+  and open it: it updates the extension you have, with the settings
+  you chose, rather than adding a second one (0.14.2 adds a third, "Tell
+  me when a new version is out", on unless you switch it off). Claude Desktop then lists
   it as Exegete, and its log becomes `mcp-server-Exegete.log` (the
   earlier `mcp-server-qualcoder-mcp.log` stays where it was). The first
   start after the update may take longer and needs the internet, since

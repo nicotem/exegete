@@ -1012,3 +1012,119 @@ class TestTheHookOnRealAnswers:
         monkeypatch.setattr(server.mcp, "run", lambda **kwargs: None)
         monkeypatch.setattr(server, "_settle_state_folder", lambda: None)
         server.main([])
+
+
+# ---------------------------------------------------------------------------
+# The port's checks, round 1 (7 October 2026); each failed before its fix
+# ---------------------------------------------------------------------------
+
+class _Stopped(BaseException):
+    """The run ending during the fetch, as when its host quits."""
+
+
+def _pep440(display):
+    """release.VERSION as pip spells it (0.14.2-alpha is 0.14.2a0)."""
+    base, _, pre = display.partition("-")
+    if not pre:
+        return base
+    name, _, number = pre.partition(".")
+    short = {"alpha": "a", "beta": "b", "rc": "rc"}[name]
+    return f"{base}{short}{number or 0}"
+
+
+class TestThePortsChecksRoundOne:
+
+    def test_an_attempt_cut_short_still_counts(self, site, monkeypatch):
+        # The security check: the attempt reached the state file only
+        # once the fetch ended, so a run stopped during it (a host quit
+        # within the eight seconds, on a network that drops the traffic)
+        # left the check due, and every start tried again
+        _started()
+        updates.mark_given(updates.due_note(True, NOW), NOW)
+        later = NOW + WEEK
+        seen = []
+        real = updates.fetch
+
+        def stopped(*args, **kwargs):
+            # what the next start reads if this run ends here
+            seen.append(updates.read_state(later).get("last_attempt"))
+            raise _Stopped()
+
+        monkeypatch.setattr(updates, "fetch", stopped)
+        with pytest.raises(_Stopped):
+            updates.check_now(later)
+        assert seen == [int(later)]
+        monkeypatch.setattr(updates, "fetch", real)
+        updates.reset_for_tests()              # a new process
+        _started(now=later + 3600)
+        assert updates._run.thread is None
+        assert site.requests == []
+
+    @pytest.mark.parametrize("kind, cause", [
+        (updates.UNTRUSTED, "Install Certificates"),
+        (updates.NO_CONNECTION, "The computer may be offline"),
+        (updates.TIMED_OUT, "The computer may be offline"),
+    ])
+    def test_a_certificate_not_trusted_is_not_blamed_on_the_network(
+            self, monkeypatch, kind, cause):
+        # The security check: python.org's Python for the Mac has no
+        # certificates until its Install Certificates step is run, and
+        # the answer said only that the computer may be offline
+        def failing(*args, **kwargs):
+            raise updates.CheckFailed(kind)
+        monkeypatch.setattr(updates, "fetch", failing)
+        _started()
+        updates.mark_given(updates.due_note(True, NOW), NOW)
+        message = _answer(NOW + WEEK)["message"]
+        assert f"({kind})" in message
+        assert cause in message
+        if kind == updates.UNTRUSTED:
+            assert "offline" not in message
+            assert "Python that runs Exegete" in message
+        else:
+            assert "Install Certificates" not in message
+
+    def test_the_note_after_an_update_says_what_is_new(self):
+        # The truth check: at 0.14.2 the note after an update reaches only
+        # researchers whose checking is off (with it on, the note about
+        # the check is given instead), so its summary says that the check
+        # has to be switched on
+        preview_tokens.state_home().mkdir(parents=True)   # 0.14.1's folder
+        _started({}, version=_pep440(release.VERSION))
+        note = updates.due_note(True, NOW)
+        assert note.key == "after update"
+        assert f"What's new: {release.SUMMARY}" in note.text
+        if release.VERSION == "0.14.2-alpha":
+            assert release.SUMMARY.startswith(
+                "Exegete can now tell you when a new version is out, if "
+                "you switch that on (it is on in the Claude Desktop "
+                "extension unless you switch it off)")
+
+    def test_the_earlier_name_is_advised_not_told(self, site, monkeypatch):
+        # The truth check: the update page suggests moving to the new
+        # name; the answer said "move"
+        venv = Path.home() / "exegete-venv"
+        monkeypatch.setattr(updates, "detect_route",
+                            lambda *a, **k: updates.OLD_NAME)
+        monkeypatch.setattr(updates.sys, "prefix", str(venv))
+        monkeypatch.setattr(updates.sys, "executable",
+                            str(venv / "bin" / "python"))
+        _started({"EXEGETE_UPDATE_CHECK": "on"})
+        updates.mark_given(updates.due_note(True, NOW), NOW)
+        answer = _answer(NOW + WEEK)
+        assert len(answer["steps"]) == 3
+        assert ("so moving to the new name before 1.0 is worth doing"
+                in answer["message"])
+        assert "so move to the new name" not in answer["message"]
+
+    def test_a_route_it_cannot_tell_is_sent_to_the_page_for_every_way(
+            self, site, monkeypatch):
+        # The truth check: the update page now shows the Terminal routes
+        # too, not only Claude Desktop
+        monkeypatch.setattr(updates, "detect_route",
+                            lambda *a, **k: updates.UNKNOWN)
+        _started({"EXEGETE_UPDATE_CHECK": "on"})
+        updates.mark_given(updates.due_note(True, NOW), NOW)
+        message = _answer(NOW + WEEK)["message"]
+        assert f"{updates.UPDATE_PAGE} shows each way" in message
+        assert "shows the way for Claude Desktop" not in message

@@ -141,7 +141,12 @@ def _tools(mode="lifecycle"):
 # steps; the advanced reader is told it is the one request of Exegete's
 # own. That takes 978 characters, and the limit is raised by that and no
 # more: 33,539.
-README_LIMIT = 33_539
+# The port's checks of 7 October 2026 found that "In short" gave the
+# check as "at most once a week while switched on": it also runs when the
+# researcher asks, and the extension has it on unless switched off. The
+# sentence now says both, which takes 88 characters, and the limit is
+# raised by that and no more: 33,627.
+README_LIMIT = 33_627
 
 
 def test_the_readme_stays_short():

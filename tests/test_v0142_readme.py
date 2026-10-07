@@ -226,10 +226,21 @@ def test_it_has_no_ai_of_its_own():
         any(name == m or name.startswith(m + ".") for m in NETWORK_ONLY)
         for name in network), network
     assert "It has no AI of its own." in _readme()
-    assert ("All it sends itself is a request, at most once a week while "
-            "switched on, for a file that says whether a newer version "
-            "exists, with nothing from your projects") in " ".join(
-                _readme().split())
+    # "In short" is the sentence a data-management plan quotes, so it
+    # gives the check's whole rule: once a week on its own, and when the
+    # researcher asks (up to once a day, updates.ASKED_REUSE), and that
+    # the extension, the route this README suggests, has it on unless
+    # switched off. "At most once a week while switched on" said neither
+    # (the port's QA and truth checks, round 1, 7 October 2026: four
+    # requests in four days, asked on four days running).
+    in_short = " ".join(_between(_readme(), "**In short.**",
+                                 "What the assistant reads").split())
+    assert ("All it sends itself is a request for a file that says whether "
+            "a newer version exists, with nothing from your projects: at "
+            "most once a week, and when you ask, while checking is on, as "
+            "it is in the Claude Desktop extension unless you switch it "
+            "off") in in_short
+    assert "once a week while switched on" not in in_short
 
 
 def test_the_no_ai_check_would_notice():

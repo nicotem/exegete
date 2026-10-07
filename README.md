@@ -174,9 +174,10 @@ match what you said; if not, say so.
 ## Where your data goes
 
 **In short.** Exegete has no online service. All it sends itself is a
-request, at most once a week while switched on, for a file that says
-whether a newer version exists, with nothing from your projects
-("Updating", below). What the assistant reads through it (passages,
+request for a file that says whether a newer version exists, with
+nothing from your projects: at most once a week, and when you ask,
+while checking is on, as it is in the Claude Desktop extension unless
+you switch it off ("Updating", below). What the assistant reads through it (passages,
 codes, memos, names) goes to the maker of the AI behind your assistant:
 Anthropic for Claude's apps, OpenAI for ChatGPT's desktop app and
 Codex, no one with a local model. Text you paste or attach goes in

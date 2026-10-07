@@ -27,6 +27,8 @@ import zipfile
 from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional, Tuple
 
+from . import garbled_text
+
 # Formats, chosen as QualCoder chooses: by the lower-cased extension
 # alone (import_files 2940-3028). `.srt` and `.vtt` are a named
 # departure: stored as they stand, as plain text documents.
@@ -1421,66 +1423,8 @@ def pdf_notes_memo(notes: List[Dict[str, Any]]) -> str:
 # Signs read in the text itself
 # ---------------------------------------------------------------------------
 
-# A wrong character set, in any script: UTF-8 read once as Windows
-# Western or Latin-1 and saved again ("Ã©" for "é", "Ä…" for "ą", "Ð˜"
-# for "И", "â€™" for "’"), or the replacement character. A character UTF-8
-# writes in two bytes, read that way, becomes the lead byte's letter (Â to
-# Û) and one of the 64 characters a following byte (0x80 to 0xBF) reads
-# as; three bytes, a letter from à to ï and two of those; four, one from ð
-# to ô and three. A C1 control (U+0080 to U+009F) is a sign on its own:
-# no text typed and saved as UTF-8 holds one.
-#
-# Wide on purpose, so that Polish, Czech, Turkish, Greek, Russian, Hebrew,
-# Arabic and Asian names are caught as well as Western ones; narrowed
-# where correct text writes the same pairs. The lead letters left out
-# (É, Ê, Ë, Í, Ü, Ý, Þ, ß) end words in correct text and would only ever
-# stand for garbled phonetic signs or the Syriac, Thaana and N'Ko
-# scripts. A following character that correct text writes after a word
-# (a closing quotation mark, a dash, an ellipsis, a no-break space, a
-# superscript number: "IRMÃ»" in Portuguese, "PÅ…" in Swedish,
-# "MALMÖ–LUND") is a sign only when a letter other than a capital A to Z
-# follows it, as one does inside a garbled word ("WÄ…sik"); a garbled
-# letter at a word's end in one of those forms is missed, and is rarely
-# alone in a file. A closing «
-# (Danish and German quotation marks, »PÅ«) is such a character too, but
-# never after Ã, where it is a garbled ë ("ZoÃ«").
-_AFTER_BYTE = ("\u0080-\u00bf"                    # Latin-1, 0x80 to 0xBF
-               # Windows Western, 0x80 to 0x9F
-               "\u20ac\u201a\u0192\u201e\u2026\u2020\u2021\u02c6\u2030"
-               "\u0160\u2039\u0152\u017d\u2018\u2019\u201c\u201d\u2022"
-               "\u2013\u2014\u02dc\u2122\u0161\u203a\u0153\u017e\u0178")
-_AFTER_A_WORD = ("\u00a0\u00bb\u00b9\u00b3\u00ae\u00b4\u00b0\u00b7"
-                 "\u2019\u201d\u201c\u2018\u203a\u2039\u2026\u2013")
-
-
-def _garbled_classes(after_a_word: str) -> Tuple[str, str]:
-    """(strict, loose): a following character that is a sign by itself,
-    and one that is a sign only before a letter."""
-    return ("(?:(?![" + after_a_word + "])[" + _AFTER_BYTE + "])",
-            "[" + after_a_word + "]")
-
-
-_STRICT_A, _LOOSE_A = _garbled_classes(_AFTER_A_WORD)
-_STRICT, _LOOSE = _garbled_classes(_AFTER_A_WORD + "\u00ab")
-_ANY = "[" + _AFTER_BYTE + "]"
-_LETTER = r"(?=[^\W\d_A-Z])"
-_GARBLED = re.compile(
-    "\ufffd"
-    # Two bytes: Western (Ã), Latin-1's own signs (Â), Central European
-    # (Ä, Å), Latin Extended-B (Æ, Ç, È), combining accents (Ì), Greek
-    # (Î, Ï), Cyrillic (Ð to Ô), Armenian (Õ, Ö), Hebrew (×), Arabic
-    # (Ø to Û).
-    "|\u00c3(?:" + _STRICT_A + "|" + _LOOSE_A + _LETTER + ")"
-    "|[\u00c2\u00c4-\u00c8\u00cc\u00ce-\u00db](?:" + _STRICT + "|" + _LOOSE
-    + _LETTER + ")"
-    # Three bytes (Asian and Indic scripts, punctuation such as "’")
-    "|[\u00e0-\u00ef](?:" + _STRICT + _ANY + "|" + _LOOSE + _STRICT + "|"
-    + _LOOSE + _LOOSE + _LETTER + ")"
-    # Four bytes (emoji)
-    "|[\u00f0-\u00f4](?:" + _STRICT + _ANY + _ANY + "|" + _LOOSE + _STRICT
-    + _ANY + "|" + _LOOSE + _LOOSE + _STRICT + "|" + _LOOSE + _LOOSE
-    + _LOOSE + _LETTER + ")"
-    "|[\u0080-\u009f]")
+# Letters that came out wrong in the file itself (a UTF-8 file opened once
+# in another character set and saved again): `garbled_text` reads them.
 _SURROGATE = re.compile("[\ud800-\udfff]")
 _INVISIBLE = re.compile("[\u0000-\u0008\u000b-\u001f\u007f-\u009f]")
 _GRID_RULE = re.compile(r"^[ \t]*\+(?:[-=:]+\+){1,}[ \t]*$", re.M)
@@ -1490,7 +1434,7 @@ _NOTE_LINE = re.compile(r"^\[\d{1,4}\]", re.M)
 
 
 def garbled(text: str) -> int:
-    return len(_GARBLED.findall(text))
+    return garbled_text.garbled(text)
 
 
 def pandoc_layout_signs(text: str) -> List[str]:

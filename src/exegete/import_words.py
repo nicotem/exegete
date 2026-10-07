@@ -215,13 +215,13 @@ HELD_BACK = {
                    "it in Word or LibreOffice and save it as a Word "
                    "document (.docx), then import that: its letters read "
                    "rightly in QualCoder too.",
-    "garbled_fixed": "Its text holds letters that came out wrong in the "
-                     "file itself (\"Ã©\" for \"é\", \"Ä…\" for \"ą\", "
-                     "\"Ð˜\" for \"И\"), as happens when a file is opened "
-                     "once in the wrong character set and saved again. A "
-                     "name written that way would escape a names list, "
-                     "though the assistant would still read it. Open it "
-                     "in its own app, correct them, save it, then ask "
+    "garbled_fixed": "Its text holds what look like letters that came out "
+                     "wrong in the file itself (\"Ã©\" for \"é\", \"Ä…\" "
+                     "for \"ą\", \"Ð˜\" for \"И\"), as happens when a file "
+                     "is opened once in the wrong character set and saved "
+                     "again. A name written that way would escape a names "
+                     "list, though the assistant would still read it. Open "
+                     "it in its own app, correct them, save it, then ask "
                      "again.",
     "not_read_in_time": "Not read in time; ask again for these.",
 }

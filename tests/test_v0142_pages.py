@@ -331,3 +331,25 @@ def test_every_terminal_command_has_its_powershell_form():
         assert "\n".join(windows) in blocks, "\n".join(windows)
         checked += 1
     assert checked == 3
+
+
+# ---------------------------------------------------------------------------
+# The records say what is still open
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("record", ["design.md", "wording.md"])
+def test_the_records_say_the_real_computer_checks_are_open(record):
+    """The port's privacy check, round 1: the design's own condition
+    (items 1 to 6 of its section 13 on a real Mac and a real Windows
+    computer before a release carries the check) was unmet, and the
+    records' note on the port did not say so."""
+    text = (REPO / "docs" / "update-check" / record).read_text(
+        encoding="utf-8")
+    note = text[text.index("**Since the port onto 0.14.2"):]
+    note = " ".join(note[:note.index("\n\n")].split())
+    assert "none of the checks on a real computer in" in note
+    assert ("items 1 to 6 must pass on a real Mac and a real Windows "
+            "computer before a release carries the check") in note
+    assert "Whether 0.14.2 waits for them is the owner's decision." in note
+    # and the site's change is in the same note, with D3 kept
+    assert "never from a branch, as D3 decided" in note

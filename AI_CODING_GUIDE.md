@@ -97,9 +97,9 @@ before acting (in the four-way vocabulary allow, allow_with_caveat,
 reframe_and_ask, refuse, explained to you in plain words). Ask for
 `explain_ai_coding_tools("grounding_rules")` or
 `explain_ai_coding_tools("methodology_vocabulary")`, or read the
-`exegete://guidance/methods` resource, which also cites the method
-literature it rests on. None of this replaces your
-approval of each suggestion.
+`exegete://guidance/methods` resource, which also lists the method
+literature QualCoder's prompts cite, if you want to bring a method into
+a session. None of this replaces your approval of each suggestion.
 
 ## Tool Reference (current)
 

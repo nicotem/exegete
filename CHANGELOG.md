@@ -199,8 +199,11 @@ matches its own) still names it.
   text; the questions about coder names ask for the researcher's own
   coder name, not "the one they use in QualCoder"; the private-note
   refusal says that a private note is written outside the conversation
-  (in QualCoder, for example). Answers say "Exegete" where they said
-  "this server".
+  (in QualCoder, for example). Answers, and the methods notes, say
+  "Exegete" where they said "this server" or "the server", and the
+  notes' description says that the method literature they list is the
+  one QualCoder's prompts cite, for researchers who want to bring in a
+  method.
 - **Tool descriptions**, rewritten in 40 of the 74 tools 0.14.1 had,
   each no longer than 0.14.1's, and in `read_brief`: "the project" for
   "the QualCoder project",
@@ -255,8 +258,11 @@ matches its own) still names it.
   opening text, the brief's first paragraph, the tagline, the command's
   help and NOTICE's first line say what was decided, that no served
   text or current document says that Exegete opens or exposes a
-  QualCoder project or misspells QualCoder's name, and that no tool
-  description is longer than 0.14.1's (`tests/test_v0142_selfrep.py`).
+  QualCoder project or misspells QualCoder's name, that no served text
+  or message says "the server" or "this server" except for the program
+  as a process (its working folder, environment and log), and that no
+  tool description is longer than 0.14.1's
+  (`tests/test_v0142_selfrep.py`).
 
 ### Changed: the rules a model must not miss come first in each tool description
 

@@ -185,7 +185,10 @@ def _messages():
     """Every string the package's code writes that is not a docstring:
     the answers, refusals and notes the tools return (and the log lines,
     which follow the same spelling). A tool's own docstring is its
-    description, which _served reads as the host sees it."""
+    description, which _served reads as the host sees it. Each string is
+    kept under a key of its own, so strings that report the same line
+    (the parts of an f-string on Python 3.11, or "a" if x else "b") are
+    all read."""
     found = {}
     for path in sorted((REPO / "src" / "exegete").glob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -200,7 +203,8 @@ def _messages():
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant) and isinstance(
                     node.value, str) and id(node) not in docstrings:
-                found[f"{path.name}:{node.lineno}"] = node.value
+                found[f"{path.name}:{node.lineno} #{len(found)}"] = \
+                    node.value
     return found
 
 
@@ -413,6 +417,139 @@ class TestNothingSaysExegeteOpensAQualCoderProject:
                      "FEATURE_ANALYSIS.md", "SECURITY_REVIEW.md"):
             assert name not in docs, name
             assert _historical((REPO / name).read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# "Exegete", not "the server", where a sentence says what Exegete does
+# ---------------------------------------------------------------------------
+
+# The ruling keeps "the server" where it names the program as a process
+# on the computer: its working folder, its environment, its log, the
+# computer that runs it, an older copy of it left running, adding it to
+# a host. Anywhere else in what is served, and in the messages, "the
+# server" or "this server" would speak for Exegete (the sweep's
+# relationship check found it in the methods notes, in
+# analyze_for_coding's lines for the researcher and in a refusal of
+# rename_file, beside a brief that says "Exegete").
+THE_SERVER_AS_A_PROCESS = (
+    "the server's own working folder",
+    "the server environment",
+    "the computer that runs the server",
+    "the server's log",
+    "copy of the server",
+    "copies of the server",
+    "to use the server, add it to your host's MCP configuration",
+    # a line of the log
+    "The server's state folder",
+    # the title of a section of INSTALL.md, quoted as a reference
+    "Environment variables the server reads",
+)
+
+THE_SERVER = re.compile(r"\b[Tt]h(?:e|is) server\b")
+
+
+def _the_server_in(text):
+    flat = _flat(text)
+    for words in THE_SERVER_AS_A_PROCESS:
+        flat = flat.replace(words, "")
+    return [flat[max(0, m.start() - 40):m.end() + 40]
+            for m in THE_SERVER.finditer(flat)]
+
+
+class TestExegeteNotTheServer:
+
+    def test_the_check_would_notice(self):
+        """The sentences the sweep found, word for word."""
+        for old in ("The server records the approval you report and cannot "
+                    "tell whether the researcher gave it",
+                    "What the server cannot check is the quality of the "
+                    "reading, or who approved",
+                    "which you relay: the server writes only what is marked "
+                    "approved, and cannot see who marked it.",
+                    "the server writes only what is marked approved, and "
+                    "cannot tell who approved it",
+                    "this server recognises a rename back only from a "
+                    "backup"):
+            assert _the_server_in(old), old
+        for fine in ("Each call that returns it writes one line to the "
+                     "server's log.",
+                     "it would be read from the server's own working folder",
+                     "an older copy of the server may still be writing",
+                     "Exegete records the approval you report"):
+            assert not _the_server_in(fine), fine
+
+    def test_no_served_text(self):
+        for mode in TOOL_SETS:
+            found = {where: hits for where, text in _served(mode).items()
+                     if (hits := _the_server_in(text))}
+            assert not found, (mode, found)
+
+    def test_no_message_in_the_code(self):
+        found = {where: hits for where, text in _messages().items()
+                 if (hits := _the_server_in(text))}
+        assert not found, found
+
+    def test_the_methods_notes_say_exegete(self):
+        notes = _flat(server.METHODS_GUIDANCE)
+        for words in ("Exegete records the approval you report and cannot "
+                      "tell whether the researcher gave it, so mark an item "
+                      "approved only on the researcher's word.",
+                      "What Exegete cannot check is the quality of the "
+                      "reading, or who approved;",
+                      "which you relay: Exegete writes only what is marked "
+                      "approved, and cannot see who marked it."):
+            assert words in notes, words
+
+    def test_the_lines_for_the_researcher_say_exegete(self, setup_server):
+        out = asyncio.run(server.mcp.call_tool(
+            "analyze_for_coding", {"file_ids": [1], "instruction": "test"}))
+        blocks = out[0] if isinstance(out, tuple) else out
+        text = json.loads("".join(getattr(b, "text", "")
+                                  for b in blocks))["instructions"]
+        for_the_user = _flat(text[text.index("**FOR THE USER:**"):])
+        assert ("record your decision on each one: Exegete writes only what "
+                "is marked approved, and cannot tell who approved it, so "
+                "check the counts it reports against what you said"
+                ) in for_the_user
+
+
+class TestTheMethodLiteratureIsQualCodersPrompts:
+    """The methods notes list the sources QualCoder 4.0's prompts cite,
+    for researchers who want to bring in a method; Exegete's rules are
+    not drawn from them (the sweep's truth check found four texts saying
+    that the notes "rest on" them)."""
+
+    CREDIT = "the method literature QualCoder's prompts cite"
+
+    def test_the_resource_and_the_help_say_whose_literature_it_is(self):
+        for mode in TOOL_SETS:
+            served = _served(mode)
+            texts = {"the resource's description": served[
+                         "description of exegete://guidance/methods"]}
+            if "help methods_notes" in served:
+                texts["the help"] = served["help methods_notes"]
+            for where, text in texts.items():
+                flat = _flat(text)
+                assert self.CREDIT + ", for researchers who want to bring " \
+                    "in a method" in flat, (mode, where)
+                assert "rest on" not in flat, (mode, where)
+        assert "## Method literature QualCoder 4.0 ships prompts for" in \
+            server.METHODS_GUIDANCE
+
+    def test_the_documents_say_the_same(self):
+        tools = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
+        entry = tools[tools.index("- `exegete://guidance/methods` -"):]
+        entry = entry[:entry.index(" - `")]
+        assert self.CREDIT + ", for researchers who want to bring in a " \
+            "method; needs no project" in entry
+        guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
+            encoding="utf-8"))
+        assert ("read the `exegete://guidance/methods` resource, which also "
+                "lists " + self.CREDIT + ", if you want to bring a method "
+                "into a session.") in guide
+        for text in (tools, guide):
+            assert "literature the notes rest on" not in text
+            assert "literature it rests on" not in text
 
 
 class TestQualCoderIsOptional:

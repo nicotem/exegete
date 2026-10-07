@@ -3514,10 +3514,10 @@ slice of the file, positions are verified or corrected when the excerpt
 is unique, codes and files must exist, and nothing is written to the
 project until each item is marked approved and apply_codings or
 create_proposed_codes runs.
-The server records the approval you report and cannot tell whether the
+Exegete records the approval you report and cannot tell whether the
 researcher gave it, so mark an item approved only on the researcher's
-word. What the server cannot check is the quality of the reading, or
-who approved; that is what the rules above, the researcher's own reading
+word. What Exegete cannot check is the quality of the reading, or who
+approved; that is what the rules above, the researcher's own reading
 and their host's per-call approval are for.
 
 ## Methodological judgement
@@ -3528,7 +3528,7 @@ QualCoder 4.0's built-in assistant applies the same four decisions
 inside its own chat, where they can stop a plan before any tool runs.
 Here the decision is yours to make and to explain; for coding
 suggestions and code proposals the safety mechanism is the researcher's
-approval of each item, which you relay: the server writes only what is
+approval of each item, which you relay: Exegete writes only what is
 marked approved, and cannot see who marked it. The direct write tools
 write on the call itself, with a backup.
 
@@ -3586,7 +3586,8 @@ researcher which framework applies before assuming one.
     f"{names.RESOURCE_SCHEME}://guidance/methods",
     mime_type="text/markdown",
     description="Grounding rules, the four-way methodological vocabulary, and "
-                "citations to the method literature the notes rest on. "
+                "citations to the method literature QualCoder's prompts "
+                "cite, for researchers who want to bring in a method. "
                 "Static; needs no project.")
 @_resource_guard
 def get_methods_guidance() -> str:
@@ -7566,7 +7567,7 @@ Once the assistant records and presents suggestions, you can:
 - Review the suggestions in the chat
 - Use `review_suggestions` to see more details
 - Use `update_suggestion_status` to record your decision on each one:
-  the server writes only what is marked approved, and cannot tell who
+  Exegete writes only what is marked approved, and cannot tell who
   approved it, so check the counts it reports against what you said
 - Use `apply_codings` to write approved suggestions to the database
 """
@@ -11454,8 +11455,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             "purpose": "Where to read more",
             "resource": "exegete://guidance/methods",
             "note": "The resource carries the grounding rules, the four-way "
-                    "vocabulary, and citations to the method literature the "
-                    "notes rest on; it needs no project to be selected"
+                    "vocabulary, and citations to the method literature "
+                    "QualCoder's prompts cite, for researchers who want to "
+                    "bring in a method; it needs no project to be selected"
         }
     }
 
@@ -17226,8 +17228,8 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
                             "it had before, restore_backup or QualCoder's "
                             "own Rename can put that name back (restoring "
                             "an earlier backup undoes everything done after "
-                            "it, any pseudonymisation run included); this "
-                            "server recognises a rename back only from a "
+                            "it, any pseudonymisation run included); "
+                            "Exegete recognises a rename back only from a "
                             "backup that shows this entry with that name "
                             "and, for its documents copy, the same text.")
             return {"error": message}

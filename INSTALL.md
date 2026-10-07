@@ -99,9 +99,10 @@ developer MCP servers are disabled on this device..."), and your IT
 team decides.
 
 **Updating**: download the newer `.mcpb` and install it the same way.
-Exegete does not look for new versions itself; with a GitHub account,
-Watch, then Custom, then Releases, on the repository's page sends you a
-notice of each.
+Exegete tells you, through Claude, when a newer version is out, unless
+you switch that off (the third setting, above); with a GitHub account,
+Watch, then Custom, then Releases, on the repository's page also sends
+you a notice of each.
 **Removing**: Settings, Extensions, Exegete, Uninstall. Neither
 touches your projects; what else stays is under "Uninstalling" below.
 **The log** is `mcp-server-Exegete.log` in `~/Library/Logs/Claude`

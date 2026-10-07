@@ -1128,3 +1128,32 @@ class TestThePortsChecksRoundOne:
         message = _answer(NOW + WEEK)["message"]
         assert f"{updates.UPDATE_PAGE} shows each way" in message
         assert "shows the way for Claude Desktop" not in message
+
+
+# ---------------------------------------------------------------------------
+# What INSTALL.md says of the extension agrees with the extension
+# ---------------------------------------------------------------------------
+
+def test_install_says_the_extension_tells_of_new_versions():
+    # The sweep's newcomer check: the extension section's "Updating" line,
+    # written before the check was ported, said that Exegete does not
+    # look for new versions, fifty lines below the setting that is on by
+    # default; a researcher could copy either into an ethics application
+    manifest = json.loads((REPO / "packaging" / "desktop-extension" /
+                           "manifest.in.json").read_text(encoding="utf-8"))
+    assert manifest["user_config"]["update_check"]["default"] is True
+    install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+    start = install.index("## Claude Desktop: the one-click extension")
+    section = " ".join(install[start:install.index("\n## ", start + 4)]
+                       .split())
+    updating = section[section.index("**Updating**"):
+                       section.index("**Removing**")]
+    assert "does not look for new versions" not in section
+    assert updating == (
+        "**Updating**: download the newer `.mcpb` and install it the same "
+        "way. Exegete tells you, through Claude, when a newer version is "
+        "out, unless you switch that off (the third setting, above); with "
+        "a GitHub account, Watch, then Custom, then Releases, on the "
+        "repository's page also sends you a notice of each. ")
+    assert "**Tell me when a new version is out**: on unless you switch " \
+           "it off." in section

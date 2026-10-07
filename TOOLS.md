@@ -638,7 +638,7 @@ no longer listed, until v1.0.
 - `exegete://cases/list` - All cases
 - `exegete://cases/{case_id}` - Case details
 - `exegete://journal` - Journal entries
-- `exegete://guidance/methods` - Static methods notes: the grounding rules, the four-way methodological vocabulary (allow, allow_with_caveat, reframe_and_ask, refuse) and citations to the method literature the notes rest on; needs no project
+- `exegete://guidance/methods` - Static methods notes: the grounding rules, the four-way methodological vocabulary (allow, allow_with_caveat, reframe_and_ask, refuse) and citations to the method literature QualCoder's prompts cite, for researchers who want to bring in a method; needs no project
 - `exegete://guidance/brief` - The assistant's brief (provisional), the text `read_brief()` returns; needs no project
 
 ## Available Tools

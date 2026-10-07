@@ -25,7 +25,10 @@ Pinned here:
   the file only when it holds them, and never say that QualCoder's
   reading garbles a file it reads rightly;
 - LibreOffice's own text box (Insert > Text Box, a shape holding text)
-  starts on a line of its own, as a frame's does;
+  starts on a line of its own, as a frame's does; a shape with no text
+  (a line or a box drawn beside the words, which LibreOffice saves with
+  an empty paragraph inside) leaves the sentence it sits in whole, and
+  the preview says nothing of a text box;
 - TOOLS.md, PRIVACY.md and the CHANGELOG say so.
 """
 
@@ -395,6 +398,67 @@ EMPTY_SHAPE = (
     '<text:p>Before <draw:custom-shape text:anchor-type="as-char" '
     'draw:name="Shape2"><draw:enhanced-geometry draw:type="line"/>'
     '</draw:custom-shape>after.</text:p>')
+# A shape with no text as LibreOffice 25.2 itself writes it: an empty
+# paragraph, <text:p/>, inside every shape it saves. Made with
+# LibreOffice through a macro (a line and a rectangle, each anchored as
+# a character and to a character, a line with a title and description,
+# and a custom shape), and a line drawn in Word that LibreOffice's
+# converter saved as OpenDocument.
+LO_SENTENCE = ('<text:p text:style-name="Standard">P1: I went to the '
+               'office{shape} and they said no.</text:p>')
+LO_EMPTY_SHAPES = {
+    "line-as-char": (
+        '<draw:line text:anchor-type="as-char" svg:y="0in" '
+        'draw:z-index="0" draw:name="Shape1" draw:style-name="gr1" '
+        'draw:text-style-name="P1" svg:x2="1.1811in" svg:y2="0.3937in">'
+        '<text:p/></draw:line>'),
+    "line-to-char": (
+        '<draw:line text:anchor-type="char" draw:z-index="0" '
+        'draw:name="Shape1" draw:style-name="gr1" draw:text-style-name="P1" '
+        'svg:x1="0in" svg:y1="0in" svg:x2="1.1811in" svg:y2="0.3937in">'
+        '<text:p/></draw:line>'),
+    "rectangle-as-char": (
+        '<draw:rect text:anchor-type="as-char" svg:y="0in" '
+        'draw:z-index="0" draw:name="Shape1" draw:style-name="gr1" '
+        'draw:text-style-name="P1" svg:width="1.1815in" '
+        'svg:height="0.3941in"><text:p/></draw:rect>'),
+    "rectangle-to-char": (
+        '<draw:rect text:anchor-type="char" draw:z-index="0" '
+        'draw:name="Shape1" draw:style-name="gr1" draw:text-style-name="P1" '
+        'svg:width="1.1815in" svg:height="0.3941in" svg:x="0in" '
+        'svg:y="0in"><text:p/></draw:rect>'),
+    "line-with-alt-text-to-char": (
+        '<draw:line text:anchor-type="char" draw:z-index="0" '
+        'draw:name="Shape1" draw:style-name="gr1" draw:text-style-name="P1" '
+        'svg:x1="0in" svg:y1="0in" svg:x2="1.1811in" svg:y2="0.3937in">'
+        '<svg:title>Arrow</svg:title><svg:desc>Points at the answer'
+        '</svg:desc><text:p/></draw:line>'),
+    "custom-shape-to-char": (
+        '<draw:custom-shape text:anchor-type="char" draw:z-index="0" '
+        'draw:name="Shape1" draw:style-name="gr1" svg:width="1.1815in" '
+        'svg:height="0.3941in" svg:x="0in" svg:y="0in"><text:p/>'
+        '<draw:enhanced-geometry svg:viewBox="0 0 21600 21600" '
+        'draw:type="rectangle" draw:enhanced-path="M 0 0 L 21600 0 21600 '
+        '21600 0 21600 0 0 Z N"/></draw:custom-shape>'),
+}
+WORD_LINE_SAVED_BY_LO = (
+    '<text:p text:style-name="Standard">Interviewer: Tell me about the '
+    'money.<draw:line text:anchor-type="char" draw:z-index="0" '
+    'draw:name="Straight Connector 1" draw:style-name="gr1" '
+    'draw:text-style-name="P1" svg:x1="3.2807in" svg:y1="0in" '
+    'svg:x2="5.4681in" svg:y2="0.0004in"><text:p/></draw:line> And the '
+    'bus.</text:p><text:p text:style-name="Standard">Respondent: It was '
+    'the funding.</text:p>')
+# Paragraphs inside a shape that hold no character once their tags are
+# taken out: written by hand, as another program might.
+NO_CHARACTER = {
+    "empty-with-style": '<text:p text:style-name="P2"></text:p>',
+    "empty-span": '<text:p><text:span text:style-name="T1"/></text:p>',
+    "spaces-and-a-tab": '<text:p> <text:s text:c="3"/><text:tab/></text:p>',
+    "two-empty": '<text:p/><text:h text:outline-level="1"/>',
+    "a-space-as-a-code": '<text:p>&#32;&#x9;</text:p>',
+    "empty-then-a-title": '<text:p/><svg:title>Arrow</svg:title>',
+}
 
 
 def _odt_text(body, departures=None):
@@ -440,6 +504,64 @@ class TestLibreOfficesTextBox:
         text, signs = _odt_text(EMPTY_SHAPE)
         assert "Before after." in text
         assert "odt_text_boxes" not in signs
+
+    @pytest.mark.parametrize("shape", list(LO_EMPTY_SHAPES.values()),
+                             ids=list(LO_EMPTY_SHAPES))
+    def test_libreoffices_empty_shape_leaves_the_sentence_whole(self,
+                                                                 shape):
+        """LibreOffice's empty paragraph inside the shape is not text."""
+        text, signs = _odt_text(LO_SENTENCE.format(shape=shape))
+        assert text.startswith(
+            "P1: I went to the office and they said no.\n"), text
+        assert "odt_text_boxes" not in signs
+
+    def test_a_word_line_saved_by_libreoffice_leaves_the_sentence_whole(
+            self):
+        text, signs = _odt_text(WORD_LINE_SAVED_BY_LO)
+        assert text.startswith(
+            "Interviewer: Tell me about the money. And the bus.\n"), text
+        assert "odt_text_boxes" not in signs
+
+    @pytest.mark.parametrize("inner", list(NO_CHARACTER.values()),
+                             ids=list(NO_CHARACTER))
+    def test_a_shape_whose_paragraphs_hold_no_character_changes_nothing(
+            self, inner):
+        body = ('<text:p>Before <draw:rect text:anchor-type="as-char" '
+                f'draw:name="Shape1">{inner}</draw:rect>after.</text:p>')
+        text, signs = _odt_text(body)
+        without = doc_readers.DEPARTURES - {"odt_text_boxes"}
+        assert text == _odt_text(body, without)[0]
+        assert "odt_text_boxes" not in signs
+
+    @pytest.mark.parametrize("empty", [
+        '<text:p/>', '<text:p text:style-name="P2"></text:p>'],
+        ids=["self-closed", "opened-and-closed"])
+    def test_a_box_whose_first_paragraph_is_empty_is_still_a_box(self,
+                                                                 empty):
+        body = LO_TEXT_BOX.replace(
+            '<text:p text:style-name="Frame_20_contents">',
+            empty + '<text:p text:style-name="Frame_20_contents">')
+        text, signs = _odt_text(body)
+        assert "money.\n\n" in text, text
+        assert ("\n\nBox: ask about the funding cuts.\n\n And the "
+                "bus.") in text, text
+        assert signs.get("odt_text_boxes") == 1
+
+    def test_the_preview_says_nothing_of_a_box_for_an_empty_shape(
+            self, project, folder):
+        (folder / "line.odt").write_bytes(import_fixtures.odt(
+            import_fixtures._content(LO_SENTENCE.format(
+                shape=LO_EMPTY_SHAPES["line-to-char"]))))
+        preview = _call(paths=[str(folder)])
+        (entry,) = preview["files"]
+        assert import_words.WARNINGS["odt_text_boxes"][1] not in \
+            entry.get("for_information", []), entry
+        done = _call(paths=[str(folder)],
+                     preview_token=preview["preview_token"])
+        (stored,) = _stored(project).values()
+        assert stored.startswith(
+            "P1: I went to the office and they said no.\n"), stored
+        assert done["success"] is True
 
     def test_the_preview_says_so(self, project, folder):
         (folder / "box.odt").write_bytes(import_fixtures.odt(
@@ -500,6 +622,8 @@ class TestTheDocuments:
                      "a capital at a word's start"):
             assert said in row, said
         assert "LibreOffice's Insert > Text Box" in tools
+        assert ("a shape with no text (a line or a box drawn beside the "
+                "words) changes nothing") in tools
 
     def test_privacy_md(self):
         privacy = _flat("PRIVACY.md")

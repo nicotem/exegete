@@ -903,14 +903,43 @@ _ODT_TEXT_BOX = re.compile(r"<draw:text-box(?=[\s/>])")
 _ODT_SHAPE = re.compile(
     r"<(draw:(?:custom-shape|rect|ellipse|circle|polygon|polyline|path|"
     r"regular-polygon|caption|connector|line|measure))(?=[\s/>])")
+# A tag here ends before the next "<" (no attribute holds one), so that
+# markup with openings and no ">" costs one pass.
+_ODT_PARAGRAPH_OPENING = re.compile(r"<(text:[ph])(?=[\s/>])[^<>]*>")
+_ODT_TAG_IN_SHAPE = re.compile(r"<[^<>]*>")
+
+
+def _holds_text(inner: str) -> bool:
+    """Whether a paragraph or heading in a shape's markup holds a
+    character other than white space once its tags are taken out.
+    LibreOffice writes an empty paragraph, <text:p/>, into every shape
+    it saves, a line or a rectangle with no text among them, so a
+    paragraph alone is no sign of text. Scans forwards only."""
+    at = 0
+    while True:
+        match = _ODT_PARAGRAPH_OPENING.search(inner, at)
+        if match is None:
+            return False
+        if match.group(0).endswith("/>"):
+            at = match.end()
+            continue
+        close = inner.find(f"</{match.group(1)}>", match.end())
+        end = len(inner) if close == -1 else close
+        words = _ODT_TAG_IN_SHAPE.sub("", inner[match.end():end])
+        if _ODT_REFERENCE.sub(_odt_reference, words).strip():
+            return True
+        if close == -1:
+            return False
+        at = close
 
 
 def _mark_text_shapes(data: str, box_mark: str) -> str:
-    """`box_mark` before each drawing shape that holds a paragraph, as
-    before a frame's text box, so that its text starts on a line of its
-    own; a shape with no text (a line drawn beside the words) is left as
-    it is. Scans forwards only, past each shape's closing tag, so a file
-    of shapes costs one pass; an opening with no closing, and all that
+    """`box_mark` before each drawing shape that holds text, as before a
+    frame's text box, so that its text starts on a line of its own; a
+    shape with no text (a line or a box drawn beside the words, which
+    LibreOffice saves with an empty paragraph inside) is left as it is.
+    Scans forwards only, past each shape's closing tag, so a file of
+    shapes costs one pass; an opening with no closing, and all that
     follows it, are left as they are."""
     out: List[str] = []
     at = 0
@@ -930,7 +959,7 @@ def _mark_text_shapes(data: str, box_mark: str) -> str:
             break
         out.append(data[at:match.start()])
         inner = data[tag_end + 1:close]
-        if "<text:p" in inner or "<text:h" in inner:
+        if _holds_text(inner):
             out.append(box_mark)
         out.append(data[match.start():close])
         at = close

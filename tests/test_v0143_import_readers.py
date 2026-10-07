@@ -339,6 +339,19 @@ class TestHostileFilesStayCheap:
             lambda: _text(doc_readers.OPENDOCUMENT, hostile),
             lambda: _text(doc_readers.OPENDOCUMENT, ordinary)) == "W.\n\n"
 
+    @pytest.mark.parametrize("inner", [
+        "<text:p " * 40000,
+        "<text:p>" + "<" * 80000 + "</text:p>"],
+        ids=["paragraph-openings-with-no-end", "a-run-of-openings"])
+    def test_opendocument_shape_paragraphs_with_no_closing(self, inner):
+        """A drawn shape's paragraphs are looked into for text (an empty
+        one is no text box); that look goes forwards only too."""
+        hostile = self._odt('<text:p>a<draw:rect draw:name="S">' + inner
+                            + "</draw:rect>b</text:p>")
+        ordinary = self._odt("<text:p>a" + "x" * len(inner) + "b</text:p>")
+        self._cheap(lambda: _text(doc_readers.OPENDOCUMENT, hostile),
+                    lambda: _text(doc_readers.OPENDOCUMENT, ordinary))
+
     def test_a_web_page_of_many_spaces_then_blocks(self):
         def page(inline):
             return ("<html><body>" + inline * 20000 + "<div></div>" * 20000

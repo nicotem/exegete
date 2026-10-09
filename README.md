@@ -190,7 +190,8 @@ Codex, no one with a local model. Text you paste or attach goes in
 full; a document imported in QualCoder or brought in through Exegete
 (provisional), only as far as the assistant reads it: Exegete's preview
 of an import sends the documents' names, sizes, lengths and warnings,
-never their text.
+never their text
+([PRIVACY.md, "Bringing documents in"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#bringing-documents-in-provisional-0143)).
 
 **Assistants that open files by themselves.** Exegete's answers hold
 some things back from the assistant, such as the private part of a memo

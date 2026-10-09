@@ -173,8 +173,10 @@ def _tools(mode="lifecycle"):
 # first session say how to see the coding, the tables carry the import
 # row and the new counts, and the advanced list names the two tools;
 # "What comes next" loses its first item. That takes 497 characters, and
-# the limit is raised by that and no more: 35,202.
-README_LIMIT = 35_202
+# the link from the sentence on imports to PRIVACY.md's section on them
+# (which tests/test_v0143_import_review_minors.py holds) 136 more, and
+# the limit is raised by that and no more: 35,338.
+README_LIMIT = 35_338
 
 
 def test_the_readme_stays_short():

@@ -154,7 +154,9 @@ def test_how_it_works_explains_before_it_instructs():
             "QualCoder or brought in through Exegete (provisional), only as "
             "far as the assistant reads it: Exegete's preview of an import "
             "sends the documents' names, sizes, lengths and warnings, never "
-            "their text.") in data
+            "their text ([PRIVACY.md, \"Bringing documents in\"]"
+            "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
+            "#bringing-documents-in-provisional-0143)).") in data
 
 
 # Modules that would give Exegete an AI, or a way onto the network, of its

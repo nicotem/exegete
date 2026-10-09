@@ -85,7 +85,7 @@ def screen(platform: Optional[str] = None) -> Optional[str]:
     """None when a window can be opened here, else why not."""
     platform = platform or sys.platform
     if env_settings.remote_session():
-        return ("this server runs in an SSH session, so a window would "
+        return ("Exegete runs in an SSH session here, so a window would "
                 "not open on your screen")
     if platform not in ("darwin", "win32") and \
             not env_settings.linux_display():

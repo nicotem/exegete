@@ -771,14 +771,23 @@ BEFORE = {
 
 class TestNoDescriptionGrew:
 
+    # v0.14.3 (provisional) adds two tools, and lengthens two descriptions
+    # on purpose (tests/test_v0142_description_cut.py pins their words in
+    # CHANGED_0143); every other description is still held to 0.14.1's
+    NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
+    CHANGED_IN_0143 = {"analyze_file_with_coding", "import_text_file"}
+
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("lifecycle")
         registered = server.mcp.original_descriptions
-        assert set(registered) == set(BEFORE) | {"check_for_updates"}
+        assert set(registered) == set(BEFORE) | {"check_for_updates"} | \
+            self.NEW_IN_0143
         exact = sys.version_info[:2] == (3, 13)
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
+            if name in self.CHANGED_IN_0143:
+                continue
             text = registered[name]
             now_solid = len("".join(text.split()))
             if now_solid > solid:

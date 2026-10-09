@@ -408,9 +408,10 @@ HELD_BACK = (
     "suggest codes first or follow",
     "ask what they make of a passage",
     "unless the study's sampling was designed for that",
-    # the owner, 1 October 2026: held back until 0.14.3 gives the reading
-    # tool a "without codes" option, so that a fresh reading can be given
-    "wants a fresh reading",
+    # The line on a fresh reading (the owner, 1 October 2026) was held back
+    # until 0.14.3 gave the reading tool a "without codes" option; 0.14.3
+    # (provisional) serves it, naming that option
+    # (tests/test_v0143_reading_without_codes.py pins its words)
 )
 # Notes meant for the owner, never for the assistant
 OWNER_MARKS = ("Owner's note", "Note for the owner", "[Provisional",

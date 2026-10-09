@@ -427,9 +427,7 @@ class TestTheRulesSitWithinTheCut:
 WORDS_0141 = {
     "add_annotation": (1697, 1406, "eb754cae1fd5fd0c"),
     "add_journal_entry": (1137, 943, "c3a73ee84df3096d"),
-    # v0.14.3 (provisional): reads in parts, the `start` argument, and
-    # the `without_codes` argument (reading without codes)
-    "analyze_file_with_coding": (2299, 1882, "ba92df2789339118"),
+    "analyze_file_with_coding": (1977, 1620, "c800e920aaa2fe59"),
     "analyze_for_coding": (6101, 4958, "c774dca8502c1ab6"),
     "apply_codings": (2627, 2152, "f9afa83a8784cd88"),
     "cleanup_old_sessions": (842, 684, "e2e05fad8d2357ea"),
@@ -465,10 +463,7 @@ WORDS_0141 = {
     "get_current_project": (1921, 1571, "a7bdafc47afae608"),
     "get_file_attributes": (317, 246, "49a2ce568819b490"),
     "get_project_summary": (242, 202, "19d66f09ec602fed"),
-    # v0.14.3 (provisional): says that the text passes through the
-    # conversation, its pointer to import_documents, and the deprecated
-    # create_backup=false
-    "import_text_file": (4025, 2998, "30b5d7a15295c216"),
+    "import_text_file": (3757, 2786, "37c3de867cf6da5f"),
     "link_file_to_case": (1846, 1434, "89fd22da7be857b6"),
     "list_attribute_types": (415, 335, "5609e42ca8a0ceea"),
     "list_available_projects": (792, 622, "62e5c4a8248d1d5e"),
@@ -558,7 +553,17 @@ REWORDED_0142 = {
 }
 
 # Every description as this release serves it
-WORDS = {**WORDS_0141, **REWORDED_0142}
+# The descriptions v0.14.3 (provisional) changes, as it serves them, on
+# top of 0.14.2's words: analyze_file_with_coding (reads in parts, the
+# `start` argument, and the `without_codes` argument, reading without
+# codes) and import_text_file (that its text passes through the
+# conversation, its pointer to import_documents, the deprecated
+# create_backup=false, and 0.14.2's "joins the project's documents")
+CHANGED_0143 = {
+    "analyze_file_with_coding": (2293, 1878, "892912ccbe8f76ac"),
+    "import_text_file": (4022, 2995, "b3bfa6902065b9a0"),
+}
+WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to

@@ -32,8 +32,10 @@ qualcoder-mcp), in the conversational workflow.
    is refused; a QualCoder 4.0 window writes no lock file and is detected
    only heuristically, so confirm yourself that none has the project
    open)
-5. **You** read the coded passages back in the conversation, or open
-   the project in QualCoder to see them highlighted in the text
+5. **You** read the coded passages back in the conversation, ask
+   Claude to open the file for reading (provisional: a page in your
+   browser shows them highlighted in the text, which stays off the
+   conversation), or open the project in QualCoder to see them there
 
 Nothing is written until each item is marked approved, every write is
 backed up first by default, and mistakes can be undone (`delete_coding`

@@ -64,10 +64,11 @@ BRIEF_SECTION_4 = (
     "QualCoder; they can work on it in either program, one at a time. The "
     "two programs do not talk to each other: they meet only in the "
     "project. "
+    # v0.14.3 (provisional): documents come in through import_documents
+    # and a whole file opens for reading through open_file_for_reading,
+    # so neither is on the list any more
     "- Some researchers also use QualCoder, by choice or for what Exegete "
-    "does not do yet: bringing in documents other than text, reading a "
-    "whole file with its coding highlighted, and images, audio, video and "
-    "graphs.")
+    "does not do yet: images, audio, video and graphs.")
 
 # What the proposal retired, and the first impressions' older bans. A
 # sentence about QualCoder itself ("a project QualCoder 3.8.2 has open")

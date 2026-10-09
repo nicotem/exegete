@@ -523,9 +523,7 @@ the researcher why; do not look for a way round it.
   two programs do not talk to each other: they meet only in the
   project.
 - Some researchers also use QualCoder, by choice or for what Exegete
-  does not do yet: bringing in documents other than text, reading a
-  whole file with its coding highlighted, and images, audio, video and
-  graphs.
+  does not do yet: images, audio, video and graphs.
 - Only one program should change a project at a time. Exegete refuses
   to write while QualCoder 3.8.2 has the project open; for QualCoder
   4.0 it can only see signs, so when a tool says the project may be

@@ -42,7 +42,7 @@ Through these tools an AI assistant can:
 - **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
 - **Undo & restore**: delete a coding, list backups, and restore a whole project to an earlier state
-- **Import transcripts**, link files to cases, and **rename cases and files** the way QualCoder's Manage Cases and Manage Files do (`rename_case`, `rename_file`)
+- **Bring in documents** from the computer (provisional, v0.14.3: Word, OpenDocument, RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part) and **transcripts** through the conversation, link files to cases, and **rename cases and files** the way QualCoder's Manage Cases and Manage Files do (`rename_case`, `rename_file`)
 - **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti, and MAXQDA: **deprecated, removed in v0.15**, because it files every coding under the AI coder name and leaves out cases, annotations, journals and media; QualCoder's own export (Project, Export, REFI-QDA Project export) keeps them
 - **Report exports**: codebook, coded segments, code frequencies and case-code matrix as CSV, txt or Markdown files
 - **Pseudonymisation that keeps the coding** (`pseudonymise_source`): replace the names you list, as whole words, in the stored text of one text source per call, moving every coding, annotation and case link with the text; a preview and a residue report come first, a mandatory backup is taken, and what the tool does not rewrite is counted rather than left to be discovered, and the names left in every file's text are counted, both readings; with `rewrite_memos` the public part of every note and journal entry is rewritten too, and a mapping you type must be saved into the project's own `pseudonyms.json` or attested as kept before a run goes ahead
@@ -533,7 +533,7 @@ Claude will:
 - Create a backup first (by default)
 - Write approved codings to database (all-or-nothing)
 - Report success with coding IDs
-- Check the results, in the conversation or in QualCoder: read them back here, or open the project in QualCoder to see them in the text (a QualCoder 4.0 window that was already open will not show them until the project is reopened)
+- Check the results, in the conversation, on your own screen or in QualCoder: read them back here, ask for the file to be opened for reading (`open_file_for_reading`, provisional: a page in your browser shows them in the text), or open the project in QualCoder to see them in the text (a QualCoder 4.0 window that was already open will not show them until the project is reopened)
 
 **If something went wrong**: `delete_coding(coding_id)` removes a single coding
 and marks its suggestion removed in the session (which then allows it to be
@@ -706,7 +706,7 @@ reaches it four ways:
   text, which Claude Code shows at the start of a session;
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
-  project: it returns the full brief (about 12,500 characters), or in
+  project: it returns the full brief (about 12,400 characters), or in
   the `core` set the short version;
 - the same full brief as the help topic `explain_ai_coding_tools('brief')`
   and the resource `exegete://guidance/brief`;

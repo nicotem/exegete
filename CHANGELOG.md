@@ -108,7 +108,10 @@ is built to those decisions, and may change before it is released.
   read without its codings: when the researcher wants a fresh reading,
   read the file with `analyze_file_with_coding(without_codes=true)`,
   which leaves their codings out, and tell them whether you have seen
-  any. The full brief is now about 12,500 characters.
+  any. Section 4's list of what Exegete does not do yet keeps images,
+  audio, video and graphs: documents now come in through Exegete, and a
+  whole file opens for reading. The full brief is now about 12,400
+  characters.
 
 ### Changed (provisional): whole-file reads in parts
 
@@ -337,6 +340,21 @@ is built to those decisions, and may change before it is released.
   an install with it is, as a whole, under the AGPL's terms, and
   Exegete's own code stays LGPL. New libraries in every install:
   defusedxml, and striprtf pinned exactly.
+
+### Changed (provisional): what the documents say Exegete does not do yet
+
+- With documents brought in through Exegete and a whole file opened
+  for reading, the README's "Not in Exegete yet" lists bringing in
+  images, audio and video, coding by selecting text yourself, coding
+  images, audio, video or an area of a PDF page, graphs, and
+  QualCoder's Reports menu. "What you can do" says that transcripts come
+  in as documents from the computer too, and that you can read a whole
+  transcript on a page in your browser; "Where your data goes" says
+  what an import's preview sends; "What comes next" no longer lists the
+  two as in development; the tables carry the import and the new tool
+  counts. INSTALL.md's note on QualCoder, the brief's section 4,
+  TOOLS.md, the coding guide, the extension's description and the maps
+  of the code in CLAUDE.md and CONTRIBUTING.md say the same.
 
 ### Changed: the README's table of assistants
 

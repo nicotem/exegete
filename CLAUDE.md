@@ -37,6 +37,13 @@ of a project from the conversation. It runs as an MCP server.
 - `project_settings.py`: the AI coder name file. `state_folder.py`: the
   state folder. `transition.py`: tidying up after the rename.
 - `path_identity.py`: containment checks by folder identity.
+- `doc_import.py`, `doc_readers.py`, `import_reading.py` and their
+  neighbours (`import_*.py`, `garbled_text.py`): bringing documents in
+  (`import_documents`, 0.14.3, provisional; the optional part
+  `pdf-epub` reads PDF and EPUB). `reading.py`, `reading_copy.py`,
+  `reading_folder.py`, `opener.py`, `origin_mark.py`: reading a whole
+  file on the researcher's screen (`open_file_for_reading`).
+  `parts.py`: long files read in parts.
 - `refi_export.py`: REFI-QDA. `coder_comparison.py`: coder agreement.
 - `updates.py`: the check for new versions (`check_for_updates` and the
   notes given once). `release.py`: this release's version, date and

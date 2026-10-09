@@ -149,13 +149,16 @@ assistant a brief: how it expects the assistant to work with you
 pass on, so the brief reaches the assistant four ways. A short version
 is Exegete's opening text: Claude Code shows it (and keeps only the
 first 2,048 characters of any server's opening text; this one is
-shorter), Claude Desktop's chat is reported not to, LM Studio does not
-support it, and whether Cowork shows it is not yet checked. The tool
-`read_brief`, in every tool set, has a description that asks the
+shorter); Claude Desktop does not pass it on, in its chat or in Cowork
+(checked on 9 October 2026); and LM Studio does not support it. The
+tool `read_brief`, in every tool set, has a description that asks the
 assistant to call it at the start of every conversation about a
-project, so it reaches every host that sends tool descriptions. The
-same text is a help topic and the resource `exegete://guidance/brief`,
-and the answers that open a project carry a one-line reminder. The
+project, so it reaches every host that sends tool descriptions; in
+that check, in Cowork, it was the first tool the assistant called. The
+same text is a help topic and the resource `exegete://guidance/brief`
+(Claude Desktop does not let the assistant read Exegete's resources,
+in its chat or in Cowork), and the answers that open a project carry a
+one-line reminder. The
 brief is provisional: a later release may change it.
 
 ## What You'll Need

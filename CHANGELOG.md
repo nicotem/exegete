@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
-## [0.14.2-alpha] - 2026-10-08
+## [0.14.2-alpha] - 2026-10-09
 
 v0.14.2. What a researcher notices first: with the Claude Desktop
 extension, a new setting, "Tell me when a new version is out", on unless
@@ -143,11 +143,15 @@ From pull request #11, with the code review's two findings fixed.
 - **Provisional.** The brief says so in its own text. It carries the
   tools' own rules, adds how to work with the researcher where no
   single tool says, and leaves out, until this project's statement on
-  method, the lines that would take a position on method. Before it is
-  released, the project's maintainer reads it and runs a ten-minute
-  live check in Cowork (whether Cowork shows the opening text, cuts
-  long tool texts at 2,048 characters, lets the assistant read a
-  resource by itself, and whether a rule given is followed).
+  method, the lines that would take a position on method. The
+  project's maintainer read it before release, and checked it live in
+  Claude Desktop with this release's extension (9 October 2026). In
+  Cowork the assistant called `read_brief` first, passed on the note
+  about new versions, and met "the main themes of the whole dataset"
+  with a sounder first step and a question. Neither Cowork nor the chat
+  passes Exegete's opening text on, or lets the assistant read its
+  resources; Cowork shows about the first 4,200 characters of a tool's
+  description, the chat all of it.
 - One line of the draft is not served: when the researcher wants a
   fresh reading, not to read their codes first. Reading a file for
   coding shows the codings already on it, so the line could not be

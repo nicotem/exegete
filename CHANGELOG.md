@@ -146,12 +146,14 @@ From pull request #11, with the code review's two findings fixed.
   method, the lines that would take a position on method. The
   project's maintainer read it before release, and checked it live in
   Claude Desktop with this release's extension (9 October 2026). In
-  Cowork the assistant called `read_brief` first, passed on the note
-  about new versions, and met "the main themes of the whole dataset"
-  with a sounder first step and a question. Neither Cowork nor the chat
-  passes Exegete's opening text on, or lets the assistant read its
-  resources; Cowork shows about the first 4,200 characters of a tool's
-  description, the chat all of it.
+  Cowork, `read_brief` was the first of Exegete's tools the assistant
+  called; it passed on the note about new versions without being
+  asked, and met a request for "the main themes of the whole dataset"
+  with a sounder first step and a question. Neither Cowork nor Claude
+  Desktop's chat passes Exegete's opening text on or lets the assistant
+  read Exegete's resources. In that check, Cowork showed about the
+  first 4,200 of the 6,342 characters of `analyze_for_coding`'s
+  description, and the chat all of it.
 - One line of the draft is not served: when the researcher wants a
   fresh reading, not to read their codes first. Reading a file for
   coding shows the codings already on it, so the line could not be

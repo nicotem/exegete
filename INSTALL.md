@@ -154,12 +154,12 @@ shorter); Claude Desktop does not pass it on, in its chat or in Cowork
 tool `read_brief`, in every tool set, has a description that asks the
 assistant to call it at the start of every conversation about a
 project, so it reaches every host that sends tool descriptions; in
-that check, in Cowork, it was the first tool the assistant called. The
-same text is a help topic and the resource `exegete://guidance/brief`
-(Claude Desktop does not let the assistant read Exegete's resources,
-in its chat or in Cowork), and the answers that open a project carry a
-one-line reminder. The
-brief is provisional: a later release may change it.
+that check, in Cowork, it was the first of Exegete's tools the
+assistant called. The same text is a help topic and the resource
+`exegete://guidance/brief` (Claude Desktop does not let the assistant
+read Exegete's resources, in its chat or in Cowork), and the answers
+that open a project carry a one-line reminder. The brief is
+provisional: a later release may change it.
 
 ## What You'll Need
 

@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- The README's table of assistants ("Where your data goes") now says
+  first why it matters (some assistants open files by themselves,
+  outside Exegete and its protections), then asks one plain question
+  per column: whether the assistant opens files by itself, where the
+  conversation goes, and which one we suggest for participants' data.
+  No fact changed.
 
 ## [0.14.2-alpha] - 2026-10-09
 

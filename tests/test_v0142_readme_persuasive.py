@@ -154,7 +154,12 @@ def _tools(mode="lifecycle"):
 # the reader uses QualCoder; "not an add-on or a remote control" moves
 # into "Three commitments". That takes 676 characters, and the limit is
 # raised by that and no more: 34,303.
-README_LIMIT = 34_303
+# The owner's redraft of the table of assistants (9 October 2026, after
+# he found it obscure) says first why it matters, in a paragraph of its
+# own that names what Exegete holds back, and asks one plain question
+# per column; no fact changed. That takes 252 characters, and the limit
+# is raised by what the page needs and no more: 34,552.
+README_LIMIT = 34_552
 
 
 def test_the_readme_stays_short():
@@ -411,39 +416,45 @@ def _cells(row):
 
 def test_the_assistants_table():
     section = _section("Where your data goes", "Start here")
-    # v0.14.2, the README's second round of checks: the verdict second,
-    # so that a reader on a phone sees it beside the name (GitHub cuts the
-    # table after its second column at 375 pixels)
-    assert ("| Assistant | For participants' data | Opens files by itself? | "
-            "Its AI's maker |") in section
+    # v0.14.2, the README's second round of checks put the verdict
+    # second, so that a reader on a phone saw it beside the name (GitHub
+    # cuts the table after its second column at 375 pixels); the owner,
+    # 9 October 2026, found that table obscure: the redraft says first
+    # why it matters and asks one plain question per column, what the
+    # assistant does beside its name and the suggestion last. No fact
+    # changed.
+    assert ("| Assistant | Opens files by itself, outside Exegete? | "
+            "Where the conversation goes | For participants' data, we "
+            "suggest |") in section
     rows = _rows(section, "| **")
     assert [re.match(r"\| \*\*([^*]+)\*\*", row).group(1) for row in rows] \
         == list(ASSISTANTS)
     cells = dict(zip(ASSISTANTS, (_cells(row) for row in rows)))
+    # (the columns: reach, where the conversation goes, verdict)
+    REACH, MAKER, VERDICT = 1, 2, 3
     # each verdict as PRIVACY.md gives it, assistant by assistant
     privacy = _flat(_read("PRIVACY.md"))
     hosts = _between(privacy, "## Assistants that open files by themselves",
                      "## Keeping notes private")
     verdicts = {
-        "Claude Desktop's chat": ("Not by itself, as far as Anthropic's "
-                                  "pages say",
+        "Claude Desktop's chat": ("No, when set up as below (as far as "
+                                  "Anthropic's pages say)",
                                   "**not by itself, as far as Anthropic's "
                                   "pages say.**"),
         "Claude's Cowork": ("Yes, in the folders you connect to it",
                             "**yes, in the folders you connect to it.**"),
-        "Claude Code": ("Yes, without asking, in the folder it starts in "
-                        "and beyond", "**yes**"),
+        "Claude Code": ("Yes, without asking, in its folder and beyond",
+                        "**yes**"),
         "ChatGPT's desktop app and Codex": (
             "Codex: yes, well beyond its folder, without asking, even in "
-            "\"Ask for approval\" and read-only mode",
+            "\"Ask for approval\" and read-only mode (a setting that may "
+            "stop it is not yet tested)",
             "**yes, without asking**"),
-        "LM Studio": ("Its chat: not by itself", "**not by itself.**"),
+        "LM Studio": ("Its chat: no", "**not by itself.**"),
     }
     for name, (readme_words, privacy_words) in verdicts.items():
-        assert cells[name][2].startswith(readme_words), name
+        assert cells[name][REACH] == readme_words, name
         assert privacy_words in hosts, name
-    # (the columns: verdict, reach, maker)
-    MAKER, VERDICT = 3, 1
     # what each maker receives, and what this project suggests (v0.14.2,
     # the README's first round of checks: the commercial-terms route of
     # 0.14.0's table, and Cowork as PRIVACY.md's checklist puts it)
@@ -452,14 +463,15 @@ def test_the_assistants_table():
     # Enterprise account (PRIVACY.md's rung 3), on the page; an
     # organisation's key for Claude Code (PRIVACY.md leaves an
     # individual's key unresolved); and the local route's trade-off, from
-    # INSTALL.md's table
+    # INSTALL.md's table (in the suggestion's cell since the redraft)
     assert [cells[name][MAKER] for name in ASSISTANTS] == [
-        "Anthropic; on a Team or Enterprise account, commercial terms",
+        "Anthropic; on a Team or Enterprise account, under commercial "
+        "terms",
         "Anthropic",
-        "Anthropic; with an organisation's API key, commercial terms",
+        "Anthropic; with an organisation's API key, under commercial "
+        "terms",
         "OpenAI",
-        "None outside. Use the `core` tool set: local models are weaker "
-        "with many tools"]
+        "Nowhere: the model runs on your computer"]
     assert ("For participants' data, this project suggests Claude Desktop's "
             "chat with Exegete under that account") in privacy
     assert ("For unambiguous commercial-terms coverage, use a Console "
@@ -469,40 +481,48 @@ def test_the_assistants_table():
     assert "local models are markedly weaker on many-tool work" in install
     assert "Requires the reduced core toolset." in install
     assert cells["Claude Desktop's chat"][VERDICT] == \
-        "Suggested, set up as below"
+        "**This one**, set up as below"
     # (the owner, 1 October 2026: warn, don't prescribe; each verdict
-    # gives its reason and a suggestion)
+    # gives its reason and a suggestion; since the redraft the reason is
+    # the reach cell in the same row)
     assert cells["Claude's Cowork"][VERDICT] == (
-        "The chat suggested instead: Cowork reads the folders you connect, "
-        "so keep projects and transcripts out of them")
+        "The chat instead, or keep projects and transcripts out of the "
+        "folders you connect")
     checklist = _between(privacy, "## Before you use real participant data, "
                          "check these", "## Practical mitigations")
     assert ("Codex, Claude Code and Claude's Cowork can open files on your "
             "computer by themselves") in checklist
-    assert cells["Claude Code"][VERDICT] == (
-        "The chat suggested instead: Claude Code reads beyond its folder "
-        "without asking")
+    assert cells["Claude Code"][VERDICT] == "The chat instead"
     # (the judge, 1 October 2026: a warning and an alternative, as for
     # Claude Code, not a purpose)
-    assert cells["ChatGPT's desktop app and Codex"][VERDICT] == (
-        "The chat suggested instead: Codex reads well beyond its folder "
-        "without asking, and a setting that stops it is not yet tested")
-    assert cells["LM Studio"][VERDICT] == ("Also suggested, with no other "
-                                           "server or plugin that reads "
-                                           "files")
-    # the Experimental routes say so, and why
+    assert cells["ChatGPT's desktop app and Codex"][VERDICT] == \
+        "The chat instead"
+    assert cells["LM Studio"][VERDICT] == (
+        "**This one too**, with no other plugin that reads files. Choose "
+        "the `core` tool set, since local models cope less well with many "
+        "tools. No local model has been evaluated with Exegete yet")
+    # the Experimental routes say so, and why (for LM Studio, in the
+    # suggestion's cell since the redraft)
     assert "(Experimental)" in cells["ChatGPT's desktop app and Codex"][0]
-    assert ("(Experimental: no local model has yet been evaluated with "
-            "Exegete)") in cells["LM Studio"][0]
-    # the two sentences the table cannot carry
+    assert "(Experimental)" in cells["LM Studio"][0]
+    # the paragraph before the table, which says why it matters
     # (v0.14.2, the README's second round of checks: one meaning for each
-    # "it", the same facts)
+    # "it", the same facts; the redraft: before the table, with what
+    # Exegete holds back)
     flat = _flat(section)
-    assert ("What they read that way goes to their maker too. Exegete "
-            "cannot see such a read or stop it, and its protections (the "
-            "`#####` mark below, your approval before codings are written, "
-            "the backups) do not apply to it. Exegete's own answers also "
-            "tell the assistant where your project is") in flat
+    assert ("**Assistants that open files by themselves.** Exegete decides "
+            "what the assistant reads from your project, and holds some "
+            "things back, such as the private part of a memo (the `#####` "
+            "mark below) and the list of real names behind pseudonyms. Some "
+            "assistants can also open files on your computer by themselves, "
+            "outside Exegete. What they read that way goes to their AI's "
+            "maker in full: Exegete cannot see such a read or stop it, and "
+            "its protections (that mark, your approval before codings are "
+            "written, the backups) do not apply to it.") in flat
+    assert flat.index("**Assistants that open files by themselves.**") < \
+        flat.index("| Assistant |")
+    assert ("Exegete's own answers also tell the assistant where your "
+            "project is") in flat
     # and the terms, which the account sets, with 0.14.0's table of routes
     # (INSTALL.md, "Choosing your AI host") one link away
     # (the second round: the routes are in the table's maker column now,

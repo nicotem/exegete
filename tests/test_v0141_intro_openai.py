@@ -866,26 +866,29 @@ class TestCodexWorksInAFolderOfItsOwn:
 
     def test_where_your_data_goes_says_what_codex_reads_by_itself(self):
         # v0.14.2, the README rewritten to persuade: the assistants table
-        # says it, with the two sentences under it; the dates and OpenAI's
-        # words are PRIVACY.md's (below)
+        # says it, with the paragraph before it (the owner, 9 October
+        # 2026: the redraft says why it matters first); the dates and
+        # OpenAI's words are PRIVACY.md's (below)
         data = _readme_data()
         for words in (
-                "Some assistants also open files on your computer by "
-                "themselves:",
-                # v0.14.2, the README's second round of checks: the
-                # verdict second, so that it shows on a phone
+                "Some assistants can also open files on your computer by "
+                "themselves, outside Exegete.",
+                # v0.14.2, the README's second round of checks put the
+                # verdict second; the redraft puts the reach second and
+                # the suggestion last
                 "| **ChatGPT's desktop app and Codex** (Experimental) | "
-                "The chat suggested instead: Codex reads well beyond its "
-                "folder without asking, and a setting that stops it is not "
-                "yet tested | Codex: yes, well beyond "
-                "its folder, without asking, even in \"Ask for approval\" "
-                "and read-only mode | OpenAI |",
+                "Codex: yes, well beyond its folder, without asking, even "
+                "in \"Ask for approval\" and read-only mode (a setting "
+                "that may stop it is not yet tested) | OpenAI | The chat "
+                "instead |",
                 # v0.14.2, the README's first round of checks: only codings
                 # wait for approval ("How it works" says what does not);
-                # the second round: one meaning for each "it"
+                # the second round: one meaning for each "it"; the
+                # redraft names the mark first, then "that mark"
+                "the private part of a memo (the `#####` mark below)",
                 "Exegete cannot see such a read or stop it, and its "
-                "protections (the `#####` mark below, your approval before "
-                "codings are written, the backups) do not apply to it.",
+                "protections (that mark, your approval before codings are "
+                "written, the backups) do not apply to it.",
                 "Exegete's own answers also tell the assistant where your "
                 "project is"):
             assert words in data, words
@@ -1319,12 +1322,13 @@ class TestAssistantsOwnFileAccess:
         chat = "such as Claude Desktop's chat with the extension"
         # v0.14.2, the README rewritten to persuade: the README's table
         # row says it, with the list it is set up by
-        # v0.14.2, the README's second round of checks: the verdict
-        # second, and the chat's commercial-terms route in its maker cell
-        assert ("| **Claude Desktop's chat**, with the extension | "
-                "Suggested, set up as below | Not by itself, as far as "
-                "Anthropic's pages say, set up as below | Anthropic; on a "
-                "Team or Enterprise account, commercial terms |") \
+        # v0.14.2, the README's second round of checks: the chat's
+        # commercial-terms route in its maker cell (the owner, 9 October
+        # 2026: the redraft puts the reach second and the suggestion last)
+        assert ("| **Claude Desktop's chat**, with the extension | No, when "
+                "set up as below (as far as Anthropic's pages say) | "
+                "Anthropic; on a Team or Enterprise account, under "
+                "commercial terms | **This one**, set up as below |") \
             in _readme_data()
         for where, text in {
                 "INSTALL, step 3": _install_openai_flat(),
@@ -1354,9 +1358,10 @@ class TestAssistantsOwnFileAccess:
                       "your project too."):
             assert words in listed, words
         assert "Do not" not in listed
-        assert ("| The chat suggested instead: Codex reads well beyond its "
-                "folder without asking, and a setting that stops it is not "
-                "yet tested |") in data
+        assert ("| Codex: yes, well beyond its folder, without asking, "
+                "even in \"Ask for approval\" and read-only mode (a "
+                "setting that may stop it is not yet tested) | OpenAI | "
+                "The chat instead |") in data
         assert data.index("| **Claude Desktop's chat**") < \
             data.index("| **ChatGPT's desktop app and Codex**")
         # v0.14.2: with PRIVACY.md's third condition, as everywhere the

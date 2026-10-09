@@ -1,5 +1,10 @@
 # Qualcoder Import Capabilities - Research Summary
 
+> **HISTORICAL DOCUMENT (early research).** Written when the program
+> was called qualcoder-mcp, early in its development. Kept for
+> design-history reference; the README and CHANGELOG say what Exegete
+> does today.
+
 ## What I Found
 
 After examining the Qualcoder source code, I discovered Qualcoder **DOES have import capabilities**, but they're specific and different from what I initially proposed.

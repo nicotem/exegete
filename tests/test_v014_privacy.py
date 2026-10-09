@@ -626,12 +626,12 @@ class TestTheRunsJournalWriteAndTheLastRoutes:
 
     def test_this_servers_own_errors_still_reach_a_resource_reader(self):
         """The resource guard answers this server's own messages as a tool
-        would, "No Qualcoder project selected" among them, as content."""
+        would, "No project selected" among them, as content."""
         original = (server.db, server.current_project_path)
         server.db, server.current_project_path = None, None
         try:
             answer = json.loads(server.list_all_codes())
-            assert answer["error"].startswith("No Qualcoder project selected")
+            assert answer["error"].startswith("No project selected")
         finally:
             server.db, server.current_project_path = original
 
@@ -733,7 +733,7 @@ class TestTheDocumentsSayTheRule:
         install = _flat("INSTALL.md")
         assert "closing that is on the list for v0.14" not in install
         assert "the SQLite error text" not in install
-        assert ("The lines this server writes carry no memo text, and "
+        assert ("The lines the server writes carry no memo text, and "
                 "since v0.14 no SQLite message") in install
 
 
@@ -988,7 +988,7 @@ class TestTheDocumentsSayWhatTheLogCarries:
                 "Desktop's server log") in privacy
         assert ("The rule closes one channel, SQLite's message; it does "
                 "not make a project built to leak safe to open.") in privacy
-        assert ("The server replaces the secret by itself, with the same "
+        assert ("Exegete replaces the secret by itself, with the same "
                 "two effects") in privacy
         assert ("they share one memory of it") in privacy
 
@@ -1315,7 +1315,7 @@ class TestResourcesLogNothingOverTheWire:
         assert _named_lines(stderr) == [], stderr
         assert "Error reading resource" not in stderr
         first = json.loads(answers[0])
-        assert first["error"].startswith("No Qualcoder project selected")
+        assert first["error"].startswith("No project selected")
         assert "The last project used on this machine was" in first["error"]
 
     def test_a_misconfigured_project_path(self, tmp_path):

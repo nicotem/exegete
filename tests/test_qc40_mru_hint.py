@@ -74,7 +74,7 @@ class TestMruHint:
 
     def test_no_state_gives_plain_error(self, no_project):
         out = json.loads(server.get_project_summary())
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
         assert HINT_PHRASE not in out["error"]
 
     def test_hint_appears_on_get_db_error_path(self, no_project,
@@ -112,14 +112,14 @@ class TestMruHint:
         shutil.rmtree(gone)
         out = json.loads(server.get_project_summary())
         assert HINT_PHRASE not in out["error"]
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
 
     def test_corrupt_mru_state_degrades_silently(self, no_project):
         server._MRU_FILE.parent.mkdir(parents=True, exist_ok=True)
         server._MRU_FILE.write_text("not json{", encoding="utf-8")
         out = json.loads(server.get_project_summary())
         assert HINT_PHRASE not in out["error"]
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
 
     def test_wrong_shape_mru_state_degrades_silently(self, no_project):
         server._MRU_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -157,7 +157,7 @@ class TestSessionProjectCheckHint:
         monkeypatch.delenv("QUALCODER_PROJECT_PATH", raising=False)
         out = json.loads(server.apply_codings(
             session_with_suggestions.session_id, create_backup=False))
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
         assert HINT_PHRASE in out["error"]
         assert str(Path(qualcoder_db_path).resolve()) in out["error"]
 
@@ -295,7 +295,7 @@ class TestMruHintValidatesRecordedPath:
         out = json.loads(server.get_project_summary())
         assert HINT_PHRASE not in out["error"]
         assert "IGNORE PREVIOUS" not in out["error"]
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
 
     def test_tampered_state_pointing_at_home_gives_plain_error(
             self, no_project):
@@ -345,7 +345,7 @@ class TestMruHintValidatesRecordedPath:
         assert server._MRU_FILE.stat().st_size > server.MRU_READ_MAX_BYTES
         out = json.loads(server.get_project_summary())
         assert HINT_PHRASE not in out["error"]
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
         # The same multibyte shape within the cap in bytes IS echoed
         text = self._write_padded_state(path, 200)
         assert server._MRU_FILE.stat().st_size <= server.MRU_READ_MAX_BYTES
@@ -367,7 +367,7 @@ class TestMruHintValidatesRecordedPath:
             json.dumps({"project_path": path}).encode(enc))
         out = json.loads(server.get_project_summary())
         assert HINT_PHRASE not in out["error"]
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
         # Positive control: the same path as strict UTF-8 IS echoed
         self._write_state(path)
         out = json.loads(server.get_project_summary())

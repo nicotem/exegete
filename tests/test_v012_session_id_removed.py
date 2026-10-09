@@ -7,6 +7,8 @@ is unchanged, and no registered tool has an argument named `session_id`
 (or another routing-flavoured name some MCP middleware reserves).
 """
 
+import asyncio
+import inspect
 import json
 import os
 import sys
@@ -85,7 +87,7 @@ class TestSessionIdDuplicateRemoved:
 # the live registry so a tool added later is covered without an edit here.
 # ===========================================================================
 
-TOOL_COUNT = 73          # pinned in tests/test_v012_cli.py too
+TOOL_COUNT = 75          # pinned in tests/test_v012_cli.py too (read_brief and check_for_updates, v0.14.2)
 
 
 def _count(toolset):
@@ -385,6 +387,10 @@ class TestNoResponseCarriesSessionId:
         for name, tool in order:
             try:
                 response = tool.fn(**_probe_arguments(tool, tmp_path))
+                # check_for_updates, the one tool that awaits (its fetch
+                # runs in a thread)
+                if inspect.iscoroutine(response):
+                    response = asyncio.run(response)
             except Exception as exc:
                 excluded[name] = f"raised {type(exc).__name__}: {exc}"
                 continue
@@ -403,6 +409,13 @@ class TestNoResponseCarriesSessionId:
                 offenders.append(f"{name}: {where}")
 
         assert offenders == []
+        # read_brief answers the brief's text, not JSON (v0.14.2): it is
+        # the one tool that answers in prose, and holds no session id
+        prose = {name for name, why in excluded.items()
+                 if why.startswith("not JSON")}
+        assert prose <= {"read_brief"}, excluded
+        assert "session_id" not in tools["read_brief"].fn()
+        scanned |= prose
         # Anti-vacuity (fix round 2, R8). Today every registered tool
         # answers these arguments with a parseable JSON string, so the
         # sweep covers 69 of 69; the old guard, `json_responses >= 40`,

@@ -1,0 +1,119 @@
+name: Publish the update site
+
+# The site of the check for new versions: pages/latest.json, which every
+# installed copy with checking on fetches from
+# https://nicotem.github.io/exegete/latest.json (updates.VERSION_FILE_URL),
+# and pages/update/, the page its notes and answers link to
+# (updates.UPDATE_PAGE).
+#
+# Deployed from GitHub Actions, never from a branch: the owner's decision
+# of 5 October 2026 (docs/update-check/design.md, D3), because a branch
+# would let any token that can push rewrite latest.json without a
+# release. So:
+#   - it is started by hand only, from a release's tag, once the release
+#     is published with its extension file and both packages are on PyPI
+#     (CONTRIBUTING.md, "The check for new versions");
+#   - the first job checks the site against the release
+#     (scripts/check_pages_site.py) and that the release is out, with a
+#     read-only token and nothing installed;
+#   - the deploy runs in the `github-pages` environment, which is limited
+#     to `v*` tags and has the owner as its required reviewer, so nothing
+#     goes live without his approval (the hold switch for a bad file);
+#   - afterwards it reads the live file back and fails if it differs.
+#
+# This stands in for the "announce" job of the design's three release
+# jobs (section 4.2, D8), which are not written yet.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check-site:
+    name: Check the site against the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      latest: ${{ steps.site.outputs.latest }}
+    steps:
+      - name: Only from a release's tag
+        if: github.ref_type != 'tag'
+        run: |
+          echo "::error::Start this workflow from the release's tag (Use workflow from: Tags), not from $GITHUB_REF."
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: The site is this release's, and newer than the one live
+        id: site
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/check_pages_site.py --tag "$GITHUB_REF_NAME" --live
+          echo "latest=$(cat pages/latest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: The release is published, with its extension file, and on PyPI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          display="${GITHUB_REF_NAME#v}"
+          pin=$(python3 -c 'import json; print(json.load(open("pages/latest.json"))["version"])')
+          draft=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)
+          if [ "$draft" != "false" ]; then
+            echo "::error::Release $GITHUB_REF_NAME is not published yet."
+            exit 1
+          fi
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' > assets.txt
+          if ! grep -qxF "exegete-${display}.mcpb" assets.txt; then
+            echo "::error::Release $GITHUB_REF_NAME has no exegete-${display}.mcpb."
+            exit 1
+          fi
+          for project in exegete qualcoder-mcp; do
+            if ! curl -fsS -o /dev/null --max-time 30 "https://pypi.org/pypi/${project}/${pin}/json"; then
+              echo "::error::PyPI has no ${project} ${pin} yet."
+              exit 1
+            fi
+          done
+
+      - name: Package the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: pages
+
+  deploy-site:
+    name: Publish the site (after the owner's approval)
+    needs: check-site
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1
+
+      - name: The live file is the one published
+        env:
+          EXPECTED: ${{ needs.check-site.outputs.latest }}
+        run: |
+          url=https://nicotem.github.io/exegete/latest.json
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o live.json -w '%{http_code}' --max-time 15 -H 'Cache-Control: no-cache' "$url" || true)
+            if [ "$code" = "200" ] && [ "$(cat live.json)" = "$EXPECTED" ]; then
+              echo "Live: $(cat live.json)"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::$url does not give the file published (last answer: $code)."
+          exit 1

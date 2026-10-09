@@ -1,8 +1,9 @@
 # qualcoder-mcp is now Exegete
 
-qualcoder-mcp, the MCP server for AI-assisted qualitative analysis of
-QualCoder projects, is now called **Exegete**. Its PyPI name, its
-command and its Python package are `exegete`:
+qualcoder-mcp is now called **Exegete**: a qualitative analysis
+application you use in conversation with an AI assistant, compatible
+with QualCoder. Its PyPI name, its command and its Python package are
+`exegete`:
 https://pypi.org/project/exegete/ and
 https://github.com/nicotem/exegete.
 
@@ -27,7 +28,7 @@ What to change, if you want to, on each route:
   then change the command in your assistant's settings to it, and
   only then `pipx uninstall qualcoder-mcp` or `uv tool uninstall
   qualcoder-mcp` (the other way round leaves no server).
-- **Settings.** The server's settings now start `EXEGETE_` (for
+- **Settings.** Exegete's settings now start `EXEGETE_` (for
   example `EXEGETE_TOOLSET`); the old `QUALCODER_MCP_...` spellings and
   `QUALCODER_PROJECT_PATH` still work until version 1.0.
 

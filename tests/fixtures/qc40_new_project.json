@@ -2687,9 +2687,9 @@
   "project": [
    [
     "v17",
-    "2026-09-25 21:01:20",
+    "2026-10-06 07:33:50",
     "",
-    "QualCoder 4.0 Beta",
+    "QualCoder 4.0",
     0,
     0,
     "alice40",
@@ -2772,8 +2772,8 @@
   "video"
  ],
  "source": {
-  "made_by": "QualCoder 4.0's own New Project (MainWindow.new_project), driven headlessly by the create-project study's harness",
-  "commit": "9bddf17",
+  "made_by": "QualCoder 4.0's own New Project (MainWindow.new_project) at the release tag 4.0, driven headlessly by the QualCoder 4.0 format check's harness",
+  "commit": "b95e021",
   "coder_name": "alice40",
   "note": "ai_data/ is written by the open that follows creation, not by creation, and is left out of the subfolders"
  }

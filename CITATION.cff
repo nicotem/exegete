@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software in your research, please cite it as below."
 type: software
 title: "Exegete"
-abstract: "Exegete (formerly qualcoder-mcp): a qualitative data analysis application used in conversation with an AI assistant and compatible with QualCoder. It creates, reads, analyses and, with researcher approval, writes to QualCoder projects. Technically, a Model Context Protocol server."
+abstract: "Exegete (formerly qualcoder-mcp): a qualitative data analysis application used in conversation with an AI assistant and compatible with QualCoder. The researcher works on their project through the conversation and approves what the assistant suggests before it is written; the project is kept in QualCoder's format, so it can be worked on in either program, one at a time. Technically, a Model Context Protocol server."
 authors:
   - family-names: "Tempini"
     given-names: "Niccolò"
@@ -10,10 +10,13 @@ authors:
     affiliation: "University of Exeter"
 repository-code: "https://github.com/nicotem/exegete"
 license: LGPL-3.0-or-later
-version: "0.14.1-alpha"
-date-released: '2026-10-01'
+version: "0.14.2-alpha"
+date-released: '2026-10-09'
 keywords:
   - "qualitative research"
-  - "QualCoder"
-  - "MCP"
+  - "qualitative data analysis"
   - "CAQDAS"
+  - "coding"
+  - "AI assistant"
+  - "MCP"
+  - "QualCoder"

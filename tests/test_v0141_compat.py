@@ -243,7 +243,11 @@ class TestTheExtensionSetsBothSpellings:
 
     def test_the_six_entries_and_their_equality(self):
         env = self.TEMPLATE["server"]["mcp_config"]["env"]
-        assert len(env) == 6
+        # Six for the three settings under both spellings, and two more
+        # with one spelling only: the check for new versions
+        assert len(env) == 8
+        assert set(env) - {n for pair in SETTINGS.values() for n in pair} \
+            == set(names.NEW_ONLY_SETTINGS.values())
         for key in ("toolset", "workspace", "workspace_required"):
             new, old = SETTINGS[key]
             assert env[new] == env[old]
@@ -326,8 +330,9 @@ class TestTheResourceAddresses:
                 [t.uriTemplate for t in templates])
 
     def test_ten_under_the_new_scheme_none_under_the_old(self):
+        # eleven from v0.14.2, with the brief's resource
         concrete, templates = self._resources()
-        assert len(concrete) + len(templates) == 10
+        assert len(concrete) + len(templates) == 11
         for address in concrete + templates:
             assert address.startswith(f"{names.RESOURCE_SCHEME}://")
             assert "qualcoder://" not in address

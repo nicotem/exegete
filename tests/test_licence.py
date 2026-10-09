@@ -340,6 +340,7 @@ NOTICE_HERE = (
      "QualcoderDatabase.merge_category", "_append_provenance_block"),
     (11, "src/exegete/server.py", "METHODOLOGY_VOCABULARY",
      "explain_ai_coding_tools"),
+    (11, "src/exegete/server.py", "BRIEF_FULL"),
     (12, "src/exegete/server.py", "_pseudonymise_journal_attempt"),
     (13, "src/exegete/database.py", "file_name_is_invalid_upstream"),
     (14, "src/exegete/database.py", "refi_declared_text_type"),

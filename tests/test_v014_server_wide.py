@@ -81,10 +81,17 @@ EXPECTED_HINTS = {
     "review_suggestions": R, "list_backups": R,
     "get_coding_session_info": R, "list_coding_sessions": R,
     "explain_ai_coding_tools": R, "review_proposals": R,
+    # the assistant's brief (v0.14.2): reads nothing from the project
+    "read_brief": R,
     # Changes nothing, but sends every real name in pseudonyms.json to the
     # AI provider: marked as not read-only so that hosts ask before it
     # runs, as the owner's v0.13 ruling intends (the lead's correction)
     "read_pseudonym_list": (False, False, True, False),
+    # Changes nothing in a project, but fetches Exegete's version file
+    # from the network and records the check: the one tool reaching
+    # beyond the computer (the owner's ruling of 5 October 2026), not
+    # read-only so that hosts ask before it runs
+    "check_for_updates": (False, False, True, True),
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
@@ -229,9 +236,13 @@ class TestToolAnnotations:
                        "`read_pseudonym_list`"):
             assert needed in section, needed
 
-    def test_no_tool_claims_the_open_world(self):
-        for name, tool in _listed("lifecycle").items():
-            assert tool.annotations.openWorldHint is False, name
+    def test_one_tool_alone_claims_the_open_world(self):
+        # check_for_updates, which fetches Exegete's version file (the
+        # owner's ruling of 5 October 2026); every other tool works on
+        # this computer's files and nothing else
+        open_world = sorted(name for name, tool in _listed("lifecycle")
+                            .items() if tool.annotations.openWorldHint)
+        assert open_world == ["check_for_updates"]
 
 
 class TestUnknownArgumentsRefused:
@@ -394,6 +405,8 @@ NOT_TOOLS = {
     "save_requested": "a value of pseudonymise_source's retention record",
     "write_support": "a key of get_project_summary's schema block",
     "set_at": "a key of the AI coder name's record",
+    "update_check": "the check for new versions' state file, "
+                    "update_check.json, and the extension's setting",
 }
 
 
@@ -515,8 +528,12 @@ class TestEveryNamedToolIsThere:
         core, _ = served_texts("core")
         marked = "restore_backup" + server.NOT_IN_THIS_TOOL_SET
         assert marked in core["description of list_backups"]
-        assert ("explain_ai_coding_tools('methodology_vocabulary')"
-                + server.NOT_IN_THIS_TOOL_SET) in core["instructions"]
+        # v0.14.2: the opening text is the brief's short version, which
+        # names only read_brief, in every set; the brief's full version,
+        # served as a resource in core too, is where the marks are
+        assert server.NOT_IN_THIS_TOOL_SET not in core["instructions"]
+        assert ("explain_ai_coding_tools()" + server.NOT_IN_THIS_TOOL_SET
+                in core["resource exegete://guidance/brief"])
         assert ("propose_codes" + server.NOT_IN_THIS_TOOL_SET
                 in core["resource exegete://guidance/methods"])
         full, _ = served_texts("full")
@@ -709,6 +726,8 @@ async def call_every_tool(client, root, lock_check=False):
     projects, exports = root / "projects", root / "exports"
     projects.mkdir()
     exports.mkdir()
+    # first, as its description asks (v0.14.2)
+    await run("read_brief", {})
     await run("list_available_projects",
               {"search_directories": [str(projects)]})
     made = await run("create_project", {
@@ -717,6 +736,9 @@ async def call_every_tool(client, root, lock_check=False):
     folder = made["project_path"]
     run.folder = Path(folder)
     await run("get_current_project", {})
+    # Off, as on the Terminal route by default: it answers without
+    # connecting to anything (the owner's ruling of 5 October 2026)
+    await run("check_for_updates", {})
     await run("set_project_ai_coder_name", {"name": "AI-Test"})
     await run("import_text_file", {"filename": "int1.txt",
                                    "content": TEXT_1,
@@ -955,6 +977,102 @@ class TestTextsThatSentTheAssistantNowhere:
             "search_directories": ["/qc_nowhere_at_all"]})
         assert answer["projects"] == []
         assert len(answer["searched"]["not_found"]) == 1
+
+    def test_an_empty_search_says_which_folders_it_searched(self, tmp_path):
+        """v0.14.2's last round (the sweep's truth check, finding 1): with
+        folders given, the empty search said "No projects found in the
+        usual places. Give search_directories", although it had searched
+        only the folders given, and asked for the folder the researcher
+        had just named."""
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(empty)]})["message"].split())
+        assert message.startswith(
+            "No projects found in the folders given, each searched three "
+            "levels deep; the usual places were not searched. Check the "
+            "paths, give other folders in search_directories, leave it out "
+            "to search the usual places, or start a new project with "
+            "create_project"), message
+        assert "exist" not in message
+        # a folder that is not there is said to be not there
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(tmp_path / "Nowhere")]})[
+                "message"].split())
+        assert "That folder does not exist." in message, message
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(tmp_path / "Nowhere"),
+                                   str(tmp_path / "Elsewhere")]})[
+                "message"].split())
+        assert "None of them exists." in message, message
+        message = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(empty), str(tmp_path / "Nowhere")]})[
+                "message"].split())
+        assert ("1 of them does not exist (searched.not_found)."
+                in message), message
+        # with nothing given, the usual places, and where to go next
+        message = " ".join(host_json("list_available_projects")[
+            "message"].split())
+        assert message.startswith(
+            "No projects found in the usual places (searched.folders). Ask "
+            "the researcher which folder holds their project and give it in "
+            "search_directories, or start a new project with "
+            "create_project"), message
+
+    def test_the_guides_headings_quote_the_empty_searchs_answers(
+            self, tmp_path):
+        """0.14.2's release preparation (the last truth check, minor 3):
+        INSTALL.md and PROJECT_SELECTION_GUIDE.md each give a
+        troubleshooting section headed with the start of the empty
+        search's answer, one for the usual places and one for the
+        folders given. Each heading must be the start of the answer the
+        code gives for its case, and the new sections must say what the
+        search does: the folders given only, three levels deep, not the
+        usual places, a folder named that does not exist, and the folder
+        just above a deeper project. Until this test, renaming a heading
+        or falsifying a section left every test green."""
+        root = Path(__file__).parent.parent
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        given = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(empty)]})["message"].split())
+        usual = " ".join(host_json("list_available_projects")[
+            "message"].split())
+        missing = " ".join(host_json("list_available_projects", {
+            "search_directories": [str(tmp_path / "Nowhere")]})[
+                "message"].split())
+        for name, suffix in (("INSTALL.md", " (Option A)"),
+                             ("PROJECT_SELECTION_GUIDE.md", "")):
+            text = (root / name).read_text(encoding="utf-8")
+            headings = re.findall(r'^### "(No projects found[^"]*)"'
+                                  + re.escape(suffix) + r"$", text, re.M)
+            assert len(headings) == 2, (name, headings)
+            for heading in headings:
+                assert given.startswith(heading) or \
+                    usual.startswith(heading), (name, heading)
+            assert any(given.startswith(h) for h in headings), name
+            assert any(usual.startswith(h) for h in headings), name
+            heading = next(h for h in headings if given.startswith(h))
+            start = text.index(f'### "{heading}"')
+            section = " ".join(text[start:text.index("\n### ", start + 4)]
+                               .split()).lower()
+            assert "three levels deep" in section, name
+            assert "not the usual places" in section, name
+            assert "does not exist" in section, name
+            assert "naming the folder just above it" in section, name
+        # what the sections say is what the search does
+        assert "each searched three levels deep" in given
+        assert "the usual places were not searched" in given
+        assert "That folder does not exist." in missing
+        deep = tmp_path / "Studies"
+        (deep / "a" / "b" / "c" / "Deep.qda").mkdir(parents=True)
+        (deep / "x" / "y" / "Shallow.qda").mkdir(parents=True)
+        found = host_json("list_available_projects", {
+            "search_directories": [str(deep)]})["projects"]
+        assert [p["name"] for p in found] == ["Shallow"]
+        found = host_json("list_available_projects", {
+            "search_directories": [str(deep / "a" / "b" / "c")]})["projects"]
+        assert [p["name"] for p in found] == ["Deep"]
 
     def test_the_usual_places_are_reported_too(self):
         answer = host_json("list_available_projects")
@@ -1827,6 +1945,8 @@ class TestHiddenCodersOnTheCodebook:
 # QualCoder lock does not stop them, each with the reason.
 NOT_PROJECT_WRITES = {
     "select_project": "changes the selection only",
+    "check_for_updates": "may record a check for new versions in the "
+                         "state folder, never touches a project",
     "create_project": "makes a new project, never an open one",
     "set_project_ai_coder_name": "writes its settings file beside the "
                                  "database, as its description says",

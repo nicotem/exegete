@@ -310,6 +310,7 @@ def build_manifest(template: dict, project: dict,
         "license": meta.get("license"),
         "compatibility": compatibility,
         "user_config": template.get("user_config"),
+        "privacy_policies": template.get("privacy_policies"),
     }
     unknown = sorted(set(template) - set(manifest))
     if unknown:

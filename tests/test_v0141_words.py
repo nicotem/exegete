@@ -40,7 +40,8 @@ class TestWhatTheServerSays:
 
     def test_the_instructions_begin_with_it(self):
         assert server.SERVER_INSTRUCTIONS.startswith(
-            "Exegete exposes a QualCoder project to this conversation.")
+            "Exegete is a qualitative analysis application for working with "
+            "the researcher on their project, in QualCoder's format.")
 
     def test_the_methods_notes_heading(self):
         assert server.METHODS_GUIDANCE.splitlines()[0] == \
@@ -184,11 +185,14 @@ SHIPPED_LEDGER = [
      "the stand-in kept in the source"),
     (r"old name's package, qualcoder-mcp|`qualcoder-mcp` command and a",
      "the old name's package, for contributors"),
-    (r"this server's names \(`exegete`, `qualcoder-mcp`",
+    (r"Exegete's names \(`exegete`, `qualcoder-mcp`",
      "the server's own process names, which never count as QualCoder"),
     (r"list the old `qualcoder-mcp` beside",
      "what an old environment's pip list shows"),
     (r"its `qualcoder` script", "QualCoder's own script"),
+    (r"calls itself [`\"]qualcoder-mcp[`\"]",
+     "QualCoder 4.0's own MCP server, which calls itself by the earlier "
+     "name (the owner's ruling of 6 October 2026: said plainly)"),
 ]
 
 
@@ -265,8 +269,13 @@ class TestInstallSaysHowToMove:
 
     def test_the_extension(self):
         section = self._coming_from()
-        for words in ("it updates the extension you have, with its two "
-                      "settings, rather than adding a second one",
+        # v0.14.2, the check for new versions: the extension has a third
+        # setting, so the sentence says the settings chosen are kept and
+        # the third is added (the port's truth check, round 1)
+        for words in ("it updates the extension you have, with the settings "
+                      "you chose, rather than adding a second one (0.14.2 "
+                      "adds a third, \"Tell me when a new version is out\", "
+                      "on unless you switch it off)",
                       "may take longer and needs the internet",
                       "Claude may ask again before it uses each tool"):
             assert words in section, words
@@ -314,7 +323,7 @@ class TestFixRoundOneWords:
         return text[first:text.index(end, first)]
 
     @pytest.mark.parametrize("name, start, end", [
-        ("PRIVACY.md", "the server's own folder, `~/.exegete`",
+        ("PRIVACY.md", "Exegete's own folder, `~/.exegete`",
          "- AI-coding session files"),
         ("CHANGELOG.md", "The server's own folder is `~/.exegete`",
          "- The resources' addresses")])

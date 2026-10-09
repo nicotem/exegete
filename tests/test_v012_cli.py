@@ -170,10 +170,12 @@ class TestTtyNotice:
         assert "—" not in server.TTY_NOTICE
         assert "exegete --version" in server.TTY_NOTICE
         assert "python -m exegete.server --version" in server.TTY_NOTICE
-        assert server.TTY_NOTICE.startswith("Exegete is an MCP server.")
+        assert server.TTY_NOTICE.startswith(
+            "Exegete is a qualitative analysis application that runs as an "
+            "MCP server.")
         assert "\n" not in server.TTY_NOTICE   # one paragraph
 
     def test_registry_intact_after_main_in_process(self, monkeypatch, capsys, stub_run):
         monkeypatch.setattr(sys, "stdin", _FakeStdin(tty=False))
         server.main([])
-        assert len(server.mcp._tool_manager._tools) == 73
+        assert len(server.mcp._tool_manager._tools) == 75

@@ -16,8 +16,10 @@ Most calls go through FastMCP's own `call_tool`, the path a host takes
 
 import asyncio
 import json
+import re
 import sqlite3
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -25,6 +27,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+import exegete.sessions as sessions_module
 from exegete.sessions import (AICodingSession, CodingSuggestion,
                                     SessionManager)
 
@@ -87,6 +90,25 @@ def approve_and_apply(sid, guids):
     return call("apply_codings", coding_session_id=sid, create_backup=False)
 
 
+# A session file's timestamps run to the microsecond, and this one holds
+# the characters "0.95" (a CI run met it by chance on 6 October 2026)
+CLOCK_HOLDING_THE_NUMBER = datetime(2026, 10, 6, 13, 57, 10, 953421)
+# ...and this one "0.85", the number of a session from an earlier release
+# (a CI run met it by chance later the same day, at 22:17:10.852926)
+CLOCK_HOLDING_THE_OLD_NUMBER = datetime(2026, 10, 6, 22, 17, 10, 852926)
+
+
+def fix_the_clock(monkeypatch, moment):
+    """The server and the sessions read `moment` as the time now."""
+    class Fixed(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return moment if tz is None else moment.replace(tzinfo=tz)
+
+    monkeypatch.setattr(server, "datetime", Fixed)
+    monkeypatch.setattr(sessions_module, "datetime", Fixed)
+
+
 # =============================================================================
 # 1. THE CONFIDENCE SCORE REPLACED (owner ruling 21)
 # =============================================================================
@@ -119,15 +141,24 @@ class TestSupportIsRequired:
         assert [r["reading"] for r in rec["recorded"]] == [
             "explicit", "interpretive"]
 
-    def test_a_number_sent_beside_the_label_is_not_kept(self, setup_server):
+    @pytest.mark.parametrize("clock", [None, CLOCK_HOLDING_THE_NUMBER],
+                             ids=["real-clock", "clock-at-13-57-10-953421"])
+    def test_a_number_sent_beside_the_label_is_not_kept(
+            self, setup_server, monkeypatch, clock):
+        if clock is not None:
+            fix_the_clock(monkeypatch, clock)
         sid = new_session()
         rec = record(sid, item(confidence=0.95))
         assert rec["recorded_count"] == 1
         assert rec["confidence_ignored"] == 1
         stored = session_file(sid).read_text()
         assert "confidence" not in stored
-        assert "0.95" not in stored
+        # 0.95 as a value of its own: the file's timestamps run to the
+        # microsecond, and one such as 13:57:10.953421 holds "0.95" too
+        assert not re.search(r"(?<![\d.])0\.95(?!\d)", stored)
         assert '"reading": "explicit"' in stored
+        if clock is not None:          # the time reached the file as set
+            assert "13:57:10.953421" in stored
 
 
 class TestTheLabelOnTheWayToTheProject:
@@ -205,8 +236,12 @@ class TestSessionsFromEarlierReleases:
         assert "**Reading:** not given (recorded before v0.14)" in out
         assert "0.85" not in out
 
+    @pytest.mark.parametrize("clock", [None, CLOCK_HOLDING_THE_OLD_NUMBER],
+                             ids=["real-clock", "clock-at-22-17-10-852926"])
     def test_it_applies_the_reason_alone_and_forgets_the_number(
-            self, setup_server, qualcoder_db_path):
+            self, setup_server, qualcoder_db_path, monkeypatch, clock):
+        if clock is not None:
+            fix_the_clock(monkeypatch, clock)
         sid, path = self._old_session(qualcoder_db_path)
         out = call("apply_codings", coding_session_id=sid,
                    create_backup=False)
@@ -216,7 +251,12 @@ class TestSessionsFromEarlierReleases:
         assert memo == "old reason"
         saved = path.read_text()
         assert "confidence" not in saved       # min_confidence included
-        assert "0.85" not in saved
+        # 0.85 as a value of its own, as for 0.95 above: the file's
+        # timestamps run to the microsecond, and one such as
+        # 22:17:10.852926 holds "0.85" too
+        assert not re.search(r"(?<![\d.])0\.85(?!\d)", saved)
+        if clock is not None:          # the time reached the file as set
+            assert "22:17:10.852926" in saved
 
     def test_memos_already_in_the_project_are_never_rewritten(
             self, setup_server, qualcoder_db_path):
@@ -839,7 +879,7 @@ class TestComparingCodersSaysWhatItCannotShow:
              "coded_by": "AI Coding Assistant"}]
         assert out["files_coded_by_neither"] == 0
         assert any("not a decision" in n for n in out["notes"])
-        ai_note = next(n for n in out["notes"] if "this server's AI" in n)
+        ai_note = next(n for n in out["notes"] if "One coder is the AI" in n)
         assert "the suggestions the person approved" in ai_note
         assert "every visible coder's codings" in ai_note
         assert "intercoder reliability" in ai_note

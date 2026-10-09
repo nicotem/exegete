@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """v0.14.1: the mark (ruling 41, decision 11; the lockup of ruling 32).
 
-The README opens with the plain ring beside the name "Exegete", on a light
-tile of its own so that it reads on GitHub's dark theme too; the Claude
-Desktop extension's icon is the ring with the font E, a 512 px PNG on a
-light tile, named in the manifest. Only what the repository needs is
-copied from the private brand folder, and the extension's package gains
-the icon and nothing else.
+The README opens with the lockup, on a light tile of its own so that it
+reads on GitHub's dark theme too: the plain ring beside the name
+"Exegete" in 0.14.1, the woven lockup from 0.14.2 (ruling 56, pinned in
+test_v0142_woven_lockup.py). The Claude Desktop extension's icon is the
+ring with the font E, a 512 px PNG on a light tile, named in the
+manifest. Only what the repository needs is copied from the private
+brand folder, and the extension's package gains the icon and nothing
+else.
 """
 
 import json
@@ -54,7 +56,7 @@ def test_the_readme_opens_with_the_lockup():
     path = REPO / src[len(RAW):]
     assert path.is_file(), path
     width, height, _ = png_size(path.read_bytes())
-    assert (width, height) == (647, 240)          # shown at half size
+    assert (width, height) == (346, 240)          # shown at half size
     assert "Exegete" in alt and "ring" in alt
 
 

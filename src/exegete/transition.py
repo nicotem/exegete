@@ -10,6 +10,9 @@ order to take them, and exits 0 when nothing is left.
   environment, or one holding 0.14.0 or earlier): a host's entry is
   never pointed at a command that does not exist, and the old package
   is never removed while an entry still needs it;
+- otherwise, a host's entry that starts the exegete command by a path
+  where there is none (an uninstall that took it, a step taken out of
+  order), with the command that puts it back when it can tell;
 - an entry in a host's configuration (Claude Desktop, Claude Code,
   LM Studio, Codex) that still starts the old command, with the entry
   to use instead (the files are only read, never changed);
@@ -17,17 +20,22 @@ order to take them, and exits 0 when nothing is left.
   was installed (pip, uv, uv tool, pipx, a copy of the source);
 - the link left at ~/.qualcoder_mcp, and whether it can safely go: it
   leads to ~/.exegete, no program started as qualcoder-mcp is running,
-  and neither a qualcoder-mcp older than 0.14.1 nor a host entry that
-  starts the old command is left;
+  and neither a qualcoder-mcp older than 0.14.1, a host entry that
+  starts the old command nor a desktop extension older than Exegete is
+  left; once `--tidy` has removed it, the command that puts it back;
 - Claude Desktop's log files under the extension's earlier name;
 - the earlier default projects folder, searched as the project listing
   searches (three levels down); never moved or emptied, and never
   offered for removal while anything is in it.
 
 What the researcher pastes (commands, entries) carries full paths,
-quoted for the shell or the file it goes into; `~` shortens paths in
-prose only. Names and paths read from files and folders are shown as
-JSON strings, so that none can break or disguise a line of the report.
+quoted for the shell or the file it goes into (for bash or zsh when a
+name holds characters that cannot be shown, which is then said); `~`
+shortens paths in prose only. Names and paths read from files and
+folders are shown as JSON strings, so that none can break or disguise a
+line of the report. Claude Desktop's files are looked for where it keeps
+them on macOS, on Windows (the ordinary folder, and the app package's
+own folder that its current installer uses) and on Linux.
 
 `--tidy` removes only what this program owns and can show to be unused:
 the link (never a folder), and the old log files only when
@@ -81,10 +89,13 @@ class Finding:
     def __init__(self, what: str, step: str, left: bool = True,
                  tidy: Optional[Callable[[], Tuple[bool, str]]] = None,
                  is_log: bool = False, commands: Iterable[str] = (),
-                 after: str = ""):
+                 after: str = "",
+                 undo: Optional[Tuple[str, List[str]]] = None):
         self.is_log = is_log
         self.what, self.step, self.left, self.tidy = what, step, left, tidy
         self.commands, self.after = list(commands), after
+        # printed once the tidy is done: how to undo it, and the commands
+        self.undo = undo
 
 
 # ---------------------------------------------------------------------------
@@ -184,6 +195,22 @@ def command_line(argv: List[str], windows: Optional[bool] = None) -> str:
     return ("& " if words[0] != argv[0] else "") + " ".join(words)
 
 
+_ANSI_C_WORD = re.compile(r"(?:^| )\$'")
+BASH_OR_ZSH = ("Paste these into bash or zsh, the usual shells of a Mac's "
+               "Terminal and of Linux: characters in a name that cannot be "
+               "shown are written as codes, in a form that dash (the sh of "
+               "Debian and Ubuntu) cannot read.")
+
+
+def needs_bash_or_zsh(commands: Iterable[str]) -> bool:
+    """Whether a printed command has a word written as $'...' (`_sh_word`,
+    for characters that cannot be shown), which bash, zsh and the Mac's
+    sh read and dash does not. Entry lines, JSON or TOML, are not
+    commands."""
+    return any(not line.startswith(('"', "command =", "args =")) and
+               _ANSI_C_WORD.search(line) is not None for line in commands)
+
+
 def _shell(windows: Optional[bool] = None) -> str:
     windows = os.name == "nt" if windows is None else windows
     return "In PowerShell" if windows else "In a terminal"
@@ -208,15 +235,34 @@ def _listed(items: List[str]) -> str:
 # without its second word.
 _APP_FOLDER = "Claude Desktop".split()[0]
 
+
+def packaged_app_folders(home: Path) -> List[Path]:
+    """Claude Desktop's folder when it is installed as a Windows app
+    package (MSIX, as its current Windows installer does): Windows keeps
+    what such an app writes under AppData/Roaming in the package's own
+    folder, AppData/Local/Packages/Claude_<publisher id>/LocalCache/
+    Roaming, and the ordinary folder holds none of it."""
+    packages = home / "AppData" / "Local" / "Packages"
+    try:
+        found = sorted(packages.iterdir())
+    except OSError:
+        return []
+    return [package / "LocalCache" / "Roaming" / _APP_FOLDER
+            for package in found
+            if package.name.lower().startswith(_APP_FOLDER.lower() + "_")]
+
+
+def _app_folders(home: Path) -> List[Path]:
+    """Every place Claude Desktop may keep its files, by system: macOS,
+    Windows (the ordinary folder, then an app package's), Linux."""
+    return ([home / "Library" / "Application Support" / _APP_FOLDER,
+             home / "AppData" / "Roaming" / _APP_FOLDER] +
+            packaged_app_folders(home) + [home / ".config" / _APP_FOLDER])
+
+
 def host_config_files(home: Path) -> List[Tuple[str, Path]]:
-    appdata = home / "AppData" / "Roaming"
-    return [
-        ("Claude Desktop", home / "Library" / "Application Support" /
-         _APP_FOLDER / "claude_desktop_config.json"),
-        ("Claude Desktop", appdata / _APP_FOLDER /
-         "claude_desktop_config.json"),
-        ("Claude Desktop", home / ".config" / _APP_FOLDER /
-         "claude_desktop_config.json"),
+    return [("Claude Desktop", folder / "claude_desktop_config.json")
+            for folder in _app_folders(home)] + [
         ("Claude Code", home / ".claude.json"),
         ("LM Studio", home / ".lmstudio" / "mcp.json"),
         ("Codex", home / ".codex" / "config.toml"),
@@ -228,16 +274,13 @@ _EXTENSIONS = _APP_FOLDER + " Extensions"
 
 
 def extension_folders(home: Path) -> List[Path]:
-    return [home / "Library" / "Application Support" / _APP_FOLDER /
-            _EXTENSIONS,
-            home / "AppData" / "Roaming" / _APP_FOLDER / _EXTENSIONS,
-            home / ".config" / _APP_FOLDER / _EXTENSIONS]
+    return [folder / _EXTENSIONS for folder in _app_folders(home)]
 
 
 def claude_log_folders(home: Path) -> List[Path]:
-    return [home / "Library" / "Logs" / _APP_FOLDER,
-            home / "AppData" / "Roaming" / _APP_FOLDER / "logs",
-            home / ".config" / _APP_FOLDER / "logs"]
+    """On macOS the logs are kept apart from the app's other files."""
+    return [home / "Library" / "Logs" / _APP_FOLDER] + [
+        folder / "logs" for folder in _app_folders(home)[1:]]
 
 
 def tool_folders(home: Path) -> List[Tuple[str, Path]]:
@@ -279,6 +322,33 @@ def _python_of(env_root: Path) -> Path:
     windows = (env_root / "Scripts").is_dir()
     return (env_root / "Scripts" / "python.exe" if windows
             else env_root / "bin" / "python")
+
+
+def uv_tool_commands(env_root: Path) -> List[str]:
+    """The commands uv recorded for a tool in its receipt
+    (`uv-receipt.toml`, `entrypoints`), each by name without `.exe`:
+    `uv tool uninstall` removes every one of them. Empty when the receipt
+    cannot be read."""
+    text = _read_text(env_root / "uv-receipt.toml")
+    if text is None:
+        return []
+    listed: List[str] = []
+    if tomllib is not None:
+        try:
+            points = tomllib.loads(text).get("tool", {}).get("entrypoints")
+        except Exception:                     # RecursionError too
+            return []
+        if isinstance(points, list):
+            listed = [p.get("name") for p in points if isinstance(p, dict)]
+    else:
+        # Python 3.10: each entry point is an inline table with its
+        # install-path (a requirement has none)
+        for table in re.findall(r"\{[^{}]*\}", text):
+            name = re.search(r'\bname\s*=\s*"([^"]*)"', table)
+            if name and re.search(r"\binstall-path\s*=", table):
+                listed.append(name.group(1))
+    return [n[:-4] if n.lower().endswith(".exe") else n
+            for n in listed if isinstance(n, str)]
 
 
 def _tool_kind(env_root: Path) -> Optional[str]:
@@ -375,6 +445,11 @@ class OldInstall:
         # an exegete command that leads into this tool's environment
         # (pipx's --include-deps, inject): installing Exegete replaces it
         self.replace_command: Optional[str] = None
+        # uv tool: uv recorded the exegete command as one of this
+        # package's (`--with-executables-from exegete`), so uninstalling
+        # it removes that command wherever it leads by then
+        self.takes_exegete = (self.tool == "uv tool" and
+                              names.COMMAND in uv_tool_commands(root))
 
     def pip(self, *args: str) -> List[str]:
         if self.installer == "uv":
@@ -643,8 +718,8 @@ def _install_finding(install: OldInstall, home: Path) -> Finding:
                   ". Until it has, change nothing else: removing the old "
                   "package first would leave no server.")
     if install.editable:
-        quit_first = ("This comes first. Quit your AI host first, since a "
-                      "copy of the server left running fails when its files "
+        quit_first = ("This comes first. Quit your AI host, since a copy "
+                      "of the server left running fails when its files "
                       "change; then update your copy of the source")
         if install.source is None:
             return Finding(
@@ -671,6 +746,22 @@ def _install_finding(install: OldInstall, home: Path) -> Finding:
 
 
 def _removal_finding(install: OldInstall, home: Path) -> Finding:
+    if install.tool == "uv tool" and install.takes_exegete:
+        return Finding(
+            f"The old package, qualcoder-mcp {_word(install.version)}, is "
+            f"still installed in {_place(install.root, home)}, and uv "
+            f"recorded the exegete command as one of its own (it was "
+            f"installed with --with-executables-from exegete).",
+            f"Once no host entry starts it any more (the steps above), "
+            f"remove it, then install Exegete's command once more: uv's "
+            f"uninstall removes the exegete command too, even where it now "
+            f"leads into Exegete's own installation. {_shell()}:",
+            commands=[command_line(["uv", "tool", "uninstall",
+                                    names.OLD_DISTRIBUTION]),
+                      command_line(["uv", "tool", "install", "--force",
+                                    names.DISTRIBUTION])],
+            after="Run both, one after the other: until the second has, "
+                  "your hosts' entries name a command that is not there.")
     if install.tool == "uv tool":
         commands = [command_line(["uv", "tool", "uninstall",
                                   names.OLD_DISTRIBUTION])]
@@ -803,6 +894,67 @@ def _new_spelling(old: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# A host's entry that starts an exegete command no longer there
+# ---------------------------------------------------------------------------
+
+class MissingCommand:
+    """A host's entry that starts the exegete command by a path at which
+    there is none, so the host cannot start the server: an uninstall that
+    took the command with it, or a step taken out of order."""
+
+    def __init__(self, label: str, path: Path, name: str, command: str):
+        self.label, self.path, self.name = label, path, name
+        self.command = command
+
+
+def missing_commands(home: Path) -> List[MissingCommand]:
+    """Every host entry whose command is the exegete command given as a
+    path that does not exist. A bare `exegete` is looked up on the host's
+    own PATH, which this check cannot see, so it is passed over."""
+    found = []
+    for label, path in host_config_files(home):
+        if not _is_file(path):
+            continue
+        for name, entry in _servers(label, path):
+            command = entry.get("command")
+            full = _as_path(command, home) if isinstance(command, str) \
+                else None
+            if full is None:
+                continue
+            last = re.split(r"[\\/]", full)[-1].lower()
+            if last in (names.COMMAND, names.COMMAND + ".exe") and \
+                    not _command_at(Path(full)):
+                found.append(MissingCommand(label, path, name, full))
+    return found
+
+
+def _missing_command_finding(missing: MissingCommand,
+                             home: Path) -> Finding:
+    what = (f"{missing.label}'s entry {quoted(missing.name)} starts "
+            f"{quoted(missing.command)}, which does not exist, so "
+            f"{missing.label} cannot start Exegete.")
+    tools = [kind for kind, folder in tool_folders(home)
+             if _dist_info(folder / names.DISTRIBUTION, "exegete")]
+    if tools and _same_root(Path(missing.command).parent,
+                            tool_command_folder(home)):
+        argv = (["uv", "tool", "install", "--force", names.DISTRIBUTION]
+                if tools[0] == "uv tool" else
+                ["pipx", "install", "--force", names.DISTRIBUTION])
+        return Finding(
+            what, f"This comes first. {_shell()}:",
+            commands=[command_line(argv)],
+            after=f"It puts the exegete command back, from the Exegete "
+                  f"installed with {tools[0]}; then reopen "
+                  f"{missing.label}.")
+    return Finding(
+        what,
+        f"Install Exegete so that this command exists (INSTALL.md), or "
+        f"change the entry {quoted(missing.name)} in "
+        f"{_place(missing.path, home)} to start the exegete command where "
+        f"it is; then reopen {missing.label}.")
+
+
+# ---------------------------------------------------------------------------
 # The desktop extension, when it is older than the pointer
 # ---------------------------------------------------------------------------
 
@@ -894,13 +1046,22 @@ def posix_ps() -> Optional[str]:
 
 Row = Tuple[int, int, Optional[int], str]
 
+# How long the process list may take, in seconds, and how many times it is
+# tried when it takes longer. ps answers at once; Windows PowerShell's
+# Get-CimInstance can take tens of seconds on a slow or busy computer (a CI
+# runner once needed more than 20), and a list not read keeps the link, so
+# the researcher could not tidy.
+PROCESS_LIST_SECONDS = {"windows": 60, "posix": 20}
+PROCESS_LIST_TRIES = 2                   # one retry after a time-out
+
 
 def _process_table() -> Optional[List[Row]]:
     """(process id, parent's id, when it started, command line) for every
-    process, or None when it cannot be read (then nothing is removed).
-    When it started is read on Windows alone (None elsewhere), where a
-    dead parent's number stays on its child and can be taken by a later
-    program; on macOS and Linux an orphan is given a new parent."""
+    process, or None when it cannot be read (then nothing is removed); a
+    list that takes too long is asked for once more. When it started is
+    read on Windows alone (None elsewhere), where a dead parent's number
+    stays on its child and can be taken by a later program; on macOS and
+    Linux an orphan is given a new parent."""
     windows = os.name == "nt"
     if windows:
         powershell = windows_powershell()
@@ -917,12 +1078,18 @@ def _process_table() -> Optional[List[Row]]:
         if ps is None:
             return None
         cmd = [ps, "-axo", "pid=,ppid=,args="]
-    try:
-        done = subprocess.run(cmd, capture_output=True, timeout=20,
-                              check=False)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if done.returncode != 0:
+    limit = PROCESS_LIST_SECONDS["windows" if windows else "posix"]
+    done = None
+    for _ in range(PROCESS_LIST_TRIES):
+        try:
+            done = subprocess.run(cmd, capture_output=True, timeout=limit,
+                                  check=False)
+            break
+        except subprocess.TimeoutExpired:
+            continue                     # too slow this time: once more
+        except (OSError, subprocess.SubprocessError):
+            return None
+    if done is None or done.returncode != 0:
         return None
     rows: List[Row] = []
     numbers = 3 if windows else 2
@@ -1057,7 +1224,23 @@ def state_link(home: Path, busy: Optional[List[str]],
         "link: the folder it leads to is untouched). This check cannot see "
         "an older copy started from a project's own .mcp.json file: keep "
         "the link while one could still start.",
-        tidy=lambda: _remove_link(old, home))]
+        tidy=lambda: _remove_link(old, home),
+        undo=("Should an older copy still start from a project's own "
+              ".mcp.json file, put the link back before it does. "
+              f"{_shell()}:", [put_back_link(home)]))]
+
+
+def put_back_link(home: Path, windows: Optional[bool] = None) -> str:
+    """The command that makes the link again, as the move made it: a
+    relative symbolic link on macOS and Linux, a directory junction on
+    Windows (state_folder.make_link)."""
+    windows = os.name == "nt" if windows is None else windows
+    old, new = state_folder.old_path(home), state_folder.new_path(home)
+    if windows:
+        return command_line(["New-Item", "-ItemType", "Junction", "-Path",
+                             str(old), "-Target", str(new)], windows=True)
+    return command_line(["ln", "-s", names.STATE_FOLDER, str(old)],
+                        windows=False)
 
 
 def old_logs(home: Path, busy: Optional[List[str]]) -> List[Finding]:
@@ -1175,8 +1358,10 @@ def check(home: Optional[Path] = None, prefix: Optional[Path] = None,
           listing: Callable[[], Optional[List[str]]] = _listing
           ) -> List[Finding]:
     """Everything, read-only, in the order to take the steps: Exegete
-    where it is missing, then the hosts' entries, then the old package,
-    then the link, the logs and the projects folder."""
+    where it is missing (and, when nothing is to be installed, the
+    exegete command a host's entry starts where it is not there), then
+    the hosts' entries, then the old package, then the link, the logs
+    and the projects folder."""
     home = Path.home() if home is None else Path(home)
     lines = listing()
     busy = None if lines is None else started_as_old(lines)
@@ -1187,8 +1372,11 @@ def check(home: Optional[Path] = None, prefix: Optional[Path] = None,
     holders += [f"{e.label}'s entry {quoted(e.name)}" for e in entries]
     extensions = old_extensions(home)
     holders += [x.label(home) for x in extensions]
-    return ([_install_finding(i, home) for i in installs
-             if i.needs_exegete] +
+    first = [_install_finding(i, home) for i in installs if i.needs_exegete]
+    if not first:
+        first = [_missing_command_finding(m, home)
+                 for m in missing_commands(home)]
+    return (first +
             [_entry_finding(e, home, which, installs) for e in entries] +
             [_removal_finding(i, home) for i in installs] +
             [_extension_finding(x, home) for x in extensions] +
@@ -1212,12 +1400,19 @@ def run(tidy: bool = False, tidy_old_logs: bool = False,
         print(f"   What to do: {finding.step}", file=out)
         for line in finding.commands:
             print(f"       {line}", file=out)
+        if needs_bash_or_zsh(finding.commands):
+            print(f"   {BASH_OR_ZSH}", file=out)
         if finding.after:
             print(f"   {finding.after}", file=out)
         if tidy and finding.tidy is not None and \
                 (tidy_old_logs or not finding.is_log):
             done, text = finding.tidy()
             print(f"   {'Done' if done else 'Not done'}: {text}", file=out)
+            if done and finding.undo is not None:
+                text, commands = finding.undo
+                print(f"   {text}", file=out)
+                for line in commands:
+                    print(f"       {line}", file=out)
             if done:
                 continue
         if finding.left:

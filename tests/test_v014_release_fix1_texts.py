@@ -64,22 +64,39 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     v0.14 line this test first pinned is gone with the section it sat
     in."""
     readme = _doc("README.md")
+    install = _doc("INSTALL.md")
     assert "**Qualcoder** with at least one project created" not in readme
     assert "otherwise at least one project made in QualCoder is needed" \
         not in readme
-    stages = readme[readme.index("### What you need, at each stage"):
-                    readme.index("### Claude Desktop, with one click")]
-    assert "QualCoder is not needed to start." in stages
-    assert ("Leave the extension's \"Tool set\" setting as it comes "
-            "(`lifecycle`): with it you can create a project") in stages
-    assert ("The other two choices, `full` and `core`, cannot create a "
-            "project") in stages
-    assert ("**QualCoder is recommended from the start, and needed** to "
-            "bring in documents (Word, PDF, images, audio, video)") in stages
-    assert "Exegete imports only text the assistant hands it" \
-        in stages
-    assert "Its standard tool set, `full`, cannot create a project" \
-        in stages
+    # v0.14.2, the README rewritten to persuade: by stage, in three
+    # places: not needed to start (the opening), recommended from the start
+    # and needed for what "Still needs QualCoder" lists (after what you can
+    # do), and the tool set where the extension is installed
+    flat = " ".join(readme.split())
+    # Since the owner's ruling of 7 October 2026: what is not in Exegete
+    # yet, and QualCoder from the start only for a study that needs it
+    assert "You do not need QualCoder to start" in flat
+    assert ("**Not in Exegete yet**, and done in QualCoder for now: "
+            "bringing in documents other than text (Word, PDF, images, "
+            "audio, video)") in flat
+    assert ("If your study needs any of these now, get QualCoder from the "
+            "start.") in flat
+    assert "| Import sources | Text, documents, PDFs, images, audio, video " \
+        "| Text the assistant hands over |" in flat
+    one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
+                            flat.index("### ChatGPT's desktop app")]
+    assert ("Leave its \"Tool set\" setting as it comes (`lifecycle`): the "
+            "other two choices cannot create a project") in one_click_readme
+    assert "whose standard tool set cannot create a project unless switched " \
+        "on" in flat
+    for name in ("`full`", "`core`"):
+        assert name not in one_click_readme, name
+    one_click = install[install.index("## Claude Desktop: the one-click "
+                                      "extension"):
+                        install.index("## Choosing your AI host")]
+    assert ("`lifecycle` (the default) gives every tool, creating a new "
+            "project included; `full` every tool except creating a "
+            "project; `core` a smaller set") in " ".join(one_click.split())
     install = _doc("INSTALL.md")
     assert "**Qualcoder installed** with at least one project created" \
         not in install
@@ -88,8 +105,10 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert ("On this route the default tool set, `full`, has no tool that "
             "creates a project") in needs
     assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
-    assert ("**QualCoder itself**, recommended, and needed to bring in "
-            "documents") in needs
+    # Since the owner's ruling of 7 October 2026: optional, with what it
+    # does that Exegete does not do yet
+    assert ("**QualCoder, optional.** Today it does what Exegete does not "
+            "do yet: bringing in documents") in needs
     # The facts it rests on: the extension's tool set defaults to
     # lifecycle, which alone has create_project (not full, the default
     # configured by hand, and not core), and a file is imported from text
@@ -104,47 +123,19 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "content" in params and "path" not in params
 
 
-def test_privacy_says_the_export_guard_compares_the_spelling(monkeypatch):
+def test_privacy_says_the_export_guard_decides_by_the_folder():
     privacy = _doc("PRIVACY.md")
     assert "No export can be written into this folder" not in privacy
-    # Fix round 2: the gap is macOS's alone. Windows paths compare
-    # ignoring letter case, so the guard already refuses there.
     assert "on macOS and Windows, whose file systems ignore" not in privacy
-    assert ("The export tools refuse paths inside this folder as it is "
-            "spelled. On Windows the guard's comparison ignores letter "
-            "case, so a spelling in another letter case is refused there "
-            "too. On macOS, whose file system usually ignores letter case, "
-            "such a spelling (`~/.EXEGETE`) is not yet caught (the "
-            "guard is fixed in v0.15).") in privacy
-
-    # Both halves, from the guard itself, on any platform: its own
-    # comparison run with each platform's path rules, resolve() keeping
-    # the letter case given (the guard's worst case; Windows' own
-    # resolve() returns the folder's stored name).
-    from pathlib import PurePosixPath, PureWindowsPath
-
-    class WinPath(PureWindowsPath):
-        def resolve(self, strict=False):
-            return self
-
-    class MacPath(PurePosixPath):
-        def resolve(self, strict=False):
-            return self
-
-    def refused(path_cls, home, target):
-        monkeypatch.setattr(server, "Path", path_cls)
-        monkeypatch.setattr(server, "preview_tokens_state_home",
-                            lambda: path_cls(home))
-        return server._inside_state_home(target)
-
-    win_home = r"C:\Users\r\.qualcoder_mcp"
-    assert refused(WinPath, win_home, r"C:\Users\r\.qualcoder_mcp\a.csv")
-    assert refused(WinPath, win_home, r"C:\Users\r\.QUALCODER_MCP\b.csv")
-    assert refused(WinPath, win_home, r"c:\users\r\.Qualcoder_Mcp")
-    assert not refused(WinPath, win_home, r"C:\Users\r\Documents\c.csv")
-    mac_home = "/Users/r/.qualcoder_mcp"
-    assert refused(MacPath, mac_home, "/Users/r/.qualcoder_mcp/a.csv")
-    assert not refused(MacPath, mac_home, "/Users/r/.QUALCODER_MCP/b.csv")
+    # 0.14.2: the guard decides by which folder a path really is, so the
+    # gap macOS had (another letter case got through) is closed; the
+    # behaviour is tested on real folders in test_v0143_path_identity.py.
+    assert "not yet caught (the guard is fixed in v0.15)" not in privacy
+    assert ("export tools refuse paths inside this folder, and inside the "
+            "project folder, by which folder a path really is, not by how "
+            "it is spelled") in _flat(privacy)
+    assert "(since 0.14.2; before, a Mac let such a spelling through)" in \
+        _flat(privacy)
 
 
 def test_the_changelog_says_what_the_assistant_is_told():
@@ -208,7 +199,7 @@ def test_the_guide_reads_every_suggestion():
         assert gone not in guide, gone
     # the three questions as what Claude is told, the default named
     assert "there is no default instruction." in guide
-    assert ("The server refuses a session without an instruction but "
+    assert ("Exegete refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in guide
     assert ("The instruction is where you say what counts as stated for "
             "your study") in guide
@@ -226,10 +217,10 @@ def test_the_workflow_decides_each_item():
     assert ("All five look good. Show me the Career Satisfaction and "
             "Professional Development suggestions.") in workflow
     assert "Show me 1, 3, 4 and 5 too" in workflow
-    assert ("The server keeps the session in a file of its own "
+    assert ("Exegete keeps the session in a file of its own "
             "(`~/.exegete/sessions/`), not in the chat") in workflow
     assert "there is no default instruction." in workflow
-    assert ("The server refuses a session without an instruction but "
+    assert ("Exegete refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in workflow
 
 

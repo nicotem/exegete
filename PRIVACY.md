@@ -3,16 +3,20 @@
 This document explains exactly what happens to your research data when
 you use Exegete (formerly qualcoder-mcp). It is factual and deliberately
 sober: this tool makes the data flow explicit precisely so you can make
-an informed decision, which many AI integrations do not. It is not legal
+an informed decision, which many AI tools do not. It is not legal
 advice.
 
 ## How your data flows
 
-**The server itself runs entirely on your machine.** It is a local
+**Exegete itself runs entirely on your machine.** It is a local
 process started by your MCP client (Claude Desktop, Claude Code, or any
 other). It adds **no telemetry, no analytics, and no separate cloud
-path** of its own. It opens your QualCoder project database read-only
-by default, and nothing in this server ever "phones home".
+path** of its own. It opens your project's database read-only
+by default. The one thing it fetches from the internet itself, while
+switched on, is a small public file that says whether a newer version
+of Exegete exists, and it sends nothing from your projects to get it
+("Checking for new versions", below, says exactly what is sent, and
+how to switch it off).
 
 **But the results of tool calls enter your Claude conversation.** That
 is the entire point of an MCP server, and it has a consequence you
@@ -35,7 +39,7 @@ assistants do, and what to use for participants' data.
 
 What stays local, always, unless a sync service copies the folder it is in:
 
-- your QualCoder project itself (the `.qda` folder and database)
+- your project itself (the `.qda` folder and its database)
 - automatic backups created before writes, and the safety backup a
   confirmed restore_backup takes first: timestamped
   `<project>_backup_<timestamp>.qda` folders (the safety backup's name
@@ -49,11 +53,14 @@ What stays local, always, unless a sync service copies the folder it is in:
   (each carries the
   same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
-- the server's own folder, `~/.exegete` (before 0.14.1,
+- Exegete's own folder, `~/.exegete` (before 0.14.1,
   `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
   the session files, the secret, the pointer and the run manifests
-  below. At the first start of 0.14.1 or later an existing
-  `~/.qualcoder_mcp` is renamed to `~/.exegete` whole, in one step on
+  below, and `update_check.json` (when Exegete last checked for a new
+  version, what it found, which versions it has told you about, and
+  the newest version that has run here; nothing from your projects;
+  "Checking for new versions" says more). At the first start of 0.14.1
+  or later an existing `~/.qualcoder_mcp` is renamed to `~/.exegete` whole, in one step on
   the same disk: the move never copies or duplicates the secret, and
   the files keep their owner-only modes. A link named
   `~/.qualcoder_mcp` (on Windows, a junction) is left pointing at it, so
@@ -62,8 +69,8 @@ What stays local, always, unless a sync service copies the folder it is in:
   where it was, unless an older copy of the server has already written
   at the old path in that instant; then both folders are kept. An older
   copy that makes a folder of its own under the old name (then, or
-  after the link was removed) has a secret of its own there, which this
-  server does not use: it takes from that folder only the session files
+  after the link was removed) has a secret of its own there, which
+  Exegete does not use: it takes from that folder only the session files
   it lacks, says so once in its log, and keeps in `~/.exegete` a
   one-line note (`old_folder_noted`, a digest that names no path) so as
   not to repeat it at every start. INSTALL.md's troubleshooting says
@@ -81,15 +88,15 @@ What stays local, always, unless a sync service copies the folder it is in:
   nothing about your project. Deleting it invalidates outstanding
   preview tokens, which means the next execute asks for a fresh
   preview, and the keyed digests in the run manifests already written
-  can then no longer be checked; nothing else. The server replaces the
+  can then no longer be checked; nothing else. Exegete replaces the
   secret by itself, with the same two effects, when it finds the file
   malformed or, on macOS and Linux, readable by other accounts (after a
   restore or a sync tool widened its mode), and logs that it did. The
-  export tools refuse paths inside this folder as it is spelled. On
-  Windows the guard's comparison ignores letter case, so a spelling in
-  another letter case is refused there too. On macOS, whose file system
-  usually ignores letter case, such a spelling (`~/.EXEGETE`) is
-  not yet caught (the guard is fixed in v0.15).
+  export tools refuse paths inside this folder, and inside the project
+  folder, by which folder a path really is, not by how it is spelled:
+  another spelling of the same folder, such as `~/.EXEGETE` on a Mac or
+  on Windows, whose disks usually ignore letter case, is refused too
+  (since 0.14.2; before, a Mac let such a spelling through).
 - the last-used project pointer (`~/.exegete/mru_project.json`:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful
@@ -97,7 +104,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   a resource read, before a project is selected (or after the
   connection to the selected one was lost and could not be reopened),
   the error answer names that path as a recovery hint (only while that project still exists on
-  disk; never in a line this server logs), so a
+  disk; never in a line the server logs), so a
   project path chosen in one MCP host or session
   can appear in another host's conversation on the same account.
   Nothing is ever selected automatically from it; only a path with the
@@ -116,7 +123,10 @@ What stays local, always, unless a sync service copies the folder it is in:
   set_project_ai_coder_name, and the current name appears on every write
   result; treat the note like any other project text the model can read.
   QualCoder never reads or writes this file. Deleting it makes the next
-  AI write ask for the name again.
+  AI write ask for the name again, unless the earlier
+  `qualcoder_mcp.json` beside it could not be marked as moved and still
+  holds a name (Exegete says so while it stays unmarked): that name
+  would then come back without a question, so remove both files.
 - a small `qualcoder_mcp.json` beside `exegete.json`, until v1.0: in a
   project from before 0.14.1, the earlier file, marked as moved and
   keeping the name it held at the move; in a project Exegete named
@@ -149,7 +159,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   the run instead (`old_fingerprint`, `new_fingerprint`): together with
   the pseudonymised text those confirm a guessed original name, so such
   a record must not be shared, not even as an audit record beside the
-  pseudonymised data. This server never rewrites or re-keys a record
+  pseudonymised data. Exegete never rewrites or re-keys a record
   already written; delete the old ones you do not need. A reader tells
   the two kinds apart by the record's `format` (3 is keyed) and by the
   field names: a field ending `_hmac_sha256` is keyed, an
@@ -187,8 +197,8 @@ tool does, as their content, so the MCP library, which logs with its
 traceback every error a fixed-address resource raises (one with an id
 in its address, such as `exegete://codes/{code_id}`, it answers
 without a line), has none to log; and for an error
-of a kind this server does not expect, which is reported by its kind
-alone. This server's own error texts, which it writes, are answered as
+of a kind Exegete does not expect, which is reported by its kind
+alone. Exegete's own error texts, which it writes, are answered as
 they are; some repeat what the caller supplied, such as a code name that
 is already taken. The rule closes one channel, SQLite's message; it
 does not make a project built to leak safe to open. Python's own
@@ -207,7 +217,7 @@ file-system error in the log is its kind and the system's short name
 for it (for example `PermissionError EACCES`), never the file it names,
 and a project's schema version only when it has QualCoder's form (`v`
 and digits). The results still name what they name, as each tool says.
-All of this is about the lines this server writes, and the MCP
+All of this is about the lines the server writes, and the MCP
 library's own lines beside them, which name the kind of each request
 and carry the caller's own text in two cases: for a prompt called with
 an argument it does not declare, that argument's value; and for a
@@ -235,22 +245,24 @@ and modification time in plain form.
 
 The `returned_so_far` figure in a paged result is carried BY the cursor,
 so it is as trustworthy as the cursor the caller handed back and no
-more: it counts what earlier pages said they returned, not what this
-server has verified. It is bounded on the way in, so a tampered cursor
+more: it counts what earlier pages said they returned, not what
+Exegete has verified. It is bounded on the way in, so a tampered cursor
 cannot put an arbitrary number in front of you, and `returned` (this
 page) and `has_more` are computed here on every page.
 
-What leaves your machine through this server: **only what tools return
-into the conversation**, but for qualitative research, that can be the
-most sensitive content you hold. An assistant that opens files by
-itself can send more, outside this server: the next section says which
+What leaves your machine through Exegete: **only what tools return
+into the conversation**, and, while checking for new versions is on,
+one request for a public file that carries nothing from your projects
+("Checking for new versions"). For qualitative research, what tools
+return can be the most sensitive content you hold. An assistant that
+opens files by itself can send more, outside Exegete: the next section says which
 do.
 
 ## Assistants that open files by themselves
 
 Everything above is about what passes through Exegete. Some AI
 assistants can also open files on your computer by themselves, with
-tools of their own: they can read a QualCoder project's files directly,
+tools of their own: they can read a project's files directly,
 its database (`data.qda`) included, without going through Exegete. What
 they read that way goes to their AI provider whole, the private part of
 every memo after `#####` included (the database holds each memo in
@@ -301,9 +313,11 @@ assistant. These pages change often, and the linked pages govern.
   (<https://code.claude.com/docs/en/sandboxing>, the same day), so it
   protects a folder only together with a rule that denies it or the
   setting that blocks reads outside the working folders. This project
-  has not tested these settings with Exegete. At the least, never start
-  Claude Code in your home folder, your projects folder or a study's
-  folder, and never add one of them as a working folder.
+  has not tested these settings with Exegete. Without them, Claude Code
+  started in your home folder, your projects folder or a study's folder,
+  or given one of them as a working folder, reads the studies there
+  without asking; an empty folder of its own, as INSTALL.md's steps
+  use, keeps them out of that folder.
 - **Claude's Cowork** (in Claude Desktop): **yes, in the folders you
   connect to it.**
   <https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>
@@ -319,22 +333,29 @@ assistant. These pages change often, and the linked pages govern.
   1.46388.3). In a Cowork session that runs in the cloud, "Claude
   fetches a copy of just that file"
   (<https://support.claude.com/en/articles/15520349-use-claude-cowork-on-web-desktop-and-mobile>,
-  the same day). In the newer experience Anthropic is rolling out to
-  Pro and Max plans, "everything Claude Cowork does is available from
-  any conversation", and "Folders you gave Cowork access to are listed
+  the same day). In the version of Claude where chat and Cowork are
+  one conversation, which Anthropic is rolling out to Pro and Max plans
+  first, "everything Claude Cowork does is available from any
+  conversation", and "Folders you gave Cowork access to are listed
   under Trusted folders."
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
-  the same day). Keep QualCoder projects, transcripts and your projects
-  folder out of every folder connected to Claude.
+  the same day). The same page, read again on 1 October 2026, says how
+  to tell: "If you're on a Pro or Max plan and your message box still
+  shows "Chat" and "Cowork" options, you don't have it yet." So a
+  project, a transcript or your projects folder inside a
+  folder connected to Claude is within its reach; kept out of every
+  connected folder, with computer use off and no other extension that
+  reads files (both below), they stay out of it.
 - **Claude Desktop's chat, with the extension**: **not by itself, as far
   as Anthropic's pages say.** They document no way for the older,
   separate chat to open a file on your computer other than one you
   attach or one a tool, such as Exegete's, reads for it; no page says so
   in one sentence, and this project has not tested it. Three
-  exceptions. In the newer experience above, a conversation can read a
-  folder you connect. "Local MCP servers bundled with plugins and
-  desktop extensions run on your computer with the same permissions as
-  any other program you run."
+  exceptions. In the version where chat and Cowork are one
+  conversation (above), a conversation can read a folder you connect.
+  "Local MCP servers bundled with plugins and desktop extensions run on
+  your computer with the same permissions as any other program you
+  run."
   (<https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>,
   the same day), so another extension that reads files can read your
   project. And computer use, once switched on (Settings, General,
@@ -342,16 +363,23 @@ assistant. These pages change often, and the linked pages govern.
   run your dev tools automatically", and "Claude asks for your
   permission before accessing each application."
   (<https://support.claude.com/en/articles/14128542-let-claude-use-your-computer-in-cowork>,
-  the same day); it is in Cowork and Claude Code, and in the newer
-  experience any conversation has it ("Computer use: In beta on Pro and
-  Max plans, Claude can use apps on your computer directly by clicking,
-  typing, and navigating your screen.", the article on the newer
-  experience above). Through an application you allow, such as
-  QualCoder or a file viewer, it can see a project, the private part of
-  memos included. With no other extension that reads files, computer
-  use off, and no folder that holds your projects or transcripts
-  connected (your home folder, Documents or a whole drive included),
-  the assistant reaches your project only through Exegete.
+  the same day); it is in Cowork and Claude Code, and in the version
+  where chat and Cowork are one conversation any conversation has it
+  ("Computer use: In beta on Pro and Max plans, Claude can use apps on
+  your computer directly by clicking, typing, and navigating your
+  screen.", the article on that version above). It works from
+  screenshots, and sees more than the applications you allow: "Claude
+  takes screenshots of your computer to understand how to navigate the
+  screen and the apps to which you've given permission." and "This means
+  Claude can see any information visible on your screen or those apps,
+  including personal data, sensitive documents, or private information
+  belonging to you or others." (the article on computer use above, read
+  1 October 2026). So through any window on the screen, QualCoder's or a
+  file viewer's, it can see a project, the private part of memos
+  included. With no other extension that reads files, computer use off,
+  and no folder that holds your projects or transcripts connected (your
+  home folder, Documents or a whole drive included), the assistant
+  reaches your project only through Exegete.
 - **LM Studio** (0.4.25, its chat window): **not by itself.** Its
   pages document no file tool of its own for the chat (its MCP page,
   <https://lmstudio.ai/docs/app/mcp>, read 30 September 2026, lists
@@ -372,28 +400,40 @@ assistant. These pages change often, and the linked pages govern.
   change and run commands on the files in the folder you give it
   (<https://lmstudio.ai/docs/bionic/quick-start>, the same day), and
   LM Studio's pages do not say whether its commands stop at that
-  folder: keep a study's folders, and the folders that hold them, out
-  of it.
+  folder, so given a study's folder, or a folder that holds one, it may
+  read and change the study; this project suggests keeping them out of
+  it.
 
-So, for participants' data, this project suggests an assistant with no
+**While you practise.** Codex and Claude Code can open files on your
+computer by themselves, so a real study kept on the same computer is
+within their reach even while you practise, and Exegete's list of
+projects tells them where it is. If that matters for a study, you
+could keep practice projects in a folder of their own, or work on that
+study with Claude Desktop's chat. A folder of their own keeps practice
+projects apart but does not put the study out of reach, and what they
+open goes to their maker, which may train on it while training is on.
+
+**For participants' data**, this project suggests an assistant with no
 file access of its own: Claude Desktop's chat with the extension, with
-computer use off and no folder that holds your projects or transcripts
-connected to it, or LM Studio's chat with Exegete and no other server
-or plugin that reads files. OpenAI's apps are for practice and for data
-that is not sensitive until a setting that stops Codex's reads has been
-tested with Exegete. With Cowork, keep your projects out of every
-folder connected to it. With Claude Code, never start it in your home
-folder, your projects folder or a study's folder; starting it elsewhere
-keeps your projects out of the folder it reads without asking, but does
-not stop its read-only commands reading them (above), so for
-participants' data this project suggests the chat above instead, on
-whichever plan or terms you use.
+computer use off, no folder that holds your projects or transcripts
+connected to it, and no other extension that reads files, or LM
+Studio's chat with Exegete and no other server or plugin that reads
+files. Codex reads well beyond its folder without asking, and a
+setting that stops it has not yet been tested with Exegete. Cowork
+reads every folder connected to it, so projects kept out of those
+folders, with computer use off and no other extension that reads files,
+stay out of its reach. Claude Code reads the
+folder it starts in without asking: an empty folder of its own keeps
+your projects out of that folder, but does not stop its read-only
+commands reading them, or its file tools in auto mode (above), which
+is why, for participants' data, this project suggests the chat above
+instead, on whichever plan or terms you use.
 
 ## Keeping notes private from the AI: the '#####' memo convention
 
 QualCoder (3.8.2 and 4.0) uses a marker for memos: everything from the
-first `#####` onward is a private note. This server honours the
-convention, whichever QualCoder made the project:
+first `#####` onward is a private note. Exegete honours the
+convention, whichever program made the project, Exegete or QualCoder:
 
 - **Reads**: every tool and resource that returns memo content (code,
   category, file, case, attribute-type and coding memos, annotations,
@@ -416,10 +456,10 @@ convention, whichever QualCoder made the project:
   after it were dropped without a word, so a note that began with it was
   emptied or, for an annotation, deleted. This departs from QualCoder's
   own AI server, which drops the marker silently; the refusal is there
-  because the silent drop destroyed notes. Code and category names and
-  coder names copied into provenance notes are neutralised, so the AI
-  can never create, read, replace, or delete a private zone through a
-  memo write.
+  because Exegete's own earlier silent drop emptied or deleted notes.
+  Code and category names and coder names copied into provenance
+  notes are neutralised, so the AI can never create, read, replace,
+  or delete a private zone through a memo write.
 - **Whole-row deletes** are the one qualification to that sentence.
   Tools that remove an entire row remove any private note on it
   together with the row: delete_coding and delete_annotation (single
@@ -445,31 +485,42 @@ convention, whichever QualCoder made the project:
 - **The exception, deliberately**: exported FILES (the REFI-QDA
   `.qdpx` and codebook files, and the coded-segments report file
   written by export_coded_segments_report) keep memos in full, private
-  zone included, because QualCoder's own exports do and export parity
-  governs. The export tools say so in their descriptions.
+  zone included, because QualCoder's own exports do, and Exegete keeps
+  its exports the same. The export tools say so in their descriptions.
   export_code_report, despite its name, returns JSON into the
   conversation rather than writing a file, so it strips like every
   other read. Treat exported files with the same care as the project
   itself.
 
 The private zone stays in your project database on disk; this
-convention controls only what enters the AI conversation through this
-server. An assistant that opens the database by itself reads every memo
-whole ("Assistants that open files by themselves", above). The QualCoder
-4.0 behaviour described in this section and the next two was verified
-against QualCoder master at commit 9bddf17 (pulled 2026-08-25, when 4.0
-was in beta); TOOLS.md and CHANGELOG.md carry the same pin. The coder
-visibility section was also verified against the 3.8.2 tag, which
-already creates the `coder_names` table, its `visibility` column and
-the four views (schema v14).
+convention controls only what enters the AI conversation through
+Exegete. An assistant that opens the database by itself reads every memo
+whole ("Assistants that open files by themselves", above).
+
+This note covers three sections: this one, "Coder visibility" and
+"Backups, project copies, and the `ai_data/` folder" below. What they
+say of QualCoder is verified against QualCoder 4.0, released on
+2 October 2026. The code behind the private memo marker, the
+coder-visibility table and its views, and QualCoder's backups is the
+same there as in its development tree at commit 9bddf17 (25 August
+2026), where they were first checked, and the line numbers cited from
+QualCoder's code are still that commit's. What these sections say of
+QualCoder's own assistant and AI server, whose code changed a good deal
+in the release, was read again in the released code on 6 October 2026,
+and one statement was corrected: what QualCoder's server answers about
+an annotation (under "Coder visibility"). TOOLS.md, "Supported
+QualCoder versions", says what else was checked at the release. The
+coder visibility section was also verified against the 3.8.2 tag,
+which already creates the `coder_names` table, its `visibility` column
+and the four views (schema v14).
 
 ## Attribution: the AI coder name is yours to choose
 
-Every row this server writes carries one coder name, so AI work stays
-distinguishable from yours in QualCoder (an attribute value it sets on
-a file or a journal entry included, where QualCoder's own edit keeps
-the row's earlier owner). AI rows are never written under
-a name the model chose by itself: the name is set per project by you,
+Every row Exegete writes carries one coder name, so AI work stays
+distinguishable from yours, in Exegete's reads and in QualCoder (an
+attribute value it sets on a file or a journal entry included, where
+QualCoder's own edit keeps the row's earlier owner). AI rows are never
+written under a name the model chose by itself: the name is set per project by you,
 and the model can only ask. The first write that needs a name stops and
 asks; your answer is stored with the project and reported back by the
 project reads. The host's `EXEGETE_AI_CODER_NAME` setting declares
@@ -479,13 +530,13 @@ project's own coder name) is refused, and the `owner` argument of
 `apply_codings` and `import_text_file` can no longer be used to write
 rows under someone else's name.
 
-## Approving AI suggestions: what the server can and cannot see
+## Approving AI suggestions: what Exegete can and cannot see
 
 Suggested codings and proposed codes are written to the project only
 once each item is marked approved (`update_suggestion_status`,
 `update_proposal_status`) and then applied (`apply_codings`,
 `create_proposed_codes`). The mark is set by a tool call the assistant
-makes when it relays your decision. The server records the approval the
+makes when it relays your decision. Exegete records the approval the
 assistant reports and cannot tell whether you gave it: nothing in a tool
 call shows what you said in the conversation. What stands behind the
 mark is your host's own approval of each tool call (keep the host in its
@@ -518,7 +569,7 @@ coder's name.
 QualCoder lets a project hide individual coders' work (a per-coder
 visibility setting stored in the project database). It is not a 4.0
 feature: QualCoder 3.8.2 and 4.0, schema v14 and later, create the
-table, the column and the views, and this server detects them by
+table, the column and the views, and Exegete detects them by
 probing the project database rather than by any version string, so the
 behaviour below follows the capability wherever it is present. When a
 project has the coder-visibility capability:
@@ -534,8 +585,8 @@ project has the coder-visibility capability:
   in both pinned builds it reads the base `code_text` table
   (`report_codes.py:1712-1724` at 9bddf17, `:1504-1515` at the 3.8.2
   tag) and lists a hidden coder's segments, so hiding a coder in
-  QualCoder hides their work from its coding screen and from this
-  server's default reads, not from its reports; this server's file
+  QualCoder hides their work from its coding screen and from
+  Exegete's default reads, not from its reports; Exegete's file
   exports keep that same parity.
   Results disclose when hidden-coder filtering shaped them as a COUNT
   of hidden coders, never their names; the owner of a row that is read
@@ -548,9 +599,16 @@ project has the coder-visibility capability:
   REFUSE unless the caller passes `allow_hidden_coder=true`; the
   refusal says only that the row belongs to a coder currently hidden
   in QualCoder, never who or how many. With the override, the result
-  echoes ids only (as QualCoder's AI server does; update_annotation
-  also echoes back the public note text the AI itself just supplied),
-  never the hidden coder's name, code, span or text. The token-gated
+  echoes ids only (update_annotation also echoes back the public note
+  text the AI itself just supplied), never the hidden coder's name,
+  code, span or text. QualCoder 4.0's own AI server answers the same
+  way about a coding but not about an annotation: its update and
+  delete of an annotation answer with the annotation's position and
+  its owner's name as well (`ai_mcp_server.py:2324-2336` and
+  `:2370-2380` at tag `4.0`). Exegete keeps to ids there too, so
+  that the override, which is there to change a hidden coder's row,
+  does not also tell the conversation whose the row is or where it
+  lies. The token-gated
   cascades (delete_code, delete_category, merge_codes, merge_category)
   report in their preview how many affected codings belong to hidden
   coders, as a count, and name every OTHER owner whose codings the
@@ -578,7 +636,7 @@ project has the coder-visibility capability:
   resources. QualCoder shows the
   owner in its code tree and its journal list (`journals.py` 181 at
   9bddf17); its file and case managers show none (`manage_files.py`
-  1974, `cases.py` 371), so on files and cases this server shows what
+  1974, `cases.py` 371), so on files and cases Exegete shows what
   QualCoder's own screens do not. `search_memos` is the exception: it
   returns a note's owner as "(hidden coder)" when that coder is hidden,
   whatever the note is attached to (below).
@@ -639,16 +697,16 @@ project has the coder-visibility capability:
   category row being removed is reported as "(hidden coder)". The
   exported FILE is never affected by this: it carries every coder's
   counts, for parity with QualCoder's own report.
-- **When the capability arrives while this server is connected.**
+- **When the capability arrives while Exegete is connected.**
   QualCoder creates the visibility column and its views when it opens a
-  project, which can be after this server connected to it. Since v0.14
+  project, which can be after Exegete connected to it. Since v0.14
   every read re-reads the declaration from the project when it is made,
   as every decision that puts a coder's NAME into a result already did
   (the pseudonymisation preview's owner breakdown and hidden-row counts,
   the cascade previews' `by_owner` and `discarded_by_owner` lists and
   their masked row owner, the coder comparison's refusal and its hidden
   count, the frequencies export's coder list and the AI coder name
-  setter). So a coder hidden after this server connected is filtered out
+  setter). So a coder hidden after Exegete connected is filtered out
   of the read tools (coded segments, searches, the file view,
   frequencies and the rest of the list above) from the next call on,
   and counted in the hidden-coder count they disclose, without selecting
@@ -686,13 +744,13 @@ source in the project** (QualCoder chunks source fulltext into it for
 retrieval), which matters to anyone sharing or syncing project
 folders.
 
-This server never writes into `ai_data/` (it is QualCoder's own
+Exegete never writes into `ai_data/` (it is QualCoder's own
 territory). Its backups and workspace copies include `ai_data/` whole,
 minus exactly the files QualCoder 4.0's own backups skip
 (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`, `*.sqlite-wal` and
 `*.sqlite-journal`) and, in addition, any `*.lock` file (QualCoder 3.8's
 backups skipped those too, and a copied lock file would make QualCoder
-report the copy as not properly closed). That mirrors upstream behaviour, keeps the
+report the copy as not properly closed). That mirrors QualCoder's own backups, keeps the
 non-regenerable prompt library and chat history safe in every backup,
 and avoids multiplying plaintext copies of your sources across backup
 folders. A restored or copied project without `search.sqlite` is
@@ -729,7 +787,7 @@ one tool reads the backups' contents: `rename_file`, to recognise a
 rename back (a name, or an ending, the file had before; deprecated:
 v0.14 says so when it happens, and v0.15 removes it). Only when one of
 its rules would refuse the new name, it opens the database of the
-project's own backups beside it, this server's `_backup_` copies and
+project's own backups beside it, Exegete's `_backup_` copies and
 QualCoder's `_BKUP_` copies, newest first and at most 200, read-only and
 immutable (nothing is written into a backup, no side file is made; a
 backup with a journal or WAL file beside its database is skipped), once
@@ -744,7 +802,7 @@ logged: the only effect is whether the rename is accepted or refused.
 
 Two further rules touch files on your disk:
 
-- **Symlinks.** Unlike QualCoder's own backups, this server's backups
+- **Symlinks.** Unlike QualCoder's own backups, Exegete's backups
   and workspace copies do not follow a symlink that points outside the
   project folder, or that dangles: such entries are skipped, and the
   result reports how many (and which, up to twenty names) were
@@ -772,15 +830,15 @@ Two further rules touch files on your disk:
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for
   processes that are QualCoder itself: a program whose own name holds
-  "qualcoder" once this server's names (`exegete`, `qualcoder-mcp`,
+  "qualcoder" once Exegete's names (`exegete`, `qualcoder-mcp`,
   `qualcoder_mcp`) are taken out, which covers QualCoder's installers,
   its app and the portable and Linux downloads it publishes, or a Python
   running QualCoder's package (`-m qualcoder`, its `__main__.py`, its
   `qualcoder` script). Since v0.14 a command line that merely mentions
-  QualCoder in its arguments no longer counts, and this server's own
+  QualCoder in its arguments no longer counts, and Exegete's own
   process is left out. Only the NUMBER of
   matches is reported into the conversation; process names, command
-  lines and other users' processes never leave the server, the
+  lines and other users' processes never leave Exegete, the
   filtered matches are held in memory for at most five seconds so that
   back-to-back calls do not rescan, and nothing from the list is
   stored on disk. The other signals in that field come from the
@@ -804,10 +862,10 @@ Two further rules touch files on your disk:
   project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
   selects a project); nothing else: no backup, no `exegete.json`,
-  no entry in QualCoder's recent-project list. The database holds the researcher's QualCoder coder name when
+  no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
   they give it (and QualCoder's speaker coder), and an "about" line
-  naming this server and its version. The coder name is asked for,
-  never read: the server does not open QualCoder's settings file
+  naming Exegete and its version. The coder name is asked for,
+  never read: Exegete does not open QualCoder's settings file
   (`~/.qualcoder/config.ini`, which holds API keys in plain text), and a
   test pins that. To refuse a name already in use, it lists the target
   folder's entries and opens an existing project's database read-only;
@@ -817,7 +875,7 @@ Two further rules touch files on your disk:
 ## Your governance options, from default to fully local (Experimental)
 
 Which terms govern the AI processing is decided by the host you run and
-the account you sign into, not by this server. Four rungs, each with
+the account you sign into, not by Exegete. Four rungs, each with
 what changes and what to check. Discipline note: we quote official
 pages verbatim with their URLs and never characterise terms in our own
 voice; every quote below was pulled on 2026-08-17, terms change, and
@@ -826,7 +884,9 @@ and not yet capability-evaluated; see the INSTALL.md recipes.)
 
 ### Rung 1: Claude consumer plans (Free/Pro/Max, including Claude Code signed in with them)
 
-Do not assume what your account's training default is. Open
+Switch training off before participants' data: while it is on,
+Anthropic may use your conversations to train its models. Do not
+assume what your account's training default is. Open
 <https://claude.ai/settings/data-privacy-controls> and check the Model
 Improvement setting yourself. The governing documents:
 
@@ -883,7 +943,8 @@ change what Anthropic may do with what it receives, not what Claude
 Code reads: Claude Code opens files by itself, outside Exegete
 ("Assistants that open files by themselves", above). For participants'
 data under commercial terms, this project suggests Claude Desktop's
-chat with Exegete on a Team or Enterprise account (rung 3).
+chat with Exegete on a Team or Enterprise account (rung 3), set up as
+"Assistants that open files by themselves", above, says.
 
 ### Rung 3: Team/Enterprise (Claude for Work)
 
@@ -899,24 +960,35 @@ do NOT touch:
 > Gov and Claude for Education"
 
 If your institution already has a Team or Enterprise deployment, using
-this server through Claude Desktop or Claude Code under that account
-is already commercial-terms coverage; no API key is needed.
+Exegete through Claude Desktop or Claude Code under that account
+is already commercial-terms coverage; no API key is needed. The terms
+do not change what Claude Code reads: on this rung as on the others,
+Claude Code opens files by itself, outside Exegete ("Assistants that
+open files by themselves", above). For participants' data, this
+project suggests Claude Desktop's chat with Exegete under that
+account, set up as that section says.
 
 ### Rung 4: fully local models (Experimental)
 
 The rung where the third-party-processor question disappears: model
-inference and every operation of Exegete happen on your machine. LM
+inference and every operation of Exegete happen on your machine,
+provided its check for new versions stays off, as it is on this route
+unless you switch it on ("Checking for new versions", below). LM
 Studio's documentation states (quoted 2026-08-17,
 <https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
 entirely offline" and that "Nothing you enter into LM Studio when
 chatting with LLMs leaves your device". That is the vendor's statement,
 not our certification: verify offline operation yourself (disconnect
-and work) and record it as a data-management-plan evidence point.
+and work), check that the host's entry sets `EXEGETE_UPDATE_CHECK` to
+`off` (Exegete's log says at each start whether checking is on), and
+record both as data-management-plan evidence points. Disconnecting
+shows that the work needs no network; it does not show that nothing
+tries to connect, because a check that fails says nothing.
 
 The trade is stated plainly: a narrower workflow with more supervision,
 the reduced core toolset required (`EXEGETE_TOOLSET=core`), and,
 importantly, **we have not yet evaluated how well any local model
-performs with this server**. That evaluation is pending; until then
+performs with Exegete**. That evaluation is pending; until then
 local-model behaviour is unverified, which is why this rung is marked
 Experimental. Mechanics: the INSTALL.md recipe "LM Studio (fully
 local)".
@@ -924,8 +996,26 @@ local)".
 ### Cross-rung cautions
 
 - Feedback mechanisms, safety flagging, and opt-in programmes can pierce
-  every Anthropic route. Never use feedback features (thumbs,
-  /feedback, /bug) in sessions containing participant data.
+  every Anthropic route. A thumbs up or down sends the conversation it
+  rates.
+  <https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training>
+  (read 1 October 2026): "When you provide us feedback via our thumbs
+  up/down button, we will store the entire related conversation,
+  including any content, custom styles or conversation preferences, in
+  our secured back-end for up to 5 years. Feedback data does not
+  include raw content from connectors (e.g. Google Drive), including
+  remote and local MCP servers, though data may be included if it’s
+  directly copied into your conversation with Claude." and "We may use
+  your feedback to analyze the effectiveness of our Services, conduct
+  research, study user behavior, and train our AI models as permitted
+  under applicable laws." So, by that page, what Exegete's tools return
+  is left out, and what Claude's replies quote from it is not. In
+  Claude Code, "Transcripts shared via
+  `/feedback`, or via `/bug` and `/share`, which report through the
+  same path, are retained for 5 years."
+  (<https://code.claude.com/docs/en/data-usage>, the same day). So in
+  sessions containing participant data, this project suggests giving
+  no feedback.
 - Claude Code opens files by itself, outside Exegete, on every rung:
   "Assistants that open files by themselves", above, says what it reads
   without asking and what narrows it.
@@ -940,6 +1030,89 @@ local)".
 - All quotes above were pulled 2026-08-17. Terms change; the linked
   pages govern. The Privacy Center now lives at privacy.claude.com
   (older privacy.anthropic.com links redirect there).
+
+## Checking for new versions
+
+**What it does.** While it is switched on, Exegete fetches one small
+file, <https://nicotem.github.io/exegete/latest.json>: at most once a
+week on its own, and at most once a day when the assistant checks for
+you, which hosts that ask before a tool runs ask about (INSTALL.md,
+"What hosts do with the tools' read and write marks", says which do). The file holds
+four values: the newest version, its date, whether it is an important
+update, and the file's format. Exegete writes every sentence and link
+it shows you itself; nothing from the file but those values reaches the
+conversation.
+
+**When it is on.** In the Claude Desktop extension, it is on unless you
+switch it off: Settings, Extensions, Exegete, "Tell me when a new
+version is out". The first time the assistant uses Exegete with the
+check on, Exegete tells you about the check through the assistant (in
+the first successful answer of 20,000 characters or fewer, so that it
+is read in full), and makes its first check no sooner than seven days later, so
+you can switch it off first. On the Terminal route, it is off unless the app
+that starts Exegete sets `EXEGETE_UPDATE_CHECK` to `on`. Exegete's log
+says at every start whether it is on.
+
+**What it sends.** An ordinary request for that file, identified only
+as "Exegete": nothing from your projects, no names, no version number,
+no identifier that Exegete creates or reads, no cookie. Like any web
+request, it shows your computer's internet address (IP address), which
+data-protection law may treat as personal data, and the time to the
+company that hosts the file, GitHub. GitHub, "What is GitHub Pages?",
+<https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages>
+(read on 5 October 2026 through GitHub's own source for its
+documentation, github/docs, since docs.github.com could not be opened
+where this was written): "When a GitHub Pages site is visited, the
+visitor's IP address is logged and stored for security purposes,
+regardless of whether the visitor has signed into GitHub or not."
+GitHub's privacy statement,
+<https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement>
+("Effective date: April 27, 2026", read the same way on the same day),
+says that "It applies to the Personal Data that GitHub, Inc. or GitHub
+B.V., processes as the “Data Controller” when you interact with
+websites, applications, and services that display this Statement"; that
+"We collect data about your interactions with the Services, such as IP
+address, device information, session details, date and time of
+requests, device type and ID, operating system and application version,
+information related to your contributions to repositories, and
+performance of specific features or Services"; and that "We transfer
+Personal Data from the European Union, the United Kingdom, and
+Switzerland to countries that the European Commission has not
+recognized as having an adequate level of data protection." The linked
+pages govern. Your network (your university's, for example) and its
+name servers also see that your computer asked for nicotem.github.io, a
+name that is Exegete's.
+
+**What this project receives.** This project adds no counter,
+analytics or log of its own to the site, and the site's pages load
+nothing from other sites.
+
+**What it keeps.** In Exegete's own folder (`~/.exegete`), a file
+`update_check.json`: when it last tried and, if that failed, the kind
+of failure; the newest version it found; the versions it has already
+told you about; when it told you about the check itself and the date
+of its first check; and the newest version of Exegete that has run on
+this computer, which it keeps even with checking off (so that it can
+say once that an update worked). Nothing from your projects.
+
+**What enters the conversation.** Notes for the assistant to pass on,
+each once: that the check exists (the first time Exegete is used),
+that a newer version is out, and that an update worked. Each goes first
+in a successful answer of 20,000 characters or fewer, and counts as
+given once it is there: whether it reaches you depends on the assistant
+passing it on. When you ask, the answer gives the installed and newest versions, how Exegete was
+installed, and the steps, with any folder in your home folder written
+from it (`$HOME`); a folder outside your home folder is written in
+full. These go to your AI provider like any other tool answer.
+
+**Switching it off.** When it is off, Exegete itself makes no
+connection, including when you ask whether it is up to date. Installing
+or updating the extension still downloads what it needs, as INSTALL.md
+says; that is Claude Desktop's work, not Exegete's. Blocking
+nicotem.github.io at your network stops the request reaching GitHub,
+but Exegete still tries, at most once a week, and when you ask, and
+your network still sees the name; switching it off stops the attempts. Blocked, Exegete
+says nothing about new versions.
 
 ## OpenAI's apps: the ChatGPT desktop app and Codex (Experimental)
 
@@ -1021,19 +1194,22 @@ that open files by themselves", above). What Codex reads by itself goes
 to OpenAI without passing through Exegete, so none of Exegete's
 protections applies to it: not the `#####` mark, which Exegete never
 passes on, not the approval before anything is written, not the preview
-or the backup. A study's folder, the projects folder or the home folder
-should never be Codex's place to work; INSTALL.md's recipe gives it an
-empty folder of its own, which keeps a study's files out of the place
-Codex works in, so that it does not change them without asking, and
-does not keep Codex from reading them, or from searching other folders
-for them. OpenAI documents a setting, in beta, that can refuse
+or the backup. Codex changes files in the folder it works in without
+asking, so a study's folder, the projects folder or the home folder
+given to it as that folder would be open to its changes as well as its
+reads; INSTALL.md's recipe gives it an empty folder of its own, which
+keeps a study's files out of the place Codex works in, so that it does
+not change them without asking, and does not keep Codex from reading
+them, or from searching other folders for them. Practising, too,
+leaves a real study on the same computer within its reach ("While you
+practise", above). OpenAI documents a setting, in beta, that can refuse
 Codex's reads outside its folder, a "permission profile"
 (<https://learn.chatgpt.com/docs/permissions>, read 30 September 2026:
 "Beta. Permission profiles are under active development and may
 change."). This project has not yet tested it with Exegete, and gives
-no steps for it until it has. Until then it suggests OpenAI's apps for
-practice and for data that is not sensitive, and, for participants'
-data, an assistant with no file access of its own.
+no steps for it until it has. Until then, for participants' data, it
+suggests an assistant with no file access of its own, such as Claude
+Desktop's chat.
 
 **Phones, through a connected computer.** OpenAI's Remote,
 <https://learn.chatgpt.com/docs/remote> (read 30 September 2026):
@@ -1073,8 +1249,11 @@ workspaces with local computer access switched on,
 > exclusively on the connected computer."
 
 **Services for individuals** (OpenAI's phrase; the page names the
-business plans separately, below). Help Center, "How your data is used
-to improve model performance",
+business plans separately, below). Switch training off before
+participants' data: while it is on, OpenAI may use your conversations
+to train its models. The settings, Codex's separate one included, and
+the exception for feedback are quoted below. Help Center, "How your
+data is used to improve model performance",
 <https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>
 (Archive capture of 28 September 2026,
 <https://web.archive.org/web/20260928102458/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
@@ -1212,6 +1391,14 @@ will ask, and the summary above depends on them:
   Team/Enterprise/API terms. Inputs being used for model training would
   almost never be covered by existing participant consent; an ethics
   board asks this first.
+- **Training, with either maker.** Switch training off before
+  participants' data: while it is on, the maker may use your
+  conversations to train its models. With Anthropic it is the Model
+  Improvement setting (rung 1); with OpenAI, "Improve the model for
+  everyone" and Codex's separate "Include environments" ("OpenAI's
+  apps", above). Rating a reply (thumbs up or down) can still let either
+  maker train on that conversation ("Cross-rung cautions"; "OpenAI's
+  apps").
 - **Controller / processor, and a written agreement.** Your institution
   is normally the data controller and Anthropic a processor. UK/EU GDPR
   (Art. 28) then requires a written data-processing agreement, and a
@@ -1232,6 +1419,37 @@ will ask, and the summary above depends on them:
 - **Secondary use.** Re-analysing data gathered for one study with AI may
   go beyond the original consent and ethics approval, and may itself need
   review.
+- **What Exegete itself connects to.** Only its check for new
+  versions, while that is on (on in the Claude Desktop extension unless
+  you switch it off, off on the Terminal route): at most once a week,
+  and when you ask, a request for a small public file, carrying nothing
+  from your projects;
+  GitHub, which hosts the file, records your computer's internet
+  address ("Checking for new versions", above). If your ethics
+  application or data-management plan says what the software you use
+  connects to, it can say this, or you can switch the check off.
+- **Which assistant, and whether it opens files by itself.** Codex,
+  Claude Code and Claude's Cowork can open files on your computer by
+  themselves, outside Exegete, and what they read that way goes to
+  their maker whole, the private part of memos included; Exegete cannot
+  see such a read or stop it ("Assistants that open files by
+  themselves", above). For participants' data this project suggests
+  Claude Desktop's chat with the extension, with computer use off, no
+  folder that holds your projects or transcripts connected to it, and
+  no other extension that reads files. Codex reads well beyond its
+  folder without asking, and a setting that stops it has not yet been
+  tested. Practising, too, leaves a real study
+  on the same computer within reach of Codex and Claude Code ("While
+  you practise", above).
+- **What stays on the computer, and for how long.** Copies stay on the
+  computer you work on: the project, its backups and your exports; the
+  lists of suggestions waiting for review (`~/.exegete/sessions/`);
+  Claude Desktop's log of the extension, which keeps every request and
+  answer, names and quoted text included (INSTALL.md, "Reading the
+  server log"); Codex's session files (`~/.codex/sessions`) and Claude
+  Code's transcripts (`~/.claude/projects/`). Say where each is kept,
+  whether a sync or backup service copies it, who else can reach the
+  computer, and when you will delete them.
 
 ## Practical mitigations
 
@@ -1251,12 +1469,12 @@ will ask, and the summary above depends on them:
   - **The backup.** Every run copies the whole project first, and that
     copy holds the text as it was, real names included. Backups sit
     beside the project until you remove them; `list_backups` shows them
-    and `prune_backups` removes this server's own. A project you are
+    and `prune_backups` removes Exegete's own. A project you are
     about to share is not pseudonymised while its backups are beside it.
   - **`pseudonyms.json`**, if you keep one. It is QualCoder's own
     import-time list and it is the reverse key in plain text at the
     project root, so it travels into every backup either tool makes.
-    This server writes it only when asked, in QualCoder's own format,
+    Exegete writes it only when asked, in QualCoder's own format,
     and removes or replaces it only by a restore: `restore_backup` rolls
     the whole folder back, this file with it, so restoring a backup taken
     before a save takes the file out of the project, and restoring one
@@ -1265,14 +1483,14 @@ will ask, and the summary above depends on them:
     the project had stays in the pre-restore safety backup, which
     `prune_backups` can remove; its preview names any backup it would
     remove that holds a `pseudonyms.json` which neither the project nor
-    a backup this server keeps holds, byte for byte, as the only lasting
-    copy this server knows of. QualCoder's own `_BKUP_` backups do not
+    a backup Exegete keeps holds, byte for byte, as the only lasting
+    copy Exegete knows of. QualCoder's own `_BKUP_` backups do not
     count as keeping a copy, because QualCoder deletes them past its
     `backup_num` when a project closes, so a copy in one of them does
     not stop a backup being named; the preview names those that hold a
     copy for now. The approval token signs that set of only copies, so
     a prune whose set changed after its preview (the project's own file
-    removed outside this server, for example) is refused as a changed
+    removed outside Exegete, for example) is refused as a changed
     project and removes nothing, and the execute's note says, in the
     past tense, which backups held the copy.
     Since v0.13 a run on a mapping you typed is refused unless the call
@@ -1314,7 +1532,7 @@ will ask, and the summary above depends on them:
     ordinary chat honours the mark is not documented, and this project
     has not yet checked either in use), so for a project with a pseudonyms file keep the host
     in its asking mode (INSTALL.md, "What hosts do with the tools' read
-    and write marks"). Each call writes one line to this server's log
+    and write marks"). Each call writes one line to the server's log
     with the count and no name. QualCoder's own
     guidance is to remove it and store it securely once the import is
     done (`manage_files.py` at the 9bddf17 pin), and that applies here
@@ -1330,9 +1548,9 @@ will ask, and the summary above depends on them:
     attribute values are never rewritten by the pseudonymisation tool (a
     case or file name is renamed with `rename_case` or `rename_file`,
     below). A note's private part (from its `#####` marker) is carried
-    across unread, so a name there is still there and nothing in this
-    server can report it. A second run with `rewrite_memos` on also
-    rewrites the journal entries this server wrote for earlier runs,
+    across unread, so a name there is still there and nothing in
+    Exegete can report it. A second run with `rewrite_memos` on also
+    rewrites the journal entries Exegete wrote for earlier runs,
     which the preview counts and warns about. **Two people who share a
     name:** one file per call gives each their own pseudonym in the file
     text only. With `rewrite_memos` on, whichever run carries it
@@ -1418,10 +1636,10 @@ will ask, and the summary above depends on them:
     copy), saved graph labels, saved table displays and filters, and
     QualCoder's saved SQL queries. Each rename's result counts the saved
     graph labels, table displays and filters for the case or file it
-    renamed; the saved SQL queries nothing in this server reads. Every
-    backup, this server's session files, QualCoder's search index and
+    renamed; the saved SQL queries nothing in Exegete reads. Every
+    backup, Exegete's session files, QualCoder's search index and
     QualCoder 4.0's AI chat keep the old name too, and
-    so do this server's pseudonymisation journal entries and run records,
+    so do Exegete's pseudonymisation journal entries and run records,
     which keep a file's name as it was at the run unless that name
     carried a name from the mapping (they then name the file by its id),
     though a later run with `rewrite_memos` rewrites the public part of
@@ -1431,9 +1649,9 @@ will ask, and the summary above depends on them:
     the `ai_data/` folder").
   - **QualCoder 4.0's `ai_data/` folder.** Its chat history may quote the
     previous text and its search index still holds it until QualCoder
-    reopens the project and re-indexes. This server never reads or
+    reopens the project and re-indexes. Exegete never reads or
     writes anything in there.
-  - **This server's own session files** in `~/.exegete/sessions/`.
+  - **Exegete's own session files** in `~/.exegete/sessions/`.
     A coding session records the excerpt each suggestion refers to,
     with the file's name and the reason given for it (which may quote
     the passage), and each proposed code with its definition and
@@ -1511,20 +1729,25 @@ will ask, and the summary above depends on them:
     on any failure after the backup was taken as well as on success; any
     of these can itself contain one of those names. The tool's
     description says so.
-- **Only open projects whose consent covers third-party processing.**
+- **Check that a project's consent covers third-party processing**
+  before you open it with an assistant whose AI runs on its maker's
+  computers: what the assistant reads goes to that maker, which your
+  participants may not have agreed to ("What this means for research
+  data", above).
 - **Consider which files you let the AI read.** Exegete's tools read
   only what is asked for: a session that never touches file 7 never
   transmits file 7's text through them.
-- **For participants' data, use an assistant with no file access of
-  its own**, such as Claude Desktop's chat with the extension, with
-  computer use off and no folder that holds your projects connected to
-  it. An assistant that opens files by itself (Codex, Claude Code,
-  Cowork in the folders you connect) can read a project whole, outside
-  this server; "Assistants that open files by themselves", above, says
-  which do and what narrows it.
+- **An assistant that opens files by itself can read a project
+  whole** (Codex, Claude Code, Cowork in the folders you connect),
+  outside Exegete; "Assistants that open files by themselves",
+  above, says which do and what narrows it. For participants' data,
+  this project suggests one with no file access of its own, such as
+  Claude Desktop's chat with the extension, with computer use off, no
+  folder that holds your projects or transcripts connected to it, and
+  no other extension that reads files.
 - **Consult your institution's DPO or ethics board** if you are unsure,
   before the analysis, not after.
-- Remember that the server's safety features (read-only default,
+- Remember that Exegete's safety features (read-only default,
   automatic local backups, refuse-while-QualCoder-is-open through the
   lock file QualCoder 3.x writes, and for
   QualCoder 4.0 a best-effort check of this machine's process list that

@@ -3,10 +3,12 @@
 
 Shared by the format tests and by the one-off run that made the oracle
 fixture `tests/fixtures/qc40_new_project.json` from a project QualCoder
-4.0's own New Project created (commit 9bddf17, driven headlessly by the
-create-project study's harness, coder name "alice40"):
+4.0's own New Project created (the release, tag 4.0 at b95e021, driven
+headlessly by the QualCoder 4.0 format check's harness, coder name
+"alice40"; the first fixture, made the same way at the August commit
+9bddf17, differed from it only in the date and the "about" line):
 
-    python tests/qc40_format_facts.py <made_by_40.qda> \
+    python tests/qc40_format_facts.py <made_by_40final.qda> \
         > tests/fixtures/qc40_new_project.json
 
 The facts are the ones QualCoder depends on (the study's check, section
@@ -164,9 +166,10 @@ if __name__ == "__main__":
     oracle = Path(sys.argv[1])
     out = facts(oracle)
     out["source"] = {
-        "made_by": "QualCoder 4.0's own New Project (MainWindow.new_project), "
-                   "driven headlessly by the create-project study's harness",
-        "commit": "9bddf17",
+        "made_by": "QualCoder 4.0's own New Project (MainWindow.new_project) "
+                   "at the release tag 4.0, driven headlessly by the "
+                   "QualCoder 4.0 format check's harness",
+        "commit": "b95e021",
         "coder_name": "alice40",
         "note": "ai_data/ is written by the open that follows creation, "
                 "not by creation, and is left out of the subfolders",

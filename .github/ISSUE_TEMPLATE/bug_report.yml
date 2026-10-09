@@ -33,18 +33,18 @@ body:
     id: mcp-version
     attributes:
       label: Exegete version
-      description: Run `exegete --version` in the environment you installed into (git installs, `python -m exegete.server --version`; an install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too). `pip show exegete`, `pipx list` and `uv tool list` also work; pip spells 0.14.1-alpha as 0.14.1a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
-      placeholder: e.g. 0.14.1a0
+      description: Run `exegete --version` in the environment you installed into (git installs, `python -m exegete.server --version`; an install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too). `pip show exegete`, `pipx list` and `uv tool list` also work; pip spells 0.14.2-alpha as 0.14.2a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
+      placeholder: e.g. 0.14.2a0
     validations:
       required: true
   - type: input
     id: qualcoder-version
     attributes:
-      label: QualCoder version
-      description: A stable release (3.8.x) or the 4.0-Beta pre-release. For a pre-release build, add the git commit if you know it.
-      placeholder: e.g. 3.8.2, or 4.0 Beta at commit 9bddf17
+      label: QualCoder version, if you use it
+      description: A release (3.8.x or 4.0), or "none" if you do not use QualCoder. For a build from QualCoder's source, add the git commit if you know it.
+      placeholder: e.g. 3.8.2, 4.0 or none
     validations:
-      required: true
+      required: false
   - type: input
     id: schema-version
     attributes:
@@ -57,7 +57,7 @@ body:
     id: host
     attributes:
       label: MCP host application
-      description: The application that runs the server for you.
+      description: The application that runs Exegete for you.
       options:
         - Claude Desktop, with the one-click extension (.mcpb)
         - Claude Desktop, configured by hand
@@ -82,11 +82,12 @@ body:
     id: qualcoder-open
     attributes:
       label: Was the project open in QualCoder at the time?
-      description: Writes are refused while a released QualCoder (3.x) has the project open; the 4.0-Beta pre-release writes no lock file and can only be detected heuristically.
+      description: Writes are refused while QualCoder 3.x has the project open, which its lock file shows; QualCoder 4.0 writes no lock file, so an open project there can only be guessed at.
       options:
         - "No"
         - "Yes"
         - Not sure
+        - I don't use QualCoder
     validations:
       required: false
   - type: dropdown

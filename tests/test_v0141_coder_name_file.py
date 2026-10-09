@@ -417,6 +417,99 @@ def test_the_retry_leaves_other_earlier_files_alone(folder):
     assert path.read_bytes() == before
 
 
+def big_new_file(folder, name="After", size=61000):
+    """exegete.json at version 1, readable (under the read cap), with an
+    unknown top-level key so large that no write of it fits the write
+    budget, as a researcher's or a later feature's annotation could be."""
+    entry = {"name": name, "set_at": "2026-09-30T10:00:00+01:00",
+             "note": "", "host_declaration": None}
+    path = Path(folder) / NEW
+    path.write_text(json.dumps({
+        "format": "qualcoder-mcp-project", "format_version": 1,
+        "ai_coder_name": entry, "ai_coder_name_history": [entry],
+        "annotation": "x" * size}), encoding="utf-8")
+    assert path.stat().st_size < ps.SIDECAR_READ_MAX_BYTES
+    return path
+
+
+@pytest.mark.parametrize("beside", [False, True])
+def test_a_file_too_large_beside_an_unmarked_earlier_one(folder, beside):
+    # moved aside alone, as the usual advice says, exegete.json would
+    # leave the unmarked earlier file, which is read as a restored backup
+    # is: its name would come back without a word. So the message says
+    # to move both aside, and names the name that would return
+    big_new_file(folder)
+    if beside:
+        old_file(folder, name="Before")
+    with pytest.raises(ps.SidecarWriteError) as e:
+        ps.write_ai_coder_name(folder, "Next")
+    said = str(e.value)
+    assert f"({NEW} in the project folder) is too large to write" in said
+    if not beside:
+        assert said == ps.OVERSIZED_MESSAGE
+        assert "the next write will then ask for the name again" in said
+        return
+    assert (f"Ask the user to remove the extra top-level keys in it, or to "
+            f"move both {NEW} and {OLD} aside: {OLD} beside it is not "
+            f"marked as moved and still holds \"Before\", so moving {NEW} "
+            f"aside alone would bring that name back without asking. "
+            f"Nothing was written.") in said
+    assert "the next write will then ask" not in said
+    # the earlier file itself in use: the usual message, naming it
+    assert ps.oversized_message(folder / OLD) == \
+        ps.oversized_message().replace(NEW, OLD)
+    # followed: both moved aside, nothing is set and the next write asks
+    (folder / NEW).rename(folder / "aside-new.json")
+    (folder / OLD).rename(folder / "aside-old.json")
+    assert ps.read_sidecar(folder).status == ps.SIDECAR_UNSET
+
+
+def test_a_newer_file_beside_an_unmarked_earlier_one(folder):
+    old_file(folder, name="Before")
+    newer = {"format": "qualcoder-mcp-project", "format_version": 99,
+             "ai_coder_name": {"name": "After", "set_at": None, "note": "",
+                               "host_declaration": None}}
+    (folder / NEW).write_text(json.dumps(newer), encoding="utf-8")
+    with pytest.raises(ps.SidecarWriteError) as e:
+        ps.write_ai_coder_name(folder, "Next")
+    said = str(e.value)
+    assert (f"Upgrade Exegete, or ask the user to move both {NEW} and {OLD} "
+            f"aside: {OLD} beside it is not marked as moved and still "
+            f"holds \"Before\", so moving {NEW} aside alone would bring "
+            f"that name back without asking. Nothing was written.") in said
+    assert "the next write will then ask" not in said
+    # an earlier file holding no name, or none at all: the usual advice
+    # holds, since moving exegete.json aside then leaves no name
+    (folder / OLD).unlink()
+    assert ps.newer_format_message(folder / NEW) == ps.NEWER_FORMAT_MESSAGE
+    old_file(folder, name="Before", ai_coder_name=None)
+    assert ps.newer_format_message(folder / NEW) == ps.NEWER_FORMAT_MESSAGE
+
+
+def test_removing_the_new_file_alone_is_warned_of():
+    assert ps.removing_alone_warning(None) == ""
+    assert ps.removing_alone_warning("Before") == (
+        f"While it is unmarked, removing {NEW} alone (to have the name asked "
+        f"for again) would make \"Before\" this project's name again "
+        f"without asking, since {OLD} is then read in its place: remove "
+        f"both files instead.")
+
+
+def test_the_changelog_says_what_0_14_2_changed():
+    changelog = " ".join((Path(__file__).parent.parent / "CHANGELOG.md")
+                         .read_text(encoding="utf-8").split())
+    entry = changelog[changelog.index(
+        "### Fixed: the AI coder name file"):
+        changelog.index("## [0.14.1-alpha]")]
+    entry = entry[:entry.index("### ", 4)]
+    for words in ("written by a newer version, or too large to write",
+                  "move both files aside and name the name that would "
+                  "come back",
+                  "deleting `exegete.json` alone",
+                  "remove both files instead"):
+        assert words in entry, words
+
+
 class TestThroughTheServer:
 
     def test_a_failed_mark_is_said_plainly_and_retried(
@@ -605,6 +698,72 @@ class TestThroughTheServer:
         out = json.loads(server.create_code("Next", create_backup=False))
         assert out.get("success") is True, out
         assert code_owner(folder, "Next") == chosen
+
+    def test_a_newer_new_file_beside_an_unmarked_earlier_one(
+            self, setup_server, qualcoder_db_path, earlier_file_locked):
+        # the mark failed (the file locked), then exegete.json came from a
+        # newer version. Moved aside alone, as the usual advice says, it
+        # would leave the unmarked earlier file, read as a restored backup
+        # is, and the next code would go under the name from before
+        folder = Path(qualcoder_db_path)
+        (folder / NEW).unlink()
+        path = old_file(folder, name="Before")
+        out = json.loads(server.set_project_ai_coder_name("After"))
+        assert out["earlier_file_not_marked"] == str(path), out
+        data = json.loads((folder / NEW).read_text(encoding="utf-8"))
+        data["format_version"] = 99
+        (folder / NEW).write_text(json.dumps(data), encoding="utf-8")
+        for said in (json.loads(server.create_code(
+                "WhileNewer", create_backup=False))["error"],
+                json.loads(server.set_project_ai_coder_name("Other"))[
+                    "error"]):
+            assert (f"move both {NEW} and {OLD} aside: {OLD} beside it is "
+                    f"not marked as moved and still holds \"Before\"") in said
+            assert "the next write will then ask" not in said
+        assert code_owner(folder, "WhileNewer") is None
+        # followed: both aside, the next write asks, and the name chosen
+        # is the one used
+        (folder / NEW).rename(folder / "newer-aside.json")
+        path.rename(folder / "earlier-aside.json")
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out.get("action_required") == "set_project_ai_coder_name", out
+        assert code_owner(folder, "Asked") is None
+        out = json.loads(server.set_project_ai_coder_name("Chosen"))
+        assert out["success"] is True, out
+        out = json.loads(server.create_code("Next", create_backup=False))
+        assert out.get("success") is True, out
+        assert code_owner(folder, "Next") == "Chosen"
+
+    def test_removing_the_new_file_alone_is_warned_of(
+            self, setup_server, qualcoder_db_path, earlier_file_locked):
+        # PRIVACY's way to reset the name is to delete exegete.json. While
+        # the earlier file beside it is unmarked and holds a name, that
+        # would bring the name back without a word (the earlier file alone
+        # reads as a restored backup does), so the setter's warning and
+        # every read say to remove both files instead
+        folder = Path(qualcoder_db_path)
+        (folder / NEW).unlink()
+        path = old_file(folder, name="Before")
+        out = json.loads(server.set_project_ai_coder_name("After"))
+        caution = ps.removing_alone_warning("Before")
+        warning = [w for w in out["warnings"] if "could not be marked" in w]
+        assert warning and warning[0].endswith(" " + caution), out
+        report = json.loads(server.get_current_project())
+        assert report["earlier_file_not_marked"]["hint"].endswith(
+            " " + caution)
+        # followed: both removed, the next write asks
+        (folder / NEW).unlink()
+        path.unlink()
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out.get("action_required") == "set_project_ai_coder_name", out
+        assert code_owner(folder, "Asked") is None
+        # an unmarked earlier file holding no name needs no such warning
+        (folder / OLD).unlink(missing_ok=True)
+        old_file(folder, name="Unused", ai_coder_name=None, history=[])
+        out = json.loads(server.set_project_ai_coder_name("Fresh"))
+        assert out["success"] is True, out
+        assert not any(f"removing {NEW} alone" in w
+                       for w in out["warnings"]), out["warnings"]
 
     def test_a_removed_new_file_in_a_project_named_first(
             self, setup_server, qualcoder_db_path):

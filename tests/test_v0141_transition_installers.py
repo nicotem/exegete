@@ -16,19 +16,27 @@ pasted into Claude Desktop's file in a scratch home). After every step
 the host's entry starts a command that answers; at the end it starts a
 server that answers MCP's `initialize` as Exegete, and the check finds
 nothing left. And once more for pipx with `--include-deps`, which links
-exegete's command from the old package's own environment.
+exegete's command from the old package's own environment, and for uv tool
+with `--with-executables-from exegete`, which does the same and records
+the command as the old package's (with two small wheels made here, so
+that it needs uv alone).
 """
 
+import base64
+import hashlib
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
 
 import rename_helpers as rh
+from exegete import transition
 from test_v0141_transition import items, pasted
 from test_v0141_upgrade import TEST_VERSION, write_old_release
 
@@ -234,3 +242,83 @@ class TestFollowingTheSteps:
                          ["pipx", "install", "--force", "exegete"],
                          ["pipx", "uninstall", "qualcoder-mcp"],
                          linked=True)
+
+
+def small_wheel(folder: Path, dist: str, version: str, command: str,
+                requires=()) -> Path:
+    """A wheel holding one module whose command prints the package's name
+    and version, made here: no index and no build are needed."""
+    module = dist.replace("-", "_") + "_small"
+    info = f"{dist.replace('-', '_')}-{version}.dist-info"
+    files = {
+        f"{module}.py": ("import sys\n\ndef main():\n"
+                         f"    print('{dist} {version}', sys.argv[1:])\n"),
+        f"{info}/METADATA": (f"Metadata-Version: 2.1\nName: {dist}\n"
+                             f"Version: {version}\n" +
+                             "".join(f"Requires-Dist: {r}\n"
+                                     for r in requires)),
+        f"{info}/WHEEL": ("Wheel-Version: 1.0\nGenerator: test\n"
+                          "Root-Is-Purelib: true\nTag: py3-none-any\n"),
+        f"{info}/entry_points.txt": (f"[console_scripts]\n"
+                                     f"{command} = {module}:main\n"),
+    }
+    record = []
+    for name, text in files.items():
+        data = text.encode("utf-8")
+        digest = base64.urlsafe_b64encode(
+            hashlib.sha256(data).digest()).rstrip(b"=").decode("ascii")
+        record.append(f"{name},sha256={digest},{len(data)}")
+    files[f"{info}/RECORD"] = "\n".join(record + [f"{info}/RECORD,,"]) + "\n"
+    path = folder / f"{dist.replace('-', '_')}-{version}-py3-none-any.whl"
+    with zipfile.ZipFile(path, "w") as wheel:
+        for name, text in files.items():
+            wheel.writestr(name, text)
+    return path
+
+
+def test_uv_tool_with_executables_from_exegete(tmp_path):
+    # uv records exegete's command in the old tool's receipt, and its
+    # uninstall removes it even after Exegete's own install relinked it,
+    # so the step that removes the old package installs the command
+    # once more; after every step the host's entry starts a command
+    if shutil.which("uv") is None:
+        rh.skip_or_fail("uv is needed for the uv tool case")
+    house = tmp_path / "house"
+    house.mkdir()
+    small_wheel(house, "exegete", TEST_VERSION, "exegete")
+    small_wheel(house, "qualcoder-mcp", TEST_VERSION, "qualcoder-mcp",
+                ["exegete"])
+    env = dict(_env(tmp_path), UV_FIND_LINKS=str(house))
+    run(["uv", "tool", "install", "--no-index", "qualcoder-mcp",
+         "--with-executables-from", "exegete"], env)
+    home = Path(env["HOME"])
+    folder = home / ".local" / "bin"
+    assert Path(os.path.realpath(folder / "exegete")).parent == \
+        Path(os.path.realpath(folder / "qualcoder-mcp")).parent
+    config = home / "Library" / "Application Support" / "Claude" / \
+        "claude_desktop_config.json"
+    config.parent.mkdir(parents=True)
+    config.write_text(json.dumps({"mcpServers": {"qualcoder": {
+        "command": str(folder / "qualcoder-mcp")}}}), encoding="utf-8")
+
+    def check():
+        out = io.StringIO()
+        code = transition.run(
+            out=out, home=home, prefix=home / "no-env",
+            which=lambda name: shutil.which(name, path=env["PATH"]),
+            listing=lambda: [])
+        return code, out.getvalue()
+
+    code, out = check()
+    install = "uv tool install --force exegete"
+    remove = "uv tool uninstall qualcoder-mcp"
+    assert code == 1 and pasted(out)[0] == install, out
+    assert pasted(out)[-2:] == [remove, install], out
+    done = follow(out, config, env)
+    assert done == [install, "entry", remove, install]
+    entry = json.loads(config.read_text(encoding="utf-8"))[
+        "mcpServers"]["qualcoder"]
+    assert entry == {"command": str(folder / "exegete"), "args": []}
+    assert f"exegete {TEST_VERSION}" in answers(entry, env)
+    code, out = check()
+    assert code == 0, out

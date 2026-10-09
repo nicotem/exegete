@@ -89,10 +89,10 @@ def _projects_dir() -> Path:
 def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
-EXPECTED_TOOLS = 73
-EXPECTED_CONCRETE_RESOURCES = 7   # six data resources + exegete://guidance/methods (0.12)
+EXPECTED_TOOLS = 75              # read_brief joined in v0.14.2, check_for_updates with it
+EXPECTED_CONCRETE_RESOURCES = 8   # six data resources + exegete://guidance/methods (0.12) + exegete://guidance/brief (0.14.2)
 EXPECTED_RESOURCE_TEMPLATES = 3
-EXPECTED_RESOURCES_TOTAL = 10
+EXPECTED_RESOURCES_TOTAL = 11
 EXPECTED_PROMPTS = 4
 
 # jsonschema is installed in the worktree venv; when this module is run under a
@@ -469,8 +469,13 @@ def test_initialize_carries_methodology_instructions():
                 return init.instructions or ""
 
     instructions = run(scenario())
-    assert "evidence discipline" in instructions
-    assert "exegete://guidance/methods" in instructions
+    # v0.14.2: the brief's short version, which sends the assistant to
+    # read_brief (and so to the methods notes)
+    assert instructions.startswith(
+        "Exegete is a qualitative analysis application for working with "
+        "the researcher on their project, in QualCoder's format.")
+    assert "call read_brief once" in instructions
+    assert len(instructions) < 2000
     assert "\u2014" not in instructions
 
 

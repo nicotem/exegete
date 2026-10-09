@@ -866,9 +866,10 @@ class TestCodexWorksInAFolderOfItsOwn:
 
     def test_where_your_data_goes_says_what_codex_reads_by_itself(self):
         # v0.14.2, the README rewritten to persuade: the assistants table
-        # says it, with the paragraph before it (the owner, 9 October
-        # 2026: the redraft says why it matters first); the dates and
-        # OpenAI's words are PRIVACY.md's (below)
+        # says it, with the paragraph before it (the redraft, after the
+        # owner found the table obscure on 9 October 2026, says why it
+        # matters first); the dates and OpenAI's words are PRIVACY.md's
+        # (below)
         data = _readme_data()
         for words in (
                 "Some assistants can also open files on your computer by "
@@ -879,8 +880,8 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "| **ChatGPT's desktop app and Codex** (Experimental) | "
                 "Codex: yes, well beyond its folder, without asking, even "
                 "in \"Ask for approval\" and read-only mode (a setting "
-                "that may stop it is not yet tested) | OpenAI | The chat "
-                "instead |",
+                "that stops it has not yet been tested with Exegete) | "
+                "OpenAI | Claude Desktop's chat instead |",
                 # v0.14.2, the README's first round of checks: only codings
                 # wait for approval ("How it works" says what does not);
                 # the second round: one meaning for each "it"; the
@@ -1323,8 +1324,9 @@ class TestAssistantsOwnFileAccess:
         # v0.14.2, the README rewritten to persuade: the README's table
         # row says it, with the list it is set up by
         # v0.14.2, the README's second round of checks: the chat's
-        # commercial-terms route in its maker cell (the owner, 9 October
-        # 2026: the redraft puts the reach second and the suggestion last)
+        # commercial-terms route in its maker cell (the redraft, after the
+        # owner found the table obscure on 9 October 2026, puts the reach
+        # second and the suggestion last)
         assert ("| **Claude Desktop's chat**, with the extension | No, when "
                 "set up as below (as far as Anthropic's pages say) | "
                 "Anthropic; on a Team or Enterprise account, under "
@@ -1360,8 +1362,8 @@ class TestAssistantsOwnFileAccess:
         assert "Do not" not in listed
         assert ("| Codex: yes, well beyond its folder, without asking, "
                 "even in \"Ask for approval\" and read-only mode (a "
-                "setting that may stop it is not yet tested) | OpenAI | "
-                "The chat instead |") in data
+                "setting that stops it has not yet been tested with "
+                "Exegete) | OpenAI | Claude Desktop's chat instead |") in data
         assert data.index("| **Claude Desktop's chat**") < \
             data.index("| **ChatGPT's desktop app and Codex**")
         # v0.14.2: with PRIVACY.md's third condition, as everywhere the

@@ -519,11 +519,14 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
     # page on the web, desktop and mobile
     data = _between(_flat("README.md"), "## Where your data goes",
                     "## Start here")
-    # (the owner, 9 October 2026: the redraft puts the reach beside the
-    # name, then where the conversation goes, the suggestion last)
+    # (the redraft, after the owner found the table obscure on 9 October
+    # 2026, puts the reach beside the name, then where the conversation
+    # goes, the suggestion last, with PRIVACY.md's three conditions)
     assert ("| **Claude's Cowork** | Yes, in the folders you connect to it "
-            "| Anthropic | The chat instead, or keep projects and "
-            "transcripts out of the folders you connect |") in data
+            "| Anthropic | Claude Desktop's chat instead. If you use Cowork, "
+            "keep projects and transcripts out of the folders you connect, "
+            "with computer use off and no other extension that reads "
+            "files |") in data
     assert "Cowork is a part of Claude Desktop." not in data
     assert ("use-claude-cowork-on-web-desktop-and-mobile") in \
         _flat("PRIVACY.md")

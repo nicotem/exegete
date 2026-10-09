@@ -297,20 +297,25 @@ def test_no_document_prescribes_where_exegete_may_be_used():
         for words in PRESCRIBING:
             assert words not in text, (name, words)
     # The README's verdicts for Cowork and Claude Code give their reason
-    # with the suggestion (since the owner's redraft, 9 October 2026, the
-    # reason is the row's first cell and the suggestion its last)
+    # with the suggestion (since the redraft, after the owner found the
+    # table obscure on 9 October 2026, the reason is the row's first cell
+    # and the suggestion its last)
     data = _between(_flat("README.md"), "## Where your data goes",
                     "## Start here")
     assert ("| **Claude's Cowork** | Yes, in the folders you connect to it "
-            "| Anthropic | The chat instead, or keep projects and "
-            "transcripts out of the folders you connect |") in data
-    assert ("| **Claude Code** | Yes, without asking, in its folder and "
-            "beyond | Anthropic; with an organisation's API key, under "
-            "commercial terms | The chat instead |") in data
+            "| Anthropic | Claude Desktop's chat instead. If you use Cowork, "
+            "keep projects and transcripts out of the folders you connect, "
+            "with computer use off and no other extension that reads "
+            "files |") in data
+    assert ("| **Claude Code** | Yes, without asking, in the folder it "
+            "starts in and beyond | Anthropic; with an organisation's API "
+            "key, under commercial terms | Claude Desktop's chat instead "
+            "|") in data
     assert ("| **ChatGPT's desktop app and Codex** (Experimental) | Codex: "
             "yes, well beyond its folder, without asking, even in \"Ask for "
-            "approval\" and read-only mode (a setting that may stop it is "
-            "not yet tested) | OpenAI | The chat instead |") in data
+            "approval\" and read-only mode (a setting that stops it has not "
+            "yet been tested with Exegete) | OpenAI | Claude Desktop's chat "
+            "instead |") in data
 
 
 def test_the_prescribing_check_would_notice():
@@ -385,9 +390,16 @@ def test_cowork_is_out_of_reach_only_with_all_three_conditions():
             "of those folders, with computer use off and no other extension "
             "that reads files, stay out of its reach.") in hosts
     # the promise without its conditions is gone
+    readme = _flat("README.md")
     for bare in ("kept out of every connected folder, they stay out of it",
                  "projects kept out of those folders stay out of its reach"):
         assert bare not in privacy, bare
+        assert bare not in readme, bare
+    # and the README's table, which suggests the chat instead, gives all
+    # three where it says what keeps Cowork from a project
+    assert ("If you use Cowork, keep projects and transcripts out of the "
+            "folders you connect, with computer use off and no other "
+            "extension that reads files |") in readme
 
 
 def test_the_facts_behind_the_warning_stay():

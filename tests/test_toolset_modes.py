@@ -501,7 +501,8 @@ class TestThePublishedSchemaBudget:
         current entry is the Unreleased one above the 0.14.1 heading, and
         0.14.1's figure is history (`_v0141_entry`). From the release on,
         the current entry is 0.14.2's, under an Unreleased heading that
-        says nothing yet.
+        measures nothing (it may hold changes that move no tool, such as
+        the README's table of assistants).
         """
         return cls._read("CHANGELOG.md").split("## [0.14.1")[0]
 

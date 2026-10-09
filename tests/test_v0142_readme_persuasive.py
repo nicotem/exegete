@@ -10,7 +10,7 @@ characters that render one column wide on GitHub and on PyPI); the
 architecture diagram's labels and borders; the path of a coding, each
 step a behaviour of the server; the example's steps, in order, each one
 the software takes; the assistants table against PRIVACY.md's verdicts,
-and the two sentences under it; the tool-set table against the server's
+with the paragraph before it and the sentence after it; the tool-set table against the server's
 tool sets and the CHANGELOG's measurement; the advanced section's tool
 names and arguments against the server; how it is tested, against the CI
 workflow; the map against the files; "What comes next" as plans; and the
@@ -154,12 +154,17 @@ def _tools(mode="lifecycle"):
 # the reader uses QualCoder; "not an add-on or a remote control" moves
 # into "Three commitments". That takes 676 characters, and the limit is
 # raised by that and no more: 34,303.
-# The owner's redraft of the table of assistants (9 October 2026, after
-# he found it obscure) says first why it matters, in a paragraph of its
-# own that names what Exegete holds back, and asks one plain question
-# per column; no fact changed. That takes 252 characters, and the limit
-# is raised by what the page needs and no more: 34,552.
-README_LIMIT = 34_552
+# The redraft of the table of assistants (9 October 2026, after the
+# owner found it obscure) says first why it matters, in a paragraph of
+# its own that names what Exegete's answers hold back, and asks one
+# plain question per column, the suggestion now in the last. Its review
+# removed a claim the first draft added (that the real names behind
+# pseudonyms are held back) and put back PRIVACY.md's wording where the
+# first draft had shortened it (Cowork's three conditions, LM Studio's
+# "server or plugin", Claude Code's starting folder, Codex's untested
+# setting). That takes 405 characters, and the limit is raised by what
+# the page needs and no more: 34,705.
+README_LIMIT = 34_705
 
 
 def test_the_readme_stays_short():
@@ -399,7 +404,7 @@ def test_the_example_shows_the_steps_the_software_takes():
 
 
 # ---------------------------------------------------------------------------
-# The assistants table, and the two sentences under it
+# The assistants table, the paragraph before it and the sentence after it
 # ---------------------------------------------------------------------------
 
 ASSISTANTS = ("Claude Desktop's chat", "Claude's Cowork", "Claude Code",
@@ -421,11 +426,13 @@ def test_the_assistants_table():
     # cuts the table after its second column at 375 pixels); the owner,
     # 9 October 2026, found that table obscure: the redraft says first
     # why it matters and asks one plain question per column, what the
-    # assistant does beside its name and the suggestion last. No fact
-    # changed.
+    # assistant does beside its name and the suggestion last (so a reader
+    # on a phone may no longer see the suggestion beside the name). Its
+    # review removed a claim the first draft added and put back
+    # PRIVACY.md's wording where the first draft had shortened it.
     assert ("| Assistant | Opens files by itself, outside Exegete? | "
-            "Where the conversation goes | For participants' data, we "
-            "suggest |") in section
+            "Where the conversation goes | For participants' data, this "
+            "project suggests |") in section
     rows = _rows(section, "| **")
     assert [re.match(r"\| \*\*([^*]+)\*\*", row).group(1) for row in rows] \
         == list(ASSISTANTS)
@@ -443,18 +450,24 @@ def test_the_assistants_table():
                                   "pages say.**"),
         "Claude's Cowork": ("Yes, in the folders you connect to it",
                             "**yes, in the folders you connect to it.**"),
-        "Claude Code": ("Yes, without asking, in its folder and beyond",
-                        "**yes**"),
+        "Claude Code": ("Yes, without asking, in the folder it starts in "
+                        "and beyond", "**yes**"),
         "ChatGPT's desktop app and Codex": (
             "Codex: yes, well beyond its folder, without asking, even in "
-            "\"Ask for approval\" and read-only mode (a setting that may "
-            "stop it is not yet tested)",
+            "\"Ask for approval\" and read-only mode (a setting that stops "
+            "it has not yet been tested with Exegete)",
             "**yes, without asking**"),
         "LM Studio": ("Its chat: no", "**not by itself.**"),
     }
     for name, (readme_words, privacy_words) in verdicts.items():
         assert cells[name][REACH] == readme_words, name
         assert privacy_words in hosts, name
+    # (the review of the redraft: Claude Code's folder and Codex's
+    # untested setting in PRIVACY.md's words, not shortened)
+    assert "Claude Code reads the folder it starts in without asking" \
+        in hosts
+    assert "a setting that stops it has not yet been tested with Exegete" \
+        in hosts
     # what each maker receives, and what this project suggests (v0.14.2,
     # the README's first round of checks: the commercial-terms route of
     # 0.14.0's table, and Cowork as PRIVACY.md's checklist puts it)
@@ -471,7 +484,7 @@ def test_the_assistants_table():
         "Anthropic; with an organisation's API key, under commercial "
         "terms",
         "OpenAI",
-        "Nowhere: the model runs on your computer"]
+        "Nowhere outside your computer: the model runs on it"]
     assert ("For participants' data, this project suggests Claude Desktop's "
             "chat with Exegete under that account") in privacy
     assert ("For unambiguous commercial-terms coverage, use a Console "
@@ -485,22 +498,33 @@ def test_the_assistants_table():
     # (the owner, 1 October 2026: warn, don't prescribe; each verdict
     # gives its reason and a suggestion; since the redraft the reason is
     # the reach cell in the same row)
+    # (the review of the redraft: "Claude Desktop's chat" in full, since
+    # in the ChatGPT row "the chat" could be ChatGPT's; and for Cowork
+    # PRIVACY.md's three conditions, not one)
     assert cells["Claude's Cowork"][VERDICT] == (
-        "The chat instead, or keep projects and transcripts out of the "
-        "folders you connect")
+        "Claude Desktop's chat instead. If you use Cowork, keep projects "
+        "and transcripts out of the folders you connect, with computer use "
+        "off and no other extension that reads files")
+    assert ("projects kept out of those folders, with computer use off and "
+            "no other extension that reads files, stay out of its reach") \
+        in hosts
     checklist = _between(privacy, "## Before you use real participant data, "
                          "check these", "## Practical mitigations")
     assert ("Codex, Claude Code and Claude's Cowork can open files on your "
             "computer by themselves") in checklist
-    assert cells["Claude Code"][VERDICT] == "The chat instead"
+    assert cells["Claude Code"][VERDICT] == "Claude Desktop's chat instead"
     # (the judge, 1 October 2026: a warning and an alternative, as for
     # Claude Code, not a purpose)
     assert cells["ChatGPT's desktop app and Codex"][VERDICT] == \
-        "The chat instead"
+        "Claude Desktop's chat instead"
+    # (the review of the redraft: "server or plugin", as PRIVACY.md says,
+    # since in LM Studio an MCP server is the usual way to add file access)
     assert cells["LM Studio"][VERDICT] == (
-        "**This one too**, with no other plugin that reads files. Choose "
-        "the `core` tool set, since local models cope less well with many "
-        "tools. No local model has been evaluated with Exegete yet")
+        "**This one too**, with no other server or plugin that reads files. "
+        "Choose the `core` tool set, since local models cope less well with "
+        "many tools. No local model has been evaluated with Exegete yet")
+    assert ("LM Studio's chat with Exegete and no other server or plugin "
+            "that reads files") in privacy
     # the Experimental routes say so, and why (for LM Studio, in the
     # suggestion's cell since the redraft)
     assert "(Experimental)" in cells["ChatGPT's desktop app and Codex"][0]
@@ -508,25 +532,35 @@ def test_the_assistants_table():
     # the paragraph before the table, which says why it matters
     # (v0.14.2, the README's second round of checks: one meaning for each
     # "it", the same facts; the redraft: before the table, with what
-    # Exegete holds back)
+    # Exegete's answers hold back; its review: the assistant chooses what
+    # to ask for, so Exegete's answers, not Exegete, hold things back)
     flat = _flat(section)
-    assert ("**Assistants that open files by themselves.** Exegete decides "
-            "what the assistant reads from your project, and holds some "
-            "things back, such as the private part of a memo (the `#####` "
-            "mark below) and the list of real names behind pseudonyms. Some "
-            "assistants can also open files on your computer by themselves, "
-            "outside Exegete. What they read that way goes to their AI's "
-            "maker in full: Exegete cannot see such a read or stop it, and "
-            "its protections (that mark, your approval before codings are "
+    assert ("**Assistants that open files by themselves.** Exegete's answers "
+            "hold some things back from the assistant, such as the private "
+            "part of a memo (the `#####` mark below). Some assistants can "
+            "also open files on your computer by themselves, outside "
+            "Exegete. What they read that way goes to their AI's maker in "
+            "full: Exegete cannot see such a read or stop it, and its "
+            "protections (that mark, your approval before codings are "
             "written, the backups) do not apply to it.") in flat
     assert flat.index("**Assistants that open files by themselves.**") < \
         flat.index("| Assistant |")
+    # (the review of the redraft: the real names behind pseudonyms are not
+    # held back while a tool of the extension's default set sends them)
+    assert "read_pseudonym_list" in _tools("lifecycle")
+    assert "pseudonym" not in _between(
+        flat, "**Assistants that open files by themselves.**",
+        "| Assistant |")
+    # (and the sentence after the table keeps its reason)
     assert ("Exegete's own answers also tell the assistant where your "
-            "project is") in flat
+            "project is, so one that opens files by itself can find it") \
+        in flat
+    assert "Exegete's own answers tell the assistant where a project is" \
+        in hosts
     # and the terms, which the account sets, with 0.14.0's table of routes
     # (INSTALL.md, "Choosing your AI host") one link away
-    # (the second round: the routes are in the table's maker column now,
-    # so the sentence no longer lists them)
+    # (the second round: the routes are in the table's column on where
+    # the conversation goes now, so the sentence no longer lists them)
     assert ("Which terms apply is set by your account, not by Exegete; "
             "institutions should prefer organisational accounts ([INSTALL.md, "
             "\"Choosing your AI host\"](https://github.com/nicotem/exegete/"

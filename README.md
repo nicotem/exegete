@@ -191,25 +191,25 @@ Codex, no one with a local model. Text you paste or attach goes in
 full; a document imported in QualCoder, only as far as the assistant
 reads it.
 
-**Assistants that open files by themselves.** Exegete decides what the
-assistant reads from your project, and holds some things back, such as
-the private part of a memo (the `#####` mark below) and the list of real
-names behind pseudonyms. Some assistants can also open files on your
+**Assistants that open files by themselves.** Exegete's answers hold
+some things back from the assistant, such as the private part of a memo
+(the `#####` mark below). Some assistants can also open files on your
 computer by themselves, outside Exegete. What they read that way goes to
 their AI's maker in full: Exegete cannot see such a read or stop it, and
 its protections (that mark, your approval before codings are written,
 the backups) do not apply to it. So, with participants' data, it matters
 which assistant you use and how it is set up:
 
-| Assistant | Opens files by itself, outside Exegete? | Where the conversation goes | For participants' data, we suggest |
+| Assistant | Opens files by itself, outside Exegete? | Where the conversation goes | For participants' data, this project suggests |
 |---|---|---|---|
 | **Claude Desktop's chat**, with the extension | No, when set up as below (as far as Anthropic's pages say) | Anthropic; on a Team or Enterprise account, under commercial terms | **This one**, set up as below |
-| **Claude's Cowork** | Yes, in the folders you connect to it | Anthropic | The chat instead, or keep projects and transcripts out of the folders you connect |
-| **Claude Code** | Yes, without asking, in its folder and beyond | Anthropic; with an organisation's API key, under commercial terms | The chat instead |
-| **ChatGPT's desktop app and Codex** (Experimental) | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode (a setting that may stop it is not yet tested) | OpenAI | The chat instead |
-| **LM Studio**, with a local model (Experimental) | Its chat: no | Nowhere: the model runs on your computer | **This one too**, with no other plugin that reads files. Choose the `core` tool set, since local models cope less well with many tools. No local model has been evaluated with Exegete yet |
+| **Claude's Cowork** | Yes, in the folders you connect to it | Anthropic | Claude Desktop's chat instead. If you use Cowork, keep projects and transcripts out of the folders you connect, with computer use off and no other extension that reads files |
+| **Claude Code** | Yes, without asking, in the folder it starts in and beyond | Anthropic; with an organisation's API key, under commercial terms | Claude Desktop's chat instead |
+| **ChatGPT's desktop app and Codex** (Experimental) | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode (a setting that stops it has not yet been tested with Exegete) | OpenAI | Claude Desktop's chat instead |
+| **LM Studio**, with a local model (Experimental) | Its chat: no | Nowhere outside your computer: the model runs on it | **This one too**, with no other server or plugin that reads files. Choose the `core` tool set, since local models cope less well with many tools. No local model has been evaluated with Exegete yet |
 
-Exegete's own answers also tell the assistant where your project is
+Exegete's own answers also tell the assistant where your project is, so
+one that opens files by itself can find it
 ([PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)).
 Which terms apply is set by your account, not by Exegete;
 institutions should prefer organisational accounts

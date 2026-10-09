@@ -7,14 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Changed: the README's table of assistants
 
-- The README's table of assistants ("Where your data goes") now says
-  first why it matters (some assistants open files by themselves,
-  outside Exegete and its protections), then asks one plain question
-  per column: whether the assistant opens files by itself, where the
-  conversation goes, and which one we suggest for participants' data.
-  No fact changed.
+- "Where your data goes" now says first why the table matters: Exegete's
+  answers hold some things back from the assistant, such as the private
+  part of a memo, but some assistants open files by themselves, outside
+  Exegete and its protections, and what they read that way goes to
+  their AI's maker in full.
+- Each column asks one plain question: whether the assistant opens
+  files by itself, where the conversation goes, and which assistant
+  this project suggests for participants' data. The suggestion moves
+  from the second column to the last, so on a phone, where GitHub shows
+  only the first two, it may be out of sight.
+- The facts are the ones the table had, in PRIVACY.md's words: the
+  suggestion for Cowork, Claude Code and Codex is Claude Desktop's chat,
+  named in full; projects stay out of Cowork's reach only when they are
+  kept out of the folders connected to it, with computer use off and no
+  other extension that reads files; LM Studio's chat is suggested with
+  no other server or plugin that reads files.
 
 ## [0.14.2-alpha] - 2026-10-09
 

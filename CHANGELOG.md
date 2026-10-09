@@ -103,12 +103,12 @@ is built to those decisions, and may change before it is released.
   file has any without seeing them. Nothing in the project changes.
 - The assistant's brief gains one line under Privacy: use
   `open_file_for_reading` when the researcher wants to read a whole
-  file, and never open, read or look at what it opens. Its line on a
-  fresh reading now names the way to give one: when the researcher
-  wants a fresh reading, read the file with
-  `analyze_file_with_coding(without_codes=true)`, which leaves their
-  codings out, and tell them whether you have seen any. The full brief
-  is now about 12,000 characters.
+  file, and never open, read or look at what it opens. The line on a
+  fresh reading that 0.14.2 held back is served, now that a file can be
+  read without its codings: when the researcher wants a fresh reading,
+  read the file with `analyze_file_with_coding(without_codes=true)`,
+  which leaves their codings out, and tell them whether you have seen
+  any. The full brief is now about 12,500 characters.
 
 ### Changed (provisional): whole-file reads in parts
 
@@ -338,41 +338,157 @@ is built to those decisions, and may change before it is released.
   Exegete's own code stays LGPL. New libraries in every install:
   defusedxml, and striprtf pinned exactly.
 
-### Fixed
+### Changed: the README's table of assistants
 
-- The export tools' refusals of the project folder and the state folder
-  compared paths as text, so on a disk that ignores letter case (a Mac's
-  usual disk, Windows) another spelling of either folder got past them.
-  They now decide by which folder a path really is.
+- "Where your data goes" now says first why the table matters: Exegete's
+  answers hold some things back from the assistant, such as the private
+  part of a memo, but some assistants open files by themselves, outside
+  Exegete and its protections, and what they read that way goes to
+  their AI's maker in full.
+- Each column asks one plain question: whether the assistant opens
+  files by itself, where the conversation goes, and which assistant
+  this project suggests for participants' data. The suggestion moves
+  from the second column to the last, so on a phone, where GitHub shows
+  only the first two, it may be out of sight.
+- The facts are the ones the table had, in PRIVACY.md's words: the
+  suggestion for Cowork, Claude Code and Codex is Claude Desktop's chat,
+  named in full; projects stay out of Cowork's reach only when they are
+  kept out of the folders connected to it, with computer use off and no
+  other extension that reads files; LM Studio's chat is suggested with
+  no other server or plugin that reads files.
 
 ### Measured
 
-- Serialised tool JSON: full = 201,088 characters (about 50.3k tokens
-  at chars/4) over 76 tools, core = 67,374 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 203,667 (about 50.9k) over 77, measured on
+- Serialised tool JSON: full = 201,765 characters (about 50.4k tokens
+  at chars/4) over 77 tools, core = 67,243 (about 16.8k) over 23, and
+  the opt-in lifecycle set = 204,322 (about 51.1k) over 78, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 210,964, 70,766 and 213,683.
-  `open_file_for_reading`'s own entry is 1,630 characters on 3.13, and
-  `import_documents`' 2,977 (2,979 with its separator; it is in the
-  standard and lifecycle sets, not in core, and its two arguments for
-  letters that look garbled, `import_files_with_garbled_letters` and
-  `show_text`, are in it); the rest of the growth is `start` and
-  `without_codes` on `analyze_file_with_coding` and the two descriptions
-  changed above. Both new tools put their rules first, and each whole
-  description fits within the 2,048 characters Claude Code keeps:
-  `open_file_for_reading`'s is 1,187 characters on 3.13 (1,267 on 3.11)
-  and `import_documents`' 1,983 (2,039 on 3.11).
+  Python 3.11.13 (the `.venv/`), 211,641, 70,635 and 214,338. Against
+  0.14.2's figures (196,387, 65,140 and 198,944 on 3.13), every set
+  grew by `open_file_for_reading`'s own entry (1,630 characters on
+  3.13, 1,632 with its separator) and by 471 characters on
+  `analyze_file_with_coding` (its `start` and `without_codes`
+  arguments); `full` and `lifecycle` also by `import_documents`' own
+  entry (2,977, 2,979 with its separator; it is in the standard and
+  lifecycle sets, not in core, and its two arguments for letters that
+  look garbled, `import_files_with_garbled_letters` and `show_text`,
+  are in it) and by 296 on `import_text_file` (the description changed
+  above). No other tool's entry changed. Both new tools put their rules
+  first, and each whole description fits within the 2,048 characters
+  Claude Code keeps: `open_file_for_reading`'s is 1,187 characters on
+  3.13 (1,267 on 3.11) and `import_documents`' 1,983 (2,039 on 3.11).
 
-## [0.14.2-alpha] - 2026-10-02
+## [0.14.2-alpha] - 2026-10-09
 
-v0.14.2: the assistant's brief, provisional; the rules a model must
-not miss within the 2,048 characters Claude Code shows of a tool
-description; fixes from the checks of 0.14.1; and the README,
-rewritten for readers new to Exegete.
+v0.14.2. What a researcher notices first: with the Claude Desktop
+extension, a new setting, "Tell me when a new version is out", on unless
+switched off, and a note in one of Exegete's first answers, for the
+assistant to pass on, saying what the check sends and how to switch it
+off, at least seven days before the first check (on the Terminal routes
+the check is off unless switched on, and updates are still never
+installed by themselves); a new tool, `read_brief`, which the assistant
+is asked to call at the start of every conversation about a project, and
+which gives it Exegete's brief on how to work with the researcher
+(provisional); Exegete describing itself as what it is, a qualitative
+analysis application for working on the researcher's own project, kept
+in QualCoder's format, rather than as a program that opens a QualCoder
+project; a README rewritten for newcomers and advanced users, opening
+with the woven lockup; and QualCoder 4.0, released on 2 October 2026,
+named as what Exegete is verified against (4.0 keeps the format of its
+beta, schema v17, which Exegete was built against, so only words
+changed, in the documents and in two messages). Less visible: the rules
+a model must not miss now come within the 2,048 characters Claude Code
+shows of a tool description, and smaller points are fixed, most of them
+left by the checks of 0.14.1 (pseudonymisation's preview on two people
+who share a name, exports refused inside the project and Exegete's own
+folder however spelled, the AI coder name file beside an earlier one,
+the transition check, and an empty search for projects that says what it
+searched).
+
+### Added: the check for new versions
+
+From pull request #11, with the code review's two findings fixed.
+
+- **New versions announced in the conversation.** While switched on,
+  Exegete fetches a small public file from its website (GitHub Pages,
+  `https://nicotem.github.io/exegete/latest.json`), at most once a
+  week on its own and at most once a day when asked, to learn whether a
+  newer version exists. The next successful tool answer after one is
+  found carries a note for the assistant to pass on, once per version,
+  as a field of the answer (`exegete_notice`), so that a host which
+  reads only a tool's structured content sees it too. The file holds
+  four values (a format number, the newest version, its date and
+  whether it is important) and no text: every sentence and every link
+  Exegete shows is its own. The request carries nothing from the
+  researcher's projects and is identified only as "Exegete". Every
+  failure (offline, a proxy, a certificate, a redirect, a malformed or
+  oversized file, no answer within eight seconds) ends as "could not
+  check" and one log line naming the kind of failure only. An attempt
+  is recorded as it starts, so a run stopped during it (a host quit
+  within the eight seconds) still counts it, and the next start does
+  not try again within the week. When the certificate is not trusted,
+  the answer names the computer's own Python as a possible cause (on a
+  Mac, Python from python.org has its certificates only after its
+  Install Certificates step) as well as a network that inspects
+  encrypted connections.
+- **Where the note goes.** A note counts as given once it is added to
+  an answer, so it goes first in the answer, before the tool's own
+  text, and only into an answer of at most 20,000 characters (about
+  5,000 tokens): a host that cuts a long answer keeps its start, and a
+  short answer is read whole. A longer answer, such as a whole
+  transcript, leaves the note for the next shorter one.
+- **Told before anything connects.** In the desktop extension the new
+  setting "Tell me when a new version is out" is on unless switched
+  off. The first such answer after this version first starts carries
+  a note saying what the check sends and how to switch it off, and the
+  first check waits at least seven days after it, for a new
+  installation and an update alike. On the Terminal route
+  `EXEGETE_UPDATE_CHECK` is off unless set to `on`. Switched off,
+  Exegete makes no connection, not even when asked. The log says at
+  every start whether checking is on. PRIVACY.md, "Checking for new
+  versions", says what is sent and kept, with GitHub's own words on
+  what it records.
+- **`check_for_updates`**: the installed and newest versions with their
+  dates, and numbered steps for the way Exegete was installed: the
+  extension's download link and how to restart Claude Desktop; the
+  exact command, with the version pinned, for pip, pipx, uv tool or a
+  copy of the source, written from the home folder (`$HOME`); or, for
+  a copy uvx starts, the version to name in the app's entry for
+  Exegete, since uvx keeps running the copy it fetched first. A copy
+  started as `uvx qualcoder-mcp` is now treated as uvx, not as the old
+  name in a virtual environment, which gave it a pip command for uv's
+  cache, where there is no pip. Its description is short, with its
+  rules first: only when the user asks, the steps as returned, and the
+  steps left to the user. It is not marked read-only, since it records
+  the check, so hosts ask before it runs where they ask at all; it is
+  not in `core`.
+- **A note after an update**, once, saying that the update worked and
+  what is new, in words written into the release (`release.py`), never
+  fetched.
+- **Two settings with one spelling only**: `EXEGETE_UPDATE_CHECK`, and
+  `EXEGETE_INSTALLED_AS`, the desktop extension's own mark, which lets
+  the steps fit the extension. An unrecognised value of either never
+  stops the server.
+- `openWorldHint` is true for one tool, `check_for_updates`; every
+  other tool still works on this computer's files and nothing else.
+  The desktop extension's manifest lists its privacy policies:
+  PRIVACY.md's section on the check, and GitHub's privacy statement.
+- The documents say it wherever they said that Exegete sends nothing
+  anywhere itself: README ("Where your data goes" and the paragraph on
+  updating, which now says how Exegete tells you of a new version),
+  PRIVACY.md (its opening, what leaves the computer, the fully local
+  rung, a new section "Checking for new versions" and a new question
+  in the checklist before participants' data), INSTALL.md, TOOLS.md
+  and the extension's description. INSTALL.md's "Updating the MCP
+  Server" gains the uvx route. QUICKSTART says to quit the client
+  before updating a copy of the source, as INSTALL.md always did.
+- The test suite refuses any name lookup or connection beyond this
+  computer, so a test of the check brings its own server on
+  127.0.0.1.
 
 ### Added: the assistant's brief (provisional)
 
-- The server gives the assistant one brief: how it expects the
+- Exegete gives the assistant one brief: how it expects the
   assistant to work with the researcher. It says what no single tool
   says (work on the project only through these tools, never by opening
   its folder or database; where Exegete sits beside QualCoder; how
@@ -383,10 +499,10 @@ rewritten for readers new to Exegete.
   cannot drift. Each tool's own rules are named in a line and left to
   its description.
 - It reaches the assistant four ways, because hosts differ in what they
-  pass on: a short version as the server's opening text (below); a new
+  pass on: a short version as Exegete's opening text (below); a new
   tool, `read_brief`, in every tool set and listed first, whose
   description asks the assistant to call it once at the start of every
-  conversation about a project (it returns the full brief, about 11,700
+  conversation about a project (it returns the full brief, about 12,100
   characters, or in the `core` set the short version, and reads nothing
   from the project); the same full brief as the help topic
   `explain_ai_coding_tools('brief')` and the resource
@@ -396,11 +512,22 @@ rewritten for readers new to Exegete.
 - **Provisional.** The brief says so in its own text. It carries the
   tools' own rules, adds how to work with the researcher where no
   single tool says, and leaves out, until this project's statement on
-  method, the lines that would take a position on method. Before it is
-  released, the project's maintainer reads it and runs a ten-minute
-  live check in Cowork (whether Cowork shows the opening text, cuts
-  long tool texts at 2,048 characters, lets the assistant read a
-  resource by itself, and whether a rule given is followed).
+  method, the lines that would take a position on method. The
+  project's maintainer read it before release, and checked it live in
+  Claude Desktop with this release's extension (9 October 2026). In
+  Cowork, `read_brief` was the first of Exegete's tools the assistant
+  called; it passed on the note about new versions without being
+  asked, and met a request for "the main themes of the whole dataset"
+  with a sounder first step and a question. Neither Cowork nor Claude
+  Desktop's chat passes Exegete's opening text on or lets the assistant
+  read Exegete's resources. In that check, Cowork showed about the
+  first 4,200 of the 6,342 characters of `analyze_for_coding`'s
+  description, and the chat all of it.
+- One line of the draft is not served: when the researcher wants a
+  fresh reading, not to read their codes first. Reading a file for
+  coding shows the codings already on it, so the line could not be
+  followed as written. It waits for an option to read a file without
+  its codings, planned with the work on reading whole files.
 - NOTICE's entry for QualCoder's methodology vocabulary now also names
   QualCoder's `ai_prompts/_agent.md` as the source of the order and
   ideas of four of the brief's sections, written in this project's own
@@ -408,14 +535,128 @@ rewritten for readers new to Exegete.
 
 ### Changed: the opening text
 
-- The server's opening text is now the brief's short version, 1,978
-  characters, within the 2,048 that Claude Code keeps: what the tools
-  are for, to call `read_brief` at the start of every conversation
-  about a project, and the eleven rules that matter most. It keeps its
-  first sentence ("Exegete exposes a QualCoder project to this
-  conversation.") and v0.14's sentence on approval word for word; it no
-  longer names the help topic `methodology_vocabulary` or the methods
-  notes, which the brief names.
+- Exegete's opening text is now the brief's short version, 1,988
+  characters, within the 2,048 that Claude Code keeps: what Exegete is
+  and what its tools are for, to call `read_brief` at the start of every
+  conversation about a project, and the eleven rules that matter most.
+  Its first sentence now says what Exegete is ("Exegete is a qualitative
+  analysis application for working with the researcher on their
+  project, in QualCoder's format.", below); v0.14's sentence on approval
+  is kept, with "Exegete" for "the server". It no longer names the help
+  topic `methodology_vocabulary` or the methods notes, which the brief
+  names.
+
+### Changed: how Exegete describes itself
+
+The owner's decision of 7 October 2026: Exegete follows QualCoder's
+formats and conventions, and the project is the researcher's, so
+Exegete no longer says that it opens or exposes a QualCoder project.
+The project is a folder in QualCoder's format that the researcher can
+work on in Exegete or in QualCoder, one program at a time, and Exegete
+is the subject of its own sentences. Every sentence that is about
+QualCoder itself (its format, its lock, its versions, a result that
+matches its own) still names it.
+
+- **What the assistant is told.** The opening text begins: "Exegete is
+  a qualitative analysis application for working with the researcher
+  on their project, in QualCoder's format. Use its tools to read and
+  search documents and transcripts, codes and coded passages, memos,
+  cases and attributes, and to suggest codings for the researcher to
+  approve." The brief's first paragraph says the same to the assistant
+  (the researcher decides; the assistant reads, searches and suggests
+  through Exegete's tools; the project is theirs), adds "Do not assume
+  that they use QualCoder", and asks the assistant to say plainly when
+  a request needs something Exegete does not do yet. Its section 4,
+  now "The project, Exegete and QualCoder", says that a project may
+  have been made in either program, that the two programs meet only in
+  the project, and what some researchers use QualCoder for, by choice
+  or because Exegete does not do it yet. The brief grows by about 600
+  characters, to about 12,100.
+- **The help, the prompts and the messages.** The help's overview is
+  "AI-assisted coding in Exegete", and its notes on evidence describe
+  Exegete's discipline as its own (NOTICE keeps the credit to
+  QualCoder's assistant brief). The four prompts say "this project", and
+  the project resource "the current project". Messages change: "No
+  project selected" in five places; an empty search for projects says
+  what it searched (the folders given, each three levels deep, or the
+  usual places) and offers other folders or a new project, instead of
+  asking the researcher to make one in QualCoder; `apply_codings` ends
+  by saying that the codings are in the project and can be read back,
+  and that QualCoder, if the researcher uses it, shows them highlighted
+  in the text; the questions about coder names ask for the researcher's
+  own coder name, not "the one they use in QualCoder"; the private-note
+  refusal says that a private note is written outside the conversation
+  (in QualCoder, for example); and answers on files whose positions
+  QualCoder's editor counts differently no longer call it "its
+  documented emoji bug": three cite QualCoder's manual (an emoji may
+  take more than one position in its editor), and the pseudonymisation
+  preview says only that the positions are counted differently. Answers,
+  and the methods notes, say "Exegete" where they said "this server" or
+  "the server", and the notes' description says that the method
+  literature they list is the one QualCoder's prompts cite, for
+  researchers who want to bring in a method.
+- **Tool descriptions**, rewritten in 40 of the 74 tools 0.14.1 had,
+  each no longer than 0.14.1's, and in `read_brief`: "the project" for
+  "the QualCoder project", "the project's own setting" for "what the
+  user sees in QualCoder", "Exegete" for "this server", the private-note
+  sentence ("what follows it is the researcher's own, not the
+  assistant's to write"), the coder-name argument of `create_project`,
+  and "a departure from QualCoder's own searches" for "a departure in
+  your favour" in `search_coded_text`. Together they make `full` 251
+  characters shorter and `lifecycle` 273 (on Python 3.13): 237 and 259
+  in 0.14.1's tools, and 14 in `read_brief`'s own entry. "MCP backups",
+  which would grow, waits for v0.15 with the backup kind `mcp`.
+- **The short descriptions.** The command's help (`exegete --help`),
+  the note shown when Exegete is started by hand in a terminal, the
+  module's own description, NOTICE's first line (in both packages) and
+  the old name's PyPI page now carry the tagline: a qualitative
+  analysis application you use in conversation with an AI assistant,
+  compatible with QualCoder. The keywords on PyPI and in the citation
+  lead with what Exegete does, QualCoder last; the citation's abstract
+  says that the researcher works on their project through the
+  conversation and approves what is written, in a project kept in
+  QualCoder's format; the extension's details page says what you do,
+  that your projects are folders in QualCoder's format that you can
+  work on in either program, one at a time, and what QualCoder is.
+- **The README.** Its paragraph on what Exegete is now says what you
+  do in it, from starting a project to exporting your codebook and
+  coding, and that it is built to stay interoperable with QualCoder;
+  "not an add-on or a remote control for QualCoder" moves into "Three
+  commitments". "Still needs QualCoder, which is recommended from the
+  start" becomes "Not in Exegete yet, and done in QualCoder for now",
+  ending "If your study needs any of these now, get QualCoder from the
+  start". "Get QualCoder too" becomes "QualCoder, if you want it"; the
+  first request to try is "Create a new project in Exegete called
+  Practice"; and the paragraph on QualCoder's own server has QualCoder
+  "able to open the same project at any stage, one program at a time"
+  in place of "a companion".
+- **The other documents.** TOOLS, INSTALL, PRIVACY, QUICKSTART, the two
+  coding guides, CONTRIBUTING, SUPPORT and PROJECT_SELECTION_GUIDE call
+  the researcher's project "your project", end the coding loop with
+  checking the codings in the conversation or in QualCoder, list
+  QualCoder as optional, and say "QualCoder's" for "upstream". They say
+  "Exegete" wherever a sentence says what it is or does for the
+  researcher, and keep "the server" for the program as it is installed
+  and runs: its host settings and environment, starting and stopping,
+  standard input and output, its log, its own folder and older copies of
+  it. QUICKSTART says what QualCoder is. CLAUDE.md now opens with what
+  Exegete is, and its rule for coding agents is interoperability: follow
+  QualCoder's formats and conventions, name every departure with its
+  reason, and be better than QualCoder where its behaviour loses or
+  garbles content. The bug report form no longer requires a QualCoder
+  version ("none" is accepted), and "I don't use QualCoder" is among the
+  answers on whether it was open. Three older documents gain the banner
+  that marks them as historical.
+- Tests: the pins moved with their words. New ones hold that the opening
+  text, the brief's first paragraph, the tagline, the command's help and
+  NOTICE's first line say what was decided, that no served text or
+  current document says that Exegete opens or exposes a QualCoder
+  project or misspells QualCoder's name, that no served text or message
+  says "the server" or "this server" except for the program as a process
+  (for example its working folder, environment and log), that the
+  sentences in the documents that said "the server" for what Exegete
+  does now say "Exegete", and that no tool description is longer than
+  0.14.1's (`tests/test_v0142_selfrep.py`).
 
 ### Changed: the rules a model must not miss come first in each tool description
 
@@ -451,7 +692,7 @@ rewritten for readers new to Exegete.
   Claude Code only through `read_brief`) and its pairings
   (`record_suggestions` states them within its cut); four of
   `pseudonymise_source`'s paragraphs (the refusal while QualCoder has
-  the project open, which the server enforces under QualCoder 3.8.2;
+  the project open, which Exegete enforces under QualCoder 3.8.2;
   what the run does not rewrite, which the preview counts; and that the
   backup keeps the real names and the file should be read again, which
   the run's answer says); and, in the Returns sections of
@@ -491,6 +732,16 @@ rewritten for readers new to Exegete.
   that deleting `exegete.json` alone, to have the name asked for again,
   would bring that earlier name back, and to remove both files instead.
 
+### Fixed: exports refused inside the project and state folders, however spelled
+
+- The export tools refuse to write inside the project folder or
+  Exegete's own folder (`~/.exegete`). They used to compare paths as
+  text, so on a Mac, whose disk usually ignores letter case, another
+  spelling of either folder (for example `~/.EXEGETE`) got past the
+  check and the export was written inside it. The refusal now compares
+  each existing folder on the way by its identity on the disk, keeping
+  the textual comparison only for folders that do not exist yet.
+
 ### Fixed: the transition check
 
 - After `uv tool install qualcoder-mcp --with-executables-from exegete`,
@@ -523,87 +774,130 @@ rewritten for readers new to Exegete.
   reruns a copy it fetched before, and names what the check now says;
   "This comes first. Quit your AI host first" says "first" once.
 
-### Changed: the README, rewritten for readers new to Exegete
+### Changed: the README, rewritten for newcomers and advanced users
 
-- README.md is rewritten for a researcher who has not met Exegete,
-  QualCoder or MCP before: each section opens with what it is for,
-  explains before it instructs, and follows each warning with an
-  action. What it promised stays: the introduction, the example
-  requests, what Exegete covers and what still needs QualCoder, the
-  three commitments and the dated table, the facts on QualCoder's own
-  MCP server and the paragraph after them, the account of assistants
-  that open files by themselves, and the line on Cohen's kappa keep
-  their words or their substance.
-- The first screen ends with "Before you start", a short list: an early
-  version by one researcher, independent of QualCoder's developers;
-  which computer; that the AI behind the assistant runs on its maker's
-  computers; where to begin, with links to three sections; and where to
-  ask.
-- A new section, "How it works": the assistant app and the AI behind
-  it; Exegete, which has no AI of its own (a test checks that its one
-  dependency is the MCP library and that its source imports no model
-  client or network library); the project, and the two ways a text
-  comes in; when anything is written; and why Exegete cannot tell
-  whether an approval was the researcher's. "What it is not" is split,
-  its words unchanged: its first sentence ends this section, and the
-  rest sits beside the compatibility commitment.
-- "Where your data goes" opens with a short version, then lists the
-  settings to check before participants' data, with the third
-  condition PRIVACY.md gives (no other extension that reads files).
-  Turning off OpenAI's training setting is now the first of the steps
-  for OpenAI's apps, before any use, practice included, and no longer
-  sits beside the advice on participants' data. The one-click route's
-  check names computer use and connected folders.
-- Moved out, because the files named already say it: the makers' terms
-  in their own words, the dates of the archived pages, how far Codex
-  reads on each operating system, Claude Code's read-only commands and
-  the folder of Codex's session files (PRIVACY.md); phones and OpenAI's
-  Remote in detail, the tunnel for developers, enterprise workspaces,
-  Codex's defaults and how to make its folder (INSTALL.md); the four
-  tools to keep approving one at a time (INSTALL.md and TOOLS.md, which
-  the README links); the project formats' numbers (TOOLS.md). Projects
-  from a QualCoder older than 3.8 moved, within the README, to "A
-  project you already have".
-- Leftovers from earlier releases removed: "new in 0.14", "from 0.14"
-  in the table, an example file name with a version in it, and "then
-  called qualcoder-mcp" in the table's date line. The sentence naming
-  QualCoder 3.8.2 as "Latest" now carries the date it was checked,
-  because the README is frozen into each extension and PyPI upload. The
-  table of what each program does was checked again on 1 October 2026
-  against this release and QualCoder's releases, and re-dated.
-- The README does not describe the assistant's brief while the brief
-  is provisional; TOOLS.md and INSTALL.md do.
-- Tests: the pins on the README's words moved with their text; new
-  pins for the first screen, "How it works", the first line of "Start
-  here", the two coder names, the commitments' opening and the date
-  beside "Latest"; two sweeps of the README, one for labels tied to a
-  release (no "NEW") and one for words that make counts sound like
-  findings; and the link check now reads the README's own sections at
-  their absolute address.
-- After the checks of the rewrite: the download step now says to take
-  the newest release that has an extension file under its Assets,
-  since GitHub orders the Releases page by version number and an early
-  build can sit above the release with no file to download (INSTALL.md
-  likewise). "How it works" says that Exegete checks that a suggested
-  coding quotes the file's words exactly, and that approved suggestions
-  are written by the assistant in a step of its own; the approval
-  advice says that no coding is written until the codings are applied.
-  The check after installing is one sentence to see that Exegete is
-  listed, then three numbered checks before participants' data: that
-  Claude asks before it uses a tool; computer use off; and no folder
-  that holds projects or transcripts connected, and no other extension
-  that reads files. The first explains once, with the date Anthropic's
-  page was read, the version of Claude in which chat and Cowork are one
-  conversation, and how to tell (on a Pro or Max plan, the message box
-  offers no choice between "Chat" and "Cowork"): there, keep the
-  permission setting in the message box on Manual, its default, since
-  on Auto Claude does not ask; Manual keeps Claude asking, and the
-  other two checks keep projects out of its reach; connected folders
-  are listed under "Trusted folders". "Where your data goes" says that its list applies
-  to that version too. Cowork comes with Claude's apps on the computer,
-  the web and phones. "What comes next" names a user manual.
-  "A first session" ends with a next step, and "Three commitments"
-  names the three before counting them.
+- README.md is rewritten to say what Exegete does for the reader, and to
+  show it, before it explains: the tagline as before, then a sentence on
+  what it does for you (ask in your own words; every suggested coding
+  quotes the text word for word and waits for your approval; the project
+  stays one QualCoder opens); the positioning (an application in its own
+  right, compatible with QualCoder, not an add-on, no window of its own);
+  a short example conversation, labelled as an illustration with
+  made-up practice text and written as text that wraps on a phone, in
+  which each step is one the software takes (the AI coder name asked
+  before the first write, the three questions before coding, quotes
+  with their readings, the explicit one stating what the code names, a
+  rejection, the counts, the backup); one next step for each reader,
+  each with its reason (newcomers; anyone with interviews or other
+  participants' data, told on the first screen that what the assistant
+  reads goes to the maker of its AI, and that some assistants open
+  files by themselves; advanced users); and a status line (free and
+  open source, tested on Windows, macOS and Linux with every change, an
+  early version by one researcher, independently of QualCoder's
+  developers; Issues, not email, never participant data). Two badges,
+  the PyPI version and the licence; no test badge.
+- Back from 0.14.0, redrawn: a diagram of how the parts fit and where
+  data goes (the assistant app, the AI model on its maker's computers,
+  Exegete with no AI of its own, the project, QualCoder (optional), one
+  program at a time), with 0.14.0's technical labels (MCP over standard
+  input and output; reads read-only, writes after a backup); a diagram
+  of a coding's path, from the request through the review list to the
+  backup and the write; a map of the documents and of the code; a list
+  of what you can do today, and "What comes next" as plans, not
+  promises, with document import and reading imported files first; the
+  table of assistants (what this project suggests for participants'
+  data, whether each opens files by itself, and where what it reads
+  goes), with the routes of 0.14.0's table of AI hosts (Anthropic's
+  commercial terms through a Team or Enterprise account or an
+  organisation's API key, and local models, with their trade-off;
+  INSTALL.md's table linked); and the table of the three tool sets, with
+  their sizes as measured below. The diagrams are text, at most 66
+  characters wide, so that GitHub and PyPI show them alike.
+- New: "For advanced users": what Exegete is technically (where the
+  assistant's data goes included, and what a backup copies), the tool
+  sets, the features beyond the basics, each family led by what it is
+  for, how it is tested, and the map.
+- Kept, in their words or their substance: what still needs QualCoder;
+  the aim; the disclosure of assistants that open files by themselves,
+  with the checks before participants' data; private notes and names,
+  word for word; the approval and its limit; one program at a time;
+  where a project is made, route by route (the extension's folder for
+  projects, or `~/Documents/Exegete projects` on the Terminal route,
+  which iCloud or OneDrive may sync), and opening it in QualCoder; the
+  dated "Latest", in "Start here"; the three commitments, with the table
+  checked on 1 October 2026; the dated facts on QualCoder's own MCP
+  server and the paragraph after them; the example requests and the line
+  on Cohen's kappa. Each warning is said in full once, where the reader
+  acts on it. "What it does that QualCoder does not" and "Read next" are
+  no longer sections: their points sit in "What you can do", "How it
+  works", the comparison table and the map.
+- Moved out, because the documents named say it in full: OpenAI's steps
+  past the first, which apps and plans, the settings lines' reason and
+  OpenAI's Remote (INSTALL.md); the coder name's place in QualCoder's
+  settings (TOOLS.md, "Starting a project from the conversation");
+  projects from a QualCoder older than 3.8, in full (TOOLS.md,
+  "Supported QualCoder versions"); QualCoder's downloads, Intel Macs
+  included (INSTALL.md, "What You'll Need"); how to hear of a new
+  release (INSTALL.md, the one-click section); Codex's and Claude Code's
+  reach in detail, and where Cowork runs (PRIVACY.md); the history of
+  the MIT releases (NOTICE). README.md is now about 34,300 characters,
+  against 31,975 in 0.14.1, and its sentences are shorter.
+- The README now says plainly that Exegete is free, open-source
+  software, under QualCoder's own licence (LGPL-3.0-or-later), and what
+  using it costs: Exegete nothing; the assistant's plans as Anthropic's
+  and OpenAI's pricing pages listed them on 6 October 2026, with the
+  pages linked (for ChatGPT's Free and Go plans, only what OpenAI's page
+  says, the desktop app "subject to rollout"), and that Claude Code is
+  not on Claude's Free plan; their usage limits (Claude's every five
+  hours and, on paid plans, weekly, which longer work can reach;
+  OpenAI's may also be weekly) and what can be done at one (wait, move
+  up a plan or, on a paid plan, pay for extra use); that coding many
+  transcripts uses far more than practice; and LM Studio, free with a
+  local model. One sentence places QualCoder beside NVivo, ATLAS.ti and
+  MAXQDA. The advice on training is the same for Claude and for ChatGPT,
+  in the same words: switch training off before participants' data, with
+  its reason, each maker's settings by name (Codex's "Include
+  environments" among them), and the exception, that a rated reply can
+  still be used for training. "A first session" now explains that Codex
+  and Claude Code can open files by themselves, so a real study on the
+  same computer is within their reach even while you practise, and
+  suggests what to do if that matters, where the README used to say
+  "never start it"; a folder of their own keeps practice projects apart
+  but does not put the study out of reach, and what they open goes to
+  their maker, which may train on it while training is on. The
+  assistants table gives the reason with each suggestion, where it said
+  "Not suggested", and the checks before participants' data give theirs,
+  where the second said "Do not". OpenAI's route is no longer called one
+  for practice and for data that is not sensitive: the README says what
+  Codex reads by itself and, for participants' data, suggests an
+  assistant with no file access of its own until a setting that stops
+  Codex's reads has been tested with Exegete, as it does for Claude
+  Code. The positioning paragraph is shorter, every fact in it kept.
+- Leftovers from earlier releases are gone ("new in 0.14", "from 0.14"
+  in the table, an example file name with a version in it), and the
+  sentence naming the QualCoder release marked "Latest" carries the
+  date it was checked, because the README is frozen into each extension and PyPI
+  upload. The brief is named, provisional, among the advanced features;
+  TOOLS.md and INSTALL.md describe it.
+- The README opens with the woven lockup: the braided ring with an E
+  in its eye, the E the first letter of the name Exegete, which is
+  woven across the ring. It sits on its own light tile as before, so
+  that it reads on a dark page too, and keeps its address in
+  `docs/brand/`, so 0.14.1's page on PyPI shows it as well. The
+  extension's icon stays the ring with the E.
+- Tests: the pins on the README's words moved with their text; two
+  sweeps keep out labels tied to a release and words that make counts
+  sound like findings; the link check reads the README's own sections
+  at their absolute address; new
+  pins (`tests/test_v0142_readme_persuasive.py`) hold the length, the
+  three diagrams and the example (width, characters, labels, borders,
+  each step a behaviour of the server), the assistants table against
+  PRIVACY.md, the tool-set table against the server and the measurement
+  below, the advanced section's tool names and arguments against the
+  server, how it is tested against the CI workflow, the map against the
+  files, "What comes next" as plans, and the badges. The lockup's pins
+  (`tests/test_v0142_woven_lockup.py`) hold its description, its tile
+  and a PNG of the same shape, shown at half size.
 
 ### Changed: the other documents, beside the README
 
@@ -648,24 +942,155 @@ rewritten for readers new to Exegete.
   or data protection officer gains two questions: which assistant, and
   whether it opens files by itself; and what stays on the computer, and
   for how long.
-- QUICKSTART.md opens by sending newcomers to the one-click extension.
-  Release labels are gone from the opening of AI_CODING_GUIDE.md and
+- Warnings explain rather than prescribe. Where INSTALL.md,
+  PRIVACY.md and QUICKSTART.md told the reader never to start Claude
+  Code in certain folders, never to give Codex one, never to rate a
+  reply in a session with participant data, or to open only projects
+  whose consent covers third-party processing, they now say what could
+  go wrong and suggest what to do, every fact kept. Where they called
+  OpenAI's route one for practice and for data that is not sensitive,
+  they now say what Codex reads by itself and suggest, for
+  participants' data, an assistant with no file access of its own until
+  a setting that stops Codex's reads has been tested. PRIVACY.md says
+  what keeps a project out of Cowork's reach: kept out of every
+  connected folder, with computer use off and no other extension that
+  reads files. The warning about practising, with what a folder of
+  their own does not do and that what Codex or Claude Code opens may be
+  used for training while training is on, is in INSTALL.md's Claude
+  Code section and Codex's step 3, in PRIVACY.md ("While you practise")
+  and in QUICKSTART.md. The
+  training advice is the same for both makers in INSTALL.md's table and
+  OpenAI's first step and in PRIVACY.md's first rung and OpenAI's
+  section, and PRIVACY.md's list for an ethics committee or data
+  protection officer gains a question on training with either maker.
+  PRIVACY.md quotes Anthropic's pages, read on 1 October 2026, on what
+  a rated reply, `/feedback`, `/bug` and `/share` send, and for how
+  long they are kept.
+- QUICKSTART.md opens by sending newcomers to the one-click extension,
+  and, before its first prompts, says that what Claude reads goes to
+  Anthropic, with the training advice in the README's words;
+  INSTALL.md's one-click section gives the same advice, and its table no
+  longer reads as if a free plan included Claude Code. Release labels
+  are gone from the opening of AI_CODING_GUIDE.md and
   AI_CODING_WORKFLOW.md, from TOOLS.md's section on the brief and from
   INSTALL.md's one-click section.
+- QualCoder 4.0 came out on 2 October 2026, and the documents no
+  longer call it a beta. The README offers 3.8.2 or 4.0, with the date
+  4.0 was seen marked "Latest", and says why the choice matters:
+  Exegete works with both, but can tell that QualCoder has a project
+  open only with 3.8.2, whose lock file shows it, and an open project
+  in QualCoder 4.0 cannot be detected; INSTALL.md says the same, with
+  each release's downloads. Where the documents said that writes are
+  refused while "a released QualCoder (3.x)" has the project open, they
+  now say QualCoder 3.x, since 4.0 is released and keeps no lock file.
+  QualCoder's own MCP server, said to be in no release, is in 4.0, off
+  by default and called experimental (the README and TOOLS.md, checked
+  6 October 2026). TOOLS.md puts 4.0's "Code retrieval" in its Analysis
+  menu, where it is. Exegete's code does not change: 4.0 keeps the
+  project format (schema v17).
+- QualCoder 4.0, the release, is now named as what Exegete is verified
+  against, wherever a researcher reads it: the README's comparison
+  table, checked again on 6 October 2026 against 3.8.2 and 4.0;
+  TOOLS.md, which says what a full re-check against the release found
+  (the same schema, the same format for a new project, backups, private
+  memo sections, coder visibility, the "AI Agent" coder name, reports,
+  merges and deletes; Exegete's tools on a project 4.0 made; 4.0
+  opening Exegete's projects without a message) and the one change
+  (4.0 waits up to five seconds for an Exegete write before opening a
+  project, then says it could not be opened, changing nothing);
+  INSTALL.md's expert override; PRIVACY.md; the bug report form; and the
+  refusal and warning for a project newer than v17, which said "QualCoder
+  master commit 9bddf17" and now say "up to QualCoder 4.0". The August
+  development commit stays only in the line citations to QualCoder's
+  code, which TOOLS.md explains. The format tests' oracle was made again
+  by 4.0's own New Project at the release tag; it differs from the one
+  made at the August commit only in the date and the "about" line.
+  PRIVACY.md names the three sections its note on this covers and says
+  what was checked at the release. Reading QualCoder's own AI server
+  again there corrected one sentence: with the override, Exegete
+  answers about a hidden coder's annotation with ids only, where
+  QualCoder 4.0's own server also gives the annotation's position and
+  its owner's name (PRIVACY.md had said the two answer alike).
+- The paragraph on QualCoder's own MCP server (README and TOOLS.md)
+  keeps the tone decided on 29 September and gains two facts: the
+  server calls itself "qualcoder-mcp", Exegete's former name, and the
+  extension QualCoder's source can build is named "qualcoder", a name an
+  earlier Exegete setup may also use, so INSTALL.md's advice to keep an
+  earlier "qualcoder" entry now says how to keep the two apart; and
+  QualCoder's AI permission setting (Read-only, for example) governs
+  QualCoder's own assistant and that server, not Exegete. The tool
+  descriptions' "released QualCoder (3.x)" is left for v0.15.
+- A short CLAUDE.md gives AI coding agents the commands, a map of the
+  package and the rules they most often miss: point `HOME` (and
+  `USERPROFILE`) at a scratch folder, since that is what protects the
+  server's own folder; commit with an explicit identity; and where the
+  2,048-character rule's listed exceptions are. CONTRIBUTING.md's map
+  of the package now lists `path_identity.py` and `transition.py`.
+- INSTALL.md and PROJECT_SELECTION_GUIDE.md gain a troubleshooting
+  section for an empty search of the folders named, "No projects found
+  in the folders given" (those folders only, three levels deep, not the
+  usual places; a folder named that does not exist; naming the folder
+  just above a deeper project), beside the one for the usual places,
+  now headed with that answer's new words. AI_CODING_WORKFLOW.md's
+  troubleshooting step opens a project from QualCoder's Project menu
+  ("Project > Open Project"), where it said "File > Open Project":
+  QualCoder 3.8.2 and 4.0 have no File menu.
 - Tests: the pins moved with their words, and new ones hold each of
-  these sentences (`tests/test_v0142_docs.py`).
+  these sentences (`tests/test_v0142_docs.py`,
+  `tests/test_v0142_qc40_release.py`, and the refusal's words in
+  `tests/test_v17_support.py`); each troubleshooting heading for an
+  empty search is held to the start of the answer for its case, and no
+  current document gives QualCoder a File menu
+  (`tests/test_v014_server_wide.py`, `tests/test_v0142_docs.py`).
+
+### CI
+
+- The update site, `latest.json` and the "Install or update Exegete"
+  page, lives in `pages/` and is published by a workflow of its own,
+  `.github/workflows/pages.yml`: deployed from GitHub Actions and never
+  from a branch, as the owner decided on 5 October 2026, since a branch
+  would let any token that can push rewrite the file every installed
+  copy trusts. It is started by hand from the release's tag. Its first
+  job, with a read-only token and nothing installed, checks the site
+  against the release (`scripts/check_pages_site.py`: the version, date
+  and summary in `release.py`, the links Exegete builds itself, nothing
+  loaded from another site), that the release is published with its
+  extension file and both packages are on PyPI, and that the version
+  file live now is not newer. The deploy waits in the `github-pages`
+  environment for the owner's approval, then reads the live file back.
+  The suite runs the same check of the site
+  (`tests/test_v0142_pages.py`), so a release prepared with the last
+  release's site fails before it is tagged.
+- Two tests that failed by chance on CI are steadied (pull request #12,
+  and the same fix in its sibling). Each looked for a number ("0.95",
+  "0.85") anywhere in a saved session file, whose times run to the
+  microsecond, so a time such as 13:57:10.953421 matched; each now looks
+  for the number only as a value of its own, with a second run at the
+  time CI met, which fails under the old check. #12's second change,
+  asking for Windows' list of running programs twice in a test, is not
+  taken: the check itself now gives that list 60 seconds and one retry,
+  and the test 150 seconds on Windows.
+- New pins: actions/upload-pages-artifact v5.0.0 and
+  actions/deploy-pages v5.0.1. The others are unchanged:
+  actions/checkout v7.0.1, actions/setup-python v7.0.0,
+  actions/upload-artifact v7.0.1, actions/download-artifact v8.0.1 and
+  pypa/gh-action-pypi-publish v1.14.2.
 
 ### Measured
 
-- Serialised tool JSON with the brief: full = 195,733 characters (about
-  48.9k tokens at chars/4) over 74 tools, core = 65,271 (about 16.3k)
-  over 22, and the opt-in lifecycle set = 198,312 (about 49.6k) over
-  75, measured on Python 3.13.5 with mcp 1.30.0 in the repository's own
-  `venv/`; on Python 3.11.13 (the `.venv/`), 205,441, 68,563 and
-  208,160. Each grew by `read_brief`'s own entry (467 characters with
-  its separator, in every set, on both interpreters) and by nothing
-  else: every other tool's description keeps the words and the length
-  0.14.1 served (fourteen changed order; see above).
+- Serialised tool JSON with the brief and the check for new versions:
+  full = 196,387 characters (about 49.1k tokens at chars/4) over 75
+  tools, core = 65,140 (about 16.3k) over 22, and the opt-in lifecycle
+  set = 198,944 (about 49.7k) over 76, measured on Python 3.13.5 with
+  mcp 1.30.0 in the repository's own `venv/`; on Python 3.11.13 (the
+  `.venv/`), 206,095, 68,432 and 208,792. Each grew by `read_brief`'s
+  own entry (453 characters with its separator, in every set, on both
+  interpreters), `full` and `lifecycle` by `check_for_updates`' own (905
+  with its separator, on both interpreters), and shrank where 0.14.1's
+  descriptions were reworded on how Exegete describes itself (237
+  characters in `full`, 117 in `core` and 259 in `lifecycle`, on both
+  interpreters; see above); no other description changed: each keeps the words 0.14.1
+  served (fourteen changed order; see above), and none is longer.
 
 ## [0.14.1-alpha] - 2026-10-01
 

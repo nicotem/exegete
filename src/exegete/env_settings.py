@@ -4,7 +4,9 @@
 Every setting this server reads from its environment is read here and
 nowhere else (tests/test_v0141_compat.py forbids any other environment
 read in the package). Each has a new spelling, starting EXEGETE_, and
-the earlier one, which is still read until v1.0 (names.SETTINGS). The
+the earlier one, which is still read until v1.0 (names.SETTINGS); the
+two settings of the check for new versions have the new spelling only
+(names.NEW_ONLY_SETTINGS, read by update_check and installed_as). The
 one other read here is not a setting: Windows' own folder, SystemRoot,
 from which the transition check starts PowerShell by its full path.
 
@@ -172,6 +174,23 @@ def reader_process_environment() -> Dict[str, str]:
     on Windows, the system root; never the host's other settings."""
     keep = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "SYSTEMROOT", "SystemRoot")
     return {key: os.environ[key] for key in keep if key in os.environ}
+
+
+def update_check(environ: Optional[Mapping[str, str]] = None
+                 ) -> Optional[str]:
+    """EXEGETE_UPDATE_CHECK, which has one spelling only (names.
+    NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
+    updates.read_setting says what each value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["update_check"])
+
+
+def installed_as(environ: Optional[Mapping[str, str]] = None
+                 ) -> Optional[str]:
+    """EXEGETE_INSTALLED_AS, the desktop extension's own mark: its raw
+    value, or None when it is not set."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["installed_as"])
 
 
 def windows_system_root() -> str:

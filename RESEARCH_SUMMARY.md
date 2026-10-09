@@ -1,5 +1,10 @@
 # Qualcoder MCP Research Summary
 
+> **HISTORICAL DOCUMENT (early research).** Written when the program
+> was called qualcoder-mcp, early in its development. Kept for
+> design-history reference; the README and CHANGELOG say what Exegete
+> does today.
+
 ## What is Model Context Protocol (MCP)?
 
 The Model Context Protocol (MCP) is an open standard introduced by Anthropic in November 2024 that enables secure, two-way connections between AI applications and data sources.

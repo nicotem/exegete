@@ -364,7 +364,7 @@ EXPECTED_ASK = (
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
     "models can then be compared later. Quick picks: \"AI Coding "
-    "Assistant\" (this server's built-in default), \"AI Agent\" (the name "
+    "Assistant\" (Exegete's built-in default), \"AI Agent\" (the name "
     "QualCoder 4.0's built-in assistant uses). The name can be changed at "
     "any time with the same tool; earlier rows keep the name they were "
     "written under.")
@@ -761,8 +761,8 @@ class TestSetterValidation:
         out = json.loads(server.set_project_ai_coder_name(HIDDEN))
         assert out["error"] == (
             f"\"{HIDDEN}\" is a coder currently hidden in QualCoder; rows "
-            f"written under it would not be shown in QualCoder or in this "
-            f"server's default reads. Pass allow_hidden_coder=true to "
+            f"written under it would not be shown in QualCoder or in "
+            f"Exegete's default reads. Pass allow_hidden_coder=true to "
             f"store it anyway, or ask the user to unhide the coder in "
             f"QualCoder. Nothing was changed.")
         assert read_sidecar(qualcoder_db_path).name == DEFAULT_AI_CODER_NAME
@@ -840,7 +840,7 @@ class TestSetterValidation:
         monkeypatch.setattr(server, "current_project_path", None)
         monkeypatch.delenv("QUALCODER_PROJECT_PATH", raising=False)
         out = json.loads(server.set_project_ai_coder_name("X"))
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
 
 
 # =============================================================================
@@ -1146,13 +1146,13 @@ class TestReadOnlyFolder:
 
 EXPECTED_OWNER_REFUSAL = (
     "The owner argument no longer chooses the coder name: this project's "
-    "AI coder name is \"{name}\" and every row this server writes is "
+    "AI coder name is \"{name}\" and every row Exegete writes is "
     "stored under it, so that AI work stays distinguishable from the "
     "researcher's and from other coders'. Omit owner, or, if the user "
     "wants a different attribution, ask them and change the project's AI "
     "coder name with set_project_ai_coder_name, then call this tool again "
-    "without owner. A human coder's name is never used for rows this "
-    "server writes. Nothing was written and no backup was made.")
+    "without owner. A human coder's name is never used for rows "
+    "Exegete writes. Nothing was written and no backup was made.")
 
 
 class TestOwnerArgument:

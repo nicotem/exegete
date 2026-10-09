@@ -9,10 +9,10 @@ and what you may change.
 
 ## Claude Desktop: the one-click extension (recommended)
 
-For Claude Desktop on macOS or Windows there is nothing to type: the
-server comes as a desktop extension, one file ending in `.mcpb`, which
-Claude Desktop installs itself. Claude fetches what the server needs
-(a tool called uv, which then fetches Python and the server's own
+For Claude Desktop on macOS or Windows there is nothing to type:
+Exegete comes as a desktop extension, one file ending in `.mcpb`, which
+Claude Desktop installs itself. Claude fetches what Exegete needs (a
+tool called uv, which then fetches Python and Exegete's own
 libraries), so you need no Python, no Terminal and no configuration
 file.
 
@@ -29,7 +29,7 @@ file.
    with its usual warning to install only extensions whose developer you
    trust; click Install, and Install again when Claude says it needs to
    fetch a few dependencies. The first install takes a minute or two.
-4. **Look at its two settings** (Settings, Extensions, Exegete).
+4. **Look at its three settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
    - **Tool set**: `lifecycle` (the default) gives every tool, creating
      a new project included; `full` every tool except creating a
@@ -41,9 +41,19 @@ file.
      your home folder), is outside Documents, which iCloud or OneDrive
      may sync; it is made when the first project needs it. Choose
      another with the folder button if you prefer, but not a folder a
-     sync service keeps, and not one inside a QualCoder project.
+     sync service keeps, and not one inside a project (a `.qda`
+     folder).
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
+   - **Tell me when a new version is out**: on unless you switch it
+     off. Once a week at most, and when you ask, Exegete fetches a
+     small file from its website on GitHub to see whether a newer
+     version exists; nothing from your projects is sent, and GitHub
+     records your computer's internet address. It first checks at
+     least seven days after installation, and the first time the
+     assistant uses Exegete it is told to say so. Switched off,
+     Exegete itself makes no connection
+     ([PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)).
 5. **Check it works**: in a new conversation, the "+" button, then
    Connectors, lists Exegete with its tools switched on. Ask
    "Using the Exegete tools, is a project open?" and allow the
@@ -70,6 +80,16 @@ you're on a Pro or Max plan and your message box still shows "Chat"
 and "Cowork" options, you don't have it yet." Keep the setting on
 Manual. For work on real data, keep Claude asking.
 
+**Switch training off** before participants' data: while it is on,
+Anthropic may use your conversations to train its models. On a
+personal plan (Free, Pro or Max) it is the Model Improvement setting,
+at https://claude.ai/settings/data-privacy-controls. Rating a reply
+(thumbs up or down) can still let Anthropic train on that
+conversation.
+[Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
+in the README, says the rest: the checks before participants' data, and
+which assistants open files by themselves.
+
 **Not signed.** The extension carries no publisher signature. On a
 personal Claude plan it installs like any other extension. If your
 university or employer manages your computer or your Claude account,
@@ -79,6 +99,10 @@ developer MCP servers are disabled on this device..."), and your IT
 team decides.
 
 **Updating**: download the newer `.mcpb` and install it the same way.
+Exegete asks Claude to tell you when a newer version is out, unless
+you switch that off (the third setting, above); with a GitHub account,
+Watch, then Custom, then Releases, on the repository's page also sends
+you a notice of each.
 **Removing**: Settings, Extensions, Exegete, Uninstall. Neither
 touches your projects; what else stays is under "Uninstalling" below.
 **The log** is `mcp-server-Exegete.log` in `~/Library/Logs/Claude`
@@ -97,18 +121,19 @@ Desktop configured by hand, and for contributors who want the source.
 
 ## Choosing your AI host: data-governance options (Experimental)
 
-This server is host-agnostic stdio MCP. Which AI processes your data,
-and under which terms, is decided by the host you run and the account
-you sign into, not by this server. The terms attach to the account and
-product line, not to the client application. Three routes with Claude,
+Exegete works with any MCP host that can run local servers over
+standard input and output.
+Which AI processes your data, and under which terms, is decided by the
+host you run and the account you sign into, not by Exegete. The terms
+attach to the account and product line, not to the client application. Three routes with Claude,
 from easiest to most private, and OpenAI's apps:
 
 | Route | What it means | Where to read more |
 |---|---|---|
-| **Claude consumer plans** (claude.ai, Claude Desktop, Claude Code with a Free/Pro/Max login) | The easiest path. Check your own Model Improvement setting at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
+| **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The easiest path. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. It is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
-| **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with this server (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so this project suggests this route for practice and non-sensitive data until a safer setting is tested. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with Exegete (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat, until a setting that stops Codex's reads has been tested with Exegete. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
@@ -118,20 +143,23 @@ OpenAI's apps goes step by step; guides of that kind for Claude Code
 and LM Studio are considered on request: ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
-**What the assistant is told (provisional).** The server gives the
+**What the assistant is told (provisional).** Exegete gives the
 assistant a brief: how it expects the assistant to work with you
 (TOOLS.md, "What the assistant is told"). Hosts differ in what they
 pass on, so the brief reaches the assistant four ways. A short version
-is the server's opening text: Claude Code shows it (and keeps only the
+is Exegete's opening text: Claude Code shows it (and keeps only the
 first 2,048 characters of any server's opening text; this one is
-shorter), Claude Desktop's chat is reported not to, LM Studio does not
-support it, and whether Cowork shows it is not yet checked. The tool
-`read_brief`, in every tool set, has a description that asks the
+shorter); Claude Desktop does not pass it on, in its chat or in Cowork
+(checked on 9 October 2026); and LM Studio does not support it. The
+tool `read_brief`, in every tool set, has a description that asks the
 assistant to call it at the start of every conversation about a
-project, so it reaches every host that sends tool descriptions. The
-same text is a help topic and the resource `exegete://guidance/brief`,
-and the answers that open a project carry a one-line reminder. The
-brief is provisional: a later release may change it.
+project, so it reaches every host that sends tool descriptions; in
+that check, in Cowork, it was the first of Exegete's tools the
+assistant called. The same text is a help topic and the resource
+`exegete://guidance/brief` (Claude Desktop does not let the assistant
+read Exegete's resources, in its chat or in Cowork), and the answers
+that open a project carry a one-line reminder. The brief is
+provisional: a later release may change it.
 
 ## What You'll Need
 
@@ -148,32 +176,38 @@ Before starting, make sure you have:
   configured by hand (download from: https://claude.ai/download);
   recipes for Claude Code, LM Studio, and OpenAI's ChatGPT desktop app
   and Codex follow further down
-- ✅ **A QualCoder project, or the `lifecycle` tool set.** On this
-  route the default tool set, `full`, has no tool that creates a
-  project, so you need a project made in QualCoder (a folder ending in
-  `.qda`, with a `data.qda` database file inside; know where it is),
-  unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
+- ✅ **A project, or the `lifecycle` tool set.** On this route the
+  default tool set, `full`, has no tool that creates a project, so you
+  need an existing project (a folder ending in `.qda`, made by Exegete
+  or by QualCoder, with a `data.qda` database file inside; know where it
+  is), unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
   variables the server reads", below), which lets the assistant create
-  one in the conversation. Projects from QualCoder 3.8.x and from the
-  QualCoder 4.0-Beta pre-release work (project schemas v14 through
-  v17); see "Supported QualCoder versions" in
+  one in the conversation. Projects in the formats of QualCoder 3.8.x
+  and 4.0 work
+  (project schemas v14 through v17); see "Supported QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
-- ✅ **QualCoder itself**, recommended, and needed to bring in images,
-  audio and video (since v0.14.3, provisionally, this server brings in
-  documents with `import_documents`, their text staying on the
-  computer on the way in; PDF and EPUB need its optional part, below),
-  to code images, audio, video or an area of a PDF page, and for graphs
-  (since v0.14.3, provisionally, Exegete opens a page in your browser
-  with a file's whole text and its codings):
-  https://github.com/ccbogel/QualCoder/releases (3.8.2 is the release
-  marked "Latest"; the 4.0-Beta at the top of the page is a test
-  version)
+- **QualCoder, optional.** Today it does what Exegete does not do
+  yet: bringing in images, audio and video, coding images, audio, video
+  or an area of a PDF page, and graphs. If your study needs any of
+  these now, get it from the start: https://github.com/ccbogel/QualCoder/releases. 4.0 is at the top of
+  the page, the release marked "Latest" when this was checked, on
+  6 October 2026, and 3.8.2 just below it. Exegete works with both,
+  but can tell that QualCoder has a project open only with 3.8.2,
+  whose lock file shows it. Each release's downloads are under its
+  notes, in Assets, for Windows, Linux and Macs with Apple Silicon (M1
+  or later): QualCoder offers none for older Intel Macs, and its notes
+  there say how to open it the first time. Since 0.14.3
+  (provisionally), Exegete brings in documents itself with
+  `import_documents`, their text staying on the computer on the way in
+  (Word, OpenDocument, RTF, plain text, Markdown, web pages and
+  subtitle files; PDF and EPUB need its optional part, below), and
+  opens a page in your browser with a whole file's text and its codings
 
 ---
 
 ## Recommended: Install from PyPI
 
-If you just want to USE the server (no code changes), you don't need
+If you just want to USE Exegete (no code changes), you don't need
 git or this repository at all:
 
 ```bash
@@ -274,7 +308,7 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 
 ### Option A: Dynamic Project Selection (Recommended)
 
-**Best for**: People with multiple QualCoder projects
+**Best for**: People with several projects
 
 1. **Find your username**:
    - In Terminal, type: `whoami` and press Enter
@@ -320,7 +354,7 @@ PATH), and leave out `args`:
 }
 ```
 
-**Important**: If you already have other MCP servers configured, add the "exegete" section inside the existing `mcpServers` block, separated by a comma. If one of them is this server under the earlier name (a "qualcoder" section), keep it and do not add an "exegete" section beside it: see ["Coming from qualcoder-mcp"](#coming-from-qualcoder-mcp).
+**Important**: If you already have other MCP servers configured, add the "exegete" section inside the existing `mcpServers` block, separated by a comma. If one of them is Exegete under the earlier name (a "qualcoder" section), keep it and do not add an "exegete" section beside it: see ["Coming from qualcoder-mcp"](#coming-from-qualcoder-mcp).
 
 5. **Save and Close** the configuration file
 
@@ -331,12 +365,11 @@ details.
 
 ### Option B: Fixed Project Path (Simpler)
 
-**Best for**: People with one main QualCoder project
+**Best for**: People with one main project
 
 1. **Find your .qda project folder**:
-   - Open QualCoder
-   - Look at your project and note its location
-   - **Important**: QualCoder projects are **folders** with `.qda` extension, not single files
+   - **Important**: projects are **folders** ending in `.qda` (QualCoder's format), not single files
+   - If you use QualCoder, its recent projects list shows where yours is
    - Each project folder contains a `data.qda` database file inside
    - Common locations:
      - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/` (folder)
@@ -373,7 +406,7 @@ details.
   If the path does not exist the server refuses to start and prints
   "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to the host's log (the path
-  itself is not printed). If the path exists but is not a QualCoder
+  itself is not printed). If the path exists but is not a `.qda`
   project, or its database will not open, the server starts and every
   tool answers that the project set in EXEGETE_PROJECT_PATH could not
   be opened.
@@ -392,8 +425,8 @@ details.
 
 3. **Verify it's working**:
    - Open a new conversation
-   - Type: "List my available QualCoder projects" (Option A) or "Give
-     me a summary of my QualCoder project" (Option B)
+   - Type: "List my available projects" (Option A) or "Give me a
+     summary of my project" (Option B)
    - If configured correctly, Claude calls the Exegete tools and
      answers from your project. If it says it has no such tool, the
      server is not connected: see Troubleshooting below
@@ -416,13 +449,20 @@ blocks such reads is on. In auto mode, the mode it starts in, its own
 file tools read outside that folder as well, after one question the
 first time they do. [PRIVACY.md](PRIVACY.md), "Assistants that
 open files by themselves", quotes Anthropic's pages and names those
-settings. So never start it in your home folder, Documents, your
-projects folder or any folder that holds a study (a new Terminal window
-opens in your home folder), and for participants' data use an assistant
-without file access of its own, such as Claude Desktop's chat with the
-extension, with computer use off, no folder that holds your projects
-or transcripts connected to it, and no other extension that reads
-files. Make an empty folder for it, and do the rest there:
+settings. So a real study kept on the same computer is within its
+reach even while you practise, and Exegete's list of projects tells it
+where it is; started in your home folder (where a new Terminal window
+opens), Documents, your projects folder or a study's folder, it reads
+that study without asking. If that matters for a study, you could keep
+practice projects in a folder of their own, or work on that study with
+an assistant without file access of its own, such as Claude Desktop's
+chat with the extension, with computer use off, no folder that holds
+your projects or transcripts connected to it, and no other extension
+that reads files. A folder of their own keeps practice projects apart
+but does not put the study out of Claude Code's reach, and what it
+opens goes to the AI provider, which may train on it while training is
+on. The steps below start Claude Code in an empty folder of its own;
+make it, and do the rest there:
 
 ```bash
 mkdir -p ~/claude-exegete && cd ~/claude-exegete
@@ -501,8 +541,9 @@ spellings with different values (after the usual tidying: spaces, the
 tool set's letter case and a leading `~` do not count), the server
 does not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
-desktop extension sets both spellings of its three settings itself,
-always to the same value.
+desktop extension sets both spellings of these three settings itself,
+always to the same value. The two settings of the check for new
+versions, below, are new and have one spelling only.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -510,13 +551,13 @@ always to the same value.
   "Error: the project set in EXEGETE_PROJECT_PATH was not found; check
   the path in the host's configuration." to stderr. The project is
   opened by whichever tool comes first (since v0.14; before, the backup
-  tools and a few others answered "No Qualcoder project selected" until
+  tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 76 tools;
+- `EXEGETE_TOOLSET`: `full` (default) registers 77 tools;
   `core` registers the 23-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
-  registers the full set plus `create_project`, 77 tools, so that a
+  registers the full set plus `create_project`, 78 tools, so that a
   study can be started from the conversation (TOOLS.md, "Starting a
   project from the conversation"). Configured by hand, creating
   projects stays out of the default set, so that researchers opt in to
@@ -526,8 +567,9 @@ always to the same value.
   naming the valid values. Resources and prompts are not affected.
   In Claude Desktop, add `"EXEGETE_TOOLSET": "lifecycle"` to the
   server's `env` block; for Claude Code, in the folder you start it in
-  (`~/claude-exegete`, never your home folder: "Alternative: Claude
-  Code and other MCP clients", above):
+  (`~/claude-exegete`: started in your home folder, Claude Code could
+  read any study kept there without asking; "Alternative: Claude Code
+  and other MCP clients", above, says more):
 
   ```bash
   claude mcp add exegete -e EXEGETE_TOOLSET=lifecycle -- ~/Documents/exegete/venv/bin/python -m exegete.server
@@ -561,8 +603,8 @@ always to the same value.
   from a name the project already has, the next write asks which to use
   rather than re-attributing anything. Declare the model this host runs
   (`"Qwen 3.8 6bit"`), or `AI Agent` to propose the exact name
-  QualCoder 4.0's built-in assistant writes under, which groups this
-  server's work with the assistant's under one coder in QualCoder's
+  QualCoder 4.0's built-in assistant writes under, which groups
+  Exegete's work with the assistant's under one coder in QualCoder's
   per-coder visibility toggle, undo and reports. The value is trimmed
   and must be non-empty, at most 80 characters, single-line plain text
   (no control characters, no line or paragraph separators, and no
@@ -572,9 +614,9 @@ always to the same value.
   exceptions) and must not contain `#####`,
   the QualCoder 4.0 private-memo marker. An invalid value stops the
   server at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
-  stderr. Do not declare your own QualCoder coder name: AI rows would
-  then be indistinguishable from yours in QualCoder, and the setter
-  refuses that name anyway.
+  stderr. Do not declare your own coder name: AI rows would then be
+  indistinguishable from yours, in Exegete's reads and in QualCoder,
+  and the setter refuses that name anyway.
 
   ```json
   "env": {
@@ -589,11 +631,30 @@ always to the same value.
 
 - `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release
-  is verified against (v14 through v17, QualCoder master commit
-  `9bddf17`) are refused to protect the data, and the refusal names this
-  variable. Setting it to `1` lets those writes proceed; every write
-  result then carries a warning. Use it only with backups you trust, and
-  verify the results in QualCoder.
+  is verified against (v14 through v17, up to QualCoder 4.0) are
+  refused to protect the data, and the refusal names this variable.
+  Setting it to `1` lets those writes proceed; every write result then
+  carries a warning. Exegete cannot know what a newer format changed, so
+  it is worth having backups you trust and checking the results in
+  QualCoder.
+- `EXEGETE_UPDATE_CHECK`: whether Exegete checks for new versions, at
+  most once a week on its own and at most once a day when asked
+  ([PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)
+  says what is sent). `on`, `true` or `1` switches it on; `off`, `false`
+  or `0` off, in any letter case. On the Terminal route, unset means
+  off; the desktop extension sets it from its setting "Tell me when a
+  new version is out", where unset means on. An unrecognised value
+  means off, and the log says so once; it never stops the server. The
+  log says at every start whether checking is on. If every check ends
+  in "certificate not trusted", the Python that runs Exegete may lack
+  the certificates it needs: Python from python.org on a Mac gets them
+  from "Install Certificates", in its folder in Applications, which is
+  worth running once. A network that inspects encrypted connections
+  gives the same answer.
+- `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
+  `extension`), so that the update steps Exegete gives fit the way it
+  was installed. It also makes checking on by default, as the
+  extension's setting is. Do not set it yourself.
 
 ---
 
@@ -604,7 +665,7 @@ always to the same value.
 > recipe is pending verification; steps may be adjusted after that pass.
 
 Running Claude Code with an API key from the Anthropic Console, instead
-of a Free/Pro/Max login, routes your usage through a different set of
+of a Pro or Max login, routes your usage through a different set of
 terms. What that means for research data is laid out in
 [PRIVACY.md](PRIVACY.md) (see "Your governance options"); this section
 is only the mechanics.
@@ -670,10 +731,13 @@ the folder (`cd ~/claude-exegete`), set the key again the same way,
 and start `claude` there; Exegete stays registered in that folder.
 
 A new Terminal window opens in your home folder, which holds your
-projects; never start Claude Code there, in Documents, in your projects
-folder or in any folder that holds a study. The empty folder keeps your
-studies out of the folder it reads without asking; it does not stop its
-read-only commands reading them, or its file tools in auto mode.
+projects, and Claude Code reads the folder it starts in without asking:
+started there, in Documents, in your projects folder or in a folder
+that holds a study, it would read your studies from the start, which is
+why these steps go to the empty folder first. The empty folder keeps
+your studies out of the folder it reads without asking; it does not
+stop its read-only commands reading them, or its file tools in auto
+mode.
 
 Approve the key when prompted (Claude Code asks once and remembers the
 choice). If you ALSO have a Pro/Max subscription login, the
@@ -700,10 +764,13 @@ export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 ```
 
 and set `cleanupPeriodDays` in your Claude Code settings to shorten the
-local transcript cache. Never use feedback features (thumbs, /feedback,
-/bug) in sessions containing participant data. These settings close
+local transcript cache. Feedback (a thumbs up or down, `/feedback`,
+`/bug` or `/share`) sends the conversation to Anthropic, which may keep
+it for up to five years whatever your training setting (PRIVACY.md,
+"Cross-rung cautions"), so in sessions containing participant data this
+project suggests giving none. These settings close
 side channels; they do not change what Claude Code reads by itself
-(step 2), so they do not make this route one for participants' data.
+(step 2).
 
 **5. Governance note.** For unambiguous commercial-terms coverage, use
 an organisational Console account rather than a personal one;
@@ -724,7 +791,7 @@ like this one work identically.
 > 0.3.17 or newer). The maintainer verified this recipe as functional
 > against LM Studio 0.4.22 on 2026-09-07: the server loads and tool
 > calls complete without breaking. We have not yet evaluated how well
-> any local model performs coding work with this server. Expect to
+> any local model performs coding work with Exegete. Expect to
 > supervise closely and report what you find.
 
 [LM Studio](https://lmstudio.ai) runs open-weight models entirely on
@@ -758,13 +825,13 @@ examples and warn that "Smaller models and models that were not trained
 for tool use may output improperly formatted tool calls"
 (<https://lmstudio.ai/docs/developer/openai-compat/tools>). Community
 reports place the practical minimum for many-tool MCP work around 14B
-parameters. We have not evaluated specific models with this server;
+parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** This server exposes 76 tools by
+**Step 3. Use the core toolset.** Exegete offers 77 tools by
 default, and the serialised tool definitions alone measure about
-200,000 characters, roughly 50k tokens (measured for 0.14.3, provisional, under
+202,000 characters, roughly 50k tokens (measured for 0.14.3, provisional, under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
@@ -803,7 +870,8 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
       "command": "/Users/YOUR_USERNAME/exegete-venv/bin/exegete",
       "env": {
         "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda",
-        "EXEGETE_TOOLSET": "core"
+        "EXEGETE_TOOLSET": "core",
+        "EXEGETE_UPDATE_CHECK": "off"
       }
     }
   }
@@ -812,10 +880,11 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
 
 With a source (git) install, use `"command":
 "/path/to/exegete/venv/bin/python"` with `"args": ["-m",
-"exegete.server"]` and the same `env` block. Replace the paths
-with your own; if the file already has other entries under
-`mcpServers`, add only the `"exegete"` block. LM Studio loads the
-server when you save.
+"exegete.server"]` and the same `env` block. The last line keeps
+Exegete's check for new versions off; it is off when unset too, and
+writing it down documents it. Replace the paths with your own; if the
+file already has other entries under `mcpServers`, add only the
+`"exegete"` block. LM Studio loads the server when you save.
 
 **Step 6. Keep tool confirmations on.** When the model calls a tool, LM
 Studio shows a confirmation dialog where you can inspect and edit the
@@ -828,19 +897,22 @@ will be updated when it has been verified).
 
 **Step 7. Verify offline (recommended for data-governance records).**
 Disconnect from the network and work. Model inference, chats, and all
-Exegete's operations are local; LM Studio states it needs the
+Exegete's operations are local (Exegete's check for new versions is off
+on this route, as Step 5's entry sets it; its log says so at every
+start); LM Studio states it needs the
 internet only for model search/downloads, runtime downloads, and update
 checks (<https://lmstudio.ai/docs/app/offline>). A note that you
 verified this yourself is good evidence for a data-management plan.
 
 **What to expect (honest; model quality not yet evaluated).** We have
-not yet evaluated local models with this server, which is why the
+not yet evaluated local models with Exegete, which is why the
 feature is Experimental. From the published evidence on many-tool MCP use, expect
 a narrower workflow than with Claude: use the core toolset, work one
 document or one code at a time, and verify codings as you go. Long
 transcripts should be worked in sections. Multi-step batch operations
 (recode across a project, cross-case reports) are not realistic
-targets for local models today. Nothing leaves your machine; the
+targets for local models today. Nothing leaves your machine through
+Exegete while its check for new versions is off; the
 trade-off is that you supervise more, and until an evaluation exists,
 treat every result as needing review.
 
@@ -868,9 +940,10 @@ corresponding care.
 > 30 September 2026 (its pages show no date), and, where it is silent,
 > from Codex's source code as it stood that day. This project has not
 > yet run Exegete in any OpenAI app; the steps may change after that
-> check. Until a setting that stops Codex reading files by itself has
-> been tested, use this route for practice and for data that is not
-> sensitive; step 3 says why.
+> check. Codex reads files on your computer by itself, so for
+> participants' data this project suggests an assistant with no file
+> access of its own, such as Claude Desktop's chat, until a setting that
+> stops Codex's reads has been tested with Exegete; step 3 says more.
 
 **Which OpenAI apps can use Exegete.** OpenAI's page on MCP
 (<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
@@ -950,13 +1023,17 @@ which of the two decides which of OpenAI's data policies apply
 ([PRIVACY.md](PRIVACY.md), "OpenAI's apps: the ChatGPT desktop app and
 Codex").
 
-**First, turn off training**, before any use with Exegete, practice
-included. Turn off "Improve the model for everyone" in ChatGPT's
-Settings, Data controls, or choose "Do not train on my content" in
-OpenAI's Privacy Portal, <https://privacy.openai.com/> (either is
-enough, by OpenAI's Help Center: [PRIVACY.md](PRIVACY.md), "OpenAI's
-apps", quotes it). Codex's "Include environments" is a separate setting
-(PRIVACY.md says more).
+**First, switch training off** before participants' data: while it is
+on, OpenAI may use your conversations to train its models. On a
+personal plan (Free, Go, Plus or Pro), turn off "Improve the model for
+everyone" in ChatGPT's Settings, Data controls, or choose "Do not train
+on my content" in OpenAI's Privacy Portal, <https://privacy.openai.com/>
+(either is enough, by OpenAI's Help Center: [PRIVACY.md](PRIVACY.md),
+"OpenAI's apps", quotes it), and turn off Codex's "Include
+environments", a separate setting that neither changes. Rating a reply
+(thumbs up or down) can still let OpenAI train on that conversation.
+Claude's plans take the same advice, in the same words (the README's
+checks before participants' data).
 
 **Step 1. Install Exegete.** It needs Python 3.10 or newer ("What
 You'll Need", above). In the Terminal (macOS or Linux):
@@ -1104,12 +1181,12 @@ instead (a new folder named `exegete-chats`, in your home folder; on
 Windows, File Explorer opens your home folder when you type
 `%USERPROFILE%` in its address bar): the lines above end by starting
 `codex`, the command line, which the desktop app does not need. You
-open the folder in the app once Codex is chosen, below. Never give
-Codex your home folder, Documents, your projects folder
-(`~/QualCoder projects`), or a folder with transcripts
-or other study files: what Codex reads there goes to OpenAI without
-passing through Exegete, and what it changes there is changed without
-Exegete's approval step, preview or backup.
+open the folder in the app once Codex is chosen, below. Given your home
+folder, Documents, your projects folder (`~/QualCoder projects`) or a
+folder with transcripts or other study files instead, Codex would work
+among them: what it reads there goes to OpenAI without passing through
+Exegete, and what it changes there is changed without Exegete's
+approval step, preview or backup.
 
 A folder of its own keeps your study's files out of the place Codex
 works in, so it does not change them without asking. It does not keep
@@ -1121,14 +1198,17 @@ home folder but a few folders that hold keys (step 4 gives OpenAI's
 words); and Exegete's own answers tell Codex where your project is.
 Whatever Codex opens that way, a project's database among it, goes to
 OpenAI whole, the private part of every memo after `#####` included.
-So, until a setting that stops those reads has been tested with
-Exegete, use this route for practice and for data that is not
-sensitive, and, for participants' data, an assistant that has no file
-access of its own, such as Claude Desktop's chat with the extension,
-with computer use off, no folder that holds your projects or
-transcripts connected to it, and no other extension that reads files
-([PRIVACY.md](PRIVACY.md), "Assistants that open files by
-themselves").
+So a real study kept on the same computer is within Codex's reach even
+while you practise, and Exegete's list of projects tells it where it
+is. If that matters for a study, you could keep practice projects in a
+folder of their own, or work on that study with an assistant that has
+no file access of its own, such as Claude Desktop's chat with the
+extension, with computer use off, no folder that holds your projects
+or transcripts connected to it, and no other extension that reads
+files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by
+themselves"). A folder of their own keeps practice projects apart but
+does not put the study out of Codex's reach, and what Codex opens goes
+to OpenAI, which may train on it while training is on.
 
 Then, in the desktop app, open Settings, MCP servers, where `exegete`
 is now listed, and select Restart (or quit the app and open it again).
@@ -1153,7 +1233,8 @@ your answer for the session or for good; for the tools that write, and
 for `read_pseudonym_list`, answer each time, since a remembered answer
 lets later calls run unasked. On the command line, if Codex started in
 its read-only mode, you may keep it there (Exegete's tools work the
-same); never choose Full access.
+same). Full access would run every tool call without asking you, so
+this project suggests leaving it aside.
 
 "Ask for approval" does not ask before Codex changes a file in its own
 folder, nor before it reads one, wherever the file is. OpenAI's page
@@ -1176,9 +1257,11 @@ for approval" and the read-only mode, and in Codex's source code (its
 release of 29 September 2026) both let those commands read the whole
 disk (on Windows, at least everything in your home folder but a few
 folders that hold keys). That is why step 3 keeps
-study files out of Codex's folder, and why this route is for practice
-and non-sensitive data for now. Codex's sandbox settings govern the
-commands the model runs, not Exegete, which reads and writes your
+study files out of Codex's folder, and why, for participants' data,
+this project suggests an assistant with no file access of its own for
+now (the box at the top of this section). Codex's sandbox
+settings govern the commands the model runs, not Exegete, which reads
+and writes your
 projects whichever sandbox you choose (Codex's source code). What
 "Approving the AI's suggestions: your host's settings are the
 safeguard", below, says holds in Codex too.
@@ -1202,8 +1285,8 @@ safeguard", below, says holds in Codex too.
 - If Codex reports that the server timed out while starting, raise
   `startup_timeout_sec`. If a tool stopped with a timeout, raise
   `tool_timeout_sec`, and before asking again check whether the change
-  was made (ask for the project summary, or the list of backups): the
-  server may have finished it.
+  was made (ask for the project summary, or the list of backups):
+  Exegete may have finished it.
 - An `EXEGETE_TOOLSET` other than `full`, `core` or `lifecycle` stops
   the server at start-up, and so does a relative path in
   `EXEGETE_WORKSPACE`; the error names the setting.
@@ -1227,11 +1310,13 @@ MCP defines: whether it only reads (`readOnlyHint`); for a tool that
 writes, whether it can replace or remove something that already exists
 (`destructiveHint`) and whether calling it twice the same way changes
 nothing more (`idempotentHint`); and whether it reaches anything beyond
-this computer (`openWorldHint`, never, for this server). The tools
+this computer (`openWorldHint`: only `check_for_updates`, which
+fetches Exegete's version file while checking is on; every other tool,
+never). The tools
 that only read are marked so, and so are the writing tools that can
 replace or remove work (renames, memos, deletions, merges, restores,
 exports with `overwrite`). The marks are hints: MCP tells hosts to
-treat them as untrusted, and the server's own safeguards (the approval
+treat them as untrusted, and Exegete's own safeguards (the approval
 of each suggestion, the preview before a deletion, the backups) do not
 depend on them.
 
@@ -1249,6 +1334,11 @@ the mark. The tool is deprecated: v0.14 says so in its description
 and in every answer, and v0.15 removes it (QualCoder's Pseudonyms
 dialog, the button in Manage Files, shows the list without sending it
 anywhere).
+
+`check_for_updates` is not marked read-only either: it records each
+check in Exegete's own folder, so a host that asks before a tool runs
+asks before it. It is in the `full` and `lifecycle` tool sets, not in
+`core`.
 
 What each host does, from Anthropic's pages as read on 27 September
 2026 ("Choose a permission mode" and the MCP page on code.claude.com;
@@ -1374,7 +1464,7 @@ behaviour, not an error. Press Ctrl+C to stop it.
 
 In Claude Desktop, try:
 ```
-List my available QualCoder projects
+List my available projects
 ```
 
 Claude should show you the `.qda` project folders it found. Then:
@@ -1386,7 +1476,7 @@ Select the "MyProject" project
 
 In Claude Desktop, try:
 ```
-Give me a summary of my QualCoder project
+Give me a summary of my project
 ```
 
 Claude should respond with information about your project!
@@ -1433,9 +1523,9 @@ Analyse the transcript for file 1 with all its coding
    - Settings > Developer > Show Logs
    - Look for errors related to "exegete"
 
-### "No Qualcoder projects found" (Option A)
+### "No projects found in the usual places" (Option A)
 
-The server searches these locations by default:
+Exegete searches these locations by default:
 - the folder `EXEGETE_WORKSPACE` names, when it is set (with the
   desktop extension, its "Folder for projects", by default
   `~/QualCoder projects`), at its top level only
@@ -1449,16 +1539,25 @@ Make sure your `.qda` project folder is in one of these locations, or tell Claud
 List available projects in ["/path/to/your/projects"]
 ```
 
-### "No Qualcoder project selected" (Option A)
+### "No projects found in the folders given" (Option A)
+
+When you name folders to search, Exegete searches those folders only,
+each three levels deep, and not the usual places above. The answer says
+when a folder you named does not exist, which usually means a typing
+slip in the path. A project folder deeper than three levels is not
+found either: naming the folder just above it helps. Asking Claude to
+list projects without naming a folder searches the usual places again.
+
+### "No project selected" (Option A)
 
 With dynamic project selection this is normal at the start of a
-session: the server has no project open until one is selected. The
-error reads "No Qualcoder project selected. Use 'list_available_projects'
+session: Exegete has no project open until one is selected. The
+error reads "No project selected. Use 'list_available_projects'
 to discover projects, then 'select_project' to choose one. Or set
-EXEGETE_PROJECT_PATH environment variable." (`get_current_project`
+EXEGETE_PROJECT_PATH in the host's configuration." (`get_current_project`
 says "No project currently open" instead.) Just select a project:
 ```
-List my available QualCoder projects
+List my available projects
 Select the "ProjectName" project
 ```
 
@@ -1538,7 +1637,7 @@ Developer > Show Logs. LM Studio on macOS persists it into
 `~/Library/Logs/LM Studio/main.log`; search that file for
 `exegete` to find the server's start-up lines (which report the
 toolset mode and the number of tools registered) and any errors. The
-lines this server writes carry no memo text, and since v0.14 no SQLite
+lines the server writes carry no memo text, and since v0.14 no SQLite
 message: a database error is logged by its kind and SQLite's short name
 for it, so a project built to put a note into an error (with a database
 trigger), or a damaged one (with a note that is not UTF-8), no longer
@@ -1574,8 +1673,8 @@ Before sharing such a file, read it as you would the conversation.
 ### Approving the AI's suggestions: your host's settings are the safeguard
 
 When the assistant suggests codings or new codes, nothing is written to
-your project until each item is marked approved and then applied. The
-server records the approval the assistant reports: it cannot tell
+your project until each item is marked approved and then applied.
+Exegete records the approval the assistant reports: it cannot tell
 whether you gave it. Two things keep that honest. Your host asks before
 each tool call: keep it asking, and when it asks about
 `update_suggestion_status`, `update_proposal_status`, `apply_codings` or
@@ -1607,7 +1706,13 @@ Create a case-code matrix
 
 ## Updating the MCP Server
 
-Updates are manual (a new release does not install itself).
+Updates are manual (a new release does not install itself). With the
+extension, Exegete tells you when one is out unless you switched that
+off; ask "How do I update Exegete?" for the steps (with the
+`lifecycle` or `full` tool set; with `core`, which has no check tool,
+the notice links the update page). On the Terminal route the check is
+off unless you set `EXEGETE_UPDATE_CHECK` to `on` ("Environment
+variables the server reads").
 
 **Desktop extension**: download the newer `.mcpb` and install it as
 before; Claude replaces the old one.
@@ -1627,6 +1732,21 @@ or in PowerShell on Windows:
 ```powershell
 $HOME\exegete-venv\Scripts\pip install --upgrade exegete
 ```
+
+`uv tool upgrade exegete` keeps a version that was pinned when Exegete
+was installed, as the steps Exegete gives pin one (`uv tool install
+--force "exegete==<version>"`); to move on from such a pin, run those
+steps again with the newer version.
+
+**uvx**: if your MCP client's entry starts Exegete with `uvx exegete`
+(or `uvx qualcoder-mcp`, the earlier name), uvx keeps running the copy
+it fetched first, until the command names a version or uv's cache is
+cleared. To update, quit the client, change `exegete` (or the earlier
+name, qualcoder-mcp) in that entry to `exegete@` and the newest version
+as PyPI spells it (for example `exegete@0.14.2a0`), and open the client
+again: it fetches that version when it next starts, which needs the
+internet that once. With the check for new versions on, "How do I
+update Exegete?" gives this step with the version filled in.
 
 **Git (contributor) install**, when new versions are released. First
 **fully quit your MCP client** (Claude Desktop: Cmd+Q; Claude Code: end
@@ -1672,7 +1792,7 @@ convenience, not proof. The
 [CHANGELOG.md](CHANGELOG.md) say what each release changed.
 
 Updating never touches your data: the server is code-only, and your
-QualCoder projects and backups stay exactly where they are.
+projects and backups stay exactly where they are.
 
 ---
 
@@ -1690,8 +1810,9 @@ yet, and the first start after the update moves the server's own folder
 (below), which is best done with no older copy running.
 
 - **The Claude Desktop extension.** Download `exegete-<version>.mcpb`
-  and open it: it updates the extension you have, with its two
-  settings, rather than adding a second one. Claude Desktop then lists
+  and open it: it updates the extension you have, with the settings
+  you chose, rather than adding a second one (0.14.2 adds a third, "Tell
+  me when a new version is out", on unless you switch it off). Claude Desktop then lists
   it as Exegete, and its log becomes `mcp-server-Exegete.log` (the
   earlier `mcp-server-qualcoder-mcp.log` stays where it was). The first
   start after the update may take longer and needs the internet, since
@@ -1728,19 +1849,26 @@ yet, and the first start after the update moves the server's own folder
   https://github.com/nicotem/exegete.git` (the old address redirects,
   so this is optional); the folder's own name does not matter.
 - **Keep your entry.** If a host's configuration already has an entry
-  for this server under the name `qualcoder`, keep it, and do not add
+  for Exegete under the name `qualcoder`, keep it, and do not add
   an `exegete` entry beside it: that would start two servers, show
   every tool twice and need a second set of "always allow" rules. If
   you do rename the entry, Claude Code names the tools after it
   (`mcp__exegete__...`), and permissions you gave under the old name
-  must be given again.
+  must be given again. If you also set up QualCoder 4.0's own MCP
+  server
+  ([TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#supported-qualcoder-versions)),
+  take care with its name: it calls itself `qualcoder-mcp`, Exegete's
+  former name, and the extension QualCoder's source can build
+  is named `qualcoder`. Added to the same host under the name
+  `qualcoder`, it could replace Exegete's entry or be mistaken for
+  it; a name of its own, such as `qualcoder-app`, keeps the two apart.
 - **The settings.** The variables now start `EXEGETE_` (for example
   `EXEGETE_TOOLSET`); the earlier `QUALCODER_MCP_...` spellings and
   `QUALCODER_PROJECT_PATH` are still read until v1.0, and the log says
   so at each start. If both spellings of one setting are set with
   different values, the server does not start and says which two
   disagree ("Environment variables the server reads" has the rules).
-- **The server's own folder** moves by itself, at the first start, from
+- **Exegete's own folder** moves by itself, at the first start, from
   `~/.qualcoder_mcp` to `~/.exegete`, whole, with everything in it (the
   secret key, sessions, the last-project hint and the privacy run
   records). A link is left under the old name (a junction on Windows),
@@ -1832,7 +1960,7 @@ program was then called qualcoder-mcp; "Coming from qualcoder-mcp",
 above, says what the rename changes).*
 
 **First, the reassurance: upgrading only replaces the SERVER code.**
-It never touches your QualCoder projects (the `.qda` folders) or your
+It never touches your projects (the `.qda` folders) or your
 files under `~/.qualcoder_mcp/` (moved whole to `~/.exegete/` at the
 first start of 0.14.1 or later: the AI-coding session files in
 `sessions/`, the last-used project pointer `mru_project.json`, the
@@ -1928,9 +2056,9 @@ Claude Desktop, after:
 Claude Code: re-register once, under the same name. Claude Code offers
 a server added this way only in the folder where it was added, so run
 `claude mcp remove` in the folder where you added it, and
-`claude mcp add` in the folder you start Claude Code in, never your
-home folder ("Alternative: Claude Code and other MCP clients", above,
-says why):
+`claude mcp add` in the folder you start Claude Code in (started in
+your home folder, it could read any study kept there without asking:
+"Alternative: Claude Code and other MCP clients", above, says more):
 
 ```bash
 claude mcp remove qualcoder
@@ -1977,13 +2105,13 @@ around.
 
 ## Getting Help
 
-- **Problems with this server**: check the Troubleshooting section
+- **Problems with Exegete**: check the Troubleshooting section
   above, then open an issue on
   [GitHub Issues](https://github.com/nicotem/exegete/issues).
   That is the only support channel (email requests receive no reply);
   see [SUPPORT.md](SUPPORT.md). Never paste research data into an
-  issue; a redacted or synthetic example is enough. Include your
-  QualCoder version, the server version, your host (Claude Desktop,
+  issue; a redacted or synthetic example is enough. Include the
+  Exegete version, your QualCoder version if you use it, your host (Claude Desktop,
   Claude Code, LM Studio) and the toolset mode (full, core or
   lifecycle).
 - **MCP Documentation**: https://modelcontextprotocol.io/
@@ -2024,7 +2152,7 @@ If you want to remove the MCP server:
    rm -rf ~/Documents/exegete
    ```
 
-3. **Optionally remove the server's own state**: `~/.exegete/`
+3. **Optionally remove Exegete's own state**: `~/.exegete/`
    (and `~/.qualcoder_mcp`, the link to it left under its earlier name)
    holds the AI-coding session files (`sessions/`), the last-used
    project pointer (`mru_project.json`), the preview-token secret
@@ -2037,12 +2165,19 @@ If you want to remove the MCP server:
    JSON file per run: the pseudonyms applied, the replacement spans, the
    row ids and offsets of the rows the run moved and, since v0.13, where
    each pseudonym now sits in the notes it rewrote; never an original
-   name). Nothing else is stored there, except, if an older copy of the
-   server ever made a folder of its own under the earlier name,
-   `old_folder_noted`, one line that lets the log say so only once.
+   name), and the record of the check for new versions
+   (`update_check.json`: when it last tried and, if that failed, the
+   kind of failure, what it found, which versions it has told you
+   about, when it told you about the check and the date of its first
+   check, and the newest version that has run here, which it keeps even
+   with checking off; nothing from your projects). Nothing else is
+   stored there,
+   except, if an older copy of the server ever made a folder of its own
+   under the earlier name, `old_folder_noted`, one line that lets the
+   log say so only once.
 
-Uninstalling does not touch your QualCoder projects. Note that the
-server does write to projects when you use its coding tools (after
+Uninstalling does not touch your projects. Note that Exegete does
+write to projects when you use its coding tools (after
 taking a backup, unless a call asks for none with
 `create_backup=false`), so the changes you approved during use, and the
 backup folders it created next to each project
@@ -2061,7 +2196,7 @@ desktop extension, its "Folder for projects", by default
 
 Now that you're installed, you can:
 
-1. ✅ Explore your QualCoder data with natural language queries
+1. ✅ Explore your project in your own words
 2. ✅ Get AI-assisted thematic analysis
 3. ✅ Discover patterns and relationships in your coding
 4. ✅ Query by demographics and attributes

@@ -24,7 +24,7 @@ import exegete.server as server
 import track5_helpers as H
 from track5_helpers import write_fixture_sidecar
 from exegete.database import (QualcoderDatabase, UnsupportedSchemaError,
-                                    VERIFIED_MASTER_COMMIT)
+                                    VERIFIED_QUALCODER)
 from exegete.sessions import SessionManager
 
 FULLTEXT = ("This is interview text. I feel stressed about deadlines. "
@@ -210,7 +210,13 @@ class TestT1ProbeGateMatrix:
         v17_env("v18")
         out = json.loads(server.set_memo("code", 1, "x", create_backup=False))
         assert "v18" in out["error"]
-        assert VERIFIED_MASTER_COMMIT in out["error"]
+        # The owner's ruling of 6 October 2026: a researcher is told the
+        # release Exegete is verified against, not a development commit
+        assert VERIFIED_QUALCODER == "QualCoder 4.0"
+        assert ("newer than the schemas Exegete is verified against "
+                "(v14 through v17, up to QualCoder 4.0).") in out["error"]
+        for gone in ("9bddf17", "master commit"):
+            assert gone not in out["error"], gone
         assert "EXEGETE_ALLOW_UNKNOWN_SCHEMA" in out["error"]
 
     def test_v18_allowed_with_override_and_warned(self, v17_env,
@@ -222,6 +228,10 @@ class TestT1ProbeGateMatrix:
         assert out.get("success") is True
         assert "WARNING" in out["schema_warning"]
         assert "v18" in out["schema_warning"]
+        assert ("newer than the verified ceiling (v17, QualCoder 4.0)"
+                in out["schema_warning"])
+        for gone in ("9bddf17", "master commit"):
+            assert gone not in out["schema_warning"], gone
 
     def test_capability_probes_reported(self, v17_env):
         v17_env("v16")

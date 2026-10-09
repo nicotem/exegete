@@ -89,7 +89,7 @@ def _projects_dir() -> Path:
 def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
-EXPECTED_TOOLS = 76              # read_brief joined in v0.14.2; open_file_for_reading and import_documents in 0.14.3
+EXPECTED_TOOLS = 77              # read_brief and check_for_updates joined in v0.14.2; open_file_for_reading and import_documents in 0.14.3
 EXPECTED_CONCRETE_RESOURCES = 8   # six data resources + exegete://guidance/methods (0.12) + exegete://guidance/brief (0.14.2)
 EXPECTED_RESOURCE_TEMPLATES = 4      # the file resource's later parts (v0.14.3)
 EXPECTED_RESOURCES_TOTAL = 12
@@ -472,7 +472,8 @@ def test_initialize_carries_methodology_instructions():
     # v0.14.2: the brief's short version, which sends the assistant to
     # read_brief (and so to the methods notes)
     assert instructions.startswith(
-        "Exegete exposes a QualCoder project to this conversation.")
+        "Exegete is a qualitative analysis application for working with "
+        "the researcher on their project, in QualCoder's format.")
     assert "call read_brief once" in instructions
     assert len(instructions) < 2000
     assert "\u2014" not in instructions

@@ -504,7 +504,10 @@ class TestWriteEchoesRedactHiddenTargets:
     ai_mcp_server.py:2243-2280 deletes by ctid with no owner check).
     Tier 2: they REFUSE unless allow_hidden_coder=true, with a refusal that
     names neither the coder nor a count. Tier 1: with the override the echo
-    is ids only, as upstream's. The fixture's hidden rows: ctid 3 ('Stress'
+    is ids only, as upstream's is for a coding; for an annotation QualCoder
+    4.0's own server answers with the position and the owner as well
+    (ai_mcp_server.py:2324-2336, 2370-2380 at tag 4.0), a departure
+    PRIVACY.md states with its reason. The fixture's hidden rows: ctid 3 ('Stress'
     on 'I feel stressed about deadlines', 24-55) and anid 1 ('hidden
     annotation'), both by HIDDEN."""
 
@@ -884,7 +887,7 @@ class TestVisibilityGuardFailsClosed:
             server.delete_annotation(1),
         ):
             out = self._assert_failed_closed(raw)
-            assert "visible in QualCoder" in out["error"]
+            assert "whether this row's coder is hidden" in out["error"]
             assert "nothing was changed" in out["error"]
         self._rows_intact(visibility_db)
 

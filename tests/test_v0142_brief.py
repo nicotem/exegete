@@ -108,10 +108,12 @@ class TestTheOpeningText:
         # saw it near 2,060 bytes: both stay under 2,000
         assert len(short) < 2000
         assert len(short.encode("utf-8")) < 2000
-        # v0.14's first sentence, which no other text of the server's
-        # holds, stays for the owner's live check
+        # Its first sentence (the owner's ruling of 7 October 2026), which
+        # no other served text holds, so that the owner's live check can
+        # recognise it (tests/test_v0142_selfrep.py pins the two sentences)
         assert short.startswith(
-            "Exegete exposes a QualCoder project to this conversation. ")
+            "Exegete is a qualitative analysis application for working with "
+            "the researcher on their project, in QualCoder's format. ")
         assert server.BRIEF_START in short
         assert "The rules that matter most:" in short
 
@@ -128,7 +130,7 @@ class TestTheOpeningText:
                 "Read and change the project only through these tools",
                 "An empty result is a result",
                 "Excerpts you record are checked against the file",
-                "which you do only on the researcher's word: the server "
+                "which you do only on the researcher's word: Exegete "
                 "cannot tell who approved",
                 "their answers are the session's instruction, without "
                 "which no session starts",
@@ -178,7 +180,7 @@ class TestItSaysWhatTheToolsDo:
         """The server writes what is marked approved and cannot tell who
         marked it (section 6, rule 4 and both status tools)."""
         full = _flat(server.BRIEF_FULL)
-        assert ("the server writes a suggested coding or a proposed code "
+        assert ("Exegete writes a suggested coding or a proposed code "
                 "only when each item has been marked approved, which you do "
                 "only on the researcher's word." in full)
         assert ("Suggested codings and proposed codes wait in a session "
@@ -222,7 +224,7 @@ class TestTheStartTool:
         text = server.READ_BRIEF_DESCRIPTION
         assert len(text) < 400
         assert text.startswith("Call this once at the start of every "
-                               "conversation about a QualCoder project")
+                               "conversation about a project")
         assert "Call it again if that text has dropped out" in text
         assert "reads nothing from the project" in text
 
@@ -239,7 +241,8 @@ class TestTheStartTool:
             " " + server.BRIEF_START, "")
         assert "read_brief" not in answer
         assert answer.startswith(
-            "Exegete exposes a QualCoder project to this conversation.")
+            "Exegete is a qualitative analysis application for working with "
+            "the researcher on their project, in QualCoder's format.")
         assert "\nThe rules that matter most:\n1. " in answer
 
     def test_it_needs_no_project(self, monkeypatch):
@@ -405,6 +408,9 @@ HELD_BACK = (
     "suggest codes first or follow",
     "ask what they make of a passage",
     "unless the study's sampling was designed for that",
+    # the owner, 1 October 2026: held back until 0.14.3 gives the reading
+    # tool a "without codes" option, so that a fresh reading can be given
+    "wants a fresh reading",
 )
 # Notes meant for the owner, never for the assistant
 OWNER_MARKS = ("Owner's note", "Note for the owner", "[Provisional",
@@ -487,44 +493,66 @@ class TestProvisionalAndHeldBack:
 
 class TestTheSizes:
     """What every request carries grows by read_brief's own entry in the
-    tool list, and by nothing else: every other description is as
-    v0.14.1 served it (tests/test_v0142_description_cut.py pins their
-    words; test_toolset_modes.py pins the new totals)."""
+    tool list, by check_for_updates' in `full` and `lifecycle` (pull
+    request #11), and by nothing else: every other description is as
+    v0.14.1 served it or, where the rewording of how Exegete describes
+    itself reached it, shorter (tests/test_v0142_description_cut.py pins
+    their words, tests/test_v0142_selfrep.py that none is longer;
+    test_toolset_modes.py pins the new totals). v0.14.3 (provisional)
+    adds two tools, left out here, and lengthens two descriptions,
+    measured apart below."""
 
-    # The figures without read_brief, measured on Python 3.13.5 with mcp
-    # 1.30.0: 0.14.1's were 195,266, 64,804 and 197,845; v0.14.3
-    # (provisional) moves them by the reading tool's entry, the `start`
-    # and `without_codes` arguments on analyze_file_with_coding and the
-    # two descriptions it changes, import_text_file's pointer to
-    # import_documents among them (tests/test_v0142_description_cut.py
-    # pins those)
-    BEFORE = {"full": 197_642, "core": 66_907, "lifecycle": 200_221}
+    # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
+    BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
+    # The same tools as 0.14.2 served them, on the same interpreter
+    NOW_0142 = {"full": 195_029, "core": 64_687, "lifecycle": 197_586}
+    # The same tools as this tree serves them: v0.14.3 (provisional)
+    # lengthens two, analyze_file_with_coding (the `start` and
+    # `without_codes` arguments) and import_text_file (its pointer to
+    # import_documents); tests/test_v0142_description_cut.py pins their
+    # words. Their entries as 0.14.2 served them are below, so every
+    # other tool is still held to 0.14.2's figure.
+    NOW = {"full": 195_796, "core": 65_158, "lifecycle": 198_353}
+    CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
+                          "import_text_file": 4_553}
+    # Each new tool's entry on Python 3.13, and the sets it is in
+    NEW = {"read_brief": (451, {"full", "core", "lifecycle"}),
+           "check_for_updates": (903, {"full", "lifecycle"})}
 
     @staticmethod
     def _entry(tool):
         return {"name": tool.name, "description": tool.description or "",
                 "inputSchema": tool.inputSchema}
 
-    def test_the_growth_is_the_new_tools_entry_alone(self):
+    def test_the_growth_is_the_new_tools_entries_alone(self):
         for mode in TOOL_SETS:
             tools, _ = _listed(mode)
             payload = [self._entry(t) for t in tools]
-            # The tools added after 0.14.2 are left out with it, so the
-            # figure stays 0.14.2's (0.14.3: import_documents)
-            others = [e for e in payload if e["name"] != "read_brief"
-                      and e["name"] not in ADDED_AFTER_0142]
-            entry = next(e for e in payload if e["name"] == "read_brief")
-            with_brief = [e for e in payload
-                          if e["name"] not in ADDED_AFTER_0142]
-            grown = len(json.dumps(with_brief)) - len(json.dumps(others))
-            assert grown == len(json.dumps(entry)) + len(", "), mode
+            # The tools added after 0.14.2 are left out, so the figures
+            # stay 0.14.2's (0.14.3: import_documents and
+            # open_file_for_reading)
+            payload = [e for e in payload
+                       if e["name"] not in ADDED_AFTER_0142]
+            others = [e for e in payload if e["name"] not in self.NEW]
+            new = {e["name"]: e for e in payload if e["name"] in self.NEW}
+            assert set(new) == {name for name, (_, sets) in self.NEW.items()
+                                if mode in sets}, mode
+            grown = len(json.dumps(payload)) - len(json.dumps(others))
+            assert grown == sum(len(json.dumps(e)) + len(", ")
+                                for e in new.values()), mode
             if sys.version_info[:2] == (3, 13):
-                assert len(json.dumps(others)) == self.BEFORE[mode], mode
-                assert len(json.dumps(entry)) == 465
+                assert len(json.dumps(others)) == self.NOW[mode], mode
+                later = sum(len(json.dumps(e)) - self.CHANGED_AFTER_0142[
+                    e["name"]] for e in others
+                    if e["name"] in self.CHANGED_AFTER_0142)
+                assert self.NOW[mode] - later == self.NOW_0142[mode], mode
+                assert self.NOW_0142[mode] <= self.BEFORE[mode], mode
+                for name, entry in new.items():
+                    assert len(json.dumps(entry)) == self.NEW[name][0], name
 
 
 # Tools added after 0.14.2, left out of its growth figure.
-ADDED_AFTER_0142 = ("import_documents",)
+ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading")
 
 
 # ---------------------------------------------------------------------------
@@ -621,9 +649,10 @@ def test_the_lengths_the_documents_give_are_the_briefs():
                         entry)
     assert [int(s.replace(",", "")) for s in stated] == [short]
     # 0.14.2's figure for the full brief is history: v0.14.3 added a line
-    # (provisional) on reading a whole file
+    # (provisional) on reading a whole file, served the line on a fresh
+    # reading 0.14.2 held back, and shortened section 4's list
     assert re.findall(r"full brief(?:, | \()about ([\d,]+) characters",
-                      entry) == ["11,700"]
+                      entry) == ["12,100"]
     for where, text in (("TOOLS", tools),):
         about = re.findall(r"full brief(?:, | \()about ([\d,]+) characters",
                            text)

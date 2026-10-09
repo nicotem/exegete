@@ -1,9 +1,12 @@
 # Qualcoder Import Capabilities - Research Summary
 
-> **HISTORICAL DOCUMENT (early research).** This summary predates
-> Exegete's own document import. From 0.14.3 (provisional), Exegete
-> brings documents in itself, by their paths, the way QualCoder's import
-> reads them: see `import_documents` in TOOLS.md.
+> **HISTORICAL DOCUMENT (early research).** Written when the program
+> was called qualcoder-mcp, early in its development. Kept for
+> design-history reference; the README and CHANGELOG say what Exegete
+> does today. It also predates Exegete's own document import: from
+> 0.14.3 (provisional), Exegete brings documents in itself, by their
+> paths, the way QualCoder's import reads them: see `import_documents`
+> in TOOLS.md.
 
 ## What I Found
 

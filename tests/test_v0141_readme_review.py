@@ -39,16 +39,27 @@ def _flat(name):
 
 def test_the_readme_says_what_it_is_not():
     readme = _flat("README.md")
-    assert ("It is not QualCoder, and it is not made or endorsed by "
-            "QualCoder's developers") in readme
+    # v0.14.2 (the owner's ruling of 7 October 2026): "not an add-on or a
+    # remote control" is said here, among the commitments
+    assert ("It is not QualCoder, nor an add-on or a remote control for "
+            "it, and it is not made or endorsed by QualCoder's developers"
+            ) in readme
     # The provenance audit's wording (2026-09-23), word for word, with
     # NOTICE linked where it is named
-    assert ("It is a separate program that reads and writes QualCoder "
-            "project files; it contains a small number of routines and "
+    # (v0.14.2, the owner's ruling of 7 October 2026: "projects in
+    # QualCoder's file format", not "QualCoder project files")
+    assert ("It is a separate program that reads and writes projects in "
+            "QualCoder's file format; it contains a small number of "
+            "routines and "
             "values taken from QualCoder so that its results match "
             "QualCoder's exactly, and [NOTICE](https://github.com/nicotem/"
             "exegete/blob/main/NOTICE) lists them") in readme
-    assert "QualCoder need not be running while you work" in readme
+    # (the README's second round of checks: said once; since the owner's
+    # ruling of 7 October 2026, among the commitments, above, and the
+    # opening says what Exegete is)
+    assert readme.count("an add-on or a remote control") == 1
+    assert ("You do not need QualCoder to start, or running while you "
+            "work") in readme
     # The opening no longer describes a connector
     assert "A Model Context Protocol (MCP) server that connects" \
         not in readme
@@ -102,14 +113,14 @@ def test_the_private_part_is_stated_for_this_server_only():
                   readme.index("## Start here")]
     assert ("Exegete never passes the part of a memo from a `#####` "
             "mark onward (QualCoder's mark for a private note) to the "
-            "assistant, whichever QualCoder made the project.") in data
+            "assistant, whichever program made the project.") in data
     assert ("exported files keep the whole memo, private part "
             "included") in data
     privacy = _flat("PRIVACY.md")
     assert ("QualCoder (3.8.2 and 4.0) uses a marker for memos: everything "
-            "from the first `#####` onward is a private note. This server "
-            "honours the convention, whichever QualCoder made the "
-            "project:") in privacy
+            "from the first `#####` onward is a private note. Exegete "
+            "honours the convention, whichever program made the project, "
+            "Exegete or QualCoder:") in privacy
     assert "QualCoder 4.0 introduces a marker" not in privacy
 
 
@@ -155,12 +166,16 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     assert quoted not in readme
     data = readme[readme.index("## Where your data goes"):
                   readme.index("## Start here")]
-    assert ("3. On a personal Claude plan (Free, Pro or Max), open "
-            "https://claude.ai/settings/data-privacy-controls and look at "
-            "the Model Improvement setting. While it is on, Anthropic may "
-            "use your conversations to train its models (PRIVACY.md quotes "
-            "the terms, with their exceptions): decide before you use "
-            "participants' data.") in data
+    # v0.14.2, the README rewritten to persuade: the check, shorter. The
+    # owner, 1 October 2026: the same training advice for both makers,
+    # with the feedback exception beside it
+    assert ("3. **Switch training off** before participants' data: while "
+            "it is on, Anthropic may use your conversations to train its "
+            "models. On a personal plan (Free, Pro or Max) it is the Model "
+            "Improvement setting, at "
+            "https://claude.ai/settings/data-privacy-controls. Rating a "
+            "reply (thumbs up or down) can still let Anthropic train on "
+            "that conversation (PRIVACY.md quotes the terms).") in data
     assert "unless you opt out there" not in readme
     # The quoted words are PRIVACY.md's own quotation of the Consumer Terms
     privacy = _flat_quotes("PRIVACY.md")
@@ -176,7 +191,7 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
 def test_the_three_commitments():
     readme = _flat("README.md")
     section = readme[readme.index("## Three commitments"):
-                     readme.index("## Read next")]
+                     readme.index("## For advanced users")]
     for heading in ("**Compatibility with QualCoder.**",
                     "**Symmetry: the same work in either place, as a "
                     "commitment.**",
@@ -184,10 +199,11 @@ def test_the_three_commitments():
         assert heading in section, heading
     assert ("It is not yet a fact: today the two differ in both "
             "directions") in section
-    # v0.14.2, the README review: every row checked again, and re-dated
-    dated = section.index("Checked on 1 October 2026, Exegete 0.14.2 "
-                          "against QualCoder 3.8.2 and the 4.0-Beta "
-                          "pre-release:")
+    # v0.14.2, the README review: every row checked again, and re-dated;
+    # then checked against QualCoder 4.0, released on 2 October 2026 (the
+    # owner's ruling of 6 October 2026: the release, not the beta)
+    dated = section.index("Checked on 6 October 2026, Exegete 0.14.2 "
+                          "against QualCoder 3.8.2 and 4.0:")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table
@@ -209,17 +225,23 @@ def test_no_document_says_qualcoders_server_has_no_external_transport():
 
 def test_the_upstream_server_is_stated_as_dated_fact():
     readme, tools = _flat("README.md"), _flat("TOOLS.md")
+    # v0.14.2: QualCoder 4.0 came out on 2 October 2026 with the server
+    # in it, so the facts were checked again, against the release
     for text in (readme, tools):
-        assert "(checked 29 September 2026)" in text
+        assert "(checked 6 October 2026)" in text
         assert "[#1571](https://github.com/ccbogel/QualCoder/pull/1571)" \
             in text
         assert "10 September 2026" in text
         assert "off by default" in text
-        assert "in no release yet" in text
-        assert ("proposes that QualCoder release an official MCP server "
-                "with QualCoder 4.0's final release") in text
+        assert "QualCoder 4.0, released on 2 October 2026" in text
+        assert "\"allow external MCP access\"" in text
+        assert "called experimental there" in text
+        for gone in ("in no release yet", "with QualCoder 4.0's final "
+                     "release", "(checked 29 September 2026)"):
+            assert gone not in text, gone
     assert "merged on 10 September 2026 as commit `0160ece`" in tools
-    assert "(`master`, at `c21e191` on 29 September 2026)" in tools
+    assert "(tag `4.0` at `b95e021`)" in tools
+    assert "`c21e191`" not in tools
     # The old positioning and the claim #1571 made stale are gone
     for text in (readme, tools):
         assert "is the external MCP surface for QualCoder projects" \
@@ -230,11 +252,11 @@ def test_the_upstream_server_is_stated_as_dated_fact():
 
 def _stance(readme):
     """The paragraph after the dated facts, up to the next section."""
-    facts = readme.index("**QualCoder's own MCP server** (checked 29 "
-                         "September 2026).")
+    facts = readme.index("**QualCoder's own MCP server** (checked 6 "
+                         "October 2026).")
     after = readme.index("gives the commits these facts were read at.",
                          facts)
-    return readme[after:readme.index("## Read next", after)]
+    return readme[after:readme.index("## For advanced users", after)]
 
 
 def test_the_readme_states_the_projects_stance_after_the_facts():
@@ -245,21 +267,32 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
     assert ("This project welcomes QualCoder's own server, and is ready "
             "to cooperate with QualCoder's developers.") in stance
     # The tone check of 29 September: the aim has a person in it
+    # v0.14.2 (the owner's ruling of 7 October 2026): QualCoder able to
+    # open the same project, not "a companion" that ranks the two
     assert ("Exegete has an aim of its own: that you can run a whole "
             "project, from its creation to the finished analysis, from the "
-            "conversation, with QualCoder as a companion that opens the "
-            "same project at any time.") in stance
+            "conversation, with QualCoder able to open the same project at "
+            "any stage, one program at a time.") in stance
+    assert "companion" not in stance
     assert "can be run from the conversation" not in stance
     # The aim is a direction, and the paragraph says what still needs
-    # QualCoder today, pointing to the section that lists it
+    # QualCoder today, pointing to the list above it (v0.14.2, the README
+    # rewritten to persuade: the list is "Still needs QualCoder", under
+    # "What you can do"; since the owner's ruling of 7 October 2026, "Not
+    # in Exegete yet")
     assert ("That is a direction, not yet a fact: today QualCoder is "
-            "still needed for several things") in stance
-    assert '("What you need, at each stage", above, lists them)' in stance
-    assert ("**QualCoder is recommended from the start, and needed** to "
-            "bring in images, audio and video") in readme
+            "still needed for several things (above).") in stance
+    # v0.14.3 (provisional): Exegete brings documents in and opens a
+    # whole file for reading, so the list starts with images, audio and
+    # video
+    assert ("**Not in Exegete yet**, and done in QualCoder for now: "
+            "bringing in images, audio and video") in readme
+    assert readme.index("**Not in Exegete yet**") < \
+        readme.index("**QualCoder's own MCP server**")
     # The interoperability commitments, restated
-    assert ("the commitments above hold: every project stays a QualCoder "
-            "project, in QualCoder's format; Exegete follows "
+    assert ("the commitments above hold: every project keeps QualCoder's "
+            "format and conventions, so you can work on it in either "
+            "program; Exegete follows "
             "QualCoder's rules and names any departure with its reason; "
             "and you work on a project in one program at a time.") \
         in stance
@@ -271,14 +304,19 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
 
 def test_a_project_from_the_conversation_stays_in_one_qualcoder():
     # The owner's decision of 29 September: 3.8.2 stays recommended, and
-    # TOOLS.md no longer sends such a project to 4.0
+    # TOOLS.md no longer sends such a project to 4.0. v0.14.2: QualCoder
+    # 4.0 is now the release marked "Latest", so the README names 3.8.2
+    # first, with the reason that still holds, and 4.0 beside it
     tools = _flat("TOOLS.md")
     opening = tools[tools.index("**Opening it in QualCoder.**"):
                     tools.index("**The project memo**")]
     assert ("Keep such a project in one QualCoder: moving it between 3.8.2 "
             "and 4.0 is what changes it.") in opening
     assert "Work on such a project in QualCoder 4.0." not in opening
-    assert '3.8.2, the release marked "Latest"' in _flat("README.md")
+    assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
+            "3.8.2 or 4.0. Exegete works with both, but can tell that "
+            "QualCoder has a project open only with 3.8.2 (below).") \
+        in _flat("README.md")
 
 
 # ---------------------------------------------------------------------------
@@ -292,8 +330,8 @@ def test_the_three_questions_are_what_the_assistant_is_told():
     assert ("Claude is told to: - Ask you three things before it starts: "
             "what to look for, how long a coded passage should be, and "
             "whether a passage may carry more than one code; and pass your "
-            "answers as the session's `instruction`, which is required. The "
-            "server cannot tell whether the instruction holds your answers, "
+            "answers as the session's `instruction`, which is required. "
+            "Exegete cannot tell whether the instruction holds your answers, "
             "so check the one the session records (`get_coding_session_info`"
             " shows it)") in step
     for name in ("README.md", "TOOLS.md"):
@@ -318,11 +356,11 @@ def test_the_three_questions_are_what_the_assistant_is_told():
 # "QualCoder" in prose; the folder and the server's strings keep theirs
 # ---------------------------------------------------------------------------
 
-# What keeps the old spelling: the folder the code makes, and two answers
-# the server gives, quoted as it gives them.
-KEEPS_THE_OLD_SPELLING = ("Qualcoder MCP Projects",
-                          "No Qualcoder project selected",
-                          "No Qualcoder projects found")
+# What keeps the old spelling: the folder the code made until 0.14.0. (The
+# two answers Exegete gave with it, "No ... project selected" and "No ...
+# projects found", say "No project selected" and "No projects found in the
+# usual places" since 0.14.2, so the documents quote no other.)
+KEEPS_THE_OLD_SPELLING = ("Qualcoder MCP Projects",)
 
 
 def _misspelt(text):
@@ -343,8 +381,8 @@ def test_the_spelling_check_would_notice():
     assert _misspelt("Open the project in Qualcoder.")
     assert not _misspelt("Open it in QualCoder; the folder "
                          "`~/Documents/Qualcoder MCP\nProjects` stays.")
-    assert not _misspelt('The error reads "No Qualcoder project '
-                         'selected."')
+    assert _misspelt('The error reads "No Qualcoder project '
+                     'selected."')
 
 
 def test_the_folder_keeps_its_name_where_the_code_writes_it():

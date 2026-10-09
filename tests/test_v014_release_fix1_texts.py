@@ -68,33 +68,38 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "**Qualcoder** with at least one project created" not in readme
     assert "otherwise at least one project made in QualCoder is needed" \
         not in readme
-    stages = readme[readme.index("### What you need, at each stage"):
-                    readme.index("### Claude Desktop, with one click")]
-    assert "QualCoder is not needed to start." in stages
-    flat = " ".join(stages.split())
-    # v0.14.2, the README review: what a tool set is, said before the
-    # instruction; the value a reader sees, `lifecycle`, named; the other
-    # two values' names are INSTALL.md's (pinned below and in its own
-    # one-click section)
-    assert ("A tool set is the group of Exegete's tools your assistant is "
-            "given. Leave the extension's \"Tool set\" setting as it comes "
-            "(`lifecycle`): with it you can create a project") in flat
-    assert "The other two choices cannot create a project." in flat
-    assert ("**QualCoder is recommended from the start, and needed** to "
-            "bring in images, audio and video. Exegete brings in documents "
-            "(provisional)") in stages
+    # v0.14.2, the README rewritten to persuade: by stage, in three
+    # places: not needed to start (the opening), recommended from the start
+    # and needed for what "Still needs QualCoder" lists (after what you can
+    # do), and the tool set where the extension is installed
+    flat = " ".join(readme.split())
+    # Since the owner's ruling of 7 October 2026: what is not in Exegete
+    # yet, and QualCoder from the start only for a study that needs it
+    assert "You do not need QualCoder to start" in flat
     # v0.14.3 (provisional): documents come in through import_documents,
-    # so neither document says any longer that only handed text does,
-    # nor that QualCoder is needed for Word or PDF files
+    # so the list starts with images, audio and video
+    assert ("**Not in Exegete yet**, and done in QualCoder for now: "
+            "bringing in images, audio and video;") in flat
+    assert ("If your study needs any of these now, get QualCoder from the "
+            "start.") in flat
+    # v0.14.3 (provisional): neither document says any longer that only
+    # handed text comes in, nor that QualCoder is needed for Word or PDF
+    # files
     for document in (readme, install):
-        assert "imports only text" not in document
-        assert "documents (Word, PDF, images, audio, video)" not in document
+        assert "imports only text" not in " ".join(document.split())
+        assert "documents (Word, PDF, images, audio, video)" not in \
+            " ".join(document.split())
     assert "| Import sources | Text, documents, PDFs, images, audio, " \
-        "video | Documents from your computer" in readme
-    assert "Or you can import a document in QualCoder" not in readme
-    assert "Its standard tool set cannot create a project" in flat
+        "video | Documents from your computer" in flat
+    assert "Or you can import a document in QualCoder" not in flat
+    one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
+                            flat.index("### ChatGPT's desktop app")]
+    assert ("Leave its \"Tool set\" setting as it comes (`lifecycle`): the "
+            "other two choices cannot create a project") in one_click_readme
+    assert "whose standard tool set cannot create a project unless switched " \
+        "on" in flat
     for name in ("`full`", "`core`"):
-        assert name not in stages, name
+        assert name not in one_click_readme, name
     one_click = install[install.index("## Claude Desktop: the one-click "
                                       "extension"):
                         install.index("## Choosing your AI host")]
@@ -109,8 +114,15 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert ("On this route the default tool set, `full`, has no tool that "
             "creates a project") in needs
     assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
-    assert ("**QualCoder itself**, recommended, and needed to bring in "
-            "images, audio and video") in " ".join(needs.split())
+    # Since the owner's ruling of 7 October 2026: optional, with what it
+    # does that Exegete does not do yet; v0.14.3 (provisional): documents
+    # come in through Exegete, so the list starts with images, audio and
+    # video
+    flat_needs = " ".join(needs.split())
+    assert ("**QualCoder, optional.** Today it does what Exegete does not "
+            "do yet: bringing in images, audio and video") in flat_needs
+    assert ("Since 0.14.3 (provisionally), Exegete brings in documents "
+            "itself with `import_documents`") in flat_needs
     # The facts it rests on: the extension's tool set defaults to
     # lifecycle, which alone has create_project (not full, the default
     # configured by hand, and not core), and a file is imported from text
@@ -125,18 +137,19 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "content" in params and "path" not in params
 
 
-def test_privacy_says_the_export_guard_compares_the_spelling(monkeypatch):
-    """0.14.3 (provisional) closed the gap this sentence used to state:
-    the guard now decides by which folder a path really is, so another
-    letter case is refused on macOS too (tests/test_v0143_path_identity.py
-    holds the behaviour, on a disk that ignores letter case)."""
+def test_privacy_says_the_export_guard_decides_by_the_folder():
     privacy = _doc("PRIVACY.md")
     assert "No export can be written into this folder" not in privacy
-    assert "is not yet caught (the guard is fixed in v0.15)" not in privacy
-    assert ("export tools refuse paths inside this folder, decided by "
-            "which folder a path really is rather than by its spelling, so "
-            "a spelling in another letter case (`~/.EXEGETE`) is refused on "
-            "macOS and Windows too") in privacy
+    assert "on macOS and Windows, whose file systems ignore" not in privacy
+    # 0.14.2: the guard decides by which folder a path really is, so the
+    # gap macOS had (another letter case got through) is closed; the
+    # behaviour is tested on real folders in test_v0143_path_identity.py.
+    assert "not yet caught (the guard is fixed in v0.15)" not in privacy
+    assert ("export tools refuse paths inside this folder, and inside the "
+            "project folder, by which folder a path really is, not by how "
+            "it is spelled") in _flat(privacy)
+    assert "(since 0.14.2; before, a Mac let such a spelling through)" in \
+        _flat(privacy)
 
 
 def test_the_changelog_says_what_the_assistant_is_told():
@@ -200,7 +213,7 @@ def test_the_guide_reads_every_suggestion():
         assert gone not in guide, gone
     # the three questions as what Claude is told, the default named
     assert "there is no default instruction." in guide
-    assert ("The server refuses a session without an instruction but "
+    assert ("Exegete refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in guide
     assert ("The instruction is where you say what counts as stated for "
             "your study") in guide
@@ -218,10 +231,10 @@ def test_the_workflow_decides_each_item():
     assert ("All five look good. Show me the Career Satisfaction and "
             "Professional Development suggestions.") in workflow
     assert "Show me 1, 3, 4 and 5 too" in workflow
-    assert ("The server keeps the session in a file of its own "
+    assert ("Exegete keeps the session in a file of its own "
             "(`~/.exegete/sessions/`), not in the chat") in workflow
     assert "there is no default instruction." in workflow
-    assert ("The server refuses a session without an instruction but "
+    assert ("Exegete refuses a session without an instruction but "
             "cannot tell whether it holds your answers") in workflow
 
 

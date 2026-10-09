@@ -81,6 +81,13 @@ VERIFIED_TAGS = {
      "dc37677b2e1c63e2034f94d8a5b11f265b73ba33"): "v1.14.2",
     ("pypa/gh-action-pypi-publish",
      "ba38be9e461d3875417946c167d0b5f3d385a247"): "v1.14.1",
+    # v0.14.2, the update site published from Actions (pages.yml):
+    # dereferenced on 2026-10-07 with the same commands, both lightweight
+    # tags (`.object.type` "commit")
+    ("actions/upload-pages-artifact",
+     "fc324d3547104276b827a68afc52ff2a11cc49c9"): "v5.0.0",
+    ("actions/deploy-pages",
+     "368f82528645a54fb793d4d04e342629a3f51346"): "v5.0.1",
 }
 
 # owner/action@sha  # vX.Y.Z[ (suffix)]
@@ -205,6 +212,9 @@ WORKFLOW_JOBS = {
                # 0.14.3: the import's text against QualCoder's own code.
                "qualcoder-parity"},
     "publish.yml": {"build", "publish-to-testpypi", "publish-to-pypi"},
+    # v0.14.2: the update site, deployed from Actions, never from a branch
+    # (the owner's decision of 5 October 2026)
+    "pages.yml": {"check-site", "deploy-site"},
 }
 
 
@@ -377,6 +387,8 @@ def test_every_action_is_sha_pinned_with_a_version_comment():
         "actions/upload-artifact",
         "actions/download-artifact",
         "pypa/gh-action-pypi-publish",
+        "actions/upload-pages-artifact",
+        "actions/deploy-pages",
     }
 
 

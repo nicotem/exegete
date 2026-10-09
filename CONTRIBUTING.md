@@ -17,8 +17,8 @@ helps the next researcher who hits the same thing. [SUPPORT.md](SUPPORT.md)
 has the full policy.
 
 When you report a bug, use the issue template. It asks for the
-Exegete version, the QualCoder version, the project's schema
-version (the `databaseversion` value in the `schema` block that
+Exegete version, the QualCoder version if you use QualCoder, the
+project's schema version (the `databaseversion` value in the `schema` block that
 `get_current_project` returns), your MCP host (Claude Desktop, Claude
 Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`,
 `lifecycle`, or `full` when the variable is not set) and your operating
@@ -56,7 +56,7 @@ is looked at first.
 
    The whole suite must pass, on your platform and on the CI. Every new
    behaviour needs a test that fails without the change, including the
-   edge cases of any upstream behaviour you are matching. Do not add
+   edge cases of any QualCoder behaviour you are matching. Do not add
    skips without a stated reason in the test. One scale test (10k+
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
@@ -94,12 +94,13 @@ is looked at first.
 Nothing is merged on a green CI alone. Every change also goes through a
 QA review and a security review. The QA review checks that each new
 behaviour has a test that fails without it, that the edge cases of the
-matched upstream behaviour are covered, and that the tests are
+matched QualCoder behaviour are covered, and that the tests are
 Windows-safe and encoding-safe. The security review looks at write
 paths, file and symlink handling, what a tool result discloses into the
-AI conversation, and what a hostile project folder or a hostile model
-input could make the server do. Findings from both are fixed and
-re-verified before the merge, and behaviour changes that come out of them
+AI conversation, and what a hostile project folder, a hostile model
+input or a hostile network response (the version file of the check for
+new versions) could make Exegete do or put into the conversation.
+Findings from both are fixed and re-verified before the merge, and behaviour changes that come out of them
 are recorded in the CHANGELOG. The maintainer runs both reviews; expect
 them to take longer than the CI, and expect requests for more tests
 rather than fewer.
@@ -124,20 +125,23 @@ rather than fewer.
   `database.py`), the way QualCoder's own migration ladder does. The
   version string is informational, with one exception: the forward
   guard that refuses writes on a schema newer than the verified ceiling.
-- **Parity claims cite the pinned upstream commit.** Any statement that
+- **Parity claims cite the pinned QualCoder commit.** Any statement that
   "QualCoder does X" in a comment, docstring, CHANGELOG entry or
-  document names the upstream file and line at the pinned commit
+  document names QualCoder's file and line at the pinned commit
   (currently QualCoder master `9bddf17`, version string "QualCoder 4.0
-  Beta"; see `VERIFIED_MASTER_COMMIT` in `database.py`). When the pin
-  moves, the claims are re-verified and re-cited, not carried forward.
+  Beta", whose project format the release keeps). What researchers are
+  told Exegete is verified against is the release itself, QualCoder 4.0
+  (`VERIFIED_QUALCODER` in `database.py`). When the pin moves, the
+  claims are re-verified and re-cited, not carried forward.
 - **Heuristics are phrased as heuristics.** A result that reports a
   guess (a project that "appears to be open" in QualCoder) says so.
   Never word a heuristic as a certainty.
 - **Disclosure is existence-only.** A tool result may say that
   something exists (a private note on a row, a hidden coder's row, a
   count), never what it contains or whose it is. If a change alters what
-  leaves the project into the conversation, `PRIVACY.md` changes in the
-  same pull request.
+  leaves the project into the conversation, or anything Exegete sends
+  beyond this computer (an address it contacts, what a request carries,
+  when it is made), `PRIVACY.md` changes in the same pull request.
 - **No tool argument named `session_id`.** Some MCP middleware strips
   that name before the call reaches the server; the session tools use
   `coding_session_id`. Check new argument names against other
@@ -183,7 +187,8 @@ rather than fewer.
                │  heuristic open-window checks)
                │
 ┌──────────────▼───────────────┐
-│  QualCoder project database  │
+│  The project database, in    │
+│  QualCoder's format          │
 │  (data.qda, in the .qda      │
 │  project folder)             │
 └──────────────────────────────┘
@@ -206,15 +211,21 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── sessions.py          # AI coding session management
 │   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
+│   │   ├── path_identity.py     # Whether a path is inside a folder, by the folder's identity
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
-│   │   └── refi_export.py       # REFI-QDA XML export
+│   │   ├── refi_export.py       # REFI-QDA XML export
+│   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
+│   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once
+│   │   └── release.py           # This release's version, date and summary, for the note after an update
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
+│   ├── check_pages_site.py     # Checks the update site against this release
 │   └── create_test_project.py  # Test project generator
+├── pages/                   # The update site: latest.json and the update page
 ├── packaging/
 │   ├── desktop-extension/      # The extension's manifest template and its validator
 │   └── pypi-old-name/          # The old name's package, qualcoder-mcp, released until v1.0
@@ -253,9 +264,10 @@ The server is built on the
 ## Scope
 
 The design is for general use, principles first. A feature is justified
-on general grounds: parity with QualCoder's own behaviour, general
-mappings that hold for any project, capability probes rather than
-special cases. Requests that fit only one research project, one
+on general grounds: the whole life of a project from the conversation;
+interoperability with QualCoder, its formats and conventions kept and
+every departure named; general mappings that hold for any project;
+capability probes rather than special cases. Requests that fit only one research project, one
 researcher's habits or one MCP host are usually declined or generalised
 first. The same rule applies to the maintainer's own projects.
 
@@ -287,6 +299,35 @@ upgrade through the old name never brings unfinished work; any tag
 other than `v<version>` or `v<version>.devN` stops the workflow before
 it builds anything (`scripts/release_version.py`).
 
+## The check for new versions
+
+Every installed copy with checking on fetches
+`https://nicotem.github.io/exegete/latest.json` (`src/exegete/updates.py`)
+and follows no redirect, so that address is permanent: never rename or
+delete the `nicotem` account, the `exegete` repository or its Pages
+site, and never set a custom domain on this
+Pages site or on the account's own one (GitHub would then redirect, and
+every copy would stop hearing of new versions). The file keeps
+`"format": 1`; a change it cannot keep is published beside it under
+another name. Each release updates `src/exegete/release.py` (the
+version, its date and the summary the note after an update shows) with
+`pyproject.toml` and the CHANGELOG heading; tests hold the three
+together. The file, and the update page Exegete's notes point to
+(`https://nicotem.github.io/exegete/update/`), live in `pages/`, and
+each release updates both with `release.py` (`latest.json`'s version as
+PyPI spells it, its date, and the page's version, date, summary, links
+and commands); `tests/test_v0142_pages.py` holds them to `release.py`.
+The site is published by `.github/workflows/pages.yml`, deployed from
+GitHub Actions and never from a branch (the owner's decision of 5
+October 2026, `docs/update-check/design.md`, D3): a branch would let
+any token that can push rewrite `latest.json` without a release. Once
+the release is published, with its extension file, and both packages
+are on PyPI, start the workflow by hand from the release's tag. It
+checks the site against the release (`scripts/check_pages_site.py`)
+and that the release is out, and the deploy waits in the
+`github-pages` environment for the owner's approval: the last step of
+each release, and a hold switch for a bad file.
+
 ## Licence
 
 From v0.13, Exegete (then called qualcoder-mcp) is licensed under the GNU Lesser General
@@ -306,7 +347,7 @@ QualCoder is licensed under LGPL-3.0-or-later as well, and the rule for
 its code is the owner's (2026-09-23):
 
 - **Write our own implementation by default,** and prove parity with
-  tests against QualCoder's source. Cite the upstream file and line you
+  tests against QualCoder's source. Cite QualCoder's file and line you
   matched in the docstring.
 - **Copy QualCoder's code only where identical results cannot be had
   otherwise,** as with the kappa expression, whose floating-point

@@ -4,9 +4,11 @@
 A project this server creates must be, in everything QualCoder reads,
 the project QualCoder 4.0's own New Project creates (the owner's ruling
 of 2026-09-25: 4.0's format only). The oracle is a committed fixture
-taken from a project 4.0 created at the verified commit
-(`tests/fixtures/qc40_new_project.json`, made by `qc40_format_facts.py`);
-the comparison runs on every CI job, so on every platform's SQLite.
+taken from a project the release created, QualCoder 4.0 at its tag
+(`tests/fixtures/qc40_new_project.json`, made by `qc40_format_facts.py`;
+before 6 October 2026 it was made at the August commit 9bddf17, and
+differed only in the date and the "about" line); the comparison runs on
+every CI job, so on every platform's SQLite.
 
 The creation is one explicit transaction: a failure injected after any
 statement, or a process killed there, leaves nothing committed.
@@ -57,8 +59,11 @@ class TestTheOracleItself:
         assert kinds.count("view") == 4
         assert ORACLE["structure"]["triggers"] == []
         assert ORACLE["rows"]["project"][0][0] == "v17"
-        assert ORACLE["rows"]["project"][0][3] == "QualCoder 4.0 Beta"
-        assert ORACLE["source"]["commit"] == new_project.FORMAT_COMMIT
+        # made by the release (tag 4.0 at b95e021), not the beta: its
+        # "about" line is the release's version string
+        assert ORACLE["rows"]["project"][0][3] == "QualCoder 4.0"
+        assert ORACLE["source"]["commit"] == new_project.FORMAT_COMMIT \
+            == "b95e021"
         assert ORACLE["subfolders"] == sorted(new_project.SUBFOLDERS)
 
 

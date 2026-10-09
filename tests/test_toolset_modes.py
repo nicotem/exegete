@@ -32,9 +32,9 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 76              # plus open_file_for_reading and import_documents (v0.14.3)
-EXPECTED_CORE = 23              # plus open_file_for_reading (v0.14.3)
-EXPECTED_LIFECYCLE = 77          # full plus create_project (v0.14)
+EXPECTED_FULL = 77              # 73, plus read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3)
+EXPECTED_CORE = 23              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3); check_for_updates and import_documents are not in core
+EXPECTED_LIFECYCLE = 78          # full plus create_project (v0.14)
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -429,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 201_088          # 76 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 67_374           # 23 tools, same environment
-    FULL_MEASURED_310 = 210_964      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 70_766
+    FULL_MEASURED = 201_765          # 77 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 67_243           # 23 tools, same environment
+    FULL_MEASURED_310 = 211_641      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 70_635
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 203_667     # 77 tools, same environment
-    LIFECYCLE_MEASURED_310 = 213_683
+    LIFECYCLE_MEASURED = 204_322     # 78 tools, same environment
+    LIFECYCLE_MEASURED_310 = 214_338
 
     # Why two per cent, away from the reference environment.
     #
@@ -462,9 +462,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "201,088"
-    CORE_CHARS = "67,374"
-    FULL_ROUNDED = "200,000"
+    FULL_CHARS = "201,765"
+    CORE_CHARS = "67,243"
+    FULL_ROUNDED = "202,000"
     CORE_ROUNDED = "67,000"
     FULL_TOKENS = "50k"
     CORE_TOKENS = "17k"
@@ -496,14 +496,16 @@ class TestThePublishedSchemaBudget:
         the Unreleased one alone and 0.14.0's figure is history
         (`_v0140_entry`). At 0.14.1's release the current entry was
         0.14.1's, under an Unreleased heading that said nothing yet;
-        v0.14.2 moves it again (read_brief, a tool in every set), so the
+        v0.14.2 moves it again (read_brief, a tool in every set, and
+        check_for_updates, in `full` and `lifecycle`), so the
         current entry is the Unreleased one above the 0.14.1 heading, and
         0.14.1's figure is history (`_v0141_entry`). From the release on,
         the current entry is 0.14.2's, under an Unreleased heading that
-        says nothing yet. v0.14.3 (provisional) moves it again (the
-        reading tool, in every set, and the reads in parts), so the
-        current entry is the Unreleased one alone, and 0.14.2's figure
-        is history (`_v0142_entry`).
+        measures nothing (it may hold changes that move no tool, such as
+        the README's table of assistants). v0.14.3 (provisional) moves it
+        again (the reading tool, in every set, the import tool, and the
+        reads in parts), so the current entry is the Unreleased one
+        alone, and 0.14.2's figure is history (`_v0142_entry`).
         """
         return cls._read("CHANGELOG.md").split("## [0.14.2")[0]
 
@@ -655,7 +657,7 @@ class TestThePublishedSchemaBudget:
         assert self._current_entry().count("Serialised tool") == 1
         v0142 = self._v0142_entry()
         assert v0142.count("Serialised tool") == 1
-        assert "full = 195,733 characters" in v0142
+        assert "full = 196,387 characters" in v0142
         assert self.FULL_CHARS not in v0142
         v0141 = self._v0141_entry()
         assert v0141.count("Serialised tool") == 1

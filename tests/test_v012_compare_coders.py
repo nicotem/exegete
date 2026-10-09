@@ -366,7 +366,7 @@ class TestArgumentsAndErrors:
         out = _compare("TestCoder", "Nobody")
         assert out["error"] == (
             "coder_b 'Nobody' has no text codings in this project. Coders "
-            "with text codings visible in QualCoder: ['Second Coder', "
+            "with visible text codings: ['Second Coder', "
             "'TestCoder'].")
 
     def test_auto_selection_with_exactly_two_coders(self, two_coders):
@@ -379,13 +379,13 @@ class TestArgumentsAndErrors:
         out = _compare()
         assert out["error"] == (
             "coder_a and coder_b are required: this project has 3 coders "
-            "with text codings visible in QualCoder: ['Second Coder', "
+            "with visible text codings: ['Second Coder', "
             "'TestCoder', 'Third Coder']. Name two of them.")
 
     def test_auto_selection_refuses_with_one(self, setup_server,
                                              qualcoder_db_path):
         out = _compare()
-        assert "1 coder with text codings" in out["error"]
+        assert "1 coder with visible text codings" in out["error"]
         assert "a comparison needs two." in out["error"]
 
     def test_the_speaker_coder_is_refused_by_name(self, two_coders):
@@ -576,7 +576,7 @@ class TestVisibility:
         _reopen(project)
         out = _compare(allow_hidden_coder=True)
         error = out["error"]
-        assert "visible in QualCoder" not in error, error
+        assert "visible text codings" not in error, error
         assert "hidden coders included" in error, error
         assert "more coders hidden in QualCoder" not in error, error
         assert "allow_hidden_coder=true to include hidden coders" not in error
@@ -590,7 +590,7 @@ class TestVisibility:
         project, name = hidden
         out = _compare("Nobody", SECOND, allow_hidden_coder=True)
         error = out["error"]
-        assert "visible in QualCoder" not in error, error
+        assert "visible text codings" not in error, error
         assert "hidden coders included" in error, error
         assert "more coders hidden in QualCoder" not in error, error
 
@@ -604,14 +604,14 @@ class TestVisibility:
         _reopen(project)
         auto = _compare()["error"]
         assert ("coder_a and coder_b are required: this project has 3 "
-                "coders with text codings visible in QualCoder: "
+                "coders with visible text codings: "
                 "['Second Coder', 'TestCoder', 'Third Coder'] (and 1 more "
                 "coder hidden in QualCoder; pass allow_hidden_coder=true "
                 "to include hidden coders). Name two of them.") == auto
         assert name not in auto
         unknown = _compare("Nobody", SECOND)["error"]
         assert ("coder_a 'Nobody' has no text codings in this project. "
-                "Coders with text codings visible in QualCoder: "
+                "Coders with visible text codings: "
                 "['Second Coder', 'TestCoder', 'Third Coder'] (and 1 more "
                 "coder hidden in QualCoder; pass allow_hidden_coder=true "
                 "to include hidden coders).") == unknown

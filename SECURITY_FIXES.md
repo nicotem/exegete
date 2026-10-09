@@ -1,5 +1,10 @@
 # Security Fixes Applied
 
+> **HISTORICAL DOCUMENT (October 2025).** A record of the fixes that
+> followed the early security review, written when the program was
+> called qualcoder-mcp. Kept for design-history reference; the
+> CHANGELOG records every later change.
+
 ## Date: 2025-10-28
 
 This document summarises the security improvements made to the Qualcoder MCP server following the comprehensive security review documented in `SECURITY_REVIEW.md`.

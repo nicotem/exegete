@@ -140,7 +140,7 @@ class TestMemoGotchas:
         annotation_tools = {n for n in names if "annotation" in n}
         assert annotation_tools == {"add_annotation", "update_annotation",
                                     "delete_annotation"}
-        assert len(names) == 76          # open_file_for_reading and import_documents (0.14.3)
+        assert len(names) == 77          # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3)
 
     @pytest.mark.parametrize("target_type,table,id_col,target_id", MEMO_FIXTURES)
     def test_m4_clear_stores_empty_string_never_null(

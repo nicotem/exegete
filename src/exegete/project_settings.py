@@ -133,7 +133,7 @@ _UNREADABLE = (
 
 _NEWER_FORMAT = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) was written by a newer version of this server "
+    "project folder) was written by a newer version of Exegete "
     f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
     f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
     "user to move the file aside; the next write will then ask for the "
@@ -142,7 +142,7 @@ _NEWER_FORMAT = (
 _OVERSIZED = (
     "The AI coder name file for this project ({file} in the "
     "project folder) is too large to write: even with one history entry "
-    "it would be bigger than this server can read back. Ask the user to "
+    "it would be bigger than Exegete can read back. Ask the user to "
     "remove the extra top-level keys in it, or to move the file aside; "
     "the next write will then ask for the name again. Nothing was "
     "written.")
@@ -165,7 +165,7 @@ _UNREADABLE_BESIDE_EARLIER = (
 
 _NEWER_FORMAT_BESIDE_EARLIER = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) was written by a newer version of this server "
+    "project folder) was written by a newer version of Exegete "
     f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
     f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
     "user to move both {file} and {old} aside: {old} beside it is not "
@@ -176,7 +176,7 @@ _NEWER_FORMAT_BESIDE_EARLIER = (
 _OVERSIZED_BESIDE_EARLIER = (
     "The AI coder name file for this project ({file} in the "
     "project folder) is too large to write: even with one history entry "
-    "it would be bigger than this server can read back. Ask the user to "
+    "it would be bigger than Exegete can read back. Ask the user to "
     "remove the extra top-level keys in it, or to move both {file} and "
     "{old} aside: {old} beside it is not marked as moved and still holds "
     "\"{held}\", so moving {file} aside alone would bring that name back "

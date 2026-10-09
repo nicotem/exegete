@@ -27,8 +27,11 @@ v0.15's. What this file pins:
 - the opening text fits;
 - every description keeps its words: the same words, the same number of
   characters that are not white space, and on 3.13 the same length, as
-  v0.14.1 served (the per-request sizes are pinned exactly in
-  test_toolset_modes.py).
+  v0.14.1 served, apart from the rewording of how Exegete describes
+  itself (the owner's ruling of 7 October 2026), whose descriptions are
+  pinned as this release serves them and held to no greater length than
+  v0.14.1's in test_v0142_selfrep.py (the per-request sizes are pinned
+  exactly in test_toolset_modes.py).
 
 A rule is named by its first words and, where it ends before its
 paragraph does, its last words ("." for the end of its sentence); the
@@ -70,7 +73,7 @@ RULES = {
         "safety", "Coder visibility (projects with the coder-visibility "
         "capability that hide coders)", None),
     "close_qualcoder_40_before_renaming": (
-        "safety", "QualCoder 4.0 writes no lock file, so this server "
+        "safety", "QualCoder 4.0 writes no lock file, so Exegete "
         "cannot see a 4.0 window", None),
     "relay_position_safety_warning": (
         "safety", "contains `position_safety_warning`", "."),
@@ -139,7 +142,7 @@ RULES = {
         "safety", "Also reports whether QualCoder currently has this "
         "project open", None),
     "work_on_a_copy": (
-        "safety", "IMPORTANT: Make sure you're working on a copy", None),
+        "safety", "IMPORTANT: work on a project in the workspace", None),
     "no_path_back_from_numeric": (
         "safety", "There is no path back from numeric data",
         "so choose carefully."),
@@ -414,15 +417,14 @@ class TestTheRulesSitWithinTheCut:
             assert len(instructions) <= CUT, mode
 
 
-# Every description as v0.14.1 served it, and as this release must keep
-# it apart from the order: (length on Python 3.13, characters that are
-# not white space, the first 16 hexadecimal digits of the SHA-256 of its
-# words sorted and joined by single spaces). Taken from the descriptions
-# as registered (before a tool set marks the tools it lacks), in the
-# lifecycle set, so all 74 tools. A change to a description's words
-# changes its line here, in the same commit, with the rules above
-# checked again.
-WORDS = {
+# Every description as v0.14.1 served it: (length on Python 3.13,
+# characters that are not white space, the first 16 hexadecimal digits
+# of the SHA-256 of its words sorted and joined by single spaces). Taken
+# from the descriptions as registered (before a tool set marks the tools
+# it lacks), in the lifecycle set, so all 74 tools. Kept as the record
+# that the rewording below is measured against
+# (tests/test_v0142_selfrep.py: none is longer).
+WORDS_0141 = {
     "add_annotation": (1697, 1406, "eb754cae1fd5fd0c"),
     "add_journal_entry": (1137, 943, "c3a73ee84df3096d"),
     # v0.14.3 (provisional): reads in parts, the `start` argument, and
@@ -505,10 +507,65 @@ WORDS = {
 }
 
 
+# The descriptions this release reworded on how Exegete describes itself
+# (the owner's ruling of 7 October 2026: "the project" for "the QualCoder
+# project", "Exegete" for "this server", the private-note sentence and
+# the like; no rule's first words changed, except the rename paragraph's
+# in RULES above), as 0.14.2 serves them. Every other description keeps its WORDS_0141 line. A
+# change to a description's words changes its line here, in the same
+# commit, with the rules above checked again.
+REWORDED_0142 = {
+    "add_annotation": (1697, 1405, "7e67b8e3fa3560e5"),
+    "add_journal_entry": (1137, 942, "4c7856247accfc00"),
+    "analyze_file_with_coding": (1971, 1616, "a2610f4cbbf9c988"),
+    "analyze_for_coding": (6098, 4956, "552625d8365c92bd"),
+    "apply_codings": (2627, 2151, "17b1da5dbe428f09"),
+    "compare_coders": (3006, 2460, "765d945ba6b6883d"),
+    "copy_project_to_workspace": (1819, 1496, "aff3f80aba8508d9"),
+    "create_attribute_type": (2121, 1712, "a265e08d0ed69fe5"),
+    "create_case": (1709, 1440, "13ebff3652c511d0"),
+    "create_category": (1901, 1534, "d21f46e51f9abbb5"),
+    "create_code": (2945, 2412, "93f3251309649f99"),
+    "create_project": (1967, 1508, "100f2bac352cd02e"),
+    "create_proposed_codes": (1929, 1605, "e4764211a04b2b38"),
+    "edit_suggestion": (3385, 2717, "b13c5dd2091df330"),
+    "find_cooccurring_codes": (2538, 1886, "d04a68bdb49f2400"),
+    "get_case_code_matrix": (1549, 1226, "95a17de97290134c"),
+    "get_cases_by_code": (1113, 881, "ebc6ab322c84354c"),
+    "get_coded_segments": (2621, 2105, "4ecc429cb7de3525"),
+    "get_codes_by_case": (1143, 906, "b857d0c54c342410"),
+    "get_coding_frequencies": (982, 784, "04d24f3d2983b1b7"),
+    "import_text_file": (3731, 2762, "37460d7adbb802ac"),
+    "list_available_projects": (762, 596, "96919cfcbf876697"),
+    "propose_codes": (2692, 2141, "8ad7a5689cff30b5"),
+    "prune_backups": (2990, 2427, "4ee76d2c6af4ce09"),
+    "pseudonymise_source": (17353, 12719, "285a3cafd81577fe"),
+    "read_pseudonym_list": (1040, 860, "007d46e6ea19c2bf"),
+    "record_suggestions": (4447, 3566, "0f2d93c94c263b3d"),
+    "rename_case": (2197, 1822, "6de3b8bd6d406a77"),
+    "rename_file": (3504, 2916, "b5af58742c3ce775"),
+    "restore_backup": (2796, 2305, "fad230102dd0181b"),
+    "search_coded_text": (2844, 2180, "2490265a2ca11ddf"),
+    "search_memos": (1959, 1597, "400fc22033c6a629"),
+    "select_project": (2415, 1997, "ca46b2c6b9ae085c"),
+    "set_attribute": (1767, 1454, "1251a82d86fd66bf"),
+    "set_memo": (2672, 2158, "3a6d89ba0a5a8e15"),
+    "set_project_ai_coder_name": (2094, 1706, "de44c1c4b5361389"),
+    "update_annotation": (2054, 1711, "152afc076a1be138"),
+    "update_proposal": (1819, 1468, "9aecd2f53a28dfb9"),
+    "update_proposal_status": (814, 676, "3c56f80ad808e2ce"),
+    "update_suggestion_status": (1535, 1261, "650e200880ca4dcd"),
+}
+
+# Every description as this release serves it
+WORDS = {**WORDS_0141, **REWORDED_0142}
+
+
 # Tools new in this release, whose descriptions have no v0.14.1 words to
 # keep: read_brief, the assistant's brief (tests/test_v0142_brief.py pins
-# its description)
-NEW_IN_0142 = {"read_brief"}
+# its description), and check_for_updates, the check for new versions
+# (pull request #11; tests/test_updates.py pins its rules, first)
+NEW_IN_0142 = {"read_brief", "check_for_updates"}
 # and in v0.14.3 (provisional): the reading tool, whose description
 # tests/test_v0143_reading.py pins, and the import tool, whose description
 # tests/test_v0143_import_hostile.py pins
@@ -535,10 +592,11 @@ class TestTheDescriptionsKeepTheirWords:
                 changed.append(f"{name}: {got} (pinned {length}, {solid}, "
                                f"{digest!r})")
         assert not changed, (
-            "These descriptions no longer hold the words v0.14.1 served "
-            "(or, on 3.13, their length moved). Moving words is allowed; "
-            "rewording is v0.15's. If the change is meant, update WORDS "
-            "and check the rules above:\n" + "\n".join(changed))
+            "These descriptions no longer hold the words this release "
+            "serves (or, on 3.13, their length moved). Moving words is "
+            "allowed; rewording beyond REWORDED_0142 is v0.15's. If the "
+            "change is meant, update its line and check the rules "
+            "above:\n" + "\n".join(changed))
 
     def test_what_moved_is_what_the_release_says(self):
         """The fourteen descriptions this release reorders: in each, a
@@ -585,8 +643,8 @@ class TestTheDescriptionsKeepTheirWords:
         for name in moved:
             assert f"`{name}`" in entry, name
         assert "is as 0.14.1 served it" not in entry_0142
-        assert ("keeps the words and the length 0.14.1 served (fourteen "
-                "changed order; see above)" in entry_0142)
+        assert ("each keeps the words 0.14.1 served (fourteen changed "
+                "order; see above), and none is longer" in entry_0142)
 
 
 # ---------------------------------------------------------------------------

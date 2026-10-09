@@ -112,18 +112,18 @@ class TestTheServerChecksItAtStart:
     def test_the_state_folder_stops_the_server(self, tmp_path):
         result = _start("~/.qualcoder_mcp/projects", tmp_path)
         assert result.returncode == 1
-        assert f"Error: {ENV}: The workspace folder is inside this " \
-               f"server's state folder" in result.stderr
+        assert f"Error: {ENV}: The workspace folder is inside " \
+               f"Exegete's state folder" in result.stderr
 
     def test_inside_a_project_stops_the_server(self, monkeypatch, tmp_path):
         monkeypatch.setenv(ENV, str(tmp_path / "Study.qda" / "inner"))
         problem = server._workspace_start_problem()
-        assert problem.startswith(f"{ENV} names a folder inside a QualCoder "
-                                  f"project")
+        assert problem.startswith(f"{ENV} names a folder inside a project "
+                                  f"(a folder ending in .qda)")
         assert "Study" not in problem and str(tmp_path) not in problem
 
     @pytest.mark.parametrize("folder,words", [
-        ("Study.qda/inner", "inside a QualCoder project"),
+        ("Study.qda/inner", "inside a project (a folder ending in .qda)"),
         ("a|b", "holds a '|'"),
     ])
     def test_the_refusals_name_no_path_on_stderr(self, tmp_path, folder,
@@ -143,7 +143,7 @@ class TestTheServerChecksItAtStart:
         install = Path(server.__file__).resolve().parent.parent.parent
         monkeypatch.setenv(ENV, str(install / "projects"))
         problem = server._workspace_start_problem()
-        assert "inside the folder this server is installed in" in problem
+        assert "inside the folder Exegete is installed in" in problem
         monkeypatch.setenv(ENV, str(install.parent / "elsewhere-projects"))
         assert server._workspace_start_problem() is None
 

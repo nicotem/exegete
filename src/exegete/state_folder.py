@@ -264,7 +264,7 @@ def _leave_a_link_to_nothing(new: Path, old: Path, new_name: str,
     said = os.path.isdir(new) and _note_said(new, old)
     return MoveResult(new, "old link led nowhere", (
         f"{old_name} is a link that leads to no folder; it was left as it "
-        f"is, nothing was moved, and this server uses a fresh {new_name}."
+        f"is, nothing was moved, and Exegete uses a fresh {new_name}."
         + (ONCE if said else "")))
 
 
@@ -291,8 +291,8 @@ def move(home: Optional[Path] = None,
                 return MoveResult(new, "old path is another link", None)
             return MoveResult(new, "old path is another link", (
                 f"{old_name} is a link, but not to {new_name} (to another "
-                f"folder, or to none); it was left as it is, and this "
-                f"server uses {new_name}."
+                f"folder, or to none); it was left as it is, and "
+                f"Exegete uses {new_name}."
                 + (ONCE if _note_said(new, old) else "")))
         if os.path.isdir(old):
             count = move_missing_sessions(old, new, windows)
@@ -305,8 +305,8 @@ def move(home: Optional[Path] = None,
             return MoveResult(new, "both", (
                 f"Both {new_name} and {old_name} are folders: an older copy "
                 f"of the server, or a restore, may have made the second one, "
-                f"and any secret in it is that copy's own, which this server "
-                f"does not use. This server uses {new_name}; {moved}, and "
+                f"and any secret in it is that copy's own, which Exegete "
+                f"does not use. Exegete uses {new_name}; {moved}, and "
                 f"nothing else there was touched or overwritten. INSTALL.md's "
                 f"troubleshooting says what to do."
                 + (ONCE if _note_said(new, old) else "")))
@@ -347,7 +347,7 @@ def move(home: Optional[Path] = None,
             return MoveResult(new, "moved, no link", (
                 f"The state folder was moved to {new_name}, but neither a "
                 f"link under {old_name} could be made ({type(error).__name__}) "
-                f"nor the folder put back. This server uses {new_name}; an "
+                f"nor the folder put back. Exegete uses {new_name}; an "
                 f"older copy of the server would not find it."))
         return MoveResult(old, "link failed, put back", (
             f"A link under {old_name} could not be made "

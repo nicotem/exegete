@@ -59,11 +59,17 @@ def test_the_interpretive_example_quotes_its_words():
     assert "burnout is my reading" not in description
 
 
-def test_the_help_rules_are_in_the_spirit_of_qualcoder_40s():
+def test_the_help_rules_are_exegetes_own():
+    """v0.14 said the rules were "in the spirit of" QualCoder 4.0's; since
+    0.14.2 (the owner's ruling of 7 October 2026) the help describes the
+    discipline as Exegete's own, and NOTICE keeps the credit to
+    QualCoder's assistant brief."""
     rules = json.loads(server.explain_ai_coding_tools("grounding_rules"))
-    assert _flat(rules["purpose"]).endswith(
-        "in the spirit of the rules QualCoder 4.0's built-in assistant "
-        "works under")
+    assert _flat(rules["purpose"]) == ("Exegete's evidence discipline, "
+                                       "which every analysis tool expects")
+    notice = _flat((Path(__file__).parent.parent / "NOTICE").read_text(
+        encoding="utf-8"))
+    assert "ai_prompts/_agent.md" in notice
     first = _flat(rules["rules"][0])
     assert first.startswith("Base every claim and code on the text")
     assert "quoting a few of those words in the reason" in first

@@ -168,7 +168,7 @@ class TestPruneBackupsPolicy:
     def test_no_project_selected(self, setup_server, monkeypatch):
         monkeypatch.setattr(server, "current_project_path", None)
         out = json.loads(server.prune_backups(keep_last=1))
-        assert "No Qualcoder project selected" in out["error"]
+        assert "No project selected" in out["error"]
 
     def test_works_while_qualcoder_open(self, retention_env):
         """Pruning never touches the live DB, so an active QualCoder lock

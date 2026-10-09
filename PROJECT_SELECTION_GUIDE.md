@@ -4,7 +4,7 @@ Exegete (formerly qualcoder-mcp) supports **two ways** to work with projects:
 
 ## Option 1: Auto-Discovery (Recommended for Multiple Projects)
 
-If you work with multiple Qualcoder projects, you can skip hardcoding the path and let Claude discover and switch between projects dynamically.
+If you work with several projects, you can skip hardcoding the path and let Claude discover and switch between projects dynamically.
 
 ### Setup
 
@@ -28,7 +28,7 @@ Note: No `env` section!
 When you start Claude Desktop, ask:
 
 ```
-List my available Qualcoder projects
+List my available projects
 ```
 
 Claude will search these locations automatically:
@@ -88,7 +88,7 @@ What project am I currently working with?
 If your projects are in a non-standard location:
 
 ```
-Search for projects in /Volumes/External/Research/QualcoderProjects
+Search for projects in /Volumes/External/Research/Projects
 ```
 
 ## Option 2: Fixed Project (Simpler Setup)
@@ -136,21 +136,28 @@ What are my most used codes?
 
 ## Troubleshooting
 
-### "No Qualcoder projects found"
+### "No projects found in the usual places"
 
 If auto-discovery doesn't find your projects:
 
-1. **Check your Qualcoder installation:**
-   - Open Qualcoder
-   - Look at recent projects to see where they're stored
-   - Note the full path to a `.qda` project folder
+1. **Find where your projects are:** note the full path to a `.qda`
+   project folder (if you use QualCoder, its recent projects list shows
+   where they are stored)
 
 2. **Tell Claude to search there:**
    ```
-   Search for Qualcoder projects in /path/to/my/projects
+   Search for projects in /path/to/my/projects
    ```
 
 3. **Or switch to Fixed Project mode** (Option 2 above)
+
+### "No projects found in the folders given"
+
+When you name a folder, Exegete searches that folder only (three levels
+deep), not the usual places. The answer says when the folder does not
+exist, which usually means a slip in the path. A project more than
+three levels down is not found; naming the folder just above it finds
+it.
 
 ### "No project currently open"
 
@@ -172,7 +179,7 @@ selected automatically.
 List all projects to see what Claude can find:
 
 ```
-List all my Qualcoder projects
+List all my projects
 ```
 
 Then select by name or path:
@@ -198,7 +205,7 @@ Discovers `.qda` project folders in common locations
 - `search_directories`: List of custom paths to search
 
 ### 2. `select_project`
-Opens a specific Qualcoder project
+Opens a project (a `.qda` folder)
 
 **Required parameter:**
 - `project_path`: Path to the `.qda` project folder (or to the `data.qda` file inside it)
@@ -218,7 +225,7 @@ heuristics (`qualcoder_gui_signals`)
 
 ```
 # Start fresh
-You: List my Qualcoder projects
+You: List my projects
 
 Claude: I found 3 projects:
 1. Interview Study 2024 (15.3 MB, last modified today)

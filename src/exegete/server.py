@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Exegete (formerly qualcoder-mcp): a QualCoder project exposed to the
-conversation through the Model Context Protocol."""
+"""Exegete (formerly qualcoder-mcp): a qualitative analysis application you
+use in conversation with an AI assistant, compatible with QualCoder. It runs
+as a Model Context Protocol server."""
 
 import errno
 import os
@@ -22,12 +23,13 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Sequence, Tuple, Callable
 
+import anyio
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp import Context
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from . import env_settings, names, state_folder
+from . import env_settings, names, state_folder, updates
 from .database import (
     QualcoderDatabase,
     sqlite_error_label,
@@ -219,7 +221,7 @@ GROUNDING_RULES = """GROUNDING RULES (every analysis tool expects these):
   between cases, no new code emerging: report it plainly rather than
   stretching a passage to fit.
 - Quote verbatim. Evidence is the exact text of the file, never a
-  paraphrase, correction or translation; the server checks every excerpt
+  paraphrase, correction or translation; Exegete checks every excerpt
   and rejects anything that is not a literal match.
 - Keep evidence, interpretation and method advice apart, and say when
   evidence is thin or uncertain instead of inventing support.
@@ -270,7 +272,7 @@ READING_REQUIRED = (
     "names) or \"interpretive\" (the code rests on what the passage "
     "implies rather than on what it says)")
 CONFIDENCE_NOT_TAKEN = (
-    "; confidence is no longer taken: this server records no score")
+    "; confidence is no longer taken: Exegete records no score")
 READING_NOT_GIVEN = "not given (recorded before v0.14)"
 READING_CLEARED = ("not given (cleared when the code was changed; give one "
                    "with edit_suggestion's reading)")
@@ -321,7 +323,7 @@ DEPRECATED_MERGE_PROPOSALS = (
     "its passages to the other with update_proposal if they belong there.")
 DEPRECATED_JOURNAL_ATTRIBUTES = (
     "Deprecated, removed in v0.15: attributes on journal entries, which "
-    "this server can set but never reads back; QualCoder's Journals "
+    "Exegete can set but never reads back; QualCoder's Journals "
     "window sets them.")
 DEPRECATED_MEMO_SEARCH = (
     "Deprecated, removed in v0.15: search_memo; search_memos searches "
@@ -400,9 +402,9 @@ instruction."""
 # project's own words (NOTICE, entry 11).
 
 READ_BRIEF_DESCRIPTION = (
-    "Call this once at the start of every conversation about a QualCoder "
-    "project, before other tools. It returns how this server expects you "
-    "to work with the researcher: evidence, approval, privacy and when to "
+    "Call this once at the start of every conversation about a project, "
+    "before other tools. It returns how Exegete expects you to work with "
+    "the researcher: evidence, approval, privacy and when to "
     "ask. Call it again if that text has dropped out of the conversation. "
     "It reads nothing from the project.")
 
@@ -410,14 +412,14 @@ READ_BRIEF_DESCRIPTION = (
 # read_brief's own answer in the small set, which is the short version
 BRIEF_START = (
     "At the start of every conversation about a project, call read_brief "
-    "once: it sets out how this server expects you to work.")
+    "once: it sets out how Exegete expects you to work.")
 
 BRIEF_SHORT = (
-    f"{names.SERVER_NAME} exposes a QualCoder project to this conversation. "
-    "Use its tools for qualitative analysis of the project: reading and "
-    "searching documents and transcripts, codes and coded passages, memos, "
-    "cases and attributes, and suggesting codings for the researcher to "
-    f"approve. {BRIEF_START}\n"
+    f"{names.SERVER_NAME} is a qualitative analysis application for working "
+    "with the researcher on their project, in QualCoder's format. Use its "
+    "tools to read and search documents and transcripts, codes and coded "
+    "passages, memos, cases and attributes, and to suggest codings for the "
+    f"researcher to approve. {BRIEF_START}\n"
     "The rules that matter most:\n"
     "1. Read and change the project only through these tools. Never open "
     "its folder or its database directly, even when you can.\n"
@@ -429,7 +431,7 @@ BRIEF_SHORT = (
     "checked, so copy them from a tool's answer.\n"
     "4. Coding suggestions and code proposals are written to the project "
     "only when each item has been marked approved, which you do only on "
-    "the researcher's word: the server cannot tell who approved.\n"
+    "the researcher's word: Exegete cannot tell who approved.\n"
     "5. Before a coding session, ask the researcher what to look for, how "
     "long a coded passage should be, and whether a passage may carry more "
     "than one code; their answers are the session's instruction, without "
@@ -456,7 +458,7 @@ BRIEF_SHORT_SMALL_SET = BRIEF_SHORT.replace(f" {BRIEF_START}", "")
 # create_project and analyze_for_coding
 BRIEF_REMINDER = (
     "If the brief is not already in this conversation, call read_brief "
-    "first: it sets out how this server expects you to work.")
+    "first: it sets out how Exegete expects you to work.")
 
 # Says that the brief is provisional, in its own text
 BRIEF_PROVISIONAL = (
@@ -465,16 +467,22 @@ BRIEF_PROVISIONAL = (
 
 BRIEF_FULL = f"""# Working with a researcher in {names.SERVER_NAME}
 
-{names.SERVER_NAME} opens a QualCoder project on the researcher's computer so
-that you and the researcher can work on it together. This is the
-server's own account of how it expects that work to go: each tool's
-description gives the details of that tool; this text gives the whole
-picture and the rules that hold across tools. If it drops out of the
-conversation, call read_brief again. {BRIEF_PROVISIONAL}
+In Exegete, a qualitative analysis application on the researcher's
+computer, you and the researcher work on their project through this
+conversation: the researcher decides, and you read, search and suggest
+through Exegete's tools. The project is theirs, a folder kept in
+QualCoder's format and conventions, so they may work on it here or in
+QualCoder, one program at a time. Do not assume that they use
+QualCoder: when a request needs something Exegete does not do yet
+(section 4), say so plainly. This is Exegete's own account of how it
+expects that work to go: each tool's description gives the details of
+that tool; this text gives the whole picture and the rules that hold
+across tools. If it drops out of the conversation, call read_brief
+again. {BRIEF_PROVISIONAL}
 
 ## 1. What you can do here
 
-With these tools you can read, search, suggest and explain; the server
+With these tools you can read, search, suggest and explain; Exegete
 writes a suggested coding or a proposed code only when each item has
 been marked approved, which you do only on the researcher's word.
 
@@ -507,17 +515,21 @@ tell them first that it holds any private notes they wrote, which then
 go to the AI provider with the conversation. When a tool refuses, tell
 the researcher why; do not look for a way round it.
 
-## 4. Where you are: outside QualCoder
+## 4. The project, Exegete and QualCoder
 
-- {names.SERVER_NAME} is a separate program that opens QualCoder project
-  folders (ending in .qda) and writes in QualCoder's own format, so
-  QualCoder can open the same project at any time. QualCoder shows
-  documents, images, audio, video and graphs, and many researchers code
-  there too.
-- Only one program should change a project at a time. The server
-  refuses to write while QualCoder 3.8.2 has the project open; for
-  QualCoder 4.0 it can only see signs, so when a tool says the project
-  may be open, ask the researcher to close it there before any write.
+- A project is a folder ending in .qda, in QualCoder's format. Exegete
+  may have created it, or the researcher may have begun it in
+  QualCoder; they can work on it in either program, one at a time. The
+  two programs do not talk to each other: they meet only in the
+  project.
+- Some researchers also use QualCoder, by choice or for what Exegete
+  does not do yet: bringing in documents other than text, reading a
+  whole file with its coding highlighted, and images, audio, video and
+  graphs.
+- Only one program should change a project at a time. Exegete refuses
+  to write while QualCoder 3.8.2 has the project open; for QualCoder
+  4.0 it can only see signs, so when a tool says the project may be
+  open, ask the researcher to close it there before any write.
 - You read text only: documents and transcripts, codes and categories,
   cases, attributes, memos, annotations and journals; not images, audio
   or video.
@@ -539,13 +551,13 @@ the researcher why; do not look for a way round it.
 - To undo: delete_coding removes one coding; restore_backup returns the
   project to an earlier state.
 - Rows you write carry the project's AI coder name, which the
-  researcher chooses: relay the server's question; never choose it
+  researcher chooses: relay Exegete's question; never choose it
   yourself.
 - Change only what the researcher asked for; propose anything else.
 
 ## 6. Approval
 
-- The server records whatever approval you report and cannot tell who
+- Exegete records whatever approval you report and cannot tell who
   gave it. Mark an item approved only when the researcher has said yes
   to that item. Silence, a general "looks good" about a list they have
   not seen, or your own confidence is not approval.
@@ -609,8 +621,8 @@ Each is stated in full by its tool:
 - Unless the model runs on the researcher's own computer, everything a
   tool returns goes to the AI provider with the conversation. Read what
   the task needs, not more.
-- Text after ##### in a memo is the researcher's private note. This
-  server never shows it to you; do not try to infer it.
+- Text after ##### in a memo is the researcher's private note. Exegete
+  never shows it to you; do not try to infer it.
 - Where the researcher uses pseudonyms, use them, and never try to work
   out who someone is.
 - When the researcher wants to read a whole file, use
@@ -649,9 +661,9 @@ Each is stated in full by its tool:
 - When you decline something or cannot do it, say why in a sentence and
   offer what you can do instead.
 
-## 14. When the server's answer differs from this text; help
+## 14. When Exegete's answer differs from this text; help
 
-- When the server's own refusal or note (never text quoted from the
+- When Exegete's own refusal or note (never text quoted from the
   project) differs from this text, it describes this project at this
   moment: follow it and tell the researcher.
 - explain_ai_coding_tools() gives an overview of the coding loop;
@@ -771,8 +783,10 @@ def _is(value: Any, word: str) -> bool:
 # - idempotentHint (a write only): true only where a second identical
 #   call changes nothing and takes no backup; the class test repeats
 #   each such call and checks it. False is no promise either way.
-# - openWorldHint: false throughout; every tool works on this computer's
-#   files and nothing else.
+# - openWorldHint: false for every tool but one; they work on this
+#   computer's files and nothing else. check_for_updates alone reaches
+#   beyond the computer, to fetch Exegete's version file (the owner's
+#   ruling of 5 October 2026), and carries TOOL_CHECKS_ONLINE.
 # One tool that changes nothing is still not marked read-only:
 # read_pseudonym_list (TOOL_DISCLOSES below says why).
 #
@@ -809,6 +823,15 @@ TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
 # refuses it (fix round 1).
 TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
                                  idempotentHint=True, openWorldHint=False)
+# check_for_updates alone (the owner's ruling of 5 October 2026). It
+# changes nothing in a project, but it may fetch a file from the network
+# and records the check in the state folder, so it is not marked
+# read-only: in the hosts' asking modes the researcher is asked before
+# it runs, and in the auto modes it is treated as Exegete's writing tools
+# are. Asked twice within a day, it fetches once.
+TOOL_CHECKS_ONLINE = ToolAnnotations(readOnlyHint=False,
+                                     destructiveHint=False,
+                                     idempotentHint=True, openWorldHint=True)
 
 # Metadata a tool's tools/list entry carries under `_meta` (fix round 1).
 # "anthropic/requiresUserInteraction": true is Anthropic's mark for a tool
@@ -930,7 +953,41 @@ class _ExegeteMCP(FastMCP):
         # text of this server's that names a tool is marked where it is
         # written, before any project text is joined to it, and a test
         # walks every text a core tool can reach to keep it so.
-        return await super().call_tool(name, arguments)
+        #
+        # A note Exegete gives once (a new version, the check's own
+        # disclosure, an update that worked: updates.py) rides on the next
+        # successful answer of ordinary size as its first field,
+        # `exegete_notice`, so that it reaches the structured content too,
+        # which is all some hosts read, and is met before the data
+        # (updates.attach says why). check_for_updates says these things
+        # itself.
+        # Nothing about the check may fail a tool: each step that could
+        # raise is read as "no note".
+        try:
+            note = (None if tool is None or tool.name == updates.TOOL_NAME
+                    else updates.due_note(
+                        updates.TOOL_NAME in self._tool_manager._tools))
+        except Exception as error:
+            logger.debug("No note for this answer: %s", error_label(error))
+            note = None
+        try:
+            if note is None:
+                return await super().call_tool(name, arguments)
+            raw = await self._tool_manager.call_tool(
+                name, arguments, context=self.get_context(),
+                convert_result=False)
+            try:
+                joined = updates.attach(raw, note)
+                if joined is not None:
+                    updates.mark_given(note)
+                    raw = joined
+            except Exception as error:
+                logger.debug("The note was not added: %s",
+                             error_label(error))
+            return tool.fn_metadata.convert_result(raw)
+        finally:
+            # The version that runs here, once its state folder exists
+            updates.after_call()
 
     async def read_resource(self, uri):
         # The earlier scheme is rewritten before matching, templates
@@ -1134,7 +1191,7 @@ def _mru_hint() -> str:
 
 def _no_project_message() -> str:
     """The uniform "no project selected" error text (with MRU hint)."""
-    return ("No Qualcoder project selected. Use 'list_available_projects' "
+    return ("No project selected. Use 'list_available_projects' "
             "to discover projects, then 'select_project' to choose one. "
             f"Or set {env_settings.new_name('project_path')} in the host's "
             f"configuration." + _mru_hint())
@@ -1576,7 +1633,7 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
 
 CONFIGURED_PROJECT_UNAVAILABLE = (
     "The project set in the host's configuration could not be opened: it was "
-    "not found, is not a QualCoder project folder, or its database will not "
+    "not found, is not a project folder (.qda), or its database will not "
     "open. Check the path in the host's configuration; if QualCoder has the "
     "project open, close it and retry. While the database will not open, no "
     "tool here can read, back it up or restore it: its backups, if any, sit "
@@ -1712,7 +1769,7 @@ def _coder_visibility_note(coder: Optional[str] = None,
                 f"coder-visibility capability of QualCoder 3.8.2 and "
                 f"4.0, schema v14 and later: a per-coder visibility "
                 f"setting stored in the project). "
-                f"Results reflect what the user sees in QualCoder; tools "
+                f"Results follow the project's visibility setting; tools "
                 f"that take a coder argument (get_coded_segments, for "
                 f"example) read a specific coder's rows from the full "
                 f"data instead.",
@@ -2052,8 +2109,8 @@ def _find_existing_by_name(rows, name: str, kind: str, plural: str):
                       f"form, and {twins} of them are one and the same "
                       f"name once spacing and Unicode form are normalised, "
                       f"so no spelling of the name can single those out: "
-                      f"work from the ids listed here ({hint}), or give "
-                      f"the duplicates distinct names in QualCoder")
+                      f"work from the ids listed here ({hint}), or rename "
+                      f"the duplicates so that their names differ")
         return None, None, {
             "error": f"{kind.capitalize()} name '{normalize_name(name)}' "
                      f"matches {len(candidates)} existing {plural} that "
@@ -2374,7 +2431,7 @@ def _ai_coder_name() -> str:
     if not raw.strip():
         raise ValueError(
             f"{reading.name} is set but empty. Set it to the coder "
-            f"name this server should write under (for example "
+            f"name Exegete should write under (for example "
             f"\"{DEFAULT_AI_CODER_NAME}\" or QualCoder 4.0's \"AI Agent\"), "
             f"or unset it to use the default.")
     return validate_coder_name(raw, reading.name)
@@ -2485,7 +2542,7 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
         "set_project_ai_coder_name with their answer and retry. The name "
         "is free text; a model name such as \"Qwen 3.8 6bit\" is a good "
         "choice, because codings by different models can then be compared "
-        "later. Quick picks: \"AI Coding Assistant\" (this server's "
+        "later. Quick picks: \"AI Coding Assistant\" (Exegete's "
         "built-in default), \"AI Agent\" (the name QualCoder 4.0's "
         "built-in assistant uses)")
     if declared and declared not in (DEFAULT_AI_CODER_NAME,
@@ -2547,14 +2604,14 @@ def _owner_argument_refusal(current: str) -> Dict[str, Any]:
     return {
         "error": (
             f"The owner argument no longer chooses the coder name: this "
-            f"project's AI coder name is \"{current}\" and every row this "
-            f"server writes is stored under it, so that AI work stays "
+            f"project's AI coder name is \"{current}\" and every row "
+            f"Exegete writes is stored under it, so that AI work stays "
             f"distinguishable from the researcher's and from other "
             f"coders'. Omit owner, or, if the user wants a different "
             f"attribution, ask them and change the project's AI coder "
             f"name with set_project_ai_coder_name, then call this tool "
             f"again without owner. A human coder's name is never used for "
-            f"rows this server writes. Nothing was written and no backup "
+            f"rows Exegete writes. Nothing was written and no backup "
             f"was made."),
         "action_required": "omit_owner_or_set_project_ai_coder_name",
         "ai_coder_name": current,
@@ -2996,7 +3053,7 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
     _adopt_configured_project()
     if current_project_path is None:
         return {
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         }
     try:
@@ -3335,7 +3392,7 @@ def _alternative_gloss(alt: Dict[str, Any],
 @mcp.resource(f"{names.RESOURCE_SCHEME}://project/info")
 @_resource_guard
 def get_project_info() -> str:
-    """Get information about the current Qualcoder project.
+    """Get information about the current project.
 
     Returns project metadata including version, date, coder name, and memo.
     """
@@ -3535,16 +3592,16 @@ These notes are static guidance. They read nothing from the project.
 
 {GROUNDING_RULES}
 
-The server checks what it can: every excerpt recorded through
+Exegete checks what it can: every excerpt recorded through
 record_suggestions, edit_suggestion or propose_codes must be a literal
 slice of the file, positions are verified or corrected when the excerpt
 is unique, codes and files must exist, and nothing is written to the
 project until each item is marked approved and apply_codings or
 create_proposed_codes runs.
-The server records the approval you report and cannot tell whether the
+Exegete records the approval you report and cannot tell whether the
 researcher gave it, so mark an item approved only on the researcher's
-word. What the server cannot check is the quality of the reading, or
-who approved; that is what the rules above, the researcher's own reading
+word. What Exegete cannot check is the quality of the reading, or who
+approved; that is what the rules above, the researcher's own reading
 and their host's per-call approval are for.
 
 ## Methodological judgement
@@ -3555,7 +3612,7 @@ QualCoder 4.0's built-in assistant applies the same four decisions
 inside its own chat, where they can stop a plan before any tool runs.
 Here the decision is yours to make and to explain; for coding
 suggestions and code proposals the safety mechanism is the researcher's
-approval of each item, which you relay: the server writes only what is
+approval of each item, which you relay: Exegete writes only what is
 marked approved, and cannot see who marked it. The direct write tools
 write on the call itself, with a backup.
 
@@ -3572,7 +3629,7 @@ not try to infer it.
 
 QualCoder 4.0 carries a prompt library (system, user and project scopes;
 project prompts live in <project>/ai_data/ai_prompts) that its own
-assistant loads by /name. This server does not read or reproduce those
+assistant loads by /name. Exegete does not read or reproduce those
 prompts. The sources they cite, for researchers who want to bring a
 method into an analyze_for_coding instruction or into the project memo:
 
@@ -3613,8 +3670,9 @@ researcher which framework applies before assuming one.
     f"{names.RESOURCE_SCHEME}://guidance/methods",
     mime_type="text/markdown",
     description="Grounding rules, the four-way methodological vocabulary, and "
-                "citations to the method literature QualCoder 4.0 ships "
-                "prompts for. Static; needs no project.")
+                "citations to the method literature QualCoder's prompts "
+                "cite, for researchers who want to bring in a method. "
+                "Static; needs no project.")
 @_resource_guard
 def get_methods_guidance() -> str:
     """Static methods notes: no project, no database, identical on every
@@ -3638,7 +3696,7 @@ def _small_tool_set() -> bool:
 @mcp.resource(
     f"{names.RESOURCE_SCHEME}://guidance/brief",
     mime_type="text/markdown",
-    description="The assistant's brief (provisional): how this server "
+    description="The assistant's brief (provisional): how Exegete "
                 "expects the assistant to work with the researcher. The "
                 "same text read_brief returns in the full tool set. "
                 "Static; needs no project.")
@@ -3678,13 +3736,42 @@ def is_relative_folder(text: str, path_class: type = Path) -> bool:
     return not path.is_absolute() and not path.root
 
 
+def _no_projects_message(given: Optional[List[str]],
+                         not_found: List[str]) -> str:
+    """What an empty search says: the folders given (`given`), or the
+    usual places when none were given, and what to do next. Until
+    v0.14.2's last round a search of the folders given also said "No
+    projects found in the usual places", and asked for the folder the
+    researcher had just named."""
+    if not given:
+        return ("No projects found in the usual places (searched.folders). "
+                "Ask the researcher which folder holds their project and "
+                "give it in search_directories, or start a new project with "
+                "create_project.")
+    if not not_found:
+        missing = ""
+    elif len(not_found) < len(given):
+        missing = (f" {len(not_found)} of them "
+                   f"{'does' if len(not_found) == 1 else 'do'} not exist "
+                   f"(searched.not_found).")
+    elif len(given) == 1:
+        missing = " That folder does not exist."
+    else:
+        missing = " None of them exists."
+    return ("No projects found in the folders given, each searched three "
+            "levels deep; the usual places were not searched." + missing
+            + " Check the paths, give other folders in search_directories, "
+            "leave it out to search the usual places, or start a new "
+            "project with create_project.")
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def list_available_projects(search_directories: Optional[List[str]] = None) -> str:
-    """Discover Qualcoder projects on your system.
+    """Discover projects on your system.
 
-    This tool searches common locations for .qda files and returns a list
-    of available Qualcoder projects. By default, it searches:
+    This tool searches common locations for .qda folders and lists the
+    projects found. By default, it searches:
     - the workspace folder, when the host set one (its top level only)
     - ~/Documents/QualCoder_projects
     - ~/Documents/QualCoder
@@ -3747,8 +3834,9 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
         if not projects:
             return json.dumps({
                 "projects": [],
-                "message": "No Qualcoder projects found. Make sure you have created "
-                          "at least one project in Qualcoder, or specify search_directories.",
+                "message": _mark_unregistered(_no_projects_message(
+                    folders if search_directories else None,
+                    searched["not_found"])),
                 "default_search_paths": top_level_only + usual
                 if not search_directories else usual,
                 "searched": searched,
@@ -3772,7 +3860,7 @@ PIPE_PATH_WARNING = (
     "This project's path contains '|'. QualCoder cannot open a project "
     "from such a path, because it reads the text after a '|' as the path; "
     "to open it in QualCoder, move or rename the folder so that its path "
-    "has no '|'. This server works with it as usual.")
+    "has no '|'. Exegete works with it as usual.")
 # For a folder holding only what a project creation that did not finish
 # leaves (new_project.is_unfinished: the four subfolders, each empty, and
 # an empty or missing data.qda with its journal). Any other folder with
@@ -3847,7 +3935,7 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
 def select_project(project_path: str) -> str:
-    """Switch to a different Qualcoder project.
+    """Switch to a different project.
 
     The result may include a `warning`, for example that QualCoder
     currently has this project open. If so, RELAY it to the user: ask them
@@ -4060,11 +4148,11 @@ def _select_project_refusal(project_path: str,
 # (v0.14, the create-project study's 7.5): the refusal of the
 # researcher's name cannot then be made.
 RESEARCHER_CODER_NAME_UNKNOWN = (
-    "This project's own coder name (the researcher's name in QualCoder) is "
-    "not known, so whether this AI coder name is theirs could not be "
-    "checked. Confirm with the researcher that it is not the name they use "
-    "in QualCoder; the check comes on when they first open the project in "
-    "QualCoder, which records their name.")
+    "This project's own coder name (the researcher's own) is not known, so "
+    "whether this AI coder name is theirs could not be checked. Confirm "
+    "with the researcher that it is not their own; the check comes on once "
+    "the project records their name (QualCoder records it when it first "
+    "opens the project).")
 
 _VISIBILITY_UNREADABLE = object()
 
@@ -4107,8 +4195,8 @@ def set_project_ai_coder_name(name: str, note: str = "",
     categories and attributes. Ask the user before calling it: the name is
     theirs to choose. Free text, up to 80 characters, plain single-line
     text; a model name such as "Qwen 3.8 6bit" lets codings by different
-    models be compared later. Quick picks: "AI Coding Assistant" (this
-    server's built-in default), "AI Agent" (QualCoder 4.0's own
+    models be compared later. Quick picks: "AI Coding Assistant"
+    (Exegete's built-in default), "AI Agent" (QualCoder 4.0's own
     assistant). The setting is stored with the project (exegete.json
     in the project folder), so it travels with backups and copies; it can
     be changed at any time, and earlier rows keep the name they were
@@ -4132,7 +4220,7 @@ def set_project_ai_coder_name(name: str, note: str = "",
               version), up to 500 characters, single line
         allow_hidden_coder: Store a name that a QualCoder visibility
               setting hides (rows would be invisible in QualCoder and in
-              this server's default reads until unhidden)
+              Exegete's default reads until unhidden)
 
     Returns:
         JSON with the stored name, when it was set, the previous name, how
@@ -4209,8 +4297,8 @@ def set_project_ai_coder_name(name: str, note: str = "",
         if coder_is_hidden(visibility or {}, name):
             return json.dumps({"error": (
                 f"\"{name}\" is a coder currently hidden in QualCoder; rows "
-                f"written under it would not be shown in QualCoder or in this "
-                f"server's default reads. Pass allow_hidden_coder=true to "
+                f"written under it would not be shown in QualCoder or in "
+                f"Exegete's default reads. Pass allow_hidden_coder=true to "
                 f"store it anyway, or ask the user to unhide the coder in "
                 f"QualCoder. Nothing was changed.")})
 
@@ -4300,7 +4388,7 @@ def _earlier_file_warnings(state, earlier, moving: bool,
         quoted = ", ".join(f"\"{n}\"" for n in earlier.names_added)
         notes.append(
             f"{OLD_SIDECAR_NAME} in the project folder held {quoted}, "
-            f"stored by an older copy of this server (qualcoder-mcp 0.12 "
+            f"stored by an older copy of Exegete (qualcoder-mcp 0.12 "
             f"to 0.14) beside {SIDECAR_NAME}; "
             f"{'that name was' if one else 'those names were'} added to "
             f"this project's history, so rows under "
@@ -4637,7 +4725,7 @@ def read_pseudonym_list() -> str:
 
     The list is the project's own pseudonyms.json: QualCoder's import-time
     list, and the researcher's reverse key. Each call that returns it
-    writes one line to this server's log saying that the list was
+    writes one line to the server's log saying that the list was
     returned and how many entries it had, with no name in it, so the
     host's log shows every time the list left the project.
 
@@ -4670,7 +4758,7 @@ def copy_project_to_workspace(
     source_path: str,
     new_name: Optional[str] = None
 ) -> str:
-    """Copy a QualCoder project to the MCP workspace for safe modification.
+    """Copy a project folder (.qda) into the workspace to work on a copy.
 
     This is the recommended first step before any AI coding: work on a copy
     in the workspace folder (~/Documents/Exegete projects/ unless the
@@ -5048,7 +5136,7 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
     some coders' work, results reflect only visible coders by default
-    (what the user sees in QualCoder); the result then carries a
+    (the project's own setting); the result then carries a
     coder_visibility block. Pass coder to read one specific coder's
     segments from the full data instead.
 
@@ -5073,8 +5161,8 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
                ignored by Unicode's default case folding, so "über"
                finds "Über" and "strasse" finds "Straße", and "ß" finds
                every "ss"; Turkish dotted and dotless i are the
-               exception, not matched to i and I. A departure in your
-               favour from QualCoder's own searches, which ignore case
+               exception, not matched to i and I. A departure from
+               QualCoder's own searches, which ignore case
                for the letters A to Z only)
         code_name: Optional - filter results to only segments coded with
                    this code. The same name after spacing and Unicode form
@@ -5274,7 +5362,7 @@ def get_coded_segments(code_id: int, limit: int = 100,
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
     some coders' work, results reflect only visible coders by default
-    (what the user sees in QualCoder); the result then carries a
+    (the project's own setting); the result then carries a
     coder_visibility block with the suppressed count. Pass coder to
     read one specific coder's segments from the full data instead.
 
@@ -5285,7 +5373,7 @@ def get_coded_segments(code_id: int, limit: int = 100,
       than one long interview. The ready-made choice for an overview.
     - recent_first: newest coding first. The date is compared as stored
       text, which equals chronological order for every writer QualCoder
-      and this server use, and is a heuristic for a hand-edited value.
+      and Exegete use, and is a heuristic for a hand-edited value.
     - sequential: the order the codings were created in.
 
     BUDGET: max_chars caps the characters of segment TEXT one page
@@ -5713,7 +5801,7 @@ def get_coding_frequencies(coder: Optional[str] = None) -> str:
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
     some coders' work, counts reflect only visible coders by default
-    (what the user sees in QualCoder); the result then carries a
+    (the project's own setting); the result then carries a
     coder_visibility block. Pass coder to count one specific coder's
     rows from the full data instead.
 
@@ -5774,7 +5862,7 @@ def search_memos(query: str, limit: int = 50) -> str:
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): coding memos and annotations
     honour the project's per-coder visibility by default (hidden coders'
-    notes are not returned, matching what the user sees in QualCoder),
+    notes are not returned, as the project's own setting has it),
     and the result then carries a coder_visibility block. The other
     notes have no per-coder visibility in QualCoder and are always
     searched; where such a note's owner is a hidden coder, the owner is
@@ -6179,7 +6267,7 @@ def get_project_summary() -> str:
         summary["unusable_pdfs_note"] = (
             "These PDF sources have no usable text, so they are not "
             "searched and cannot be coded as text here: no_text_layer is "
-            "a PDF with no text layer (OCR it outside this server and "
+            "a PDF with no text layer (OCR it outside Exegete and "
             "import the result); pdf_file_stored_as_text is a PDF that "
             "QualCoder 3.8.2 stored as the file itself, recognised by a "
             "heuristic (repair it with 'Restructure' in QualCoder 4.0's "
@@ -6256,7 +6344,7 @@ def analyze_file_with_coding(file_id: int, start: int = 0,
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides some
     coders' work, coded_segments and annotations reflect only visible
-    coders (what the user sees in QualCoder) and the result carries a
+    coders (the project's own setting) and the result carries a
     coder_visibility block. This tool has no coder override; use
     get_coded_segments(coder=...) to read a specific coder's rows.
     """
@@ -6303,8 +6391,9 @@ def analyze_file_with_coding(file_id: int, start: int = 0,
         result["position_safety_warning"] = (
             "This file contains \r\n sequences or characters beyond U+FFFF "
             "(e.g. emoji), so QualCoder's GUI uses a different position "
-            "system for it (its documented emoji bug). GUI-created codings "
-            "here may not align with the text slices shown by this server, "
+            "system for it (QualCoder's manual notes that an emoji may "
+            "take more than one position in its editor). GUI-created codings "
+            "here may not align with the text slices shown by Exegete, "
             "and codings written here may render shifted or unhighlighted "
             "in the QualCoder editor. Reports and exports are unaffected."
         )
@@ -6850,14 +6939,14 @@ def _listing_scope(listed_hidden: bool) -> str:
     """What the coder listing that follows actually contains (X1).
 
     With `allow_hidden_coder=true` the listing includes hidden coders by
-    design (D2 3.12 item 1), so it must not be labelled "visible in
-    QualCoder" and must not carry the hidden clause, which would both
+    design (D2 3.12 item 1), so it must not be labelled "visible" and
+    must not carry the hidden clause, which would both
     double-count those coders and advise passing a flag the caller has
     already passed. Without the override the D2 3.11 text stands
     verbatim.
     """
     return ("with text codings, hidden coders included" if listed_hidden
-            else "with text codings visible in QualCoder")
+            else "with visible text codings")
 
 
 def _coder_role(name: str, ai_names: Sequence[str]) -> str:
@@ -6887,13 +6976,13 @@ def compare_coders(coder_a: Optional[str] = None,
     tool: how much of each file each coder coded with a code, how much
     they agreed, and two agreement coefficients.
 
-    COMPARING A PERSON WITH THE AI: this server's AI codings in the
+    COMPARING A PERSON WITH THE AI: the AI's codings in the
     project are the suggestions the person approved (and perhaps edited),
     so their agreement partly counts the person's own judgement twice,
     and the suggestions they rejected are not in the project at all. And
     the assistant is told to read each file with analyze_file_with_coding
     before suggesting, which gives it every visible coder's codings
-    (every coder QualCoder shows), the person's included unless their
+    (every coder not hidden), the person's included unless their
     coder was hidden.
     Such a comparison is not intercoder reliability between independent
     coders; say so whenever you report it.
@@ -7275,7 +7364,7 @@ def compare_coders(coder_a: Optional[str] = None,
     if _coder_role(coder_a, ai_names) == "ai_this_server" or \
             _coder_role(coder_b, ai_names) == "ai_this_server":
         result["notes"].append(
-            "One coder is this server's AI: its codings are the suggestions "
+            "One coder is the AI: its codings are the suggestions "
             "the person approved (and perhaps edited), and the assistant is "
             "told to read each file with analyze_file_with_coding before "
             "suggesting, which gives it every visible coder's codings. The "
@@ -7336,7 +7425,7 @@ def find_cooccurring_codes(code_id: int, window_size: int = 0,
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
     some coders' work, counts reflect only visible coders by
-    default (what the user sees in QualCoder). The result is then
+    default (the project's own setting). The result is then
     wrapped in an object carrying a coder_visibility block
     (otherwise it stays a plain array). Pass coder to analyse one
     specific coder's rows from the full data instead.
@@ -7402,7 +7491,7 @@ def get_case_code_matrix(coder: Optional[str] = None) -> str:
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
     some coders' work, counts reflect only visible coders by default
-    (what the user sees in QualCoder); the result then carries a
+    (the project's own setting); the result then carries a
     coder_visibility block. Pass coder to count one specific coder's
     rows from the full data. The CSV export tool is NOT filtered
     (QualCoder report-export parity).
@@ -7450,7 +7539,7 @@ def get_codes_by_case(case_id: int, coder: Optional[str] = None) -> str:
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
     some coders' work, counts reflect only visible coders by
-    default (what the user sees in QualCoder). The result is then
+    default (the project's own setting). The result is then
     wrapped in an object carrying a coder_visibility block
     (otherwise it stays a plain array). Pass coder to analyse one
     specific coder's rows from the full data instead.
@@ -7495,7 +7584,7 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
     Coder visibility (projects with the coder-visibility capability,
     QualCoder 3.8.2 and 4.0 onwards): when the project hides
     some coders' work, counts reflect only visible coders by
-    default (what the user sees in QualCoder). The result is then
+    default (the project's own setting). The result is then
     wrapped in an object carrying a coder_visibility block
     (otherwise it stays a plain array). Pass coder to analyse one
     specific coder's rows from the full data instead.
@@ -7821,7 +7910,7 @@ Once the assistant records and presents suggestions, you can:
 - Review the suggestions in the chat
 - Use `review_suggestions` to see more details
 - Use `update_suggestion_status` to record your decision on each one:
-  the server writes only what is marked approved, and cannot tell who
+  Exegete writes only what is marked approved, and cannot tell who
   approved it, so check the counts it reports against what you said
 - Use `apply_codings` to write approved suggestions to the database
 """
@@ -8247,7 +8336,7 @@ def record_suggestions(
 
     This is step 2 of the AI coding workflow: after analyze_for_coding creates
     a session, use this tool to persist the suggestions you identified
-    by reading the files. Nothing is written to the QualCoder database: the
+    by reading the files. Nothing is written to the project: the
     suggestions are stored in the session for the user to review, approve, and
     apply.
 
@@ -8546,14 +8635,15 @@ def record_suggestions(
         result["confidence_ignored"] = confidence_ignored
         result["confidence_note"] = (
             f"{confidence_ignored} suggestion(s) carried a confidence "
-            f"number, which was not recorded: this server marks each "
+            f"number, which was not recorded: Exegete marks each "
             f"suggestion explicit or interpretive and keeps no score.")
     if unsafe_files:
         result["position_safety_warning"] = (
             f"File(s) {sorted(unsafe_files.values())} contain \r\n sequences "
             f"or characters beyond U+FFFF (e.g. emoji). QualCoder's GUI uses "
-            f"a different position system for such files (its documented "
-            f"emoji bug), so codings on them may render shifted or "
+            f"a different position system for such files (QualCoder's "
+            f"manual notes that an emoji may take more than one position in "
+            f"its editor), so codings on them may render shifted or "
             f"unhighlighted in the QualCoder editor, and GUI-created codings "
             f"there may not verify. Reports and exports are unaffected. "
             f"Relay this to the user before proceeding to approval."
@@ -8766,7 +8856,7 @@ def edit_suggestion(
         end_pos: New end position (end-exclusive)
         segment_text: New exact excerpt (alternative to positions)
         use_alternative: "shorter" | "longer": apply the
-            server-precomputed span alternative (shorter = the span
+            precomputed span alternative (shorter = the span
             trimmed to its core sentence; longer = the enclosing
             paragraph, else ± one sentence). This is the preferred
             response to "make #3 longer" / "widen that one": one call,
@@ -9099,8 +9189,8 @@ def update_suggestion_status(
 
     Use this to record the USER'S decisions about which suggestions should
     be applied to the database. Approve only the suggestions the user has
-    actually reviewed and confirmed; do not approve on their behalf. The
-    server writes what is marked approved and cannot tell who approved
+    actually reviewed and confirmed; do not approve on their behalf.
+    Exegete writes what is marked approved and cannot tell who approved
     it, so the counts this returns are what the user checks against what
     they said.
 
@@ -9580,7 +9670,9 @@ def apply_codings(
 
     output.extend(_already_existing_lines())
 
-    output.append(f"\n\n**You can now open the project in Qualcoder to see the AI-coded segments.**")
+    output.append("\n\n**The codings are in the project now: they can be "
+                  "read back here, and QualCoder, if the researcher uses "
+                  "it, shows them highlighted in the text.**")
     unlabelled = sum(1 for s in to_write if s.reading is None)
     output.append(f"All codings are attributed to '{owner}'. Each memo "
                   f"gives the reading first (explicit or interpretive), "
@@ -9616,17 +9708,17 @@ def import_text_file(
     The text passes through the conversation, so it reaches the AI
     provider. For a document on the researcher's computer use
     import_documents, which keeps its text off the conversation. At most
-    1,000,000 characters. Like QualCoder's "Create text file":
-    the file is visible in QualCoder's file manager and can be coded.
+    1,000,000 characters. Like QualCoder's "Create text file": the file
+    joins the project's documents, ready for coding here or in QualCoder.
 
     Optionally links the new file to an existing case (participant) in the
     same transaction; without a case link the file is invisible to every
     case-based analysis (matrices, case reports). You can also link later
     with link_file_to_case.
 
-    IMPORTANT: Make sure you're working on a copy of your project in the
-    MCP workspace (~/Documents/Exegete projects/ unless the host set
-    another)
+    IMPORTANT: work on a project in the workspace
+    (~/Documents/Exegete projects/ unless the host set another), or on a
+    copy there.
 
     Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
@@ -10765,7 +10857,7 @@ def list_backups() -> str:
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         })
 
@@ -10802,7 +10894,7 @@ def list_backups() -> str:
             "vector-search database ai_data/search.sqlite and its sqlite "
             "sidecar files, like QualCoder's own backups. QualCoder "
             "rebuilds search.sqlite when the project is opened.",
-            "Since v0.14 this server copies the project database with "
+            "Since v0.14 Exegete copies the project database with "
             "SQLite's own online backup, so a backup taken while QualCoder "
             "is writing holds what was last committed, and the database's "
             "journal and WAL files are never copied (QualCoder's own "
@@ -10916,7 +11008,7 @@ def prune_backups(keep_last: Optional[int] = None,
       newest N AND older than D days), the conservative intersection
 
     Safety rules:
-    - ONLY this server's backups are touched: the folders whose whole
+    - ONLY Exegete's backups are touched: the folders whose whole
       name is {project}_backup_<date>_<time>, with at most a counter
       (_2, _3) and _prerestore (a restore's safety copy) after it. A
       folder with that prefix and anything else (no time, or a Finder
@@ -10966,7 +11058,7 @@ def prune_backups(keep_last: Optional[int] = None,
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         })
 
@@ -11164,7 +11256,7 @@ def _never_removed_block(names: List[str]) -> Dict[str, Any]:
     return {"never_removed": names,
             "never_removed_note": (
                 "These folders carry this project's backup prefix, but "
-                "their names are not the ones this server gives its "
+                "their names are not the ones Exegete gives its "
                 "backups (no time, or something after it, as a copy made "
                 "by hand has), so prune_backups never removes them.")}
 
@@ -11205,17 +11297,17 @@ def _prune_only_copies_note(only_copies: Dict[str, List[Any]],
     if done:
         subject = ("The backup this removed held" if one
                    else "Backups this removed held")
-        after = ("This server now knows of no other lasting copy. "
+        after = ("Exegete now knows of no other lasting copy. "
                  + ("It" if one else "They")
                  + " may have held the only record")
     else:
         subject = ("The backup this would remove holds" if one
                    else "Backups this would remove hold")
         after = ("Once " + ("it is" if one else "they are")
-                 + " removed, this server knows of no other lasting copy. "
+                 + " removed, Exegete knows of no other lasting copy. "
                  "It may be the only record")
     note = (f"{subject} a pseudonyms.json that the project does not hold "
-            f"now, byte for byte, and that no backup this server keeps "
+            f"now, byte for byte, and that no backup Exegete keeps "
             f"holds: {', '.join(named)}. {after} of a pseudonymisation "
             f"mapping (a pseudonymise_source run's save writes one, and a "
             f"restore of an earlier backup leaves it in the pre-restore "
@@ -11307,7 +11399,7 @@ def restore_backup(backup_path: str,
     1. does nothing until called with the preview_token its own preview
        returns (the default call returns that preview),
     2. only accepts backups of the currently open project sitting next to
-       the project folder: this server's own `<project>_backup_<timestamp>`
+       the project folder: Exegete's own `<project>_backup_<timestamp>`
        snapshots and QualCoder's own `<project>_BKUP_<timestamp>` copies,
     3. creates a safety backup of the CURRENT state first, so even a restore
        can be undone,
@@ -11336,7 +11428,7 @@ def restore_backup(backup_path: str,
     restored project not having one is normal, never corruption:
     QualCoder 4.0 rebuilds it on project open. The rest of ai_data/
     (prompt library, chat history) restores with the project. Backups
-    made by this server also skip symlinks that point outside the
+    made by Exegete also skip symlinks that point outside the
     project folder (or dangle) and in-project symlink loops, so such
     entries are absent from a restored project; the safety backup taken
     before a restore follows the same rule, and every confirmed-restore
@@ -11357,7 +11449,7 @@ def restore_backup(backup_path: str,
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({
-            "error": "No Qualcoder project selected. Use 'list_available_projects' "
+            "error": "No project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         })
 
@@ -11633,8 +11725,8 @@ def restore_backup(backup_path: str,
         logger.error("Restore completed, reporting degraded: %s",
                      error_label(e))
         result["report_incomplete"] = (
-            "The restore completed and the paths above are correct. This "
-            "server could not finish describing the restored project "
+            "The restore completed and the paths above are correct. "
+            "Exegete could not finish describing the restored project "
             f"(check {SIDECAR_NAME} or {OLD_SIDECAR_NAME} in the project "
             "folder); nothing further was changed.")
         result.setdefault("safety_backup", str(safety_backup))
@@ -11943,8 +12035,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     # Comprehensive help documentation
     tool_help = {
         "overview": {
-            "title": "AI-Assisted Coding for QualCoder",
-            "description": "Use an AI assistant to help code your qualitative data. The assistant can analyse interview transcripts, suggest codes, and create coded segments that you can review and apply directly to your QualCoder project.",
+            "title": "AI-assisted coding in Exegete",
+            "description": "Use an AI assistant to help code your qualitative data. The assistant can analyse interview transcripts, suggest codes, and create coded segments that you can review and apply to your project.",
             "workflow": {
                 "step_1": "Ask the researcher the three questions first, "
                           "then start a coding session for the files and "
@@ -11959,7 +12051,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "before approval)",
                 "step_4": "Record the researcher's decision on each "
                           "suggestion (update_suggestion_status: approve, "
-                          "reject, or reopen to edit again). The server "
+                          "reject, or reopen to edit again). Exegete "
                           "writes what is marked approved and cannot tell "
                           "who approved it: mark approved only what the "
                           "researcher said yes to",
@@ -11983,7 +12075,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "in between the execute is refused and you preview "
                           "again."
             },
-            "ai_coder_name": "Rows this server writes carry the PROJECT's AI "
+            "ai_coder_name": "Rows Exegete writes carry the PROJECT's AI "
                              "coder name, which the researcher chooses. The "
                              "first write that needs it stops and asks: relay "
                              "the question, and call "
@@ -12060,9 +12152,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 f"change; there is no score",
                 "Every suggestion verified against the file text before storage",
                 "Review, then record the researcher's decision on each "
-                "suggestion before applying (the server writes what is "
+                "suggestion before applying (Exegete writes what is "
                 "marked approved; it cannot see who approved it)",
-                "Apply codings directly to QualCoder database (with a backup "
+                "Write approved codings to the project (with a backup "
                 "first, unless create_backup is false)",
                 "Writes refuse to run while a released QualCoder (3.x) has the "
                 "project open (lock file); an open QualCoder 4.0 window is "
@@ -12112,7 +12204,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             ]
         },
         "apply_codings": {
-            "purpose": "Apply approved coding suggestions directly to the QualCoder database",
+            "purpose": "Write approved coding suggestions to the project",
             "when_to_use": "After reviewing suggestions and approving the ones you want",
             "workflow": [
                 "1. Run analyze_for_coding on your files",
@@ -12142,7 +12234,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "removes it and marks the suggestion removed, after which "
                 "it can be reopened too",
                 "use_alternative='shorter'|'longer' applies a ready-made "
-                "span the server computed (core sentence / enclosing "
+                "span Exegete computed (core sentence / enclosing "
                 "paragraph), the one-call answer to 'make it "
                 "shorter/longer'; alternatives are recomputed after every "
                 "edit",
@@ -12180,9 +12272,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             ]
         },
         "grounding_rules": {
-            "purpose": "The evidence discipline every analysis tool expects, "
-                       "in the spirit of the rules QualCoder 4.0's built-in "
-                       "assistant works under",
+            "purpose": "Exegete's evidence discipline, which every "
+                       "analysis tool expects",
             "rules": [
                 "Base every claim and code on the text; an interpretive "
                 "reading may draw on the same participant elsewhere (the "
@@ -12340,8 +12431,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             "purpose": "Where to read more",
             "resource": "exegete://guidance/methods",
             "note": "The resource carries the grounding rules, the four-way "
-                    "vocabulary, and citations to the method literature QualCoder "
-                    "4.0 ships prompts for; it needs no project to be selected"
+                    "vocabulary, and citations to the method literature "
+                    "QualCoder's prompts cite, for researchers who want to "
+                    "bring in a method; it needs no project to be selected"
         }
     }
 
@@ -12989,7 +13081,7 @@ def update_proposal_status(coding_session_id: str,
     """Approve or reject code proposals: record the USER'S decisions.
 
     Approve only the proposals the user has actually reviewed and
-    confirmed; do not approve on their behalf: the server writes what is
+    confirmed; do not approve on their behalf: Exegete writes what is
     marked approved and cannot tell who approved it. Proposals already
     CREATED are immutable and skipped (skipped_created); a proposal
     merged into another is final and skipped (skipped_merged). A
@@ -14025,7 +14117,7 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
 
 TOKEN_ERROR_TEXTS = {
     "token_malformed": (
-        "preview_token is not a token this server issued. Call `{tool}` "
+        "preview_token is not a token Exegete issued. Call `{tool}` "
         "without preview_token for a fresh preview and token; nothing was "
         "changed."),
     "token_expired": (
@@ -14064,8 +14156,8 @@ TOKEN_ERROR_TEXTS = {
         "reason is that the project changed since the preview: the rows "
         "this operation would affect are no longer exactly those "
         "previewed, so the token no longer applies. It also happens when "
-        "this server's preview secret has been rotated since the "
-        "preview, and when the token was not one this server issued for "
+        "Exegete's preview secret has been rotated since the "
+        "preview, and when the token was not one Exegete issued for "
         "this state. Nothing here can tell those apart and the remedy is "
         "the same for all of them: call `{tool}` without preview_token "
         "for a fresh preview, show the user what it says, then execute. "
@@ -14306,7 +14398,7 @@ def _collateral_warnings(preview: Dict[str, Any]) -> List[str]:
         names = ", ".join(block.get("ai_coder_names", [])) or "none recorded"
         warnings.append(
             f"Warning: {other} of the {total} affected coding(s) were not "
-            f"made under this server's AI coder name(s) ({names}); they are "
+            f"made under Exegete's AI coder name(s) ({names}); they are "
             f"other coders' work. Show the user the by_owner breakdown and "
             f"get an explicit go-ahead before executing.")
     hidden = preview.get("hidden_coder_codings_affected") or 0
@@ -15531,7 +15623,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         names = ", ".join(preview.get("ai_coder_names", [])) or "none recorded"
         warnings.append(
             f"Warning: {other} of the {changed} coding(s) this run would "
-            f"move were not made under this server's AI coder name(s) "
+            f"move were not made under Exegete's AI coder name(s) "
             f"({names}); they are other coders' work. Show the user the "
             f"by_owner breakdown and get an explicit go-ahead before "
             f"executing.")
@@ -15602,9 +15694,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         warnings.append(
             f"Warning: file(s) {unsafe} contain \\r\\n sequences or "
             f"characters beyond U+FFFF, so QualCoder's GUI already counts "
-            f"positions in them differently from this server (its "
-            f"documented emoji bug). This run does not make that worse and "
-            f"does not fix it.")
+            f"positions in them differently from Exegete. This run does not "
+            f"make that worse and does not fix it.")
     residue = preview.get("residue") or {}
     # Every field count the residue block carries, the twelve notes and
     # every label key from the one table that defines them, so a field
@@ -15682,8 +15773,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
                 f"would rewrite carry a private part this assistant cannot "
                 f"see. Their public part will be rewritten; the private "
                 f"part is carried across unchanged and unread, so if a name "
-                f"occurs there it is still there, and nothing in this "
-                f"server can tell you whether it does.")
+                f"occurs there it is still there, and nothing in "
+                f"Exegete can tell you whether it does.")
         risky = memo_block.get("memos_not_rewritten_marker_risk", 0)
         if risky:
             warnings.append(
@@ -15708,7 +15799,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         if earlier:
             warnings.append(
                 f"Warning: {earlier} journal entr(ies) this run would "
-                f"rewrite are this server's own records of earlier "
+                f"rewrite are Exegete's own records of earlier "
                 f"pseudonymisation runs. Rewriting them changes the "
                 f"project's record of what those runs applied. If that "
                 f"record matters, run without rewrite_memos and change "
@@ -15893,7 +15984,7 @@ def _pseudonymise_notes(backup_name: Optional[str],
         "project has one, still holds the previous text and re-indexes the "
         "source the next time QualCoder opens the project with AI enabled. "
         "Its chat history (ai_data/chat_history.sqlite) can hold the "
-        "previous text too and is never re-indexed; this server neither "
+        "previous text too and is never re-indexed; Exegete neither "
         "reads nor writes either file.",
     ]
 
@@ -15909,8 +16000,8 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
     when it applies. Counts and the error's class name only.
     """
     note = ("The mapping you gave is half of the reverse key for this run; "
-            "the backup is the other half and holds the real names. This "
-            "server does not keep the mapping unless asked.")
+            "the backup is the other half and holds the real names. "
+            "Exegete does not keep the mapping unless asked.")
     saved = bool(result.get("mapping_saved"))
     if save and saved:
         note += (f" On this run it was saved into the project's own "
@@ -16048,7 +16139,7 @@ def _sessions_note(holding: List[str], to_apply: List[str]) -> List[str]:
             f"text, real names included: a suggestion's passage (and, in a "
             f"file written before v0.14, the text around it) or a proposed "
             f"code's evidence. They are in "
-            f"this server's sessions folder ({state_folder.shown()}/"
+            f"Exegete's sessions folder ({state_folder.shown()}/"
             f"sessions/, one file per session). ")
     if to_apply:
         note += (f"{len(to_apply)} of them have work still to apply "
@@ -16160,7 +16251,7 @@ def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
             f"were because a rewrite would have formed a private-part "
             f"marker: {totals['not_rewritten_marker_risk']}.")
         lines.append(
-            f"Journal entries rewritten that were this server's own "
+            f"Journal entries rewritten that were Exegete's own "
             f"records of earlier runs: "
             f"{totals['journal_entries_from_earlier_runs']}.")
         lines.append("This entry was written after the rewrite and was not "
@@ -16418,7 +16509,7 @@ def pseudonymise_source(
     """Replace names with pseudonyms in a project's stored text.
 
     THIS REWRITES SOURCE TEXT and moves every coding, annotation and case
-    link in the file it touches. It is the only tool in this server that
+    link in the file it touches. It is the only tool in Exegete that
     changes the text those positions are measured against.
 
     Preview first, relay the counts, the collisions and the residue to
@@ -16574,8 +16665,8 @@ def pseudonymise_source(
                  journal entry, across the whole project whatever file_id
                  says. Default false. A note's private part (after
                  QualCoder's marker) is carried across unchanged and never
-                 read, so a name in a private part is still there and this
-                 server cannot tell you whether one is. Nothing is
+                 read, so a name in a private part is still there and
+                 Exegete cannot tell you whether one is. Nothing is
                  renamed: case, file, code, category, attribute-type and
                  journal names stay as they are. The residue's wide counts
                  do not go to zero after a note rewrite: a name inside a
@@ -16622,7 +16713,7 @@ def pseudonymise_source(
 
                  The execute is REFUSED on a typed mapping unless one of
                  these two is true: the mapping is half of the reverse key
-                 and this server does not keep it. With
+                 and Exegete does not keep it. With
                  use_project_pseudonyms the file is the record and neither
                  may be given. The transport turns 1, "1", "true", "yes",
                  "on", "t" and "y" into true for each of these three
@@ -17120,10 +17211,12 @@ def pseudonymise_source(
             result["position_safety_warning"] = (
                 f"File(s) {unsafe} contain \\r\\n sequences or characters "
                 f"beyond U+FFFF (e.g. emoji), so QualCoder's GUI uses a "
-                f"different position system for them (its documented emoji "
-                f"bug). That was already true before this run and is not "
+                f"different position system for them (QualCoder's manual "
+                f"notes that an emoji may take more than one position in "
+                f"its editor). "
+                f"That was already true before this run and is not "
                 f"made worse by it; GUI-created codings in that file may "
-                f"not align with the slices this server reports.")
+                f"not align with the slices Exegete reports.")
         return result
 
     result = None
@@ -17662,7 +17755,7 @@ RENAME_CASE_NOTE = (
     "in the names of files named after the case (their ids are in "
     "old_name_left_in.file_ids, and rename_file renames them); in every "
     "backup, including the one just taken (list_backups lists them; "
-    "prune_backups removes this server's, and QualCoder's own _BKUP_ "
+    "prune_backups removes Exegete's, and QualCoder's own _BKUP_ "
     "copies only the researcher can remove); and in QualCoder 4.0's AI "
     "chat. A later case spreadsheet import, survey import or Merge "
     "Projects that still uses the old label creates a case carrying it "
@@ -17671,7 +17764,7 @@ RENAME_CASE_NOTE = (
 # The accepted limitation both renames carry (rename dossier 1.6), in
 # their descriptions: QualCoder 4.0 writes no lock file.
 _RENAME_QC40_PARAGRAPH = (
-    "QualCoder 4.0 writes no lock file, so this server cannot see a 4.0 "
+    "QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 "
     "window that has the project open: a Manage {window} window opened "
     "before the rename keeps showing the old name, and an edit there can "
     "overwrite the rename or fail on it. Close the project in QualCoder "
@@ -17704,7 +17797,7 @@ def rename_case(case_id: int, new_name: str,
     Find a case id in exegete://cases/list, get_case_code_matrix, a
     create_case answer, or QualCoder's own id column.
 
-    QualCoder 4.0 writes no lock file, so this server cannot see a 4.0 window that has the project open: a Manage Cases window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
+    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window that has the project open: a Manage Cases window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -17767,9 +17860,9 @@ RENAME_FILE_NOTE = (
     "Only the name QualCoder shows changed, exactly as its \"Rename "
     "database entry\" does: nothing on disk was renamed, and the stored "
     "path, date, notes, codings and case links are kept. Every backup, "
-    "including the one just taken, keeps the old name, and so do this "
-    "server's coding-session files and any of QualCoder's saved SQL "
-    "queries that name it (not read here), and so do this server's "
+    "including the one just taken, keeps the old name, and so do "
+    "Exegete's coding-session files and any of QualCoder's saved SQL "
+    "queries that name it (not read here), and so do Exegete's "
     "pseudonymisation journal entries and run records, which keep the "
     "file's name as it was at the run unless that name carried a name "
     "from the mapping (they then name the file by its id), though a later "
@@ -17826,7 +17919,7 @@ def _stored_copy_block(db, mediapath: Optional[str],
                          f"will not find it.")}
     if mediapath:
         return {"kind": "unrecognised",
-                "note": "The stored path has a form this server does not "
+                "note": "The stored path has a form Exegete does not "
                         "recognise; whatever it points at keeps its name."}
     # A text with no stored path. Names are compared with the listing
     # under the strictest disk's rules (S-1); nothing is joined into a
@@ -18120,8 +18213,8 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
                             "it had before, restore_backup or QualCoder's "
                             "own Rename can put that name back (restoring "
                             "an earlier backup undoes everything done after "
-                            "it, any pseudonymisation run included); this "
-                            "server recognises a rename back only from a "
+                            "it, any pseudonymisation run included); "
+                            "Exegete recognises a rename back only from a "
                             "backup that shows this entry with that name "
                             "and, for its documents copy, the same text.")
             return {"error": message}
@@ -18170,7 +18263,7 @@ def rename_file(file_id: int, new_name: str,
     written and no backup made; a name stored with spaces at its ends or
     in another Unicode form is rewritten in normal form when retyped.
 
-    QualCoder 4.0 writes no lock file, so this server cannot see a 4.0 window that has the project open: a Manage Files window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
+    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window that has the project open: a Manage Files window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
     the user to close the project in QualCoder, re-check with
@@ -18301,7 +18394,7 @@ def create_attribute_type(name: str, applies_to: str,
                     are stored as text, checked to be finite numbers by
                     set_attribute and compared as numbers by
                     query_by_attribute. There is no path back from numeric data to
-                    character-only in this server, so choose carefully.
+                    character-only in Exegete, so choose carefully.
         memo: Optional description of what the attribute captures
         create_backup: Create a timestamped backup before writing (default True)
 
@@ -18352,7 +18445,7 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     included, is refused with an error and nothing changes. QualCoder
     blanks or reverts a value that is not a number, with a warning, and
     accepts "nan", "inf" and underscores, which its attribute report
-    then reads as other numbers; this server refuses them, so what it
+    then reads as other numbers; Exegete refuses them, so what it
     stores is what query_by_attribute compares.
 
     Refused while QualCoder has the project open (heartbeat lock): ask
@@ -18392,7 +18485,7 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
 
 # The export tools' refusal of a path inside the state folder.
 STATE_FOLDER_EXPORT_REFUSAL = (
-    "Refusing to write the export inside this server's state folder "
+    "Refusing to write the export inside Exegete's state folder "
     "(~/.exegete, or ~/.qualcoder_mcp, its earlier name), which holds "
     "session files and internal state; choose another location.")
 
@@ -19283,8 +19376,7 @@ def export_frequencies_csv(output_path: str,
             "hidden_coders": hidden_coders_in_file,
             "note": ("The exported FILE carries every coder's counts, as "
                      "QualCoder's own frequencies report does; the coders "
-                     "list above names only the coders visible in "
-                     "QualCoder."),
+                     "list above names only the visible coders."),
         }}
     else:
         coder_keys = {"coders": visible_coders}
@@ -19385,7 +19477,7 @@ def analyze_theme(theme_name: str) -> str:
     Args:
         theme_name: The name of the code/theme to analyse
     """
-    return _mark_unregistered(f"""Please analyse the theme '{theme_name}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please analyse the theme '{theme_name}' in this project.
 
 Use the following tools to gather information:
 1. First find the code and its id: get_coding_frequencies lists every
@@ -19413,7 +19505,7 @@ def compare_codes(code1: str, code2: str) -> str:
         code1: Name of the first code
         code2: Name of the second code
     """
-    return _mark_unregistered(f"""Please compare and contrast the codes '{code1}' and '{code2}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please compare and contrast the codes '{code1}' and '{code2}' in this project.
 
 Use these tools to gather data:
 1. Use get_coded_segments for both codes (get_coding_frequencies gives
@@ -19433,11 +19525,11 @@ Provide a comparison grounded in verbatim segments. If the two codes do not diff
 def summarize_project() -> str:
     """Generate a prompt for describing the state of a project.
 
-    This prompt template helps describe what a Qualcoder project holds
+    This prompt template helps describe what a project holds
     and how far its coding has progressed, without drawing analytic
     conclusions from counts.
     """
-    return _mark_unregistered("""Please describe the state of this Qualcoder project.
+    return _mark_unregistered("""Please describe the state of this project.
 
 Use the following tools and resources:
 1. get_project_summary - for overall statistics and the number of files
@@ -19468,7 +19560,7 @@ def explore_case(case_name: str) -> str:
     Args:
         case_name: The name of the case to explore
     """
-    return _mark_unregistered(f"""Please explore and analyse the case '{case_name}' in this Qualcoder project.
+    return _mark_unregistered(f"""Please explore and analyse the case '{case_name}' in this project.
 
 Use these tools and resources to gather information:
 1. get_case_code_matrix lists every case with its id (so does the
@@ -19504,18 +19596,17 @@ def _create_project_refusal(text: str, **extra: Any) -> str:
 # missing (the owner's ruling 6 of 2026-09-25), and the warning for an
 # explicit "not known" (the study's 7.5 wording).
 CODER_NAME_ASK = (
-    "Ask the researcher for the coder name they use in QualCoder "
-    "(Settings, Coder name), exactly as it appears there, and call again "
-    "with it as coder_name. It is the researcher's own name for their "
-    "codings, not the AI's, and must never be guessed. If they do not use "
-    "QualCoder yet or do not know it, call again with "
-    "coder_name_not_known=true instead.")
+    "Ask the researcher for their own coder name, exactly as they give it "
+    "(in QualCoder: Settings, Coder name), and call again with it as "
+    "coder_name. It is the researcher's own name for their codings, not "
+    "the AI's, and must never be guessed. If they do not use QualCoder or "
+    "do not know it, call again with coder_name_not_known=true instead.")
 CODER_NAME_NOT_KNOWN_WARNING = (
-    "The researcher's QualCoder coder name is not known, so the check that "
+    "The researcher's own coder name is not known, so the check that "
     "keeps the AI's codings apart from the researcher's own is off. It "
-    "comes on when the researcher first opens this project in QualCoder, "
-    "which records their name there; until then, make sure the AI coder "
-    "name chosen is not the name they use in QualCoder.")
+    "comes on when the project records the researcher's name (QualCoder "
+    "records it when it first opens the project); until then, make sure "
+    "the AI coder name chosen is not theirs.")
 
 
 def _coder_name_for_creation(coder_name: Any, not_known: Any
@@ -19537,9 +19628,9 @@ def _coder_name_for_creation(coder_name: Any, not_known: Any
         return None, "coder_name must be the coder name, given as text."
     if not coder_name.strip():
         return None, (
-            "coder_name is empty. Give the coder name exactly as it "
-            "appears in QualCoder, or, when the researcher does not know "
-            "it, leave coder_name out and pass coder_name_not_known=true.")
+            "coder_name is empty. Give the researcher's own coder name "
+            "exactly as they give it, or, when they do not know it, leave "
+            "coder_name out and pass coder_name_not_known=true.")
     if not_known:
         return None, (
             "Give coder_name or coder_name_not_known=true, not both: the "
@@ -19552,7 +19643,7 @@ def _coder_name_for_creation(coder_name: Any, not_known: Any
         return None, (
             f"\"{SPEAKER_SYSTEM_CODER}\" is QualCoder's speaker coder, which "
             f"every project lists; it is not a person's coder name. Ask the "
-            f"researcher for the name they use in QualCoder.")
+            f"researcher for their own coder name.")
     return name, None
 
 
@@ -19590,11 +19681,10 @@ def _opening_in_qualcoder_40(folder: Path, coder: str) -> str:
 
 def _created_project_next_steps(coder: str,
                                 previous: Optional[str]) -> List[str]:
-    differ = (f"it must differ from the researcher's own QualCoder coder "
-              f"name, \"{coder}\"." if coder else
-              "the researcher's own QualCoder coder name is not known, so "
-              "make sure the name chosen is not the one they use in "
-              "QualCoder.")
+    differ = (f"it must differ from the researcher's own coder name, "
+              f"\"{coder}\"." if coder else
+              "the researcher's own coder name is not known, so make sure "
+              "the name chosen is not theirs.")
     return [
         ("No AI coder name is set for this project yet. Ask the researcher "
          "which name the AI's codings and other writes should be stored "
@@ -19701,7 +19791,7 @@ def _create_project_place_refusal(name: Any, directory: Any):
 def create_project(name: str, directory: Optional[str] = None,
                    coder_name: Optional[str] = None,
                    coder_name_not_known: bool = False) -> str:
-    """Create a new, empty QualCoder project, and select it.
+    """Create a new, empty project, and select it.
 
     Makes the project folder "<name>.qda" with its four subfolders and a
     database in QualCoder 4.0's format, exactly as QualCoder 4.0's own New
@@ -19709,12 +19799,12 @@ def create_project(name: str, directory: Optional[str] = None,
     imported at once. Nothing existing is ever changed: a name already in
     use is refused, never replaced or given a "_1".
 
-    THE RESEARCHER'S CODER NAME: ask the researcher for the coder name
-    they use in QualCoder (Settings, Coder name) and pass it exactly as
+    THE RESEARCHER'S CODER NAME: ask the researcher for their own coder
+    name (in QualCoder: Settings, Coder name) and pass it exactly as
     they give it. It is their own name, not the AI's, and must never be
     guessed or taken from anywhere else: a wrong name makes QualCoder ask
     them to keep or switch names when they open the project. If they do
-    not use QualCoder yet or do not know it, pass coder_name_not_known=true
+    not use QualCoder or do not know it, pass coder_name_not_known=true
     instead; the project is then created, and the result says what that
     means. With neither, nothing is created and the answer asks for it.
 
@@ -19730,11 +19820,11 @@ def create_project(name: str, directory: Optional[str] = None,
               dropped)
         directory: An existing folder to create the project in, as a
                    full path or one starting with ~; leave it out to use
-                   this server's workspace, ~/Documents/Exegete projects
+                   Exegete's workspace, ~/Documents/Exegete projects
                    unless the host set another (the answer gives the
                    path)
-        coder_name: The coder name the researcher uses in QualCoder
-                    (Settings, Coder name), exactly as they give it
+        coder_name: The researcher's own coder name (in QualCoder:
+                    Settings, Coder name), exactly as they give it
         coder_name_not_known: True when the researcher does not know it;
                     then leave coder_name out
 
@@ -19859,6 +19949,25 @@ def create_project(name: str, directory: Optional[str] = None,
 
 
 # ============================================================================
+# Checking for a new version (the owner's ruling of 5 October 2026)
+# ============================================================================
+
+@mcp.tool(annotations=TOOL_CHECKS_ONLINE)
+async def check_for_updates() -> str:
+    """Call only when the user asks whether Exegete is up to date, how to update it, or which version they have. Give the user the message and the steps as returned, and do not suggest other ways to update, such as GitHub's Releases page. The steps are for the user to follow: the app that started Exegete must be closed while Exegete changes, so do not run them yourself. Returns the installed version and its date, the newest version and its date, numbered steps for this computer, and links. While checking is on, it may fetch Exegete's version file from its website, which GitHub hosts, at most once a day; when checking is switched off in Exegete's settings, it makes no connection and returns the installed version and where to look."""
+    # The fetch runs in a worker thread under updates.DEADLINE, so the
+    # server keeps answering while it waits (every other tool is plain
+    # and runs on the event loop). The guard every tool has, written out:
+    # _tool_guard wraps plain functions only.
+    try:
+        return await anyio.to_thread.run_sync(
+            functools.partial(updates.tool_answer, tool_available=True),
+            abandon_on_cancel=True)
+    except Exception as e:
+        return _error_answer("check_for_updates", e)
+
+
+# ============================================================================
 # Main entry point
 # ============================================================================
 
@@ -19928,7 +20037,7 @@ def _workspace_start_problem() -> Optional[str]:
         return None
     # The spelling the host's configuration used (v0.14.1)
     setting = env_settings.read("workspace").name
-    unusable = (f"{setting} is not a folder path this server can "
+    unusable = (f"{setting} is not a folder path Exegete can "
                 f"use; check the folder in the host's configuration.")
     try:
         resolved = Path(folder).resolve()
@@ -19939,7 +20048,7 @@ def _workspace_start_problem() -> Optional[str]:
     # answer the conversation, still name the folder).
     if any(part.name.lower().endswith(new_project.PROJECT_SUFFIX)
            for part in (resolved,) + tuple(resolved.parents)):
-        return (f"{setting} names a folder inside a QualCoder project "
+        return (f"{setting} names a folder inside a project "
                 f"(a folder ending in .qda); a project inside a project is "
                 f"copied into every backup of the outer one. Choose another "
                 f"folder in the host's settings.")
@@ -19950,8 +20059,8 @@ def _workspace_start_problem() -> Optional[str]:
     install = _install_folder()
     if install is not None and (resolved == install
                                 or install in resolved.parents):
-        return (f"{setting} names a folder inside the folder this "
-                f"server is installed in, which an update or an uninstall "
+        return (f"{setting} names a folder inside the folder Exegete "
+                f"is installed in, which an update or an uninstall "
                 f"replaces, and the projects with it. Choose another folder "
                 f"in the host's settings.")
     try:
@@ -20059,8 +20168,8 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
 # ever appears in that situation; it goes to stderr (stdout is the MCP
 # transport) and the server keeps waiting as before.
 TTY_NOTICE = (
-    f"{names.SERVER_NAME} is an MCP server. It is normally started by an MCP "
-    "host "
+    f"{names.SERVER_NAME} is a qualitative analysis application that runs "
+    "as an MCP server. It is normally started by an MCP host "
     "(Claude Desktop, Claude Code, LM Studio or another MCP client) and speaks "
     "JSON-RPC over standard input and output, so when it is started by hand in "
     "a terminal it prints its start-up lines and this note, then waits for a "
@@ -20101,8 +20210,10 @@ def _build_arg_parser(started_as: Optional[str] = None
         version = f"{names.COMMAND} {_package_version}"
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="MCP server for QualCoder projects. It is started by an "
-                    "MCP host over stdio; run it with --version to check the "
+        description="Exegete: a qualitative analysis application you use "
+                    "in conversation with an AI assistant, compatible with "
+                    "QualCoder. It runs as an MCP server, started by an MCP "
+                    "host over stdio; run it with --version to check the "
                     "installed version.")
     parser.add_argument("--version", action="version", version=version)
     # v0.14.1: the transition check (transition.py)
@@ -20252,6 +20363,18 @@ def main(argv: Optional[List[str]] = None, *,
     except Exception as e:
         logger.warning("Could not tidy the reading folder: %s",
                        error_label(e))
+
+    # The check for new versions (the owner's ruling of 5 October 2026):
+    # after the state folder is settled, since it keeps its record there,
+    # and never for --version or --check-transition. It logs whether it is
+    # on, and checks in the background only when a week has passed.
+    try:
+        updates.start(_package_version, started_as)
+    except Exception as error:
+        # It never stops the server: without it, nothing is checked
+        logger.warning("The check for new versions could not start (%s); "
+                       "nothing will be checked in this run.",
+                       error_label(error))
 
     # Run the server using stdio transport
     mcp.run(transport="stdio")

@@ -7,8 +7,10 @@ Claude Desktop instead:
 This guide will get you up and running with Exegete (formerly
 qualcoder-mcp), a qualitative analysis application you use in
 conversation with an AI assistant, compatible with QualCoder, in 10
-minutes. It sets Exegete up by hand, in Claude Desktop's settings file;
-README's one-click extension is the easier start.
+minutes. QualCoder is free software for qualitative analysis, of the
+same kind as NVivo, ATLAS.ti and MAXQDA. This guide sets Exegete up by
+hand, in Claude Desktop's settings file; README's one-click extension
+is the easier start.
 
 ## Prerequisites Checklist
 
@@ -18,14 +20,23 @@ README's one-click extension is the easier start.
       `claude mcp add exegete -- <venv-python> -m exegete.server`
       in an empty folder of its own (see "Alternative: Claude Code and
       other MCP clients" in INSTALL.md). Claude Code opens files by
-      itself, outside Exegete: never start it in your home folder or a
-      folder that holds a study, and for participants' data use Claude
-      Desktop's chat instead, with computer use off, no folder that
-      holds your projects or transcripts connected to it, and no other
-      extension that reads files (PRIVACY.md, "Assistants that open
-      files by themselves")
-- [ ] At least one QualCoder project (a `.qda` project folder): the
-      setup below cannot create one; the one-click extension can
+      itself, outside Exegete, so a real study kept on the same
+      computer is within its reach even while you practise, and
+      Exegete's list of projects tells it where it is; started in your
+      home folder or a folder that holds a study, it reads that study
+      without asking. If that matters for a study, you could keep
+      practice projects in a folder of their own, or work on that
+      study with Claude Desktop's chat, with computer use off, no
+      folder that holds your projects or transcripts connected to it,
+      and no other extension that reads files. A folder of their own
+      keeps practice projects apart but does not put the study out of
+      Claude Code's reach, and what it opens goes to the AI provider,
+      which may train on it while training is on (PRIVACY.md,
+      "Assistants that open files by themselves")
+- [ ] A project to work on (a `.qda` folder, in QualCoder's format):
+      the standard tool set this setup uses cannot create one; the
+      one-click extension can, and so can this setup with
+      `EXEGETE_TOOLSET=lifecycle` (INSTALL.md)
 
 > Choosing between Claude plans, an API key, or a fully local model?
 > See "Choosing your AI host: data-governance options" in INSTALL.md
@@ -33,7 +44,7 @@ README's one-click extension is the easier start.
 
 ## Installation Steps
 
-### 1. Install the MCP Server
+### 1. Install Exegete
 
 The quickest install is from PyPI (`pip install exegete` in a
 virtual environment, or `pipx install exegete`; see "Recommended:
@@ -58,14 +69,14 @@ source venv/bin/activate
 pip install -e .
 ```
 
-### 2. Find Your Qualcoder Project
+### 2. Find your project
 
 Locate your `.qda` project folder (it's a folder with `.qda` extension, not a single file). Common locations:
 - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/`
 - `~/QualCoder/MyProject/MyProject.qda/`
 
 You can find it by:
-- Opening Qualcoder and checking the recent projects list
+- In QualCoder, if you use it: the recent projects list
 - Searching for `.qda` folders: `find ~ -name "*.qda" -type d 2>/dev/null`
 
 ### 3. Configure Claude Desktop
@@ -115,14 +126,26 @@ Replace:
 
 1. Quit Claude Desktop completely (Cmd+Q)
 2. Reopen Claude Desktop
-3. The MCP should now be connected!
+3. Exegete should now be available in a new conversation.
 
 ### 5. Test It Out
+
+**Where what Claude reads goes.** What Claude reads through Exegete
+(passages, codes, memos, names) goes to Anthropic, whose computers run
+the AI behind Claude Desktop. Switch training off before participants'
+data: while it is on, Anthropic may use your conversations to train its
+models. On a personal plan (Free, Pro or Max) it is the Model
+Improvement setting, at https://claude.ai/settings/data-privacy-controls.
+Rating a reply (thumbs up or down) can still let Anthropic train on
+that conversation.
+[Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
+in the README, says the rest: the checks before participants' data, and
+which assistants open files by themselves.
 
 In Claude Desktop, try these prompts:
 
 ```
-Can you give me a summary of my Qualcoder project?
+Can you give me a summary of my project?
 ```
 
 ```
@@ -135,10 +158,11 @@ Show me the most frequently used codes
 
 ## Updating Later
 
-When a new version is released: `cd` into the cloned folder, run
-`git pull`, then `venv/bin/pip install -e .`, and **fully quit and
-relaunch your Claude client**; new tools only appear after the
-restart. Confirm the installed version with `venv/bin/python -m
+When a new version is released: first **fully quit your Claude
+client**, so that no copy of the server is running while its files
+change; then `cd` into the cloned folder, run `git pull`, then
+`venv/bin/pip install -e .`, and open the client again; new tools only
+appear after the restart. Confirm the installed version with `venv/bin/python -m
 exegete.server --version`, which prints the version and exits
 (`venv/bin/pip show exegete` still works and spells
 `0.14.2-alpha` as `0.14.2a0`). Updates never touch your projects or
@@ -169,8 +193,8 @@ You should see it start without errors. Press Ctrl+C to stop.
 
 ### Common Errors
 
-**"No Qualcoder project selected"**
-- The server has no project open. With the fixed-project config above,
+**"No project selected"**
+- Exegete has no project open. With the fixed-project config above,
   make sure the `env` section has `EXEGETE_PROJECT_PATH` and check
   for typos in the variable name; otherwise ask Claude to list and
   select a project (the error also names the last project used on this
@@ -198,7 +222,7 @@ Once it's working:
 
 - Check the [troubleshooting section of INSTALL.md](INSTALL.md#troubleshooting)
 - Review [MCP documentation](https://modelcontextprotocol.io/)
-- Check [Qualcoder documentation](https://github.com/ccbogel/QualCoder/wiki)
+- Check [QualCoder documentation](https://github.com/ccbogel/QualCoder/wiki)
 - Bug reports, questions and feature ideas: [GitHub Issues](https://github.com/nicotem/exegete/issues)
   (the only support channel; support requests by email will not receive a reply; see [SUPPORT.md](SUPPORT.md))
 

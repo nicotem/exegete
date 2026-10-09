@@ -2,16 +2,23 @@
 """v0.14.2, the README review: the README rewritten for readers new to
 Exegete (the owner, 30 September 2026: easy to follow for people who do
 not already know what this is about, the detail on tool calls elsewhere,
-no leftovers such as NEW labels, sections written more patiently).
+no leftovers such as NEW labels, sections written more patiently), then
+rewritten again to persuade (the owner, 1 October 2026: the diagrams,
+the feature list, the table of tool sets and the advanced features back,
+and fewer words).
 
-Pinned here: the first screen's key promises and its three links; "How
-it works", with "It has no AI of its own" checked against the code; the
+Pinned here: the first screen (the benefit before any feature name, the
+example before the next steps, three next steps in order); "How it
+works", with "It has no AI of its own" checked against the code; the
 first line of "Start here"; the two coder names; the approval steps the
-README points to; the commitments' opening; the date beside "Latest";
-and two sweeps, one for labels tied to a release and one for words that
-make counts sound like findings. Pins that moved with their text stay in
-the modules that held them (test_v0141_intro_openai.py,
-test_v0141_readme_review.py, test_v014_release_fix1_texts.py).
+newcomer's part points to, named in the advanced section; the
+commitments' opening; the date beside "Latest"; and two sweeps, one for
+labels tied to a release and one for words that make counts sound like
+findings. The diagrams, the tables, the example's steps and the length
+are pinned in test_v0142_readme_persuasive.py. Pins that moved with
+their text stay in the modules that held them
+(test_v0141_intro_openai.py, test_v0141_readme_review.py,
+test_v014_release_fix1_texts.py, test_v0142_docs.py).
 """
 
 import ast
@@ -53,37 +60,63 @@ ANCHOR = "https://github.com/nicotem/exegete#"
 
 
 # ---------------------------------------------------------------------------
-# The first screen: what it is, and where to begin
+# The first screen: what it is, what it does for you, where to go next
+# (the README rewritten to persuade, 1 October 2026: value first, an
+# example before any explanation, one next step for each reader)
 # ---------------------------------------------------------------------------
 
-def test_the_first_screen_says_where_the_ai_runs_and_where_to_begin():
-    opening = _between(_readme(), "# Exegete", "## How it works")
-    before = opening[opening.index("**Before you start**"):]
-    # after what it is and the three lists, as a short list
-    assert opening.index("**The aim**") < opening.index("**Before you start**")
+HEADINGS = ("What you can do", "How it works", "Where your data goes",
+            "Start here", "Three commitments", "For advanced users",
+            "What comes next", "Disclaimer", "Licence", "Acknowledgements")
+
+
+def test_the_first_screen_says_what_it_does_and_where_to_go():
+    opening = _between(_readme(), "# Exegete", "## What you can do")
     for words in (
-            "Exegete is an experimental early version (an alpha), built by "
-            "one researcher, independently of QualCoder's developers.",
-            "Parts marked Experimental have had little or no use yet",
-            "Try it on practice text first, and work on a copy of any real "
-            "study.",
-            "The easiest start is the Claude Desktop app on a Mac or a "
-            "Windows computer",
-            "The assistant's app runs on your computer, but with Claude, "
-            "ChatGPT or Codex the AI behind it runs on its maker's "
-            "computers, and what it reads through Exegete goes there.",
-            "Some assistants also open files on your computer by "
-            "themselves.",
-            "before you use interviews or anything else from participants.",
-            "not email. Never put participant data in an issue."):
-        assert words in before, words
-    # Three links to the sections a newcomer reads first, in that order
-    links = re.findall(r"\]\((" + re.escape(ANCHOR) + r"[^)]+)\)", before)
-    assert links == [ANCHOR + "where-your-data-goes", ANCHOR + "how-it-works",
-                     ANCHOR + "start-here"]
+            # the benefit, in the reader's terms, before any feature name
+            "Analyse your interviews by asking, in your own words. Your AI "
+            "assistant reads, searches and suggests; you decide. Every "
+            "suggested coding quotes the text word for word and waits for "
+            "your approval",
+            # the example, labelled for what it is
+            "*An illustration, shortened, with made-up practice text; your "
+            "assistant's words will differ.*",
+            # the honest flags, once (v0.14.2, the README's first round of
+            # checks: where the data goes is back on the first screen, and
+            # the evidence stands beside the caveats)
+            "- **Interviews or other participants' data?** First read "
+            "[Where your data goes](https://github.com/nicotem/exegete"
+            "#where-your-data-goes): the AI behind your assistant runs on "
+            "its maker's computers, and what it reads goes there; some "
+            "assistants also open files by themselves.",
+            # (the owner, 1 October 2026: free, open-source software, the
+            # licence named, and what it costs, in "Start here")
+            "Exegete is free, open-source software, under QualCoder's own "
+            "licence (LGPL-3.0-or-later), and costs nothing (your assistant "
+            "may: see \"Start here\"). It is tested on Windows, macOS and "
+            "Linux with every change.",
+            "an early version (an alpha) built by one researcher, "
+            "independently of QualCoder's developers",
+            "parts marked Experimental have had little or no use yet",
+            "not email; never put participant data in an issue."):
+        assert words in opening, words
+    # no tool, protocol or feature name before the benefit sentence
+    lede = opening[:opening.index("Analyse your interviews")]
+    for word in ("MCP", "tool", "server", "`"):
+        assert word not in lede.replace("shields.io", ""), word
+    # the example comes before the next steps, and they are three, one for
+    # each reader, in that order
+    # (v0.14.2, the README's first round of checks: the example is text
+    # that wraps on a phone, in a block quote, not a code block)
+    assert opening.index("**You:** Bring this into") < \
+        opening.index("**New here?**")
+    assert "\n> **You:** Bring this into" in _read("README.md")
+    assert "```" not in opening
+    links = re.findall(r"\]\((" + re.escape(ANCHOR) + r"[^)]+)\)", opening)
+    assert links == [ANCHOR + "start-here", ANCHOR + "where-your-data-goes",
+                     ANCHOR + "for-advanced-users"]
     readme = _read("README.md")
-    order = [readme.index(f"\n## {h}\n") for h in
-             ("How it works", "Where your data goes", "Start here")]
+    order = [readme.index(f"\n## {h}\n") for h in HEADINGS]
     assert order == sorted(order)
     # No contents list of in-page links: every link stays absolute
     assert "](#" not in readme
@@ -92,39 +125,36 @@ def test_the_first_screen_says_where_the_ai_runs_and_where_to_begin():
 def test_how_it_works_explains_before_it_instructs():
     section = _between(_readme(), "## How it works", "## Where your data goes")
     for words in (
-            "The AI model behind it, which reads and answers, runs on its "
-            "maker's computers (Anthropic's or OpenAI's), unless you set up "
-            "one that runs on your own computer.",
-            "in Claude Desktop it comes as an extension, a file you "
-            "download and double-click. It has no AI of its own.",
-            # the two ways a text comes in, and what each sends
-            "You can ask the assistant to bring in documents from your "
-            "computer, Word and PDF included (provisional): "
-            "Exegete reads them on your computer, as QualCoder's own import "
-            "does, and only what the assistant later reads of them goes to "
-            "the AI's maker, as for a document imported in QualCoder.",
-            "Or you can paste or attach a transcript's text in the "
-            "conversation, and the assistant hands it to Exegete: the whole "
-            "text goes to the AI's maker.",
+            "Exegete runs on your computer. It has no AI of its own. The AI "
+            "model behind your assistant, which reads and suggests, runs on "
+            "its maker's computers unless it is a local one.",
             # what Exegete checks: the quoted words, not whether the code
-            # fits (record_suggestions' verbatim check)
-            "Exegete checks that each suggested coding quotes the file's "
-            "words exactly, keeps suggestions waiting, and writes to your "
-            "project; you decide.",
+            # fits (record_suggestions' verbatim check); the diagram says it
+            "Exegete checks each quote is the file's own words",
             # when anything is written, and not more than that: approving
             # marks, and the assistant writes in a step of its own
             # (apply_codings, create_proposed_codes)
             "Suggested codings and proposed codes wait in a review list "
             "outside the project until you approve them and the assistant "
             "writes them. Other changes, such as making a code or writing "
-            "a memo, are made when the tool runs.",
+            "a memo, are made when the tool runs;",
             # the approval, with its reason and its limit
-            "Exegete hears only from the assistant, never from you "
-            "directly.",
-            "Exegete records the approval the assistant reports: it cannot "
-            "tell whether you gave it."):
+            # v0.14.2, the README's first round of checks: one sentence
+            "Exegete hears only from the assistant, so it records the "
+            "approval the assistant reports: it cannot tell whether you "
+            "gave it."):
         assert words in section, words
     assert "nothing is written" not in section.lower()
+    # the two ways a text comes in, and what each sends, where data is
+    # discussed
+    data = _between(_readme(), "## Where your data goes", "## Start here")
+    # v0.14.3 (provisional): a document brought in through Exegete too,
+    # and what the import's preview sends
+    assert ("Text you paste or attach goes in full; a document imported in "
+            "QualCoder or brought in through Exegete (provisional), only as "
+            "far as the assistant reads it: Exegete's preview of an import "
+            "sends the documents' names, sizes, lengths and warnings, never "
+            "their text.") in data
 
 
 # Modules that would give Exegete an AI, or a way onto the network, of its
@@ -172,14 +202,23 @@ def _model_or_network_uses(source):
     return uses
 
 
+# The check for new versions (pull request #11, the owner's ruling 60 of
+# 6 October 2026) is the one module that reaches the network, for one
+# file, Exegete's version file, with the standard library; it imports no
+# model's client and asks no model
+NETWORK_MODULE = "src/exegete/updates.py"
+NETWORK_ONLY = ("socket", "ssl", "urllib.request")
+
+
 def test_it_has_no_ai_of_its_own():
     """"It has no AI of its own" (README, "How it works"): its
     dependencies are the MCP library and, from 0.14.3, the two small
     libraries the document import reads with (a safe XML parser,
     QualCoder's RTF reader), neither a model's client nor a network
-    library; and nothing in its source imports one, or asks the host's
-    model through MCP's sampling call. The day that changes, this
-    fails."""
+    library; nothing in its source imports a model's client or asks the
+    host's model through MCP's sampling call; and a network library only
+    in the check for new versions, which the README names. The day that
+    changes, this fails."""
     with open(REPO / "pyproject.toml", "rb") as handle:
         dependencies = tomllib.load(handle)["project"]["dependencies"]
     assert [re.match(r"[A-Za-z0-9_.-]+", d).group(0) for d in dependencies] \
@@ -188,9 +227,28 @@ def test_it_has_no_ai_of_its_own():
     for path in sorted((REPO / "src").rglob("*.py")):
         uses = _model_or_network_uses(path.read_text(encoding="utf-8"))
         if uses:
-            found[str(path.relative_to(REPO))] = uses
+            found[str(path.relative_to(REPO)).replace("\\", "/")] = uses
+    network = found.pop(NETWORK_MODULE, [])
     assert found == {}
+    assert network and all(
+        any(name == m or name.startswith(m + ".") for m in NETWORK_ONLY)
+        for name in network), network
     assert "It has no AI of its own." in _readme()
+    # "In short" is the sentence a data-management plan quotes, so it
+    # gives the check's whole rule: once a week on its own, and when the
+    # researcher asks (up to once a day, updates.ASKED_REUSE), and that
+    # the extension, the route this README suggests, has it on unless
+    # switched off. "At most once a week while switched on" said neither
+    # (the port's QA and truth checks, round 1, 7 October 2026: four
+    # requests in four days, asked on four days running).
+    in_short = " ".join(_between(_readme(), "**In short.**",
+                                 "What the assistant reads").split())
+    assert ("All it sends itself is a request for a file that says whether "
+            "a newer version exists, with nothing from your projects: at "
+            "most once a week, and when you ask, while checking is on, as "
+            "it is in the Claude Desktop extension unless you switch it "
+            "off") in in_short
+    assert "once a week while switched on" not in in_short
 
 
 def test_the_no_ai_check_would_notice():
@@ -213,19 +271,23 @@ def test_the_no_ai_check_would_notice():
 # "Start here", a first session, the approval steps, the commitments
 # ---------------------------------------------------------------------------
 
-def test_start_here_says_which_way_and_sends_a_reader_back():
+def test_start_here_says_which_way():
     first = _between(_readme(), "## Start here",
-                     "### What you need, at each stage")
-    for words in (
-            "Claude Desktop, with one click, is the easiest, and the one "
-            "this project suggests for participants' data.",
-            "ChatGPT's desktop app and Codex take the Terminal route "
-            "(installing by typing a few commands), and are for practice and "
-            "data that is not sensitive.",
-            "If you came straight here, read \"How it works\" and \"Where "
-            "your data goes\" first: the assistant you choose decides where "
-            "your data goes."):
-        assert words in first, words
+                     "### Claude Desktop, with one click")
+    assert ("Claude Desktop, with one click, is the easiest start, and the "
+            "one this project suggests for participants' data.") in first
+    # v0.14.2, the README's first round of checks: a reader who came
+    # straight here is sent to where the data goes first, by a link
+    assert ("Came straight here? First read [Where your data goes]"
+            "(https://github.com/nicotem/exegete#where-your-data-goes).") \
+        in first
+    # and the one-click steps send the reader to the checks before
+    # participants' data, which live where data is discussed
+    one_click = _between(_readme(), "### Claude Desktop, with one click",
+                         "### ChatGPT's desktop app and Codex")
+    assert ("Before participants' data, go through [the five checks]"
+            "(https://github.com/nicotem/exegete#where-your-data-goes)") \
+        in one_click
 
 
 def test_a_first_session_names_both_coder_names():
@@ -235,85 +297,116 @@ def test_a_first_session_names_both_coder_names():
     "the AI's codings", since each coding under it was approved."""
     first = _between(_readme(), "### A first session",
                      "### Other assistants, and updates")
-    names = _between(first, "**Two coder names.**", "**To see it in "
-                     "QualCoder:**")
-    for words in (
-            "The first is your own, the one QualCoder records with what you "
-            "code there. The assistant asks for it when it makes the "
-            "project (in QualCoder: Project menu, Settings, \"Current "
-            "coder\";",
-            "The second, which the other documents call the AI coder name, "
-            "is a separate name you choose for each project. Exegete writes "
-            "under it what is done through the conversation, the codings you "
-            "approve included. The assistant asks for it the first time "
-            "something is to be written under it."):
-        assert words in names, words
+    names = _between(first, "**Two coder names.**",
+                     "**A project you already have.**")
+    # v0.14.2, the README's first round of checks: two sentences, and what
+    # to say without QualCoder; since the owner's ruling of 7 October 2026,
+    # without assuming that the reader uses QualCoder at all
+    assert ("When it makes the project, the assistant asks for your own "
+            "coder name, which the project keeps so that your work and the "
+            "AI's stay apart (QualCoder, if you use it, records your coding "
+            "under it). Not using QualCoder, or no coder name? Say so. Before "
+            "its first write, it asks for the AI coder name, kept per "
+            "project, under which Exegete writes what is done through the "
+            "conversation.") in names
+    assert "no QualCoder yet" not in names
+    # the example on the first screen shows the second ask, before the
+    # first write (import_text_file asks through _resolve_write_owner)
+    example = _between(_read("README.md"), "> **You:** Bring this",
+                       "*An illustration")
+    assert example.index("which name should my work be stored under?") < \
+        example.index("Done. Practice now holds Interview 3.")
     assert "the AI's codings" not in _readme()
     assert "coder_name" in inspect.signature(server.create_project).parameters
     assert server._ASK_ACTION == "set_project_ai_coder_name"
+    assert "_resolve_write_owner" in inspect.getsource(
+        server.import_text_file)
     assert "The first write that needs a name stops and asks" in \
         _flat("PRIVACY.md")
 
 
 def test_the_approval_steps_are_named_where_the_readme_points():
-    """The README keeps the scope (the steps that record your decisions
-    and write what you approved) and points to INSTALL.md, which names
-    them; each named tool is one the assistant is given."""
-    adds = _between(_readme(), "## What it does that QualCoder does not",
-                    "## Three commitments")
+    """The newcomer's part keeps the scope (the steps that record your
+    decisions and write what you approved) and points to INSTALL.md,
+    which names them; each named tool is one the assistant is given. The
+    advanced section names the tools of the coding loop."""
+    readme = _readme()
+    # (the README's second round of checks: "What it is not", which
+    # followed, is said in the opening, so the section's end bounds it)
+    approval = _between(readme, "**Your approval, and its limit.**",
+                        "## Where your data goes")
     for words in (
-            "The assistant is told to bring each one to you with the "
-            "passage, that reading and its reason.",
-            "Exegete records the approval the assistant reports and cannot "
+            "so it records the approval the assistant reports: it cannot "
             "tell whether you gave it.",
-            "Never allow for the whole conversation the steps that record "
-            "your decisions and write what you approved",
+            # v0.14.2, the README's first round of checks: shorter, and
+            # what to check the counts against (the counts
+            # update_suggestion_status returns, below)
+            "Keep the assistant asking for the steps that record your "
+            "decisions and write them",
             "INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-"
             "are-the-safeguard",
-            "choose \"allow once\" in Claude (with its permission setting "
-            "on Manual, if your message box has one), and answer each "
-            "prompt in Codex.",
-            "no coding is written until the codings are applied."):
-        assert words in adds, words
+            "\"Allow once\" in Claude, each prompt answered in Codex.",
+            "Before any coding is applied, check that the counts (approved, "
+            "rejected, pending) match what you said; if not, say so."):
+        assert words in approval, words
+    status = " ".join(inspect.getsource(server.update_suggestion_status)
+                      .split())
+    assert "the counts this returns are what the user checks against what " \
+        "they said" in status
+    # what the assistant is told to bring, said as an instruction (the
+    # diagram of a coding's path)
+    assert "the assistant is told to show each passage with" in readme
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "
                        "suggestions: your host's settings are the safeguard",
                        "### Try some richer queries")
     server._apply_toolset("lifecycle")
     tools = {t.name for t in asyncio.run(server.mcp.list_tools())}
+    newcomer = _read("README.md")[:_read("README.md").index(
+        "\n## For advanced users\n")]
+    advanced = _between(readme, "## For advanced users", "## What comes next")
     for name in ("update_suggestion_status", "update_proposal_status",
                  "apply_codings", "create_proposed_codes"):
         assert f"`{name}`" in install, name
         assert name in tools, name
-        assert name not in _read("README.md"), name
+        assert name not in newcomer, name
+    for name in ("update_suggestion_status", "apply_codings",
+                 "create_proposed_codes"):
+        assert f"`{name}`" in advanced, name
 
 
 def test_the_commitments_open_with_what_they_promise():
-    section = _between(_readme(), "## Three commitments", "## Read next")
-    opening = section[:section.index("**Compatibility with QualCoder.**")]
-    # named before they are counted
-    assert ("There are three: compatibility, symmetry and interoperability. "
-            "Together they are this project's promises about your work: "
-            "your project stays a QualCoder project, in QualCoder's format, "
-            "that QualCoder opens. The second, symmetry, is an aim, not yet "
-            "a fact.") in opening
+    section = _between(_readme(), "## Three commitments",
+                       "## For advanced users")
+    # v0.14.2, the README's first round of checks: the heading counts
+    # them, and the paragraph that restated them is gone ("There are
+    # three: ..." under "Three commitments"); the first opens the section,
+    # and symmetry says, where it is stated, that it is an aim
+    assert section.startswith("## Three commitments **Compatibility with "
+                              "QualCoder.**")
     for label in ("**Compatibility with QualCoder.**", "**Symmetry:",
                   "**Interoperability.**"):
         assert label in section, label
-    for words in ("keep your project yours", "whatever you do"):
+    assert ("The aim is that the analytic work you can do in QualCoder, you "
+            "can do from the conversation. It is not yet a fact: today the "
+            "two differ in both directions.") in section
+    for words in ("keep your project yours", "whatever you do",
+                  "There are three:"):
         assert words not in section, words
 
 
 def test_latest_carries_the_date_it_was_checked():
     """The README is frozen into each extension and PyPI upload, so the
-    "Latest" badge it names carries the day it was checked; the table of
-    the two programs was checked the same day."""
+    "Latest" badge it names carries the day it was checked, and the table
+    of the two programs carries its own date. (QualCoder 4.0 came out on
+    2 October 2026: the download step and the table were both checked
+    again on 6 October.)"""
     readme = _readme()
     dated = re.findall(r"\"Latest\" when this was checked, on (\d{1,2} \w+ "
                        r"\d{4})\.", readme)
     assert len(dated) == 1 and readme.count("\"Latest\"") == 1
-    assert ("3.8.2, the release marked \"Latest\" when this was checked, on "
-            f"{dated[0]}.") in readme
-    assert f"Checked on {dated[0]}, Exegete " in readme
+    assert ("3.8.2 is listed just below 4.0, the release marked \"Latest\" "
+            f"when this was checked, on {dated[0]}.") in readme
+    assert re.search(r"Checked on \d{1,2} \w+ \d{4}, Exegete ", readme)
 
 
 # ---------------------------------------------------------------------------

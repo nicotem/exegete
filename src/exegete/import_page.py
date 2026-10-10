@@ -10,7 +10,9 @@ in the researcher's browser. For each file whose letters look garbled it
 shows the text exactly as it would be stored (the names list applied),
 one paragraph per stored line, each place marked with what it would
 read as. The answer gives the page's location and counts, never the
-text. The page goes after the import, or once it is an hour old.
+text. The page goes after the import, or at Exegete's first tidy of the
+reading folder once it is an hour old (it tidies when it starts, and at
+most every five minutes while it writes there).
 
 Safe by structure, as the reading copy is: the text goes only into HTML
 text, every character escaped and control characters shown as their
@@ -31,7 +33,7 @@ PAGE_NAME = "letters to check - import preview.html"
 FOR_THE_ASSISTANT = (
     "This page is for the researcher: do not open it, read it or look at "
     "it with any tool, browser or screenshot. It goes after the import, or "
-    "once it is an hour old.")
+    "at Exegete's first tidy once it is an hour old.")
 
 
 def seen_line(numbers: Dict[str, Any]) -> str:
@@ -109,8 +111,9 @@ def build(files: Sequence[Dict[str, Any]], written_at: datetime,
         f"<style>{BASE_STYLE}\n{STYLE}\n</style></head><body>",
         "<header><h1>Letters to check before the import</h1>",
         f'<ul class="facts"><li>Written at {_when(written_at)}, by the '
-        "import's preview. It goes after the import, or once it is an "
-        "hour old.</li><li>Each file below has letters that look "
+        "import's preview. It goes after the import, or at Exegete's "
+        "first tidy once it is an hour old.</li><li>Each file below has "
+        "letters that look "
         "garbled, as when a file is opened once in the wrong character "
         "set and saved again. Each place is marked, with what it would "
         "read as in brackets. Correct text can look so too: a brand name "

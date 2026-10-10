@@ -37,7 +37,7 @@ Tidying: preview pages go after the import, or once they are an hour
 old, when Exegete next tidies the folder (at most every five minutes
 while it writes here, and at each start); a file's folder goes whenever Exegete changes that file's text
 or name; a project's whole subfolder goes when a backup is restored over
-it; and anything older than a week goes when the server starts. A short
+it; and anything older than a week goes when Exegete starts. A short
 note at the top says what the pages are and that they can be deleted at
 any time.
 
@@ -87,8 +87,9 @@ delete this whole folder at any time.
 
 Exegete also deletes them itself: a file's page and copy, when Exegete
 changes that file's text or name; a page for checking letters, after
-the import or once it is an hour old; everything here, a week after it
-was written.
+the import or at the first tidy once it is an hour old; everything here,
+a week after it was written. Exegete tidies this folder when it starts,
+and at most every five minutes while it writes here.
 
 This folder is not synced and is not indexed by the computer's search.
 A page holds a whole file's text: to keep one, save it elsewhere from
@@ -509,6 +510,48 @@ def _write_file(folder: Path, name: str, mode: int,
             pass
         raise
     return target
+
+
+def _is_our_page(path: Path) -> bool:
+    """An ordinary file whose start carries Exegete's page mark."""
+    try:
+        info = os.lstat(path)
+        if not stat.S_ISREG(info.st_mode):
+            return False
+        with open(path, "rb") as handle:
+            head = handle.read(200).decode("utf-8", "replace")
+    except OSError:
+        return False
+    return PAGE_MARK in head
+
+
+def remove_others(folder: Path, keep: str, pages_only: bool) -> int:
+    """Remove what Exegete wrote in one file's folder beside `keep`: a
+    page or a copy of an original made for a file that had this number
+    before. QualCoder gives a new file the highest number plus one, so a
+    number can be one a file deleted in QualCoder had, and a file
+    QualCoder then imports under it does not pass through Exegete. With
+    `pages_only`, only Exegete's own pages go (a file's folder); else
+    every ordinary file (the copy of the original's own folder).
+    Folders inside, temporary files and the file kept stay."""
+    removed = 0
+    try:
+        entries = list(os.scandir(folder))
+    except OSError:
+        return 0
+    for entry in entries:
+        if entry.name == keep or entry.name.startswith(TEMP_PREFIX):
+            continue
+        path = Path(entry.path)
+        try:
+            if not entry.is_file(follow_symlinks=False):
+                continue
+        except OSError:
+            continue
+        if pages_only and not _is_our_page(path):
+            continue
+        removed += _remove(path)
+    return removed
 
 
 def write_page(folder: Path, name: str, page: str) -> Path:

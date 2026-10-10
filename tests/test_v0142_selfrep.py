@@ -68,7 +68,7 @@ BRIEF_SECTION_4 = (
     # and a whole file opens for reading through open_file_for_reading,
     # so neither is on the list any more
     "- Some researchers also use QualCoder, by choice or for what Exegete "
-    "does not do yet: images, audio, video and graphs.")
+    "does not do yet, among them images, audio, video and graphs.")
 
 # What the proposal retired, and the first impressions' older bans. A
 # sentence about QualCoder itself ("a project QualCoder 3.8.2 has open")

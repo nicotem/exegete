@@ -180,7 +180,14 @@ def _tools(mode="lifecycle"):
 # decisions settled (the brief keeps its own) and says, in "A first
 # session", that the practice page can come in from a Word or text file,
 # its text off the conversation: 35,336 characters, within the limit.
-README_LIMIT = 35_338
+# Its review then asked for four corrections: PDF and EPUB "with the
+# optional part" (not "in the extension", which suggested an install
+# from PyPI cannot read them) in "What you can do" and the table, plain
+# words for where an imported document is read, the preview "gives the
+# assistant" what it sends, and how to copy a file's place in "A first
+# session". That takes 148 characters, and the limit is raised by that
+# and no more: 35,486.
+README_LIMIT = 35_486
 
 
 def test_the_readme_stays_short():

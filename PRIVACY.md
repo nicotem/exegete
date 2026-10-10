@@ -563,7 +563,11 @@ private part of every memo (from `#####`) is left out of it, and the
 page says so. Asked without codes, for a fresh reading, the page holds
 the text and the file's memo alone, its private part left out in the
 same way. The copy of an original is not pseudonymised, as in
-QualCoder, which applies the pseudonyms list to the stored text only.
+QualCoder, which applies the names list to the stored text only. On a
+Mac, an EPUB's copy opened in its own app (`show="original"`) goes into
+Apple Books, which adds it to its library and, with Books' iCloud Drive
+setting on, keeps a copy in iCloud; `show="in_folder"` shows it in
+Finder instead, without opening it.
 
 Three cautions:
 
@@ -591,13 +595,18 @@ folder of originals for imported documents); every backup taken after it
 came in (a file brought in by mistake stays in those backups until they
 are pruned); a reading copy or a copy of the original in the reading
 folder, and the page on which an import's preview shows letters that
-look garbled (`show_text`), which goes after the import or once it is
-an hour old; and any backup of the whole disk, such as Time Machine or
+look garbled (`show_text`), which goes after the import, or at
+Exegete's first tidy of the folder once it is an hour old (it tidies
+when it starts, and at most every five minutes while it writes there,
+so in an app that keeps Exegete running such a page can stay longer);
+and any backup of the whole disk, such as Time Machine or
 File History, that copies those folders. Exegete tidies
 the reading folder itself: a file's page and copy go whenever Exegete
 changes that file's text or name (renaming, pseudonymising, restoring a
 backup over the project), a page left for a file deleted in QualCoder
-goes when a new file takes its number, and anything there goes a week
+goes when a new file that takes its number comes in through Exegete,
+or when Exegete next writes a page or a copy for that file, and
+anything there goes a week
 after it was written, when Exegete next starts. A page written
 before you pseudonymised a file would otherwise keep the real names; a
 file deleted or renamed in QualCoder keeps its page until then. A study with
@@ -860,8 +869,12 @@ Seven cautions:
   any import.
 - **What is not pseudonymised**: the originals (copied unchanged into
   the project's folder of originals, as QualCoder does), a PDF's text
-  and its notes. A PDF holding names from your list is held back unless
-  you say so for that import (`import_pdfs_with_listed_names`). Plain
+  and its notes. A PDF holding names from your list, written as the
+  list writes them, is held back unless you say so for that import
+  (`import_pdfs_with_listed_names`). A name written otherwise in the
+  PDF, in capitals ("MARIA BROWN"), split across two lines, or broken
+  by a hyphen at a line's end, is not seen, and such a PDF comes in
+  without a word. Plain
   text, Markdown, subtitle files and web pages are read as UTF-8 alone:
   a file saved in another character set is held back, with steps to
   save a copy as UTF-8 in Word, TextEdit or Notepad, and is never read
@@ -878,7 +891,7 @@ Seven cautions:
   (`import_files_with_garbled_letters`), after checking its letters on
   a page Exegete opens on your own screen (`show_text`), whose text
   does not reach the provider. A garbled name may not match the
-  pseudonyms list: it is then not replaced, and reaches the provider
+  names list: it is then not replaced, and reaches the provider
   whenever the file is read. The warning finds signs, not proof:
   correct text can show them (Chinese with English words written inside
   it, a sum straight after an opening quotation mark), and a garbled
@@ -886,7 +899,7 @@ Seven cautions:
   ("Ã–zdemir" for "Özdemir"), a single garbled letter in a name ("MĂĽller"
   for "Müller"), or a file garbled on a Chinese or Japanese Windows
   computer; such a file comes in without a word, and a garbled name in
-  it may not match the pseudonyms list either (TOOLS.md has the
+  it may not match the names list either (TOOLS.md has the
   detail). So the names are looked for, and replaced, in the text
   exactly as it is stored. Three limits remain, as in QualCoder: an RTF
   file is read by the code page it declares, so a wrong declaration
@@ -902,9 +915,10 @@ Seven cautions:
 - **Hidden instructions in a document** can try to steer an assistant
   into previewing and importing some other document. The short list of
   formats, the refusal of hidden places and links, the preview and your
-  approval stand against it: allow the import once, after reading the
-  preview, and never set it to "always allow". Codex's default mode
-  runs it without asking.
+  approval stand against it. Set to "always allow", the import would
+  run without asking, and such instructions could then bring in another
+  file unasked; allowing it once, after reading the preview, keeps you
+  asked each time. Codex's default mode runs it without asking.
 - **A file imported by mistake** stays in every backup taken after it,
   since a backup copies the whole project. Restoring the backup taken
   just before the import takes it back while nothing else has changed.
@@ -917,8 +931,11 @@ Seven cautions:
   such as "[Footnote 1]" where it stood. So a comment a transcriber or a
   colleague left, or a header naming the interview's date and place,
   becomes part of the text the assistant reads. The names list is
-  applied to these parts as to the rest; comments' authors, initials
-  and dates are left out. If a document's comments are not meant to be read, you
+  applied to these parts as to the rest, and reads through the markers:
+  a comment on a first name alone leaves its marker inside the full
+  name ("Maria[Comment 1] Brown"), and the name is still replaced, with
+  the marker after the pseudonym ("Participant A[Comment 1]").
+  Comments' authors, initials and dates are left out. If a document's comments are not meant to be read, you
   could delete them, or save a copy without them, in its own app before
   importing; the preview says when a file has such parts.
 

@@ -401,8 +401,8 @@ class TestArchivesAndWords:
 
     def test_a_file_holding_a_nul_character_is_held_back(self, project,
                                                         folder):
-        """QualCoder stores it as read; no text saved as UTF-8 holds a
-        NUL, which is the sign of UTF-16 or UTF-32 without its mark."""
+        """QualCoder stores it as read; text saved as UTF-8 rarely holds
+        a NUL, which is the sign of UTF-16 or UTF-32 without its mark."""
         (folder / "nul_chars.txt").write_bytes(
             import_fixtures.TEXT["nul_chars.txt"])
         preview = _call(paths=[str(folder)])

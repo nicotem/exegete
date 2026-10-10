@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """0.14.3: the text Exegete's import stores is QualCoder
 4.0's, PDF to the character, and every other format with the named
-departures only (the owner's ruling of 6 October 2026: better text where
-QualCoder's readers lose or garble content; TOOLS.md lists them).
+departures only (where QualCoder's readers lose or garble content,
+Exegete keeps it, and names the departure; TOOLS.md lists them).
 
 The expected outcomes in `tests/fixtures/import_expected.json` were
 recorded by `scripts/qualcoder_parity.py` from QualCoder's own extraction
@@ -316,7 +316,13 @@ def with_differences(name: str, qualcoders: str) -> str:
     return text
 
 
-def _check(name: str, recorded: dict, ours: dict) -> None:
+def _check(name: str, recorded: dict, ours: dict, live: bool = False
+           ) -> None:
+    """Exegete's outcome for `name` against QualCoder's. Against the
+    record, a PDF's or EPUB's text is compared only at the library
+    release it was recorded with; against QualCoder's functions run
+    afresh (`live`), both sides read with the one library installed, so
+    the text is compared exactly whatever the release."""
     if name in DEPARTURES:
         wanted = DEPARTURES[name]
         # It is a departure because QualCoder stores noise, fails, or
@@ -341,7 +347,7 @@ def _check(name: str, recorded: dict, ours: dict) -> None:
         return
     assert "text" in recorded and not recorded.get("noise"), \
         f"{name}: a new difference from QualCoder: {recorded}"
-    if not _same_library(name):
+    if not live and not _same_library(name):
         assert "text" in ours, (name, ours)
         return
     assert ours.get("text") == with_differences(name, recorded["text"]), name
@@ -463,4 +469,29 @@ def test_against_a_live_qualcoder_tree():
     import qualcoder_parity
     fresh = qualcoder_parity.run(Path(os.environ["QUALCODER_SOURCE"]))
     for name in NAMES:
-        _check(name, fresh["files"][name], _ours(name))
+        _check(name, fresh["files"][name], _ours(name), live=True)
+
+
+@pytest.mark.skipif(not OPTIONAL, reason="the optional part is not installed")
+def test_a_live_comparison_is_exact_whatever_the_release(monkeypatch):
+    """Against the record, another PyMuPDF release is allowed a different
+    text; against QualCoder's functions run afresh with the same library,
+    it is not."""
+    name = "three_pages.pdf"
+    recorded = dict(EXPECTED["files"][name])
+    recorded["text"] = recorded["text"] + " words added"
+    monkeypatch.setitem(EXPECTED["versions"], "pymupdf", "0.0.0")
+    _check(name, recorded, _ours(name))
+    with pytest.raises(AssertionError):
+        _check(name, recorded, _ours(name), live=True)
+
+
+@pytest.mark.skipif(not os.environ.get("EXEGETE_PARITY_GATE"),
+                    reason="only in CI's parity gate")
+def test_the_gate_reads_with_the_records_releases():
+    """CI's gate installs the PyMuPDF and EbookLib releases the record
+    names, the releases the extension pins, so the record's comparison of
+    PDF and EPUB text is never skipped there."""
+    for library in sorted(set(DEPENDS_ON.values())):
+        assert metadata.version(library) == EXPECTED["versions"][library], \
+            library

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3: the readers' better text (the owner's ruling of 6 October
-2026), beyond the parity tests' named differences.
+"""0.14.3: where QualCoder's readers lose or garble content, Exegete
+keeps it, and names the departure; beyond the parity tests' named
+differences.
 
 Pinned here: what the preview says of the departures (information, said
 once, never a change to look at); names in the parts QualCoder leaves

@@ -466,7 +466,8 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
     if counts["private_parts_left_out"]:
         facts.append(f"The private parts of "
                      f"{_plural(counts['private_parts_left_out'], 'memo', 'memos')} (from #####) are "
-                     f"left out of this page; QualCoder shows them.")
+                     f"left out of this page; QualCoder, if you use it, "
+                     f"shows them.")
     if counts["codings_placed_by_second_reading"]:
         facts.append(f"{_plural(counts['codings_placed_by_second_reading'], 'coding is', 'codings are')} "
                      f"placed by QualCoder's way of counting positions, in "

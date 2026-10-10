@@ -306,9 +306,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,pdf-epub]"
 
+      # The gate reads PDFs and EPUBs with the releases the record names
+      # (the extension's pins), so their text is compared, not skipped,
+      # whatever PyPI's newest release; the watch keeps the newest.
+      - name: The record's PyMuPDF and EbookLib releases (gate)
+        if: matrix.which == 'gate'
+        shell: bash
+        run: |
+          pins=$(python -c "import json; v = json.load(open('tests/fixtures/import_expected.json'))['versions']; print('pymupdf==' + v['pymupdf'], 'ebooklib==' + v['ebooklib'])")
+          pip install $pins
+
       - name: Exegete's text against QualCoder's
         env:
           QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src
+          EXEGETE_PARITY_GATE: ${{ matrix.which == 'gate' && '1' || '' }}
         run: python -m pytest -ra tests/test_v0143_import_parity.py
 
       - name: What QualCoder's newest code stores differently

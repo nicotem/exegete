@@ -10,8 +10,10 @@ files it has no time for, or whose reading the time left cut short, for
 the next call; the import, which reads the same files again from their
 copies, works for 45, imports the files done, and leaves the rest. The
 first file a call reads always has its whole time (30 seconds at the
-preview, 40 at the import), so every call takes in at least one file; a
-file over its own time is refused, as before.
+preview, 40 at the import), so every call reads at least one file; a
+file over its own time is refused, as before. When every file a preview
+read was held back or refused, its note says to leave them out: the same
+paths would stop at the same place.
 
 The reading is faked here, on a clock of its own: each file's text names
 how many seconds its reading takes, at the preview and at the import.
@@ -168,10 +170,11 @@ class TestThePreview:
         assert refused["file"] == "P01.txt"
         assert "longer than 30 seconds" in refused["reason"]
         # The time left after it is too little for the next file, which
-        # is left for the next call, and the note says the refused file
-        # is read again each time it is named.
+        # is left for the next call; no file is ready, so the same paths
+        # would stop at the same place, and the note says to leave the
+        # refused file out.
         assert preview["not_read_this_time"]["files"] == ["P02.txt"]
-        assert "leaving them out" in preview["not_read_this_time"]["note"]
+        assert "are left out" in preview["not_read_this_time"]["note"]
         assert "preview_token" not in preview
 
 

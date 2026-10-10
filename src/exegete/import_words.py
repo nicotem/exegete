@@ -33,6 +33,11 @@ PATH_REFUSALS = {
                "copying the files to your computer is the other way, and if "
                "they are participant data, check your study's data plan "
                "first.",
+    "long_form": "This is Windows' long form of a path, with \\\\?\\ or "
+                 "\\\\.\\ before the drive letter. Exegete takes a path "
+                 "in its ordinary form: give it from the drive letter on "
+                 "(for example C:\\Users\\you\\Documents\\Interviews). "
+                 + COPY_A_PATH,
     "link": "This place is reached through a link (a shortcut, symbolic "
             "link or junction). Exegete follows a link only into a cloud "
             "drive's own folder. Give the place the link points to.",
@@ -76,15 +81,25 @@ FILE_REFUSALS = {
     "unsupported": "Exegete does not import this kind of file (it imports "
                    ".docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt, "
                    "and .pdf and .epub with the optional part).",
-    "optional_missing": "This computer's Exegete cannot read PDF and EPUB "
-                        "files yet: they need an optional part. QualCoder "
-                        "can import them.",
+    "optional_missing": "Exegete on this computer cannot read PDF and "
+                        "EPUB files yet: they need its optional part, "
+                        "which the Claude Desktop extension has, and which "
+                        "INSTALL.md's section \"PDF and EPUB: the optional "
+                        "part\" tells how to add to an install from PyPI "
+                        "(pipx install --force \"exegete[pdf-epub]\"). "
+                        "QualCoder, if you use it, imports them too.",
     "too_large": "This file is larger than Exegete reads for this kind of "
                  "document ({limit_mb} MB). QualCoder has no such limit "
                  "and would import it.",
     "name_in_use": "The project already has a file with this name, with "
                    "other contents. Rename the file on your computer, then "
                    "ask again.",
+    "place_too_long": "Its place in the project's folder of originals "
+                      "would be {length} characters long, past the {limit} "
+                      "Windows allows unless long paths are switched on, "
+                      "so it could not be copied there. Rename it shorter "
+                      "on your computer, or keep the project in a folder "
+                      "nearer the top of the disk, then ask again.",
     "same_name_in_batch": "Another file in this batch has the same name "
                           "(letter case aside). Rename one of them on your "
                           "computer, then ask again.",
@@ -116,9 +131,10 @@ FILE_REFUSALS = {
                           "not read it (QualCoder imports it). You could "
                           "convert it again (EPUB to EPUB, in Calibre, "
                           "say), then import that.",
-    "no_text": "No text was found in this file. QualCoder would store the "
-               "file's own codes as its text, which is noise; Exegete does "
-               "not import it.",
+    "no_text": "No text was found in this file. QualCoder would store its "
+               "markup or raw bytes as its text, which hold none of the "
+               "document's words, so Exegete departs here and does not "
+               "import it.",
     "empty": "This file is empty.",
     "pdf_password": "This PDF is protected by a password. Save a copy "
                     "without the password (in Preview or Acrobat), then "
@@ -132,8 +148,8 @@ FILE_REFUSALS = {
                       "it too). Save it as Word (.docx) in its app, or "
                       "remove that character, then import that.",
     "too_long": "Its text is {characters} characters long, over Exegete's "
-                "limit of {limit}. Import long books and reports in "
-                "QualCoder.",
+                "limit of {limit}. For now, long books and reports come in "
+                "through QualCoder, if you use it.",
     "reader_timeout": "Reading this file took longer than {seconds} "
                       "seconds, so it was stopped.",
     "reader_memory": "Reading this file needed more memory than Exegete "
@@ -172,8 +188,8 @@ _STEPS_WEB = (
 # saved without the byte-order mark that names it, which reads as UTF-8
 # with a NUL beside every letter.
 _WHY_NUL = (
-    "Its text holds NUL characters, invisible characters that no text "
-    "saved as UTF-8 holds: most often the sign of a file saved as UTF-16 "
+    "Its text holds NUL characters, invisible characters that text saved "
+    "as UTF-8 rarely holds: most often the sign of a file saved as UTF-16 "
     "or UTF-32 (\"Unicode\") without the mark at its start that says so. "
     "Read as it stands, it would come in with a NUL beside each letter, "
     "and a name from your list written that way would not be replaced, "
@@ -383,7 +399,7 @@ WARNINGS = {
     "odt_any_program": ("information",
         "It was not saved by LibreOffice (pandoc and the Mac's TextEdit "
         "write OpenDocument differently). QualCoder's own import would "
-        "find no text in it and store the file's own codes instead."),
+        "find no text in it and store its markup instead."),
     "odt_tables": ("information",
         "Tables come in between \"=== TABLE ===\" and \"=== END TABLE "
         "===\" lines, each cell a paragraph of its own, as QualCoder marks "
@@ -452,7 +468,7 @@ WARNINGS = {
         "names in them are not replaced."),
     "pdf_markups": ("information",
         "It has highlight or underline marks ({count}). QualCoder would "
-        "have offered to code them; Exegete codes nothing without your "
+        "have offered to code them; nothing is coded without your "
         "approval, one by one."),
     "qc382_pdf": ("information",
         "QualCoder 3.8.2's PDF view shows this PDF but will not let you "

@@ -91,6 +91,16 @@ def is_network_form(text: str) -> bool:
     return len(text) >= 2 and text[0] in "/\\" and text[1] in "/\\"
 
 
+def is_local_long_form(text: str) -> bool:
+    """Windows' long form of a path on a drive of this computer
+    (\\\\?\\C:\\... or \\\\.\\C:\\...), which is not a network path,
+    though it starts with two backslashes."""
+    return (len(text) >= 7 and is_network_form(text) and text[2] in "?."
+            and text[3] in "/\\" and text[4].isascii()
+            and text[4].isalpha() and text[5] == ":"
+            and text[6] in "/\\")
+
+
 def cloud_roots(home: Optional[Path] = None) -> List[Path]:
     """The cloud drives' own folders on a Mac, under `~/Library`."""
     if sys.platform != "darwin":
@@ -161,6 +171,8 @@ def walk(given: str, refused_places: Sequence[Tuple[str, Optional[Path]]] = (),
     text = clean_given(given) if isinstance(given, str) else ""
     if not text or "\x00" in text:
         raise PathRefused("missing")
+    if is_local_long_form(text):
+        raise PathRefused("long_form")
     if is_network_form(text):
         raise PathRefused("network")
     whole = Path(os.path.expanduser(text))

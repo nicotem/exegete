@@ -41,7 +41,9 @@ def test_start_here_names_importing_a_file_and_reading_it():
                      "## Three commitments")
     assert ("then bring in your page: paste it, as in the example, or save "
             "it as a Word or text file and give the assistant its place, "
-            "which keeps its text off the conversation.") in start
+            "which keeps its text off the conversation (on a Mac, hold "
+            "Option, right-click it and choose Copy as Pathname; on "
+            "Windows, Copy as path).") in start
     assert "ask to open a file for reading" in start
     assert "Exegete opens a file for you to read with its coding " \
         "highlighted" in start
@@ -55,9 +57,11 @@ def test_install_says_which_formats_need_the_optional_part():
     assert ("The Claude Desktop extension switches it on by itself."
             ) in section
     for command in ('pip install "exegete[pdf-epub]"',
-                    'pipx install "exegete[pdf-epub]"',
+                    'pipx install --force "exegete[pdf-epub]"',
                     'uv tool install "exegete[pdf-epub]"'):
         assert command in section, command
+    # pipx leaves an installed package as it is unless told to replace it
+    assert 'pipx install "exegete[pdf-epub]"' not in section
     # the extension's own section points there
     extension = _between(install, "## Claude Desktop: the one-click",
                          "## Choosing your AI host")

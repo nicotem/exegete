@@ -22,6 +22,7 @@ Nothing here touches the disk or the network. A refusal is a
 library's message, which a hostile document could fill.
 """
 
+import bisect
 import io
 import posixpath
 import re
@@ -47,6 +48,12 @@ FORMATS = {
 OPTIONAL_FORMATS = frozenset({PDF, EPUB})
 ARCHIVE_FORMATS = frozenset({WORD, OPENDOCUMENT, EPUB})
 PLAIN_FORMATS = frozenset({TEXT, MARKDOWN, SUBTITLES})
+# The formats whose readers leave a marker such as "[Footnote 1]" where a
+# note or comment moved to the end of the text stood, and the marker's
+# form. The names list reads through it: a comment on a first name alone
+# puts its marker inside the full name ("Maria[Comment 1] Brown").
+MARKING_FORMATS = frozenset({WORD, OPENDOCUMENT, RTF})
+NOTE_MARKER = re.compile(r"\[(?:Footnote|Endnote|Comment) [1-9][0-9]*\]")
 
 # Limits inside an archive (provisional figures, the design's Part 5).
 MAX_ARCHIVE_ENTRIES = 10_000
@@ -214,7 +221,7 @@ class Archive:
 # Cyrillic script, and each space, comes with one zero byte (UTF-16) or
 # three (UTF-32), which UTF-8 reads as the NUL character. QualCoder stores
 # that text ("M\0a\0r\0i\0a"), and a listed name in it is not replaced.
-# No text saved as UTF-8 holds a NUL, so a file whose text holds one is
+# Text saved as UTF-8 rarely holds a NUL, so a file whose text holds one is
 # held back with the same steps (`nul_characters`, a named departure);
 # nothing is guessed.
 
@@ -496,31 +503,50 @@ def read_rtf(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
                 if label == "Footnote" and "ftnalt" in names:
                     label = "Endnote"
                 taken.append((start, end, label))
-        spans = _outermost([(s, e) for s, e, _l in taken])
-        taken = [t for t in sorted(taken) if (t[0], t[1]) in spans]
+        taken.sort()
+        starts = [t[0] for t in taken]
         before, after = _rtf_wrapper(source)
-        markers: List[str] = []
-        for start, end, _label in taken:
+
+        def outermost_within(start: int, end: int):
+            # The parts inside source[start:end], outermost among them.
+            within = [t for t in taken[bisect.bisect_left(starts, start):
+                                       bisect.bisect_left(starts, end)]
+                      if t[1] <= end and (t[0], t[1]) != (start, end)]
+            kept = _outermost([(s, e) for s, e, _l in within])
+            return [t for t in within if (t[0], t[1]) in kept]
+
+        def take(start: int, end: int, label: str) -> str:
+            # A part inside this one (a comment inside a footnote) is
+            # taken out of it first, in the same way, leaving its marker
+            # there: so it is numbered in the order it stands, and its
+            # text is not lost with the note's.
+            nested = outermost_within(start, end)
             group = source[start:end]
+            if nested:
+                group = _cut(group, [(s - start, e - start)
+                                     for s, e, _l in nested],
+                             [take(*t) for t in nested])
             inner = re.sub(r"^\{(?:\\\*\s*)?\\[a-zA-Z]+-?\d* ?", "{",
                            group, count=1)
             try:
                 part = rtf_to_text(before + inner + after)
             except Exception:
                 raise ReadRefused("no_text") from None
-            parts[_label].append(part.strip(" \t\r\n"))
+            parts[label].append(part.strip(" \t\r\n"))
             # A note or comment leaves its label where it stood, numbered
             # as at the end; one with no text, and the unnumbered parts
             # (text boxes, headers, footers), leave nothing.
-            markers.append(f"[{_label} {len(parts[_label])}]"
-                           if _label in _RTF_NUMBERED and parts[_label][-1]
-                           else "")
-        source = _cut(source, spans, markers)
+            return (f"[{label} {len(parts[label])}]"
+                    if label in _RTF_NUMBERED and parts[label][-1] else "")
+
+        top = outermost_within(0, len(source) + 1)
+        markers = [take(*t) for t in top]
+        source = _cut(source, [(s, e) for s, e, _l in top], markers)
     try:
         text = rtf_to_text(source)
     except Exception:
         # QualCoder then stores the RTF's own markup as its text, which
-        # is noise; refused instead (a named departure).
+        # holds none of its words; refused instead (a named departure).
         raise ReadRefused("no_text") from None
     items: List[str] = []
     for label in _RTF_ORDER:
@@ -800,7 +826,13 @@ def _word_notes(archive: Archive, document, departures
         if tag.endswith("Reference"):
             referred.setdefault(tag, []).append(element.get(W_NS + "id"))
     items = []
-    for part, tag, reference, label in _WORD_NOTES:
+    labelled: Dict[str, List[str]] = {}
+    # Comments are read first: a comment can stand inside a footnote or
+    # an endnote, and its marker goes there, so its label must be known
+    # when the note's own text is read. The labels at the end keep the
+    # order footnotes, endnotes, comments.
+    for part, tag, reference, label in sorted(
+            _WORD_NOTES, key=lambda entry: entry[3] != "Comment"):
         root = _word_part(archive, part)
         if root is None:
             continue
@@ -810,7 +842,8 @@ def _word_notes(archive: Archive, document, departures
                 continue
             if note.get(W_NS + "type") in _NOTE_SEPARATORS:
                 continue
-            text = "\n\n".join(getdocumenttext(note, departures))
+            text = "\n\n".join(getdocumenttext(note, departures,
+                                                markers=markers))
             notes.setdefault(note.get(W_NS + "id"), text.strip(" \t"))
         order = [i for i in dict.fromkeys(referred.get(reference, []))
                  if i in notes]
@@ -818,8 +851,11 @@ def _word_notes(archive: Archive, document, departures
         order += [i for i in notes if i not in order and i not in gone]
         for number, note_id in enumerate(order, 1):
             if notes[note_id]:
-                items.append(f"{label} {number}: {notes[note_id]}")
+                labelled.setdefault(label, []).append(
+                    f"{label} {number}: {notes[note_id]}")
                 markers[(W_NS + reference, note_id)] = f"{label} {number}"
+    for _part, _tag, _reference, label in _WORD_NOTES:
+        items += labelled.get(label, [])
     for kind, label in (("header", "Header"), ("footer", "Footer")):
         names = sorted((n for n in archive.names()
                         if re.fullmatch(rf"word/{kind}\d*\.xml", n)),
@@ -1350,9 +1386,13 @@ _ENTITY_MARKERS = tuple("<!ENTITY".encode(name) for name in (
 # itself, could hide an entity declaration from the markers; such a part
 # refuses the book (`epub_character_set`). EPUB allows UTF-8 and UTF-16
 # only; a part declaring a set that writes ASCII as ASCII (ISO 8859-1,
-# say) is read as before.
+# say) is read as before. White space of any length may come before
+# `encoding` (within the part's first 1,024 bytes, which are what is
+# looked at); a declaration that does not end within them is refused too,
+# since what it declares cannot be read.
 _XML_ENCODING = re.compile(
-    r"\A\s*<\?xml\s[^>]{0,200}?encoding\s*=\s*[\"']([^\"'>]{0,40})[\"']")
+    r"\A\s*<\?xml\s[^>]*?encoding\s*=\s*[\"']([^\"'>]{0,40})[\"']")
+_XML_DECLARATION_START = re.compile(r"\A\s*<\?xml\s")
 _UNICODE_SETS = frozenset(("utf8", "utf16", "utf16le", "utf16be", "utf32",
                            "utf32le", "utf32be"))
 _OTHER_XML_STARTS = (b"\x4c\x6f\xa7\x94", b"\x00\x00\x3c\x00",
@@ -1386,8 +1426,10 @@ def _declares_another_set(data: bytes) -> bool:
         return True
     for codec in ("utf-8", "utf-16-le", "utf-16-be", "utf-32-le",
                   "utf-32-be"):
-        found = _XML_ENCODING.match(
-            head.decode(codec, "ignore").lstrip(BOM))
+        text = head.decode(codec, "ignore").lstrip(BOM)
+        if _XML_DECLARATION_START.match(text) and "?>" not in text:
+            return True
+        found = _XML_ENCODING.match(text)
         if found and _hides_the_markers(found.group(1)):
             return True
     return False
@@ -1666,8 +1708,8 @@ def read_document(kind: str, raw: bytes, departures=None
         raise ReadRefused("empty")
     if text == "":
         # QualCoder then decodes the file's own bytes as text, which for
-        # every format but plain text is noise: refused instead (a named
-        # departure). An empty plain text file QualCoder refuses too.
+        # every format but plain text holds none of its words: refused
+        # instead (a named departure). An empty plain text file QualCoder refuses too.
         raise ReadRefused("empty" if kind in PLAIN_FORMATS else "no_text")
     if kind != PDF:
         text = text.replace("\r\n", "\n").replace("\r", "\n")

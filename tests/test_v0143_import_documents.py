@@ -118,7 +118,7 @@ class TestThePreview:
                                                           folder):
         (folder / "a.txt").write_bytes(b"Plain words.\n")
         preview = _call(paths=[str(folder / "a.txt")])
-        assert "no list of names to replace" in preview["names_list"]
+        assert "has no names list" in preview["names_list"]
         keys = list(preview)
         assert keys.index("summary") < keys.index("names_list") < \
             keys.index("files")
@@ -310,8 +310,7 @@ class TestTheNamesList:
         _names_list(project, [("Maria", "Participant A")])
         (folder / "P01.txt").write_bytes(b"Maria said hello. Mariana too.\n")
         preview, done = _both([str(folder)])
-        assert "1 entries" in preview["names_list"] or \
-            "(1 entries)" in preview["names_list"]
+        assert "(1 entry)" in preview["names_list"]
         assert "Maria" not in json.dumps(preview)
         ((_i, _n, text, _m, _memo, _o),) = _rows(project)
         assert text == "Participant A said hello. Mariana too.\n"
@@ -328,7 +327,7 @@ class TestTheNamesList:
         _names_list(project, [])
         (folder / "a.txt").write_bytes(b"Words.\n")
         preview = _call(paths=[str(folder)])
-        assert "list of names to replace is empty" in preview["names_list"]
+        assert "names list is empty" in preview["names_list"]
         assert "preview_token" in preview
 
     def test_a_list_the_engine_cannot_use_stops_the_import(self, project,

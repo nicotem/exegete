@@ -129,8 +129,10 @@ def write_reading_copy(project: Path, file_id: int, **page) -> Tuple[
     """Build and write a file's reading copy; (its place, its counts)."""
     html, counts = reading_copy.build_page(file_id=file_id, **page)
     folder = reading_folder.file_folder(project, file_id)
-    path = reading_folder.write_page(folder, page_name(page["file_name"]),
-                                     html)
+    name = page_name(page["file_name"])
+    path = reading_folder.write_page(folder, name, html)
+    # A page left by a file that had this number before goes now.
+    reading_folder.remove_others(folder, name, pages_only=True)
     return path, counts
 
 
@@ -144,7 +146,10 @@ def copy_original(project: Path, file_id: int, source: Path) -> Path:
                                  != os.path.splitext(source.name)[1].lower()):
         raise ReadingRefusal(NOT_A_DOCUMENT_TYPE)
     folder = reading_folder.original_folder(project, file_id)
-    return reading_folder.copy_read_only(source, folder, name)
+    copy = reading_folder.copy_read_only(source, folder, name)
+    # A copy left by a file that had this number before goes now.
+    reading_folder.remove_others(folder, name, pages_only=False)
+    return copy
 
 
 def present(path: Path, how: str, own_page: bool) -> Dict[str, Any]:

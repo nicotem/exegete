@@ -523,7 +523,7 @@ the researcher why; do not look for a way round it.
   two programs do not talk to each other: they meet only in the
   project.
 - Some researchers also use QualCoder, by choice or for what Exegete
-  does not do yet: images, audio, video and graphs.
+  does not do yet, among them images, audio, video and graphs.
 - Only one program should change a project at a time. Exegete refuses
   to write while QualCoder 3.8.2 has the project open; for QualCoder
   4.0 it can only see signs, so when a tool says the project may be
@@ -6562,9 +6562,10 @@ def open_file_for_reading(file_id: int, show: str = "reading_copy",
             if why != "no_original":
                 result.update({"shown": "nothing", "note": why})
                 return json.dumps(result, indent=2)
-            result["note"] = ("This file has no original in the project "
-                              "(its text was typed or pasted in), so the "
-                              "reading copy is shown instead.")
+            result["note"] = ("The project records no original for this "
+                              "file (its text may have been typed or "
+                              "pasted in), so the reading copy is shown "
+                              "instead.")
         pending, approved = _suggestion_counts(file_id)
         counts = db_.non_text_coding_counts(file_ids=[file_id])
         no_text = None
@@ -9992,7 +9993,8 @@ def import_text_file(
 # ============================================================================
 
 IMPORT_DOCUMENTS_ADVICE_NAMES = (
-    " Correct the list in QualCoder (Project, Pseudonyms), then ask again. "
+    " Correct the list (in QualCoder, the Pseudonyms button in Manage "
+    "Files), then ask again. "
     "The import applies the list as the text comes in, so it cannot go "
     "ahead with a list it cannot read.")
 
@@ -10169,19 +10171,29 @@ def _import_arguments_error(paths, memo) -> Optional[str]:
     return None
 
 
+# How the line for a project with no names list, or an empty one, opens.
+IMPORT_NO_LIST_LEAD = {"none": "This project has no names list",
+                       "empty": "This project's names list is empty"}
 IMPORT_DONE_LINES = {
     "take_back": ("If any of these is the wrong file, say so now: restoring "
                   "the backup taken just before ({backup}) takes the import "
                   "back, and nothing else has changed yet."),
-    "corrections": ("Exegete keeps its own copy. Changes you make later to "
-                    "the file on your computer do not reach the project, so "
-                    "correct transcripts before you start coding them."),
+    "corrections": ("The project keeps its own copy. Changes you make "
+                    "later to the file on your computer do not reach the "
+                    "project, so correct transcripts before you start "
+                    "coding them."),
     "owner": ("The files are recorded under the AI coder name '{owner}': it "
               "records who brought them in, on your word."),
-    "no_list": ("This project has no list of names to replace. If these "
+    # Said after an import into a project with no names list ("none") or
+    # an empty one: a list made after the import changes nothing already
+    # stored, so it names only the two ways that do replace the names.
+    "no_list": ("{lead}, so the names in these files came in as written, "
+                "and a list made now does not change them. If these "
                 "documents name participants, replace the names before the "
-                "assistant reads them: pseudonymise_source on each file, or "
-                "make the list in QualCoder's Pseudonyms dialog."),
+                "assistant reads them: run pseudonymise_source on each file "
+                "(with the names given in the call, or with the project's "
+                "names list once it is made), or restore the backup taken "
+                "just before, make the list, and import again."),
     "pdf_names": ("A PDF brought in names people from your list: its names "
                   "will reach the AI provider on every later read, search or "
                   "coding excerpt of that file."),
@@ -10218,15 +10230,15 @@ def import_documents(
     show_text: bool = False,
     memo: str = ""
 ) -> str:
-    """Bring documents from the researcher's computer into the open project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with this app's own tools first: give its path.
+    """Bring documents from the researcher's computer into the open project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
 
     Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
 
-    Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The pseudonyms list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
+    Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The names list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
     Refused or kept out, saying why: while QualCoder has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
 
-    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what its readers lose (notes, comments, headers) and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
+    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
 
     Args:
         paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
@@ -10492,6 +10504,13 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     if later:
         message += (f" {len(later)} more {'were' if len(later) != 1 else 'was'}"
                     f" not imported this time (below).")
+    # The files over the batch's cap, which the preview counted: said in
+    # the message too, so the batch is never taken for the whole folder.
+    over_the_cap = result.left_for_later("")
+    if over_the_cap:
+        message += (f" {len(over_the_cap)} more in the folder "
+                    f"{'are' if len(over_the_cap) != 1 else 'is'} for the "
+                    f"next batch (below).")
     answer: Dict[str, Any] = {
         "success": True,
         "message": message,
@@ -10521,6 +10540,9 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
             "files": [doc_import.item_label(i) for i in later],
             "note": doc_import.not_imported_note(len(later)),
         }
+    if over_the_cap:
+        answer["not_taken_this_time"] = doc_import.not_taken_note(
+            len(over_the_cap))
     if any(i.kind == doc_readers.PDF for i in taken):
         answer["pymupdf_version"] = _pymupdf_version()
     if written.marks_lost:
@@ -10540,7 +10562,8 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
         lines.append(IMPORT_DONE_LINES["pdf_release"].format(
             version=answer.get("pymupdf_version") or "unknown"))
     if ctx.names_list in ("none", "empty"):
-        lines.append(IMPORT_DONE_LINES["no_list"])
+        lines.append(IMPORT_DONE_LINES["no_list"].format(
+            lead=IMPORT_NO_LIST_LEAD[ctx.names_list]))
     backups = [b for b in _collect_backups(ctx.project_folder)
                if b["kind"] == "mcp"]
     size = round(sum(b["size_mb"] for b in backups))
@@ -12007,10 +12030,11 @@ def _converted_documents_help() -> Dict[str, Any]:
         "never": [
             "Do not convert .tex files this way: a LaTeX file can pull in "
             "private files from the computer.",
-            "Do not convert .html or .epub files: Exegete reads them itself "
-            "(EPUB with the optional part).",
+            "Do not convert .html files: Exegete reads them itself; nor "
+            ".epub files where Exegete has its optional part (without it, "
+            "an EPUB can be converted to .txt this way).",
             "Never convert to .odt: QualCoder's own import finds no text "
-            "in a pandoc-made .odt and stores the file's own codes, so the "
+            "in a pandoc-made .odt and stores its markup, so the "
             "two programs would read the same file differently; a .txt "
             "reads the same in both. Pandoc cannot read PDF."],
         "defaults_file": place if place is not None else (

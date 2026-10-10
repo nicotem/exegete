@@ -239,7 +239,7 @@ PDF or EPUB yet; to add it:
 ```bash
 ~/exegete-venv/bin/pip install "exegete[pdf-epub]"
 # or
-pipx install "exegete[pdf-epub]"
+pipx install --force "exegete[pdf-epub]"
 uv tool install "exegete[pdf-epub]"
 ```
 
@@ -250,9 +250,13 @@ are; Exegete's own code stays under the LGPL (LGPL-3.0-or-later), and an
 install without the part is untouched. Neither library is inside
 Exegete's package or its extension file: both are fetched from PyPI on
 your computer. NOTICE lists them, with lxml (BSD-3-Clause). If your
-institution or your project's terms rule out AGPL software, install
-without the part and convert PDFs and EPUBs to text another way
-(`explain_ai_coding_tools('converted_documents')`).
+institution or your project's terms rule out AGPL software, the Claude
+Desktop extension would not suit, since it always has the part; an
+install from PyPI without it keeps AGPL software off your computer.
+PDFs can then be saved as plain text from a PDF program that offers
+it, and EPUBs converted to text with pandoc
+(`explain_ai_coding_tools('converted_documents')`); a PDF's text saved
+that way can differ from QualCoder's reading of it.
 
 The step-by-step install below is the **contributor path**: use it if
 you want to read or modify the source, or run the test suite.
@@ -886,7 +890,7 @@ coding set, measured at about 67,000 characters, roughly 17k tokens.
 model, set the context length to at least 32k for the core toolset
 (that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
-or 64k if you must run the full surface (its schema alone is about 49k
+or 64k if you must run the full surface (its schema alone is about 50k
 tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
@@ -1448,11 +1452,10 @@ in Claude Code 2.1.199 and later, `read_pseudonym_list` and
 Bringing documents in (`import_documents`, 0.14.3) takes
 two calls: the first only looks and changes nothing in the project (if
 letters look garbled, it can open a page on your screen to check them
-on); the second brings the files in. Allow the second only after
-reading the preview, allow it
-once, and never set the import to "always allow": a document's hidden
-instructions could otherwise have an assistant bring in another file
-unasked. PRIVACY.md, "Bringing documents in", says what reaches the AI
+on); the second brings the files in. Set to "always allow", the
+import would run without asking, and a document's hidden instructions
+could then have an assistant bring in another file unasked; allowing
+it once, after reading the preview, keeps you asked each time. PRIVACY.md, "Bringing documents in", says what reaches the AI
 provider. The Claude Desktop extension switches on the optional part
 for PDF and EPUB (PyMuPDF 1.28.2 and EbookLib 0.20, the releases it
 pins, with which Exegete's text is checked against QualCoder's; about

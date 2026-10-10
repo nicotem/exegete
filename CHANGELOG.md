@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-For 0.14.3, a release of its own after 0.14.2. The owner decided the
+For 0.14.3, a release of its own after 0.14.2. The maintainer decided the
 questions of the import and reading design on 6 October 2026: as
 recommended, except that where QualCoder's readers lose or garble
 content, Exegete keeps it, and names the departure (a PDF's text stays
@@ -19,12 +19,13 @@ character sets; PDFs and file names holding listed names, and files
 whose letters look garbled, held back, each with a way through on the
 researcher's word; imported files under the AI coder name; reading
 pages in a private folder of Exegete's own, tidied; and reading without
-codes. On 9 October 2026 he settled the wording ("where QualCoder's
+codes. On 9 October 2026 the maintainer settled the wording ("where QualCoder's
 readers lose or garble content, Exegete keeps it, and names the
 departure") and the marker a moved note leaves ("[Footnote 1]"). What
 follows is built to those decisions. Two
-things stay provisional: how long one call may run, until he has timed
-his hosts' limit, and the figures of the import's other limits.
+things stay provisional: how long one call may run, until the limit of
+the assistants' apps has been timed, and the figures of the import's
+other limits.
 
 ### Added: reading a whole file on your own computer
 
@@ -83,9 +84,11 @@ his hosts' limit, and the figures of the import's other limits.
   Tidied: a file's page and copy go whenever Exegete changes the file's
   text or name (`rename_file`, `pseudonymise_source`, which with
   `rewrite_memos` clears the whole project's pages, and
-  `restore_backup`), and a page left for a file deleted in QualCoder
-  when a new file takes its number (QualCoder gives a new file the
-  highest number plus one); everything a week after, when Exegete
+  `restore_backup`), and a page or copy left for a file deleted in
+  QualCoder (QualCoder gives a new file the highest number plus one)
+  when a new file that takes its number comes in through Exegete, or
+  when Exegete next writes a page or a copy for it, whichever program
+  brought it in; everything a week after, when Exegete
   starts; a temporary file an interrupted copy left beside an
   original's copy goes after ten
   minutes, as one beside a page does. An original of another type is
@@ -181,8 +184,8 @@ his hosts' limit, and the figures of the import's other limits.
   Claude Code asks before both calls
   (`anthropic/requiresUserInteraction`).
 - Where QualCoder's readers lose or garble content, Exegete keeps it,
-  and names the departure (the owner's decisions of 6 and 9 October
-  2026), each departure a line of TOOLS.md with an example. In
+  and names the departure, each departure a line of TOOLS.md with an
+  example. In
   Word files, a line break inside a paragraph stays a line break (where
   QualCoder joins the words either side), tab stops set on a paragraph
   add no tabs, a text box comes once (QualCoder repeats it up to four
@@ -193,9 +196,11 @@ his hosts' limit, and the figures of the import's other limits.
   deleted with tracked changes left out with that text; each note and
   comment leaves its label in square brackets where it stood ("was
   far.[Footnote 1] We moved", a comment's where the words it is on
-  end; the owner's decision of 9 October 2026), so a quote across that
-  spot includes it, and a note with no text, which has no label, leaves
-  nothing (files already in a project keep the text they were imported
+  end), so a quote across that spot includes it, and a note with no
+  text, which has no label, leaves nothing; a comment inside a footnote
+  or endnote leaves its marker in the note's own text, in Word,
+  OpenDocument and RTF alike (an RTF file had lost such a comment's
+  text, as QualCoder's import does) (files already in a project keep the text they were imported
   with); an emoji Word writes as an extension element comes in once, as
   in QualCoder. In
   OpenDocument files, runs of spaces, tabs and line breaks are kept, a
@@ -241,8 +246,9 @@ his hosts' limit, and the figures of the import's other limits.
   the way round; originals are always copied, never linked, and keep
   their internet-origin mark; per-format size
   limits, archive limits and time and memory limits; the AI coder name
-  owns the rows and their attribute values, as the owner decided.
-- The project's pseudonyms list is applied to the stored text by
+  owns the rows and their attribute values, Exegete's rule for every
+  write.
+- The project's names list is applied to the stored text by
   default, as QualCoder's import does (never to PDFs, nor to the
   originals); an empty list counts as none; a list Exegete cannot use
   stops the import, and turning the list off is never offered as the way
@@ -250,7 +256,17 @@ his hosts' limit, and the figures of the import's other limits.
   from it, since QualCoder's Pseudonyms dialog saves lists Exegete
   cannot use (a name with a space at its end, a chain, an emoji in a
   pseudonym) and the names in them are names all the same (every name is
-  hidden when the list cannot be read at all). A PDF holding listed
+  hidden when the list cannot be read at all). The list reads through
+  the markers the import leaves where a note or comment stood: a
+  comment on a first name alone puts its marker inside the full name
+  ("Maria[Comment 1] Brown"), which the list had then missed, so the
+  real name was stored without a word; the name is now replaced, with
+  the marker after the pseudonym ("Participant A[Comment 1]"). After an
+  import into a project with no names list, or an empty one, the line
+  for the researcher names the two ways that replace names afterwards,
+  `pseudonymise_source` on each file, or restoring the backup taken
+  just before, making the list and importing again, since a list made
+  after the import changes nothing already stored. A PDF holding listed
   names is held back unless the researcher says so
   (`import_pdfs_with_listed_names`). A file whose own name holds a
   listed name, found in any letter case, across any separator or inside
@@ -261,12 +277,11 @@ his hosts' limit, and the figures of the import's other limits.
   (`import_file_names_with_listed_names`). A folder's subfolders and
   other files are named by the same rule, hidden when they hold a listed
   name, and so is a step of the real place a link leads to.
-- Letters that look garbled are the researcher's to decide (the owner's
-  ruling of 7 October 2026, "Warn, and let me decide"). A UTF-8 file
+- Letters that look garbled are the researcher's to decide. A UTF-8 file
   once opened in another character set and saved again carries its
   letters as other characters ("Ã©" for "é", "Ä…" for "ą", "Ð˜" for "И",
   "√©" for "é" through a Mac's own set), in any script and any format
-  but PDF, and a garbled name may not match the pseudonyms list. Each run
+  but PDF, and a garbled name may not match the names list. Each run
   of characters that a common Windows, Mac, DOS or KOI8 set, Shift JIS
   or GBK could have made of UTF-8 is read back through it, and counts
   where the reading back fits its word better than the text as written.
@@ -276,7 +291,9 @@ his hosts' limit, and the figures of the import's other limits.
   a page on the researcher's own screen with the text as it would be
   stored and each place marked with what it would read as; the answer
   gives the page's location, never the text, and the page goes after the
-  import, or once it is an hour old. The file comes in as it is only with
+  import, or at Exegete's first tidy of its reading folder once it is an
+  hour old (when it starts, and at most every five minutes while it
+  writes there). The file comes in as it is only with
   `import_files_with_garbled_letters`, on the researcher's word, the
   names list applied to the rest, and its line in the preview and the
   import's answer say that a name written with garbled letters is not
@@ -297,7 +314,7 @@ his hosts' limit, and the figures of the import's other limits.
   web pages whatever character set they declare) are held back, with
   plain steps to save a copy as UTF-8 in Word, TextEdit or Notepad (for
   a web page, or as a Word document); nothing is guessed, and no
-  character set can be named (the owner's decision of 6 October 2026).
+  character set can be named.
   Read by a guess, by a set the researcher names or by the set a page
   declares, accented letters can come out as others, and a listed name
   written with other letters is not replaced: a Polish or Turkish file
@@ -307,19 +324,20 @@ his hosts' limit, and the figures of the import's other limits.
   and its names looked for in, the text exactly as it is stored. A file
   saved as UTF-16 or UTF-32 without the byte-order mark that names it,
   which is valid UTF-8 byte for byte with a NUL beside each letter, is
-  held back too, with the same steps: no text saved as UTF-8 holds a
-  NUL, and a listed name written with NULs between its letters is not
+  held back too, with the same steps: text saved as UTF-8 rarely holds
+  a NUL, and a listed name written with NULs between its letters is not
   replaced. QualCoder guesses instead, and stores such a file as read; a
   file saved as UTF-8 has the same letters in both programs.
   charset-normalizer, QualCoder's guesser, is not one of Exegete's
   libraries.
-- The batch goes in together or not at all: a file the preview read as
-  ready that reads otherwise at the import (out of time or memory, say)
-  stops the whole import, naming the file; a file the preview held back
-  or refused is skipped without being read again, and the answer names
-  each file not imported, with its reason.
-- How long one call may run (provisional, until the owner has timed his
-  hosts' limit): a host can stop a tool call that runs long (Claude
+- A file the preview read as ready that reads otherwise at the import
+  (out of its own time or memory, say) stops the whole batch, naming the
+  file, and nothing goes in; a file the preview held back or refused is
+  skipped without being read again, and the answer names each file not
+  imported, with its reason. A batch the call's time cuts short goes in
+  as far as it got, and the answer names the rest (below).
+- How long one call may run (provisional, until the limit of the
+  assistants' apps has been timed): a host can stop a tool call that runs long (Claude
   Desktop's own text is said to give 180 seconds, and 60 to a local
   server added by hand), and the largest files the limits allow took up
   to 39 seconds each to read on a fast Mac (a 9,000-page PDF, a book of
@@ -330,14 +348,24 @@ his hosts' limit, and the figures of the import's other limits.
   so that the import, which reads the same files again from their
   copies, fits within its own 45; one file has 30 seconds to be read at
   the preview and 40 at the import, and the first file a call reads
-  always has its whole time, so every call takes in at least one. The
+  always has its whole time, so every call reads at least one file. The
   files a preview had no time for, or whose reading the time left cut
   short, are counted in its summary line and listed as not read this
   time, with how to go on: import
   the files it read, then ask again with the same paths, the files
   already imported skipped. An import that runs out of time between
   files imports the files it has done and names the rest, with the same
-  way on. A file over its own time is refused, as before. A batch of 20
+  way on. When every file a call read was held back or refused, the
+  same paths would read them first again and stop at the same place,
+  so the preview says to leave those files out (naming the others, or
+  moving them out of the folder) rather than to ask again. The files
+  over the batch's cap of 50 are counted in the summary line too, and
+  in the import's message, as the files left for later are. A file
+  kept online only by a cloud drive is downloaded when it is named,
+  and the download is not counted in the call's time. While something
+  stops the whole import, the summary line says how many files would be
+  ready, and that the import is stopped. A file over its own time is
+  refused, as before. A batch of 20
   everyday documents (Word, OpenDocument, RTF, web pages, text,
   subtitles, PDFs and EPUBs) took about 5 seconds for each call.
 - Limits that hold whatever a file declares: every part EbookLib reads
@@ -347,7 +375,11 @@ his hosts' limit, and the figures of the import's other limits.
   parser reads by itself (UTF-32 too); an archive's directory larger
   than 10,000 entries could need is refused before it is parsed, and so
   is an archive whose zip64 locator points away from the record Python's
-  zipfile reads.
+  zipfile reads. An EPUB part's XML declaration is read whatever white
+  space comes before its character set, and one that does not end
+  within the part's first 1,024 bytes refuses the book; refusing a part
+  in such a character set, which QualCoder imports, is named among
+  TOOLS.md's other departures.
 - A project whose folder of originals is a link stops the import (the
   copies would land outside the project, where its backups do not
   reach), as it already stopped the reading tool.
@@ -366,15 +398,21 @@ his hosts' limit, and the figures of the import's other limits.
 - Paths: `~` and quoted paths accepted; hidden places, links (except
   into a Mac's cloud drive folders), network paths typed as such, the
   open project, Exegete's state folders and its reading folder refused,
-  each with a next step in plain words.
+  each with a next step in plain words; Windows' long form of a path on
+  the computer's own drive (`\\?\C:\...`) is refused in words of its
+  own, not as a network path. On Windows with long paths switched off,
+  a file whose place in the folder of originals would pass 259
+  characters is refused before it is read, with the way round, and the
+  temporary copy's name no longer carries the file's own name, so it is
+  never the longer of the two for a name of 27 characters or more.
 - `explain_ai_coding_tools('converted_documents')`: how to bring in a
   document converted by another tool, such as a pandoc server (file to
   file, with Exegete's defaults file, which keeps pandoc sandboxed from
-  the first conversion), named by the import's description.
+  the first conversion), named by the import's description; an EPUB
+  may be converted this way where Exegete has no optional part.
 - The optional part `pdf-epub` (PyMuPDF and EbookLib, the libraries
   QualCoder 4.0 reads PDF and EPUB with, AGPL-licensed) is switched on in
-  the Claude Desktop extension, as the owner decided on 6 October 2026;
-  an install with it is, as a whole, under the AGPL's terms, and
+  the Claude Desktop extension; an install with it is, as a whole, under the AGPL's terms, and
   Exegete's own code stays LGPL. New libraries in every install:
   defusedxml, and striprtf pinned exactly.
 
@@ -423,24 +461,24 @@ his hosts' limit, and the figures of the import's other limits.
 
 ### Measured
 
-- Serialised tool JSON: full = 201,762 characters (about 50.4k tokens
+- Serialised tool JSON: full = 201,748 characters (about 50.4k tokens
   at chars/4) over 77 tools, core = 67,243 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 204,319 (about 51.1k) over 78, measured on
+  the opt-in lifecycle set = 204,305 (about 51.1k) over 78, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 211,638, 70,635 and 214,335. Against
+  Python 3.11.13 (the `.venv/`), 211,624, 70,635 and 214,321. Against
   0.14.2's figures (196,387, 65,140 and 198,944 on 3.13), every set
   grew by `open_file_for_reading`'s own entry (1,630 characters on
   3.13, 1,632 with its separator) and by 471 characters on
   `analyze_file_with_coding` (its `start` and `without_codes`
   arguments); `full` and `lifecycle` also by `import_documents`' own
-  entry (2,974, 2,976 with its separator; it is in the standard and
+  entry (2,960, 2,962 with its separator; it is in the standard and
   lifecycle sets, not in core, and its two arguments for letters that
   look garbled, `import_files_with_garbled_letters` and `show_text`,
   are in it) and by 296 on `import_text_file` (the description changed
   above). No other tool's entry changed. Both new tools put their rules
   first, and each whole description fits within the 2,048 characters
   Claude Code keeps: `open_file_for_reading`'s is 1,187 characters on
-  3.13 (1,267 on 3.11) and `import_documents`' 1,980 (2,036 on 3.11).
+  3.13 (1,267 on 3.11) and `import_documents`' 1,966 (2,022 on 3.11).
 
 ## [0.14.2-alpha] - 2026-10-09
 

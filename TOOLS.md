@@ -623,8 +623,8 @@ Native first, as on any computer:
    switch, and the annotations and the public part of memos as numbered
    notes at the end. The private part of memos (from `#####`) is left
    out, and the page says so. It is written after QualCoder's own HTML
-   export of a coded file. Converted with pandoc (for example your
-   pandoc server, file to file) it becomes a Word file with one comment
+   export of a coded file. Converted with pandoc (from a pandoc server,
+   if you use one, file to file) it becomes a Word file with one comment
    per coding, named after its code.
 
 **Codings made in QualCoder** are drawn where QualCoder draws them.
@@ -665,9 +665,11 @@ video) is copied, opened or shown, and a web page only shown; any other
 type, such as a program or a shortcut in a project from someone else,
 is neither copied nor shown, since a read-only copy of it could still
 act when opened. A long name is shortened before its ending, never
-through it, so the copy is always of the original's type. A file
-whose text was typed or pasted in has no original, so the reading copy
-opens instead. With no screen (an SSH session, Linux without a desktop),
+through it, so the copy is always of the original's type. Where the
+project records no original for a file (its text may have been typed
+or pasted in; a text file an older QualCoder imported can also have no
+recorded place, though its original may sit in the folder of
+originals), the reading copy opens instead. With no screen (an SSH session, Linux without a desktop),
 nothing opens and the answer gives the place only.
 
 **Where the pages go.** Into a private folder of Exegete's own, outside
@@ -677,9 +679,15 @@ Mac `~/Library/Caches/Exegete/Reading.noindex`, on Windows
 `~/.cache/exegete/reading`. Readable by your account only. Exegete
 deletes a file's page and copy whenever it changes that file's text or
 name (renaming, pseudonymising, restoring a backup), and anything there
-a week after it was written. The page an import's preview opens to
-check letters that look garbled (`show_text`) goes there too, and goes
-after the import or once it is an hour old. To keep a page, save it
+a week after it was written. A file deleted in QualCoder can leave its
+page behind; when a new file takes its number, the old page goes when
+Exegete brings that file in, or when it next writes a page or a copy
+for it. The page an import's preview opens to check letters that look
+garbled (`show_text`) goes there too, and goes after the import, or at
+Exegete's first tidy once it is an hour old: Exegete tidies the folder
+when it starts, and at most every five minutes while it writes there,
+so in an app that keeps Exegete running a page left without an import
+can stay longer. To keep a page, save it
 elsewhere from the browser or print it to PDF. PRIVACY.md lists every
 place a transcript's text can end up.
 
@@ -728,8 +736,7 @@ with every later request, until the host shortens the conversation.
 `import_documents` (0.14.3) reads each document following
 QualCoder 4.0's own import; where QualCoder's readers lose or garble
 content, Exegete keeps it, and names the departure, in the ways listed
-first below and only those (the owner's decisions of 6 and 9 October
-2026). A PDF's text is QualCoder's to the character, since
+first below and only those. A PDF's text is QualCoder's to the character, since
 QualCoder 4.0 re-reads a PDF and compares. `scripts/qualcoder_parity.py`
 runs QualCoder's own extraction functions on the test documents, and
 the tests check two things against them: with none of these departures,
@@ -748,7 +755,18 @@ after the document's text, each part labelled, so that the text
 QualCoder does read keeps its place. A footnote, endnote or
 comment moved there leaves its label where it stood, in square brackets
 (`was far.[Footnote 1] We moved`), so a quote across that spot includes
-the marker; a note with no text has no label and leaves nothing. Files
+the marker; a note with no text has no label and leaves nothing. The
+names list reads through a marker: a comment on a first name alone
+leaves its marker inside the full name (`Maria[Comment 1] Brown`), and
+the name is still replaced, with the marker after the pseudonym
+(`Participant A[Comment 1]`). Markers can stand out of number order:
+OpenDocument numbers comments where they start and marks them where
+they end, so overlapping comments read `stopped[Comment 2][Comment 1]`,
+and Word reads a text box after the paragraph that holds it, so a note
+in the box comes after a later note's marker; the labels always match.
+A footnote with its own mark (`*`) instead of a number reads three
+ways: `left[Footnote 1]*.` from Word, `left*[Footnote 1].` from RTF,
+and `left[Footnote 1].` from OpenDocument, whose mark is left out. Files
 already in a project keep the text they were imported with.
 
 | | QualCoder 4.0 | Exegete |
@@ -788,11 +806,12 @@ the file declares).
 
 | | QualCoder 4.0 | Exegete | Why |
 |---|---|---|---|
-| No text found in a Word, OpenDocument, EPUB, RTF or web page file | stores the file's raw bytes, or its markup, as the text | refused, with the reason | QualCoder's result is noise |
+| No text found in a Word, OpenDocument, EPUB, RTF or web page file | stores the file's raw bytes, or its markup, as the text | refused, with the reason | the stored text would be the file's markup or bytes, which hold none of its words |
+| An EPUB part declaring a character set that writes its markup in other bytes (UTF-7, iconv's JAVA form, EBCDIC), or a declaration that does not end within the part's first 1,024 bytes | imported | refused, with a way round (convert it again, EPUB to EPUB) | such a part could slip markup past the checks for entity declarations and sizes; EPUB allows UTF-8 and UTF-16 only |
 | An RTF file holding half of a character RTF writes in two halves (an emoji, say) without the other half | the import fails on the insert, leaving the copy | refused, with the way round (save it as Word, or remove that character) | neither program can store the half alone |
-| A plain text, Markdown or subtitle file not saved as UTF-8 (a UTF-16 file among them) | its character set guessed (charset-normalizer), else read as Windows Western or Latin-1, and stored as read, rightly or not | held back, with steps to save a copy as UTF-8 in Word, TextEdit or Notepad; nothing is guessed, and no character set can be named | a guessed or a chosen character set can read accented letters as others (a Polish or Turkish file is often guessed to be Western), and a name from the list written with other letters is not replaced; saved as UTF-8, the file reads the same way in both programs (the owner's decision of 6 October 2026) |
+| A plain text, Markdown or subtitle file not saved as UTF-8 (a UTF-16 file among them) | its character set guessed (charset-normalizer), else read as Windows Western or Latin-1, and stored as read, rightly or not | held back, with steps to save a copy as UTF-8 in Word, TextEdit or Notepad; nothing is guessed, and no character set can be named | a guessed or a chosen character set can read accented letters as others (a Polish or Turkish file is often guessed to be Western), and a name from the list written with other letters is not replaced; saved as UTF-8, the file reads the same way in both programs |
 | A web page not saved as UTF-8, whatever character set it declares | read as UTF-8; the import fails when the page's text holds bytes that are not UTF-8, and goes ahead when they lie only in what it drops (a comment, a script) | held back, with steps to save a copy as UTF-8, or as a Word document; never read by its declaration, which can be wrong | the same: a page declaring the wrong set would come in with its letters wrong and a listed name unreplaced |
-| A plain text, Markdown, subtitle or web page file whose text holds a NUL character: the sign of UTF-16 or UTF-32 saved without the mark that names it, which is valid UTF-8 byte for byte | stored as read, a NUL beside each letter (`M\0a\0r\0i\0a`), a web page with all its markup; its text view shows nothing after the first NUL | held back, with the same steps to save a copy as UTF-8 | no text saved as UTF-8 holds a NUL, and a listed name written with NULs between its letters is not replaced, though an assistant reads it all the same |
+| A plain text, Markdown, subtitle or web page file whose text holds a NUL character: the sign of UTF-16 or UTF-32 saved without the mark that names it, which is valid UTF-8 byte for byte | stored as read, a NUL beside each letter (`M\0a\0r\0i\0a`), a web page with all its markup; its text view shows nothing after the first NUL | held back, with the same steps to save a copy as UTF-8 | text saved as UTF-8 rarely holds a NUL, and a listed name written with NULs between its letters is not replaced, though an assistant reads it all the same |
 | Letters that look garbled, in any script and any format but PDF: a UTF-8 file once opened in another character set and saved again (`Ã©` for `é` through Windows Western, `√©` through the Mac's own set, `Ä…` for `ą`, `Рџ` for `П` through Windows Cyrillic, `‚Äô` for `’`); and an RTF file holding letters written as UTF-8 straight into it, outside its escapes, which RTF's rule reads byte by byte, in both programs | stored as they are, without a word | held back with a warning that says what was seen (in how many places, the first one's line, the character set they read back through), never the text; `show_text` on the preview opens a page on the researcher's own screen with the text as it would be stored and each place marked with what it would read as, and the page goes after the import, or once it is an hour old; the file comes in as it is only with `import_files_with_garbled_letters`, on the researcher's word, the names list applied to the rest, and the preview, the answer and the file's own line then say that a name written with garbled letters may not match the names list. How the places are found: each run of characters that a common set could have made of UTF-8 is read back through that set: Windows' own (Western, Central European, Cyrillic, Greek, Turkish, Hebrew, Arabic, Baltic, Vietnamese), the Mac's (Western, Central European, Cyrillic, Greek, Icelandic), DOS's (437, 850, 852, 866), KOI8-R and KOI8-U, Shift JIS's half-width katakana, and GBK; Latin-1 is read back as Windows Western, and the other ISO sets count only where they leave a control character; a control character or the replacement character counts on its own. A run counts only when the reading back sits in its word more naturally than the characters as written (no capital straight after a small letter, no symbol inside a word, one script to a word; GBK, which writes many Chinese characters the same way, needs a clearer sign). These are signs, not proof, which is why the researcher decides. Correct text can show one: Chinese with English words written inside it (`这个project太tough了`), a sum straight after an opening quotation mark or in a range (`‘£5`, `£5–£10`), a capital inside a Cyrillic word (`ПриватБанк`), Arabic punctuation typed straight before the next word, an ellipsis typed straight before a word, box drawing; other correct forms that look alike come in with no warning, such as an accented name cut off inside quotation marks (`“José`, a long dash, `”`), French spacing before a dash, `Nestlé®’s`, `SKÚŠKA`, Portuguese `«IRMÃ»`. Garbled text can show none, however many times it occurs: a garbled letter that reads naturally where it stands (`Ã` and a no-break space for the word `à`, `ĆØ` for `è` through Windows Baltic); a capital at a word's start through the Western and Central European sets (`Ã–zdemir`, `ÄŒapek`, `Åšliwa`); single letters of a name through Windows Central European (`MĂĽller`, `JĂłzef`) or ISO 8859-2 (`JosĂŠ`); two marks between letters (`Nguyá»…n`); most garbled letters at a word's start or end through GBK, as on a Chinese Windows computer (`Jos茅`), and through it every character UTF-8 writes in three bytes (`don鈥檛`); garbled punctuation outside any word; and a file read through Big5, EUC-KR or EUC-JP, which are not read back because their runs are ordinary Chinese. Such a file comes in without a word, and a garbled name in it may not match the names list either | a garbled name may not match the names list, and an assistant reads it all the same; only the researcher can tell a garbled file from a correct one that looks so |
 | XML entity declarations (Word, in any part Exegete reads: the document, its notes, comments, headers and footers; EPUB) | expanded, or imported with stray text | refused | safety |
 | Word's XML | the standard parser | defusedxml, which gives the same tree for ordinary documents | safety |
@@ -801,13 +820,13 @@ the file declares).
 | The internet-origin mark (Windows' zone mark, the Mac's quarantine mark) | the bytes copied alone | carried onto the project's copy when the original has one | a stranger's attachment still opens in Word's Protected View |
 | A folder of originals (`documents`) that is a link | not checked here | stops the import | the copies would land outside the project, where its backups do not reach |
 | File names | as on the disk | Exegete's name rules, one Unicode form; a name differing only in letter case from one in the folder of originals refused | names that look the same compare the same |
-| Errors and batches | some files stop the batch and leave their copy | the batch goes in together or not at all: a file that reads otherwise at the import than at the preview stops it, named; files held back or refused at the preview are skipped, unread. Each call stops between files within its time (provisional): the preview reads for about 30 seconds and the import works for about 45, counted from the call's start, and the files not reached are left for the next call, named, with how to go on (import what the preview read, then ask again with the same paths; files already imported are skipped); the first file a call reads always has its whole time | one clear outcome; and a host can stop a tool call that runs long |
+| Errors and batches | some files stop the batch and leave their copy | a file that reads otherwise at the import than at the preview stops the whole batch, named, and nothing goes in; files held back or refused at the preview are skipped, unread; a batch the call's time cuts short goes in as far as it got, and the answer names the rest. Each call stops between files within its time (provisional): the preview reads for about 30 seconds and the import works for about 45, counted from the call's start, and the files not reached are left for the next call, named, with how to go on (import what the preview read, then ask again with the same paths; files already imported are skipped); the first file a call reads always has its whole time, so every call reads at least one file. When every file a call read was held back or refused, the same paths would stop at the same place, so the preview says to leave those files out (name the others, or move them out of the folder). A file kept online only by a cloud drive is downloaded when it is named, and its download is not counted in the call's time | one clear outcome; and a host can stop a tool call that runs long |
 | Limits | none | per-format file sizes (8 MB plain text, Markdown and subtitles; 32 MB web pages and RTF; 100 MB Word, OpenDocument, EPUB and PDF), 10,000 entries and 25 MB a part (100 MB in all, a part read twice counted twice) inside an archive, 1,000,000 characters of text, 30 seconds (40 at the import) and 1 GB of memory to read a file, 50 files a batch (the figures provisional) | hostile and huge files; Exegete may refuse a file QualCoder would import, and says so |
 | The names list | applied entry by entry; a backslash in a pseudonym read as a pattern | applied in one pass, longest first, each pseudonym written literally; a list Exegete cannot use stops the import, and its preview then shows no file or folder name holding a name from it (every name, when the list cannot be read at all) | one pass never rewrites a pseudonym it has written |
 | PDFs, and file names, holding listed names | imported | held back. A PDF whose text or notes hold names from the list (by the list's own rule) comes in with `import_pdfs_with_listed_names`. A file whose own name holds one, found as Exegete finds a name inside a name (in any letter case, across any separator, inside a longer word: `maria_interview.docx`, `MariaB.docx`), is referred to by its position only (its place among the folder's documents of the kinds Exegete imports, in A to Z order), and so is a step of a link's real place that holds one; renaming it first is the advice, and it comes in under that name with `import_file_names_with_listed_names`. Each argument is set only on the researcher's word | the names list's promise |
 | PDF highlights and underlines | offered to be coded at import | counted in the preview, not coded | every coding needs the researcher's approval |
 | The file's memo | empty, PDF notes apart | also `memo`, before the PDF notes; the PDF notes' heading is always "PDF annotations:", where QualCoder writes it in its interface language | what the researcher asked to record |
-| The file's owner | the researcher's coder name | the AI coder name, on the row and its attribute values | Exegete's rule for every write, as the owner decided on 6 October 2026: it records who brought the file in, on the researcher's word |
+| The file's owner | the researcher's coder name | the AI coder name, on the row and its attribute values | Exegete's rule for every write: it records who brought the file in, on the researcher's word |
 | QualCoder's search and AI indexes | written at import | left to QualCoder's next opening of the project | QualCoder rebuilds both itself |
 | A PDF's text | read with the PyMuPDF release QualCoder has | read with the release Exegete has (the extension pins 1.28.2, the release with which Exegete's text is checked against QualCoder's); another release can read some PDFs differently, and QualCoder 4.0 may then report a text mismatch and offer to restructure, which moves codings | the import's answer names the release and says to take a backup and check before accepting |
 | Folders | no folder import | a folder's own supported files, in name order; its subfolders named, not opened | one place to name |
@@ -943,7 +962,7 @@ still answers empty, and that answer is a finding.
 
 **Rich Transcript Analysis:**
 - `analyze_file_with_coding(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
-- `open_file_for_reading(file_id, show, without_codes)` - **Let the researcher read a whole file on their own computer** (v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). `without_codes=true` writes the page with the text alone, for a fresh reading. See "Reading a whole file" below
+- `open_file_for_reading(file_id, show, without_codes)` - **Let the researcher read a whole file on their own computer** (v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). `without_codes=true` writes the page with the text alone, for a fresh reading. See "Reading a whole file" above
 
 **Attributes & Demographics:**
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)
@@ -982,7 +1001,7 @@ still answers empty, and that answer is a finding.
 - `create_proposed_codes(coding_session_id, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first
 
 **Data Import, Cases & Attributes (Write Operations):**
-- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` - **WRITES TO DATABASE** (0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer following QualCoder 4.0's own import; where QualCoder's readers lose or garble content, Exegete keeps it, and names the departure (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's pseudonyms list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice); so are files whose letters look garbled (`import_files_with_garbled_letters`), with a warning that says what was seen, never the text, and `show_text` on the preview opens a page on the researcher's own screen to check them on first. Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so in Word, TextEdit or Notepad; nothing is guessed). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" below. In the full and lifecycle sets, not core
+- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` - **WRITES TO DATABASE** (0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer following QualCoder 4.0's own import; where QualCoder's readers lose or garble content, Exegete keeps it, and names the departure (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's names list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice); so are files whose letters look garbled (`import_files_with_garbled_letters`), with a warning that says what was seen, never the text, and `show_text` on the preview opens a page on the researcher's own screen to check them on first. Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so in Word, TextEdit or Notepad; nothing is guessed). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" above. In the full and lifecycle sets, not core
 - `import_text_file(filename, content, memo, owner, create_backup, case_name, apply_project_pseudonyms)` - **WRITES TO DATABASE** - Add a new text source, optionally linked to a case. The name follows `rename_file`'s rules (at most 200 bytes in UTF-8; no path, control or invisible characters; no name Windows cannot store; not a name already in the project's `documents/` folder). With `apply_project_pseudonyms=true` the project's own `pseudonyms.json` is applied to the text before it is stored, which is what QualCoder does to every text file it imports; default off; `owner` is deprecated, removed in v0.15 (see "The `owner` argument is deprecated" above)
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **WRITES TO DATABASE** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and names it)
 - `create_case(name, memo, create_backup)` - **WRITES TO DATABASE** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)
@@ -1127,6 +1146,18 @@ What codes do I have in my project?
 
 ```
 List all the source files in my project
+```
+
+```
+Bring in the interviews in /Users/me/Documents/Interviews: show me the preview first
+```
+
+```
+Open P01's interview for me to read, with its coding highlighted
+```
+
+```
+Open P01's interview for me to read without its codes, for a fresh reading
 ```
 
 ### Finding Files

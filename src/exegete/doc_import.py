@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Bringing documents into a project from the researcher's computer, the
-way QualCoder's own import does (0.14.3; the import and
-reading design, Parts 3 to 6).
+"""Bringing documents into a project from the researcher's computer,
+following QualCoder's own import, with each departure named (0.14.3;
+the import and reading design, Parts 3 to 6).
 
 The server's `import_documents` tool calls `survey` twice: once for the
 preview, which reads every file (in a reading process) and writes
@@ -19,6 +19,7 @@ so the names list is applied to, and checked in, the text as it is
 stored.
 """
 
+import bisect
 import hashlib
 import os
 import secrets
@@ -44,7 +45,7 @@ MAX_MEMO = 10_000
 # seconds, so that the import, which reads the same files again from
 # their copies, fits within its own 45; one file read at the import has
 # 40 seconds (the preview's 30 for a file, and a margin), and the first
-# file a call reads always has its whole time, so each call takes in at
+# file a call reads always has its whole time, so each call reads at
 # least one file.
 PREVIEW_SECONDS = 30
 IMPORT_SECONDS = 45
@@ -68,6 +69,10 @@ SIZE_LIMITS = {
 # What an interrupted import leaves in the folder of originals, so that
 # the next import recognises and removes it.
 TEMP_PREFIX = ".exegete-importing-"
+# The temporary copy's name: the prefix and eight letters, never the
+# file's own name, so that on Windows the temporary place is no longer
+# than the final one for any name of this length or more.
+TEMP_NAME_CHARS = len(TEMP_PREFIX) + 8
 ORDINALS = ("first", "second", "third", "fourth", "fifth", "sixth",
             "seventh", "eighth", "ninth", "tenth")
 
@@ -159,6 +164,9 @@ class Context:
     import_seconds: float = IMPORT_SECONDS
     home: Optional[Path] = None
     memo: str = ""
+    # On Windows with long paths switched off: a place in the folder of
+    # originals past 259 characters cannot be written. None until asked.
+    short_paths: Optional[bool] = None
 
 
 def stored_name(disk_name: str) -> str:
@@ -466,6 +474,25 @@ def _same_original(ctx: Context, name: str, digest: str, size: int) -> bool:
     return data is not None and digest_of(data) == digest
 
 
+def windows_short_paths() -> bool:
+    """True on Windows with long paths switched off, where a file's place
+    may be at most 259 characters long."""
+    if os.name != "nt":
+        return False
+    from .new_project import windows_long_paths_enabled
+    return not windows_long_paths_enabled()
+
+
+def place_too_long(documents: Path, name: str) -> Optional[int]:
+    """The length of the longest place the import writes for a file named
+    `name` in the folder of originals (its temporary copy's or its
+    own), when that passes the 259 characters Windows allows without
+    long paths; else None."""
+    from .new_project import WINDOWS_MAX_FILE_PATH
+    longest = len(str(documents)) + 1 + max(len(name), TEMP_NAME_CHARS)
+    return longest if longest > WINDOWS_MAX_FILE_PATH else None
+
+
 def prepare(item: Item, ctx: Context, seen_keys: set,
             new_so_far: int) -> Optional[bytes]:
     """Every check on one file that needs no reading of its text; the
@@ -502,6 +529,15 @@ def prepare(item: Item, ctx: Context, seen_keys: set,
     if problem is not None:
         _refuse(item, "name_rule", problem=problem)
         return None
+    if ctx.short_paths is None:
+        ctx.short_paths = windows_short_paths()
+    if ctx.short_paths:
+        from .new_project import WINDOWS_MAX_FILE_PATH
+        length = place_too_long(ctx.project_folder / "documents", item.name)
+        if length is not None:
+            _refuse(item, "place_too_long", length=length,
+                    limit=WINDOWS_MAX_FILE_PATH)
+            return None
     key = documents_name_key(item.name)
     if key in seen_keys:
         _refuse(item, "same_name_in_batch")
@@ -542,6 +578,72 @@ def prepare(item: Item, ctx: Context, seen_keys: set,
     return data
 
 
+def listed_names(compiled: Any, text: str, kind: Optional[str]) -> list:
+    """The names list's replacements in a file's text, read through the
+    markers its reader left where a note or comment stood. A comment on a
+    first name alone, or a footnote after it, puts its marker inside the
+    full name ("Maria[Comment 1] Brown"): the name is found in the text
+    with the markers taken out, the whole span is replaced, and the
+    markers inside it follow the pseudonym ("Participant A[Comment 1]").
+    A name found only with the markers in place (one followed by a marker
+    and then letters) is replaced as before, so this never replaces less
+    than the list's own rule does."""
+    from . import pseudonymise as pseudo
+    found = pseudo.find_replacements(compiled, text)
+    if kind not in doc_readers.MARKING_FORMATS:
+        return found
+    spans = [(m.start(), m.end())
+             for m in doc_readers.NOTE_MARKER.finditer(text)]
+    if not spans:
+        return found
+    # The text without the markers, and for each marker where it stands
+    # in that text and how much of the stored text it and those before it
+    # take up.
+    pieces, at, removed = [], 0, 0
+    places: List[int] = []
+    taken: List[int] = []
+    for start, end in spans:
+        pieces.append(text[at:start])
+        places.append(start - removed)
+        removed += end - start
+        taken.append(removed)
+        at = end
+    pieces.append(text[at:])
+    bare = "".join(pieces)
+
+    def stored_at(position: int) -> int:
+        # The place in the stored text of the bare text's character at
+        # `position`: after every marker that stood before it.
+        index = bisect.bisect_right(places, position)
+        return position + (taken[index - 1] if index else 0)
+
+    marker_starts = [start for start, _end in spans]
+    through = []
+    for found_bare in pseudo.find_replacements(compiled, bare):
+        start = stored_at(found_bare.start)
+        end = stored_at(found_bare.end - 1) + 1
+        # The markers that stood inside the name, in their order.
+        inside = []
+        index = bisect.bisect_right(marker_starts, start)
+        while index < len(spans) and spans[index][1] <= end:
+            inside.append(text[spans[index][0]:spans[index][1]])
+            index += 1
+        through.append(pseudo.Replacement(
+            start, end, found_bare.entry, text[start:end],
+            found_bare.text + "".join(inside)))
+    # Each list is in order and its spans do not overlap, so a name the
+    # list's own rule found overlaps one found through the markers only
+    # if it overlaps the last of them to start before it ends.
+    through_starts = [replacement.start for replacement in through]
+    chosen = list(through)
+    for replacement in found:
+        index = bisect.bisect_left(through_starts, replacement.end) - 1
+        if index < 0 or through[index].end <= replacement.start:
+            chosen.append(replacement)
+    chosen.sort(key=lambda replacement: replacement.start)
+    return chosen
+
+
 def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
     """What the import does with one file's text: holds it back, or
     applies the names list and gathers its warnings and memo. The text is
@@ -566,7 +668,7 @@ def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
                 item.status, item.code = "held", "pdf_listed_names"
                 return
     elif ctx.compiled is not None:
-        replacements = pseudo.find_replacements(ctx.compiled, text)
+        replacements = listed_names(ctx.compiled, text, item.kind)
         text = pseudo.apply_replacements(text, replacements)
         item.replacements = len(replacements)
     if len(text) > ctx.max_characters:
@@ -803,26 +905,28 @@ def refusal_words(item: Item) -> str:
 
 def names_list_line(ctx: Context) -> str:
     if ctx.names_list == "none":
-        return ("This project has no list of names to replace. If these "
-                "documents name participants or places, make the list "
-                "first (QualCoder's Pseudonyms dialog); the import then "
-                "replaces the names as the text comes in.")
+        return ("This project has no names list. If these documents name "
+                "participants or places, make the list first (in "
+                "QualCoder, if you use it, the Pseudonyms button in Manage "
+                "Files); the import then replaces the names as the text "
+                "comes in.")
     if ctx.names_list == "empty":
-        return ("This project's list of names to replace is empty, so no "
-                "names are replaced.")
+        return ("This project's names list is empty, so no names are "
+                "replaced.")
     if ctx.names_list == "off":
-        return ("The project's list of names is not applied to this "
-                "import, as asked: the real names are stored, and PDFs "
-                "and file names holding names from it are not held back.")
+        return ("The project's names list is not applied to this import, "
+                "as asked: the real names are stored, and PDFs and file "
+                "names holding names from it are not held back.")
     if ctx.names_list == "unusable":
-        return ("The project's list of names cannot be used as it stands "
+        return ("The project's names list cannot be used as it stands "
                 "(what stops the import says why), so nothing is imported "
                 "until it is corrected. Meanwhile every file and folder "
                 "whose name may hold a name from it is shown by its "
                 "position only.")
-    return (f"The project's list of names ({ctx.names_list_entries} "
-            f"entries) is applied to the text as it comes in (never to "
-            f"PDFs, nor to the originals).")
+    count = ctx.names_list_entries
+    return (f"The project's names list ({count} "
+            f"{'entry' if count == 1 else 'entries'}) is applied to the "
+            f"text as it comes in (never to PDFs, nor to the originals).")
 
 
 def file_entry(item: Item) -> Dict[str, Any]:
@@ -855,8 +959,13 @@ def file_entry(item: Item) -> Dict[str, Any]:
 
 
 def summary_line(ready: int, look: int, held: int, refused: int,
-                 skipped: int, unread: int = 0) -> str:
-    parts = [f"{ready} file{'s' if ready != 1 else ''} ready"]
+                 skipped: int, unread: int = 0, more: int = 0,
+                 stopped: bool = False) -> str:
+    """The preview's one line: each count, the files its time left unread,
+    and the files over the batch's cap. While something stops the whole
+    import, the files are only those that would be ready."""
+    parts = [f"{ready} file{'s' if ready != 1 else ''} "
+             f"{'would be ready' if stopped else 'ready'}"]
     if look:
         parts.append(f"{look} need{'s' if look == 1 else ''} a look before "
                      f"you say yes")
@@ -870,7 +979,23 @@ def summary_line(ready: int, look: int, held: int, refused: int,
         # Said in the line the researcher is shown, so that a batch the
         # preview's time cut short is never taken for the whole of it.
         parts.append(f"{unread} not read this time")
+    if more:
+        # The files over the batch's cap, said in the same line for the
+        # same reason.
+        parts.append(f"{more} more in the folder for the next batch")
+    if stopped:
+        parts.append("the import is stopped (above)")
     return "; ".join(parts) + "."
+
+
+def not_taken_note(count: int) -> str:
+    """What the preview and the import say of the files over the batch's
+    cap."""
+    return (f"{count} more file{'s' if count != 1 else ''} in the "
+            f"folder {'are' if count != 1 else 'is'} not in this batch: at "
+            f"most {MAX_BATCH} files not yet in the project are taken at a "
+            f"time, by name. After this import, ask again with the same "
+            f"folder for the next ones.")
 
 
 def preview_answer(result: Survey, ctx: Context,
@@ -891,7 +1016,8 @@ def preview_answer(result: Survey, ctx: Context,
         answer["stops_the_import"] = list(stops)
     answer["summary"] = summary_line(len(ready), look, len(held),
                                      len(refused) + len(result.path_refusals),
-                                     len(skipped), len(unread))
+                                     len(skipped), len(unread), len(later),
+                                     bool(stops))
     answer["names_list"] = names_list_line(ctx)
     if held:
         answer["held_back"] = [{"file": item_label(i),
@@ -908,11 +1034,7 @@ def preview_answer(result: Survey, ctx: Context,
     if skipped:
         answer["already_in_the_project"] = [item_label(i) for i in skipped]
     if later:
-        answer["not_taken_this_time"] = (
-            f"{len(later)} more file{'s' if len(later) != 1 else ''} in the "
-            f"folder are not in this batch: at most {MAX_BATCH} files not "
-            f"yet in the project are taken at a time, by name. After this "
-            f"import, ask again with the same folder for the next ones.")
+        answer["not_taken_this_time"] = not_taken_note(len(later))
     if unread:
         answer["not_read_this_time"] = {
             "files": [item_label(i) for i in unread],
@@ -981,13 +1103,22 @@ def not_read_note(count: int, ready: bool, held_or_refused: bool) -> str:
                  "agrees; then call again with the same paths, without a "
                  "token, for a preview of the rest (files already in the "
                  "project are skipped).")
+        if held_or_refused:
+            note += (" The files held back or refused above are read again "
+                     "each time they are named: leaving them out (or moving "
+                     "them out of the folder) saves that time.")
+    elif held_or_refused:
+        # Every file this call read was held back or refused: the same
+        # paths would read them first again and stop at the same place.
+        note += ("No file in this call is ready, so a call with the same "
+                 "paths would read the same files first and stop at the "
+                 "same place: the rest can be read only once the files held "
+                 "back or refused above are left out. Call again without a "
+                 "token, naming only the files not read (or moving the "
+                 "others out of the folder), for a preview of the rest.")
     else:
         note += ("Call again with the same paths, without a token, for a "
                  "preview of the rest.")
-    if held_or_refused:
-        note += (" The files held back or refused above are read again "
-                 "each time they are named: leaving them out (or moving "
-                 "them out of the folder) saves that time.")
     return note
 
 
@@ -1197,7 +1328,7 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
             raise BatchFailed("changed") from None
         if data is None or digest_of(data) != item.digest:
             raise BatchFailed("changed")
-        temp = documents / f"{TEMP_PREFIX}{secrets.token_hex(4)}-{item.name}"
+        temp = documents / f"{TEMP_PREFIX}{secrets.token_hex(4)}"
         try:
             _write_new_file(temp, data)
         except OSError:

@@ -326,10 +326,12 @@ class TestThePageToCheck:
         note = " ".join(reading_folder.NOTE.split())
         assert ("a page on which to check letters that look garbled "
                 "before a file comes in") in note
-        assert ("a page for checking letters, after the import or once it "
-                "is an hour old") in note
+        assert ("a page for checking letters, after the import or at the "
+                "first tidy once it is an hour old") in note
+        assert "Exegete tidies this folder when it starts" in note
         assert import_page.FOR_THE_ASSISTANT.endswith(
-            "It goes after the import, or once it is an hour old.")
+            "It goes after the import, or at Exegete's first tidy once it "
+            "is an hour old.")
 
     def test_show_text_given_with_the_token_changes_nothing(self, project,
                                                             folder):
@@ -629,7 +631,7 @@ class TestTheDocuments:
         privacy = _flat("PRIVACY.md")
         section = privacy[privacy.index("## Bringing documents in"):]
         section = section[:section.index("## ", 5)]
-        assert "may not match the pseudonyms list" in section
+        assert "may not match the names list" in section
         assert "`import_files_with_garbled_letters`" in section
         assert "when it is the only one in a file" not in section
 
@@ -639,7 +641,7 @@ class TestTheDocuments:
         assert "`show_text`" in entry
         assert "is held back until it is corrected" not in entry
         assert "which QualCoder's way of reading RTF garbles so" not in entry
-        assert "may not match the pseudonyms list" in entry
+        assert "may not match the names list" in entry
 
 
 def test_a_file_too_long_is_refused_before_any_question_on_its_letters(

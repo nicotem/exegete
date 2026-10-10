@@ -129,9 +129,8 @@ class TestTheDescription:
         flat = " ".join(self._served(mode)["import_documents"].split())
         assert "as QualCoder's own import reads them" not in flat
         assert "Text as QualCoder reads it" not in flat
-        assert ("Exegete reads them QualCoder's way, keeps what its readers "
-                "lose (notes, comments, headers) and names each departure."
-                ) in flat
+        assert ("Exegete reads them QualCoder's way, keeps what QualCoder's "
+                "readers lose or garble, and names each departure.") in flat
         assert "better" not in flat
 
     @pytest.mark.parametrize("mode", ["full", "lifecycle"])

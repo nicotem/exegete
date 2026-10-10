@@ -596,6 +596,36 @@ class TestAfterCreation:
             "Steps2", coder_name_not_known=True))["next_steps"])
         assert "is not known" in steps
 
+    def test_the_next_steps_bring_documents_in_with_import_documents(self):
+        """0.14.3: documents on the researcher's computer come in through
+        import_documents, which keeps their text off the conversation;
+        import_text_file is for text typed or pasted in the conversation
+        (its own description says so). create_project is served in the
+        lifecycle set, which has import_documents."""
+        server._apply_toolset("lifecycle")
+        assert "import_documents" in server.mcp._tool_manager._tools
+        steps = create("Material")["next_steps"]
+        (step,) = [s for s in steps if "import_documents" in s]
+        assert step == (
+            "Bring the researcher's documents in from their computer with "
+            "import_documents, giving their paths, so that their text "
+            "stays off the conversation; import_text_file is for text "
+            "typed or pasted in the conversation. Sub-codes are available "
+            "at once (create_code with parent_code_id).")
+        assert not any("Add material with import_text_file" in s
+                       for s in steps)
+
+    def test_a_set_without_import_documents_keeps_the_earlier_step(self):
+        """Where import_documents is not served, the step names only
+        import_text_file, as before (the registry is put back after the
+        test by conftest's fixture)."""
+        server.mcp.remove_tool("import_documents")
+        steps = create("NoDocuments")["next_steps"]
+        assert "Add material with import_text_file; sub-codes are " \
+               "available at once (create_code with parent_code_id)." \
+            in steps
+        assert not any("import_documents" in s for s in steps)
+
     def test_created_but_not_selected_is_said(self, monkeypatch):
         def refuse(path, read_only=True):
             raise database.DatabaseLockedError("locked")

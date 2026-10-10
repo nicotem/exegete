@@ -270,3 +270,82 @@ class TestTheImport:
                             preview_token=preview["preview_token"])
         assert done.get("success") is not True, done
         assert _rows(project) == []
+
+
+class TestAFileKeptOnlineOnly:
+    """A cloud drive's file kept online only is downloaded when Exegete
+    reads its bytes, which it does for every file of the batch at each
+    call, before any text is read. The download counts towards the
+    call's time, since that time runs from the call's start, but it is
+    never cut short by it: a file is downloaded whole even when the time
+    is spent. (Until this test, TOOLS.md and the CHANGELOG said the
+    download was not counted in the call's time.)"""
+
+    @pytest.fixture
+    def downloads(self, monkeypatch, clock):
+        """Each file named in `seconds` takes that long to come down
+        when its bytes are read; `fetched` lists the files read."""
+        seconds, fetched = {}, []
+        real = doc_import.read_bytes
+
+        def read_bytes(path, limit):
+            name = Path(path).name
+            if name in seconds:
+                fetched.append(name)
+                clock.now += seconds[name]
+            return real(path, limit)
+        monkeypatch.setattr(doc_import, "read_bytes", read_bytes)
+        return seconds, fetched
+
+    def test_the_download_counts_towards_the_time_and_is_not_cut_short(
+            self, project, folder, clock, downloads):
+        seconds, fetched = downloads
+        _files(folder, (1, 1), (1, 1), (1, 1))
+        seconds.update({"P01.txt": 20, "P02.txt": 20, "P03.txt": 20})
+        preview, took = _call(clock, paths=[str(folder)])
+        # Counted: P01's 20 seconds of download and 1 of reading leave 9
+        # of the preview's 30; P02's download takes them, so its reading,
+        # of 1 second, is left for the next call, and so is P03's.
+        assert preview["summary"] == "1 file ready; 2 not read this time."
+        assert preview["not_read_this_time"]["files"] == [
+            "P02.txt", "P03.txt"]
+        assert len(clock.reads) == 1
+        # Never cut short: every file came down whole, P03 with no time
+        # left at all, and none is refused for it; so the call ran long.
+        assert fetched == ["P01.txt", "P02.txt", "P03.txt"]
+        assert "refused" not in preview
+        assert took == pytest.approx(61)
+        assert took > doc_import.PREVIEW_SECONDS
+        # The import downloads every file of the batch again
+        fetched.clear()
+        done, took = _call(clock, paths=[str(folder)],
+                           preview_token=preview["preview_token"])
+        assert done["success"] is True
+        assert [f["name"] for f in done["files"]] == ["P01.txt"]
+        assert sorted(set(fetched)) == ["P01.txt", "P02.txt", "P03.txt"]
+        assert took > doc_import.IMPORT_SECONDS
+        assert _rows(project) == ["P01.txt"]
+
+
+def _changelog_0143():
+    text = (Path(__file__).resolve().parent.parent / "CHANGELOG.md"
+            ).read_text(encoding="utf-8")
+    entry = text[text.index("## [0.14.3-alpha]"):]
+    return " ".join(entry[:entry.index("## [0.14.2-alpha]")].split())
+
+
+def test_the_documents_say_the_download_counts_and_is_not_cut_short():
+    """TOOLS.md's "Errors and batches" row and the CHANGELOG's 0.14.3
+    entry say what the test above shows, as the release notes do."""
+    tools = " ".join((Path(__file__).resolve().parent.parent / "TOOLS.md"
+                      ).read_text(encoding="utf-8").split())
+    said = ("A file kept online only by a cloud drive is downloaded when it "
+            "is named, every file of the batch at each call: the download "
+            "counts towards the call's time but is never cut short by it, "
+            "so a large folder kept online only can make a call run long; "
+            "making the folder available offline first avoids that")
+    assert said + " | one clear outcome;" in tools
+    changelog = _changelog_0143()
+    assert said + "." in changelog
+    for text in (tools, changelog):
+        assert "not counted in the call's time" not in text

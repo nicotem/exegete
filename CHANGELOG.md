@@ -390,7 +390,10 @@ other limits.
   over the batch's cap of 50 are counted in the summary line too, and
   in the import's message, as the files left for later are. A file
   kept online only by a cloud drive is downloaded when it is named,
-  and the download is not counted in the call's time. While something
+  every file of the batch at each call: the download counts towards
+  the call's time but is never cut short by it, so a large folder
+  kept online only can make a call run long; making the folder
+  available offline first avoids that. While something
   stops the whole import, the summary line says how many files would be
   ready, and that the import is stopped. A file over its own time is
   refused, as before. A batch of 20

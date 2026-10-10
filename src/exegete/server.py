@@ -19745,6 +19745,22 @@ def _opening_in_qualcoder_40(folder: Path, coder: str) -> str:
         "of the project beside it.")
 
 
+def _created_project_material_step() -> str:
+    """The next step for bringing material in (0.14.3): documents on the
+    researcher's computer through import_documents, which keeps their
+    text off the conversation, wherever the tool set serves it (the
+    lifecycle set, where create_project is, always does);
+    import_text_file is for text typed or pasted in the conversation."""
+    if "import_documents" in mcp._tool_manager._tools:
+        return ("Bring the researcher's documents in from their computer "
+                "with import_documents, giving their paths, so that their "
+                "text stays off the conversation; import_text_file is for "
+                "text typed or pasted in the conversation. Sub-codes are "
+                "available at once (create_code with parent_code_id).")
+    return ("Add material with import_text_file; sub-codes are available at "
+            "once (create_code with parent_code_id).")
+
+
 def _created_project_next_steps(coder: str,
                                 previous: Optional[str]) -> List[str]:
     differ = (f"it must differ from the researcher's own coder name, "
@@ -19756,8 +19772,7 @@ def _created_project_next_steps(coder: str,
          "which name the AI's codings and other writes should be stored "
          "under, and call set_project_ai_coder_name before the first write "
          "that needs it; " + differ),
-        ("Add material with import_text_file; sub-codes are available at "
-         "once (create_code with parent_code_id)."),
+        _created_project_material_step(),
         ("The project memo is empty, as QualCoder leaves a new project's; "
          "set_memo with target_type 'project' writes it (research topic "
          "and questions, methodology, participants), and QualCoder 4.0's "

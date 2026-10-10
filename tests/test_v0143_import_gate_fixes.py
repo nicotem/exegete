@@ -489,7 +489,7 @@ class TestWord:
     def test_a_note_of_deleted_text_goes_with_it(self):
         text, signs = doc_readers.read_word(import_fixtures.word(
             DELETED_NOTES_BODY, DELETED_NOTES_PARTS))
-        assert text == ("Kept words and the end.\n\n"
+        assert text == ("Kept words[Footnote 1] and the end.\n\n"
                         "Footnote 1: A kept note.\n\n"
                         "Footnote 2: A note nothing refers to.")
         assert signs.get("word_notes") == 2

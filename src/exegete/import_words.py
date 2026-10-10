@@ -340,8 +340,10 @@ WARNINGS = {
     "word_notes": ("information",
         "Its footnotes, endnotes, comments, headers and footers ({count} "
         "in all) come after the document's text, each labelled, as in "
-        "\"Footnote 1: ...\"; comments' authors and dates are left out. "
-        "QualCoder's own import would leave them all out."),
+        "\"Footnote 1: ...\", and each note or comment leaves its label "
+        "where it stood, as in \"[Footnote 1]\"; comments' authors and "
+        "dates are left out. QualCoder's own import would leave them all "
+        "out."),
     "word_revisions": ("information",
         "It has tracked changes, read as if accepted (insertions in, "
         "deletions out), as QualCoder reads them. To read it another way, "
@@ -368,7 +370,9 @@ WARNINGS = {
     "odt_notes": ("information",
         "Its footnotes, endnotes, comments, headers and footers ({count} "
         "in all) come after the document's text, each labelled, as in "
-        "\"Footnote 1: ...\"; comments' authors and dates are left out. "
+        "\"Footnote 1: ...\", and each note or comment leaves its label "
+        "where it stood, as in \"[Footnote 1]\"; comments' authors and "
+        "dates are left out. "
         "QualCoder's own import would leave notes and comments inside the "
         "sentence with their markup (a comment's author and date among "
         "it), and headers and footers out."),
@@ -390,9 +394,10 @@ WARNINGS = {
     "rtf_notes": ("information",
         "Its footnotes, endnotes, comments, headers, footers and text "
         "boxes ({count} in all) come after the document's text, each "
-        "labelled, as in \"Footnote 1: ...\"; comments' authors and "
-        "dates are left out. QualCoder's own import would leave them all "
-        "out."),
+        "labelled, as in \"Footnote 1: ...\", and each note or comment "
+        "leaves its label where it stood, as in \"[Footnote 1]\"; "
+        "comments' authors and dates are left out. QualCoder's own import "
+        "would leave them all out."),
     "rtf_emoji": ("information",
         "It holds emoji ({count}), which RTF writes in two halves; each "
         "comes in as one character. QualCoder's own import would fail on "

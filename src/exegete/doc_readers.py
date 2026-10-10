@@ -371,6 +371,7 @@ _RTF_PARTS = {"shptxt": "Text box", "footnote": "Footnote",
               "footerf": "Footer"}
 _RTF_ORDER = ("Text box", "Footnote", "Endnote", "Comment", "Header",
               "Footer")
+_RTF_NUMBERED = frozenset(("Footnote", "Endnote", "Comment"))
 
 
 def _rtf_groups(text: str) -> List[Tuple[int, int, List[Tuple[str, str]]]]:
@@ -418,14 +419,18 @@ def _outermost(spans: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
     return kept
 
 
-def _cut(text: str, spans: List[Tuple[int, int]]) -> str:
+def _cut(text: str, spans: List[Tuple[int, int]],
+         markers: Optional[List[str]] = None) -> str:
     """`text` with each group in `spans` made an empty group, which
     striprtf reads as it read the group it replaces (a control word
-    before it still ends there, and nothing is written)."""
+    before it still ends there, and nothing is written); or, given
+    `markers`, a group holding the span's marker alone ("[Footnote 1]",
+    which has no character RTF reads as markup), or empty where its
+    marker is ""."""
     out, at = [], 0
-    for start, end in spans:
+    for index, (start, end) in enumerate(spans):
         out.append(text[at:start])
-        out.append("{}")
+        out.append("{" + (markers[index] if markers else "") + "}")
         at = end
     out.append(text[at:])
     return "".join(out)
@@ -463,7 +468,9 @@ def read_rtf(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
     """The text and signs of an RTF file: what striprtf gives for it, as
     QualCoder reads it; with the departures, text deleted with tracked
     changes left out (rtf_deleted), the parts striprtf leaves out after
-    the text, each labelled (rtf_notes), and emoji joined (rtf_emoji)."""
+    the text, each labelled, with a marker such as "[Footnote 1]" where
+    each note and comment stood (rtf_notes), and emoji joined
+    (rtf_emoji)."""
     from striprtf.striprtf import rtf_to_text
     departures = _departures(departures)
     source = _universal_newlines(raw.decode("latin-1"))
@@ -488,6 +495,7 @@ def read_rtf(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
         spans = _outermost([(s, e) for s, e, _l in taken])
         taken = [t for t in sorted(taken) if (t[0], t[1]) in spans]
         before, after = _rtf_wrapper(source)
+        markers: List[str] = []
         for start, end, _label in taken:
             group = source[start:end]
             inner = re.sub(r"^\{(?:\\\*\s*)?\\[a-zA-Z]+-?\d* ?", "{",
@@ -497,7 +505,13 @@ def read_rtf(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
             except Exception:
                 raise ReadRefused("no_text") from None
             parts[_label].append(part.strip(" \t\r\n"))
-        source = _cut(source, spans)
+            # A note or comment leaves its label where it stood, numbered
+            # as at the end; one with no text, and the unnumbered parts
+            # (text boxes, headers, footers), leave nothing.
+            markers.append(f"[{_label} {len(parts[_label])}]"
+                           if _label in _RTF_NUMBERED and parts[_label][-1]
+                           else "")
+        source = _cut(source, spans, markers)
     try:
         text = rtf_to_text(source)
     except Exception:
@@ -561,7 +575,9 @@ def read_rtf(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
 # 2022 Modified by Colin Curtain to import docx only (QualCoder).
 # 2026 Exegete: the same walk, the tree parsed with defusedxml, which
 # refuses entity declarations, instead of the standard parser; and the
-# named departures, each a switch: given none, the walk is QualCoder's.
+# named departures, each a switch: given none, the walk is QualCoder's
+# (with word_notes, `markers` puts "[Footnote 1]" where a note moved to
+# the end of the text was referred to).
 
 W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 MC_NS = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
@@ -636,10 +652,12 @@ def _word_walk(root, departures, inside_paragraph, firsts=frozenset()):
                                if c.tag not in pruned]))
 
 
-def getdocumenttext(document, departures=AS_QUALCODER, counts=None):
+def getdocumenttext(document, departures=AS_QUALCODER, counts=None,
+                    markers=None):
     """ Return the raw text of a document, as a list of paragraphs. """
 
     paratextlist = []
+    shown = set()
     firsts = (_first_forms(document) if "word_text_boxes" in departures
               else frozenset())
     # Compile a list of all paragraph (p) elements
@@ -669,6 +687,13 @@ def getdocumenttext(document, departures=AS_QUALCODER, counts=None):
                 pieces.append('-')
             elif marks and element.tag == W_NS + 'ptab':
                 pieces.append('\t')
+            elif markers and element.tag in _REFERENCES:
+                # Where a note or comment moved to the end of the text was
+                # referred to, its label, once (word_notes).
+                key = (element.tag, element.get(W_NS + "id"))
+                if key in markers and key not in shown:
+                    shown.add(key)
+                    pieces.append(f"[{markers[key]}]")
         # A break at a paragraph's start or end adds nothing, so a
         # paragraph of breaks alone is empty, as QualCoder has it.
         while pieces and pieces[0] is _BREAK:
@@ -721,6 +746,8 @@ _WORD_NOTES = (("word/footnotes.xml", "footnote", "footnoteReference",
                 "Endnote"),
                ("word/comments.xml", "comment", "commentReference",
                 "Comment"))
+_REFERENCES = frozenset(W_NS + reference
+                        for _part, _tag, reference, _label in _WORD_NOTES)
 
 
 def _part_number(name: str) -> int:
@@ -745,15 +772,20 @@ def _references_in_deleted_text(document) -> Dict[str, set]:
     return found
 
 
-def _word_notes(archive: Archive, document, departures) -> List[str]:
+def _word_notes(archive: Archive, document, departures
+                ) -> Tuple[List[str], Dict[Tuple[str, str], str]]:
     """What QualCoder leaves out of a Word file, in this order, each
     labelled: footnotes, endnotes and comments, numbered in the order
     the document refers to them (those it does not refer to after);
     then each header and footer whose text is not an earlier one's.
     A comment's author and date are left out. With tracked changes read
     as accepted (word_tracked_changes), a note or comment referred to
-    only from deleted or moved-away text goes with that text."""
+    only from deleted or moved-away text goes with that text.
+
+    Also the label of each note the document's text refers to, by its
+    reference's tag and id, for the marker left where it stood."""
     referred: Dict[str, List[str]] = {}
+    markers: Dict[Tuple[str, str], str] = {}
     deleted = (_references_in_deleted_text(document)
                if "word_tracked_changes" in departures else {})
     firsts = (_first_forms(document) if "word_text_boxes" in departures
@@ -783,6 +815,7 @@ def _word_notes(archive: Archive, document, departures) -> List[str]:
         for number, note_id in enumerate(order, 1):
             if notes[note_id]:
                 items.append(f"{label} {number}: {notes[note_id]}")
+                markers[(W_NS + reference, note_id)] = f"{label} {number}"
     for kind, label in (("header", "Header"), ("footer", "Footer")):
         names = sorted((n for n in archive.names()
                         if re.fullmatch(rf"word/{kind}\d*\.xml", n)),
@@ -795,7 +828,7 @@ def _word_notes(archive: Archive, document, departures) -> List[str]:
             if text and text not in seen:
                 seen.add(text)
                 items.append(f"{label}: {text}")
-    return items
+    return items, markers
 
 
 def _has_text(element) -> bool:
@@ -805,7 +838,8 @@ def _has_text(element) -> bool:
 def read_word(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
     """The text and the signs of a Word file: QualCoder's paragraphs
     joined by a blank line, then what QualCoder leaves out (word_notes)
-    after another."""
+    after another, with a marker such as "[Footnote 1]" where each note
+    moved to the end was referred to."""
     departures = _departures(departures)
     archive = Archive(raw)
     try:
@@ -813,13 +847,15 @@ def read_word(raw: bytes, departures=None) -> Tuple[str, Dict[str, int]]:
     except KeyError:
         raise ReadRefused("not_this_format") from None
     seen: Dict[str, int] = {}
-    paragraphs = getdocumenttext(document, departures, seen)
-    text = "\n\n".join(paragraphs)
+    notes: List[str] = []
+    markers: Dict[Tuple[str, str], str] = {}
     if "word_notes" in departures:
-        notes = _word_notes(archive, document, departures)
-        if notes:
-            text = "\n\n".join(([text] if text else []) + notes)
-            seen["word_notes"] = len(notes)
+        notes, markers = _word_notes(archive, document, departures)
+    paragraphs = getdocumenttext(document, departures, seen, markers)
+    text = "\n\n".join(paragraphs)
+    if notes:
+        text = "\n\n".join(([text] if text else []) + notes)
+        seen["word_notes"] = len(notes)
 
     def count(code, n=1):
         if n and (code not in DEPARTURES or code in departures):
@@ -973,6 +1009,11 @@ _ODT_REFERENCE = re.compile(
     r"&(#[0-9]{1,7}|#[xX][0-9A-Fa-f]{1,6}|apos|quot|gt|lt|amp);")
 _ODT_NAMED = {"apos": "'", "quot": '"', "gt": ">", "lt": "<", "amp": "&"}
 _ODT_ANNOTATION = re.compile(r"<(office:annotation)(\s[^>]*)?>")
+# The end of a comment's range, which LibreOffice writes where the range
+# ends, and the name that pairs it with its comment.
+_ODT_ANNOTATION_END = re.compile(r"<office:annotation-end(?=[\s/>])[^<>]*>")
+_ODT_ANNOTATION_NAME = re.compile(
+    r"""office:name\s*=\s*["']([^"'<>]{0,200})["']""")
 _ODT_COMMENT_META = re.compile(r"<(dc:creator|dc:date|meta:date-string|"
                                r"meta:creator-initials)"
                                r"(\s[^>]*)?>")
@@ -1135,8 +1176,10 @@ def odt_recipe(content: bytes, departures=AS_QUALCODER,
                ) -> Tuple[str, List[str], str]:
     """QualCoder's text for a content.xml, before load_file_text doubles
     its line breaks; what QualCoder leaves out (odt_notes), each
-    labelled; and the character that marks a line break inside a
-    paragraph (odt_line_breaks), which the doubling leaves single. QualCoder turns the bytes into their printed form and back,
+    labelled, with a marker such as "[Footnote 1]" left where each note
+    and comment stood; and the character that marks a line break inside
+    a paragraph (odt_line_breaks), which the doubling leaves single.
+    QualCoder turns the bytes into their printed form and back,
     which gives the bytes decoded as UTF-8 between two quote marks it
     never reaches; decoded directly here. A content.xml that is not UTF-8
     makes QualCoder's import fail."""
@@ -1174,18 +1217,48 @@ def odt_recipe(content: bytes, departures=AS_QUALCODER,
                 fragment, departures, marks, None), marks[0]).strip(
                     "\n \t")
 
+        # Each note and comment taken out leaves its label where it stood
+        # ("[Footnote 1]"), numbered as at the end; one with no text is
+        # not labelled there, so it leaves nothing. A comment on a range
+        # leaves it where the range ends, as Word and RTF place a
+        # comment's reference. The marker holds no "<" or "&", so the
+        # recipe keeps it as it is.
+        def marker(label: str, found: List[str]) -> str:
+            return f"[{label} {len(found)}]" if found[-1] else ""
+
+        range_ends = {_name.group(1) for _name in (
+            _ODT_ANNOTATION_NAME.search(end.group(0))
+            for end in _ODT_ANNOTATION_END.finditer(data)) if _name}
+        at_range_end: Dict[str, str] = {}
+
         def take_comment(match, inner):
             comments.append(note_text(
                 _take_elements(inner, _ODT_COMMENT_META)))
+            label = marker("Comment", comments)
+            name = _ODT_ANNOTATION_NAME.search(match.group(2) or "")
+            if label and name and name.group(1) in range_ends \
+                    and name.group(1) not in at_range_end:
+                at_range_end[name.group(1)] = label
+                return ""
+            return label
+
+        def range_end(match):
+            name = _ODT_ANNOTATION_NAME.search(match.group(0))
+            if name and name.group(1) in at_range_end:
+                return at_range_end.pop(name.group(1))
+            return match.group(0)
 
         def take_note(match, inner):
             body = _ODT_NOTE_BODY.search(inner)
-            kind = (endnotes if re.search(
-                r"""text:note-class\s*=\s*["']endnote""",
-                match.group(2) or "") else footnotes)
+            endnote = re.search(r"""text:note-class\s*=\s*["']endnote""",
+                                match.group(2) or "")
+            kind = endnotes if endnote else footnotes
             kind.append(note_text(body.group(1) if body else ""))
+            return marker("Endnote" if endnote else "Footnote", kind)
 
         data = _take_elements(data, _ODT_ANNOTATION, take_comment)
+        if at_range_end:
+            data = _ODT_ANNOTATION_END.sub(range_end, data)
         data = _take_elements(data, _ODT_NOTE, take_note)
         for label, found in (("Footnote", footnotes),
                              ("Endnote", endnotes), ("Comment", comments)):

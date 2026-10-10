@@ -231,11 +231,12 @@ class TestTheRulesInDetail:
 
     def test_an_rtf_part_taken_out_leaves_the_word_before_it_whole(self):
         """A control word just before a part taken out still ends where
-        it ended (the part is left as an empty group)."""
+        it ended (the part is left as a group holding its marker alone,
+        the owner's ruling of 9 October 2026)."""
         data = (rb"{\rtf1\ansi A\chatn{\*\annotation Note.}Commented."
                 rb"\par}")
         assert _text(doc_readers.RTF, data) == \
-            "ACommented.\nComment 1: Note.\n"
+            "A[Comment 1]Commented.\nComment 1: Note.\n"
 
     def test_rtf_binary_data_is_stepped_over(self):
         """Bytes after \\binN are data, even when they look like a
@@ -245,7 +246,7 @@ class TestTheRulesInDetail:
                 + str(len(fake)).encode() + b" " + fake
                 + rb"}after.{\*\footnote Note.}\par}")
         assert _text(doc_readers.RTF, data) == \
-            "Before after.\nFootnote 1: Note.\n"
+            "Before after.[Footnote 1]\nFootnote 1: Note.\n"
 
     def test_an_opendocument_declaration_left_out_wherever_it_stands(self):
         assert "gone" not in _text(

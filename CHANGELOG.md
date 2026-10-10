@@ -183,8 +183,14 @@ is built to those decisions, and may change before it is released.
   are kept; footnotes, endnotes, comments, headers and footers come
   after the text, each labelled ("Footnote 1: ..."), comments' authors
   and dates left out, and a note or comment referred to only from text
-  deleted with tracked changes left out with that text; an emoji Word
-  writes as an extension element comes in once, as in QualCoder. In
+  deleted with tracked changes left out with that text; each note and
+  comment leaves its label in square brackets where it stood ("was
+  far.[Footnote 1] We moved", a comment's where the words it is on
+  end; the owner's decision of 9 October 2026), so a quote across that
+  spot includes it, and a note with no text, which has no label, leaves
+  nothing (files already in a project keep the text they were imported
+  with); an emoji Word writes as an extension element comes in once, as
+  in QualCoder. In
   OpenDocument files, runs of spaces, tabs and line breaks are kept, a
   text box (a frame, or a shape holding text, as LibreOffice's Insert >
   Text Box makes and as LibreOffice saves a Word text box) starts on a
@@ -195,9 +201,11 @@ is built to those decisions, and may change before it is released.
   file not saved by LibreOffice (pandoc's, TextEdit's) is read, where
   QualCoder finds no text. In RTF files, text deleted with tracked
   changes is left out, notes, comments, headers, footers and text boxes
-  come after the text, and an emoji (two halves in RTF) is one
+  come after the text (notes and comments leaving their labels where
+  they stood, as in Word), and an emoji (two halves in RTF) is one
   character, where QualCoder's import fails. In web pages and EPUB
-  chapters, blocks and table cells start on lines of their own. What
+  chapters, blocks and table cells start on lines of their own, and a
+  note stays where the page has it, so no marker is needed. What
   QualCoder's reading leaves out comes after the text, so the text it
   does read keeps its place. A PDF's text is QualCoder's to the
   character, since QualCoder 4.0 re-reads a PDF and compares. The

@@ -811,8 +811,10 @@ Added for document import (0.14.3, provisional)
     QualCoder's with Word's namespace written as a constant where
     QualCoder builds it from its prefix table, and its comments
     rewrapped; each departure switched on leaves out a kind of element
-    or reads one more (TOOLS.md lists them); the tree is parsed with
-    defusedxml instead of the standard parser.
+    or reads one more (TOOLS.md lists them; with the one that moves
+    notes to the end, a note's reference becomes its label in square
+    brackets); the tree is parsed with defusedxml instead of the
+    standard parser.
 
 80. QualCoder's OpenDocument text recipe (closely ported)
     Here: src/exegete/doc_readers.py, _ODT_REPLACEMENTS, _ODT_TAG_STARTS,

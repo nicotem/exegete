@@ -82,9 +82,10 @@ DEPARTURES = {
                            "\n\n\n\n=== TABLE ===\n\nName:\n\n\n\n=== END "
                            "TABLE ===\n\n",
                    "departure": "odt_any_program"},
-    "pandoc.odt": {"text": "\n\nInterview\n\n\n\nQ: Why did you\nleave? Pat"
-                           " said so.\n\n\n\n=== TABLE ===\n\nName:\n\n\n\n"
-                           "Ana\n\n\n\nx\n\n\n\ny\n\n\n\n=== END TABLE ===\n"
+    "pandoc.odt": {"text": "\n\nInterview\n\n\n\nQ: Why did you\nleave?"
+                           "[Footnote 1] Pat said so.\n\n\n\n=== TABLE ==="
+                           "\n\nName:\n\n\n\nAna\n\n\n\nx\n\n\n\ny\n\n\n\n"
+                           "=== END TABLE ===\n"
                            "\nFootnote 1: The clinic.\n\nFooter: 1\n\n",
                    "departure": "odt_any_program"},
     # RTF writes an emoji in two halves: QualCoder's import fails on the
@@ -99,11 +100,14 @@ DEPARTURES = {
                  "recorded_text_differs": True},
 }
 
-# Where QualCoder stores the file's text and Exegete's is better: every
-# difference, with the departure that makes it, as (departure,
-# QualCoder's words, Exegete's words). Applied in order to QualCoder's
-# text, each QualCoder's words found exactly once (AFTER: added at the
-# end), they give Exegete's text exactly.
+# Where QualCoder stores the file's text and Exegete keeps what
+# QualCoder's readers lose or garble: every difference, with the
+# departure that makes it, as (departure, QualCoder's words, Exegete's
+# words). Applied in order to QualCoder's text, each QualCoder's words
+# found exactly once (AFTER: added at the end), they give Exegete's text
+# exactly. A note or comment moved to the end leaves its label where it
+# stood ("[Footnote 1]", the owner's ruling of 9 October 2026), as part
+# of the departure that moves it.
 AFTER = None
 DIFFERENCES = {
     "features.docx": [
@@ -137,6 +141,9 @@ DIFFERENCES = {
          "\n\nMiddle."),
     ],
     "notes.docx": [
+        ("word_notes", "The clinic was far.\n\nWe moved in 2019.",
+         "The clinic[Footnote 1] was far[Footnote 2].\n\nWe moved"
+         "[Comment 1] in 2019[Endnote 1]."),
         ("word_notes", AFTER, "\n\nFootnote 1: First, by its place.\n\nIts "
                               "second paragraph.\n\nFootnote 2: Second, by "
                               "its place.\n\nFootnote 3: Not referred to.\n\n"
@@ -150,6 +157,9 @@ DIFFERENCES = {
                             "In a box\n\nIn a box",
          "Outer words after the box.\n\nIn a box"),
         ("word_hyphens_tabs", "non-breakinghyphen", "non-breaking-hyphen"),
+        ("word_notes", "far. We moved", "far.[Footnote 1] We moved"),
+        ("word_notes", "2019 and an endnote here.",
+         "2019[Comment 1] and an endnote[Endnote 1] here."),
         ("word_notes", AFTER, "\n\nFootnote 1: The clinic in town.\n\n"
                               "Endnote 1: End note text.\n\nComment 1: "
                               "Check the date.\n\nHeader: Interview 12, "
@@ -161,9 +171,9 @@ DIFFERENCES = {
         ("odt_line_breaks", "tabbedand broken", "tabbed\nand broken"),
         ("odt_notes", "<office:annotation><dc:creator>Ann</dc:creator><dc:"
                       "date>2026-01-01T10:00:00</dc:date>Note text\n\n"
-                      "</office:annotation>", ""),
+                      "</office:annotation>", "[Comment 1]"),
         ("odt_notes", "1</text:note-citation>Footnote\n\n</text:note-body>"
-                      "</text:note>", ""),
+                      "</text:note>", "[Footnote 1]"),
         ("odt_markup", "&#233;", "é"),
         ("odt_markup", "</x:odd>", ""),
         ("odt_notes", AFTER, "Footnote 1: Footnote\n\nComment 1: Note text"
@@ -171,9 +181,10 @@ DIFFERENCES = {
     ],
     "notes.odt": [
         ("odt_notes", "i</text:note-citation>An endnote.\n\n</text:note-"
-                      "body></text:note>", ""),
+                      "body></text:note>", "[Endnote 1]"),
         ("odt_notes", "1</text:note-citation>A footnote,\n\nin two "
-                      "paragraphs.\n\n</text:note-body></text:note>", ""),
+                      "paragraphs.\n\n</text:note-body></text:note>",
+         "[Footnote 1]"),
         ("odt_markup", "<svg:title>A frame</svg:title><svg:desc>Its "
                        "description</svg:desc>", ""),
         ("odt_text_boxes", "Outer wordsIn a box", "Outer words\n\nIn a box"),
@@ -188,15 +199,17 @@ DIFFERENCES = {
         ("odt_tabs", "Q:Why", "Q:\tWhy"),
         ("odt_line_breaks", "leave?Pat:", "leave?\nPat:"),
         ("odt_notes", "1</text:note-citation>The clinic in town.\n\n</text:"
-                      "note-body></text:note>", ""),
+                      "note-body></text:note>", "[Footnote 1]"),
         ("odt_notes", '<office:annotation office:name="__Annotation__26_'
                       '4050117056" loext:resolved="false"><dc:creator>Ann '
                       "Editor</dc:creator><dc:date>2026-01-01T10:00:00</dc:"
                       "date>Check the date.\n\n</office:annotation>", ""),
-        ("odt_markup", '<office:annotation-end office:name="__Annotation__'
-                       '26_4050117056"/>', ""),
+        # A comment on a range leaves its marker where the range ends,
+        # as Word and RTF place a comment's reference.
+        ("odt_notes", '<office:annotation-end office:name="__Annotation__'
+                      '26_4050117056"/>', "[Comment 1]"),
         ("odt_notes", "i</text:note-citation>End note text.\n\n</text:note-"
-                      "body></text:note>", ""),
+                      "body></text:note>", "[Endnote 1]"),
         ("odt_text_boxes", "Outer wordsIn a box", "Outer words\n\nIn a box"),
         ("odt_markup", "</draw:text-box>", ""),
         ("odt_spaces", "Café well spaced", "Café well  spaced"),
@@ -207,12 +220,18 @@ DIFFERENCES = {
     ],
     "notes.rtf": [
         ("rtf_deleted", "Kept gone words", "Kept words"),
+        ("rtf_notes", "Kept words.", "Kept words[Footnote 1]."),
+        ("rtf_notes", "Endnote here.", "Endnote here[Endnote 1]."),
+        ("rtf_notes", "\nCommented.", "\n[Comment 1]Commented."),
         ("rtf_notes", AFTER, "Text box: In a box\nFootnote 1: A café note.\n"
                              "Endnote 1: A last note.\nComment 1: A comment."
                              "\nHeader: Interview 12\nFooter: Page 1\n"),
     ],
     "libreoffice.rtf": [
         ("rtf_deleted", "We gone moved", "We moved"),
+        ("rtf_notes", "far. We moved", "far.[Footnote 1] We moved"),
+        ("rtf_notes", "2019 and an endnote here.",
+         "2019[Comment 1] and an endnote[Endnote 1] here."),
         ("rtf_notes", AFTER, "Text box: In a box\nFootnote 1: The clinic in "
                              "town.\nEndnote 1: End note text.\nComment 1: "
                              "Check the date.\nHeader: Interview 12, header"

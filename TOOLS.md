@@ -742,7 +742,11 @@ preview says, file by file, which of these lines apply.
 
 **Better text than QualCoder's readers.** What QualCoder's reading
 leaves out comes after the document's text, each part labelled, so that
-the text QualCoder does read keeps its place.
+the text QualCoder does read keeps its place. A footnote, endnote or
+comment moved there leaves its label where it stood, in square brackets
+(`was far.[Footnote 1] We moved`), so a quote across that spot includes
+the marker; a note with no text has no label and leaves nothing. Files
+already in a project keep the text they were imported with.
 
 | | QualCoder 4.0 | Exegete |
 |---|---|---|
@@ -751,16 +755,16 @@ the text QualCoder does read keeps its place.
 | A Word text box | its text inside the paragraph that holds it, then again after it, and twice more from the copy Word keeps for older programs: `Before the boxBoxed words and after it.` | once, as paragraphs of its own after that paragraph: `Before the box and after it.`, then `Boxed words`; other content Word stores in two forms is read as QualCoder reads it, so an emoji Word writes as an extension element, with the character as its second form, comes in once |
 | Text moved or deleted with Word's tracked changes | moved text at both places, and a deleted tab kept: `Kept <tab>new words.` | read as accepted: moved text once, at its new place, and nothing deleted: `Kept new words.` |
 | A non-breaking hyphen, or a positioned tab, in Word | left out, joining the words: `a wellknown name`, `NameDate` | kept: `a well-known name`, `Name<tab>Date` |
-| Word's footnotes, endnotes, comments, headers and footers | left out | after the text, each a paragraph: `Footnote 1: ...`, `Endnote 1: ...`, `Comment 1: ...`, then `Header: ...` and `Footer: ...`; notes and comments numbered in the order the text refers to them (Word may show endnotes as i, ii), one nothing refers to after the rest, and one referred to only from text deleted with tracked changes left out with that text; a header or footer repeating an earlier one's text left out; comments' authors and dates left out |
+| Word's footnotes, endnotes, comments, headers and footers | left out | after the text, each a paragraph: `Footnote 1: ...`, `Endnote 1: ...`, `Comment 1: ...`, then `Header: ...` and `Footer: ...`; notes and comments numbered in the order the text refers to them (Word may show endnotes as i, ii), one nothing refers to after the rest, and one referred to only from text deleted with tracked changes left out with that text; each note and comment leaves its label where the text refers to it, a comment's where the words it is on end: `was far.[Footnote 1] We moved`, `in 2019[Comment 1] and`; a header or footer repeating an earlier one's text left out; comments' authors and dates left out |
 | Runs of spaces in OpenDocument | all but the first space dropped: `words,spaced` | kept: `words,   spaced` |
 | A tab in OpenDocument | left out: `Q:Why` | kept: `Q:<tab>Why` |
 | A line break inside an OpenDocument paragraph | joins the words either side: `leave?Pat:` | a line break: `leave?` ends one line and `Pat:` starts the next |
 | An OpenDocument text box: a frame, or a shape holding text (LibreOffice's Insert > Text Box, and a Word text box LibreOffice saves as OpenDocument) | joined to the words before it: `Outer wordsIn a box` | on a line of its own: `Outer words`, then `In a box`; at the very start of the text, with no blank line before it; a shape with no text (a line or a box drawn beside the words) changes nothing |
-| OpenDocument footnotes, endnotes and comments, and the headers and footers in its styles | notes and comments inside the sentence with their markup, a comment's author and date among it: `was far.1</text:note-citation>The clinic in town.`; headers and footers left out | taken out of the sentence (`was far.`) and placed after the text, as for Word; a comment's author, initials and date left out |
+| OpenDocument footnotes, endnotes and comments, and the headers and footers in its styles | notes and comments inside the sentence with their markup, a comment's author and date among it: `was far.1</text:note-citation>The clinic in town.`; headers and footers left out | taken out of the sentence, leaving its label (`was far.[Footnote 1]`; a comment's where the words it is on end, or where it stands when it is on none), and placed after the text, as for Word; a comment's author, initials and date left out |
 | Markup in OpenDocument that QualCoder's recipe leaves | in the text: `</draw:text-box>`, `<svg:title>A frame</svg:title>`, and character codes such as `&#233;` | taken out, and character codes read as their letters: `é`; a code for a character XML does not allow kept as typed |
 | An OpenDocument file not saved by LibreOffice (pandoc's, the Mac's TextEdit's) | no text found, so the file's own bytes stored as its text | read, its declarations and the line breaks laying out its XML left out: `Hello<tab>world` |
 | Text deleted with RTF's tracked changes | kept: `We gone moved quickly.` | left out: `We moved quickly.` |
-| RTF footnotes, endnotes, comments, headers, footers and text boxes | left out | after the text, each on a line: `Text box: ...`, `Footnote 1: ...`, `Endnote 1: ...`, `Comment 1: ...`, `Header: ...`, `Footer: ...` |
+| RTF footnotes, endnotes, comments, headers, footers and text boxes | left out | after the text, each on a line: `Text box: ...`, `Footnote 1: ...`, `Endnote 1: ...`, `Comment 1: ...`, `Header: ...`, `Footer: ...`; each note and comment leaves its label where it stood, as for Word |
 | An emoji in RTF (RTF writes it in two halves) | the import fails | one character: `Smile 😀 ok.` |
 | Blocks and table cells in web pages and EPUB chapters (div, section, td, th and the like) | run together: `Name:Ana` for a table of two cells | each starts and ends on a line of its own: `Name:`, then `Ana`; a line break goes in only where there is none, so nothing of QualCoder's text is taken out |
 

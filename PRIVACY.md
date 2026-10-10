@@ -897,7 +897,8 @@ Seven cautions:
   footers (and an RTF file's text boxes) come after its text, where
   QualCoder's import leaves them out (an OpenDocument file's notes and
   comments it keeps inside the sentence, with their markup and a
-  comment's author and date). So a comment a transcriber or a
+  comment's author and date); each note and comment leaves a marker
+  such as "[Footnote 1]" where it stood. So a comment a transcriber or a
   colleague left, or a header naming the interview's date and place,
   becomes part of the text the assistant reads. The names list is
   applied to these parts as to the rest; comments' authors, initials

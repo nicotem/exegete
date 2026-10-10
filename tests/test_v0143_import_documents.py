@@ -405,7 +405,8 @@ class TestRefusedPlaces:
 
     def test_inside_the_project(self, project):
         (project / "x.txt").write_bytes(b"Words.\n")
-        assert "open project's own folder" in self._refused(project / "x.txt")
+        assert "selected project's own folder" in self._refused(
+            project / "x.txt")
 
     def test_a_hidden_folder(self, project, folder):
         hidden = folder / ".private"

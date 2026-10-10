@@ -403,8 +403,10 @@ class TestTheTexts:
             "if you use it.")
         ctx = doc_import.Context(project_folder=Path("."), source_names={},
                                  documents_listing=[], refused_places=())
-        assert "(in QualCoder, if you use it, the Pseudonyms button in " \
-            "Manage Files)" in doc_import.names_list_line(ctx)
+        # 0.14.3's second review: the list cannot be made in Exegete
+        # before a file is in, so the line says so
+        assert "(not in Exegete yet: in QualCoder, the Pseudonyms button " \
+            "in Manage Files)" in doc_import.names_list_line(ctx)
 
     def test_the_reading_page_names_qualcoder_if_you_use_it(self):
         source = (REPO / "src" / "exegete" / "reading_copy.py").read_text(

@@ -187,7 +187,14 @@ def _tools(mode="lifecycle"):
 # assistant" what it sends, and how to copy a file's place in "A first
 # session". That takes 148 characters, and the limit is raised by that
 # and no more: 35,486.
-README_LIMIT = 35_486
+# Its second review asked for five more: what "the optional part" is
+# (the extension has it) in "What you can do" and the table, "read by
+# Exegete on your computer", Windows 11 for "Copy as path", that an EPUB
+# opened in Apple Books joins its library (and iCloud, if Books syncs)
+# in "What stays on your computer", and the table re-dated for 0.14.3,
+# whose import row it carries. That takes 146 characters, and the limit
+# is raised by that and no more: 35,630.
+README_LIMIT = 35_630
 
 
 def test_the_readme_stays_short():

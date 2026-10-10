@@ -560,7 +560,7 @@ class TestSmallerWords:
                  "Maria Brown study/talk.txt")
         monkeypatch.setattr(
             import_paths, "walk",
-            lambda text, refused, home: import_paths.Walked(
+            lambda text, refused, home, longest=None: import_paths.Walked(
                 target, False, place))
         compiled = pseudo.Compiled(pseudo.validate_mapping(
             [{"original": "Maria Brown", "pseudonym": "Participant A"}]))
@@ -589,7 +589,8 @@ class TestSmallerWords:
         # of 7 October 2026), and the note says when it goes
         assert "before it is imported" not in note
         assert "a page for checking letters, after the import" in note
-        assert "a week after it was written" in note
+        assert "everything here, at the first tidy once it is a week old" \
+            in note
 
     def test_no_line_promises_more_sameness_than_holds(self):
         """After an emoji, QualCoder's text coder shows codings shifted;

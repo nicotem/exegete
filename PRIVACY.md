@@ -606,8 +606,8 @@ changes that file's text or name (renaming, pseudonymising, restoring a
 backup over the project), a page left for a file deleted in QualCoder
 goes when a new file that takes its number comes in through Exegete,
 or when Exegete next writes a page or a copy for that file, and
-anything there goes a week
-after it was written, when Exegete next starts. A page written
+anything there goes at Exegete's first tidy once it is a week old. A
+page written
 before you pseudonymised a file would otherwise keep the real names; a
 file deleted or renamed in QualCoder keeps its page until then. A study with
 a date for deleting its data should include the reading folder, which
@@ -844,7 +844,7 @@ provider, and what does not:
 | Step | Sent to the AI provider | Not sent |
 |---|---|---|
 | The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token; with `show_text`, where the page it opens on your screen is | the text, also when that page shows it to you; any library's or the document's own messages |
-| The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's name | the text |
+| The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's place | the text |
 | Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
 
 Seven cautions:
@@ -880,9 +880,10 @@ Seven cautions:
   save a copy as UTF-8 in Word, TextEdit or Notepad, and is never read
   by a guess, by a set you name, or by the set a web page declares.
   Read any of those ways, a listed name can come out with other letters
-  ("Agnès" as "Agnčs"), which the list would then not replace. So is a
-  file saved as UTF-16 or UTF-32 without the mark that names it, which
-  reads as UTF-8 with an invisible character beside each letter. A
+  ("Agnès" as "Agnčs"), which the list would then not replace. A file
+  saved as UTF-16 or UTF-32 without the mark that names it, which reads
+  as UTF-8 with an invisible character beside each letter, is held back
+  too. A
   file whose letters look garbled, as when a file is opened once in the
   wrong character set and saved again ("WÄ…sik" for "Wąsik", "Agn√®s"
   for "Agnès"), is held back with a warning that says in how many
@@ -934,8 +935,9 @@ Seven cautions:
   applied to these parts as to the rest, and reads through the markers:
   a comment on a first name alone leaves its marker inside the full
   name ("Maria[Comment 1] Brown"), and the name is still replaced, with
-  the marker after the pseudonym ("Participant A[Comment 1]").
-  Comments' authors, initials and dates are left out. If a document's comments are not meant to be read, you
+  the marker after the pseudonym ("Participant A[Comment 1]");
+  `pseudonymise_source`, run on such a file after the import, reads it
+  the same way. Comments' authors, initials and dates are left out. If a document's comments are not meant to be read, you
   could delete them, or save a copy without them, in its own app before
   importing; the preview says when a file has such parts.
 
@@ -1039,8 +1041,9 @@ Two further rules touch files on your disk:
 - **Process listing.** To warn when a QualCoder 4.0 window appears to
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
-  get_current_project, analyze_for_coding and the restore_backup
-  preview, which is the call without a preview_token) also looks at the
+  get_current_project, analyze_for_coding, and the restore_backup and
+  import_documents previews, each the call without a preview_token)
+  also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for
   processes that are QualCoder itself: a program whose own name holds

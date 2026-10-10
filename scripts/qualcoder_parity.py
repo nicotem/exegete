@@ -6,7 +6,7 @@ Given a QualCoder source tree, this runs QualCoder's own extraction
 functions, cut out of its files without its interface (no PyQt), on every
 document `tests/import_fixtures.py` builds, and writes what QualCoder
 would store from each: its text, or that it refuses the file, fails on
-it, or stores noise (the raw file, when it finds no text). The tests
+it, or stores the raw file as its text, when it finds none. The tests
 compare Exegete's text with these, character for character.
 
 Nothing is retyped: each function's source is taken from QualCoder's

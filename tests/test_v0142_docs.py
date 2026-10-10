@@ -750,7 +750,7 @@ def test_a_first_session_says_what_to_do_next():
             "it as a Word or text file and give the assistant its place, "
             "which keeps its text off the conversation (on a Mac, hold "
             "Option, right-click it and choose Copy as Pathname; on "
-            "Windows, Copy as path). With the extension "
+            "Windows 11, Copy as path). With the extension "
             "or OpenAI's steps, the project is made in \"QualCoder "
             "projects\", in your home folder: ask to open a file for "
             "reading, or open the project in QualCoder (Project, Open "

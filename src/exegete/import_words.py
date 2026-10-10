@@ -37,7 +37,13 @@ PATH_REFUSALS = {
                  "\\\\.\\ before the drive letter. Exegete takes a path "
                  "in its ordinary form: give it from the drive letter on "
                  "(for example C:\\Users\\you\\Documents\\Interviews). "
-                 + COPY_A_PATH,
+                 "If that form is longer than Windows allows unless long "
+                 "paths are switched on (259 characters), move the files to "
+                 "a folder nearer the top of the disk first. " + COPY_A_PATH,
+    "too_long": "This place is longer than the 259 characters Windows "
+                "allows unless long paths are switched on, so Exegete "
+                "cannot open it. Move the files to a folder nearer the top "
+                "of the disk, such as one in Documents, then ask again.",
     "link": "This place is reached through a link (a shortcut, symbolic "
             "link or junction). Exegete follows a link only into a cloud "
             "drive's own folder. Give the place the link points to.",
@@ -53,7 +59,7 @@ PATH_REFUSALS = {
                   "permissions, or copy the files to a folder of your own.",
     "unreadable": "This place could not be read.",
     "not_a_file": "This is neither an ordinary file nor a folder.",
-    "project": "This is inside the open project's own folder. Bring "
+    "project": "This is inside the selected project's own folder. Bring "
                "documents in from where you keep them, not from the "
                "project.",
     "state_folder": "This is inside Exegete's own state folder, which "
@@ -89,8 +95,11 @@ FILE_REFUSALS = {
                         "(pipx install --force \"exegete[pdf-epub]\"). "
                         "QualCoder, if you use it, imports them too.",
     "too_large": "This file is larger than Exegete reads for this kind of "
-                 "document ({limit_mb} MB). QualCoder has no such limit "
-                 "and would import it.",
+                 "document ({limit_mb} MB). A copy saved in its own app "
+                 "with its pictures compressed or removed is often much "
+                 "smaller, and a long text file can be split into parts. "
+                 "QualCoder, if you use it, has no such limit and would "
+                 "import it.",
     "name_in_use": "The project already has a file with this name, with "
                    "other contents. Rename the file on your computer, then "
                    "ask again.",
@@ -100,6 +109,22 @@ FILE_REFUSALS = {
                       "so it could not be copied there. Rename it shorter "
                       "on your computer, or keep the project in a folder "
                       "nearer the top of the disk, then ask again.",
+    "temporary_place_too_long": "Exegete first copies a file into the "
+                                "project's folder of originals under a "
+                                "temporary name of {temporary} characters, "
+                                "and that place would be {length} "
+                                "characters long, past the {limit} Windows "
+                                "allows unless long paths are switched on. "
+                                "The file's own place there would fit, and "
+                                "QualCoder, if you use it, would import it. "
+                                "Keep the project in a folder nearer the "
+                                "top of the disk, then ask again.",
+    "own_place_too_long": "This file's place on your computer is {length} "
+                          "characters long, past the {limit} Windows allows "
+                          "unless long paths are switched on, so Exegete "
+                          "cannot open it. Move its folder nearer the top "
+                          "of the disk, or rename the file shorter, then "
+                          "ask again.",
     "same_name_in_batch": "Another file in this batch has the same name "
                           "(letter case aside). Rename one of them on your "
                           "computer, then ask again.",
@@ -112,14 +137,23 @@ FILE_REFUSALS = {
     "not_this_format": "This file's contents do not match its name: it is "
                        "not a {format} file Exegete can read.",
     "archive_too_many_entries": "This file holds more parts than Exegete "
-                                "reads ({limit}). QualCoder has no such "
-                                "limit.",
+                                "reads ({limit}). A fresh copy saved in its "
+                                "own app may hold fewer. QualCoder, if you "
+                                "use it, has no such limit.",
     "archive_part_too_large": "Unpacked, part of this file is larger than "
-                              "Exegete reads ({limit_mb} MB). QualCoder "
-                              "has no such limit.",
+                              "Exegete reads ({limit_mb} MB), usually a "
+                              "picture or another file inside it. Save a "
+                              "copy in its own app with its pictures "
+                              "compressed or removed, then import that. "
+                              "QualCoder, if you use it, has no such "
+                              "limit.",
     "archive_too_large": "Unpacked, this file is larger than Exegete reads "
-                         "({limit_mb} MB). QualCoder has no such limit.",
-    "damaged": "This file is damaged or could not be read.",
+                         "({limit_mb} MB). Save a copy in its own app with "
+                         "its pictures compressed or removed, then import "
+                         "that. QualCoder, if you use it, has no such "
+                         "limit.",
+    "damaged": "This file is damaged or could not be read. Open it in its "
+               "own app and save a fresh copy, then import that.",
     "xml_entities": "This file declares XML entities, which ordinary "
                     "documents do not use and attacks do, so Exegete does "
                     "not read it (QualCoder imports it). Open it in its own "
@@ -131,9 +165,9 @@ FILE_REFUSALS = {
                           "not read it (QualCoder imports it). You could "
                           "convert it again (EPUB to EPUB, in Calibre, "
                           "say), then import that.",
-    "no_text": "No text was found in this file. QualCoder would store its "
-               "markup or raw bytes as its text, which hold none of the "
-               "document's words, so Exegete departs here and does not "
+    "no_text": "No text was found in this file. QualCoder would store the "
+               "file's markup or raw bytes as its text, which hold none of "
+               "the document's words, so Exegete departs here and does not "
                "import it.",
     "empty": "This file is empty.",
     "pdf_password": "This PDF is protected by a password. Save a copy "
@@ -151,10 +185,17 @@ FILE_REFUSALS = {
                 "limit of {limit}. For now, long books and reports come in "
                 "through QualCoder, if you use it.",
     "reader_timeout": "Reading this file took longer than {seconds} "
-                      "seconds, so it was stopped.",
+                      "seconds, so it was stopped. An RTF file or a web "
+                      "page saved as a Word document in its own app reads "
+                      "more quickly, and a very long file can be split "
+                      "into parts.",
     "reader_memory": "Reading this file needed more memory than Exegete "
-                     "allows ({limit_mb} MB), so it was stopped.",
-    "reader_failed": "This file could not be read.",
+                     "allows ({limit_mb} MB), so it was stopped. An RTF "
+                     "file or a web page saved as a Word document in its "
+                     "own app, or a copy with its pictures compressed or "
+                     "removed, needs less.",
+    "reader_failed": "This file could not be read. Open it in its own app "
+                     "and save a fresh copy, then import that.",
     "not_supported": "Exegete does not import this kind of file.",
 }
 
@@ -399,7 +440,7 @@ WARNINGS = {
     "odt_any_program": ("information",
         "It was not saved by LibreOffice (pandoc and the Mac's TextEdit "
         "write OpenDocument differently). QualCoder's own import would "
-        "find no text in it and store its markup instead."),
+        "find no text in it and store the file's raw bytes instead."),
     "odt_tables": ("information",
         "Tables come in between \"=== TABLE ===\" and \"=== END TABLE "
         "===\" lines, each cell a paragraph of its own, as QualCoder marks "

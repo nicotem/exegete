@@ -844,7 +844,7 @@ adds PyMuPDF and EbookLib, both under the GNU Affero General Public
 License, version 3, and lxml (BSD-3-Clause), which EbookLib needs; an
 install with that part is, taken as a whole, under the AGPL's terms, as
 QualCoder's own installs are, while Exegete's own code stays under the
-LGPL (the owner's decision of 6 October 2026, which also switches the
+LGPL (the maintainer's decision of 6 October 2026, which also switches the
 part on in the Claude Desktop extension). None of these libraries is
 contained in Exegete's package or its Claude Desktop extension file:
 they are fetched from PyPI on the researcher's computer.

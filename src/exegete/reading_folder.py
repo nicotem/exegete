@@ -37,9 +37,9 @@ Tidying: preview pages go after the import, or once they are an hour
 old, when Exegete next tidies the folder (at most every five minutes
 while it writes here, and at each start); a file's folder goes whenever Exegete changes that file's text
 or name; a project's whole subfolder goes when a backup is restored over
-it; and anything older than a week goes when Exegete starts. A short
-note at the top says what the pages are and that they can be deleted at
-any time.
+it; and anything older than a week goes at the first tidy after that. A
+short note at the top says what the pages are and that they can be
+deleted at any time.
 
 Nothing here follows a link: the folders are checked not to be links,
 and every removal works only inside this folder.
@@ -88,8 +88,8 @@ delete this whole folder at any time.
 Exegete also deletes them itself: a file's page and copy, when Exegete
 changes that file's text or name; a page for checking letters, after
 the import or at the first tidy once it is an hour old; everything here,
-a week after it was written. Exegete tidies this folder when it starts,
-and at most every five minutes while it writes here.
+at the first tidy once it is a week old. Exegete tidies this folder when
+it starts, and at most every five minutes while it writes here.
 
 This folder is not synced and is not indexed by the computer's search.
 A page holds a whole file's text: to keep one, save it elsewhere from
@@ -206,6 +206,12 @@ def _check_folder(path: Path) -> None:
             f"the folder again.")
 
 
+# Windows' tag for a junction or other mount point (stat's
+# IO_REPARSE_TAG_MOUNT_POINT), spelt out so the module reads the same on
+# every system.
+_IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003
+
+
 def is_link(path: Path) -> bool:
     """A symbolic link, or on Windows a junction or other mount point."""
     return os.path.islink(path) or _is_junction(path)
@@ -216,12 +222,16 @@ def _is_junction(path: Path) -> bool:
     if is_junction is not None:
         return is_junction(path)
     if sys.platform == "win32":
+        # Before Python 3.12: a junction is a mount point, read from the
+        # reparse tag as import_paths reads it. Not every reparse point
+        # is one: a cloud drive's placeholder (OneDrive's, say) is a
+        # reparse point too, and is an ordinary folder for this purpose.
         try:
             info = os.lstat(path)
         except OSError:
             return False
-        reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
-        return bool(getattr(info, "st_file_attributes", 0) & reparse)
+        tag = getattr(info, "st_reparse_tag", 0)
+        return tag == _IO_REPARSE_TAG_MOUNT_POINT
     return False
 
 
@@ -532,8 +542,10 @@ def remove_others(folder: Path, keep: str, pages_only: bool) -> int:
     number can be one a file deleted in QualCoder had, and a file
     QualCoder then imports under it does not pass through Exegete. With
     `pages_only`, only Exegete's own pages go (a file's folder); else
-    every ordinary file (the copy of the original's own folder).
-    Folders inside, temporary files and the file kept stay."""
+    only the read-only files, as Exegete writes its copies of originals
+    (the copy of the original's own folder), so a lock file a program
+    left beside an open copy, or a document saved there, stays. Folders
+    inside, temporary files and the file kept stay."""
     removed = 0
     try:
         entries = list(os.scandir(folder))
@@ -548,10 +560,23 @@ def remove_others(folder: Path, keep: str, pages_only: bool) -> int:
                 continue
         except OSError:
             continue
-        if pages_only and not _is_our_page(path):
+        if pages_only:
+            if not _is_our_page(path):
+                continue
+        elif not _read_only(path):
             continue
         removed += _remove(path)
     return removed
+
+
+def _read_only(path: Path) -> bool:
+    """An ordinary file its owner cannot write to, as Exegete leaves its
+    copies of originals (0400; on Windows, marked read-only)."""
+    try:
+        info = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISREG(info.st_mode) and not info.st_mode & stat.S_IWUSR
 
 
 def write_page(folder: Path, name: str, page: str) -> Path:

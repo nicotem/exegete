@@ -243,6 +243,13 @@ pipx install --force "exegete[pdf-epub]"
 uv tool install "exegete[pdf-epub]"
 ```
 
+or in PowerShell on Windows, for the virtual environment of the steps
+above:
+
+```powershell
+$HOME\exegete-venv\Scripts\pip install "exegete[pdf-epub]"
+```
+
 **Its licence.** PyMuPDF and EbookLib are under the GNU Affero General
 Public License, version 3 (AGPL-3.0), so an install with this part is,
 taken as a whole, under the AGPL's terms, as QualCoder's own installs
@@ -1462,8 +1469,9 @@ pins, with which Exegete's text is checked against QualCoder's; about
 24 to 35 MB more to
 download at the first start, AGPL-licensed); installed from PyPI
 without it (`pip install exegete`), Exegete imports the other formats
-and says it cannot read PDF or EPUB yet (`pip install
-"exegete[pdf-epub]"` adds it). A PDF's text is QualCoder 4.0's only at
+and says it cannot read PDF or EPUB yet ("PDF and EPUB: the optional
+part", above, says how to add it for each way of installing). A PDF's
+text is QualCoder 4.0's only at
 the same PyMuPDF release: with another, QualCoder may report a text
 mismatch and offer to restructure, which moves codings, so take a
 backup and check them before you accept; the import's answer names the

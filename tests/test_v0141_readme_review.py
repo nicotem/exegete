@@ -201,8 +201,9 @@ def test_the_three_commitments():
             "directions") in section
     # v0.14.2, the README review: every row checked again, and re-dated;
     # then checked against QualCoder 4.0, released on 2 October 2026 (the
-    # owner's ruling of 6 October 2026: the release, not the beta)
-    dated = section.index("Checked on 6 October 2026, Exegete 0.14.2 "
+    # owner's ruling of 6 October 2026: the release, not the beta); and
+    # checked again for 0.14.3, whose import row it carries
+    dated = section.index("Checked on 10 October 2026, Exegete 0.14.3 "
                           "against QualCoder 3.8.2 and 4.0:")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")

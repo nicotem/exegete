@@ -552,7 +552,9 @@ class TestTheDocuments:
         for notice in ("NOTICE", "packaging/pypi-old-name/NOTICE"):
             text = _flat(notice)
             assert "Every install fetches defusedxml" in text
-            assert "the owner's decision of 6 October 2026" in text
+            # the maker named as the reader of NOTICE knows them (0.14.3's
+            # second review)
+            assert "the maintainer's decision of 6 October 2026" in text
 
     def test_the_pyproject_comment_says_what_was_decided(self):
         text = (REPO / "pyproject.toml").read_text(encoding="utf-8")

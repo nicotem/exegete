@@ -75,8 +75,9 @@ never put participant data in an issue.
   a copy of yours.
 - **Bring in transcripts** as documents from your computer (Word,
   OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB
-  with the optional part), read on your computer, their text kept off
-  the conversation, or through the conversation; sort them into cases
+  with the optional part, which the extension has), read by Exegete on
+  your computer, their text kept off the conversation, or through the
+  conversation; sort them into cases
   with attributes such as age, role or site.
 - **Code the files you choose, with suggestions you approve**: each
   quotes the text word for word (Exegete checks the words are in the
@@ -253,7 +254,8 @@ copies its folder
 says where):
 
 - your project, backups, exports and pending suggestions;
-- the pages and copies Exegete opens for you to read a file;
+- the pages and copies Exegete opens for you to read a file (an EPUB
+  opened in Apple Books joins its library, and iCloud if Books syncs);
 - Claude Desktop's log of the extension, with every request and answer;
 - Codex's session files, with what Codex read by itself.
 
@@ -355,8 +357,8 @@ Ask the assistant to "Create a new project in Exegete called
 Practice" (Experimental), then bring in your page: paste it, as in the
 example, or save it as a Word or text file and give the assistant its
 place, which keeps its text off the conversation (on a Mac, hold
-Option, right-click it and choose Copy as Pathname; on Windows, Copy as
-path). With the extension or
+Option, right-click it and choose Copy as Pathname; on Windows 11, Copy
+as path). With the extension or
 OpenAI's steps, the project is made in "QualCoder projects", in your
 home folder: ask to open a file for reading, or open the project in
 QualCoder (Project, Open Project), to see your coding in the text.
@@ -434,13 +436,13 @@ them, with where each comes from.
 **Symmetry: the same work in either place, as a commitment.** The aim
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
-directions. Checked on 6 October 2026, Exegete 0.14.2 against
+directions. Checked on 10 October 2026, Exegete 0.14.3 against
 QualCoder 3.8.2 and 4.0:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
 | Create a project | Yes | Yes, in the extension's default tool set (Experimental) |
-| Import sources | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part), and text the assistant hands over |
+| Import sources | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part, which the extension has), and text the assistant hands over |
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
 | Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting; nesting an existing code under another is done in QualCoder |

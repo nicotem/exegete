@@ -325,10 +325,11 @@ def _check(name: str, recorded: dict, ours: dict, live: bool = False
     the text is compared exactly whatever the release."""
     if name in DEPARTURES:
         wanted = DEPARTURES[name]
-        # It is a departure because QualCoder stores noise, fails, or
-        # (for entities) stores text from the declarations, or (for a
-        # subtitle file) because Exegete takes it as a document, or
-        # because the file is not UTF-8, which Exegete holds back.
+        # It is a departure because QualCoder stores the raw file as its
+        # text (recorded as "noise"), fails, or (for entities) stores text
+        # from the declarations, or (for a subtitle file) because Exegete
+        # takes it as a document, or because the file is not UTF-8, which
+        # Exegete holds back.
         assert ("text" not in recorded or recorded.get("noise")
                 or name.startswith("entities") or "held" in wanted
                 or wanted.get("recorded_text_differs")), (name, recorded)

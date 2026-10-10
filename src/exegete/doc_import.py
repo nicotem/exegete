@@ -19,7 +19,6 @@ so the names list is applied to, and checked in, the text as it is
 stored.
 """
 
-import bisect
 import hashlib
 import os
 import secrets
@@ -336,9 +335,16 @@ def gather(paths: Sequence[str], ctx: Context) -> Survey:
     batch names, in order, before any is opened."""
     survey = Survey()
     order = 0
+    if ctx.short_paths is None:
+        ctx.short_paths = windows_short_paths()
+    longest = None
+    if ctx.short_paths:
+        from .new_project import WINDOWS_MAX_FILE_PATH
+        longest = WINDOWS_MAX_FILE_PATH
     for given, text in enumerate(paths, start=1):
         try:
-            walked = import_paths.walk(text, ctx.refused_places, ctx.home)
+            walked = import_paths.walk(text, ctx.refused_places, ctx.home,
+                                       longest=longest)
         except import_paths.PathRefused as refused:
             survey.path_refusals.append({"given": given, "code": refused.code})
             continue
@@ -533,10 +539,27 @@ def prepare(item: Item, ctx: Context, seen_keys: set,
         ctx.short_paths = windows_short_paths()
     if ctx.short_paths:
         from .new_project import WINDOWS_MAX_FILE_PATH
-        length = place_too_long(ctx.project_folder / "documents", item.name)
-        if length is not None:
-            _refuse(item, "place_too_long", length=length,
+        # A file in a folder given whole: its own place can pass what
+        # Windows opens without long paths, though the folder's does not.
+        own = len(str(item.path))
+        if own > WINDOWS_MAX_FILE_PATH:
+            _refuse(item, "own_place_too_long", length=own,
                     limit=WINDOWS_MAX_FILE_PATH)
+            return None
+        documents = ctx.project_folder / "documents"
+        length = place_too_long(documents, item.name)
+        if length is not None:
+            # Said as it is: when only the temporary copy's place passes
+            # the limit, renaming the file shorter cannot help.
+            temporary = (len(str(documents)) + 1 + len(item.name)
+                         <= WINDOWS_MAX_FILE_PATH)
+            if temporary:
+                _refuse(item, "temporary_place_too_long", length=length,
+                        limit=WINDOWS_MAX_FILE_PATH,
+                        temporary=TEMP_NAME_CHARS)
+            else:
+                _refuse(item, "place_too_long", length=length,
+                        limit=WINDOWS_MAX_FILE_PATH)
             return None
     key = documents_name_key(item.name)
     if key in seen_keys:
@@ -587,61 +610,14 @@ def listed_names(compiled: Any, text: str, kind: Optional[str]) -> list:
     markers inside it follow the pseudonym ("Participant A[Comment 1]").
     A name found only with the markers in place (one followed by a marker
     and then letters) is replaced as before, so this never replaces less
-    than the list's own rule does."""
+    than the list's own rule does. `pseudonymise_source` reads a file of
+    these formats the same way (`pseudonymise.find_replacements_through`,
+    shared)."""
     from . import pseudonymise as pseudo
-    found = pseudo.find_replacements(compiled, text)
     if kind not in doc_readers.MARKING_FORMATS:
-        return found
-    spans = [(m.start(), m.end())
-             for m in doc_readers.NOTE_MARKER.finditer(text)]
-    if not spans:
-        return found
-    # The text without the markers, and for each marker where it stands
-    # in that text and how much of the stored text it and those before it
-    # take up.
-    pieces, at, removed = [], 0, 0
-    places: List[int] = []
-    taken: List[int] = []
-    for start, end in spans:
-        pieces.append(text[at:start])
-        places.append(start - removed)
-        removed += end - start
-        taken.append(removed)
-        at = end
-    pieces.append(text[at:])
-    bare = "".join(pieces)
-
-    def stored_at(position: int) -> int:
-        # The place in the stored text of the bare text's character at
-        # `position`: after every marker that stood before it.
-        index = bisect.bisect_right(places, position)
-        return position + (taken[index - 1] if index else 0)
-
-    marker_starts = [start for start, _end in spans]
-    through = []
-    for found_bare in pseudo.find_replacements(compiled, bare):
-        start = stored_at(found_bare.start)
-        end = stored_at(found_bare.end - 1) + 1
-        # The markers that stood inside the name, in their order.
-        inside = []
-        index = bisect.bisect_right(marker_starts, start)
-        while index < len(spans) and spans[index][1] <= end:
-            inside.append(text[spans[index][0]:spans[index][1]])
-            index += 1
-        through.append(pseudo.Replacement(
-            start, end, found_bare.entry, text[start:end],
-            found_bare.text + "".join(inside)))
-    # Each list is in order and its spans do not overlap, so a name the
-    # list's own rule found overlaps one found through the markers only
-    # if it overlaps the last of them to start before it ends.
-    through_starts = [replacement.start for replacement in through]
-    chosen = list(through)
-    for replacement in found:
-        index = bisect.bisect_left(through_starts, replacement.end) - 1
-        if index < 0 or through[index].end <= replacement.start:
-            chosen.append(replacement)
-    chosen.sort(key=lambda replacement: replacement.start)
-    return chosen
+        return pseudo.find_replacements(compiled, text)
+    return pseudo.find_replacements_through(compiled, text,
+                                            doc_readers.NOTE_MARKER)
 
 
 def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
@@ -906,10 +882,12 @@ def refusal_words(item: Item) -> str:
 def names_list_line(ctx: Context) -> str:
     if ctx.names_list == "none":
         return ("This project has no names list. If these documents name "
-                "participants or places, make the list first (in "
-                "QualCoder, if you use it, the Pseudonyms button in Manage "
+                "participants or places, make the list first (not in "
+                "Exegete yet: in QualCoder, the Pseudonyms button in Manage "
                 "Files); the import then replaces the names as the text "
-                "comes in.")
+                "comes in. Or, once the files are in and before the "
+                "assistant reads them, run pseudonymise_source on each file "
+                "(which can save its names as the project's list).")
     if ctx.names_list == "empty":
         return ("This project's names list is empty, so no names are "
                 "replaced.")
@@ -1087,7 +1065,8 @@ def preview_answer(result: Survey, ctx: Context,
         batch.update(backup)
     answer["batch"] = batch
     answer["closing"] = ("If your app asks whether to allow the import, "
-                         "allow it once, after reading this preview.")
+                         "allow it once, after reading this preview, which "
+                         "keeps you asked each time.")
     return answer
 
 

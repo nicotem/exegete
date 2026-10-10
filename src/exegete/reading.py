@@ -70,6 +70,12 @@ def copied_type(name: str) -> bool:
     return suffix in opener.OPENABLE or suffix in opener.WEB_PAGES
 
 
+# Said after every reason an original is not opened: the stored text can
+# still be read.
+READING_COPY_OFFER = ("The reading copy (show=\"reading_copy\", the "
+                      "default) shows its text.")
+
+
 class ReadingRefusal(Exception):
     """A plain refusal, for the answer."""
 
@@ -88,8 +94,8 @@ def original_source(project: Path, mediapath: Optional[str]
     if mediapath.startswith(LINKED_PREFIXES):
         return None, ("This file's original is linked from elsewhere on "
                       "the computer, not kept in the project, so Exegete "
-                      "does not open it; QualCoder's Manage files opens "
-                      "it.")
+                      "does not open it; QualCoder's Manage files, if you "
+                      "use it, opens it.")
     for prefix, folder_name in STORED_FOLDERS.items():
         if mediapath.startswith(prefix):
             name = mediapath[len(prefix):]
@@ -99,7 +105,7 @@ def original_source(project: Path, mediapath: Optional[str]
     if file_name_problem(name) is not None:
         return None, ("The original's stored name is not one Exegete can "
                       "use safely, so it was not opened; QualCoder's "
-                      "Manage files opens it.")
+                      "Manage files, if you use it, opens it.")
     if not copied_type(name):
         return None, NOT_A_DOCUMENT_TYPE
     folder = project / folder_name

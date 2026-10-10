@@ -25,7 +25,7 @@ from datetime import datetime
 from contextlib import closing, contextmanager
 import glob
 
-from . import env_settings, names
+from . import doc_readers, env_settings, names
 from .memo_privacy import (
     PERSONAL_NOTE_MARK,
     extract_ai_memo,
@@ -10630,7 +10630,9 @@ class QualcoderDatabase:
                 skipped.append({"file_id": fid, "name": name,
                                 "reason": "no_fulltext"})
                 continue
-            eligible.append({"file_id": fid, "name": name, "text": text})
+            eligible.append({"file_id": fid, "name": name, "text": text,
+                             "through_markers": doc_readers.leaves_markers(
+                                 mediapath)})
         return eligible, skipped
 
     def _pseudonymise_rows(self, file_id: int) -> Dict[str, List[Dict]]:
@@ -10713,7 +10715,15 @@ class QualcoderDatabase:
             text = source["text"]
             length, sha = self.fingerprint_of_text(text)
             digest_files.append([source["file_id"], length, sha])
-            replacements = engine.find_replacements(compiled, text)
+            # A Word, OpenDocument or RTF file is read through the markers
+            # Exegete's import left where a note or comment stood, as the
+            # import's own names list reads it: a comment on a first name
+            # puts "[Comment 1]" inside the full name (0.14.3).
+            if source["through_markers"]:
+                replacements = engine.find_replacements_through(
+                    compiled, text, doc_readers.NOTE_MARKER)
+            else:
+                replacements = engine.find_replacements(compiled, text)
             if not replacements:
                 # A file with no match is not touched at all: no rewrite,
                 # no row update, no row read beyond the fingerprint.
@@ -10734,6 +10744,7 @@ class QualcoderDatabase:
                 "file_id": source["file_id"],
                 "name": source["name"],
                 "old_text": text,
+                "through_markers": source["through_markers"],
                 "new_text": engine.apply_replacements(text, replacements),
                 "old_fingerprint": (length, sha),
                 "position_safe": position_safe(text),
@@ -11478,6 +11489,15 @@ class QualcoderDatabase:
             if not isinstance(text, str) or text == "":
                 continue
             fid = int(row["id"])
+            if doc_readers.leaves_markers(row["mediapath"]):
+                # A reader sees a name whole where Exegete's import left a
+                # note's marker inside it ("Maria[Comment 1] Brown"), so a
+                # Word, OpenDocument or RTF file's names are counted with
+                # the markers taken out (0.14.3).
+                if fid in rewritten:
+                    rewritten[fid] = engine.without_markers(
+                        rewritten[fid], doc_readers.NOTE_MARKER)
+                text = engine.without_markers(text, doc_readers.NOTE_MARKER)
             if fid in rewritten:
                 sources.append((fid, row["name"], rewritten[fid], None))
                 continue
@@ -12210,7 +12230,9 @@ class QualcoderDatabase:
                 hidden["override_required"])
             collisions = {table: rows for table, rows
                           in item["collisions"].items() if rows}
-            variants = engine.case_variants_seen(compiled, text)
+            variants = engine.case_variants_seen(
+                compiled, engine.without_markers(text, doc_readers.NOTE_MARKER)
+                if item.get("through_markers") else text)
             totals["files"] += 1
             totals["codings_changed"] += codings["changed"]
             totals["annotations_changed"] += (

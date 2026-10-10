@@ -29,9 +29,9 @@ other limits.
 
 ### Added: reading a whole file on your own computer
 
-- `open_file_for_reading(file_id, show)`, in every tool set: a
-  researcher can read a whole file without its text passing through the
-  conversation, native first. `show="in_folder"` shows a read-only copy
+- `open_file_for_reading(file_id, show, without_codes)`, in every tool
+  set: a researcher can read a whole file without its text passing
+  through the conversation, native first. `show="in_folder"` shows a read-only copy
   of the original in Finder or File Explorer (on a Mac the space bar
   then gives Quick Look); `show="original"` opens that copy in its own
   app (QualCoder's "View original text file", done on a copy, so that a
@@ -88,8 +88,8 @@ other limits.
   QualCoder (QualCoder gives a new file the highest number plus one)
   when a new file that takes its number comes in through Exegete, or
   when Exegete next writes a page or a copy for it, whichever program
-  brought it in; everything a week after, when Exegete
-  starts; a temporary file an interrupted copy left beside an
+  brought it in; everything at Exegete's first tidy of the folder once
+  it is a week old; a temporary file an interrupted copy left beside an
   original's copy goes after ten
   minutes, as one beside a page does. An original of another type is
   refused in words that say it is not one of the types Exegete copies
@@ -178,9 +178,12 @@ other limits.
   (`documents`, stored path `/docs/<name>`, as QualCoder does) and store
   its text. The token binds the files' contents, each folder's list of
   files and the project's names: a file changed or added after the
-  preview refuses the import. QualCoder's lock and the signs that
-  QualCoder 4.0 has the project open refuse it before any backup. A
-  failure after the backup takes the batch back and names the backup.
+  preview refuses the import. QualCoder 3.8.2's lock refuses it before
+  any backup; QualCoder 4.0 writes no lock, so the signs that it may
+  have the project open are passed on as a warning in the preview
+  (`qualcoder_gui_hint`), as the other write tools pass them on, and
+  only you can make sure no 4.0 window has the project open. A failure
+  after the backup takes the batch back and names the backup.
   Claude Code asks before both calls
   (`anthropic/requiresUserInteraction`).
 - Where QualCoder's readers lose or garble content, Exegete keeps it,
@@ -199,9 +202,9 @@ other limits.
   end), so a quote across that spot includes it, and a note with no
   text, which has no label, leaves nothing; a comment inside a footnote
   or endnote leaves its marker in the note's own text, in Word,
-  OpenDocument and RTF alike (an RTF file had lost such a comment's
-  text, as QualCoder's import does) (files already in a project keep the text they were imported
-  with); an emoji Word writes as an extension element comes in once, as
+  OpenDocument and RTF alike, where an RTF file had lost such a
+  comment's text, as QualCoder's import does (files already in a
+  project keep the text they were imported with); an emoji Word writes as an extension element comes in once, as
   in QualCoder. In
   OpenDocument files, runs of spaces, tabs and line breaks are kept, a
   text box (a frame, or a shape holding text, as LibreOffice's Insert >
@@ -261,8 +264,12 @@ other limits.
   comment on a first name alone puts its marker inside the full name
   ("Maria[Comment 1] Brown"), which the list had then missed, so the
   real name was stored without a word; the name is now replaced, with
-  the marker after the pseudonym ("Participant A[Comment 1]"). After an
-  import into a project with no names list, or an empty one, the line
+  the marker after the pseudonym ("Participant A[Comment 1]").
+  `pseudonymise_source` reads a Word, OpenDocument or RTF file through
+  the markers in the same way, and counts the names left in the
+  sentence as a reader sees it, without them: it had found no name in
+  such a file, said the name did not occur and counted none left. After
+  an import into a project with no names list, or an empty one, the line
   for the researcher names the two ways that replace names afterwards,
   `pseudonymise_source` on each file, or restoring the backup taken
   just before, making the list and importing again, since a list made
@@ -401,10 +408,14 @@ other limits.
   each with a next step in plain words; Windows' long form of a path on
   the computer's own drive (`\\?\C:\...`) is refused in words of its
   own, not as a network path. On Windows with long paths switched off,
-  a file whose place in the folder of originals would pass 259
-  characters is refused before it is read, with the way round, and the
-  temporary copy's name no longer carries the file's own name, so it is
-  never the longer of the two for a name of 27 characters or more.
+  a place on the computer longer than the 259 characters Windows opens
+  is refused as too long (it had been refused as not there), and so is
+  a file whose place in the folder of originals would pass them, before
+  it is read, with the way round; the temporary copy's name no longer
+  carries the file's own name, so it is never the longer of the two for
+  a name of 27 characters or more, and when it is the longer, the
+  refusal says so and does not advise renaming the file (TOOLS.md names
+  this departure).
 - `explain_ai_coding_tools('converted_documents')`: how to bring in a
   document converted by another tool, such as a pandoc server (file to
   file, with Exegete's defaults file, which keeps pandoc sandboxed from
@@ -461,24 +472,24 @@ other limits.
 
 ### Measured
 
-- Serialised tool JSON: full = 201,748 characters (about 50.4k tokens
+- Serialised tool JSON: full = 201,758 characters (about 50.4k tokens
   at chars/4) over 77 tools, core = 67,243 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 204,305 (about 51.1k) over 78, measured on
+  the opt-in lifecycle set = 204,315 (about 51.1k) over 78, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 211,624, 70,635 and 214,321. Against
+  Python 3.11.13 (the `.venv/`), 211,634, 70,635 and 214,331. Against
   0.14.2's figures (196,387, 65,140 and 198,944 on 3.13), every set
   grew by `open_file_for_reading`'s own entry (1,630 characters on
   3.13, 1,632 with its separator) and by 471 characters on
   `analyze_file_with_coding` (its `start` and `without_codes`
   arguments); `full` and `lifecycle` also by `import_documents`' own
-  entry (2,960, 2,962 with its separator; it is in the standard and
+  entry (2,970, 2,972 with its separator; it is in the standard and
   lifecycle sets, not in core, and its two arguments for letters that
   look garbled, `import_files_with_garbled_letters` and `show_text`,
   are in it) and by 296 on `import_text_file` (the description changed
   above). No other tool's entry changed. Both new tools put their rules
   first, and each whole description fits within the 2,048 characters
   Claude Code keeps: `open_file_for_reading`'s is 1,187 characters on
-  3.13 (1,267 on 3.11) and `import_documents`' 1,966 (2,022 on 3.11).
+  3.13 (1,267 on 3.11) and `import_documents`' 1,976 (2,032 on 3.11).
 
 ## [0.14.2-alpha] - 2026-10-09
 

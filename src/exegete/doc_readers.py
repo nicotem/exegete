@@ -55,6 +55,18 @@ PLAIN_FORMATS = frozenset({TEXT, MARKDOWN, SUBTITLES})
 MARKING_FORMATS = frozenset({WORD, OPENDOCUMENT, RTF})
 NOTE_MARKER = re.compile(r"\[(?:Footnote|Endnote|Comment) [1-9][0-9]*\]")
 
+
+def leaves_markers(stored_path: Any) -> bool:
+    """Whether a file stored under this path (a source's `mediapath`, such
+    as "/docs/P01.docx") is of a format whose reader leaves a marker where
+    a note or comment stood. Chosen by the extension, as the import
+    chooses a format, so `pseudonymise_source` reads the same files
+    through the markers as the import does."""
+    if not isinstance(stored_path, str):
+        return False
+    extension = posixpath.splitext(stored_path.replace("\\", "/"))[1]
+    return FORMATS.get(extension.lower()) in MARKING_FORMATS
+
 # Limits inside an archive (provisional figures, the design's Part 5).
 MAX_ARCHIVE_ENTRIES = 10_000
 MAX_ARCHIVE_PART = 25 * 1024 * 1024

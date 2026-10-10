@@ -276,7 +276,7 @@ def test_after_an_import_with_no_list_only_working_ways_are_named(
             "them: run pseudonymise_source on each file (with the names "
             "given in the call, or with the project's names list once it "
             "is made), or restore the backup taken just before, make the "
-            "list, and import again.") in said
+            "list (in QualCoder for now), and import again.") in said
     assert "or make the list in QualCoder's Pseudonyms dialog." not in said
     # The finding's own steps: a list made now changes nothing stored.
     _names_list(project, [("Maria", "Ana Lopes")])

@@ -43,7 +43,7 @@ def test_start_here_names_importing_a_file_and_reading_it():
             "it as a Word or text file and give the assistant its place, "
             "which keeps its text off the conversation (on a Mac, hold "
             "Option, right-click it and choose Copy as Pathname; on "
-            "Windows, Copy as path).") in start
+            "Windows 11, Copy as path).") in start
     assert "ask to open a file for reading" in start
     assert "Exegete opens a file for you to read with its coding " \
         "highlighted" in start

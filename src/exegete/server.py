@@ -6560,7 +6560,8 @@ def open_file_for_reading(file_id: int, show: str = "reading_copy",
                     own_page=False))
                 return json.dumps(result, indent=2)
             if why != "no_original":
-                result.update({"shown": "nothing", "note": why})
+                result.update({"shown": "nothing", "note": (
+                    why + " " + reading.READING_COPY_OFFER)})
                 return json.dumps(result, indent=2)
             result["note"] = ("The project records no original for this "
                               "file (its text may have been typed or "
@@ -10193,7 +10194,15 @@ IMPORT_DONE_LINES = {
                 "assistant reads them: run pseudonymise_source on each file "
                 "(with the names given in the call, or with the project's "
                 "names list once it is made), or restore the backup taken "
-                "just before, make the list, and import again."),
+                "just before, make the list (in QualCoder for now), and "
+                "import again."),
+    # Beside it, when the batch held a PDF: pseudonymise_source refuses a
+    # PDF, and an import with the list holds one back rather than
+    # replacing its names.
+    "no_list_pdf": ("Names in a PDF are not replaced either way: "
+                    "pseudonymise_source does not rewrite a PDF, and with "
+                    "the list made, an import holds back a PDF that names "
+                    "people from it."),
     "pdf_names": ("A PDF brought in names people from your list: its names "
                   "will reach the AI provider on every later read, search or "
                   "coding excerpt of that file."),
@@ -10216,6 +10225,17 @@ IMPORT_DONE_LINES = {
                     "backup and check the codings before you accept."),
 }
 PRUNE_MENTION_MB = 500
+# QualCoder 4.0 writes no lock file, so the signs that it may have the
+# project open (`qualcoder_gui_signals`) are passed on in the import's
+# preview as a warning, never a refusal, as the other write tools'
+# previews pass them on; only QualCoder 3.8.2's lock refuses the import.
+IMPORT_GUI_HINT = (
+    "This project appears to be open in QualCoder ({signs}). That is a "
+    "heuristic (QualCoder 4.0 writes no lock file), so ask the researcher "
+    "whether a QualCoder window has this project open, and import only "
+    "once it is closed: a write into a live QualCoder 4.0 session can be "
+    "lost or corrupted, and an open window does not show the new files "
+    "until the project is reopened there.")
 
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
@@ -10230,13 +10250,13 @@ def import_documents(
     show_text: bool = False,
     memo: str = ""
 ) -> str:
-    """Bring documents from the researcher's computer into the open project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
+    """Bring documents from the researcher's computer into the selected project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
 
     Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
 
     Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The names list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
-    Refused or kept out, saying why: while QualCoder has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
+    Refused or kept out, saying why: while QualCoder 3.8.2 has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
 
     Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
 
@@ -10309,6 +10329,11 @@ def _import_documents_preview(paths, ctx, stops, token_args,
         result, ctx, stops,
         _import_backup_note(ctx.project_folder, adding))
     page = _import_page_to_check(result, ctx) if show_text else None
+    signals = qualcoder_gui_signals(ctx.project_folder)
+    preview["qualcoder_gui_signals"] = signals
+    if signals:
+        preview["qualcoder_gui_hint"] = IMPORT_GUI_HINT.format(
+            signs="; ".join(signals))
     ready = [i for i in result.items if i.status == "ready"]
     if stops or not ready:
         preview["nothing_to_import"] = (
@@ -10564,6 +10589,8 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     if ctx.names_list in ("none", "empty"):
         lines.append(IMPORT_DONE_LINES["no_list"].format(
             lead=IMPORT_NO_LIST_LEAD[ctx.names_list]))
+        if any(i.kind == doc_readers.PDF for i in taken):
+            lines.append(IMPORT_DONE_LINES["no_list_pdf"])
     backups = [b for b in _collect_backups(ctx.project_folder)
                if b["kind"] == "mcp"]
     size = round(sum(b["size_mb"] for b in backups))
@@ -12034,7 +12061,7 @@ def _converted_documents_help() -> Dict[str, Any]:
             ".epub files where Exegete has its optional part (without it, "
             "an EPUB can be converted to .txt this way).",
             "Never convert to .odt: QualCoder's own import finds no text "
-            "in a pandoc-made .odt and stores its markup, so the "
+            "in a pandoc-made .odt and stores the file's raw bytes, so the "
             "two programs would read the same file differently; a .txt "
             "reads the same in both. Pandoc cannot read PDF."],
         "defaults_file": place if place is not None else (

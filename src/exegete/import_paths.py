@@ -162,12 +162,15 @@ def _refusal_for_unreadable(error: OSError) -> PathRefused:
 
 
 def walk(given: str, refused_places: Sequence[Tuple[str, Optional[Path]]] = (),
-         home: Optional[Path] = None) -> Walked:
+         home: Optional[Path] = None,
+         longest: Optional[int] = None) -> Walked:
     """Walk one given path under the rules above, or raise PathRefused.
 
     `refused_places` pairs a reason code with a folder ("project",
     "state_folder", "reading_folder"); a path inside one is refused with
-    that code."""
+    that code. `longest`, on Windows with long paths switched off, is the
+    longest place Windows opens (259 characters): a longer one is refused
+    as too long, rather than as not there."""
     text = clean_given(given) if isinstance(given, str) else ""
     if not text or "\x00" in text:
         raise PathRefused("missing")
@@ -180,6 +183,8 @@ def walk(given: str, refused_places: Sequence[Tuple[str, Optional[Path]]] = (),
         raise PathRefused("relative")
     if any(part == ".." for part in whole.parts):
         raise PathRefused("relative")
+    if longest is not None and len(str(whole)) > longest:
+        raise PathRefused("too_long")
     if sys.platform == "darwin":
         for link, real in _MAC_SYSTEM_LINKS.items():
             if str(whole) == link or str(whole).startswith(link + "/"):

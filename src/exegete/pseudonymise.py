@@ -1518,6 +1518,90 @@ def apply_replacements(text: str, replacements: Sequence[Replacement]) -> str:
 
 
 # --------------------------------------------------------------------------
+# Reading through the markers a document's reader left (0.14.3)
+# --------------------------------------------------------------------------
+#
+# Exegete's import leaves a marker such as "[Comment 1]" in the sentence
+# where a Word, OpenDocument or RTF note or comment stood. A comment on a
+# first name alone, or a footnote straight after it, puts that marker
+# inside the full name: "Maria[Comment 1] Brown". The marker's form is
+# the caller's (`doc_readers.NOTE_MARKER`), since this module imports
+# nothing of ours; the import and `pseudonymise_source` both read a file
+# of those formats through it, so the two replace the same names.
+
+def without_markers(text: str, markers: "re.Pattern[str]") -> str:
+    """`text` with every marker taken out, as a reader sees the sentence.
+    Used to count the names left, never to write."""
+    return markers.sub("", text)
+
+
+def find_replacements_through(compiled: Compiled, text: str,
+                              markers: "re.Pattern[str]"
+                              ) -> List[Replacement]:
+    """Every edit this mapping makes to `text`, read through `markers`.
+
+    A name is found in the text with the markers taken out; the whole span
+    it covers in `text` is replaced, and the markers that stood inside it
+    follow the pseudonym ("Participant A[Comment 1]"), in their order. A
+    name found only with the markers in place (one followed by a marker
+    and then letters, "Maria[Footnote 1]and") is replaced as
+    `find_replacements` replaces it, so this never replaces less than the
+    list's own rule does. Left to right, never overlapping, as
+    `find_replacements` gives them.
+    """
+    found = find_replacements(compiled, text)
+    spans = [(m.start(), m.end()) for m in markers.finditer(text)]
+    if not spans:
+        return found
+    # The text without the markers, and for each marker where it stands
+    # in that text and how much of the stored text it and those before it
+    # take up.
+    pieces, at, removed = [], 0, 0
+    places: List[int] = []
+    taken: List[int] = []
+    for start, end in spans:
+        pieces.append(text[at:start])
+        places.append(start - removed)
+        removed += end - start
+        taken.append(removed)
+        at = end
+    pieces.append(text[at:])
+    bare = "".join(pieces)
+
+    def stored_at(position: int) -> int:
+        # The place in the stored text of the bare text's character at
+        # `position`: after every marker that stood before it.
+        index = bisect_right(places, position)
+        return position + (taken[index - 1] if index else 0)
+
+    marker_starts = [start for start, _end in spans]
+    through = []
+    for found_bare in find_replacements(compiled, bare):
+        start = stored_at(found_bare.start)
+        end = stored_at(found_bare.end - 1) + 1
+        # The markers that stood inside the name, in their order.
+        inside = []
+        index = bisect_right(marker_starts, start)
+        while index < len(spans) and spans[index][1] <= end:
+            inside.append(text[spans[index][0]:spans[index][1]])
+            index += 1
+        through.append(Replacement(
+            start, end, found_bare.entry, text[start:end],
+            found_bare.text + "".join(inside)))
+    # Each list is in order and its spans do not overlap, so a name the
+    # list's own rule found overlaps one found through the markers only
+    # if it overlaps the last of them to start before it ends.
+    through_starts = [replacement.start for replacement in through]
+    chosen = list(through)
+    for replacement in found:
+        index = bisect_left(through_starts, replacement.end) - 1
+        if index < 0 or through[index].end <= replacement.start:
+            chosen.append(replacement)
+    chosen.sort(key=lambda replacement: replacement.start)
+    return chosen
+
+
+# --------------------------------------------------------------------------
 # Diagnostics (computed from the same pass)
 # --------------------------------------------------------------------------
 

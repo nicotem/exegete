@@ -12,11 +12,12 @@ compare Exegete's text with these, character for character.
 Nothing is retyped: each function's source is taken from QualCoder's
 file with `ast` and run in a namespace holding only the libraries it
 needs. The order of the steps around them follows `load_file_text`
-(`manage_files.py` 3213-3341 at 9bddf17) and, for subtitle files,
-`import_transcription_from_file` (2484-2505). QualCoder itself, with its
-interface, is never run.
+(`manage_files.py` 3213-3341 at 9bddf17, 3248-3376 in the 4.0 release)
+and, for subtitle files, `import_transcription_from_file` (2484-2505 at
+9bddf17). QualCoder itself, with its interface, is never run. The record
+in the tests is the 4.0 release's (tag 4.0, commit b95e021):
 
-    python scripts/qualcoder_parity.py --qualcoder <tree> --out <json>
+    python scripts/qualcoder_parity.py --qualcoder <tree> --commit <sha> --out <json>
     python scripts/qualcoder_parity.py --qualcoder <tree> --check <json>
 
 `--check` compares a fresh run with a recorded one and lists any file

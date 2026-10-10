@@ -6,10 +6,12 @@ QualCoder's readers lose or garble content; TOOLS.md lists them).
 
 The expected outcomes in `tests/fixtures/import_expected.json` were
 recorded by `scripts/qualcoder_parity.py` from QualCoder's own extraction
-functions at the pinned commit (9bddf17), run without its interface on
-the documents `import_fixtures.py` builds and keeps, with the library and
-Python versions the record names. The proof that nothing else differs:
-given no departures, Exegete's readers give QualCoder's text exactly;
+functions in its 4.0 release (tag 4.0, commit b95e021; the August commit
+9bddf17, recorded before, stores the same text for every one of them),
+run without its interface on the documents `import_fixtures.py` builds
+and keeps, with the library and Python versions the record names. The
+proof that nothing else differs: given no departures, Exegete's readers
+give QualCoder's text exactly;
 and for every document, each difference between QualCoder's text and
 Exegete's is listed below with the departure that makes it, so that
 QualCoder's text with those differences, and only those, is Exegete's.
@@ -332,7 +334,9 @@ NAMES = sorted(FIXTURES)
 def test_every_fixture_has_a_recorded_outcome():
     missing = [n for n in NAMES if n not in EXPECTED["files"]]
     assert not missing
-    assert EXPECTED["qualcoder_commit"].startswith("9bddf17")
+    # QualCoder 4.0, the release CI's parity gate checks out
+    assert EXPECTED["qualcoder_commit"] == (
+        "b95e021c93eb29a646ee7a8de196c281b7890ddf")
 
 
 @pytest.mark.parametrize("name", NAMES)

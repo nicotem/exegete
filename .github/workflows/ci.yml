@@ -260,10 +260,11 @@ jobs:
 
   # 0.14.3 (provisional): the import's stored text against QualCoder's
   # own extraction functions, run without QualCoder's interface
-  # (scripts/qualcoder_parity.py): a gate at the commit the readers
-  # follow, and a watch on QualCoder's newest code, whose changes are a
-  # notice for the lead, never a failure. QualCoder's source is checked
-  # out read only; QualCoder itself is never run.
+  # (scripts/qualcoder_parity.py): a gate at the release the readers
+  # follow, QualCoder 4.0 (tag 4.0, commit b95e021), and a watch on
+  # QualCoder's newest code, whose changes are a notice for the lead,
+  # never a failure. QualCoder's source is checked out read only;
+  # QualCoder itself is never run.
   qualcoder-parity:
     name: QualCoder parity (${{ matrix.which }})
     runs-on: ubuntu-latest
@@ -276,7 +277,8 @@ jobs:
       matrix:
         include:
           - which: gate
-            ref: 9bddf17f86aa457aff72c3a38dbc10a37f296ad2
+            # QualCoder 4.0, the release (tag 4.0)
+            ref: b95e021c93eb29a646ee7a8de196c281b7890ddf
           - which: watch
             ref: master
 

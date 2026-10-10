@@ -172,7 +172,7 @@
    "text": "Interview in UTF-16, with \u00e9.\n"
   }
  },
- "qualcoder_commit": "9bddf17f86aa457aff72c3a38dbc10a37f296ad2",
+ "qualcoder_commit": "b95e021c93eb29a646ee7a8de196c281b7890ddf",
  "versions": {
   "charset-normalizer": "3.5.2",
   "ebooklib": "0.20",

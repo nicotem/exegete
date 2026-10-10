@@ -40,7 +40,10 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-READ_TIMEOUT_SECONDS = 60.0
+# One file's reading at the preview (provisional, 0.14.3): within the
+# preview's own time (doc_import's PREVIEW_SECONDS), so that no call runs
+# past what a host may allow; the import gives a file a margin over it.
+READ_TIMEOUT_SECONDS = 30.0
 MEMORY_CAP_BYTES = 1024 * 1024 * 1024
 MAX_ANSWER_BYTES = 16 * 1024 * 1024
 WATCH_INTERVAL_SECONDS = 0.05

@@ -10238,6 +10238,9 @@ def import_documents(
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
         memo: a note for every file (e.g. its source); at most 10,000 characters
     """
+    # Each call's reading time is counted from here (doc_import's
+    # PREVIEW_SECONDS and IMPORT_SECONDS).
+    call_started = doc_import.clock()
     error = _import_arguments_error(paths, memo)
     if error is None:
         marker = private_marker_refusal(memo, "memo")
@@ -10253,6 +10256,7 @@ def import_documents(
         project_folder, apply_project_pseudonyms,
         import_pdfs_with_listed_names, import_file_names_with_listed_names,
         memo, bool(import_files_with_garbled_letters))
+    ctx.call_started = call_started
     stops = []
     gate = _write_gate_error()
     if gate is not None:
@@ -10294,12 +10298,11 @@ def _import_documents_preview(paths, ctx, stops, token_args,
         _import_backup_note(ctx.project_folder, adding))
     page = _import_page_to_check(result, ctx) if show_text else None
     ready = [i for i in result.items if i.status == "ready"]
-    if stops or result.out_of_time or not ready:
+    if stops or not ready:
         preview["nothing_to_import"] = (
             "No import can be made from this preview: "
             + ("what stops the import comes first above." if stops else
-               "no file is ready." if not ready else
-               "some files were not read in time."))
+               "no file is ready."))
         if page is not None:
             preview["page_to_check"] = page
         return json.dumps(preview, indent=2, ensure_ascii=False)
@@ -10505,6 +10508,15 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
              for r in result.path_refusals]
             + [{"file": doc_import.item_label(i),
                 "reason": doc_import.refusal_words(i)} for i in refused_now])
+    later = (result.left_for_later(doc_import.NOT_IMPORTED_THIS_TIME)
+             + result.left_for_later(doc_import.NOT_READ_THIS_TIME))
+    if later:
+        # Left for the next call by this call's time or the preview's
+        # (provisional, 0.14.3): what was done, and how to go on.
+        answer["not_imported_this_time"] = {
+            "files": [doc_import.item_label(i) for i in later],
+            "note": doc_import.not_imported_note(len(later)),
+        }
     if any(i.kind == doc_readers.PDF for i in taken):
         answer["pymupdf_version"] = _pymupdf_version()
     if written.marks_lost:

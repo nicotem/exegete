@@ -311,6 +311,27 @@ is built to those decisions, and may change before it is released.
   stops the whole import, naming the file; a file the preview held back
   or refused is skipped without being read again, and the answer names
   each file not imported, with its reason.
+- How long one call may run (provisional, until the owner has timed his
+  hosts' limit): a host can stop a tool call that runs long (Claude
+  Desktop's own text is said to give 180 seconds, and 60 to a local
+  server added by hand), and the largest files the limits allow took up
+  to 39 seconds each to read on a fast Mac (a 9,000-page PDF, a book of
+  75 million characters, both refused as too long only once read),
+  where a batch could read for five minutes and one file for a minute.
+  So each call now stops between files within a
+  time counted from its start: the preview reads for about 30 seconds,
+  so that the import, which reads the same files again from their
+  copies, fits within its own 45; one file has 30 seconds to be read at
+  the preview and 40 at the import, and the first file a call reads
+  always has its whole time, so every call takes in at least one. The
+  files a preview had no time for, or whose reading the time left cut
+  short, are listed as not read this time, with how to go on: import
+  the files it read, then ask again with the same paths, the files
+  already imported skipped. An import that runs out of time between
+  files imports the files it has done and names the rest, with the same
+  way on. A file over its own time is refused, as before. A batch of 20
+  everyday documents (Word, OpenDocument, RTF, web pages, text,
+  subtitles, PDFs and EPUBs) took about 5 seconds for each call.
 - Limits that hold whatever a file declares: every part EbookLib reads
   from an EPUB counts towards the 100 MB, each time it is read (a
   chapter listed thirty times is thirty reads), and is checked for

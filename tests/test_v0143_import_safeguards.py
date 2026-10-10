@@ -185,13 +185,13 @@ class TestTheBatchGoesInTogether:
         real = doc_import._read_one
         seen = {}
 
-        def read_one(item, data, ctx):
+        def read_one(item, data, ctx, *more):
             seen[item.name] = seen.get(item.name, 0) + 1
             if item.name == name and seen[item.name] in failing_reads:
                 doc_import._refuse(item, "reader_timeout",
-                                   before_reading=False, seconds=60)
+                                   before_reading=False, seconds=30)
                 return
-            return real(item, data, ctx)
+            return real(item, data, ctx, *more)
         monkeypatch.setattr(doc_import, "_read_one", read_one)
         return seen
 
@@ -221,7 +221,7 @@ class TestTheBatchGoesInTogether:
         assert seen["P02.docx"] == 1            # never read again
         (refused,) = done["not_imported"]
         assert refused["file"] == "P02.docx"
-        assert "longer than 60 seconds" in refused["reason"]
+        assert "longer than 30 seconds" in refused["reason"]
         assert sorted(p.name for p in (project / "documents").iterdir()) \
             == ["P01.docx"]
 

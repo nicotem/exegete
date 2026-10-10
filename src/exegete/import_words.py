@@ -285,7 +285,6 @@ HELD_BACK = {
                      "(import_files_with_garbled_letters); if not, "
                      "correct them in the file's own app, save it, then "
                      "ask again.",
-    "not_read_in_time": "Not read in time; ask again for these.",
 }
 
 # Said once for a file whose text a warning changes: why the import does

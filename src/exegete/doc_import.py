@@ -36,7 +36,26 @@ from . import import_words as words
 MAX_PATHS = 50
 MAX_BATCH = 50
 MAX_MEMO = 10_000
-BATCH_SECONDS = 5 * 60
+# How long one call may read (provisional, 0.14.3): a host can stop a
+# tool call that runs long (Claude Desktop's own text is said to give
+# 180 seconds, and 60 to a local server added by hand; not yet timed), so
+# each call stops between files within these, counted from the call's
+# start, and says how to go on with the rest. The preview reads for 30
+# seconds, so that the import, which reads the same files again from
+# their copies, fits within its own 45; one file read at the import has
+# 40 seconds (the preview's 30 for a file, and a margin), and the first
+# file a call reads always has its whole time, so each call takes in at
+# least one file.
+PREVIEW_SECONDS = 30
+IMPORT_SECONDS = 45
+IMPORT_FILE_SECONDS = 40
+# Less time than this left in a call: no file is started.
+LEAST_SECONDS = 1.0
+
+
+def clock() -> float:
+    """The clock a call's time is counted by."""
+    return time.monotonic()
 MB = 1024 * 1024
 # One file on the disk, by format (the design's Part 5).
 SIZE_LIMITS = {
@@ -76,6 +95,10 @@ class Item:
     size: int = 0
     digest: str = ""
     status: str = "ready"          # ready, refused, held, skipped, later
+    # A file left for the next call ("later"): code "" when the batch
+    # already holds MAX_BATCH new files, NOT_READ_THIS_TIME when the
+    # preview's time ran out before it was read, NOT_IMPORTED_THIS_TIME
+    # when the import's did.
     code: str = ""
     numbers: Dict[str, Any] = field(default_factory=dict)
     read: Optional[Dict[str, Any]] = None
@@ -126,8 +149,14 @@ class Context:
     # as they are (the owner's ruling of 7 October 2026).
     files_with_garbled_letters: bool = False
     max_characters: int = 1_000_000
-    reader: Callable[..., Dict[str, Any]] = import_reading.read_in_process
-    budget_seconds: float = BATCH_SECONDS
+    # The reader: None for the reading process (import_reading's
+    # read_in_process, looked up at each read).
+    reader: Optional[Callable[..., Dict[str, Any]]] = None
+    # When the tool call began (clock()), from which its time is counted;
+    # None: when the survey or the write begins.
+    call_started: Optional[float] = None
+    preview_seconds: float = PREVIEW_SECONDS
+    import_seconds: float = IMPORT_SECONDS
     home: Optional[Path] = None
     memo: str = ""
 
@@ -197,7 +226,10 @@ class Survey:
     items: List[Item] = field(default_factory=list)
     path_refusals: List[Dict[str, Any]] = field(default_factory=list)
     folders: List[Dict[str, Any]] = field(default_factory=list)
-    out_of_time: bool = False
+
+    def left_for_later(self, code: str) -> List[Item]:
+        return [i for i in self.items
+                if i.status == "later" and i.code == code]
 
     def fingerprint(self, ctx: Context) -> Dict[str, Any]:
         return {
@@ -228,11 +260,13 @@ _KEEP_OUTCOMES = 64
 
 def read_outcomes(result: "Survey") -> List[List[Any]]:
     """[order, status, code, numbers] for every file held back or refused
-    after its text was read (a decision made before reading is in the
-    file's own fingerprint)."""
+    after its text was read, and every file the preview's time left for
+    the next call (a decision made before reading is in the file's own
+    fingerprint)."""
     return [[item.order, item.status, item.code, dict(item.numbers)]
             for item in result.items
-            if item.status in ("held", "refused") and not item.pre_code]
+            if (item.status in ("held", "refused") and not item.pre_code)
+            or (item.status == "later" and item.code == NOT_READ_THIS_TIME)]
 
 
 def remember_outcomes(token: str, result: "Survey") -> None:
@@ -641,22 +675,50 @@ def _memo(item: Item, result: Dict[str, Any], ctx: Context) -> str:
 GARBLED = frozenset({"garbled_fixed", "garbled_rtf"})
 HELD_WHEN_READ = frozenset({"not_utf8", "not_utf8_web", "nul_characters",
                             "nul_characters_web"})
+NOT_READ_THIS_TIME = "not_read_this_time"
+NOT_IMPORTED_THIS_TIME = "not_imported_this_time"
 
 
-def _read_one(item: Item, data: bytes, ctx: Context) -> None:
+def _time_for(limit: float, budget: float, started: float, first: bool,
+              now: Callable[[], float]) -> Optional[float]:
+    """How long the next file may be read: its whole `limit` when it is
+    the call's first, else no more than what is left of the call's
+    `budget`; None when too little is left to start one."""
+    if first:
+        return limit
+    left = budget - (now() - started)
+    if left < LEAST_SECONDS:
+        return None
+    return min(limit, left)
+
+
+def _read_one(item: Item, data: bytes, ctx: Context,
+              timeout: Optional[float] = None,
+              limit: Optional[float] = None,
+              later_code: str = NOT_READ_THIS_TIME) -> None:
+    """Read one file's text in the reading process. A read stopped by
+    what was left of the call's time, short of the file's own `limit`,
+    leaves the file for the next call (`later_code`); one stopped at its
+    own limit refuses it."""
+    limit = import_reading.READ_TIMEOUT_SECONDS if limit is None else limit
+    timeout = limit if timeout is None else timeout
+    reader = ctx.reader or import_reading.read_in_process
     try:
-        result = ctx.reader(item.kind, data,
-                            max_characters=ctx.max_characters)
+        result = reader(item.kind, data, max_characters=ctx.max_characters,
+                        timeout=timeout)
     except import_reading.ReadFailed as failed:
         if failed.code in HELD_WHEN_READ:
             item.status, item.code = "held", failed.code
+            return
+        if failed.code == "reader_timeout" and timeout < limit:
+            item.status, item.code = "later", later_code
             return
         numbers = dict(failed.numbers)
         if "limit" in numbers and failed.code.startswith("archive_part") \
                 or failed.code == "archive_too_large":
             numbers["limit_mb"] = numbers.get("limit", 0) // MB
         if failed.code == "reader_timeout":
-            numbers["seconds"] = int(import_reading.READ_TIMEOUT_SECONDS)
+            numbers["seconds"] = int(limit)
         if failed.code == "reader_memory":
             numbers["limit_mb"] = import_reading.MEMORY_CAP_BYTES // MB
         _refuse(item, failed.code, before_reading=False, **numbers)
@@ -665,13 +727,20 @@ def _read_one(item: Item, data: bytes, ctx: Context) -> None:
 
 
 def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
-           now: Callable[[], float] = time.monotonic) -> Survey:
+           now: Optional[Callable[[], float]] = None) -> Survey:
     """The batch as the preview sees it. With `read_texts` false (the
-    import's check of its token), files are hashed but not read."""
+    import's check of its token), files are hashed but not read.
+
+    The preview reads for `ctx.preview_seconds` from the call's start: a
+    file it has no time left for is left for the next call (status
+    "later"), and so is one whose reading the time left cut short; the
+    first file read always has its whole time."""
+    now = now or clock
     result = gather(paths, ctx)
     seen: set = set()
     new_so_far = 0
-    started = now()
+    started = ctx.call_started if ctx.call_started is not None else now()
+    first = True
     for item in result.items:
         data = prepare(item, ctx, seen, new_so_far)
         if data is None:
@@ -679,11 +748,13 @@ def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
         new_so_far += 1
         if not read_texts:
             continue
-        if now() - started > ctx.budget_seconds:
-            item.status, item.code = "held", "not_read_in_time"
-            result.out_of_time = True
+        timeout = _time_for(import_reading.READ_TIMEOUT_SECONDS,
+                            ctx.preview_seconds, started, first, now)
+        if timeout is None:
+            item.status, item.code = "later", NOT_READ_THIS_TIME
             continue
-        _read_one(item, data, ctx)
+        first = False
+        _read_one(item, data, ctx, timeout)
     return result
 
 
@@ -808,7 +879,8 @@ def preview_answer(result: Survey, ctx: Context,
     held = [i for i in result.items if i.status == "held"]
     refused = [i for i in result.items if i.status == "refused"]
     skipped = [i for i in result.items if i.status == "skipped"]
-    later = [i for i in result.items if i.status == "later"]
+    later = result.left_for_later("")
+    unread = result.left_for_later(NOT_READ_THIS_TIME)
     look = sum(1 for i in ready if any(g == "changes" for g, _ in i.warnings))
     answer: Dict[str, Any] = {}
     if stops:
@@ -837,6 +909,12 @@ def preview_answer(result: Survey, ctx: Context,
             f"folder are not in this batch: at most {MAX_BATCH} files not "
             f"yet in the project are taken at a time, by name. After this "
             f"import, ask again with the same folder for the next ones.")
+    if unread:
+        answer["not_read_this_time"] = {
+            "files": [item_label(i) for i in unread],
+            "note": not_read_note(len(unread), bool(ready),
+                                  bool(held or refused)),
+        }
     folders = []
     for folder in result.folders:
         note: Dict[str, Any] = {"path": folder["given"]}
@@ -882,15 +960,43 @@ def preview_answer(result: Survey, ctx: Context,
     if backup:
         batch.update(backup)
     answer["batch"] = batch
-    if result.out_of_time:
-        answer["not_read_in_time"] = (
-            "Reading took longer than the batch allows "
-            f"({BATCH_SECONDS // 60} minutes), so some files were not "
-            "read (held back above). Ask again with fewer files at a "
-            "time; no import can be made from this preview.")
     answer["closing"] = ("If your app asks whether to allow the import, "
                          "allow it once, after reading this preview.")
     return answer
+
+
+def not_read_note(count: int, ready: bool, held_or_refused: bool) -> str:
+    """What the preview says of the files its time left unread: why,
+    and how to go on with them."""
+    files = f"{count} file{'s' if count != 1 else ''}"
+    note = (f"{files} {'were' if count != 1 else 'was'} not read in this "
+            f"call: Exegete reads for about {PREVIEW_SECONDS} seconds a "
+            f"call, since an app can stop a call that runs longer. ")
+    if ready:
+        note += ("Import the files above with the token if the researcher "
+                 "agrees; then call again with the same paths, without a "
+                 "token, for a preview of the rest (files already in the "
+                 "project are skipped).")
+    else:
+        note += ("Call again with the same paths, without a token, for a "
+                 "preview of the rest.")
+    if held_or_refused:
+        note += (" The files held back or refused above are read again "
+                 "each time they are named: leaving them out (or moving "
+                 "them out of the folder) saves that time.")
+    return note
+
+
+def not_imported_note(count: int) -> str:
+    """What the import says of the files left for the next call."""
+    files = f"{count} file{'s' if count != 1 else ''}"
+    return (f"{files} of this batch {'were' if count != 1 else 'was'} not "
+            f"imported this time: Exegete works for about "
+            f"{IMPORT_SECONDS} seconds a call, since an app can stop a "
+            f"call that runs longer, and leaves the rest for the next. "
+            f"Call import_documents again with the same paths, without a "
+            f"token, for a preview of them; the files imported now are "
+            f"skipped.")
 
 
 # ---------------------------------------------------------------------------
@@ -924,9 +1030,6 @@ BATCH_FAILURES = {
     "name_taken": "A file appeared in the project's folder of originals "
                   "under one of these names since the preview; nothing was "
                   "imported. Ask for a fresh preview.",
-    "out_of_time": f"Reading the batch took longer than "
-                   f"{BATCH_SECONDS // 60} minutes; nothing was imported. "
-                   f"Import fewer files at a time.",
     "documents_not_a_folder": DOCUMENTS_NOT_A_FOLDER + " Nothing was "
                               "imported.",
     "differs": "A file read differently at the import than at the preview "
@@ -1049,12 +1152,19 @@ class Written:
 
 def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
                 ctx: Context, owner: str, written: Written,
-                now: Callable[[], float] = time.monotonic) -> List[Item]:
+                now: Optional[Callable[[], float]] = None) -> List[Item]:
     """Copy each file's original into the folder of originals under a
     temporary name, check the copy, read its text from the copy's bytes,
     and write its row through `insert_row`; then give the copies their
     names. Raises BatchFailed; the caller rolls back and calls
-    `written.remove_all()`."""
+    `written.remove_all()`.
+
+    The import works for `ctx.import_seconds` from the call's start: the
+    first file always has its whole time (IMPORT_FILE_SECONDS); after
+    it, a file there is no time left for, or whose reading the time left
+    cut short, stops the call there, and it and the files after it are
+    left for the next call (status "later"): the files before it are
+    imported, as the answer says."""
     documents = ctx.project_folder / "documents"
     if documents_folder_problem(ctx.project_folder) is not None:
         raise BatchFailed("documents_not_a_folder")
@@ -1064,13 +1174,19 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
         raise BatchFailed("not_copied") from None
     if documents_folder_problem(ctx.project_folder) is not None:
         raise BatchFailed("documents_not_a_folder")
-    started = now()
+    now = now or clock
+    started = ctx.call_started if ctx.call_started is not None else now()
     taken: List[Item] = []
+    stopped = False
     for item in result.items:
         if item.status != "ready":
             continue
-        if now() - started > ctx.budget_seconds:
-            raise BatchFailed("out_of_time")
+        timeout = None if stopped else _time_for(
+            IMPORT_FILE_SECONDS, ctx.import_seconds, started, not taken, now)
+        if timeout is None:
+            stopped = True
+            item.status, item.code = "later", NOT_IMPORTED_THIS_TIME
+            continue
         try:
             data, _size = read_bytes(item.path, SIZE_LIMITS[item.kind])
         except _ReadRefusal:
@@ -1091,7 +1207,18 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
             raise BatchFailed("not_copied") from None
         if copy is None or digest_of(copy) != item.digest:
             raise BatchFailed("not_copied")
-        _read_one(item, copy, ctx)
+        _read_one(item, copy, ctx, timeout, IMPORT_FILE_SECONDS,
+                  NOT_IMPORTED_THIS_TIME)
+        if item.status == "later":
+            # Its reading was cut short by the call's time: neither it
+            # nor any file after it goes in this time.
+            written.temps.remove(temp)
+            try:
+                temp.unlink()
+            except OSError:
+                pass
+            stopped = True
+            continue
         if item.status != "ready":
             # The preview read this file as ready, and the researcher
             # approved the batch with it in: a file that now reads

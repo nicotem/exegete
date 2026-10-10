@@ -352,11 +352,12 @@ does not put the study out of reach, and what they open goes to their
 maker, which may train on it while training is on.
 
 Ask the assistant to "Create a new project in Exegete called
-Practice" (Experimental), then bring in your page as in the example.
-With the extension or OpenAI's steps, the project is made in "QualCoder
-projects", in your home folder: ask to open a file for reading, or open
-the project in QualCoder (Project, Open Project), to see your coding in
-the text.
+Practice" (Experimental), then bring in your page: paste it, as in the
+example, or save it as a Word or text file and give the assistant its
+place, which keeps its text off the conversation. With the extension or
+OpenAI's steps, the project is made in "QualCoder projects", in your
+home folder: ask to open a file for reading, or open the project in
+QualCoder (Project, Open Project), to see your coding in the text.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).
 
 **Two coder names.** When it makes the project, the assistant asks for

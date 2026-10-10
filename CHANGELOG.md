@@ -391,6 +391,15 @@ his hosts' limit, and the figures of the import's other limits.
   counts. INSTALL.md's note on QualCoder, the brief's section 4,
   TOOLS.md, the coding guide, the extension's description and the maps
   of the code in CLAUDE.md and CONTRIBUTING.md say the same.
+- The README's "A first session" says that the practice page can come
+  in from a Word or text file, its text off the conversation. INSTALL.md
+  gains "PDF and EPUB: the optional part": which formats need it, that
+  the Claude Desktop extension switches it on, how to add it to an
+  install from PyPI, and its licence (an install with it is, as a whole,
+  under the AGPL's terms; Exegete's own code stays LGPL). PRIVACY.md
+  says what a reading page holds and where it is written. TOOLS.md's
+  contents list its sections on reading a whole file and on the
+  import's departures.
 
 ### Changed: the README's table of assistants
 

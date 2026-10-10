@@ -176,6 +176,10 @@ def _tools(mode="lifecycle"):
 # the link from the sentence on imports to PRIVACY.md's section on them
 # (which tests/test_v0143_import_review_minors.py holds) 136 more, and
 # the limit is raised by that and no more: 35,338.
+# 0.14.3's last round takes out the eight "provisional" marks the owner's
+# decisions settled (the brief keeps its own) and says, in "A first
+# session", that the practice page can come in from a Word or text file,
+# its text off the conversation: 35,336 characters, within the limit.
 README_LIMIT = 35_338
 
 

@@ -541,6 +541,21 @@ To talk about a passage you have read on the page, copy a few words of
 it into the conversation: those words go to the provider, like anything
 you type.
 
+**What a page holds, and where it is written.** A reading page holds
+the file's whole text as stored, its codings (each passage in its
+code's colour and named), the list of its codes, its annotations, and
+the public part of the codings' memos and of the file's memo; asked
+without codes, the text and the public part of the file's memo alone.
+Exegete writes it, and the read-only copy of an original, into its
+reading folder, never into the project or the folder a document came
+from: `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
+`%LOCALAPPDATA%\Exegete\Reading` on Windows, `~/.cache/exegete/reading`
+on Linux, each page in a folder named after its project, then one
+named after the file's number. The
+folder is out of iCloud and OneDrive, not indexed by the computer's
+search and readable by your account only; it is tidied as said below,
+and you can delete it at any time.
+
 The page itself never reaches out: it holds no script, fetches nothing
 (its own content security policy forbids it) and links to nothing
 outside itself, and a web address in a document stays plain text. The

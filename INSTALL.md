@@ -14,7 +14,8 @@ Exegete comes as a desktop extension, one file ending in `.mcpb`, which
 Claude Desktop installs itself. Claude fetches what Exegete needs (a
 tool called uv, which then fetches Python and Exegete's own
 libraries), so you need no Python, no Terminal and no configuration
-file.
+file. The extension switches on the optional part that reads PDF and
+EPUB documents ("PDF and EPUB: the optional part", below).
 
 1. **Get Claude Desktop**, the latest version, from
    https://claude.ai/download, and sign in.
@@ -225,6 +226,33 @@ This gives you an `exegete` command; get its absolute path with
 configuration of Step 6 (no `args` needed). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
 
+### PDF and EPUB: the optional part
+
+`import_documents` reads Word, OpenDocument, RTF, plain text, Markdown,
+web pages and subtitle files in every install. PDF and EPUB need an
+optional part, `pdf-epub`: the two libraries QualCoder 4.0 reads them
+with, PyMuPDF and EbookLib (with lxml, which EbookLib needs). The
+Claude Desktop extension switches it on by itself. Installed from PyPI
+without it, Exegete imports the other formats and says it cannot read
+PDF or EPUB yet; to add it:
+
+```bash
+~/exegete-venv/bin/pip install "exegete[pdf-epub]"
+# or
+pipx install "exegete[pdf-epub]"
+uv tool install "exegete[pdf-epub]"
+```
+
+**Its licence.** PyMuPDF and EbookLib are under the GNU Affero General
+Public License, version 3 (AGPL-3.0), so an install with this part is,
+taken as a whole, under the AGPL's terms, as QualCoder's own installs
+are; Exegete's own code stays under the LGPL (LGPL-3.0-or-later), and an
+install without the part is untouched. Neither library is inside
+Exegete's package or its extension file: both are fetched from PyPI on
+your computer. NOTICE lists them, with lxml (BSD-3-Clause). If your
+institution or your project's terms rule out AGPL software, install
+without the part and convert PDFs and EPUBs to text another way
+(`explain_ai_coding_tools('converted_documents')`).
 
 The step-by-step install below is the **contributor path**: use it if
 you want to read or modify the source, or run the test suite.
@@ -300,6 +328,9 @@ pytest from the repository root:
 pip install -e ".[dev]"
 python -m pytest
 ```
+
+With `pip install -e ".[dev,pdf-epub]"`, as the automated checks
+install it, the tests of PDF and EPUB import run too.
 
 ---
 

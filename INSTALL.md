@@ -874,7 +874,7 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 77 tools by
 default, and the serialised tool definitions alone measure about
-202,000 characters, roughly 50k tokens (measured for 0.14.3, provisional, under
+202,000 characters, roughly 50k tokens (measured for 0.14.3 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
@@ -1787,7 +1787,7 @@ steps again with the newer version.
 it fetched first, until the command names a version or uv's cache is
 cleared. To update, quit the client, change `exegete` (or the earlier
 name, qualcoder-mcp) in that entry to `exegete@` and the newest version
-as PyPI spells it (for example `exegete@0.14.2a0`), and open the client
+as PyPI spells it (for example `exegete@0.14.3a0`), and open the client
 again: it fetches that version when it next starts, which needs the
 internet that once. With the check for new versions on, "How do I
 update Exegete?" gives this step with the version filled in.
@@ -1827,7 +1827,7 @@ terminal:
 ```
 
 It prints `exegete` followed by the version and exits; version
-`0.14.2-alpha` shows as `0.14.2a0`, its normalised form. The server
+`0.14.3-alpha` shows as `0.14.3a0`, its normalised form. The server
 also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a

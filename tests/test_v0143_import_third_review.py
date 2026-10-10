@@ -479,7 +479,9 @@ class TestTheTexts:
         assert "goes in together or not at all" not in tools
         assert ("a batch the call's time cuts short goes in as far as it "
                 "got, and the answer names the rest") in tools
-        changelog = _doc("CHANGELOG.md").split("## [0.14.2-alpha]")[0]
+        changelog = _doc("CHANGELOG.md")
+        changelog = changelog[changelog.index("## [0.14.3-alpha]"):
+                              changelog.index("## [0.14.2-alpha]")]
         assert "goes in together or not at all" not in changelog
         assert "every call takes in at least one" not in changelog
         assert "every call reads at least one file" in changelog
@@ -522,7 +524,9 @@ class TestTheTexts:
         tools = (REPO / "TOOLS.md").read_text(encoding="utf-8")
         section = tools.split("## Document import: where it departs")[1]
         assert "the owner" not in section.split("\n## ")[0]
-        changelog = _doc("CHANGELOG.md").split("## [0.14.2-alpha]")[0]
+        changelog = _doc("CHANGELOG.md")
+        changelog = changelog[changelog.index("## [0.14.3-alpha]"):
+                              changelog.index("## [0.14.2-alpha]")]
         assert "until he has timed" not in changelog
         assert "the owner's decision" not in changelog
 

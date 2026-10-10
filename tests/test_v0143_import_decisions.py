@@ -543,7 +543,8 @@ class TestTheDocuments:
 
     def test_the_changelog_and_the_notice(self):
         changelog = _flat("CHANGELOG.md")
-        entry = changelog[:changelog.index("## [0.14.2-alpha]")]
+        entry = changelog[changelog.index("## [0.14.3-alpha]"):
+                          changelog.index("## [0.14.2-alpha]")]
         assert "nothing is guessed, and no character set can be named" \
             in entry
         assert "charset-normalizer, QualCoder's guesser, is not one of " \

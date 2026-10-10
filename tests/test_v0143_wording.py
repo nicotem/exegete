@@ -44,8 +44,9 @@ def _changelog_parts():
 
 
 def _live_texts():
-    """Every document at the top of the repository (the CHANGELOG's
-    unreleased entry alone), and every module of the code, which holds
+    """Every document at the top of the repository (of the CHANGELOG,
+    the entries above 0.14.2's alone: 0.14.3's and anything written
+    since, under Unreleased), and every module of the code, which holds
     the tools' descriptions, answers and refusals."""
     texts = {}
     for path in sorted(REPO.glob("*.md")):

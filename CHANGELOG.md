@@ -7,9 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-For 0.14.3, a release of its own after 0.14.2. The maintainer decided the
-questions of the import and reading design on 6 October 2026: as
-recommended, except that where QualCoder's readers lose or garble
+Nothing yet.
+
+## [0.14.3-alpha] - 2026-10-10
+
+v0.14.3. What a researcher notices first: documents now come into a
+project through Exegete, not only text passed through the conversation.
+`import_documents` brings in Word, OpenDocument, RTF, plain text,
+Markdown, web pages and subtitle files, and PDF and EPUB with an
+optional part that the Claude Desktop extension switches on; Exegete
+reads them on the researcher's own computer, so their text never passes
+through the conversation, and writes them only after a preview and on
+the researcher's word. A whole file can now be read on the researcher's
+own computer with `open_file_for_reading`: a page in the browser with
+its codings in their codes' colours, the original in its own app, or the
+original shown in Finder or File Explorer, again without the text
+passing through the conversation. A file can also be read without its
+codings, for a fresh reading, by the researcher on that page and by the
+assistant. Less visible: a long file is read a part at a time, sized to
+fit one answer; a coding made in QualCoder is found where QualCoder
+draws it; and the README's table of assistants says first why it
+matters.
+
+The maintainer decided the questions of the import and reading design
+on 6 October 2026: as recommended, except that where QualCoder's readers lose or garble
 content, Exegete keeps it, and names the departure (a PDF's text stays
 identical to QualCoder's), and with one new rule, that files not saved
 as UTF-8 are held back. In short: PDF and EPUB through QualCoder 4.0's

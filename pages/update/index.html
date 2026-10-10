@@ -39,17 +39,17 @@ footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
 
 <h1>Install or update Exegete</h1>
 
-<p>The newest version is <strong>0.14.2-alpha</strong>, from 9 October 2026.</p>
+<p>The newest version is <strong>0.14.3-alpha</strong>, from 10 October 2026.</p>
 
-<p><strong>What's new:</strong> Exegete can now tell you when a new version is
-out, if you switch that on (it is on in the Claude Desktop extension unless you
-switch it off), and it gives the assistant a brief on how to work with you.
-QualCoder 4.0 is now the version it is checked against.
-<a href="https://github.com/nicotem/exegete/releases/tag/v0.14.2-alpha">The full
-notes for 0.14.2-alpha</a>.</p>
+<p><strong>What's new:</strong> Exegete can now bring Word, PDF and other
+documents into your project from your computer (PDF and EPUB need an optional
+part, which the Claude Desktop extension has), and open a whole file for you to
+read in your browser or its own app, with its codings or without them.
+<a href="https://github.com/nicotem/exegete/releases/tag/v0.14.3-alpha">The full
+notes for 0.14.3-alpha</a>.</p>
 
-<p><a class="download" href="https://github.com/nicotem/exegete/releases/download/v0.14.2-alpha/exegete-0.14.2-alpha.mcpb">Download Exegete 0.14.2-alpha for Claude Desktop</a></p>
-<p class="note">The file is called exegete-0.14.2-alpha.mcpb. Every version
+<p><a class="download" href="https://github.com/nicotem/exegete/releases/download/v0.14.3-alpha/exegete-0.14.3-alpha.mcpb">Download Exegete 0.14.3-alpha for Claude Desktop</a></p>
+<p class="note">The file is called exegete-0.14.3-alpha.mcpb. Every version
 before 1.0 is marked "alpha", meaning an early version; the newest alpha is the
 one to use.</p>
 
@@ -66,7 +66,7 @@ conversations.</p>
 <ol>
 <li><strong>Download.</strong> Click the button above. When it has finished,
 your browser shows the file in its list of downloads. Its name starts with
-exegete-0.14.2-alpha.</li>
+exegete-0.14.3-alpha.</li>
 <li><strong>Open it.</strong> Click the file there, or double-click it in your
 Downloads folder. Claude Desktop opens and shows Exegete, with the same
 reminder as the first time to install only extensions you trust. Click
@@ -86,7 +86,7 @@ Wait until the Claude Desktop icon has gone, then open the app again. If you
 are not sure it has quit, restarting the computer always works.</li>
 <li><strong>Check.</strong> In a new conversation, ask Claude: "Is Exegete up
 to date?". If Claude asks whether it may use Exegete, allow it. It should
-answer that you have 0.14.2-alpha. The assistant may need to open your project
+answer that you have 0.14.3-alpha. The assistant may need to open your project
 again.</li>
 </ol>
 
@@ -99,7 +99,7 @@ it.</strong> Open Claude Desktop's Settings, then Extensions, then Advanced
 settings, click <strong>Install Extension...</strong>, and choose the
 file.</li>
 <li><strong>There are several Exegete files in my Downloads folder.</strong>
-Use the one with 0.14.2-alpha in its name.</li>
+Use the one with 0.14.3-alpha in its name.</li>
 <li><strong>Claude Desktop refuses the extension.</strong> The extension is not
 signed by its developer, and a computer or Claude account managed by your
 university or employer may refuse it. The decision is your IT team's: you
@@ -142,17 +142,24 @@ check on, at least seven days after it first tells you about the check, the
 answer gives the step for your computer, with your folders filled in. (Not in
 the tool set <code>core</code>, which has no such tool.)</p>
 
+<p>Bringing in PDF and EPUB files (new in 0.14.3) needs Exegete's optional
+part, which the steps below do not add. To add it, and for what its licence
+means, see
+<a href="https://github.com/nicotem/exegete/blob/main/INSTALL.md#pdf-and-epub-the-optional-part">INSTALL.md,
+"PDF and EPUB: the optional part"</a>. Without it, Exegete brings in the other
+documents and says when it cannot read a PDF or an EPUB.</p>
+
 <h3>pip, in a virtual environment</h3>
 <p>Run the environment's own Python, for example:</p>
-<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "exegete==0.14.2a0"</code></pre>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "exegete==0.14.3a0"</code></pre>
 <p>In PowerShell on Windows:</p>
-<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "exegete==0.14.2a0"</code></pre>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "exegete==0.14.3a0"</code></pre>
 
 <h3>pipx</h3>
-<pre><code>pipx install --force "exegete==0.14.2a0"</code></pre>
+<pre><code>pipx install --force "exegete==0.14.3a0"</code></pre>
 
 <h3>uv tool</h3>
-<pre><code>uv tool install --force "exegete==0.14.2a0"</code></pre>
+<pre><code>uv tool install --force "exegete==0.14.3a0"</code></pre>
 
 <h3>uvx</h3>
 <p>uvx keeps running the version it fetched first until the command names
@@ -160,7 +167,7 @@ another, so there is nothing to type in Terminal. In the app's settings for
 Exegete (its entry for MCP servers), where the command is uvx, change
 <code>exegete</code> (with any version after an @), or
 <code>qualcoder-mcp</code>, Exegete's earlier name, to
-<code>exegete@0.14.2a0</code>. The app fetches the new version the next time it
+<code>exegete@0.14.3a0</code>. The app fetches the new version the next time it
 starts, which needs the internet that once.</p>
 
 <h3>A copy of the source (git)</h3>
@@ -169,21 +176,21 @@ on your branch, and refuses if the copy has changes of its own), then install
 it again with the copy's own Python:</p>
 <pre><code>cd "$HOME/Documents/exegete"
 git fetch --tags
-git merge --ff-only v0.14.2-alpha
+git merge --ff-only v0.14.3-alpha
 "$HOME/Documents/exegete/venv/bin/python" -m pip install -e .</code></pre>
 <p>In PowerShell on Windows:</p>
 <pre><code>cd "$HOME\Documents\exegete"
 git fetch --tags
-git merge --ff-only v0.14.2-alpha
+git merge --ff-only v0.14.3-alpha
 &amp; "$HOME\Documents\exegete\venv\Scripts\python.exe" -m pip install -e .</code></pre>
 <p>Use your own folder if the copy is elsewhere.</p>
 
 <h3>Under the earlier name, qualcoder-mcp</h3>
 <p>In a virtual environment, update both names together, with the
 environment's own Python:</p>
-<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "qualcoder-mcp==0.14.2a0" "exegete==0.14.2a0"</code></pre>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "qualcoder-mcp==0.14.3a0" "exegete==0.14.3a0"</code></pre>
 <p>In PowerShell on Windows:</p>
-<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "qualcoder-mcp==0.14.2a0" "exegete==0.14.2a0"</code></pre>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "qualcoder-mcp==0.14.3a0" "exegete==0.14.3a0"</code></pre>
 <p>With pipx or uv tool, move to the new name first:
 <a href="https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp">INSTALL.md,
 "Coming from qualcoder-mcp"</a>, has the steps. The earlier name's last release

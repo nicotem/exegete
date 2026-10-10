@@ -13,15 +13,17 @@ same character rule as everything else this server echoes.
 """
 
 # pyproject.toml's version, as written there
-VERSION = "0.14.2-alpha"
+VERSION = "0.14.3-alpha"
 # The release date, as the CHANGELOG heading gives it
-RELEASED = "2026-10-09"
+RELEASED = "2026-10-10"
 # One or two plain sentences: what is new for a researcher
-# (0.14.2's note after an update reaches only those whose checking is
-# off: with it on, the note about the check is given instead, so the
-# summary says that the check has to be on)
-SUMMARY = ("Exegete can now tell you when a new version is out, if you "
-           "switch that on (it is on in the Claude Desktop extension unless "
-           "you switch it off), and it gives the assistant a brief on how "
-           "to work with you. QualCoder 4.0 is now the version it is "
-           "checked against.")
+# (0.14.3's note after an update reaches everyone coming from 0.14.2,
+# whether their checking is on or off, since 0.14.2 has already given
+# the note about the check; PDF and EPUB need the optional part, which
+# the extension has and an install from PyPI may not, so the summary
+# says so)
+SUMMARY = ("Exegete can now bring Word, PDF and other documents into your "
+           "project from your computer (PDF and EPUB need an optional "
+           "part, which the Claude Desktop extension has), and open a "
+           "whole file for you to read in your browser or its own app, "
+           "with its codings or without them.")

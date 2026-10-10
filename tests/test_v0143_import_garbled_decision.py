@@ -636,7 +636,9 @@ class TestTheDocuments:
         assert "when it is the only one in a file" not in section
 
     def test_the_changelog(self):
-        entry = _flat("CHANGELOG.md").split("## [0.14.2")[0]
+        changelog = _flat("CHANGELOG.md")
+        entry = changelog[changelog.index("## [0.14.3-alpha]"):
+                          changelog.index("## [0.14.2-alpha]")]
         assert "`import_files_with_garbled_letters`" in entry
         assert "`show_text`" in entry
         assert "is held back until it is corrected" not in entry

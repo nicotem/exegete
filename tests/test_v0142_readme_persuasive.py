@@ -606,10 +606,10 @@ def test_the_assistants_table():
 # ---------------------------------------------------------------------------
 
 def _measured():
-    # v0.14.3 moves the figures, so the entry being written,
-    # the Unreleased one, carries them (test_toolset_modes.py pins them)
+    # v0.14.3 moves the figures, so its entry carries them
+    # (test_toolset_modes.py pins them)
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [Unreleased]",
+    entry = _flat(_between(changelog, "## [0.14.3-alpha]",
                            "## [0.14.2-alpha]"))
     measured = entry[entry.index("### Measured"):]
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) .*? "

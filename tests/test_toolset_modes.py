@@ -505,16 +505,18 @@ class TestThePublishedSchemaBudget:
         the README's table of assistants). v0.14.3 moves it
         again (the reading tool, in every set, the import tool, and the
         reads in parts), so the current entry is the Unreleased one
-        alone, and 0.14.2's figure is history (`_v0142_entry`).
+        alone, and 0.14.2's figure is history (`_v0142_entry`). From the
+        release on, the current entry is 0.14.3's, under an Unreleased
+        heading that says nothing yet.
         """
-        return cls._read("CHANGELOG.md").split("## [0.14.2")[0]
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [0.14.3"):text.index("## [0.14.2")]
 
     @classmethod
     def _v0142_entry(cls):
         """The 0.14.2 entry, whose figure is history and stays put
-        (0.14.3 adds open_file_for_reading and import_documents,
-        provisional, so the current entry is the Unreleased one above the
-        0.14.2 heading)."""
+        (0.14.3 adds open_file_for_reading and import_documents, so the
+        current entry is 0.14.3's, above the 0.14.2 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.14.2"):text.index("## [0.14.1")]
 

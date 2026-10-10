@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""What the document import says, in plain words (0.14.3, provisional).
+"""What the document import says, in plain words (0.14.3).
 
 Every refusal and warning the import gives is one of these fixed texts
 with numbers, never a library's message or a document's own words: a
@@ -294,8 +294,9 @@ WHY_AS_QUALCODER = (SAME_READING + " Each way round gives a file QualCoder "
                     "reads the same way too.")
 # Said instead when Exegete's reading of the file departs from
 # QualCoder's (the departures' lines say how).
-WHY_DEPARTED = ("Where Exegete reads this file better than QualCoder's "
-                "own import would, the lines for information say how.")
+WHY_DEPARTED = ("Where QualCoder's own import would lose or garble this "
+                "file's content, Exegete keeps it, and the lines for "
+                "information name each departure.")
 READS_OTHERWISE = "qualcoder_reads_otherwise"
 WHY_SUBTITLES = ("QualCoder imports a subtitle file only as a recording's "
                  "transcript, so it has no reading of this document to "
@@ -314,9 +315,9 @@ def why_line(subtitles: bool, codes: Sequence[str] = ()) -> str:
 # Sign code -> (group, words). Group "changes" changes what the
 # researcher will read; "information" does not.
 WARNINGS = {
-    # Where Exegete reads the file better than QualCoder's own import
-    # (the named departures; TOOLS.md lists them): information, since
-    # the text is the better for them.
+    # Where QualCoder's own import would lose or garble the file's
+    # content and Exegete keeps it (the named departures; TOOLS.md lists
+    # them): information, since nothing the researcher reads is lost.
     "word_line_breaks": ("information",
         "Lines that end without a new paragraph (Shift and Return in "
         "Word) keep their line break. QualCoder's own import would join "

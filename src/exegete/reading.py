@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""What the reading tool does, native first (v0.14.3, provisional; the
+"""What the reading tool does, native first (v0.14.3; the
 import and reading design, Part 7):
 
 1. `in_folder`: a read-only copy of the original shown in Finder or File

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The reading folder: where Exegete writes what the researcher reads on
-their own computer (v0.14.3, provisional; the import and reading design,
+their own computer (v0.14.3; the import and reading design,
 decision 6).
 
 Three kinds of file go here, never into the project (exports are refused

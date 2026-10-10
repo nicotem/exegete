@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Whole-file reads in parts (v0.14.3, provisional; the import and
+"""Whole-file reads in parts (v0.14.3; the import and
 reading design, Part 3).
 
 `analyze_file_with_coding`, the file resource and the case resource

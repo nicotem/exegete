@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Small documents of every format the import reads (0.14.3, provisional).
+"""Small documents of every format the import reads (0.14.3).
 
 Built here, byte for byte the same each time (archive dates fixed), so
 the expected texts recorded from QualCoder's own functions

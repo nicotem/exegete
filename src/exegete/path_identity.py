@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Whether a path lies inside a folder, decided by which folder it really
-is (0.14.3, provisional).
+is (0.14.3).
 
 Comparing paths as text misses the same folder spelt another way. On a
 Mac's usual disk, and on Windows, letter case is ignored, so

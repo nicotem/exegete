@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The reading process: each document is read in a separate, short-lived
 Python process, so that a hostile or broken file cannot reach the server
-itself (0.14.3, provisional; the design's Part 5). The server reads no
+itself (0.14.3; the design's Part 5). The server reads no
 document itself: plain text and web pages are read as UTF-8 alone, so
 the names check searches the text this process returns, as stored.
 

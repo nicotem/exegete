@@ -429,13 +429,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 201_765          # 77 tools, Python 3.13.5, mcp 1.30.0
+    FULL_MEASURED = 201_762          # 77 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 67_243           # 23 tools, same environment
-    FULL_MEASURED_310 = 211_641      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 211_638      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 70_635
     # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 204_322     # 78 tools, same environment
-    LIFECYCLE_MEASURED_310 = 214_338
+    LIFECYCLE_MEASURED = 204_319     # 78 tools, same environment
+    LIFECYCLE_MEASURED_310 = 214_335
 
     # Why two per cent, away from the reference environment.
     #
@@ -462,7 +462,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "201,765"
+    FULL_CHARS = "201,762"
     CORE_CHARS = "67,243"
     FULL_ROUNDED = "202,000"
     CORE_ROUNDED = "67,000"
@@ -502,7 +502,7 @@ class TestThePublishedSchemaBudget:
         0.14.1's figure is history (`_v0141_entry`). From the release on,
         the current entry is 0.14.2's, under an Unreleased heading that
         measures nothing (it may hold changes that move no tool, such as
-        the README's table of assistants). v0.14.3 (provisional) moves it
+        the README's table of assistants). v0.14.3 moves it
         again (the reading tool, in every set, the import tool, and the
         reads in parts), so the current entry is the Unreleased one
         alone, and 0.14.2's figure is history (`_v0142_entry`).

@@ -78,7 +78,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   removed by hand is left as it is, and a fresh `~/.exegete` is made.
   The export tools, `create_project` and the workspace setting refuse
   both names, whether or not the old one exists, in every run.
-- the reading folder (provisional, v0.14.3), where Exegete writes the
+- the reading folder (v0.14.3), where Exegete writes the
   pages and read-only copies it opens for you to read a file, and the
   page on which you check an import's letters that look garbled:
   `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
@@ -524,7 +524,7 @@ and the four views (schema v14).
 
 ## Reading a whole file: what leaves the computer
 
-Provisional, v0.14.3. When you ask to read a file, the assistant calls
+New in v0.14.3. When you ask to read a file, the assistant calls
 `open_file_for_reading`, and the file opens on your own screen: a page
 in your browser with its whole text and its codings, or a read-only copy
 of the original in its own app, or that copy shown in Finder or File
@@ -583,7 +583,7 @@ the reading folder itself: a file's page and copy go whenever Exegete
 changes that file's text or name (renaming, pseudonymising, restoring a
 backup over the project), a page left for a file deleted in QualCoder
 goes when a new file takes its number, and anything there goes a week
-after it was written, when the server next starts. A page written
+after it was written, when Exegete next starts. A page written
 before you pseudonymised a file would otherwise keep the real names; a
 file deleted or renamed in QualCoder keeps its page until then. A study with
 a date for deleting its data should include the reading folder, which
@@ -808,11 +808,12 @@ project has the coder-visibility capability:
 Projects without the coder-visibility capability (schemas older than
 v14) are unaffected.
 
-## Bringing documents in (provisional, 0.14.3)
+## Bringing documents in (0.14.3)
 
 `import_documents` reads documents on your computer, by their paths,
-the way QualCoder's own import reads them, and better where QualCoder's
-reading loses or garbles content (TOOLS.md lists how). The documents'
+following QualCoder's own import; where QualCoder's readers lose or
+garble content, Exegete keeps it, and names the departure (TOOLS.md
+lists each one). The documents'
 text does not pass through the conversation on the way in. What does reach the AI
 provider, and what does not:
 

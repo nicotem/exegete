@@ -499,7 +499,7 @@ class TestTheSizes:
     v0.14.1 served it or, where the rewording of how Exegete describes
     itself reached it, shorter (tests/test_v0142_description_cut.py pins
     their words, tests/test_v0142_selfrep.py that none is longer;
-    test_toolset_modes.py pins the new totals). v0.14.3 (provisional)
+    test_toolset_modes.py pins the new totals). v0.14.3
     adds two tools, left out here, and lengthens two descriptions,
     measured apart below."""
 
@@ -507,7 +507,7 @@ class TestTheSizes:
     BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
     # The same tools as 0.14.2 served them, on the same interpreter
     NOW_0142 = {"full": 195_029, "core": 64_687, "lifecycle": 197_586}
-    # The same tools as this tree serves them: v0.14.3 (provisional)
+    # The same tools as this tree serves them: v0.14.3
     # lengthens two, analyze_file_with_coding (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
     # import_documents); tests/test_v0142_description_cut.py pins their

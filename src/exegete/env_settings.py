@@ -170,7 +170,7 @@ def old_spellings_in_use(environ: Optional[Mapping[str, str]] = None
 
 def reader_process_environment() -> Dict[str, str]:
     """The few variables the document import's reading process is
-    started with (0.14.3, provisional): the system path, the locale and,
+    started with (0.14.3): the system path, the locale and,
     on Windows, the system root; never the host's other settings."""
     keep = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "SYSTEMROOT", "SystemRoot")
     return {key: os.environ[key] for key in keep if key in os.environ}
@@ -202,7 +202,7 @@ def windows_system_root() -> str:
 
 
 # The system's own values that reading a file on the computer needs
-# (v0.14.3, provisional). Not settings: where this account's caches live,
+# (v0.14.3). Not settings: where this account's caches live,
 # and whether there is a screen on which to open a window.
 
 def windows_local_app_data() -> Optional[str]:

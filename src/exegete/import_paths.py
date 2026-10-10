@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Where documents may be imported from (0.14.3, provisional; the
+"""Where documents may be imported from (0.14.3; the
 design's Part 3, "Where imports may come from").
 
 A path is walked step by step from its root, and each step is judged by

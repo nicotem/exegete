@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): the reading process's contract (the import and
+"""0.14.3: the reading process's contract (the import and
 reading design, Part 5, "The reading process").
 
 Pinned: how it is started (the same Python, isolated, a private working

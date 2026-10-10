@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The reading copy: a web page with a file's whole text and its codings,
-for the researcher to read in their own browser (v0.14.3, provisional;
+for the researcher to read in their own browser (v0.14.3;
 the import and reading design, Part 7).
 
 It starts from QualCoder 4.0's own HTML export of a coded file

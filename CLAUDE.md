@@ -39,7 +39,7 @@ of a project from the conversation. It runs as an MCP server.
 - `path_identity.py`: containment checks by folder identity.
 - `doc_import.py`, `doc_readers.py`, `import_reading.py` and their
   neighbours (`import_*.py`, `garbled_text.py`): bringing documents in
-  (`import_documents`, 0.14.3, provisional; the optional part
+  (`import_documents`, 0.14.3; the optional part
   `pdf-epub` reads PDF and EPUB). `reading.py`, `reading_copy.py`,
   `reading_folder.py`, `opener.py`, `origin_mark.py`: reading a whole
   file on the researcher's screen (`open_file_for_reading`).
@@ -82,7 +82,7 @@ of a project from the conversation. It runs as an MCP server.
   documents are pinned by tests, so move the pin with its sentence.
   Explain risks and suggest alternatives; do not prescribe.
 - **Interoperability with QualCoder:** follow QualCoder's formats and
-  conventions; name every departure, with its reason; be better than
-  QualCoder where its behaviour loses or garbles content
+  conventions; name every departure, with its reason; where QualCoder's
+  readers lose or garble content, keep it, and name the departure
   (CONTRIBUTING.md's rules on parity and citations; NOTICE lists what
-  was taken from QualCoder, and why).
+  was taken from QualCoder, and why), without grading QualCoder.

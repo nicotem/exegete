@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Record what QualCoder's own import stores from each test document
-(0.14.3, provisional; design Part 10).
+(0.14.3; design Part 10).
 
 Given a QualCoder source tree, this runs QualCoder's own extraction
 functions, cut out of its files without its interface (no PyQt), on every

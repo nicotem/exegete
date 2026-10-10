@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): a coding QualCoder made across a line break is
+"""0.14.3: a coding QualCoder made across a line break is
 its own text, on the reading page and in the whole-file read.
 
 QualCoder stores a coding's passage as Qt's selectedText() gives it,

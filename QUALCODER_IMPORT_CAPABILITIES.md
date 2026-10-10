@@ -4,9 +4,9 @@
 > was called qualcoder-mcp, early in its development. Kept for
 > design-history reference; the README and CHANGELOG say what Exegete
 > does today. It also predates Exegete's own document import: from
-> 0.14.3 (provisional), Exegete brings documents in itself, by their
-> paths, the way QualCoder's import reads them: see `import_documents`
-> in TOOLS.md.
+> 0.14.3, Exegete brings documents in itself, by their
+> paths, following QualCoder's import and naming each departure: see
+> `import_documents` in TOOLS.md.
 
 ## What I Found
 

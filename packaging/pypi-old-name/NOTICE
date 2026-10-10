@@ -797,8 +797,8 @@ These are in the repository only; no package contains them.
     Why: research notes on QualCoder's tables and columns, in prose.
 
 
-Added for document import (0.14.3, provisional)
------------------------------------------------
+Added for document import (0.14.3)
+----------------------------------
 
 79. QualCoder's Word text walk (closely ported, with switches)
     Here: src/exegete/doc_readers.py, getdocumenttext.

@@ -76,13 +76,13 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     # Since the owner's ruling of 7 October 2026: what is not in Exegete
     # yet, and QualCoder from the start only for a study that needs it
     assert "You do not need QualCoder to start" in flat
-    # v0.14.3 (provisional): documents come in through import_documents,
+    # v0.14.3: documents come in through import_documents,
     # so the list starts with images, audio and video
     assert ("**Not in Exegete yet**, and done in QualCoder for now: "
             "bringing in images, audio and video;") in flat
     assert ("If your study needs any of these now, get QualCoder from the "
             "start.") in flat
-    # v0.14.3 (provisional): neither document says any longer that only
+    # v0.14.3: neither document says any longer that only
     # handed text comes in, nor that QualCoder is needed for Word or PDF
     # files
     for document in (readme, install):
@@ -115,14 +115,14 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             "creates a project") in needs
     assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
     # Since the owner's ruling of 7 October 2026: optional, with what it
-    # does that Exegete does not do yet; v0.14.3 (provisional): documents
+    # does that Exegete does not do yet; v0.14.3: documents
     # come in through Exegete, so the list starts with images, audio and
     # video
     flat_needs = " ".join(needs.split())
     assert ("**QualCoder, optional.** Today it does what Exegete does not "
             "do yet: bringing in images, audio and video") in flat_needs
-    assert ("Since 0.14.3 (provisionally), Exegete brings in documents "
-            "itself with `import_documents`") in flat_needs
+    assert ("Since 0.14.3, Exegete brings in documents itself with "
+            "`import_documents`") in flat_needs
     # The facts it rests on: the extension's tool set defaults to
     # lifecycle, which alone has create_project (not full, the default
     # configured by hand, and not core), and a file is imported from text

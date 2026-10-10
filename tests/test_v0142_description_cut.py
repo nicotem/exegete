@@ -553,7 +553,7 @@ REWORDED_0142 = {
 }
 
 # Every description as this release serves it
-# The descriptions v0.14.3 (provisional) changes, as it serves them, on
+# The descriptions v0.14.3 changes, as it serves them, on
 # top of 0.14.2's words: analyze_file_with_coding (reads in parts, the
 # `start` argument, and the `without_codes` argument, reading without
 # codes) and import_text_file (that its text passes through the
@@ -571,7 +571,7 @@ WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143}
 # its description), and check_for_updates, the check for new versions
 # (pull request #11; tests/test_updates.py pins its rules, first)
 NEW_IN_0142 = {"read_brief", "check_for_updates"}
-# and in v0.14.3 (provisional): the reading tool, whose description
+# and in v0.14.3: the reading tool, whose description
 # tests/test_v0143_reading.py pins, and the import tool, whose description
 # tests/test_v0143_import_hostile.py pins
 NEW_IN_0143 = {"open_file_for_reading", "import_documents"}

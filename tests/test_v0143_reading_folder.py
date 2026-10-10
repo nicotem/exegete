@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.14.3 (provisional): the reading folder, its tidying, and the
+"""v0.14.3: the reading folder, its tidying, and the
 opener.
 
 The reading folder is private to Exegete and to this account, out of

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.14.3 (provisional): reading a whole file on the computer.
+"""v0.14.3: reading a whole file on the computer.
 
 The reading tool, `open_file_for_reading`, writes a reading copy (a web
 page with the whole text and its codings) into Exegete's private reading

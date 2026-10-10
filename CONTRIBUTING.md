@@ -212,14 +212,14 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
 │   │   ├── path_identity.py     # Whether a path is inside a folder, by the folder's identity
-│   │   ├── doc_import.py        # import_documents: the survey, the preview and the write (0.14.3, provisional)
+│   │   ├── doc_import.py        # import_documents: the survey, the preview and the write (0.14.3)
 │   │   ├── doc_readers.py       # Each format's text, as QualCoder 4.0 reads it, with every departure named
 │   │   ├── import_reading.py    # The separate, short-lived process each document is read in
 │   │   ├── import_paths.py      # Where documents may be imported from
 │   │   ├── import_words.py      # What the import says, in fixed plain words
 │   │   ├── import_page.py       # The page for checking letters that look garbled
 │   │   ├── garbled_text.py      # Letters that came out wrong, read back through common sets
-│   │   ├── reading.py           # open_file_for_reading: native first (0.14.3, provisional)
+│   │   ├── reading.py           # open_file_for_reading: native first (0.14.3)
 │   │   ├── reading_copy.py      # The reading page: a file's whole text and its codings
 │   │   ├── reading_folder.py    # The private reading folder, and its tidying
 │   │   ├── opener.py            # Opening a file in its own app, or showing it in its folder

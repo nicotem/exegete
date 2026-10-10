@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Bringing documents into a project from the researcher's computer, the
-way QualCoder's own import does (0.14.3, provisional; the import and
+way QualCoder's own import does (0.14.3; the import and
 reading design, Parts 3 to 6).
 
 The server's `import_documents` tool calls `survey` twice: once for the

@@ -64,7 +64,7 @@ BRIEF_SECTION_4 = (
     "QualCoder; they can work on it in either program, one at a time. The "
     "two programs do not talk to each other: they meet only in the "
     "project. "
-    # v0.14.3 (provisional): documents come in through import_documents
+    # v0.14.3: documents come in through import_documents
     # and a whole file opens for reading through open_file_for_reading,
     # so neither is on the list any more
     "- Some researchers also use QualCoder, by choice or for what Exegete "
@@ -669,10 +669,12 @@ class TestQualCoderIsOptional:
 
     def test_the_rule_for_coding_agents(self):
         claude = _flat((REPO / "CLAUDE.md").read_text(encoding="utf-8"))
+        # The owner's wording of 9 October 2026 (ruling 67)
         assert ("**Interoperability with QualCoder:** follow QualCoder's "
                 "formats and conventions; name every departure, with its "
-                "reason; be better than QualCoder where its behaviour loses "
-                "or garbles content") in claude
+                "reason; where QualCoder's readers lose or garble content, "
+                "keep it, and name the departure") in claude
+        assert "be better than QualCoder" not in claude
         assert "follow QualCoder's own behaviour" not in claude
         assert claude.index("Exegete is a qualitative analysis application"
                             ) < claude.index("## Commands")
@@ -772,7 +774,7 @@ BEFORE = {
 
 class TestNoDescriptionGrew:
 
-    # v0.14.3 (provisional) adds two tools, and lengthens two descriptions
+    # v0.14.3 adds two tools, and lengthens two descriptions
     # on purpose (tests/test_v0142_description_cut.py pins their words in
     # CHANGED_0143); every other description is still held to 0.14.1's
     NEW_IN_0143 = {"open_file_for_reading", "import_documents"}

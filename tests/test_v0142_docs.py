@@ -744,12 +744,11 @@ def test_a_first_session_says_what_to_do_next():
     # practised (the extension's own default folder); the second round:
     # on the routes that set it, not on the Terminal route otherwise
     # (test_the_terminal_route_says_where_projects_go, below)
-    # v0.14.3 (provisional): a file opened for reading shows the coding
-    # too
+    # v0.14.3: a file opened for reading shows the coding too
     assert ("then bring in your page as in the example. With the extension "
             "or OpenAI's steps, the project is made in \"QualCoder "
-            "projects\", in your home folder: ask to open a file for reading "
-            "(provisional), or open the project in QualCoder (Project, Open "
+            "projects\", in your home folder: ask to open a file for "
+            "reading, or open the project in QualCoder (Project, Open "
             "Project), to see your coding in the text. [More requests to "
             "try](https://github.com/nicotem/exegete/blob/main/TOOLS.md"
             "#example-requests).") in first

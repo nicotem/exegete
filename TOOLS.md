@@ -29,7 +29,7 @@ Through these tools an AI assistant can:
 - Read your codes, categories, and coding structure
 - Access coded text segments and original source documents
 - **Analyse complete transcripts with coding context**, a part at a time for long files
-- **Let you read a whole file on your own computer** (provisional, v0.14.3): a page in your browser with its text and codings, or a read-only copy of the original in its own app, without the text passing through the conversation
+- **Let you read a whole file on your own computer** (v0.14.3): a page in your browser with its text and codings, or a read-only copy of the original in its own app, without the text passing through the conversation
 - Search through your qualitative data
 - Generate coding frequency reports
 - Analyse themes and patterns
@@ -42,7 +42,7 @@ Through these tools an AI assistant can:
 - **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
 - **Undo & restore**: delete a coding, list backups, and restore a whole project to an earlier state
-- **Bring in documents** from the computer (provisional, v0.14.3: Word, OpenDocument, RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part) and **transcripts** through the conversation, link files to cases, and **rename cases and files** the way QualCoder's Manage Cases and Manage Files do (`rename_case`, `rename_file`)
+- **Bring in documents** from the computer (v0.14.3: Word, OpenDocument, RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part) and **transcripts** through the conversation, link files to cases, and **rename cases and files** the way QualCoder's Manage Cases and Manage Files do (`rename_case`, `rename_file`)
 - **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti, and MAXQDA: **deprecated, removed in v0.15**, because it files every coding under the AI coder name and leaves out cases, annotations, journals and media; QualCoder's own export (Project, Export, REFI-QDA Project export) keeps them
 - **Report exports**: codebook, coded segments, code frequencies and case-code matrix as CSV, txt or Markdown files
 - **Pseudonymisation that keeps the coding** (`pseudonymise_source`): replace the names you list, as whole words, in the stored text of one text source per call, moving every coding, annotation and case link with the text; a preview and a residue report come first, a mandatory backup is taken, and what the tool does not rewrite is counted rather than left to be discovered, and the names left in every file's text are counted, both readings; with `rewrite_memos` the public part of every note and journal entry is rewritten too, and a mapping you type must be saved into the project's own `pseudonyms.json` or attested as kept before a run goes ahead
@@ -533,7 +533,7 @@ Claude will:
 - Create a backup first (by default)
 - Write approved codings to database (all-or-nothing)
 - Report success with coding IDs
-- Check the results, in the conversation, on your own screen or in QualCoder: read them back here, ask for the file to be opened for reading (`open_file_for_reading`, provisional: a page in your browser shows them in the text), or open the project in QualCoder to see them in the text (a QualCoder 4.0 window that was already open will not show them until the project is reopened)
+- Check the results, in the conversation, on your own screen or in QualCoder: read them back here, ask for the file to be opened for reading (`open_file_for_reading`: a page in your browser shows them in the text), or open the project in QualCoder to see them in the text (a QualCoder 4.0 window that was already open will not show them until the project is reopened)
 
 **If something went wrong**: `delete_coding(coding_id)` removes a single coding
 and marks its suggestion removed in the session (which then allows it to be
@@ -590,9 +590,9 @@ Never work on your original projects with AI coding! Always:
 
 For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md).
 
-## Reading a whole file (provisional)
+## Reading a whole file
 
-New in 0.14.3, and provisional until that release. A researcher often
+New in 0.14.3. A researcher often
 needs to read a whole interview, not only the passages the assistant
 quotes. Ask the assistant to open a file for you; it calls
 `open_file_for_reading`, and the file opens on your own screen. Its
@@ -721,13 +721,13 @@ position on method; it may change once that statement is written.
 Once read, the full brief stays in that conversation and is sent again
 with every later request, until the host shortens the conversation.
 
-## Document import: where it departs from QualCoder (provisional)
+## Document import: where it departs from QualCoder
 
-`import_documents` (0.14.3, provisional) reads each document the way
-QualCoder 4.0's own import reads it,
-and better where QualCoder's way of reading loses or garbles content,
-in the ways listed first below and only those (the owner's decision of
-6 October 2026). A PDF's text is QualCoder's to the character, since
+`import_documents` (0.14.3) reads each document following
+QualCoder 4.0's own import; where QualCoder's readers lose or garble
+content, Exegete keeps it, and names the departure, in the ways listed
+first below and only those (the owner's decisions of 6 and 9 October
+2026). A PDF's text is QualCoder's to the character, since
 QualCoder 4.0 re-reads a PDF and compares. `scripts/qualcoder_parity.py`
 runs QualCoder's own extraction functions on the test documents, and
 the tests check two things against them: with none of these departures,
@@ -740,9 +740,10 @@ imported separately by each program can come in with different text,
 and codings made on one copy do not then line up on the other. The
 preview says, file by file, which of these lines apply.
 
-**Better text than QualCoder's readers.** What QualCoder's reading
-leaves out comes after the document's text, each part labelled, so that
-the text QualCoder does read keeps its place. A footnote, endnote or
+**Where QualCoder's readers lose or garble content, Exegete keeps it,
+and names the departure.** What QualCoder's reading leaves out comes
+after the document's text, each part labelled, so that the text
+QualCoder does read keeps its place. A footnote, endnote or
 comment moved there leaves its label where it stood, in square brackets
 (`was far.[Footnote 1] We moved`), so a quote across that spot includes
 the marker; a note with no text has no label and leaves nothing. Files
@@ -806,7 +807,7 @@ the file declares).
 | The file's memo | empty, PDF notes apart | also `memo`, before the PDF notes; the PDF notes' heading is always "PDF annotations:", where QualCoder writes it in its interface language | what the researcher asked to record |
 | The file's owner | the researcher's coder name | the AI coder name, on the row and its attribute values | Exegete's rule for every write, as the owner decided on 6 October 2026: it records who brought the file in, on the researcher's word |
 | QualCoder's search and AI indexes | written at import | left to QualCoder's next opening of the project | QualCoder rebuilds both itself |
-| A PDF's text | read with the PyMuPDF release QualCoder has | read with the release Exegete has (the extension pins 1.28.2, the release the parity tests pass with); another release can read some PDFs differently, and QualCoder 4.0 may then report a text mismatch and offer to restructure, which moves codings | the import's answer names the release and says to take a backup and check before accepting |
+| A PDF's text | read with the PyMuPDF release QualCoder has | read with the release Exegete has (the extension pins 1.28.2, the release with which Exegete's text is checked against QualCoder's); another release can read some PDFs differently, and QualCoder 4.0 may then report a text mismatch and offer to restructure, which moves codings | the import's answer names the release and says to take a backup and check before accepting |
 | Folders | no folder import | a folder's own supported files, in name order; its subfolders named, not opened | one place to name |
 | LaTeX (`.tex`) | imported linked, never copied, its text made from the markup | not imported: refused by path, and counted among a folder's other files | it needs a reader of its own, and QualCoder keeps no copy in the project for Exegete to hold |
 
@@ -850,7 +851,7 @@ no longer listed, until v1.0.
 - `exegete://codes/{code_id}` - Specific code details
 - `exegete://files/list` - All source files
 - `exegete://files/{file_id}` - File content; a long file's first part, whose `part` names the address of the next
-- `exegete://files/{file_id}/from/{start}` - A long file's content from character `start` (v0.14.3, provisional)
+- `exegete://files/{file_id}/from/{start}` - A long file's content from character `start` (v0.14.3)
 - `exegete://cases/list` - All cases
 - `exegete://cases/{case_id}` - Case details; excerpts past one answer's size are cut, each saying where its text continues
 - `exegete://journal` - Journal entries
@@ -939,8 +940,8 @@ never a coder hidden in QualCoder). A known value with nothing in scope
 still answers empty, and that answer is a finding.
 
 **Rich Transcript Analysis:**
-- `analyze_file_with_coding(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3, provisional): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
-- `open_file_for_reading(file_id, show, without_codes)` - **Let the researcher read a whole file on their own computer** (provisional, v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). `without_codes=true` writes the page with the text alone, for a fresh reading. See "Reading a whole file" below
+- `analyze_file_with_coding(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
+- `open_file_for_reading(file_id, show, without_codes)` - **Let the researcher read a whole file on their own computer** (v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). `without_codes=true` writes the page with the text alone, for a fresh reading. See "Reading a whole file" below
 
 **Attributes & Demographics:**
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)
@@ -979,7 +980,7 @@ still answers empty, and that answer is a finding.
 - `create_proposed_codes(coding_session_id, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first
 
 **Data Import, Cases & Attributes (Write Operations):**
-- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` - **WRITES TO DATABASE** (provisional, 0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer as QualCoder 4.0's own import reads them, and better where QualCoder's reading loses or garbles content (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's pseudonyms list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice); so are files whose letters look garbled (`import_files_with_garbled_letters`), with a warning that says what was seen, never the text, and `show_text` on the preview opens a page on the researcher's own screen to check them on first. Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so in Word, TextEdit or Notepad; nothing is guessed). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" below. In the full and lifecycle sets, not core
+- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` - **WRITES TO DATABASE** (0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer following QualCoder 4.0's own import; where QualCoder's readers lose or garble content, Exegete keeps it, and names the departure (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's pseudonyms list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice); so are files whose letters look garbled (`import_files_with_garbled_letters`), with a warning that says what was seen, never the text, and `show_text` on the preview opens a page on the researcher's own screen to check them on first. Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so in Word, TextEdit or Notepad; nothing is guessed). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" below. In the full and lifecycle sets, not core
 - `import_text_file(filename, content, memo, owner, create_backup, case_name, apply_project_pseudonyms)` - **WRITES TO DATABASE** - Add a new text source, optionally linked to a case. The name follows `rename_file`'s rules (at most 200 bytes in UTF-8; no path, control or invisible characters; no name Windows cannot store; not a name already in the project's `documents/` folder). With `apply_project_pseudonyms=true` the project's own `pseudonyms.json` is applied to the text before it is stored, which is what QualCoder does to every text file it imports; default off; `owner` is deprecated, removed in v0.15 (see "The `owner` argument is deprecated" above)
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **WRITES TO DATABASE** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and names it)
 - `create_case(name, memo, create_backup)` - **WRITES TO DATABASE** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)

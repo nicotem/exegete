@@ -95,7 +95,7 @@ EXPECTED_HINTS = {
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
-    # 0.14.3 (provisional): a repeat of the preview reads again, and a
+    # 0.14.3: a repeat of the preview reads again, and a
     # repeat of the import finds its files there and its token spent
     "import_documents": A1,
     # adds

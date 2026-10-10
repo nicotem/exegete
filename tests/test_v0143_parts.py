@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.14.3 (provisional): whole-file reads in parts.
+"""v0.14.3: whole-file reads in parts.
 
 `analyze_file_with_coding`, the file resource and the case resource
 returned a whole file's text with no limit; a long document overflowed

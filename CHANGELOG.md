@@ -9,19 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For 0.14.3, a release of its own after 0.14.2. The owner decided the
 questions of the import and reading design on 6 October 2026: as
-recommended, except that the stored text is to be better than
-QualCoder's where its readers lose or garble content (a PDF's stays
-identical), and with one new rule, that files not saved as UTF-8 are
-held back. In short: PDF and EPUB through QualCoder 4.0's own libraries,
-as an optional part switched on in the Claude Desktop extension; every
-departure from QualCoder's text named; no guessing of character sets;
-PDFs and file names holding listed names, and files whose letters look
-garbled, held back, each with a way through on the researcher's word;
-imported files under the AI coder name; reading pages in a private
-folder of Exegete's own, tidied; and reading without codes. What follows
-is built to those decisions, and may change before it is released.
+recommended, except that where QualCoder's readers lose or garble
+content, Exegete keeps it, and names the departure (a PDF's text stays
+identical to QualCoder's), and with one new rule, that files not saved
+as UTF-8 are held back. In short: PDF and EPUB through QualCoder 4.0's
+own libraries, as an optional part switched on in the Claude Desktop
+extension; every departure from QualCoder's text named; no guessing of
+character sets; PDFs and file names holding listed names, and files
+whose letters look garbled, held back, each with a way through on the
+researcher's word; imported files under the AI coder name; reading
+pages in a private folder of Exegete's own, tidied; and reading without
+codes. On 9 October 2026 he settled the wording ("where QualCoder's
+readers lose or garble content, Exegete keeps it, and names the
+departure") and the marker a moved note leaves ("[Footnote 1]"). What
+follows is built to those decisions. Two
+things stay provisional: how long one call may run, until he has timed
+his hosts' limit, and the figures of the import's other limits.
 
-### Added (provisional): reading a whole file on your own computer
+### Added: reading a whole file on your own computer
 
 - `open_file_for_reading(file_id, show)`, in every tool set: a
   researcher can read a whole file without its text passing through the
@@ -80,9 +85,9 @@ is built to those decisions, and may change before it is released.
   `rewrite_memos` clears the whole project's pages, and
   `restore_backup`), and a page left for a file deleted in QualCoder
   when a new file takes its number (QualCoder gives a new file the
-  highest number plus one); everything a week after, when the server
-  starts; a temporary file
-  an interrupted copy left beside an original's copy goes after ten
+  highest number plus one); everything a week after, when Exegete
+  starts; a temporary file an interrupted copy left beside an
+  original's copy goes after ten
   minutes, as one beside a page does. An original of another type is
   refused in words that say it is not one of the types Exegete copies
   for reading (a project QualCoder 3.8.2 made can hold one, since 3.8.2
@@ -113,7 +118,7 @@ is built to those decisions, and may change before it is released.
   whole file opens for reading. The full brief is now about 12,400
   characters.
 
-### Changed (provisional): whole-file reads in parts
+### Changed: whole-file reads in parts
 
 - `analyze_file_with_coding` (with a new `start` argument), the
   `exegete://files/{file_id}` resource and the `exegete://cases/{case_id}`
@@ -149,16 +154,17 @@ is built to those decisions, and may change before it is released.
   other options v0.14 deprecated: an import always takes a backup
   first. A call that passes it is answered with the deprecation.
 
-### Added (provisional): bringing documents in
+### Added: bringing documents in
 
 - `import_documents` brings Word (.docx), OpenDocument (.odt), RTF,
   plain text (.txt), Markdown (.md), web pages (.html, .htm) and
   subtitle files (.srt, .vtt) into the open project from the
   researcher's computer, by their paths or a folder's, and PDF and EPUB
   with an optional part (below). Exegete reads each document on the
-  computer, the way QualCoder 4.0's own import reads it and better where
-  QualCoder's reading loses or garbles content (below); the documents'
-  text never passes through the conversation.
+  computer, following QualCoder 4.0's own import; where QualCoder's
+  readers lose or garble content, Exegete keeps it, and names the
+  departure (below). The documents' text never passes through the
+  conversation.
 - Two steps, as Exegete's other changes that matter: the first call
   writes nothing and answers with a preview (a summary line, the names
   list's state, each file's name, size, length and warnings in plain
@@ -174,8 +180,9 @@ is built to those decisions, and may change before it is released.
   failure after the backup takes the batch back and names the backup.
   Claude Code asks before both calls
   (`anthropic/requiresUserInteraction`).
-- Better text than QualCoder's readers (the owner's decision of 6
-  October 2026), each departure a line of TOOLS.md with an example. In
+- Where QualCoder's readers lose or garble content, Exegete keeps it,
+  and names the departure (the owner's decisions of 6 and 9 October
+  2026), each departure a line of TOOLS.md with an example. In
   Word files, a line break inside a paragraph stays a line break (where
   QualCoder joins the words either side), tab stops set on a paragraph
   add no tabs, a text box comes once (QualCoder repeats it up to four
@@ -370,7 +377,7 @@ is built to those decisions, and may change before it is released.
   Exegete's own code stays LGPL. New libraries in every install:
   defusedxml, and striprtf pinned exactly.
 
-### Changed (provisional): what the documents say Exegete does not do yet
+### Changed: what the documents say Exegete does not do yet
 
 - With documents brought in through Exegete and a whole file opened
   for reading, the README's "Not in Exegete yet" lists bringing in
@@ -406,24 +413,24 @@ is built to those decisions, and may change before it is released.
 
 ### Measured
 
-- Serialised tool JSON: full = 201,765 characters (about 50.4k tokens
+- Serialised tool JSON: full = 201,762 characters (about 50.4k tokens
   at chars/4) over 77 tools, core = 67,243 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 204,322 (about 51.1k) over 78, measured on
+  the opt-in lifecycle set = 204,319 (about 51.1k) over 78, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 211,641, 70,635 and 214,338. Against
+  Python 3.11.13 (the `.venv/`), 211,638, 70,635 and 214,335. Against
   0.14.2's figures (196,387, 65,140 and 198,944 on 3.13), every set
   grew by `open_file_for_reading`'s own entry (1,630 characters on
   3.13, 1,632 with its separator) and by 471 characters on
   `analyze_file_with_coding` (its `start` and `without_codes`
   arguments); `full` and `lifecycle` also by `import_documents`' own
-  entry (2,977, 2,979 with its separator; it is in the standard and
+  entry (2,974, 2,976 with its separator; it is in the standard and
   lifecycle sets, not in core, and its two arguments for letters that
   look garbled, `import_files_with_garbled_letters` and `show_text`,
   are in it) and by 296 on `import_text_file` (the description changed
   above). No other tool's entry changed. Both new tools put their rules
   first, and each whole description fits within the 2,048 characters
   Claude Code keeps: `open_file_for_reading`'s is 1,187 characters on
-  3.13 (1,267 on 3.11) and `import_documents`' 1,983 (2,039 on 3.11).
+  3.13 (1,267 on 3.11) and `import_documents`' 1,980 (2,036 on 3.11).
 
 ## [0.14.2-alpha] - 2026-10-09
 

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The page on which the researcher checks letters that look garbled,
-before deciding whether a file comes in (0.14.3, provisional; the
+before deciding whether a file comes in (0.14.3; the
 owner's ruling of 7 October 2026, "Warn, and let me decide").
 
 The import's preview, asked with `show_text`, writes one page for the

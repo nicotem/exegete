@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): safeguards of the document import and the
+"""0.14.3: safeguards of the document import and the
 reading tool, added after their first review.
 
 Pinned here: the per-PDF line on QualCoder 3.8.2 appears in a project
@@ -419,9 +419,10 @@ class TestArchivesAndWords:
 
     @pytest.mark.parametrize("code", sorted(doc_readers.DEPARTURES))
     def test_each_departure_says_what_qualcoder_would_do(self, code):
-        """Where Exegete reads better than QualCoder, the preview says so
-        for information (the text is the better for it) and says what
-        QualCoder's own import would store instead."""
+        """Where QualCoder's readers lose or garble content and Exegete
+        keeps it, the preview says so for information (nothing the
+        researcher reads is lost) and says what QualCoder's own import
+        would store instead."""
         group, words = import_words.WARNINGS[code]
         assert group == "information"
         assert "QualCoder's own import would" in words

@@ -7602,7 +7602,7 @@ class QualcoderDatabase:
     def insert_imported_document(self, name: str, fulltext: str,
                                  mediapath: str, memo: str,
                                  owner: str) -> Dict[str, Any]:
-        """One document's row for import_documents (0.14.3, provisional),
+        """One document's row for import_documents (0.14.3),
         in the caller's transaction (no commit here).
 
         The text arrives as QualCoder's import would store it, already

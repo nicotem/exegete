@@ -175,7 +175,7 @@ class TestTheIntroduction:
             "sort them into cases with attributes such as age, role or "
             "site": ["create_case", "create_attribute_type",
                      "set_attribute", "link_file_to_case"],
-            # v0.14.3 (provisional): as documents from the computer too
+            # v0.14.3: as documents from the computer too
             "**Bring in transcripts** as documents from your computer": [
                 "import_documents"],
             "or through the conversation; sort them into cases": [
@@ -206,8 +206,9 @@ class TestTheIntroduction:
             # reading of a whole file yourself, which is in development
             "a whole transcript with its codings, read by the assistant": [
                 "analyze_file_with_coding"],
-            # v0.14.3 (provisional): and by the researcher, on a page
-            "or by you on a page in your browser (provisional)": [
+            # v0.14.3: and by the researcher, on a page (no longer
+            # marked provisional once the owner decided the design)
+            "or by you on a page in your browser.": [
                 "open_file_for_reading"],
             "**Write** memos, annotations and a research journal": [
                 "set_memo", "add_annotation", "add_journal_entry"],
@@ -235,7 +236,7 @@ class TestTheIntroduction:
         # Exegete's, and QualCoder is for a study that needs it now
         needs = _between(_what_you_can_do(), "**Not in Exegete yet**",
                          "**The aim**")
-        # v0.14.3 (provisional): documents come in through Exegete, and a
+        # v0.14.3: documents come in through Exegete, and a
         # whole file opens for reading on the researcher's screen, so
         # neither is on the list any more
         assert ("**Not in Exegete yet**, and done in QualCoder for now: "

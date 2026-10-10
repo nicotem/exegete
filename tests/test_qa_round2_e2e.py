@@ -52,7 +52,7 @@ EXPECTED_TOOLS = {
     "find_cooccurring_codes", "get_case_code_matrix", "get_codes_by_case",
     # (16th read)
     "get_cases_by_code",
-    # v0.14.3 (provisional): reading a whole file on the computer, its
+    # v0.14.3: reading a whole file on the computer, its
     # text kept off the conversation, in every tool set
     "open_file_for_reading",
     # v0.12 B3: the coder comparison (full toolset only, never core)
@@ -62,7 +62,7 @@ EXPECTED_TOOLS = {
     "edit_suggestion", "update_suggestion_status", "apply_codings",
     # writes & recovery (6)
     "import_text_file", "link_file_to_case", "delete_coding",
-    # document import (0.14.3, provisional)
+    # document import (0.14.3)
     "import_documents",
     "list_backups", "restore_backup", "export_refi_qda",
     # sessions & help (5)

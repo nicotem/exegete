@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): the document import's smaller safeguards,
+"""0.14.3: the document import's smaller safeguards,
 pinned after the reviews.
 
 Pinned here: an archive's zip64 record is the one Python's zipfile
@@ -245,7 +245,7 @@ def test_the_documents_name_what_differs():
         encoding="utf-8").split())
     assert ("Exegete's preview of an import sends the documents' names, "
             "sizes, lengths and warnings, never their text") in readme
-    assert "PRIVACY.md#bringing-documents-in-provisional-0143" in readme
+    assert "PRIVACY.md#bringing-documents-in-0143" in readme
 
 
 class TestTheOlderGuards:

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): the text Exegete's import stores is QualCoder
+"""0.14.3: the text Exegete's import stores is QualCoder
 4.0's, PDF to the character, and every other format with the named
 departures only (the owner's ruling of 6 October 2026: better text where
 QualCoder's readers lose or garble content; TOOLS.md lists them).

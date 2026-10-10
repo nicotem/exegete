@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Reading a document's text the way QualCoder 4.0 reads it, and better
-where QualCoder's readers lose or garble content (0.14.3, provisional).
+"""Reading a document's text the way QualCoder 4.0 reads it; where
+QualCoder's readers lose or garble content, Exegete keeps it, and names
+the departure (0.14.3).
 
 Each function here takes the file's bytes, never a path, and gives the
 text Exegete stores for it, with the warning codes the import's preview
-turns into plain words. The rules are QualCoder 4.0's, at the pinned
-commit 9bddf17 (src/qualcoder/manage_files.py unless another file is
-named), with the named departures (DEPARTURES, each a switch: given
-none, a reader's text is QualCoder's); the other departures are named
-where they are made, and all are in TOOLS.md. A document is read by
+turns into plain words. The rules are QualCoder 4.0's: its release (tag
+4.0, commit b95e021), which CI's parity gate checks out, reads every
+format as the August commit 9bddf17 did, whose line numbers are cited
+here (src/qualcoder/manage_files.py unless another file is named; see
+CONTRIBUTING.md on citations). The named departures (DEPARTURES) are
+each a switch: given none, a reader's text is QualCoder's; the other
+departures are named where they are made, and all are in TOOLS.md. A document is read by
 `read_document`, called only inside the reading process
 (import_reading), never in the server. The server uses this module's
 names and small helpers only, and reads no document itself. Plain text and web pages are read as UTF-8 alone:
@@ -56,9 +59,10 @@ MAX_ARCHIVE_DIRECTORY = MAX_ARCHIVE_ENTRIES * (46 + 1024)
 
 BOM = "\ufeff"
 
-# Where Exegete reads better than QualCoder (the owner's ruling of 6
-# October 2026): each departure from QualCoder's way of reading has a
-# name, and TOOLS.md gives each one a line with an example. A reader
+# Where QualCoder's readers lose or garble content, Exegete keeps it, and
+# names the departure (the owner's rulings of 6 and 9 October 2026): each
+# departure from QualCoder's way of reading has a name, and TOOLS.md
+# gives each one a line with an example. A reader
 # given none of them reads as QualCoder 4.0 does, to the character (the
 # parity tests check it on every test document); PDF has none, since
 # QualCoder re-reads a PDF and compares. What QualCoder's reading leaves

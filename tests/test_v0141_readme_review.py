@@ -282,7 +282,7 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
     # in Exegete yet")
     assert ("That is a direction, not yet a fact: today QualCoder is "
             "still needed for several things (above).") in stance
-    # v0.14.3 (provisional): Exegete brings documents in and opens a
+    # v0.14.3: Exegete brings documents in and opens a
     # whole file for reading, so the list starts with images, audio and
     # video
     assert ("**Not in Exegete yet**, and done in QualCoder for now: "

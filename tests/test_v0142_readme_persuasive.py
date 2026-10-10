@@ -164,7 +164,7 @@ def _tools(mode="lifecycle"):
 # "server or plugin", Claude Code's starting folder, Codex's untested
 # setting). That takes 405 characters, and the limit is raised by what
 # the page needs and no more: 34,705.
-# 0.14.3 (provisional) brings documents in through Exegete and opens a
+# 0.14.3 brings documents in through Exegete and opens a
 # whole file for reading: "What you can do" says both (transcripts as
 # documents from the computer, and a whole transcript read by you on a
 # page), "Not in Exegete yet" loses them and gains coding by selecting
@@ -588,7 +588,7 @@ def test_the_assistants_table():
 # ---------------------------------------------------------------------------
 
 def _measured():
-    # v0.14.3 (provisional) moves the figures, so the entry being written,
+    # v0.14.3 moves the figures, so the entry being written,
     # the Unreleased one, carries them (test_toolset_modes.py pins them)
     changelog = _read("CHANGELOG.md")
     entry = _flat(_between(changelog, "## [Unreleased]",
@@ -753,7 +753,7 @@ def test_what_comes_next_is_plans():
     assert ("Plans, not promises: the order may change with what testers "
             "report.") in section
     items = re.findall(r" - ([^ ]+(?: [^ ]+)?)", section)
-    # v0.14.3 (provisional): bringing documents in and reading a whole
+    # v0.14.3: bringing documents in and reading a whole
     # file yourself are in Exegete, so they are no longer the next plan
     assert [item.split(",")[0].split(":")[0] for item in items] == [
         "v0.15", "v0.16", "v0.17", "Later"]
@@ -782,7 +782,7 @@ def test_what_comes_next_is_plans():
         assert engineering not in section, engineering
     # and the list of what still needs QualCoder no longer says that
     # bringing documents in and reading a whole file are worked on: they
-    # are in Exegete (v0.14.3, provisional)
+    # are in Exegete (v0.14.3)
     can_do = _flat(_section("What you can do", "How it works"))
     assert "in development" not in can_do
 

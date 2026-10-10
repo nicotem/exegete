@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The mark a system puts on a file that came from the internet, carried
-from one file to its copy (v0.14.3, provisional).
+from one file to its copy (v0.14.3).
 
 Word opens a document marked as from the internet in Protected View,
 read-only and without fetching the pictures or templates it links to;

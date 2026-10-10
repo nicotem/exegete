@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): QualCoder's codings read where QualCoder draws
+"""0.14.3: QualCoder's codings read where QualCoder draws
 them, on the reading page and in the whole-file read, whatever the
 file's line endings, a byte-order mark at its start, or emoji.
 

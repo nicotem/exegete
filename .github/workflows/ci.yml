@@ -258,7 +258,7 @@ jobs:
           test "$(ls builds/*/*.mcpb | wc -l)" -eq 3
           test "$(sha256sum builds/*/*.mcpb | cut -d' ' -f1 | sort -u | wc -l)" -eq 1
 
-  # 0.14.3 (provisional): the import's stored text against QualCoder's
+  # 0.14.3: the import's stored text against QualCoder's
   # own extraction functions, run without QualCoder's interface
   # (scripts/qualcoder_parity.py): a gate at the release the readers
   # follow, QualCoder 4.0 (tag 4.0, commit b95e021), and a watch on

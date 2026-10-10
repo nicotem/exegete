@@ -842,7 +842,7 @@ TOOL_CHECKS_ONLINE = ToolAnnotations(readOnlyHint=False,
 # FastMCP sends no tool metadata of its own.
 TOOL_META = {
     "read_pseudonym_list": {"anthropic/requiresUserInteraction": True},
-    # import_documents (0.14.3, provisional): the researcher approves each
+    # import_documents (0.14.3): the researcher approves each
     # import, the preview and then the import; Claude Code asks before
     # both calls (the design's "Asking every time").
     "import_documents": {"anthropic/requiresUserInteraction": True},
@@ -6401,7 +6401,7 @@ def analyze_file_with_coding(file_id: int, start: int = 0,
     return _ai_json(result, indent=2)
 
 
-# Reading without codes (v0.14.3, provisional; the owner's decision of 1
+# Reading without codes (v0.14.3; the owner's decision of 1
 # October 2026): a fresh reading meets nothing of the coding already
 # done. The file's memo describes the file and stays.
 WITHOUT_CODES_NOTE = (
@@ -6428,7 +6428,7 @@ def _leave_out_codes(result: Dict[str, Any]) -> None:
 
 def _in_parts(result: Dict[str, Any], file_id: int, start: int,
               without_codes: bool = False) -> None:
-    """Cut a whole-file read to one part (v0.14.3, provisional). Each
+    """Cut a whole-file read to one part (v0.14.3). Each
     coding found by QualCoder's count gets the place of its words
     (`text_start`, `text_end`); each found by neither count is flagged.
     A file that fits one part reads as before, these apart."""
@@ -6463,7 +6463,7 @@ def _in_parts(result: Dict[str, Any], file_id: int, start: int,
 
 
 # ============================================================================
-# READING A WHOLE FILE ON THE COMPUTER (v0.14.3, provisional)
+# READING A WHOLE FILE ON THE COMPUTER (v0.14.3)
 # ============================================================================
 
 def _suggestion_counts(file_id: int) -> Tuple[int, int]:
@@ -9988,7 +9988,7 @@ def import_text_file(
 
 
 # ============================================================================
-# DOCUMENT IMPORT (0.14.3, provisional): import_documents
+# DOCUMENT IMPORT (0.14.3): import_documents
 # ============================================================================
 
 IMPORT_DOCUMENTS_ADVICE_NAMES = (
@@ -10224,9 +10224,9 @@ def import_documents(
 
     Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The pseudonyms list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
-    Refused or kept out, saying why: while QualCoder has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8 (with steps to re-save it); names already in the project.
+    Refused or kept out, saying why: while QualCoder has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
 
-    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Text as QualCoder reads it, plus what it loses (notes, comments, headers). For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
+    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what its readers lose (notes, comments, headers) and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
 
     Args:
         paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
@@ -10236,7 +10236,7 @@ def import_documents(
         import_file_names_with_listed_names: true on the researcher's word
         import_files_with_garbled_letters: true on the researcher's word
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
-        memo: a note for every file (e.g. its source); at most 10,000 characters
+        memo: a note for every file; at most 10,000 characters
     """
     # Each call's reading time is counted from here (doc_import's
     # PREVIEW_SECONDS and IMPORT_SECONDS).
@@ -11946,7 +11946,7 @@ def cleanup_old_sessions(days_old: int = 30) -> str:
 
 
 # The pandoc defaults file the converted_documents topic names (0.14.3,
-# provisional, decision 3): two lines, checked against this digest before
+# decision 3): two lines, checked against this digest before
 # its place is given, so a file changed on the disk is never named.
 PANDOC_DEFAULTS_NAME = "pandoc-defaults.yaml"
 PANDOC_DEFAULTS_SHA256 = (
@@ -11977,10 +11977,11 @@ def _converted_documents_help() -> Dict[str, Any]:
         "title": "Bringing in a document converted by another tool, such "
                  "as a pandoc server",
         "why": "Exegete reads Word, OpenDocument, RTF, web page, Markdown, "
-               "plain text and subtitle files itself, as QualCoder does and "
-               "better where QualCoder's reading loses or garbles content "
-               "(TOOLS.md lists how). A converter gives other text, so a "
-               "converted file comes in as a .txt of its own.",
+               "plain text and subtitle files itself, following QualCoder's "
+               "import; where QualCoder's readers lose or garble content, "
+               "Exegete keeps it, and names the departure (TOOLS.md lists "
+               "each one). A converter gives other text, so a converted "
+               "file comes in as a .txt of its own.",
         "steps": [
             "Convert file to file: the original in, a .txt out, in a folder "
             "outside the project. Always give an output file: without one, "
@@ -12453,7 +12454,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         return _brief()
 
     if tool_name == "converted_documents":
-        # 0.14.3 (provisional): import_documents' description points here
+        # 0.14.3: import_documents' description points here
         return json.dumps(_converted_documents_help(), indent=2)
 
     if tool_name is None:
@@ -20007,7 +20008,7 @@ CORE_TOOLSET = frozenset({
     # file search and read-with-coding
     "search_files", "analyze_file_with_coding",
     # reading a whole file on the computer, its text kept off the
-    # conversation (v0.14.3, provisional): most useful with local models,
+    # conversation (v0.14.3): most useful with local models,
     # where reading a file otherwise pulls all of it into a small context
     "open_file_for_reading",
     # coded-text retrieval and frequencies
@@ -20366,7 +20367,7 @@ def main(argv: Optional[List[str]] = None, *,
     # the move cannot be made)
     _settle_state_folder()
 
-    # v0.14.3 (provisional): the reading folder's stale pages and copies
+    # v0.14.3: the reading folder's stale pages and copies
     # (previews after an hour, everything after a week) go at each start
     try:
         reading_folder.sweep()

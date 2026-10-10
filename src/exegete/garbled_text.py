@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Letters that came out wrong in a file itself (0.14.3, provisional).
+"""Letters that came out wrong in a file itself (0.14.3).
 
 A UTF-8 file opened once in another character set and saved again carries
 its letters as other characters: "é" becomes "Ã©" through Windows

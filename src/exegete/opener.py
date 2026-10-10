@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Asking the system to open a file in its own app, or to show it in its
-folder (v0.14.3, provisional; the import and reading design, Part 7).
+folder (v0.14.3; the import and reading design, Part 7).
 
 Opening a file is launching a program by another name, so the rules are
 narrow:

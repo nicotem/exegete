@@ -167,7 +167,7 @@ Before starting, make sure you have:
 
 - ✅ **A computer** with macOS, Windows or Linux (paths differ
   slightly), and **Python 3.10 or newer**. Opening a file for you to
-  read (provisional, v0.14.3) needs a screen: on Linux, a desktop
+  read (v0.14.3) needs a screen: on Linux, a desktop
   session; in an SSH session nothing opens, and Exegete gives the
   page's place instead
   - Check by opening Terminal and typing: `python3 --version`
@@ -196,8 +196,8 @@ Before starting, make sure you have:
   whose lock file shows it. Each release's downloads are under its
   notes, in Assets, for Windows, Linux and Macs with Apple Silicon (M1
   or later): QualCoder offers none for older Intel Macs, and its notes
-  there say how to open it the first time. Since 0.14.3
-  (provisionally), Exegete brings in documents itself with
+  there say how to open it the first time. Since 0.14.3,
+  Exegete brings in documents itself with
   `import_documents`, their text staying on the computer on the way in
   (Word, OpenDocument, RTF, plain text, Markdown, web pages and
   subtitle files; PDF and EPUB need its optional part, below), and
@@ -224,6 +224,7 @@ This gives you an `exegete` command; get its absolute path with
 `which exegete` and use THAT as the `command` in the Claude
 configuration of Step 6 (no `args` needed). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
+
 
 The step-by-step install below is the **contributor path**: use it if
 you want to read or modify the source, or run the test suite.
@@ -1413,7 +1414,7 @@ classifier, not you, decides on the writing tools, and on
 in Claude Code 2.1.199 and later, `read_pseudonym_list` and
 `import_documents`.
 
-Bringing documents in (`import_documents`, provisional, 0.14.3) takes
+Bringing documents in (`import_documents`, 0.14.3) takes
 two calls: the first only looks and changes nothing in the project (if
 letters look garbled, it can open a page on your screen to check them
 on); the second brings the files in. Allow the second only after
@@ -1423,7 +1424,8 @@ instructions could otherwise have an assistant bring in another file
 unasked. PRIVACY.md, "Bringing documents in", says what reaches the AI
 provider. The Claude Desktop extension switches on the optional part
 for PDF and EPUB (PyMuPDF 1.28.2 and EbookLib 0.20, the releases it
-pins and the parity tests pass with; about 24 to 35 MB more to
+pins, with which Exegete's text is checked against QualCoder's; about
+24 to 35 MB more to
 download at the first start, AGPL-licensed); installed from PyPI
 without it (`pip install exegete`), Exegete imports the other formats
 and says it cannot read PDF or EPUB yet (`pip install

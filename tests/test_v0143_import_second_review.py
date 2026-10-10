@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): safeguards of the document import and the
+"""0.14.3: safeguards of the document import and the
 reading tool, added after their second review.
 
 Pinned here: a long original's copy keeps its ending whole, so a

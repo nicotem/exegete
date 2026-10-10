@@ -148,15 +148,15 @@ def test_how_it_works_explains_before_it_instructs():
     # the two ways a text comes in, and what each sends, where data is
     # discussed
     data = _between(_readme(), "## Where your data goes", "## Start here")
-    # v0.14.3 (provisional): a document brought in through Exegete too,
-    # and what the import's preview sends
+    # v0.14.3: a document brought in through Exegete too, and what the
+    # import's preview sends
     assert ("Text you paste or attach goes in full; a document imported in "
-            "QualCoder or brought in through Exegete (provisional), only as "
-            "far as the assistant reads it: Exegete's preview of an import "
-            "sends the documents' names, sizes, lengths and warnings, never "
-            "their text ([PRIVACY.md, \"Bringing documents in\"]"
+            "QualCoder or brought in through Exegete, only as far as the "
+            "assistant reads it: Exegete's preview of an import sends the "
+            "documents' names, sizes, lengths and warnings, never their "
+            "text ([PRIVACY.md, \"Bringing documents in\"]"
             "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
-            "#bringing-documents-in-provisional-0143)).") in data
+            "#bringing-documents-in-0143)).") in data
 
 
 # Modules that would give Exegete an AI, or a way onto the network, of its

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): reading a file without its codes, the owner's
+"""0.14.3: reading a file without its codes, the owner's
 decision of 1 October 2026.
 
 A fresh reading, by the assistant or by the researcher, meets nothing of

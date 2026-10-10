@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): hostile files, the limits, the description and
+"""0.14.3: hostile files, the limits, the description and
 the help topic for converted documents (the import and reading design,
 Parts 3, 5 and 10).
 
@@ -121,13 +121,18 @@ class TestTheDescription:
 
     @pytest.mark.parametrize("mode", ["full", "lifecycle"])
     def test_the_text_it_promises_is_the_decided_one(self, mode):
-        """The owner's decision of 6 October 2026: better text than
-        QualCoder's where its readers lose content. The description
-        no longer promises QualCoder's text alone."""
+        """The owner's decisions of 6 and 9 October 2026: where
+        QualCoder's readers lose or garble content, Exegete keeps it, and
+        names the departure; and Exegete, the subject of what it does
+        (ruling 62). The description promises neither QualCoder's text
+        alone nor better text than QualCoder's."""
         flat = " ".join(self._served(mode)["import_documents"].split())
         assert "as QualCoder's own import reads them" not in flat
-        assert ("Text as QualCoder reads it, plus what it loses (notes, "
-                "comments, headers).") in flat
+        assert "Text as QualCoder reads it" not in flat
+        assert ("Exegete reads them QualCoder's way, keeps what its readers "
+                "lose (notes, comments, headers) and names each departure."
+                ) in flat
+        assert "better" not in flat
 
     @pytest.mark.parametrize("mode", ["full", "lifecycle"])
     def test_the_rules_come_first(self, mode):

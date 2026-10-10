@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.14.3 (provisional), once 0.14.2 met the import and reading work:
+"""v0.14.3, once 0.14.2 met the import and reading work:
 the documents say what Exegete does now.
 
 Bringing documents in (`import_documents`) and reading a whole file on
@@ -61,13 +61,13 @@ def test_no_text_sends_documents_or_whole_files_to_qualcoder():
 
 def test_tools_md_names_both_ways_in_and_the_reading_page():
     tools = _read("TOOLS.md")
-    assert ("- **Bring in documents** from the computer (provisional, "
-            "v0.14.3: Word, OpenDocument, RTF, plain text, Markdown, web "
-            "pages and subtitle files, and PDF and EPUB with the optional "
-            "part) and **transcripts** through the conversation") in tools
+    assert ("- **Bring in documents** from the computer (v0.14.3: Word, "
+            "OpenDocument, RTF, plain text, Markdown, web pages and "
+            "subtitle files, and PDF and EPUB with the optional part) and "
+            "**transcripts** through the conversation") in tools
     assert ("ask for the file to be opened for reading "
-            "(`open_file_for_reading`, provisional: a page in your browser "
-            "shows them in the text)") in tools
+            "(`open_file_for_reading`: a page in your browser shows them in "
+            "the text)") in tools
     # the tools those lines name
     for name in ("import_documents", "open_file_for_reading",
                  "import_text_file"):
@@ -77,10 +77,10 @@ def test_tools_md_names_both_ways_in_and_the_reading_page():
 def test_the_coding_guide_offers_the_reading_page():
     guide = _read("AI_CODING_GUIDE.md")
     assert ("**You** read the coded passages back in the conversation, ask "
-            "Claude to open the file for reading (provisional: a page in "
-            "your browser shows them highlighted in the text, which stays "
-            "off the conversation), or open the project in QualCoder to see "
-            "them there") in guide
+            "Claude to open the file for reading (a page in your browser "
+            "shows them highlighted in the text, which stays off the "
+            "conversation), or open the project in QualCoder to see them "
+            "there") in guide
 
 
 def test_the_extension_says_documents_come_in():

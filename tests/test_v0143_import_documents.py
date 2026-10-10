@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): import_documents, the import of documents from
+"""0.14.3: import_documents, the import of documents from
 the researcher's computer (the import and reading design, Parts 3 to 6).
 
 What is pinned: the preview writes nothing and takes no backup; the

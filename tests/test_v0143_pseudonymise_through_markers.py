@@ -14,6 +14,7 @@ names left reads a reader's sentence, with the markers taken out.
 """
 
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -24,13 +25,27 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
-from exegete import doc_import, doc_readers  # noqa: E402
+from exegete import doc_import, doc_readers, import_paths  # noqa: E402
 from exegete import pseudonymise as pseudo  # noqa: E402
 
 import test_v0143_names_through_markers as marked  # noqa: E402
 
 MAPPING = [{"original": "Maria Brown", "pseudonym": "Participant A"}]
 THREE = ("word_comment.docx", "odt_comment.odt", "rtf_footnote.rtf")
+
+
+@pytest.fixture(autouse=True)
+def _scratch_is_not_hidden(tmp_path, monkeypatch):
+    """pytest's scratch folders lie under AppData on Windows, which the
+    system marks hidden; the rule is for the researcher's places."""
+    excused = {os.path.normcase(str(p)) for p in tmp_path.parents}
+    real = import_paths.hidden_step
+
+    def hidden_step(step, info):
+        if os.path.normcase(str(step)) in excused:
+            return False
+        return real(step, info)
+    monkeypatch.setattr(import_paths, "hidden_step", hidden_step)
 
 
 @pytest.fixture

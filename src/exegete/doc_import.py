@@ -855,7 +855,7 @@ def file_entry(item: Item) -> Dict[str, Any]:
 
 
 def summary_line(ready: int, look: int, held: int, refused: int,
-                 skipped: int) -> str:
+                 skipped: int, unread: int = 0) -> str:
     parts = [f"{ready} file{'s' if ready != 1 else ''} ready"]
     if look:
         parts.append(f"{look} need{'s' if look == 1 else ''} a look before "
@@ -866,6 +866,10 @@ def summary_line(ready: int, look: int, held: int, refused: int,
         parts.append(f"{refused} refused")
     if skipped:
         parts.append(f"{skipped} already in the project")
+    if unread:
+        # Said in the line the researcher is shown, so that a batch the
+        # preview's time cut short is never taken for the whole of it.
+        parts.append(f"{unread} not read this time")
     return "; ".join(parts) + "."
 
 
@@ -887,7 +891,7 @@ def preview_answer(result: Survey, ctx: Context,
         answer["stops_the_import"] = list(stops)
     answer["summary"] = summary_line(len(ready), look, len(held),
                                      len(refused) + len(result.path_refusals),
-                                     len(skipped))
+                                     len(skipped), len(unread))
     answer["names_list"] = names_list_line(ctx)
     if held:
         answer["held_back"] = [{"file": item_label(i),

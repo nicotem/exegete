@@ -332,7 +332,8 @@ his hosts' limit, and the figures of the import's other limits.
   the preview and 40 at the import, and the first file a call reads
   always has its whole time, so every call takes in at least one. The
   files a preview had no time for, or whose reading the time left cut
-  short, are listed as not read this time, with how to go on: import
+  short, are counted in its summary line and listed as not read this
+  time, with how to go on: import
   the files it read, then ask again with the same paths, the files
   already imported skipped. An import that runs out of time between
   files imports the files it has done and names the rest, with the same

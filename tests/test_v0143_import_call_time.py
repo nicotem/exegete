@@ -130,7 +130,7 @@ class TestThePreview:
         _files(folder, *[(10, 10)] * 5)
         preview, took = _call(clock, paths=[str(folder)])
         assert took <= doc_import.PREVIEW_SECONDS
-        assert preview["summary"] == "3 files ready."
+        assert preview["summary"] == "3 files ready; 2 not read this time."
         assert [f["file"] for f in preview["files"]] == [
             "P01.txt", "P02.txt", "P03.txt"]
         unread = preview["not_read_this_time"]
@@ -147,7 +147,7 @@ class TestThePreview:
         _files(folder, (10, 10), (25, 25))
         preview, took = _call(clock, paths=[str(folder)])
         assert took <= doc_import.PREVIEW_SECONDS
-        assert preview["summary"] == "1 file ready."
+        assert preview["summary"] == "1 file ready; 1 not read this time."
         assert preview["not_read_this_time"]["files"] == ["P02.txt"]
         assert "refused" not in preview
         assert clock.reads[1][1] == pytest.approx(20)   # what was left
@@ -217,6 +217,8 @@ class TestTheImport:
         assert took <= doc_import.IMPORT_SECONDS
         assert done["success"] is True
         assert done["message"].startswith("3 files imported")
+        assert done["message"].endswith(
+            "2 more were not imported this time (below).")
         assert done["not_imported_this_time"]["files"] == [
             "P04.txt", "P05.txt"]
         assert _rows(project) == ["P01.txt", "P02.txt", "P03.txt"]
@@ -244,7 +246,7 @@ class TestTheImport:
         which goes in together or not at all."""
         _files(folder, (25, 38), (6, 5))
         preview, _took = _call(clock, paths=[str(folder)])
-        assert preview["summary"] == "1 file ready."
+        assert preview["summary"] == "1 file ready; 1 not read this time."
         done, _took = _call(clock, paths=[str(folder)],
                             preview_token=preview["preview_token"])
         assert done["success"] is True

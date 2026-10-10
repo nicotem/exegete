@@ -10484,11 +10484,17 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
         entry["file_id"] = item.numbers["file_id"]
         entry["name"] = entry.pop("file")
         files.append(entry)
+    later = (result.left_for_later(doc_import.NOT_IMPORTED_THIS_TIME)
+             + result.left_for_later(doc_import.NOT_READ_THIS_TIME))
+    message = (f"{len(taken)} file{'s' if len(taken) != 1 else ''} "
+               f"imported, each original copied into the project's folder "
+               f"of originals.")
+    if later:
+        message += (f" {len(later)} more {'were' if len(later) != 1 else 'was'}"
+                    f" not imported this time (below).")
     answer: Dict[str, Any] = {
         "success": True,
-        "message": (f"{len(taken)} file{'s' if len(taken) != 1 else ''} "
-                    f"imported, each original copied into the project's "
-                    f"folder of originals."),
+        "message": message,
         "files": files,
     }
     if ctx.names_list == "entries":
@@ -10508,8 +10514,6 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
              for r in result.path_refusals]
             + [{"file": doc_import.item_label(i),
                 "reason": doc_import.refusal_words(i)} for i in refused_now])
-    later = (result.left_for_later(doc_import.NOT_IMPORTED_THIS_TIME)
-             + result.left_for_later(doc_import.NOT_READ_THIS_TIME))
     if later:
         # Left for the next call by this call's time or the preview's
         # (provisional, 0.14.3): what was done, and how to go on.

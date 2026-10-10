@@ -626,6 +626,23 @@ class TestAfterCreation:
             in steps
         assert not any("import_documents" in s for s in steps)
 
+    def test_the_changelog_names_the_new_step(self):
+        """The CHANGELOG's 0.14.3 entry says, beside import_text_file's
+        change, that create_project's next steps now send documents to
+        import_documents: the assistant sees the change."""
+        text = (Path(__file__).resolve().parent.parent / "CHANGELOG.md"
+                ).read_text(encoding="utf-8")
+        entry = text[text.index("## [0.14.3-alpha]"):]
+        entry = " ".join(entry[:entry.index("## [0.14.2-alpha]")].split())
+        said = ("- `create_project`'s next steps send the researcher's "
+                "documents on their computer to `import_documents`, by "
+                "their paths, so that their text stays off the "
+                "conversation, and keep `import_text_file` for text typed "
+                "or pasted in the conversation.")
+        assert said in entry
+        assert entry.index("- `import_text_file`'s description says first") \
+            < entry.index(said) < entry.index("### Deprecated")
+
     def test_created_but_not_selected_is_said(self, monkeypatch):
         def refuse(path, read_only=True):
             raise database.DatabaseLockedError("locked")

@@ -275,11 +275,11 @@ class TestTheImport:
 class TestAFileKeptOnlineOnly:
     """A cloud drive's file kept online only is downloaded when Exegete
     reads its bytes, which it does for every file of the batch at each
-    call, before any text is read. The download counts towards the
-    call's time, since that time runs from the call's start, but it is
-    never cut short by it: a file is downloaded whole even when the time
-    is spent. (Until this test, TOOLS.md and the CHANGELOG said the
-    download was not counted in the call's time.)"""
+    call, each before the call's time is checked. The download counts
+    towards the call's time, since that time runs from the call's start,
+    but it is never cut short by it: a file is downloaded whole even when
+    the time is spent. (Until this test, TOOLS.md and the CHANGELOG said
+    the download was not counted in the call's time.)"""
 
     @pytest.fixture
     def downloads(self, monkeypatch, clock):

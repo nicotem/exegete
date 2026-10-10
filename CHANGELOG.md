@@ -171,6 +171,10 @@ other limits.
 - `import_text_file`'s description says first that its text passes
   through the conversation, points to `import_documents` for a document
   on the computer, and gives the 1,000,000-character limit.
+- `create_project`'s next steps send the researcher's documents on their
+  computer to `import_documents`, by their paths, so that their text
+  stays off the conversation, and keep `import_text_file` for text typed
+  or pasted in the conversation.
 
 ### Deprecated
 

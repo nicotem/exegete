@@ -22,8 +22,11 @@ The contract, and why each part matters:
   standard output inside the process writes nowhere.
 - Limits: a time limit, and a memory cap on every system (Linux: an
   address-space limit the process sets on itself before it reads
-  anything; macOS: the server watches the process's resident memory and
-  ends it past the cap; Windows: a job object with a memory limit).
+  anything; macOS, which honours no such limit: the server watches the
+  process's resident memory and ends it past the cap, and refuses the
+  reading when the peak the system recorded for the process, read as it
+  ends, passed the cap, so that a burst between two looks is refused
+  too; Windows: a job object with a memory limit).
 
 No exception text, library message or process output is ever passed on:
 a refusal is one of Exegete's own codes.
@@ -38,7 +41,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 # One file's reading at the preview (provisional, 0.14.3): within the
 # preview's own time (doc_import's PREVIEW_SECONDS), so that no call runs
@@ -162,6 +165,26 @@ def _mac_resident_bytes(pid: int) -> Optional[int]:
     if filled < 16:
         return None
     return int(buffer[1])
+
+
+def _mac_ended(process: "subprocess.Popen"
+               ) -> Tuple[bool, Optional[int]]:
+    """(ended, peak) for a reading process on macOS. The server watches
+    the process's memory only every WATCH_INTERVAL_SECONDS, and a burst
+    can rise and end between two looks; so the process is collected here
+    with wait4 rather than by `poll`, which would discard the system's
+    record of its peak resident memory (ru_maxrss, in bytes on macOS, the
+    process's own: measured, a parent of 1.5 GB does not raise it). The
+    peak is None while the process runs, or when another part of the
+    host collected it first (then the looks alone have watched it)."""
+    try:
+        pid, status, usage = os.wait4(process.pid, os.WNOHANG)
+    except ChildProcessError:
+        return process.poll() is not None, None
+    if pid == 0:
+        return False, None
+    process.returncode = os.waitstatus_to_exitcode(status)
+    return True, int(usage.ru_maxrss)
 
 
 class _WindowsJob:
@@ -320,7 +343,14 @@ def _talk(process: "subprocess.Popen", payload: bytes, timeout: float,
     reader.start()
     started = time.monotonic()
     reason = None
-    while process.poll() is None:
+    peak = None
+    while True:
+        if sys.platform == "darwin":
+            ended, peak = _mac_ended(process)
+        else:
+            ended = process.poll() is not None
+        if ended:
+            break
         if time.monotonic() - started > timeout:
             reason = "reader_timeout"
         elif overflow.is_set():
@@ -340,6 +370,10 @@ def _talk(process: "subprocess.Popen", payload: bytes, timeout: float,
         process.stdout.close()
     except OSError:
         pass
+    if reason is None and peak is not None and peak > memory_cap:
+        # Over the cap between two looks (macOS): refused whatever it
+        # answered, as it would have been had a look fallen in the burst.
+        reason = "reader_memory"
     if reason is not None:
         raise ReadFailed(reason)
     if overflow.is_set():

@@ -429,7 +429,10 @@ other limits.
 - Every document is read in a separate, short-lived process: started
   isolated, handed the file's bytes rather than a path, answering in
   plain data, its error output dropped, with a time limit and a memory
-  cap on every system. No library's message reaches an answer.
+  cap on every system. On a Mac, where the cap is watched rather than
+  enforced, the process's own peak is also read when it ends, so a
+  reading that passed the cap between two looks is refused all the
+  same. No library's message reaches an answer.
 - Paths: `~` and quoted paths accepted; hidden places, links (except
   into a Mac's cloud drive folders), network paths typed as such, the
   open project, Exegete's state folders and its reading folder refused,

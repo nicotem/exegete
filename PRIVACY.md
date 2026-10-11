@@ -877,8 +877,10 @@ Seven cautions:
   without a word. Plain
   text, Markdown, subtitle files and web pages are read as UTF-8 alone:
   a file saved in another character set is held back, with steps to
-  save a copy as UTF-8 in Word, TextEdit or Notepad, and is never read
-  by a guess, by a set you name, or by the set a web page declares.
+  save a copy as UTF-8 in Word, TextEdit or Notepad (each saying how to
+  open it in the encoding it was saved in, should its accents look
+  wrong), and is never read by a guess, by a set you name, or by the
+  set a web page declares.
   Read any of those ways, a listed name can come out with other letters
   ("Agnès" as "Agnčs"), which the list would then not replace. A file
   saved as UTF-16 or UTF-32 without the mark that names it, which reads
@@ -886,7 +888,8 @@ Seven cautions:
   too. A
   file whose letters look garbled, as when a file is opened once in the
   wrong character set and saved again ("WÄ…sik" for "Wąsik", "Agn√®s"
-  for "Agnès"), is held back with a warning that says in how many
+  for "Agnès", or "AgnËs" when a file from Windows is opened as the
+  Mac's own set), is held back with a warning that says in how many
   places, the first one's line and through which character set, never
   the text. It comes in as it is only if you say so for that import
   (`import_files_with_garbled_letters`), after checking its letters on

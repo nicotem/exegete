@@ -357,7 +357,9 @@ ALLOWED = {
                                                   "checked"},
     "label": {"for"}, "table": set(), "caption": set(), "thead": set(),
     "tbody": set(), "tr": set(), "th": set(), "td": set(),
-    "span": {"class", "id", "data-author", "data-code", "dir"},
+    # a coding's tag carries the code's whole name as its title, shown
+    # on hover (the owner's sitting of 11 October 2026)
+    "span": {"class", "id", "data-author", "data-code", "dir", "title"},
     "bdi": set(),
     "sup": {"class", "data-code"}, "main": {"id"}, "section": {"id"},
     "footer": set(),
@@ -448,7 +450,9 @@ class TestThePageIsSafeByStructure:
             {"http-equiv": "Content-Security-Policy",
              "content": "default-src 'none'; style-src 'unsafe-inline'; "
                         "form-action 'none'; base-uri 'none'"},
-            {"name": "referrer", "content": "no-referrer"}]
+            {"name": "referrer", "content": "no-referrer"},
+            {"name": "viewport",
+             "content": "width=device-width, initial-scale=1"}]
 
     def test_no_project_data_in_the_style_sheet(self):
         style = "".join(structure(hostile_page()).styles)

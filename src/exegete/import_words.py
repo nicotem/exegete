@@ -201,30 +201,69 @@ FILE_REFUSALS = {
 
 # Saving a copy as UTF-8, in the apps researchers have: what a hold of a
 # file that is not UTF-8 suggests (the owner's decision of 6 October
-# 2026: no guessing, and plain steps instead).
+# 2026: no guessing, and plain steps instead). The steps name each app's
+# own words for choosing an encoding when a file is opened, since an app
+# that guesses wrongly reads accented letters as others (the owner's
+# sitting of 11 October 2026: TextEdit read a Windows file as the Mac's
+# own set, "cafÈ" for "café"). TextEdit's names are its own on macOS 15
+# (the Open window's Show Options and Plain Text Encoding, and the names
+# of the encodings), as Apple's TextEdit guide gives them; Word's are its
+# File Conversion window's, on Windows and on a Mac, as Microsoft's guide
+# gives them.
 _WHY_NOT_UTF8 = (
     "so it is held back rather than read by a guess: a wrong guess reads "
     "accented letters as others, and a name from your list written with "
     "other letters would not be replaced. Saved as UTF-8, its letters "
     "read the same way in QualCoder too.")
-_CHECK_ACCENTS = ("checking first that its accents look right (if they "
-                  "do not, the app read it wrongly: choose another "
-                  "encoding when you open it)")
-_STEPS_TEXT = (
-    ": in Word, open it (if Word asks which encoding to use, pick the one "
-    "whose preview reads right), then choose File, Save As, Plain Text, "
-    "and \"Unicode (UTF-8)\" in the window that follows; in TextEdit on a "
-    "Mac, open it, then choose File, Duplicate and File, Save, with "
-    "\"Unicode (UTF-8)\" as the plain text encoding; in Notepad on "
-    "Windows, open it, then choose File, Save As, with UTF-8 as the "
-    "encoding.")
-_STEPS_WEB = (
-    ": in Word, open the page, then choose File, Save As, Word Document "
-    "(.docx), and import the .docx; in Notepad on Windows, open it, then "
-    "choose File, Save As, with UTF-8 as the encoding; in TextEdit on a "
-    "Mac, first tick \"Display HTML files as HTML code\" in its settings "
-    "(Open and Save), open the page, then choose File, Duplicate and "
-    "File, Save, with \"Unicode (UTF-8)\" as the plain text encoding.")
+_CHECK_ACCENTS = (
+    "checking first that its accents look right (\"café\", not \"cafÈ\"): "
+    "if they do not, the app read it in another encoding, so close it and "
+    "open it again in the one it was saved in, most often Windows Latin 1 "
+    "for a file from Windows. ")
+
+
+def _steps_text(textedit: str, word: str) -> str:
+    """Open in a chosen encoding, then save as UTF-8, in TextEdit, Word
+    and Notepad; `textedit` and `word` name the likely encoding in each
+    app's own words."""
+    return (
+        "In TextEdit on a Mac, choose File, Open, select the file, click "
+        "Show Options if you see it, set Plain Text Encoding (to "
+        f"\"{textedit}\", say; Customise Encodings List adds one not "
+        "listed) and click Open, then choose File, Duplicate and File, "
+        "Save, with \"Unicode (UTF-8)\" as the plain text encoding. In "
+        "Word, tick \"Confirm file format conversion on open\" (File, "
+        "Options, Advanced; on a Mac, \"at Open\", in Word's settings, "
+        "General), open the file, choose Encoded Text if asked, and in "
+        "File Conversion choose Other encoding and the one whose preview "
+        f"reads right (\"{word}\", say), then choose File, Save As, Plain "
+        "Text, and \"Unicode (UTF-8)\" in the window that follows. In "
+        "Notepad on Windows, open it (the status bar names the encoding it "
+        "read; Word can open it in another), then choose File, Save As, "
+        "with UTF-8 as the encoding.")
+
+
+_STEPS_TEXT = _steps_text("Western (Windows Latin 1)",
+                          "Western European (Windows)")
+
+
+def _steps_web(textedit: str) -> str:
+    """The same for a web page: TextEdit shows it as code, and Word
+    saves it as a Word document."""
+    return (
+        "In TextEdit on a Mac, first tick \"Display HTML files as HTML "
+        "code\" in its settings (Open and Save), then choose File, Open, "
+        "select the page, click Show Options if you see it, set Plain Text "
+        f"Encoding (to \"{textedit}\", say) and click Open, then choose "
+        "File, Duplicate and File, Save, with \"Unicode (UTF-8)\" as the "
+        "plain text encoding. In Word, open the page, then choose File, "
+        "Save As, Word Document (.docx), and import the .docx (Word reads "
+        "the page in the character set it declares). In Notepad on "
+        "Windows, open it (the status bar names the encoding it read), "
+        "then choose File, Save As, with UTF-8 as the encoding.")
+
+
+_STEPS_WEB = _steps_web("Western (Windows Latin 1)")
 # A file whose text holds NUL characters: most often UTF-16 or UTF-32
 # saved without the byte-order mark that names it, which reads as UTF-8
 # with a NUL beside every letter.
@@ -236,8 +275,10 @@ _WHY_NUL = (
     "and a name from your list written that way would not be replaced, "
     "so it is held back rather than read by a guess. You could save a "
     "copy as UTF-8 and import that, checking first that its text reads "
-    "right (if it shows gaps or odd characters between the letters, "
-    "choose UTF-16, or \"Unicode\", as the encoding when you open it)")
+    "right: if it shows gaps or odd characters between the letters, close "
+    "it and open it again as UTF-16. ")
+_STEPS_NUL = _steps_text("Unicode (UTF-16LE)", "Unicode")
+_STEPS_NUL_WEB = _steps_web("Unicode (UTF-16LE)")
 
 # Letters that look garbled: how to look before deciding.
 _CHECK_ON_SCREEN = (
@@ -307,9 +348,10 @@ HELD_BACK = {
                     "declares, since a declaration can be wrong), "
                     + _WHY_NOT_UTF8 + " You could save a copy as UTF-8 "
                     "and import that, " + _CHECK_ACCENTS + _STEPS_WEB,
-    "nul_characters": _WHY_NUL + _STEPS_TEXT,
+    "nul_characters": _WHY_NUL + _STEPS_NUL,
     "nul_characters_web": _WHY_NUL.replace(
-        "Its text holds", "This web page's text holds", 1) + _STEPS_WEB,
+        "Its text holds", "This web page's text holds", 1)
+    + _STEPS_NUL_WEB,
     # Letters that look garbled (the owner's ruling of 7 October 2026,
     # "Warn, and let me decide"): what was seen, never the text; a page
     # to check them on; and the way through, on the researcher's word.
@@ -328,10 +370,11 @@ HELD_BACK = {
                    "(import_files_with_garbled_letters).",
     "garbled_fixed": "Some of its letters look garbled, {where} of its "
                      "text: {seen}. Garbled "
-                     "letters look like \"Ã©\" for \"é\", \"Ä…\" for "
-                     "\"ą\" or \"Ð˜\" for \"И\", as happens when a "
-                     "file is opened once in the wrong character set and "
-                     "saved again, and a name written that way is not "
+                     "letters look like \"Ã©\" or \"È\" for \"é\", "
+                     "\"Ä…\" for \"ą\" or \"Ð˜\" for \"И\", as happens "
+                     "when a file is opened once in the wrong character "
+                     "set and saved again, and a name written that way is "
+                     "not "
                      "matched by a names list, though the assistant still "
                      "reads it. This can also be correct text that only "
                      "looks so: a brand name with a capital inside it, "

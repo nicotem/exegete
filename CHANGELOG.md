@@ -66,10 +66,17 @@ other limits.
   file", and PRIVACY.md, "Reading a whole file: what leaves the
   computer", say more.
 - The reading copy: every overlapping coding drawn as an underline of
-  its own; the code's name at the start of each passage and, for screen
-  readers and print, after it; a list of the codes with a tick box that
-  hides each one, and a "text only" switch, done in the style sheet
-  with no script; annotations and the public part of memos as numbered
+  its own; the code's name after each passage as a tag of its own, never
+  as text: a small label edged in the code's colour, with no colon, cut
+  short with an ellipsis when long, the whole name on hover and to
+  screen readers, and left out when text is copied (the maintainer's
+  sitting with the test build found the earlier label, the name in
+  small grey type and a colon before the passage, read as part of the
+  text: QualCoder's in-vivo coding names a code with the words it
+  codes, so the passage seemed to come twice, and a name ending in a
+  full stop gave ".:"); a list of the codes with a tick box that hides
+  each one, and a "text only" switch, done in the style sheet with no
+  script, which hide the tags too; laid out at a phone's own width; annotations and the public part of memos as numbered
   notes linked both ways; the private part of every memo (from `#####`)
   left out, with a line saying so; what the page cannot draw (areas on
   images and PDF pages, audio and video codings) counted; suggestions
@@ -317,6 +324,22 @@ other limits.
   of characters that a common Windows, Mac, DOS or KOI8 set, Shift JIS
   or GBK could have made of UTF-8 is read back through it, and counts
   where the reading back fits its word better than the text as written.
+  So does a file saved in one of the two Western sets and opened once
+  in the other, then saved as UTF-8, each letter as one other
+  character: "cafÈ" for "café" when a Windows file is opened as the
+  Mac's own set, as TextEdit did with the practice field notes at the
+  maintainer's sitting (the file came in without a word), and "cafŽ"
+  the other way round. That reading is tried on the whole text, only
+  where every character outside ASCII could have come from it, and
+  counts only where the whole text reads back less odd; a run counts
+  only where it reads back with nothing odd while as written it is
+  clearly odd (a capital straight after a small letter, a symbol between
+  letters). Checked on some 1.4 million strings of macOS's own
+  translations and LibreOffice's autocorrect lists, and on French,
+  Spanish, Portuguese, German, Nordic, Irish and Italian words, names
+  and all-capital headings, it raised no warning on correct text; read
+  the wrong way, two in three single strings and 99 in a hundred files
+  of fifty strings showed signs.
   Such a file is held back with a warning that says what was seen (in
   how many places, the first one's line, the character set they read
   back through), never the text. `show_text`, on the preview only, opens
@@ -345,8 +368,14 @@ other limits.
 - Files not saved as UTF-8 (plain text, Markdown and subtitle files, and
   web pages whatever character set they declare) are held back, with
   plain steps to save a copy as UTF-8 in Word, TextEdit or Notepad (for
-  a web page, or as a Word document); nothing is guessed, and no
-  character set can be named.
+  a web page, or as a Word document), each saying how to open the file
+  in the encoding it was saved in when its accents look wrong, in the
+  app's own words: TextEdit's Show Options and Plain Text Encoding in
+  its Open window ("Western (Windows Latin 1)" for most files from
+  Windows), Word's Confirm file format conversion setting and its File
+  Conversion window with a preview, and Notepad's status bar, which
+  names the encoding it read; nothing is guessed, and no character set
+  can be named.
   Read by a guess, by a set the researcher names or by the set a page
   declares, accented letters can come out as others, and a listed name
   written with other letters is not replaced: a Polish or Turkish file

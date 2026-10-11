@@ -173,15 +173,19 @@ class TestNotUtf8IsHeldBack:
         assert reason == import_words.HELD_BACK["not_utf8"]
         for step in (
                 "You could save a copy as UTF-8 and import that",
-                "in Word, open it (if Word asks which encoding to use, "
-                "pick the one whose preview reads right), then choose "
-                "File, Save As, Plain Text, and \"Unicode (UTF-8)\" in "
-                "the window that follows",
-                "in TextEdit on a Mac, open it, then choose File, "
-                "Duplicate and File, Save, with \"Unicode (UTF-8)\" as "
-                "the plain text encoding",
-                "in Notepad on Windows, open it, then choose File, Save "
-                "As, with UTF-8 as the encoding."):
+                "In Word, tick \"Confirm file format conversion on open\"",
+                "in File Conversion choose Other encoding and the one "
+                "whose preview reads right (\"Western European "
+                "(Windows)\", say), then choose File, Save As, Plain "
+                "Text, and \"Unicode (UTF-8)\" in the window that follows",
+                "In TextEdit on a Mac, choose File, Open, select the file, "
+                "click Show Options if you see it, set Plain Text Encoding "
+                "(to \"Western (Windows Latin 1)\", say;",
+                "then choose File, Duplicate and File, Save, with "
+                "\"Unicode (UTF-8)\" as the plain text encoding",
+                "In Notepad on Windows, open it (the status bar names the "
+                "encoding it read; Word can open it in another), then "
+                "choose File, Save As, with UTF-8 as the encoding."):
             assert step in reason, step
         assert _stored(project) == {}
 
@@ -193,13 +197,16 @@ class TestNotUtf8IsHeldBack:
         for step in (
                 "whatever character set the page declares, since a "
                 "declaration can be wrong",
-                "in Word, open the page, then choose File, Save As, Word "
+                "In Word, open the page, then choose File, Save As, Word "
                 "Document (.docx), and import the .docx",
-                "in Notepad on Windows, open it, then choose File, Save "
-                "As, with UTF-8 as the encoding",
-                "in TextEdit on a Mac, first tick \"Display HTML files as "
-                "HTML code\" in its settings (Open and Save), open the "
-                "page, then choose File, Duplicate and File, Save, with "
+                "In Notepad on Windows, open it (the status bar names the "
+                "encoding it read), then choose File, Save As, with UTF-8 "
+                "as the encoding.",
+                "In TextEdit on a Mac, first tick \"Display HTML files as "
+                "HTML code\" in its settings (Open and Save), then choose "
+                "File, Open, select the page, click Show Options if you see "
+                "it, set Plain Text Encoding",
+                "then choose File, Duplicate and File, Save, with "
                 "\"Unicode (UTF-8)\" as the plain text encoding."):
             assert step in reason, step
         assert _stored(project) == {}

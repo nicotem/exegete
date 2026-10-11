@@ -5,9 +5,14 @@ A UTF-8 file opened once in another character set and saved again carries
 its letters as other characters: "é" becomes "Ã©" through Windows
 Western, "√©" through the Mac's own Western set, "Ă©" through Windows
 Central European; "П" becomes "Рџ" through Windows Cyrillic; "’" becomes
-"â€™" or "‚Äô". A name written that way escapes the names list, so the
-import warns of such a file and brings it in only on the researcher's
-word (`doc_import.evaluate`; the owner's ruling of 7 October 2026). What
+"â€™" or "‚Äô". So does a file saved in one of the two Western sets and
+opened once in the other, then saved as UTF-8, each letter as one other
+character: "café" becomes "cafÈ" when a Windows file is opened as the
+Mac's own set (as TextEdit does when it guesses), "cafŽ" the other way
+round (the owner's sitting of 11 October 2026; "Another reading", below).
+A name written that way escapes the names list, so the import warns of
+such a file and brings it in only on the researcher's word
+(`doc_import.evaluate`; the owner's ruling of 7 October 2026). What
 follows finds signs, not proof: correct text can show one, and a
 garbled file can show none.
 
@@ -85,9 +90,53 @@ Cyrillic word ("ПриватБанк"), Arabic punctuation typed straight before
 the next word, an ellipsis typed straight before a word, box drawing.
 Hence the researcher's word, after a look at the places marked.
 
+Another reading: a Western file opened in the other Western set. Each
+run of characters outside ASCII is read back one for one, from the
+Mac's own Western set into Windows Western (the Mac's "È" is the byte
+Windows writes for "é") and the other way round. Only a whole text can
+show this, so the reading is tried on the whole text first, and only
+where it could have happened at all: every character outside ASCII must
+be one the set it was opened in has, standing for a byte the set it was
+saved in uses, so a text holding "è", "ç", "ê", "ù" or "Å" (bytes
+Windows Western leaves unused) or any letter the opened set lacks ("ł",
+"ş", Greek, an emoji) is never read this way. Then:
+
+- a run is a sign only when it reads back with nothing odd while as
+  written it is odd by two or more (a capital straight after a small
+  letter, "cafÈ"; a symbol between letters, "br˚lÈe"), the clearer sign
+  GBK needs;
+- the reading counts only when the whole text, every run weighed, reads
+  back less odd than as written, so a text with correct accented small
+  letters ("é" reads back as "Ž", "á" as "‡") is not taken for one;
+- a run counts only when it reads back as letters, and a capital after
+  it does not count against it (an abbreviation's, "HéN", "NyÉNy");
+- Irish writes a small n, h or t before a capital vowel with an acute
+  at a word's start ("na hÉireann", "Tír na nÓg"), so there the small
+  letter is not counted against the capital;
+- quotation marks alone (typed between letters by mistake, or for
+  Hawaiian's okina, "Hawai‘i") and a run holding a control or
+  private-use character (Apple's logo, in Apple's own text) are not
+  weighed.
+
+Measured on correct text (macOS 15's own translations and LibreOffice's
+autocorrect lists, some 1.4 million strings in about a hundred
+languages, each string alone and in files of 300), no string was a sign
+of this reading, nor were French, Spanish, Portuguese, German, Nordic,
+Irish and Italian words, names and all-capital headings, or the correct
+text the earlier checks gathered. Read once the wrong way, the Western
+strings among them were signs 66 times in a hundred a string at a time
+(a Windows file opened as the Mac's set) and 58 the other way round, and
+99 times in a hundred in files of fifty strings. Missed: a file whose
+only accented letters read naturally either way ("CAFÉ" in capitals
+becomes "CAF…"; "ö" becomes the modifier letter "ˆ"; "ñ" from a Mac
+becomes a dash, "ã" from Windows a quotation mark), a misread file in
+which something was typed afterwards that the opened set lacks, and the
+other pairs of sets (a DOS file read as Windows', say).
+
 The cost is one scan a set and a few small steps a run, and the same
 run between the same neighbours is weighed once, so a file costs about
-what its length does.
+what its length does; the other reading adds one encoding of the text
+and one scan of its runs for each of its two ways.
 """
 
 import bisect
@@ -362,10 +411,100 @@ def _a_sign(name: str, left: str, run: str, right: str) -> bool:
     return read_back < as_written
 
 
+# A Western file opened in the other Western set: the name of each way,
+# with the set it was opened in and the set it was saved in.
+MISREAD = {
+    "mac_roman_for_cp1252": ("mac_roman", "cp1252"),
+    "cp1252_for_mac_roman": ("cp1252", "mac_roman"),
+}
+_NON_ASCII = re.compile("[^\x00-\x7f]+")
+_IRISH_PREFIXES = frozenset("nht")
+# Typed between letters by mistake, or for Hawaiian's ʻokina
+# ("Hawai‘i"): never a sign of this reading on their own.
+_QUOTES = frozenset("\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f"
+                    "\u2039\u203a\u00ab\u00bb")
+_IRISH_CAPITALS = frozenset("\u00c1\u00c9\u00cd\u00d3\u00da")
+
+
+def read_back(name: str, run: str) -> str:
+    """What `run` reads back as through `name` (a key of SET_NAMES)."""
+    if name in MISREAD:
+        opened, saved = MISREAD[name]
+        return run.encode(opened).decode(saved)
+    return run.encode(name).decode("utf-8")
+
+
+def _misread_way(text: str, name: str
+                 ) -> Optional[Tuple[int, List[Tuple[int, int]]]]:
+    """The whole text read one way ("Another reading", above): how odd
+    it reads back, and its runs that are signs; None when the text could
+    not have been misread that way, or reads back no less odd."""
+    opened, saved = MISREAD[name]
+    try:
+        text.encode(opened).decode(saved)
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return None
+    length = len(text)
+    weighed: Dict[Tuple[str, str, str], Tuple[int, int, bool]] = {}
+    as_written = as_read_back = 0
+    signs: List[Tuple[int, int]] = []
+    for match in _NON_ASCII.finditer(text):
+        start, end = match.span()
+        run = match.group()
+        if all(c in _QUOTES for c in run) or any(
+                _info(c)[0] in ("Cc", "Co", "Cn") for c in run):
+            # quotation marks alone; a control or private-use character
+            # (Apple's logo in Apple's own text), a sign of its own
+            continue
+        left = text[start - 1] if start else ""
+        if left in _IRISH_PREFIXES and run[0] in _IRISH_CAPITALS and \
+                (start < 2 or not text[start - 2].isalpha()):
+            left = ""
+        right = text[end] if end < length else ""
+        if "A" <= right <= "Z":
+            right = ""          # an abbreviation's capital ("HéN")
+        key = (left, run, right)
+        got = weighed.get(key)
+        if got is None:
+            letters = read_back(name, run)
+            back = oddness(left, letters, right, reading=True)
+            got = (oddness(*key), -1 if back is None else back,
+                   letters.isalpha())
+            if len(weighed) < 100000:
+                weighed[key] = got
+        written, back, letters = got
+        if back < 0:
+            return None         # it cannot stand there: not this reading
+        as_written += written
+        as_read_back += back
+        if back == 0 and written >= 2 and letters:
+            signs.append((start, end))
+    if not signs or as_read_back >= as_written:
+        return None
+    return as_read_back, signs
+
+
+def _misread_runs(text: str) -> Iterator[Tuple[int, int, str]]:
+    """Each run that reads back clearly better when the whole text is
+    read as a Western file opened in the other Western set, as (start,
+    end, the way's name): of the two ways, the one that reads back the
+    least odd, then with the most signs."""
+    best = None
+    for name in MISREAD:
+        found = _misread_way(text, name)
+        if found is not None and (best is None or (
+                found[0], -len(found[1])) < (best[1][0], -len(best[1][1]))):
+            best = (name, found)
+    if best is not None:
+        for start, end in best[1][1]:
+            yield start, end, best[0]
+
+
 def _runs(text: str) -> Iterator[Tuple[int, int, str]]:
     """Each run that reads back better through another set, as (start,
-    end, the set's name), set by set in the order above; a place one set
-    has claimed is not weighed again."""
+    end, the set's name), set by set in the order above, then each the
+    other reading finds; a place one set has claimed is not weighed
+    again."""
     seen = set()
     weighed: Dict[Tuple[str, str, str, str], bool] = {}
     length = len(text)
@@ -384,6 +523,10 @@ def _runs(text: str) -> Iterator[Tuple[int, int, str]]:
             if sign:
                 seen.add(start)
                 yield start, end, name
+    for start, end, name in _misread_runs(text):
+        if start not in seen:
+            seen.add(start)
+            yield start, end, name
 
 
 def garbled(text: str, enough: int = 10) -> int:
@@ -415,6 +558,10 @@ SET_NAMES = {
     "cp866": "DOS Cyrillic (866)", "koi8_r": "KOI8-R", "koi8_u": "KOI8-U",
     "shift_jis": "Shift JIS (Japanese Windows)",
     "gbk": "GBK (Chinese Windows)",
+    "mac_roman_for_cp1252": "the Mac's own Western set, for a file saved "
+                            "in Windows Western",
+    "cp1252_for_mac_roman": "Windows Western, for a file saved in the "
+                            "Mac's own Western set",
 }
 # A control character or the replacement character: no set to name.
 LOST = None
@@ -442,7 +589,7 @@ def places(text: str, limit: int = MAX_PLACES) -> List[Place]:
         for start, end, name in _runs(text):
             if len(found) >= 2 * limit:
                 break
-            back = text[start:end].encode(name).decode("utf-8")
-            found.append(Place(start, end, name, back))
+            found.append(Place(start, end, name,
+                               read_back(name, text[start:end])))
     found.sort()
     return found[:limit]

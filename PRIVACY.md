@@ -95,9 +95,9 @@ What stays local, always, unless a sync service copies the folder it is in:
   not indexed by the computer's search and, on a Mac, is left out of
   Time Machine when Exegete could mark it so. The import uses a file for
   up to an hour after the preview and removes it after the import; a
-  file left by a preview that was not imported goes when Exegete next
-  starts, or next prepares an import, once that hour has passed, so it
-  can stay longer in an app that keeps Exegete running. Deleting the
+  file left by a preview that was not imported goes at Exegete's next
+  start, or the next time it prepares an import, once that hour has
+  passed, so it can stay longer in an app that keeps Exegete running. Deleting the
   folder changes nothing in any project (the next import reads the
   documents again), and nothing in it is sent anywhere. Another backup
   of your home folder can copy it, as it copies the documents
@@ -1689,8 +1689,8 @@ will ask, and the summary above depends on them:
   computer you work on: the project, its backups and your exports; the
   lists of suggestions waiting for review (`~/.exegete/sessions/`);
   the texts an import's preview read, until the import or, when none
-  follows, until Exegete next starts or prepares an import an hour or
-  more later (`~/.exegete/import-texts.noindex`);
+  follows, until Exegete's next start, or the next import it prepares,
+  an hour or more later (`~/.exegete/import-texts.noindex`);
   Claude Desktop's log of the extension, which keeps every request and
   answer, names and quoted text included (INSTALL.md, "Reading the
   server log"); Codex's session files (`~/.codex/sessions`) and Claude

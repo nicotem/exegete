@@ -942,9 +942,9 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
                  "left out of Time Machine when Exegete could mark it so",
                  "up to an hour after the preview and removes it after the "
                  "import",
-                 "goes when Exegete next starts, or next prepares an "
-                 "import, once that hour has passed, so it can stay longer "
-                 "in an app that keeps Exegete running",
+                 "goes at Exegete's next start, or the next time it "
+                 "prepares an import, once that hour has passed, so it can "
+                 "stay longer in an app that keeps Exegete running",
                  "Deleting the folder changes nothing in any project",
                  "nothing in it is sent anywhere",
                  "Another backup of your home folder can copy it, as it "

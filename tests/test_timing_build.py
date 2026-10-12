@@ -3,7 +3,9 @@
 mark, EXEGETE_INSTALLED_AS) the preview of import_documents reads for
 600 seconds instead of 30, and says how long it took as its answer's
 last key, so that the owner can time when his app stops a call. The
-import keeps its 45 seconds; without the mark nothing changes.
+import keeps its 45 seconds; without the mark nothing changes. With
+v0.15.0's reading once, the texts such a preview read are kept for its
+import, which then reads none of them again.
 
 The reading is faked on a clock of its own, as in
 test_v0143_import_call_time.py: each file's text names how many seconds
@@ -163,8 +165,30 @@ class TestMarked:
         assert list(preview)[-1] == "timing_build"
         assert LINE.fullmatch(preview["timing_build"]).group(1) == "30"
 
-    def test_the_import_still_stops_at_forty_five_seconds(
+    def test_a_long_preview_keeps_every_text_for_the_import(
             self, project, folder, clock, marked):
+        """v0.15.0, reading once: texts are kept until the preview's own
+        time and KEEP_SECONDS have passed, the build's 600 seconds here,
+        so after a preview of 300 seconds the import reads nothing and
+        takes every file at once."""
+        _files(folder, *[(10, 10)] * 30)
+        preview, took = _call(clock, paths=[str(folder)])
+        assert took == pytest.approx(300)
+        assert preview["summary"] == "30 files ready."
+        done, took = _call(clock, paths=[str(folder)],
+                           preview_token=preview["preview_token"])
+        assert took == 0
+        assert len(clock.reads) == 30   # the preview's readings alone
+        assert done["success"] is True, done
+        assert len(done["files"]) == 30
+        assert "not_imported_this_time" not in done
+        assert "timing_build" not in done
+
+    def test_the_import_still_stops_at_forty_five_seconds(
+            self, project, folder, clock, marked, keeping_off):
+        """With no kept text (reading once switched off), so that the
+        import reads each file again, as it does when a kept text cannot
+        be used: it still stops at 45 seconds."""
         _files(folder, *[(5, 15)] * 5)
         preview, _took = _call(clock, paths=[str(folder)])
         assert preview["summary"] == "5 files ready."

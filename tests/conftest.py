@@ -164,9 +164,9 @@ def _isolate_home(tmp_path, _sandbox_patch):
 # collected in it: the files are taken largest first (ties by path), each
 # into the part with the fewest tests so far (ties to the lower number),
 # so the jobs of one Python, which collect alike, make the same parts.
-# By the counts of 0.14.3's Windows run, the parts take 17 to 18 minutes
-# on Python 3.13 (52 in one job); by each file's time would need a table
-# of times kept up to date.
+# Parts of equal counts are not of equal times, as some files are slower
+# than others; parts by time would need a table of each file's time,
+# kept up to date.
 TEST_PART_VARIABLE = "EXEGETE_TEST_SHARD"
 TEST_PART_KEY = pytest.StashKey()
 _TEST_PART = re.compile(r"([0-9]+)/([0-9]+)")

@@ -61,15 +61,23 @@ is looked at first.
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
 5. **Continuous integration** runs on every pushed branch and on pull
-   requests to `main`: ten jobs. Six run the suite, on Ubuntu, Windows
-   and macOS, each on Python 3.10 and 3.13. Three build the desktop
+   requests to `main`: eighteen jobs. Ten run the suite, on Python 3.10
+   and 3.13: one job each on Ubuntu and on macOS, and three on Windows,
+   where the suite is slowest and runs in three parts made of whole test
+   files (`tests/conftest.py`). To run one part on your own computer,
+   set `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
+   three; left empty, every test runs. Three build the desktop
    extension, one on each system, and install and start it as Claude
    Desktop does (the Linux one also validates it with the official
    MCPB tool and checks that the lock has a wheel for every computer);
-   the tenth checks that the three builds are the same bytes. All ten
-   must be green. The workflow actions are pinned by commit SHA with a
-   version comment beside each pin; if you add or bump an action, keep
-   that shape (Dependabot maintains the pins). A bump also means
+   one checks that the three builds are the same bytes. Two compare the
+   text the import stores with QualCoder's own extraction: one against
+   QualCoder 4.0, and one watching QualCoder's newest code, whose
+   changes are a notice, never a failure. Two try the upgrade from the
+   package's earlier name, on Ubuntu and on Windows. Every job must be
+   green, the watch apart. The workflow actions are pinned by commit SHA
+   with a version comment beside each pin; if you add or bump an action,
+   keep that shape (Dependabot maintains the pins). A bump also means
    recording the new SHA against the tag it really is, in
    `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`;
    that module's docstring carries the two API calls that resolve it.

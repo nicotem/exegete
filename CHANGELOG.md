@@ -13,8 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the checks on a change finish sooner: one job there took 40 to 60
   minutes. A part is made of whole test files, weighed by their number
   of tests. `EXEGETE_TEST_SHARD="k/n"` (such as `2/3`) runs part k of n
-  on any computer; left empty, every test runs. Linux and macOS still
-  run every test in one job each.
+  on any computer, n at most 100; left empty, every test runs. A part
+  ends its run with a line naming its share of the tests and a
+  fingerprint of the whole split, the same in every part of one run.
+  Linux and macOS still run every test in one job each.
 
 ## [0.14.3-alpha] - 2026-10-12
 

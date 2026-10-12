@@ -2,6 +2,7 @@
 """Pytest configuration and shared fixtures."""
 
 import gc
+import hashlib
 import os
 import pytest
 import re
@@ -155,36 +156,48 @@ def _isolate_home(tmp_path, _sandbox_patch):
 
 
 # v0.15, the groundwork: the suite in parts. CI runs Windows' suite in
-# three jobs, a part each, as one job took 40 to 60 minutes there against
-# 15 at most on Linux and macOS (.github/workflows/ci.yml says why not
-# pytest-xdist). EXEGETE_TEST_SHARD="k/n" keeps part k of n; unset or
+# three jobs, a part each, as one job took 40 to 60 minutes there
+# (.github/workflows/ci.yml says why not pytest-xdist).
+# EXEGETE_TEST_SHARD="k/n" keeps part k of n, n at most 100; unset or
 # empty, every test runs; anything else stops the run before it starts.
 # A part is made of whole files, so a file's tests stay together and run
 # in their usual order. Each file is weighed by the number of tests
 # collected in it: the files are taken largest first (ties by path), each
 # into the part with the fewest tests so far (ties to the lower number),
 # so the jobs of one Python, which collect alike, make the same parts.
+# No job checks that they did: each part ends its summary with a line,
+# "test part: 2 of 3, ...", giving its share and a fingerprint of the
+# whole split, which CI copies into the step summary and an annotation.
+# The same fingerprint in the three parts of one Python means each file
+# ran in exactly one of them; the three are compared by eye, from the
+# run page.
 # Parts of equal counts are not of equal times, as some files are slower
 # than others; parts by time would need a table of each file's time,
 # kept up to date.
 TEST_PART_VARIABLE = "EXEGETE_TEST_SHARD"
 TEST_PART_KEY = pytest.StashKey()
-_TEST_PART = re.compile(r"([0-9]+)/([0-9]+)")
+TEST_PART_LINE_KEY = pytest.StashKey()
+MOST_TEST_PARTS = 100
+# three digits at most, so that a number too long for int() is refused
+# here like any other value
+_TEST_PART = re.compile(r"([0-9]{1,3})/([0-9]{1,3})")
 
 
 def parse_test_part(value):
-    """`(k, n)` for "k/n" with 1 <= k <= n; None when unset or empty."""
+    """`(k, n)` for "k/n" with 1 <= k <= n <= 100; None when unset or
+    empty."""
     if not value:
         return None
     match = _TEST_PART.fullmatch(value)
     if match is not None:
         part, parts = int(match[1]), int(match[2])
-        if 1 <= part <= parts:
+        if 1 <= part <= parts <= MOST_TEST_PARTS:
             return part, parts
     raise pytest.UsageError(
         f"{TEST_PART_VARIABLE} is {value!r}: give the part to run as "
-        f"\"k/n\", k from 1 to n (\"2/3\" runs the second of three "
-        f"parts), or leave it empty to run every test.")
+        f"\"k/n\", k from 1 to n and n at most {MOST_TEST_PARTS} (\"2/3\" "
+        f"runs the second of three parts), or leave it empty to run every "
+        f"test.")
 
 
 def parts_of(nodeids, parts):
@@ -218,12 +231,32 @@ def pytest_collection_modifyitems(config, items):
     if chosen is None:
         return
     part, parts = chosen
-    numbers = parts_of([item.nodeid for item in items], parts)
+    nodeids = [item.nodeid for item in items]
+    numbers = parts_of(nodeids, parts)
+    config.stash[TEST_PART_LINE_KEY] = _test_part_line(
+        nodeids, numbers, part, parts)
     kept = [item for item, number in zip(items, numbers) if number == part]
     left = [item for item, number in zip(items, numbers) if number != part]
     if left:
         config.hook.pytest_deselected(items=left)
     items[:] = kept
+
+
+def _test_part_line(nodeids, numbers, part, parts):
+    """The line a part writes at the end of its run: its share of the
+    files and tests collected, and the first twelve hexadecimal digits of
+    the SHA-256 of the whole split (each file and its part, sorted),
+    which is the same in every part of one collection."""
+    part_of = {}
+    for nodeid, number in zip(nodeids, numbers):
+        part_of[nodeid.split("::", 1)[0]] = number
+    split = "".join(f"{path} {number}\n"
+                    for path, number in sorted(part_of.items()))
+    fingerprint = hashlib.sha256(split.encode("utf-8")).hexdigest()[:12]
+    files = sum(1 for number in part_of.values() if number == part)
+    return (f"test part: {part} of {parts}, {files} of {len(part_of)} "
+            f"files, {numbers.count(part)} of {len(nodeids)} tests, split "
+            f"{fingerprint}")
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -255,6 +288,11 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
                         f"Python {sys.version_info[0]}."
                         f"{sys.version_info[1]}.{sys.version_info[2]}, "
                         f"test {key})")
+    # v0.15, the groundwork: a run in parts says which, and how the whole
+    # suite was split (the comment above parse_test_part).
+    line = config.stash.get(TEST_PART_LINE_KEY, None)
+    if line is not None:
+        terminalreporter.write_line(line)
 
 
 # The baseline for the guard below, and the proof that it was taken

@@ -857,7 +857,12 @@ class TestBounds:
         (folder / "P01.txt").write_bytes(b"One.\n")
         (folder / "P02.txt").write_bytes(b"Two.\n")
         late = {"by": 0.0}
-        base = doc_import.clock()
+        # Whole seconds, so that the call reaches the bound exactly: on a
+        # fractional clock, (base + 35) - base can come out a hair under
+        # 35 when the sum crosses a power of two (a clock just under
+        # 1,024 seconds, as a fresh runner's can be), and both files
+        # would then be kept.
+        base = float(int(doc_import.clock()))
         monkeypatch.setattr(doc_import, "clock", lambda: base + late["by"])
         real_remember = doc_import.remember_outcomes
 

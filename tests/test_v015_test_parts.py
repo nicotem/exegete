@@ -21,7 +21,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import conftest
+# The conftest pytest loaded, under its package name: `import conftest`
+# would load a second copy, whose start-of-run hooks never ran
+# (test_suite_hygiene.py reads every copy's baseline).
+from tests import conftest
 
 REPO = Path(__file__).resolve().parents[1]
 VARIABLE = "EXEGETE_TEST_SHARD"

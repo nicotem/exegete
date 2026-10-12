@@ -9735,8 +9735,8 @@ def import_text_file(
     case-based analysis (matrices, case reports). You can also link later
     with link_file_to_case.
 
-    IMPORTANT: work on a project in the workspace, the folder set for
-    projects (get_current_project gives it), or on a copy there.
+    IMPORTANT: work on a project in the workspace (the folder set for
+    projects: get_current_project gives it), or on a copy there.
 
     Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
@@ -19682,14 +19682,18 @@ def _create_project_refusal(text: str, **extra: Any) -> str:
 # explicit "not known" (the study's 7.5 wording). QualCoder 4.0 labels
 # the setting "Current coder", in Project, Settings (on a Mac, Qt moves
 # Settings to the QualCoder menu); the question presumes no QualCoder
-# (0.14.3, from the maintainer's sitting).
+# (0.14.3, from the maintainer's sitting). Nothing in Exegete changes the
+# name once the project is made; QualCoder's Settings window does
+# (`update project set codername=?` in its settings.py at the tag 4.0).
 CODER_NAME_ASK = (
     "Ask the researcher what name their own codings should carry; if they "
     "use QualCoder, the name in its settings (\"Current coder\"), exactly "
     "as there; if not, any name they choose. Call again with it as "
     "coder_name. It is the researcher's own name for their codings, not "
-    "the AI's, and must never be guessed. If they do not know it, call "
-    "again with coder_name_not_known=true instead.")
+    "the AI's, and must never be guessed. Exegete cannot change it once "
+    "the project is made (QualCoder's settings can), so ask for the name "
+    "as they want it to stay. If they do not know it, call again with "
+    "coder_name_not_known=true instead.")
 CODER_NAME_NOT_KNOWN_WARNING = (
     "The researcher's own coder name is not known, so the check that "
     "keeps the AI's codings apart from the researcher's own is off. It "
@@ -19946,11 +19950,18 @@ def create_project(name: str, directory: Optional[str] = None,
         extra = ({"action_required": "ask_researcher_coder_name"}
                  if coder_problem == CODER_NAME_ASK else {})
         return _create_project_refusal(refusal, **extra)
-    if coder_problem is not None:
-        extra = ({"action_required": "ask_researcher_coder_name"}
-                 if coder_problem == CODER_NAME_ASK else {})
-        return _create_project_refusal(coder_problem, **extra)
     stem, parent, is_default, folder = refusal
+    if coder_problem is not None:
+        if coder_problem != CODER_NAME_ASK:
+            return _create_project_refusal(coder_problem)
+        # The place checks passed, so the path is known: projects_folder
+        # is the folder that is set, and `directory` may name another
+        # (0.14.3, the review of the maintainer's sitting).
+        return _create_project_refusal(
+            f"{coder_problem} The project will be made as '{folder}': "
+            f"tell the researcher when you ask.",
+            action_required="ask_researcher_coder_name",
+            will_be_made_as=str(folder))
     folder_name = folder.name
     warnings: List[str] = []
     too_long = new_project.long_path_warning(folder)

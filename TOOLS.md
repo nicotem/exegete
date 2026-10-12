@@ -265,7 +265,9 @@ tools plus `create_project`.
   finds them). The answer gives the full path. So that the assistant
   can say where a project will go before it is made,
   `list_available_projects`, `get_current_project` and `create_project`
-  give the folder that is set as `projects_folder`.
+  give the folder that is set as `projects_folder`, and when
+  `create_project` asks for the coder name, it also gives the full path
+  the project will be made as.
   Keep projects on a local disk that is not synced (iCloud, OneDrive,
   Dropbox): sync services can copy the database and its journal
   separately. On a Mac with iCloud's "Desktop & Documents Folders"
@@ -277,7 +279,9 @@ tools plus `create_project`.
 - **Your coder name.** The assistant asks what name your own codings
   should carry: if you use QualCoder, the name in its settings, exactly
   as there (Project menu, Settings, "Current coder"; on a Mac it may be
-  under the QualCoder menu instead); if not, any name you choose. It
+  under the QualCoder menu instead); if not, any name you choose.
+  Exegete cannot change it once the project is made (QualCoder's
+  settings can), so give it as you want it to stay. It
   asks after every other check, so you are asked once. If you do not
   know it, say so: the project is created, and the check that keeps the
   AI's codings apart from yours stays off until a name is recorded,

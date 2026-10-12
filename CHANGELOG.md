@@ -561,26 +561,40 @@ other limits.
   choose. Until now a researcher without QualCoder was sent to
   `coder_name_not_known`, which leaves the check that keeps the AI's
   codings apart from theirs off; that flag is now for a researcher who
-  does not know the name. TOOLS.md says the same.
+  does not know the name. The answer's question also says that Exegete
+  cannot change the name once the project is made (QualCoder's
+  settings can), so that the assistant asks for it as the researcher
+  wants it to stay: at the sitting a project was made again for a
+  fuller name. TOOLS.md says the same. The README told a reader
+  without QualCoder to say so, which leads to the flag; it now says that
+  any name they choose will do, and "say so" is for a reader who does
+  not know theirs.
 - At the sitting the assistant said a new project would go to
   `~/Documents/Exegete projects`, the folder `create_project`'s
   description named as the default, and the project went to
   `~/QualCoder projects`, the Claude Desktop extension's "Folder for
   projects". `list_available_projects`, `get_current_project` and
-  `create_project` (its refusals too, so the question for the coder
-  name carries it) now give the folder that is set as
-  `projects_folder`, so the assistant can say where a project will go
-  before it is made; `create_project`, `copy_project_to_workspace` and
-  `import_text_file` name "the folder set for projects" rather than a
-  default, each description shorter than before or as long.
+  `create_project` (its refusals too) now give the folder that is set
+  as `projects_folder`. When `create_project` asks for the coder name,
+  its answer also gives the full path the project will be made as, in
+  the folder given as `directory` or else in the folder set, as
+  `will_be_made_as`, and asks the assistant to tell the researcher, so
+  that they hear where a project will go before it is made.
+  `create_project`, `copy_project_to_workspace` and `import_text_file`
+  name "the folder set for projects" rather than a default, each
+  description shorter than before or as long.
 
 ### Measured
 
 - Serialised tool JSON: full = 201,739 characters (about 50.4k tokens
   at chars/4) over 77 tools, core = 67,225 (about 16.8k) over 23, and
   the opt-in lifecycle set = 204,244 (about 51.1k) over 78, measured on
-  Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 211,611, 70,617 and 214,248. Against
+  Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a separate
+  environment, not the repository's own `venv/`: for the tree before the
+  wording from the maintainer's sitting, it gives exactly the figures
+  measured in `venv/`; on Python 3.11.13 (likewise a separate
+  environment, which gives exactly the figures measured in the
+  `.venv/`), 211,611, 70,617 and 214,248. Against
   0.14.2's figures (196,387, 65,140 and 198,944 on 3.13), every set
   grew by `open_file_for_reading`'s own entry (1,630 characters on
   3.13, 1,632 with its separator) and by 471 characters on

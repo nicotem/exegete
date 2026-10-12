@@ -367,8 +367,8 @@ QualCoder (Project, Open Project), to see your coding in the text.
 **Two coder names.** When it makes the project, the assistant asks for
 your own coder name, which the project keeps so that your work and the
 AI's stay apart (QualCoder, if you use it, records your coding under
-it). Not using QualCoder, or no coder name? Say so. Before its first
-write, it asks for the AI coder name,
+it). Not using QualCoder? Any name you choose will do. Do not know
+yours? Say so. Before its first write, it asks for the AI coder name,
 kept per project, under which Exegete writes what is done through the
 conversation.
 

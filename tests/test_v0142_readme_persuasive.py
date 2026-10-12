@@ -194,7 +194,12 @@ def _tools(mode="lifecycle"):
 # in "What stays on your computer", and the table re-dated for 0.14.3,
 # whose import row it carries. That takes 146 characters, and the limit
 # is raised by that and no more: 35,630.
-README_LIMIT = 35_630
+# The review of the maintainer's sitting found "Two coder names" still
+# sending a reader without QualCoder to "say so", which leads to the
+# flag that leaves the check off; a reader without QualCoder now chooses
+# any name, and "say so" is for one who does not know theirs. That takes
+# 30 characters, and the limit is raised by that and no more: 35,660.
+README_LIMIT = 35_660
 
 
 def test_the_readme_stays_short():
@@ -615,7 +620,8 @@ def _measured():
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) .*? "
                       r"lifecycle set = ([\d,]+)", measured)
     full, core, lifecycle = (int(n.replace(",", "")) for n in found.groups())
-    later = re.search(r"on Python 3\.11\.13 \(the `\.venv/`\), ([\d,]+),",
+    # the 3.11 figures follow the environment named in brackets
+    later = re.search(r"on Python 3\.11\.13 \([^)]*`\.venv/`\), ([\d,]+),",
                       measured)
     return ({"full": full, "core": core, "lifecycle": lifecycle},
             int(later.group(1).replace(",", "")))

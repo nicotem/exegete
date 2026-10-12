@@ -26,6 +26,19 @@ refusals too, so the question for the coder name carries it) give it as
 import_text_file name "the folder set for projects" rather than a
 default, each description no longer than before
 (tests/test_v0142_description_cut.py pins their words).
+
+The reviews of those fixes (12 October 2026) found four things more.
+projects_folder is the folder that is set, so a refusal for a project
+asked for in another folder (`directory`) named the wrong place: the
+question for the coder name now also gives the full path the project
+will be made as, and asks the assistant to tell the researcher. The
+question warns that Exegete cannot change the name once the project is
+made (QualCoder's settings can: `src/qualcoder/settings.py` at the tag
+4.0 runs `update project set codername=?`); at the sitting a project
+had to be deleted and made again for a fuller name. The README still
+sent a reader without QualCoder to "say so", which leads to
+`coder_name_not_known`. And import_text_file's rule read as a list of
+three places.
 """
 
 import json
@@ -203,3 +216,79 @@ class TestTheFolderSetForProjects:
         create = _flat(descriptions["create_project"])
         assert "get_current_project's projects_folder" in create
         assert "leave it out for the folder set for projects" in create
+
+
+# ---------------------------------------------------------------------------
+# The reviews of the fixes above (12 October 2026)
+# ---------------------------------------------------------------------------
+
+def _repo_text(name):
+    return (Path(__file__).parent.parent / name).read_text(encoding="utf-8")
+
+
+class TestTheReviewsOfTheSittingWording:
+
+    def test_the_question_names_the_path_in_a_folder_given(
+            self, projects_folder, tmp_path):
+        """projects_folder is the folder that is set; with `directory`
+        given, the project goes elsewhere, and the question for the
+        coder name says where."""
+        desktop = tmp_path / "Desktop"
+        desktop.mkdir()
+        answer = json.loads(server.create_project(
+            "Study", directory=str(desktop)))
+        assert answer["action_required"] == "ask_researcher_coder_name"
+        made_as = str(desktop / "Study.qda")
+        assert answer["will_be_made_as"] == made_as
+        assert (f"The project will be made as '{made_as}': tell the "
+                f"researcher when you ask.") in answer["error"]
+        # the folder that is set is still reported as such
+        assert answer["projects_folder"] == str(projects_folder)
+        assert not (desktop / "Study.qda").exists()
+
+    def test_the_question_names_the_path_in_the_folder_set(
+            self, projects_folder):
+        answer = json.loads(server.create_project("Study"))
+        made_as = str(projects_folder / "Study.qda")
+        assert answer["will_be_made_as"] == made_as
+        assert f"made as '{made_as}'" in answer["error"]
+        assert not (projects_folder / "Study.qda").exists()
+
+    def test_no_path_when_the_place_is_refused(self, projects_folder):
+        """A refusal of the name or the folder names no path the
+        project would get: it would get none."""
+        answer = json.loads(server.create_project("Stu|dy"))
+        assert answer["action_required"] == "ask_researcher_coder_name"
+        assert "will_be_made_as" not in answer
+        assert "will be made as" not in answer["error"]
+
+    def test_the_question_warns_the_name_stays(self):
+        text = json.loads(server.create_project("Study"))["error"]
+        assert ("Exegete cannot change it once the project is made "
+                "(QualCoder's settings can), so ask for the name as they "
+                "want it to stay.") in text
+        assert server.CODER_NAME_ASK.endswith(
+            "If they do not know it, call again with "
+            "coder_name_not_known=true instead.")
+
+    def test_import_text_files_rule_names_one_place(self):
+        d = _flat(_descriptions()["import_text_file"])
+        assert ("IMPORTANT: work on a project in the workspace (the folder "
+                "set for projects: get_current_project gives it), or on a "
+                "copy there.") in d
+        assert "workspace, the folder set for projects" not in d
+
+    def test_the_readme_does_not_send_a_reader_without_qualcoder_to_the_flag(
+            self):
+        readme = _flat(_repo_text("README.md"))
+        assert "Not using QualCoder, or no coder name? Say so." not in readme
+        assert ("Not using QualCoder? Any name you choose will do. Do not "
+                "know yours? Say so.") in readme
+
+    def test_tools_md_says_the_same(self):
+        tools = _flat(_repo_text("TOOLS.md"))
+        assert ("Exegete cannot change it once the project is made "
+                "(QualCoder's settings can), so give it as you want it to "
+                "stay.") in tools
+        assert ("when `create_project` asks for the coder name, it also "
+                "gives the full path the project will be made as") in tools

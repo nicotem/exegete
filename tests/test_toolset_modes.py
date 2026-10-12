@@ -646,9 +646,19 @@ class TestThePublishedSchemaBudget:
         assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
         # The environment, by path: this repository holds two, at
         # different interpreters, and a version alone does not say which
-        # was used.
-        assert "repository's own `venv/`" in entry
-        assert "Python 3.11.13" in entry and "`.venv/`" in entry
+        # was used. 0.14.3's figures were taken in separate environments
+        # with the same mcp and pydantic, and the entry says so, with the
+        # check that they give the repository's own figures exactly (the
+        # review of 12 October 2026 found it naming `venv/` instead).
+        flat = " ".join(entry.split())
+        assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a "
+                "separate environment, not the repository's own `venv/`"
+                ) in flat
+        assert "gives exactly the figures measured in `venv/`" in flat
+        assert ("Python 3.11.13 (likewise a separate environment, which "
+                "gives exactly the figures measured in the `.venv/`)"
+                ) in flat
+        assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
 
     def test_each_entry_carries_one_measurement_of_its_own(self):
         """The 0.12 entry used to state two, a batch apart, both in the

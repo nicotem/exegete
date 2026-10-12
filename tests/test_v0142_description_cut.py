@@ -569,7 +569,7 @@ CHANGED_0143 = {
     "analyze_file_with_coding": (2293, 1878, "892912ccbe8f76ac"),
     "copy_project_to_workspace": (1801, 1483, "997bac5f12875338"),
     "create_project": (1915, 1505, "3f93233739c71562"),
-    "import_text_file": (4022, 2994, "087c5ad64cf6f50a"),
+    "import_text_file": (4022, 2994, "f51bac7ab0c34434"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143}
 

@@ -11,16 +11,26 @@ name after it), reimplemented here, and adds, each a named departure:
 - the text laid out exactly as stored, runs of spaces and tabs kept
   (QualCoder's export lets the browser fold them), one paragraph per
   line, at about seventy characters a line;
-- the code's name also at the start of each passage, small and quiet;
+- the code's name after each passage as a tag of its own, never as
+  text: a small rounded label on the page's panel colour, edged in the
+  code's colour, cut short with an ellipsis when long (the whole name on
+  hover, to screen readers and in print), with no colon, and left out
+  when text is copied (the owner's sitting of 11 October 2026 found the
+  earlier label, the name in small grey type before the passage, read
+  as part of the text: an in-vivo code repeats its passage, and a name
+  ending in a full stop gave ".:"); the name at the start of each
+  passage kept for screen readers and for the Word comment, not for the
+  eye;
   overlapping codings drawn with all their codes, each as an underline
   of its own (QualCoder's export colours only the first); important
   codings and annotated passages in bold, as QualCoder's coding window
   shows them; memos and annotations as numbered notes at the end,
-  linked both ways, instead of hover tooltips; the closing names kept
-  for screen readers and print rather than for the eye;
+  linked both ways, instead of hover tooltips;
 - "with codings" and "text only" switches and a tick box per code, done
   in the page's style sheet alone, with no script;
-- a list of the codes on the page, with categories, colours and counts;
+- a list of the codes on the page, with categories, colours and counts,
+  whose headings and links break only between words at a phone's width
+  (a code's name or category, inside a word too, when it is long);
   what the page cannot draw (areas on images and PDF pages, audio and
   video codings), counted;
 - each coding placed where its stored passage matches the text, at its
@@ -191,8 +201,9 @@ def _run(text: str, active: Sequence[Coding], annotated: bool) -> str:
 def render_text(text: str, codings: List[Coding],
                 annotations: List[Annotation]) -> str:
     """The whole text as paragraphs, one per stored line, with each
-    coding's start label (also its Word comment's start), its closing
-    name (also the comment's end) and its note's number."""
+    coding's name at its start (hidden from the eye; also its Word
+    comment's start), its tag after it (also the comment's end, whose
+    content pandoc leaves out) and its note's number."""
     starts: Dict[int, List[Coding]] = {}
     ends: Dict[int, List[Coding]] = {}
     for coding in codings:
@@ -215,12 +226,13 @@ def render_text(text: str, codings: List[Coding],
         for coding in sorted(ends.get(here, []), key=lambda c: -c.lane):
             if coding in active:
                 active.remove(coding)
-            out.append(
-                f'<span class="comment-end" id="{coding.number}" '
-                f'data-code="{coding.code_id}"><span class="end">'
-                f'[{esc(coding.name)}]</span></span>')
-            if coding.note is not None:
-                out.append(_reference(coding.note, coding.code_id))
+            if coding.note is None:
+                out.append(_tag(coding))
+            else:
+                # the note's number kept on the line of its own tag
+                out.append(f'<span class="noted">{_tag(coding)}'
+                           f'{_reference(coding.note, coding.code_id)}'
+                           "</span>")
         for note in a_ends.get(here, []):
             open_notes -= 1
             if note.note is not None:
@@ -246,6 +258,19 @@ def render_text(text: str, codings: List[Coding],
             out.append(_run(piece, active, open_notes > 0))
     out.append("</p>")
     return "".join(out)
+
+
+def _tag(coding: Coding) -> str:
+    """A coding's tag, after its passage: the code's name in a label of
+    its own (`.end`), which the style sheet cuts short with an ellipsis
+    when long, the whole name on hover (its title) and to screen readers
+    (its text), with words for screen readers before it. It is the Word
+    comment's end, whose content pandoc leaves out of the Word file."""
+    name = esc(coding.name)
+    return (f'<span class="comment-end" id="{coding.number}" '
+            f'data-code="{coding.code_id}"><span class="end" '
+            f'title="{name}"><span class="sr">end of coding: </span>'
+            f'<bdi>{name}</bdi></span></span>')
 
 
 def _reference(number: int, code_id: Optional[int]) -> str:
@@ -277,7 +302,8 @@ border-radius:6px}
 .controls legend{font-weight:600;padding:0}
 table{border-collapse:collapse;width:100%;margin:.5rem 0}
 th,td{text-align:left;padding:.2rem .4rem;border-bottom:1px solid var(--line);
-vertical-align:top;overflow-wrap:anywhere}
+vertical-align:top;overflow-wrap:break-word}
+td:nth-child(-n+2){overflow-wrap:anywhere}
 .sw{display:inline-block;width:1.4em;padding:0 .2em;border-radius:3px;
 text-align:center}
 #text{margin-top:1.5rem}
@@ -292,11 +318,17 @@ overflow-wrap:break-word;line-height:2.1}
 .ln5{border-bottom:3px solid;padding-bottom:21px}
 .nm{border-bottom-style:dotted}
 .imp,.an{font-weight:700}
-.comment-start{font-size:.72em;color:var(--quiet);letter-spacing:.02em;
-margin:0 .3em 0 .15em;white-space:normal}
-.comment-start::after{content:":"}
-.end{position:absolute;width:1px;height:1px;overflow:hidden;
+.comment-start,.sr{position:absolute;width:1px;height:1px;overflow:hidden;
 clip:rect(0 0 0 0);white-space:nowrap}
+.comment-start::before{content:"coding starts: "}
+.comment-start,.end,.ref{-webkit-user-select:none;user-select:none}
+.noted{white-space:nowrap}
+.end{display:inline-block;max-width:16em;overflow:hidden;
+text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;
+font-size:.72em;line-height:1.45;font-weight:400;font-style:normal;
+color:var(--fg);background:var(--panel);border:1px solid var(--line);
+border-left-width:.5em;border-radius:.35em;padding:0 .45em;
+margin:0 .15em 0 .35em;cursor:default}
 .ref{font-size:.7em;line-height:0}
 #notes li{margin:.75rem 0}
 .memo{white-space:pre-wrap;margin:.25rem 0}
@@ -306,10 +338,11 @@ border-bottom-color:transparent;color:inherit;font-weight:inherit;
 padding-bottom:0}
 body:has(#mode-text:checked) .an{font-weight:inherit}
 body:has(#mode-text:checked) .comment-start,
+body:has(#mode-text:checked) .comment-end,
 body:has(#mode-text:checked) .ref{display:none}
 @media print{.controls,.skip{display:none}
-.end{position:static;width:auto;height:auto;clip:auto;font-size:.72em}
-body{max-width:none}}
+body{max-width:none}
+.end{max-width:none;white-space:normal;overflow:visible}}
 """
 
 
@@ -331,6 +364,8 @@ def code_style(codings: List[Coding]) -> Tuple[str, int]:
             rules.append(f".k{code_id}{{border-bottom-color:{fill}}}")
         rules.append(f".sw.k{code_id}{{background-color:{fill};"
                      f"color:{ink}}}")
+        rules.append(f'.comment-end[data-code="{code_id}"] .end'
+                     f"{{border-left-color:{fill}}}")
         rules.append(
             f"body:has(#show-{code_id}:not(:checked)) .k{code_id}"
             f"{{background-color:transparent;border-bottom-color:"
@@ -494,6 +529,9 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         '<html lang="en-GB"><head><meta charset="utf-8">',
         f'<meta http-equiv="Content-Security-Policy" content="{POLICY}">',
         '<meta name="referrer" content="no-referrer">',
+        # so that a phone's browser lays the page out at its own width
+        '<meta name="viewport" content="width=device-width, '
+        'initial-scale=1">',
         f"<title>{title}</title>",
         f"<style>{BASE_STYLE}\n{style}\n</style></head><body>",
         '<a class="skip" href="#text">Skip to the text</a>',

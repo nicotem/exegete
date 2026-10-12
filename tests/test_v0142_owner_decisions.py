@@ -29,10 +29,12 @@ Pinned here:
   enough; and, where the README offers Claude Code, that it is not on
   Claude's Free plan;
 - the brief: the "fresh reading" line held back until the reading tool
-  can read a file without its codes (0.14.3), "Do not agree to please"
-  kept, and the opening text under 2,000 characters.
+  can read a file without its codes (0.14.3, which serves it,
+  provisionally), "Do not agree to please" kept, and the opening text
+  under 2,000 characters.
 """
 
+import inspect
 import re
 import sys
 from pathlib import Path
@@ -544,16 +546,27 @@ def test_the_readme_says_what_it_costs():
 # 6 and 7. The brief
 # ---------------------------------------------------------------------------
 
-def test_the_fresh_reading_line_is_held_back_and_honesty_kept():
+def test_the_fresh_reading_line_waits_for_its_option_and_honesty_kept():
     served = {"full": server.BRIEF_FULL, "short": server.BRIEF_SHORT,
               "short, small set": server.BRIEF_SHORT_SMALL_SET,
               "help topic": server.explain_ai_coding_tools("brief")}
+    # Held back in 0.14.2 until the reading tool had a "without codes"
+    # option, so that a fresh reading could be given. 0.14.3
+    # (provisional) gives it, and the full brief serves the line, naming
+    # the option (tests/test_v0143_reading_without_codes.py pins its
+    # words); the short versions never carried it.
+    assert "without_codes" in inspect.signature(
+        server.analyze_file_with_coding).parameters
     for where, text in served.items():
         flat = " ".join(text.split())
-        # held back until 0.14.3 gives the reading tool a "without codes"
-        # option, so that a fresh reading can be given
-        assert "fresh reading" not in flat, where
-        assert "whether you have seen any" not in flat, where
+        line = ("When the researcher wants a fresh reading, read the file "
+                "with analyze_file_with_coding(without_codes=true), which "
+                "leaves their codings out, and tell them whether you have "
+                "seen any.")
+        if where in ("full", "help topic"):
+            assert line in flat, where
+        else:
+            assert "fresh reading" not in flat, where
     for where in ("full", "help topic"):
         flat = " ".join(served[where].split())
         assert ("Do not agree to please. When you read a passage "

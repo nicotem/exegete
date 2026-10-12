@@ -288,17 +288,22 @@ class TestTheListingFindsIt:
 
 
 class TestTheDescriptionsSayIt:
-    """The three tools that name the Terminal workspace
-    (`~/Documents/Exegete projects` from v0.14.1) as
-    the workspace now say that the host can set another, and the listing
-    names the workspace among the places it searches."""
+    """The three tools that named the Terminal workspace
+    (`~/Documents/Exegete projects` from v0.14.1) as the workspace, with
+    "unless the host set another", now name no folder: they say "the
+    folder set for projects", which get_current_project gives as
+    `projects_folder` (0.14.3: at the maintainer's sitting the assistant
+    announced the default while the extension's setting named another;
+    tests/test_v0143_sitting_wording.py). The listing names the
+    workspace among the places it searches."""
 
     @pytest.mark.parametrize("tool", [
         "copy_project_to_workspace", "import_text_file", "create_project"])
     def test_the_workspace_is_not_promised(self, tool):
         text = " ".join(getattr(server, tool).__doc__.split())
-        assert "~/Documents/Exegete projects" in text
-        assert "unless the host set another" in text
+        assert "~/Documents/Exegete projects" not in text
+        assert "the folder set for projects" in text
+        assert "get_current_project" in text
 
     def test_the_tool_set_error_is_neutral(self, monkeypatch):
         """The extension's default is lifecycle, the variable's full: the

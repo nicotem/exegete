@@ -592,7 +592,9 @@ def _tools_running_the_process_scan():
 # A helper that does a tool's work, by the tool it does it for (v0.14:
 # select_project's selection moved into _select_project, so that a
 # failed switch leaves the previous project selected)
-_TOOL_OF_HELPER = {"_select_project": "select_project"}
+_TOOL_OF_HELPER = {"_select_project": "select_project",
+                   # 0.14.3: the import's preview passes the signs on
+                   "_import_documents_preview": "import_documents"}
 
 
 def _paragraph_after(text, marker):
@@ -604,13 +606,13 @@ def _paragraph_after(text, marker):
 class TestProcessScanCallersAreDocumented:
 
     EXPECTED = {"select_project", "get_current_project",
-                "analyze_for_coding", "restore_backup"}
+                "analyze_for_coding", "restore_backup", "import_documents"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's
-        # callers are these four (restore_backup: its preview, the call
-        # without a token). Update PRIVACY.md and TOOLS.md when this set
-        # grows.
+        # callers are these five (restore_backup and import_documents:
+        # their previews, the calls without a token). Update PRIVACY.md
+        # and TOOLS.md when this set grows.
         assert _tools_running_the_process_scan() == self.EXPECTED
 
     def test_privacy_doc_names_every_caller(self):

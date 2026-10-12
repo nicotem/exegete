@@ -1,0 +1,632 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+"""What the document import says, in plain words (0.14.3).
+
+Every refusal and warning the import gives is one of these fixed texts
+with numbers, never a library's message or a document's own words: a
+hostile document can put instructions in an archive entry's name or a
+PDF object's, and an error message would carry them. Each warning says
+what the researcher will see, what to do, and why.
+"""
+
+from typing import Any, Dict, Sequence
+
+COPY_A_PATH = (
+    "To copy a file's or folder's place: on a Mac, select it in Finder, "
+    "hold Option, right-click and choose Copy as Pathname; on Windows 11, "
+    "right-click it and choose Copy as path. Then paste it.")
+
+SAME_READING = ("QualCoder reads the file the same way, so both programs "
+                "read the same text.")
+
+PATH_REFUSALS = {
+    "missing": "There is no file or folder at this place on your "
+               "computer. " + COPY_A_PATH,
+    "relative": "This is not a full path. Give the place from the top of "
+                "the disk (for example /Users/you/Documents/Interviews or "
+                "C:\\Users\\you\\Documents\\Interviews), or starting with ~ "
+                "for your home folder. " + COPY_A_PATH,
+    "network": "This is a network path (\\\\server\\share or //server/"
+               "share). Exegete does not open those, because reaching one "
+               "makes Windows offer your account's sign-in to the computer "
+               "it names. Use the drive letter your computer has given that "
+               "share (for example H:), or a share mounted in Finder; "
+               "copying the files to your computer is the other way, and if "
+               "they are participant data, check your study's data plan "
+               "first.",
+    "long_form": "This is Windows' long form of a path, with \\\\?\\ or "
+                 "\\\\.\\ before the drive letter. Exegete takes a path "
+                 "in its ordinary form: give it from the drive letter on "
+                 "(for example C:\\Users\\you\\Documents\\Interviews). "
+                 "If that form is longer than Windows allows unless long "
+                 "paths are switched on (259 characters), move the files to "
+                 "a folder nearer the top of the disk first. " + COPY_A_PATH,
+    "too_long": "This place is longer than the 259 characters Windows "
+                "allows unless long paths are switched on, so Exegete "
+                "cannot open it. Move the files to a folder nearer the top "
+                "of the disk, such as one in Documents, then ask again.",
+    "link": "This place is reached through a link (a shortcut, symbolic "
+            "link or junction). Exegete follows a link only into a cloud "
+            "drive's own folder. Give the place the link points to.",
+    "hidden": "This is a hidden file, or is in a hidden folder. Exegete "
+              "does not import from hidden places. Move the files to an "
+              "ordinary folder, such as one in Documents, and ask again.",
+    "macos_permission": "macOS has not let the assistant's app open this "
+                        "place. In System Settings, Privacy & Security, "
+                        "Files and Folders, allow that app to open it "
+                        "(Documents, Desktop or Downloads), then ask "
+                        "again.",
+    "permission": "Your account cannot open this place. Check its "
+                  "permissions, or copy the files to a folder of your own.",
+    "unreadable": "This place could not be read.",
+    "not_a_file": "This is neither an ordinary file nor a folder.",
+    "project": "This is inside the selected project's own folder. Bring "
+               "documents in from where you keep them, not from the "
+               "project.",
+    "state_folder": "This is inside Exegete's own state folder, which "
+                    "holds no documents.",
+    "reading_folder": "This is inside Exegete's reading folder, which "
+                      "holds reading copies, not documents to import.",
+}
+
+OTHER_FORMATS = {
+    ".doc": "This is an older Word document. Open it in Word and save it "
+            "as a Word document (.docx), then import that.",
+    ".pages": "This is a Pages document. In Pages, choose File, Export To, "
+              "Word, then import the .docx.",
+    ".gdoc": "This is a shortcut to a Google document, not a document. In "
+             "Google Docs, choose File, Download, Microsoft Word, then "
+             "import the .docx.",
+    ".docm": "This is a Word document with macros. Open it in Word and "
+             "save it as a Word document (.docx), then import that.",
+    ".rtfd": "This is a TextEdit document with pictures. In TextEdit, "
+             "choose File, Save, and the format Word 2007 (.docx).",
+}
+KNOWN_OTHER_SUFFIXES = tuple(OTHER_FORMATS)
+
+FILE_REFUSALS = {
+    "unsupported": "Exegete does not import this kind of file (it imports "
+                   ".docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt, "
+                   "and .pdf and .epub with the optional part).",
+    "optional_missing": "Exegete on this computer cannot read PDF and "
+                        "EPUB files yet: they need its optional part, "
+                        "which the Claude Desktop extension has, and which "
+                        "INSTALL.md's section \"PDF and EPUB: the optional "
+                        "part\" tells how to add to an install from PyPI "
+                        "(pipx install --force \"exegete[pdf-epub]\"). "
+                        "QualCoder, if you use it, imports them too.",
+    "too_large": "This file is larger than Exegete reads for this kind of "
+                 "document ({limit_mb} MB). A copy saved in its own app "
+                 "with its pictures compressed or removed is often much "
+                 "smaller, and a long text file can be split into parts. "
+                 "QualCoder, if you use it, has no such limit and would "
+                 "import it.",
+    "name_in_use": "The project already has a file with this name, with "
+                   "other contents. Rename the file on your computer, then "
+                   "ask again.",
+    "place_too_long": "Its place in the project's folder of originals "
+                      "would be {length} characters long, past the {limit} "
+                      "Windows allows unless long paths are switched on, "
+                      "so it could not be copied there. Rename it shorter "
+                      "on your computer, or keep the project in a folder "
+                      "nearer the top of the disk, then ask again.",
+    "temporary_place_too_long": "Exegete first copies a file into the "
+                                "project's folder of originals under a "
+                                "temporary name of {temporary} characters, "
+                                "and that place would be {length} "
+                                "characters long, past the {limit} Windows "
+                                "allows unless long paths are switched on. "
+                                "The file's own place there would fit, and "
+                                "QualCoder, if you use it, would import it. "
+                                "Keep the project in a folder nearer the "
+                                "top of the disk, then ask again.",
+    "own_place_too_long": "This file's place on your computer is {length} "
+                          "characters long, past the {limit} Windows allows "
+                          "unless long paths are switched on, so Exegete "
+                          "cannot open it. Move its folder nearer the top "
+                          "of the disk, or rename the file shorter, then "
+                          "ask again.",
+    "same_name_in_batch": "Another file in this batch has the same name "
+                          "(letter case aside). Rename one of them on your "
+                          "computer, then ask again.",
+    "online_only": "This file is kept online only. Open it once on this "
+                   "computer, then try again.",
+    "changed_while_read": "This file changed while it was being read. Try "
+                          "again once it is saved.",
+    "not_an_archive": "This file's contents do not match its name: it is "
+                      "not a {format} file Exegete can read.",
+    "not_this_format": "This file's contents do not match its name: it is "
+                       "not a {format} file Exegete can read.",
+    "archive_too_many_entries": "This file holds more parts than Exegete "
+                                "reads ({limit}). A fresh copy saved in its "
+                                "own app may hold fewer. QualCoder, if you "
+                                "use it, has no such limit.",
+    "archive_part_too_large": "Unpacked, part of this file is larger than "
+                              "Exegete reads ({limit_mb} MB), usually a "
+                              "picture or another file inside it. Save a "
+                              "copy in its own app with its pictures "
+                              "compressed or removed, then import that. "
+                              "QualCoder, if you use it, has no such "
+                              "limit.",
+    "archive_too_large": "Unpacked, this file is larger than Exegete reads "
+                         "({limit_mb} MB). Save a copy in its own app with "
+                         "its pictures compressed or removed, then import "
+                         "that. QualCoder, if you use it, has no such "
+                         "limit.",
+    "damaged": "This file is damaged or could not be read. Open it in its "
+               "own app and save a fresh copy, then import that.",
+    "xml_entities": "This file declares XML entities, which ordinary "
+                    "documents do not use and attacks do, so Exegete does "
+                    "not read it (QualCoder imports it). Open it in its own "
+                    "app and save a fresh copy.",
+    "epub_character_set": "Part of this EPUB declares a character set "
+                          "that writes its markup in other bytes (UTF-7, "
+                          "say), which EPUB does not allow and which could "
+                          "hide what Exegete checks for, so Exegete does "
+                          "not read it (QualCoder imports it). You could "
+                          "convert it again (EPUB to EPUB, in Calibre, "
+                          "say), then import that.",
+    "no_text": "No text was found in this file. QualCoder would store the "
+               "file's markup or raw bytes as its text, which hold none of "
+               "the document's words, so Exegete departs here and does not "
+               "import it.",
+    "empty": "This file is empty.",
+    "pdf_password": "This PDF is protected by a password. Save a copy "
+                    "without the password (in Preview or Acrobat), then "
+                    "import that.",
+    "unstorable": "This file holds a character a project cannot store "
+                  "(QualCoder's import fails on it too). Open it in its "
+                  "own app and save a fresh copy.",
+    "unstorable_rtf": "It holds half of a character RTF writes in two "
+                      "halves (an emoji, say) without the other half, which "
+                      "a project cannot store (QualCoder's import fails on "
+                      "it too). Save it as Word (.docx) in its app, or "
+                      "remove that character, then import that.",
+    "too_long": "Its text is {characters} characters long, over Exegete's "
+                "limit of {limit}. For now, long books and reports come in "
+                "through QualCoder, if you use it.",
+    "reader_timeout": "Reading this file took longer than {seconds} "
+                      "seconds, so it was stopped. An RTF file or a web "
+                      "page saved as a Word document in its own app reads "
+                      "more quickly, and a very long file can be split "
+                      "into parts.",
+    "reader_memory": "Reading this file needed more memory than Exegete "
+                     "allows ({limit_mb} MB), so it was stopped. An RTF "
+                     "file or a web page saved as a Word document in its "
+                     "own app, or a copy with its pictures compressed or "
+                     "removed, needs less.",
+    "reader_failed": "This file could not be read. Open it in its own app "
+                     "and save a fresh copy, then import that.",
+    "not_supported": "Exegete does not import this kind of file.",
+}
+
+# Saving a copy as UTF-8, in the apps researchers have: what a hold of a
+# file that is not UTF-8 suggests (the owner's decision of 6 October
+# 2026: no guessing, and plain steps instead). The steps name each app's
+# own words for choosing an encoding when a file is opened, since an app
+# that guesses wrongly reads accented letters as others (the owner's
+# sitting of 11 October 2026: TextEdit read a Windows file as the Mac's
+# own set, "cafÈ" for "café"). TextEdit's names are its own on macOS 15
+# (the Open window's Show Options and Plain Text Encoding, Customize
+# Encodings List, spelt Customise on a Mac set to UK English, and the
+# names of the encodings, which are macOS's own), as Apple's TextEdit
+# guide gives them; Word's are its File Conversion window's, on Windows
+# and on a Mac, as Microsoft's guide gives them; Notepad's "ANSI" is
+# Windows Latin 1 on a Western Windows. The reviews of 12 October 2026:
+# a copy under a new name, so that the original stays until the copy is
+# checked (the sitting's copy replaced its original); each app on a line
+# of its own; and the steps said once in an answer, however many files
+# they serve (`SAVING_AS_UTF8`), each file with a short reason.
+_WHY_NOT_UTF8 = (
+    "so it is held back rather than read by a guess: a wrong guess reads "
+    "accented letters as others, and a name from your list written with "
+    "other letters would not be replaced. Saved as UTF-8, its letters "
+    "read the same way in QualCoder too.")
+_A_COPY = (
+    " You could save a copy as UTF-8 under a new name, so that the "
+    "original stays as it is until you have checked the copy, and import "
+    "the copy. The steps, in TextEdit, Word or Notepad, are given once "
+    "below for every file like this (saving_a_copy_as_utf8).")
+_CHECK_ACCENTS = (
+    "Before saving, check that its accents look right (\"café\", not "
+    "\"cafÈ\"): if they do not, the app read it in another encoding, so "
+    "close it without saving and open it again in the one it was saved "
+    "in, most often Windows Latin 1 for a file from Windows.")
+_CHECK_GAPS = (
+    "Before saving, check that its text reads right: if it shows gaps or "
+    "odd characters between the letters, close it without saving and "
+    "open it again as UTF-16.")
+_TEXTEDIT_ENCODING = (
+    "click Show Options if you see it, and set Plain Text Encoding, for "
+    "example to \"{textedit}\" (if that is not in the list, choose "
+    "Customize Encodings List, spelt Customise on a Mac set to UK English, "
+    "and tick it there); click Open, then choose File, Duplicate, and "
+    "File, Save, with a new name and \"Unicode (UTF-8)\" as the plain text "
+    "encoding.")
+_NOTEPAD = (
+    "In Notepad on Windows: open the file, and look at the encoding its "
+    "status bar names ({ansi}Word can open the file in another); then "
+    "choose File, Save As, with a new name and UTF-8 as the encoding.")
+_ANSI = "\"ANSI\" there means Windows Latin 1 on a Western Windows; "
+
+
+def _steps_text(check: str, textedit: str, word: str, ansi: str) -> str:
+    """Open in a chosen encoding, then save a copy as UTF-8, in TextEdit,
+    Word and Notepad, each on a line of its own; `textedit` and `word`
+    name the likely encoding in each app's own words."""
+    return "\n".join((
+        check,
+        "In TextEdit on a Mac: choose File, Open, select the file, "
+        + _TEXTEDIT_ENCODING.format(textedit=textedit),
+        "In Word: tick \"Confirm file format conversion on open\" (on "
+        "Windows: File, Options, Advanced, under General; on a Mac: Word, "
+        "Settings, General, where it ends \"at Open\"), open the file, "
+        "choose Encoded Text if asked, and in the File Conversion window "
+        "choose Other encoding and the one whose preview reads right, for "
+        f"example \"{word}\"; then choose File, Save As, give a new name, "
+        "choose Plain Text, and in the File Conversion window that follows "
+        "choose Other encoding, then \"Unicode (UTF-8)\".",
+        _NOTEPAD.format(ansi=ansi)))
+
+
+def _steps_web(check: str, textedit: str, ansi: str) -> str:
+    """The same for a web page: TextEdit shows it as code, and Word
+    saves it as a Word document."""
+    return "\n".join((
+        check,
+        "In TextEdit on a Mac: first tick \"Display HTML files as HTML code "
+        "instead of formatted text\" in its settings (Open and Save); then "
+        "choose File, Open, select the page, "
+        + _TEXTEDIT_ENCODING.format(textedit=textedit),
+        "In Word: open the page, then choose File, Save As, give a new "
+        "name, choose Word Document (.docx), and import the .docx; Word "
+        "reads the page in the encoding it declares.",
+        _NOTEPAD.format(ansi=ansi)))
+
+
+# The steps, by the kind of file they serve, said once in an answer
+# (`doc_import.steps_once`); HELD_BACK's reasons point to them.
+SAVING_AS_UTF8 = {
+    "text_files": _steps_text(_CHECK_ACCENTS, "Western (Windows Latin 1)",
+                              "Western European (Windows)", _ANSI),
+    "web_pages": _steps_web(_CHECK_ACCENTS, "Western (Windows Latin 1)",
+                            _ANSI),
+    "text_files_with_nul_characters": _steps_text(
+        _CHECK_GAPS, "Unicode (UTF-16LE)", "Unicode", ""),
+    "web_pages_with_nul_characters": _steps_web(
+        _CHECK_GAPS, "Unicode (UTF-16LE)", ""),
+}
+STEPS_FOR = {
+    "not_utf8": "text_files", "not_utf8_web": "web_pages",
+    "nul_characters": "text_files_with_nul_characters",
+    "nul_characters_web": "web_pages_with_nul_characters",
+}
+# A file whose text holds NUL characters: most often UTF-16 or UTF-32
+# saved without the byte-order mark that names it, which reads as UTF-8
+# with a NUL beside every letter.
+_WHY_NUL = (
+    "Its text holds NUL characters, invisible characters that text saved "
+    "as UTF-8 rarely holds: most often the sign of a file saved as UTF-16 "
+    "or UTF-32 (\"Unicode\") without the mark at its start that says so. "
+    "Read as it stands, it would come in with a NUL beside each letter, "
+    "and a name from your list written that way would not be replaced, "
+    "so it is held back rather than read by a guess.")
+
+# Letters that look garbled: how to look before deciding.
+_CHECK_ON_SCREEN = (
+    "To check, ask to see the text (show_text): a page opens on your own "
+    "screen with each place marked, and its text does not reach the AI "
+    "provider; or open the file in its own app.")
+# What was seen, in the garbled_fixed words: the encodings the odd
+# characters read back through, in TextEdit's names (the review of 12
+# October 2026: names a researcher can find in an app's menu), and
+# characters standing for letters lost earlier.
+GARBLED_SEEN = {
+    "sets": "they read better as if the file had once been opened in the "
+            "wrong encoding and saved again (in TextEdit's names: {sets})",
+    "lost": "the text holds characters that stand for letters lost "
+            "earlier (the replacement character, or an invisible control "
+            "character)",
+}
+
+
+def where_phrase(count: int, line: int, limit: int) -> str:
+    """Where letters look garbled: "in 1 place, on line 3", "in 2
+    places, the first on line 3"."""
+    if count == 1:
+        return f"in 1 place, on line {line:,}"
+    many = f"{limit:,} places or more" if count >= limit else \
+        f"{count:,} places"
+    return f"in {many}, the first on line {line:,}"
+
+
+def sets_phrase(names: Sequence[str], more: bool) -> str:
+    """One or two sets' names, the commonest first."""
+    said = " or ".join(names)
+    return said + (", among others" if more else "")
+
+
+# How to put garbled letters right, by the way the commonest of them
+# read back (the review of 12 October 2026). A UTF-8 file opened once in
+# another encoding and saved again was UTF-8 before, so the file as it
+# was imports as it is; a Western file opened in the other Western set
+# was saved in that set, so it opens rightly in it, in each app's names.
+_STILL_HAVE = ("If not, and you still have the file as it was before it "
+               "was saved again, ")
+_OR_CORRECT = ("otherwise correct the letters in the file's own app, save "
+               "it, then ask again.")
+_OPEN_IN = (_STILL_HAVE + "open that in the encoding it was saved in "
+            "(\"{textedit}\" in TextEdit, \"{word}\" in Word), save a copy "
+            "as UTF-8 under a new name and import the copy (importing the "
+            "file as it was gives the steps); " + _OR_CORRECT)
+GARBLED_REMEDY = {
+    None: _STILL_HAVE + "import that instead; " + _OR_CORRECT,
+    "mac_roman_for_cp1252": _OPEN_IN.format(
+        textedit="Western (Windows Latin 1)",
+        word="Western European (Windows)"),
+    "cp1252_for_mac_roman": _OPEN_IN.format(
+        textedit="Western (Mac OS Roman)", word="Western European (Mac)"),
+}
+
+
+def garbled_words(code: str, numbers: Dict[str, Any]) -> str:
+    """The words for a file whose letters look garbled, with what was
+    seen: how many places, the first line, the encodings; and how to put
+    them right, by the commonest way they read back (`way`)."""
+    seen = []
+    if numbers.get("sets"):
+        seen.append(GARBLED_SEEN["sets"].format(sets=numbers["sets"]))
+    if numbers.get("lost"):
+        seen.append(GARBLED_SEEN["lost"])
+    remedy = GARBLED_REMEDY.get(numbers.get("way"), GARBLED_REMEDY[None])
+    return say(HELD_BACK, code, where=numbers.get("where", "in places"),
+               seen="; and ".join(seen) or GARBLED_SEEN["lost"],
+               remedy=remedy)
+
+
+HELD_BACK = {
+    "names_in_file_name": "This file's own name holds a name from your "
+                          "names list, so it is not shown here. You could "
+                          "rename the file on your computer, then ask "
+                          "again; or, if the name may stay, say so for "
+                          "this import (import_file_names_with_listed_"
+                          "names), and it comes in under that name, which "
+                          "then reaches the AI provider whenever an answer "
+                          "names the file.",
+    "pdf_listed_names": "This PDF names {people} from your list, "
+                        "{times}. Names in a PDF are never replaced, here "
+                        "or in QualCoder; if the assistant reads this "
+                        "file, it reads those names. It comes in only if "
+                        "you say so for this import "
+                        "(import_pdfs_with_listed_names).",
+    "not_utf8": "It is not saved as UTF-8, the one form of text Exegete "
+                "reads, " + _WHY_NOT_UTF8 + _A_COPY,
+    "not_utf8_web": "This web page is not saved as UTF-8, the one form of "
+                    "text Exegete reads (whatever encoding the page "
+                    "declares, since a declaration can be wrong), "
+                    + _WHY_NOT_UTF8 + _A_COPY,
+    "nul_characters": _WHY_NUL + _A_COPY,
+    "nul_characters_web": _WHY_NUL.replace(
+        "Its text holds", "This web page's text holds", 1) + _A_COPY,
+    # Letters that look garbled (the owner's ruling of 7 October 2026,
+    # "Warn, and let me decide"): what was seen, never the text; a page
+    # to check them on; and the way through, on the researcher's word.
+    "garbled_rtf": "Some of its letters look garbled, {where} of its "
+                   "text: this RTF file holds "
+                   "letters written as UTF-8 straight into the file, "
+                   "outside RTF's own escapes, and RTF's rule reads each "
+                   "such byte as a letter of its own, in QualCoder as "
+                   "here (\"Ã©\" for \"é\"). A name written that way is "
+                   "not matched by a names list, though the assistant "
+                   "still reads it. " + _CHECK_ON_SCREEN + " If the file "
+                   "reads rightly in Word or LibreOffice, saving it from "
+                   "there as a Word document (.docx) and importing that "
+                   "keeps its letters; or, if they will do as they are, "
+                   "it comes in on your word "
+                   "(import_files_with_garbled_letters).",
+    "garbled_fixed": "Some of its letters look garbled, {where} of its "
+                     "text: {seen}. Garbled "
+                     "letters look like \"Ã©\" or \"È\" for \"é\", "
+                     "\"Ä…\" for \"ą\" or \"Ð˜\" for \"И\", as happens "
+                     "when a file is opened once in the wrong encoding and "
+                     "saved again, and a name written that way is not "
+                     "matched by a names list, though the assistant still "
+                     "reads it. This can also be correct text that only "
+                     "looks so: a brand name with a capital inside it, "
+                     "punctuation typed straight before a word, two "
+                     "languages written side by side. " + _CHECK_ON_SCREEN
+                     + " If its letters are right, or will do as they "
+                     "are, it comes in on your word "
+                     "(import_files_with_garbled_letters). {remedy}",
+}
+
+# Said once for a file whose text a warning changes: why the import does
+# not mend what QualCoder's way of reading does, and why the ways round
+# are chosen as they are.
+WHY_AS_QUALCODER = (SAME_READING + " Each way round gives a file QualCoder "
+                    "reads the same way too.")
+# Said instead when Exegete's reading of the file departs from
+# QualCoder's (the departures' lines say how).
+WHY_DEPARTED = ("Where QualCoder's own import would lose or garble this "
+                "file's content, Exegete keeps it, and the lines for "
+                "information name each departure.")
+READS_OTHERWISE = "qualcoder_reads_otherwise"
+WHY_SUBTITLES = ("QualCoder imports a subtitle file only as a recording's "
+                 "transcript, so it has no reading of this document to "
+                 "agree with.")
+
+
+def why_line(subtitles: bool, codes: Sequence[str] = ()) -> str:
+    """The line said once for a file whose text a warning changes."""
+    if subtitles:
+        return WHY_SUBTITLES
+    if READS_OTHERWISE in codes:
+        return WHY_DEPARTED
+    return WHY_AS_QUALCODER
+
+
+# Sign code -> (group, words). Group "changes" changes what the
+# researcher will read; "information" does not.
+WARNINGS = {
+    # Where QualCoder's own import would lose or garble the file's
+    # content and Exegete keeps it (the named departures; TOOLS.md lists
+    # them): information, since nothing the researcher reads is lost.
+    "word_line_breaks": ("information",
+        "Lines that end without a new paragraph (Shift and Return in "
+        "Word) keep their line break. QualCoder's own import would join "
+        "the words either side, as in \"thank youInterviewer\"."),
+    "word_tab_stops": ("information",
+        "Tab stops set on a paragraph add nothing to its text. "
+        "QualCoder's own import would put a tab character at the "
+        "paragraph's start for each one."),
+    "word_text_boxes": ("information",
+        "Text in a text box comes in once, after the paragraph it belongs "
+        "to. QualCoder's own import would repeat it, up to four times."),
+    "word_tracked_changes": ("information",
+        "Text moved with tracked changes comes in once, at its new place, "
+        "and deleted tabs are left out. QualCoder's own import would keep "
+        "moved text at both places."),
+    "word_hyphens_tabs": ("information",
+        "Non-breaking hyphens and positioned tabs are kept. QualCoder's "
+        "own import would leave them out and join the words, as in "
+        "\"wellknown\" for \"well-known\"."),
+    "word_notes": ("information",
+        "Its footnotes, endnotes, comments, headers and footers ({count} "
+        "in all) come after the document's text, each labelled, as in "
+        "\"Footnote 1: ...\", and each note or comment leaves its label "
+        "where it stood, as in \"[Footnote 1]\"; comments' authors and "
+        "dates are left out. QualCoder's own import would leave them all "
+        "out."),
+    "word_revisions": ("information",
+        "It has tracked changes, read as if accepted (insertions in, "
+        "deletions out), as QualCoder reads them. To read it another way, "
+        "accept or reject the changes in Word first."),
+    "odt_spaces": ("information",
+        "Runs of spaces are kept. QualCoder's own import would keep only "
+        "the first space of each run."),
+    "odt_tabs": ("information",
+        "Tabs are kept. QualCoder's own import would leave them out, as "
+        "in \"Q:Why\" for \"Q:<tab>Why\"."),
+    "odt_line_breaks": ("information",
+        "Lines that end without a new paragraph keep their line break. "
+        "QualCoder's own import would join the words either side."),
+    # A file whose letters look garbled, brought in on the researcher's
+    # word (import_files_with_garbled_letters).
+    "garbled_letters": ("information",
+        "Some of its letters look garbled ({where}); it comes in as it "
+        "is, as you said. A name written with "
+        "garbled letters is not matched by a names list, and reaches the "
+        "AI provider whenever this file is read."),
+    "odt_text_boxes": ("information",
+        "Text in a text box starts on a line of its own. QualCoder's own "
+        "import would join it to the words before it."),
+    "odt_notes": ("information",
+        "Its footnotes, endnotes, comments, headers and footers ({count} "
+        "in all) come after the document's text, each labelled, as in "
+        "\"Footnote 1: ...\", and each note or comment leaves its label "
+        "where it stood, as in \"[Footnote 1]\"; comments' authors and "
+        "dates are left out. "
+        "QualCoder's own import would leave notes and comments inside the "
+        "sentence with their markup (a comment's author and date among "
+        "it), and headers and footers out."),
+    "odt_markup": ("information",
+        "Markup QualCoder's own import would leave in the text is taken "
+        "out: other programs' tags, and character codes such as "
+        "\"&#233;\", which are read as the letters they stand for."),
+    "odt_any_program": ("information",
+        "It was not saved by LibreOffice (pandoc and the Mac's TextEdit "
+        "write OpenDocument differently). QualCoder's own import would "
+        "find no text in it and store the file's raw bytes instead."),
+    "odt_tables": ("information",
+        "Tables come in between \"=== TABLE ===\" and \"=== END TABLE "
+        "===\" lines, each cell a paragraph of its own, as QualCoder marks "
+        "them."),
+    "rtf_deleted": ("information",
+        "Text deleted with tracked changes is left out. QualCoder's own "
+        "import would keep it."),
+    "rtf_notes": ("information",
+        "Its footnotes, endnotes, comments, headers, footers and text "
+        "boxes ({count} in all) come after the document's text, each "
+        "labelled, as in \"Footnote 1: ...\", and each note or comment "
+        "leaves its label where it stood, as in \"[Footnote 1]\"; "
+        "comments' authors and dates are left out. QualCoder's own import "
+        "would leave them all out."),
+    "rtf_emoji": ("information",
+        "It holds emoji ({count}), which RTF writes in two halves; each "
+        "comes in as one character. QualCoder's own import would fail on "
+        "this file."),
+    "web_blocks": ("information",
+        "Blocks and table cells start on lines of their own. QualCoder's "
+        "own import would run them together, as in \"Name:Ana\" for a "
+        "table of two cells."),
+    READS_OTHERWISE: ("information",
+        "So QualCoder's own import of this file would store other text: "
+        "if the same file is also imported in QualCoder, codings made on "
+        "one copy will not line up on the other. In this project both "
+        "programs read the text Exegete stores."),
+    "pdf_scanned": ("changes",
+        "This PDF is pictures of pages, with no words Exegete can read; "
+        "only QualCoder's area coding works on it. QualCoder imports it "
+        "the same way. Way round: run text recognition (OCR) on it in "
+        "another program, then import the result."),
+    "pandoc_wrapped": ("changes",
+        "Its lines are broken at 72 characters, as a converter such as "
+        "pandoc leaves them; each break stays in the text. See "
+        "explain_ai_coding_tools('converted_documents') for converting "
+        "without it."),
+    "pandoc_tables": ("changes",
+        "It has tables drawn with dashes and plus signs, as a converter "
+        "such as pandoc draws them. See "
+        "explain_ai_coding_tools('converted_documents')."),
+    "pandoc_notes": ("changes",
+        "It has numbered note markers such as [1], with the notes "
+        "gathered at the end, as a converter such as pandoc leaves them. "
+        "See explain_ai_coding_tools('converted_documents')."),
+    "subtitles": ("changes",
+        "A subtitle file comes in line by line, with its timings and "
+        "numbers; if your transcription tool can export a Word or text "
+        "file, that reads more easily. Brought in as a document, it "
+        "cannot later be attached to its recording as QualCoder's "
+        "transcript, so its codings would stay on the document."),
+    "near_limit": ("changes",
+        "Its text is {characters} characters long, more than half "
+        "Exegete's limit of {limit}."),
+    "astral": ("information",
+        "It holds emoji or other rare characters ({count}); after the "
+        "first of them, QualCoder shows codings shifted."),
+    "invisible": ("information",
+        "It holds invisible control characters ({count}), kept as "
+        "QualCoder keeps them."),
+    "spaces_only": ("information",
+        "Its text is only spaces and blank lines, as QualCoder would "
+        "store it."),
+    "pdf_notes": ("information",
+        "Its notes ({count}) join the file's memo, as QualCoder adds them; "
+        "names in them are not replaced."),
+    "pdf_markups": ("information",
+        "It has highlight or underline marks ({count}). QualCoder would "
+        "have offered to code them; nothing is coded without your "
+        "approval, one by one."),
+    "qc382_pdf": ("information",
+        "QualCoder 3.8.2's PDF view shows this PDF but will not let you "
+        "code it there (its Code text window can); QualCoder 4.0's PDF "
+        "view can."),
+    "listed_name_in_file_name": ("information",
+        "Its own name holds a name from your names list, and it comes in "
+        "under that name, as you said: the name reaches the AI provider "
+        "whenever an answer names the file, and the project's copy of "
+        "the original keeps it."),
+}
+
+
+def say(table: Dict[str, Any], code: str, **numbers: Any) -> str:
+    """The fixed words for `code`, with its numbers; a code with no words
+    gives the general one, never the code's own text."""
+    entry = table.get(code)
+    if entry is None:
+        entry = FILE_REFUSALS["reader_failed"]
+    if isinstance(entry, tuple):
+        entry = entry[1]
+    try:
+        return entry.format(**numbers)
+    except (KeyError, IndexError, ValueError):
+        return entry.split("{")[0].rstrip(" (") + "."

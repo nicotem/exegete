@@ -553,7 +553,25 @@ REWORDED_0142 = {
 }
 
 # Every description as this release serves it
-WORDS = {**WORDS_0141, **REWORDED_0142}
+# The descriptions v0.14.3 changes, as it serves them, on
+# top of 0.14.2's words: analyze_file_with_coding (reads in parts, the
+# `start` argument, and the `without_codes` argument, reading without
+# codes) and import_text_file (that its text passes through the
+# conversation, its pointer to import_documents, the deprecated
+# create_backup=false, and 0.14.2's "joins the project's documents");
+# and from the maintainer's sitting, each no longer than before
+# (tests/test_v0143_sitting_wording.py): create_project (the
+# researcher's coder name as QualCoder 4.0 labels it, "Current coder",
+# asked without presuming QualCoder, and the folder set for projects
+# named rather than a default), copy_project_to_workspace and
+# import_text_file (the folder set for projects, likewise)
+CHANGED_0143 = {
+    "analyze_file_with_coding": (2293, 1878, "892912ccbe8f76ac"),
+    "copy_project_to_workspace": (1801, 1483, "997bac5f12875338"),
+    "create_project": (1915, 1505, "3f93233739c71562"),
+    "import_text_file": (4022, 2994, "f51bac7ab0c34434"),
+}
+WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to
@@ -561,6 +579,10 @@ WORDS = {**WORDS_0141, **REWORDED_0142}
 # its description), and check_for_updates, the check for new versions
 # (pull request #11; tests/test_updates.py pins its rules, first)
 NEW_IN_0142 = {"read_brief", "check_for_updates"}
+# and in v0.14.3: the reading tool, whose description
+# tests/test_v0143_reading.py pins, and the import tool, whose description
+# tests/test_v0143_import_hostile.py pins
+NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
 
 
 def _fingerprint(description):
@@ -574,7 +596,7 @@ class TestTheDescriptionsKeepTheirWords:
     def test_every_description_keeps_its_words_and_length(self):
         server._apply_toolset("lifecycle")
         registered = server.mcp.original_descriptions
-        assert set(registered) == set(WORDS) | NEW_IN_0142
+        assert set(registered) == set(WORDS) | NEW_IN_0142 | NEW_IN_0143
         exact = sys.version_info[:2] == (3, 13)
         changed = []
         for name, (length, solid, digest) in sorted(WORDS.items()):

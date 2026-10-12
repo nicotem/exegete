@@ -744,11 +744,18 @@ def test_a_first_session_says_what_to_do_next():
     # practised (the extension's own default folder); the second round:
     # on the routes that set it, not on the Terminal route otherwise
     # (test_the_terminal_route_says_where_projects_go, below)
-    assert ("then bring in your page as in the example. With the extension "
+    # v0.14.3: a file opened for reading shows the coding too, and the
+    # page can come in from a file, its text off the conversation
+    assert ("then bring in your page: paste it, as in the example, or save "
+            "it as a Word or text file and give the assistant its place, "
+            "which keeps its text off the conversation (on a Mac, hold "
+            "Option, right-click it and choose Copy as Pathname; on "
+            "Windows 11, Copy as path). With the extension "
             "or OpenAI's steps, the project is made in \"QualCoder "
-            "projects\", in your home folder: open it in QualCoder (Project, "
-            "Open Project) to see your coding in the text. [More requests "
-            "to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md"
+            "projects\", in your home folder: ask to open a file for "
+            "reading, or open the project in QualCoder (Project, Open "
+            "Project), to see your coding in the text. [More requests to "
+            "try](https://github.com/nicotem/exegete/blob/main/TOOLS.md"
             "#example-requests).") in first
     import json
     manifest = json.loads(_read("packaging/desktop-extension/"

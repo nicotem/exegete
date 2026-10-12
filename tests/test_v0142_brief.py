@@ -408,9 +408,10 @@ HELD_BACK = (
     "suggest codes first or follow",
     "ask what they make of a passage",
     "unless the study's sampling was designed for that",
-    # the owner, 1 October 2026: held back until 0.14.3 gives the reading
-    # tool a "without codes" option, so that a fresh reading can be given
-    "wants a fresh reading",
+    # The line on a fresh reading (the owner, 1 October 2026) was held back
+    # until 0.14.3 gave the reading tool a "without codes" option; 0.14.3
+    # (provisional) serves it, naming that option
+    # (tests/test_v0143_reading_without_codes.py pins its words)
 )
 # Notes meant for the owner, never for the assistant
 OWNER_MARKS = ("Owner's note", "Note for the owner", "[Provisional",
@@ -498,12 +499,28 @@ class TestTheSizes:
     v0.14.1 served it or, where the rewording of how Exegete describes
     itself reached it, shorter (tests/test_v0142_description_cut.py pins
     their words, tests/test_v0142_selfrep.py that none is longer;
-    test_toolset_modes.py pins the new totals)."""
+    test_toolset_modes.py pins the new totals). v0.14.3
+    adds two tools, left out here, and lengthens two descriptions,
+    measured apart below."""
 
     # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
     BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
-    # The same tools as this release serves them, on the same interpreter
-    NOW = {"full": 195_029, "core": 64_687, "lifecycle": 197_586}
+    # The same tools as 0.14.2 served them, on the same interpreter
+    NOW_0142 = {"full": 195_029, "core": 64_687, "lifecycle": 197_586}
+    # The same tools as this tree serves them: v0.14.3
+    # lengthens two, analyze_file_with_coding (the `start` and
+    # `without_codes` arguments) and import_text_file (its pointer to
+    # import_documents), and, from the maintainer's sitting, shortens
+    # copy_project_to_workspace and create_project (the folder set for
+    # projects, and the coder name as QualCoder 4.0 labels it);
+    # tests/test_v0142_description_cut.py pins their words. Their entries
+    # as 0.14.2 served them are below, so every other tool is still held
+    # to 0.14.2's figure.
+    NOW = {"full": 195_777, "core": 65_140, "lifecycle": 198_282}
+    CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
+                          "import_text_file": 4_553,
+                          "copy_project_to_workspace": 2_232,
+                          "create_project": 2_555}
     # Each new tool's entry on Python 3.13, and the sets it is in
     NEW = {"read_brief": (451, {"full", "core", "lifecycle"}),
            "check_for_updates": (903, {"full", "lifecycle"})}
@@ -517,6 +534,11 @@ class TestTheSizes:
         for mode in TOOL_SETS:
             tools, _ = _listed(mode)
             payload = [self._entry(t) for t in tools]
+            # The tools added after 0.14.2 are left out, so the figures
+            # stay 0.14.2's (0.14.3: import_documents and
+            # open_file_for_reading)
+            payload = [e for e in payload
+                       if e["name"] not in ADDED_AFTER_0142]
             others = [e for e in payload if e["name"] not in self.NEW]
             new = {e["name"]: e for e in payload if e["name"] in self.NEW}
             assert set(new) == {name for name, (_, sets) in self.NEW.items()
@@ -526,9 +548,17 @@ class TestTheSizes:
                                 for e in new.values()), mode
             if sys.version_info[:2] == (3, 13):
                 assert len(json.dumps(others)) == self.NOW[mode], mode
-                assert self.NOW[mode] <= self.BEFORE[mode], mode
+                later = sum(len(json.dumps(e)) - self.CHANGED_AFTER_0142[
+                    e["name"]] for e in others
+                    if e["name"] in self.CHANGED_AFTER_0142)
+                assert self.NOW[mode] - later == self.NOW_0142[mode], mode
+                assert self.NOW_0142[mode] <= self.BEFORE[mode], mode
                 for name, entry in new.items():
                     assert len(json.dumps(entry)) == self.NEW[name][0], name
+
+
+# Tools added after 0.14.2, left out of its growth figure.
+ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading")
 
 
 # ---------------------------------------------------------------------------
@@ -624,7 +654,12 @@ def test_the_lengths_the_documents_give_are_the_briefs():
     stated = re.findall(r"the brief's short version, ([\d,]+) characters",
                         entry)
     assert [int(s.replace(",", "")) for s in stated] == [short]
-    for where, text in (("CHANGELOG", entry), ("TOOLS", tools)):
+    # 0.14.2's figure for the full brief is history: v0.14.3 added a line
+    # (provisional) on reading a whole file, served the line on a fresh
+    # reading 0.14.2 held back, and shortened section 4's list
+    assert re.findall(r"full brief(?:, | \()about ([\d,]+) characters",
+                      entry) == ["12,100"]
+    for where, text in (("TOOLS", tools),):
         about = re.findall(r"full brief(?:, | \()about ([\d,]+) characters",
                            text)
         assert about, where

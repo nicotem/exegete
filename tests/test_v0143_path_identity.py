@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""0.14.3 (provisional): whether a path lies inside a folder is decided by
+"""0.14.3: whether a path lies inside a folder is decided by
 which folder it really is, not by comparing the paths as text.
 
 On a disk that ignores letter case (a Mac's usual disk, Windows), another

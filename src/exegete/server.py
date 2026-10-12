@@ -86,12 +86,15 @@ from .database import (
     nfc_ordered,
     position_safe as db_position_safe,
     read_project_pseudonyms,
+    MAX_TEXT_CONTENT_LENGTH,
     read_project_pseudonyms_with_raw,
     PSEUDONYMS_JSON_NAME,
 )
 from . import pseudonymise as pseudo
 from . import new_project
+from . import parts, reading, reading_folder
 from .path_identity import is_inside, is_inside_any
+from . import doc_import, doc_readers
 from .cursors import (
     CURSOR_MAX_LENGTH,
     CURSOR_TOO_LONG,
@@ -305,6 +308,9 @@ DEPRECATED_CASCADE = (
 DEPRECATED_OWNER = (
     "Deprecated, removed in v0.15: owner, which can only repeat the "
     "project's AI coder name.")
+DEPRECATED_IMPORT_SKIP_BACKUP = (
+    "Deprecated, removed in v0.15: create_backup=false; an import always "
+    "takes a backup first.")
 DEPRECATED_HELP_TOPICS = (
     "Deprecated, removed in v0.15: the topics analyze_for_coding, "
     "apply_codings, edit_suggestion and coding_style_guidance, which "
@@ -517,9 +523,7 @@ the researcher why; do not look for a way round it.
   two programs do not talk to each other: they meet only in the
   project.
 - Some researchers also use QualCoder, by choice or for what Exegete
-  does not do yet: bringing in documents other than text, reading a
-  whole file with its coding highlighted, and images, audio, video and
-  graphs.
+  does not do yet, among them images, audio, video and graphs.
 - Only one program should change a project at a time. Exegete refuses
   to write while QualCoder 3.8.2 has the project open; for QualCoder
   4.0 it can only see signs, so when a tool says the project may be
@@ -592,7 +596,10 @@ Each is stated in full by its tool:
 ## 10. Finding your way in the data
 
 - When the task concerns the researcher's existing codes, start from
-  them and their coded passages, which may be incomplete.
+  them and their coded passages, which may be incomplete. When the
+  researcher wants a fresh reading, read the file with
+  analyze_file_with_coding(without_codes=true), which leaves their
+  codings out, and tell them whether you have seen any.
 - For an overview, use the project summary and the lists of files and
   cases.
 - A search match is a lead, not a reading: read the passage in its
@@ -616,6 +623,11 @@ Each is stated in full by its tool:
   never shows it to you; do not try to infer it.
 - Where the researcher uses pseudonyms, use them, and never try to work
   out who someone is.
+- When the researcher wants to read a whole file, use
+  open_file_for_reading: it opens on their screen and its text stays off
+  the conversation. That page and the copies it opens are for the
+  researcher: never open, read or look at them with any tool, browser or
+  screenshot.
 
 ## 12. When to ask and when to act
 
@@ -830,6 +842,10 @@ TOOL_CHECKS_ONLINE = ToolAnnotations(readOnlyHint=False,
 # FastMCP sends no tool metadata of its own.
 TOOL_META = {
     "read_pseudonym_list": {"anthropic/requiresUserInteraction": True},
+    # import_documents (0.14.3): the researcher approves each
+    # import, the preview and then the import; Claude Code asks before
+    # both calls (the design's "Asking every time").
+    "import_documents": {"anthropic/requiresUserInteraction": True},
 }
 
 def _argument_name_for_display(name: Any) -> str:
@@ -1308,6 +1324,21 @@ def _resource_guard(fn):
             return _error_answer(fn.__name__, e,
                                  unexpected=UNEXPECTED_RESOURCE_ERROR)
     return wrapper
+
+
+def _projects_folder() -> Optional[str]:
+    """The folder set for projects, as a full path: where create_project
+    creates a project and copy_project_to_workspace copies one when no
+    folder is given (the desktop extension's "Folder for projects", or
+    the standard workspace). list_available_projects, get_current_project
+    and create_project give it as `projects_folder` (0.14.3: at the
+    maintainer's sitting the assistant announced the standard folder
+    while the extension's setting named another). None only for a
+    setting the server refuses to start with."""
+    try:
+        return str(default_workspace())
+    except ValueError:
+        return None
 
 
 def _host_set_workspace() -> Optional[str]:
@@ -3445,9 +3476,42 @@ def get_file_content(file_id: int) -> str:
     Returns the full text content of the file along with metadata.
     For non-text files (media), returns metadata only.
     """
+    return _file_content_part(file_id, 0)
+
+
+@mcp.resource(f"{names.RESOURCE_SCHEME}://files/{{file_id}}/from/{{start}}")
+@_resource_guard
+def get_file_content_from(file_id: int, start: int) -> str:
+    """A part of a long text file's content, from character `start`.
+
+    Long files come in parts (v0.14.3); the first part's `part` block
+    gives the address of the next.
+    """
+    return _file_content_part(file_id, start)
+
+
+def _file_content_part(file_id: int, start: Any) -> str:
+    """The file resource's answer: the whole content when it fits one
+    part, else the part from `start` with its `part` block."""
     file_data = get_db().get_file_content(file_id)
     if file_data is None:
         return json.dumps({"error": f"File with id {file_id} not found"})
+    whole = file_data.get("content") or ""
+    try:
+        start = int(start)
+    except (TypeError, ValueError):
+        start = -1
+    problem = parts.start_problem(start, len(whole))
+    if problem is not None:
+        return json.dumps({"error": problem})
+    end = parts.choose_end(whole, start)
+    if start > 0 or end < len(whole):
+        file_data["content"] = whole[start:end]
+        file_data["part"] = parts.part_block(
+            start, end, len(whole),
+            f"read {names.RESOURCE_SCHEME}://files/{file_id}/from/{end}, "
+            f"or call analyze_file_with_coding(file_id={file_id}, "
+            f"start={end}).")
     return _ai_json(file_data, indent=2)
 
 
@@ -3476,7 +3540,40 @@ def get_case_info(case_id: int) -> str:
     case = get_db().get_case_details(case_id)
     if case is None:
         return json.dumps({"error": f"Case with id {case_id} not found"})
+    _case_excerpts_in_parts(case)
     return _ai_json(case, indent=2)
+
+
+def _case_excerpts_in_parts(case: Dict[str, Any]) -> None:
+    """Keep a case's excerpts within one answer's budget (v0.14.3): a
+    case linked to whole files carries each file's whole text. Excerpts
+    are given in order until the budget is spent; the one that spends it
+    is cut, and it and every later one say where their text continues,
+    as a whole-file position to read from with analyze_file_with_coding."""
+    left = float(parts.BUDGET)
+    cut = False
+    for segment in case.get("text_segments") or []:
+        text = segment.get("text") or ""
+        start = int(segment.get("position_start") or 0)
+        if cut:
+            if text:
+                segment["text"] = ""
+                segment["text_continues_at"] = start
+            continue
+        costs = parts.Costs(text)
+        if costs.of(0, len(text)) <= left:
+            left -= costs.of(0, len(text))
+            continue
+        end = parts.choose_end(text, 0, budget=max(left, 1.0), costs=costs)
+        segment["text"] = text[:end]
+        segment["text_continues_at"] = start + end
+        cut = True
+    if cut:
+        case["parts_note"] = (
+            "The excerpts' text is cut to fit one answer. Each excerpt "
+            "marked text_continues_at continues there, a whole-file "
+            "position: call analyze_file_with_coding(file_id=..., "
+            "start=...) with it.")
 
 
 @mcp.resource(f"{names.RESOURCE_SCHEME}://journal")
@@ -3750,6 +3847,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
         if not projects:
             return json.dumps({
                 "projects": [],
+                "projects_folder": _projects_folder(),
                 "message": _mark_unregistered(_no_projects_message(
                     folders if search_directories else None,
                     searched["not_found"])),
@@ -3762,6 +3860,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
             "project_count": len(projects),
             "projects": projects,
             "current_project": current_project_path,
+            "projects_folder": _projects_folder(),
             "searched": searched,
         }, indent=2)
 
@@ -4564,6 +4663,7 @@ def get_current_project() -> str:
                 "current_project": None,
                 "message": "No project currently open. Use 'list_available_projects' "
                           "and 'select_project' to open one." + _mru_hint(),
+                "projects_folder": _projects_folder(),
                 "brief": BRIEF_REMINDER,
             }, indent=2)
 
@@ -4574,6 +4674,7 @@ def get_current_project() -> str:
             "project_name": project_display_name(current_project_path),
             "project_info": project_info,
             "schema": _schema_block(),
+            "projects_folder": _projects_folder(),
         }
         # The project's AI coder name, reported and never asked for (D7 4.4)
         result.update(_ai_coder_name_report())
@@ -4677,8 +4778,8 @@ def copy_project_to_workspace(
     """Copy a project folder (.qda) into the workspace to work on a copy.
 
     This is the recommended first step before any AI coding: work on a copy
-    in the workspace folder (~/Documents/Exegete projects/ unless the
-    host set another; the answer gives the path) so your
+    in the workspace folder (the folder set for projects:
+    get_current_project's projects_folder) so your
     original project is never touched. If a project with the same name
     already exists in the workspace, the copy gets a timestamped name.
 
@@ -6200,17 +6301,43 @@ def get_project_summary() -> str:
     return _ai_json(summary, indent=2)
 
 
+# A coding made in QualCoder whose positions are in its editor's count
+# (v0.14.3): an emoji counts as two, a Windows line break as one, a
+# byte-order mark at the start as none (parts.Positions). Its words are
+# found by that count and given beside the stored positions, which are
+# never moved: other tools use the positions as stored.
+QUALCODER_POSITIONS_NOTE = (
+    "Codings with text_start and text_end were made in QualCoder, which "
+    "counts positions differently (an emoji as two characters, a Windows "
+    "line break as one, a byte-order mark at the start as none): their "
+    "passage stands from text_start to text_end of this text. Quote it "
+    "from there; position_start and position_end are as stored, for "
+    "naming the coding to other tools.")
+# A coding whose stored passage is found by neither count (v0.14.3).
+STORED_PASSAGE_NOTE = (
+    "Codings marked stored_passage_differs have a stored passage that is "
+    "not the text at their positions, counted either as characters or as "
+    "QualCoder counts them. Quote the text at the positions, not the "
+    "stored passage, and say so if it matters.")
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 @_with_guidance(GROUNDING_READ, before="Args:")
-def analyze_file_with_coding(file_id: int) -> str:
+def analyze_file_with_coding(file_id: int, start: int = 0,
+                             without_codes: bool = False) -> str:
     """Return a text file's whole text with its coded segments.
 
     Read a file this way before suggesting codings for it, or to answer a
     question that needs the whole account rather than coded extracts.
+    A long file comes in parts (about 60,000 characters of English): the
+    result's `part` says where the next starts; ask again with that
+    `start`. Every position is a whole-file position, in every part.
 
     Args:
         file_id: The numeric ID of the file to analyse
+        start: Where the part begins, in characters (default 0)
+        without_codes: true for the text alone, for a fresh reading
 
     Returns:
         JSON object with:
@@ -6243,6 +6370,10 @@ def analyze_file_with_coding(file_id: int) -> str:
         return json.dumps({
             "error": f"File with id {file_id} not found"
         })
+    whole = result.get("full_text") or ""
+    problem = parts.start_problem(start, len(whole))
+    if problem is not None:
+        return json.dumps({"error": problem})
 
     # Non-text sources: say so explicitly — an empty full_text was
     # previously indistinguishable from a genuinely empty text file (track6)
@@ -6283,7 +6414,209 @@ def analyze_file_with_coding(file_id: int) -> str:
             "and codings written here may render shifted or unhighlighted "
             "in the QualCoder editor. Reports and exports are unaffected."
         )
+    if without_codes:
+        _leave_out_codes(result)
+    _in_parts(result, file_id, start, without_codes)
     return _ai_json(result, indent=2)
+
+
+# Reading without codes (v0.14.3; the owner's decision of 1
+# October 2026): a fresh reading meets nothing of the coding already
+# done. The file's memo describes the file and stays.
+WITHOUT_CODES_NOTE = (
+    "This is the file's text without its codings, codes and annotations, "
+    "for a fresh reading; the file's memo is kept. Tell the researcher "
+    "that you read it this way. Without without_codes, the codings come "
+    "as usual.")
+
+
+def _leave_out_codes(result: Dict[str, Any]) -> None:
+    """A whole-file read without codes: every coding, code and
+    annotation left out, and counted."""
+    segments = result.pop("coded_segments", None) or []
+    annotations = result.pop("annotations", None) or []
+    for key in ("codes_used", "codings_not_shown", "coder_visibility"):
+        result.pop(key, None)
+    result["statistics"] = {
+        "text_length": len(result.get("full_text") or "")}
+    result["without_codes"] = {
+        "codings_left_out": len(segments),
+        "annotations_left_out": len(annotations),
+        "note": WITHOUT_CODES_NOTE}
+
+
+def _in_parts(result: Dict[str, Any], file_id: int, start: int,
+              without_codes: bool = False) -> None:
+    """Cut a whole-file read to one part (v0.14.3). Each
+    coding found by QualCoder's count gets the place of its words
+    (`text_start`, `text_end`); each found by neither count is flagged.
+    A file that fits one part reads as before, these apart."""
+    whole = result.get("full_text") or ""
+    segments = result.get("coded_segments") or []
+    positions = parts.Positions(whole)
+    for segment in segments:
+        p0, p1, reading = parts.place_segment(whole, segment, positions)
+        if reading == "second":
+            segment["text_start"], segment["text_end"] = p0, p1
+        elif reading == "neither":
+            segment["stored_passage_differs"] = True
+    if any("text_start" in s for s in segments):
+        result["qualcoder_positions_note"] = QUALCODER_POSITIONS_NOTE
+    if any(s.get("stored_passage_differs") for s in segments):
+        result["stored_passage_note"] = STORED_PASSAGE_NOTE
+    end = parts.choose_end(whole, start, segments)
+    if start == 0 and end >= len(whole):
+        return
+    result.pop("full_text", None)
+    result["part_text"] = whole[start:end]
+    if "coded_segments" in result:
+        result["coded_segments"] = parts.overlapping(segments, start, end)
+    if "annotations" in result:
+        result["annotations"] = parts.overlapping(
+            result.get("annotations") or [], start, end)
+    again = ", without_codes=true" if without_codes else ""
+    result["part"] = parts.part_block(
+        start, end, len(whole),
+        f"call analyze_file_with_coding(file_id={file_id}, start={end}"
+        f"{again}).")
+
+
+# ============================================================================
+# READING A WHOLE FILE ON THE COMPUTER (v0.14.3)
+# ============================================================================
+
+def _suggestion_counts(file_id: int) -> Tuple[int, int]:
+    """(pending, approved and not yet applied) suggestions for a file,
+    across this project's coding sessions."""
+    pending = approved = 0
+    try:
+        listed = session_manager.list_sessions(
+            project_path=current_project_path, days_old=36500)
+    except Exception:
+        return 0, 0
+    for meta in listed:
+        try:
+            session = session_manager.load_session(meta["coding_session_id"])
+        except Exception:
+            continue
+        for suggestion in session.get_suggestions_by_file(file_id):
+            if suggestion.status == "pending":
+                pending += 1
+            elif suggestion.status == "approved":
+                approved += 1
+    return pending, approved
+
+
+def _forget_reading_copies(file_ids: Optional[Sequence[int]] = None
+                           ) -> None:
+    """Remove the reading copies and copies of originals Exegete wrote
+    for these files, or for the whole open project when `file_ids` is
+    None, after a write changed their text or name (v0.14.3,
+    decision 6): a copy written before a file was pseudonymised would
+    otherwise keep the real names. Never fails the write that called it."""
+    try:
+        project = _current_project_folder()
+        if file_ids is None:
+            reading_folder.forget_project(project)
+        else:
+            for file_id in file_ids:
+                reading_folder.forget_file(project, int(file_id))
+    except Exception as e:
+        logger.warning("Could not tidy the reading folder: %s",
+                       error_label(e))
+
+
+@mcp.tool(annotations=TOOL_ADDS)
+@_tool_guard
+def open_file_for_reading(file_id: int, show: str = "reading_copy",
+                          without_codes: bool = False) -> str:
+    """Let the researcher read a whole file on their own computer; its text
+    does not pass through the conversation. Call this only when the
+    researcher asks to read or see a file.
+
+    show="reading_copy" (the default) writes a web page with the file's
+    full text and its codings (each passage in its code's colour and
+    named), a list of the codes, and the annotations and the public part
+    of memos as notes, then opens it in the researcher's browser;
+    with without_codes=true, the text alone, for a fresh reading.
+    show="original" opens a read-only copy of the document as it was
+    imported, in its own app. show="in_folder" shows that copy in Finder
+    or File Explorer (on a Mac, the space bar then gives Quick Look).
+
+    The answer is the page's location and counts, never the text. The
+    page is for the researcher: do not open it, read it or look at it
+    with any tool, browser or screenshot. The original has no codings and
+    is not pseudonymised. Takes a file id, never a path.
+
+    Args:
+        file_id: The file's numeric id
+        show: "reading_copy" (default), "original" or "in_folder"
+        without_codes: true for a page with no codings, codes or
+            annotations (default false); an original never has codings
+    """
+    if show not in reading.SHOW_CHOICES:
+        return json.dumps({"error": "show must be 'reading_copy', "
+                                    "'original' or 'in_folder'."})
+    db_ = get_db()
+    refusal = _refuse_unknown_id(db_, "file", file_id, "file_id")
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
+    project = _current_project_folder()
+    data = db_.get_file_with_coding(file_id)
+    info = data["file_info"]
+    mediapath = db_.conn.execute("SELECT mediapath FROM source WHERE id = ?",
+                                 (file_id,)).fetchone()[0]
+    result: Dict[str, Any] = {"file_id": file_id, "file_name": info["name"]}
+    try:
+        if show != "reading_copy":
+            source, why = reading.original_source(project, mediapath)
+            if source is not None:
+                copy = reading.copy_original(project, file_id, source)
+                result.update({"shown": show, "location": str(copy),
+                               "note": reading.COPY_NOTE})
+                result.update(reading.present(
+                    copy, "open" if show == "original" else "show",
+                    own_page=False))
+                return json.dumps(result, indent=2)
+            if why != "no_original":
+                result.update({"shown": "nothing", "note": (
+                    why + " " + reading.READING_COPY_OFFER)})
+                return json.dumps(result, indent=2)
+            result["note"] = ("The project records no original for this "
+                              "file (its text may have been typed or "
+                              "pasted in), so the reading copy is shown "
+                              "instead.")
+        pending, approved = _suggestion_counts(file_id)
+        counts = db_.non_text_coding_counts(file_ids=[file_id])
+        no_text = None
+        if info.get("unusable_pdf"):
+            no_text = info["unusable_pdf"].get("message")
+        elif not info.get("is_text", True):
+            no_text = (f"This file is {info.get('type', 'media')}, with no "
+                       f"text; ask for the original to see it.")
+        visibility = _coder_visibility_note()
+        path, page_counts = reading.write_reading_copy(
+            project, file_id, project_name=project_display_name(
+                current_project_path),
+            file_name=info["name"] or f"file {file_id}",
+            text=data["full_text"] or "",
+            segments=data["coded_segments"],
+            annotations=data["annotations"], file_memo=info.get("memo"),
+            written_at=reading.now(),
+            coder_note=("Codings by coders hidden in QualCoder are not "
+                        "shown, as in QualCoder." if visibility else None),
+            not_drawn={"region": counts.get("region", 0),
+                       "audio_video": counts.get("audio_video", 0)},
+            suggestions_pending=pending, suggestions_approved=approved,
+            no_text_reason=no_text, version=_package_version,
+            without_codes=bool(without_codes))
+        result.update({"shown": "reading_copy", "location": str(path),
+                       "counts": page_counts})
+        result.update(reading.present(
+            path, "open" if show != "in_folder" else "show", own_page=True))
+    except (reading.ReadingRefusal, reading_folder.ReadingFolderError) as exc:
+        return json.dumps({"error": str(exc)}, indent=2)
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_READS)
@@ -9377,6 +9710,8 @@ def apply_codings(
 @_tool_guard
 @_deprecated(DEPRECATED_OWNER, before="Args:",
              when=lambda a: a.get("owner") is not None)
+@_deprecated(DEPRECATED_IMPORT_SKIP_BACKUP, before="Args:",
+             when=lambda a: a.get("create_backup") is False)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def import_text_file(
     filename: str,
@@ -9387,20 +9722,21 @@ def import_text_file(
     case_name: Optional[str] = None,
     apply_project_pseudonyms: bool = False
 ) -> str:
-    """Import text content as a new source file in the project.
+    """Import text typed or pasted in the conversation as a new text file.
 
-    Creates a new text source file in the project database, similar to
-    QualCoder's "Create text file" feature. The file joins the project's
-    documents, ready for coding here or in QualCoder.
+    The text passes through the conversation, so it reaches the AI
+    provider. For a document on the researcher's computer use
+    import_documents, which keeps its text off the conversation. At most
+    1,000,000 characters. Like QualCoder's "Create text file": the file
+    joins the project's documents, ready for coding here or in QualCoder.
 
     Optionally links the new file to an existing case (participant) in the
     same transaction; without a case link the file is invisible to every
     case-based analysis (matrices, case reports). You can also link later
     with link_file_to_case.
 
-    IMPORTANT: work on a project in the workspace
-    (~/Documents/Exegete projects/ unless the host set another), or on a
-    copy there.
+    IMPORTANT: work on a project in the workspace (the folder set for
+    projects: get_current_project gives it), or on a copy there.
 
     Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
@@ -9419,7 +9755,8 @@ def import_text_file(
         owner: Deprecated (above). Only the project's AI coder name is
                accepted, as a no-op; any other value is refused before
                backup or write (set_project_ai_coder_name changes it)
-        create_backup: Create timestamped backup before writing (default: True)
+        create_backup: Create timestamped backup before writing (default:
+                       True; false is deprecated, above)
         case_name: Optional existing case to link the new file to.
                    The same name after spacing and Unicode form are
                    normalised is used first; otherwise one that differs
@@ -9610,6 +9947,9 @@ def import_text_file(
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
                 committed = True
+                # A new file can take the id of one deleted in QualCoder:
+                # no page written for that file stands for this one.
+                _forget_reading_copies([result["id"]])
             except DatabaseLockedError as e:
                 # The same two post-backup routes as `_perform_write`'s,
                 # answered here so the backup is named (v0.13 A5, QA
@@ -9665,6 +10005,619 @@ def import_text_file(
             prefix="backup_")
 
     return json.dumps(output, indent=2)
+
+
+# ============================================================================
+# DOCUMENT IMPORT (0.14.3): import_documents
+# ============================================================================
+
+IMPORT_DOCUMENTS_ADVICE_NAMES = (
+    " Correct the list (in QualCoder, the Pseudonyms button in Manage "
+    "Files), then ask again. "
+    "The import applies the list as the text comes in, so it cannot go "
+    "ahead with a list it cannot read.")
+
+
+def _import_owner_stop() -> Optional[str]:
+    """Why the import could not record an owner, without writing anything
+    (the preview writes nothing; `_resolve_write_owner` may settle an
+    earlier file)."""
+    state = read_sidecar(_current_project_folder())
+    if state.status == SIDECAR_UNREADABLE:
+        return unreadable_message(state.path)
+    if state.status == SIDECAR_NEWER_FORMAT:
+        return newer_format_message(state.path)
+    if not state.is_set:
+        return _ask_refusal(owner_supplied=False)["error"]
+    declared = host_declaration()
+    if ai_coder_name_mismatch(declared, state.entry):
+        return _mismatch_refusal(state.name, declared)["error"]
+    return None
+
+
+def _import_names_list(apply: bool, folder: Path):
+    """(state, entries, compiled, canonical, stop, name_check) for the
+    project's names list. An empty list counts as none, as in QualCoder; a
+    list the engine cannot use stops the import, and turning pseudonyms
+    off is never offered as the way round. Such a list still holds names
+    (QualCoder's Pseudonyms dialog saves a name with a space at its end,
+    a pseudonym with an emoji, or a chain, which Exegete refuses), so its
+    names are read for the file-name check alone (`name_check`), and when
+    none can be read every name is hidden: the preview of an import the
+    list stops shows no listed name either."""
+    if not apply:
+        return "off", 0, None, None, None, None
+    if not os.path.lexists(str(folder / PSEUDONYMS_JSON_NAME)):
+        return "none", 0, None, None, None, None
+    entries = None
+    try:
+        entries, _encoding = read_project_pseudonyms(folder)
+        if not entries:
+            return "empty", 0, None, None, None, None
+        validated = pseudo.validate_mapping(entries, "exact",
+                                            may_echo_names=False)
+    except FileNotFoundError:
+        return "none", 0, None, None, None, None
+    except (ValueError, OSError, RuntimeError) as e:
+        return ("unusable", 0, None, None,
+                _pseudonyms_json_error(e, IMPORT_DOCUMENTS_ADVICE_NAMES),
+                _unusable_names_check(entries))
+    return ("entries", len(validated.entries), pseudo.Compiled(validated),
+            pseudo.canonical_mapping(validated), None, None)
+
+
+def _unusable_names_check(entries):
+    """What file and folder names are checked against when the names list
+    cannot be used: the names in it, each trimmed, that can be read as
+    names (originals and variants of at least the list's shortest), or,
+    when there are none, every name."""
+    forms = []
+    for entry in entries if isinstance(entries, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        values = [entry.get("original")]
+        variants = entry.get("variants")
+        if isinstance(variants, list):
+            values += variants
+        for value in values:
+            if isinstance(value, str):
+                value = value.strip()
+                if len(value) >= pseudo.MIN_ORIGINAL_CHARS:
+                    forms.append(value)
+    if forms:
+        try:
+            return doc_import.OriginalsOnly(forms)
+        except Exception:
+            pass
+    return doc_import.EveryName()
+
+
+def _optional_formats_available() -> frozenset:
+    """The optional part's formats this install can read: PDF with
+    PyMuPDF, EPUB with EbookLib (and the lxml it needs)."""
+    import importlib.util
+    available = set()
+    if importlib.util.find_spec("pymupdf") is not None:
+        available.add(doc_readers.PDF)
+    if (importlib.util.find_spec("ebooklib") is not None
+            and importlib.util.find_spec("lxml") is not None):
+        available.add(doc_readers.EPUB)
+    return frozenset(available)
+
+
+def _reading_folder_root() -> Optional[Path]:
+    """Exegete's reading folder (decision 6), refused as a source."""
+    from . import reading_folder
+    try:
+        return Path(reading_folder.root())
+    except Exception:
+        return None
+
+
+def _import_context(project_folder: Path, apply_pseudonyms: bool,
+                    pdfs_with_names: bool, file_names_with_names: bool,
+                    memo: str, garbled_letters: bool = False):
+    (state, count, compiled, canonical, names_stop,
+     name_check) = _import_names_list(apply_pseudonyms, project_folder)
+    db = get_db()
+    rows = db.conn.execute("SELECT name, mediapath FROM source").fetchall()
+    caps = getattr(db, "capabilities", None)
+    ctx = doc_import.Context(
+        project_folder=project_folder,
+        source_names={r["name"]: r["mediapath"] for r in rows},
+        documents_listing=db.documents_listing(),
+        refused_places=[
+            ("project", project_folder),
+            ("state_folder", preview_tokens_state_home()),
+            ("state_folder", preview_tokens_old_state_home()),
+            ("reading_folder", _reading_folder_root())],
+        compiled=compiled, name_check=name_check, names_list=state,
+        names_list_entries=count,
+        names_list_canonical=canonical,
+        optional_available=_optional_formats_available(),
+        # A project QualCoder 4.0 has not opened: no sub-codes column
+        # (schema v16). QualCoder 3.8.2 makes and keeps its projects at
+        # v14, with the coder visibility of every project from v14 on,
+        # so visibility cannot tell the two apart.
+        qc382=caps is not None and not caps.has_supercid,
+        pdfs_with_listed_names=pdfs_with_names,
+        file_names_with_listed_names=file_names_with_names,
+        files_with_garbled_letters=garbled_letters,
+        max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo)
+    return ctx, names_stop
+
+
+def _folder_megabytes(folder: Path) -> float:
+    total = 0
+    for root, _dirs, files in os.walk(folder):
+        for name in files:
+            try:
+                total += os.lstat(os.path.join(root, name)).st_size
+            except OSError:
+                pass
+    return round(total / (1024 * 1024), 1)
+
+
+def _import_backup_note(project_folder: Path, adding_bytes: int):
+    backups = [b for b in _collect_backups(project_folder)
+               if b["kind"] == "mcp"]
+    return {"backup": "one backup of the whole project is taken first, "
+                      "before anything is written",
+            "backup_size_mb": _folder_megabytes(project_folder),
+            "backups_already_take_mb": round(
+                sum(b["size_mb"] for b in backups), 1),
+            "this_batch_adds_mb": round(adding_bytes / (1024 * 1024), 1),
+            "backup_tip": "Each import takes a backup of the whole "
+                          "project, originals included, so bringing "
+                          "several files in at once keeps backups few."}
+
+
+def _import_arguments_error(paths, memo) -> Optional[str]:
+    if (not isinstance(paths, list) or not paths
+            or len(paths) > doc_import.MAX_PATHS):
+        return (f"paths must be a list of 1 to {doc_import.MAX_PATHS} full "
+                f"paths, each to a file or a folder; nothing was done.")
+    for given in paths:
+        if (not isinstance(given, str) or not given.strip()
+                or len(given) > 4096 or "\x00" in given):
+            return ("Each of paths must be a full path to a file or a "
+                    "folder; nothing was done.")
+    if not isinstance(memo, str):
+        return "memo must be text; nothing was done."
+    if len(memo) > doc_import.MAX_MEMO:
+        return (f"memo is too long ({len(memo)} characters; limit "
+                f"{doc_import.MAX_MEMO}); nothing was done.")
+    return None
+
+
+# How the line for a project with no names list, or an empty one, opens.
+IMPORT_NO_LIST_LEAD = {"none": "This project has no names list",
+                       "empty": "This project's names list is empty"}
+IMPORT_DONE_LINES = {
+    "take_back": ("If any of these is the wrong file, say so now: restoring "
+                  "the backup taken just before ({backup}) takes the import "
+                  "back, and nothing else has changed yet."),
+    "corrections": ("The project keeps its own copy. Changes you make "
+                    "later to the file on your computer do not reach the "
+                    "project, so correct transcripts before you start "
+                    "coding them."),
+    "owner": ("The files are recorded under the AI coder name '{owner}': it "
+              "records who brought them in, on your word."),
+    # Said after an import into a project with no names list ("none") or
+    # an empty one: a list made after the import changes nothing already
+    # stored, so it names only the two ways that do replace the names.
+    "no_list": ("{lead}, so the names in these files came in as written, "
+                "and a list made now does not change them. If these "
+                "documents name participants, replace the names before the "
+                "assistant reads them: run pseudonymise_source on each file "
+                "(with the names given in the call, or with the project's "
+                "names list once it is made), or restore the backup taken "
+                "just before, make the list (in QualCoder for now), and "
+                "import again."),
+    # Beside it, when the batch held a PDF: pseudonymise_source refuses a
+    # PDF, and an import with the list holds one back rather than
+    # replacing its names.
+    "no_list_pdf": ("Names in a PDF are not replaced either way: "
+                    "pseudonymise_source does not rewrite a PDF, and with "
+                    "the list made, an import holds back a PDF that names "
+                    "people from it."),
+    "pdf_names": ("A PDF brought in names people from your list: its names "
+                  "will reach the AI provider on every later read, search or "
+                  "coding excerpt of that file."),
+    "garbled": ("A file whose letters look garbled came in as it is, as "
+                "you said: a name written with garbled letters is not "
+                "matched by a names list, so it reaches the AI provider "
+                "whenever that file is read."),
+    "file_name_names": ("A file came in under a name that holds a name from "
+                        "your list, as you said: that name reaches the AI "
+                        "provider whenever an answer names the file, and "
+                        "the project's copy of the original keeps it."),
+    "prune": ("The project's backups now take about {size} MB; "
+              "prune_backups removes old ones."),
+    "pdf_release": ("QualCoder 4.0 checks a PDF's stored text against its "
+                    "own reading of the PDF, which can differ with another "
+                    "release of the PDF library (PyMuPDF; this import used "
+                    "{version}). If QualCoder reports a text mismatch and "
+                    "offers to restructure, which rewrites the text and "
+                    "moves codings by searching for their passages, take a "
+                    "backup and check the codings before you accept."),
+}
+PRUNE_MENTION_MB = 500
+# QualCoder 4.0 writes no lock file, so the signs that it may have the
+# project open (`qualcoder_gui_signals`) are passed on in the import's
+# preview as a warning, never a refusal, as the other write tools'
+# previews pass them on; only QualCoder 3.8.2's lock refuses the import.
+IMPORT_GUI_HINT = (
+    "This project appears to be open in QualCoder ({signs}). That is a "
+    "heuristic (QualCoder 4.0 writes no lock file), so ask the researcher "
+    "whether a QualCoder window has this project open, and import only "
+    "once it is closed: a write into a live QualCoder 4.0 session can be "
+    "lost or corrupted, and an open window does not show the new files "
+    "until the project is reopened there.")
+
+
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
+@_tool_guard
+def import_documents(
+    paths: List[str],
+    preview_token: Optional[str] = None,
+    apply_project_pseudonyms: bool = True,
+    import_pdfs_with_listed_names: bool = False,
+    import_file_names_with_listed_names: bool = False,
+    import_files_with_garbled_letters: bool = False,
+    show_text: bool = False,
+    memo: str = ""
+) -> str:
+    """Bring documents from the researcher's computer into the selected project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
+
+    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
+
+    Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The names list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
+
+    Refused or kept out, saying why: while QualCoder 3.8.2 has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
+
+    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
+
+    Args:
+        paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
+        preview_token: from the preview, for the import
+        apply_project_pseudonyms: default true
+        import_pdfs_with_listed_names: true on the researcher's word
+        import_file_names_with_listed_names: true on the researcher's word
+        import_files_with_garbled_letters: true on the researcher's word
+        show_text: preview only; opens the garbled-looking files' text on the researcher's screen
+        memo: a note for every file; at most 10,000 characters
+    """
+    # Each call's reading time is counted from here (doc_import's
+    # PREVIEW_SECONDS and IMPORT_SECONDS).
+    call_started = doc_import.clock()
+    error = _import_arguments_error(paths, memo)
+    if error is None:
+        marker = private_marker_refusal(memo, "memo")
+        if marker is not None:
+            error = marker
+    if error is not None:
+        return json.dumps({"error": error}, indent=2)
+    _adopt_configured_project()
+    if current_project_path is None:
+        return json.dumps({"error": _no_project_message()}, indent=2)
+    project_folder = _current_project_folder()
+    ctx, names_stop = _import_context(
+        project_folder, apply_project_pseudonyms,
+        import_pdfs_with_listed_names, import_file_names_with_listed_names,
+        memo, bool(import_files_with_garbled_letters))
+    ctx.call_started = call_started
+    stops = []
+    gate = _write_gate_error()
+    if gate is not None:
+        stops.append(gate["error"])
+    owner_stop = _import_owner_stop()
+    if owner_stop is not None:
+        stops.append(owner_stop)
+    if names_stop is not None:
+        stops.append(names_stop)
+    documents_stop = doc_import.documents_folder_problem(project_folder)
+    if documents_stop is not None:
+        stops.append(documents_stop)
+    token_args = canonical_args(
+        "import_documents", paths=paths,
+        apply_project_pseudonyms=apply_project_pseudonyms,
+        import_pdfs_with_listed_names=import_pdfs_with_listed_names,
+        import_file_names_with_listed_names=(
+            import_file_names_with_listed_names),
+        import_files_with_garbled_letters=import_files_with_garbled_letters,
+        memo=memo)
+    if preview_token is None:
+        # show_text is the preview's alone: it writes a page for the
+        # researcher and decides nothing the token binds.
+        return _import_documents_preview(paths, ctx, stops, token_args,
+                                         bool(show_text))
+    if stops:
+        return json.dumps({"error": " ".join(stops),
+                           "nothing_changed": True}, indent=2)
+    return _import_documents_write(paths, ctx, token_args, preview_token,
+                                   project_folder)
+
+
+def _import_documents_preview(paths, ctx, stops, token_args,
+                              show_text: bool = False) -> str:
+    result = doc_import.survey(paths, ctx)
+    adding = sum(i.size for i in result.items if i.status == "ready")
+    preview = doc_import.preview_answer(
+        result, ctx, stops,
+        _import_backup_note(ctx.project_folder, adding))
+    page = _import_page_to_check(result, ctx) if show_text else None
+    signals = qualcoder_gui_signals(ctx.project_folder)
+    preview["qualcoder_gui_signals"] = signals
+    if signals:
+        preview["qualcoder_gui_hint"] = IMPORT_GUI_HINT.format(
+            signs="; ".join(signals))
+    ready = [i for i in result.items if i.status == "ready"]
+    if stops or not ready:
+        preview["nothing_to_import"] = (
+            "No import can be made from this preview: "
+            + ("what stops the import comes first above." if stops else
+               "no file is ready."))
+        if page is not None:
+            preview["page_to_check"] = page
+        return json.dumps(preview, indent=2, ensure_ascii=False)
+    try:
+        payload = _issue_preview(
+            "import_documents", token_args, preview, [],
+            "Show the researcher the summary, the names list line and "
+            "every warning, and wait for their word before calling again "
+            "with the token.",
+            {"paths": list(paths),
+             "apply_project_pseudonyms": token_args[
+                 "apply_project_pseudonyms"],
+             "import_pdfs_with_listed_names": token_args[
+                 "import_pdfs_with_listed_names"],
+             "import_file_names_with_listed_names": token_args[
+                 "import_file_names_with_listed_names"],
+             "import_files_with_garbled_letters": token_args[
+                 "import_files_with_garbled_letters"],
+             "memo": token_args["memo"]},
+            state_preview=result.fingerprint(ctx))
+    except PreviewSecretUnavailable:
+        return json.dumps(
+            _token_error("preview_secret_unavailable", "import_documents"))
+    doc_import.remember_outcomes(payload["preview_token"], result)
+    # The preview's own order first (what stops it, the summary line, the
+    # names list, ...), then the token and how to use it.
+    answer = dict(payload.pop("preview"))
+    if page is not None:
+        answer["page_to_check"] = page
+    answer.update(payload)
+    return json.dumps(answer, indent=2, ensure_ascii=False)
+
+
+def _import_page_to_check(result, ctx):
+    """show_text: the page on which the researcher checks letters that
+    look garbled before deciding (the owner's ruling of 7 October 2026),
+    written into the reading folder's previews and opened; its location
+    and counts, never the text."""
+    from . import import_page
+    files = [item for item in result.items
+             if item.check_text is not None
+             and item.status in ("held", "ready")]
+    if not files:
+        return ("No file in this batch has letters that look garbled, so "
+                "no page was written.")
+    entries = [{"label": item.name or item.disk_name,
+                "seen": import_page.seen_line(item.numbers),
+                "text": item.check_text, "places": item.check_places}
+               for item in files]
+    try:
+        html = import_page.build(entries, reading.now(), _package_version)
+        path = reading_folder.write_page(
+            reading_folder.previews_folder(ctx.project_folder),
+            import_page.PAGE_NAME, html)
+        shown: Dict[str, Any] = {"location": str(path),
+                                 "files": len(entries)}
+        shown.update(reading.present(path, "open", own_page=True))
+    except (reading.ReadingRefusal, reading_folder.ReadingFolderError,
+            OSError) as exc:
+        return {"not_written_because": str(exc)}
+    shown["note"] = import_page.FOR_THE_ASSISTANT
+    return shown
+
+
+def _import_documents_write(paths, ctx, token_args, preview_token,
+                            project_folder) -> str:
+    result = doc_import.survey(paths, ctx, read_texts=False)
+    # The files the preview held back or refused after reading them are
+    # skipped as it said; the token's state binds that list too.
+    doc_import.apply_outcomes(result, preview_token)
+    state = fingerprint_rows(result.fingerprint(ctx), [])
+    try:
+        outcome = verify(preview_token, "import_documents", token_args,
+                         _token_project(), state)
+    except PreviewSecretUnavailable:
+        return json.dumps(
+            _token_error("preview_secret_unavailable", "import_documents"))
+    if outcome != OK:
+        return json.dumps(_token_error(outcome, "import_documents"))
+    owner, owner_error = _resolve_write_owner()
+    if owner_error is not None:
+        return json.dumps(owner_error, indent=2)
+    if not any(i.status == "ready" for i in result.items):
+        return json.dumps({"error": "No file in this batch is ready to "
+                                    "import; nothing was changed.",
+                           "nothing_changed": True}, indent=2)
+    lock_error = _write_gate_error()
+    if lock_error is not None:
+        return json.dumps(lock_error)
+    write_db = get_db(read_only=False)
+    backup_path = None
+    committed = False
+    written = doc_import.Written()
+    taken: List[Any] = []
+    try:
+        with hold_project_lock(project_folder) as lock_held:
+            doc_import.sweep_temporary_copies(project_folder / "documents")
+            try:
+                backup_path = write_db.backup_before_write()
+            except Exception as e:
+                logger.error("Failed to create backup: %s", error_label(e))
+                return json.dumps({
+                    "error": _backup_failed_text(
+                        isinstance(e, DatabaseLockedError),
+                        isinstance(e, BackupWithoutDatabaseError)),
+                    "message": "Aborting to protect your data."})
+            try:
+                taken = doc_import.write_batch(
+                    write_db.insert_imported_document, result, ctx, owner,
+                    written)
+                if not taken:
+                    return json.dumps(_with_backup({
+                        "error": "No file was imported: every file was held "
+                                 "back or refused when read again.",
+                        "nothing_changed": True}, backup_path), indent=2)
+                _recheck_lock_before_commit(project_folder, lock_held)
+                write_db.conn.commit()
+                committed = True
+                doc_import.forget_outcomes(preview_token)
+                # The preview's page to check letters on has done its
+                # work.
+                try:
+                    reading_folder.forget_previews(project_folder)
+                except Exception as e:
+                    logger.warning("Could not remove the preview page: %s",
+                                   error_label(e))
+                # QualCoder gives a new file the highest id plus one, so
+                # an id can be one a file deleted in QualCoder had: a page
+                # written for that file must not stand for the new one.
+                _forget_reading_copies([item.numbers["file_id"]
+                                        for item in taken])
+            except doc_import.BatchFailed as e:
+                failure = doc_import.BATCH_FAILURES.get(
+                    e.code, doc_import.BATCH_FAILURES["not_copied"])
+                if e.file:
+                    failure += f" The file: {e.file}."
+                return json.dumps(_with_backup({
+                    "error": failure, "nothing_changed": True},
+                    backup_path), indent=2, ensure_ascii=False)
+            except DatabaseLockedError as e:
+                return json.dumps(_with_backup({"error": str(e)},
+                                               backup_path))
+            except (ValueError, TypeError) as e:
+                return json.dumps(_with_backup({"error": str(e)},
+                                               backup_path))
+            except sqlite3.Error as e:
+                logger.error("SQLite error during the document import: %s",
+                             error_label(e))
+                return json.dumps(_with_backup(
+                    {"error": _write_failed_text(
+                        _rollback_if_open(write_db),
+                        "no file was imported", e)}, backup_path))
+    finally:
+        if not committed:
+            _rollback_if_open(write_db)
+            written.remove_all()
+        _downgrade_to_readonly()
+    return json.dumps(_import_done_answer(result, taken, ctx, owner,
+                                          backup_path, written),
+                      indent=2, ensure_ascii=False)
+
+
+def _pymupdf_version() -> Optional[str]:
+    try:
+        from importlib.metadata import version
+        return version("pymupdf")
+    except Exception:
+        return None
+
+
+def _import_done_answer(result, taken, ctx, owner, backup_path,
+                        written) -> Dict[str, Any]:
+    """What the import answers: each file's id, name, length and
+    warnings, the names replaced, the backup; then the lines for the
+    assistant to show. Never the text."""
+    files = []
+    for item in taken:
+        entry = doc_import.file_entry(item)
+        entry["file_id"] = item.numbers["file_id"]
+        entry["name"] = entry.pop("file")
+        files.append(entry)
+    later = (result.left_for_later(doc_import.NOT_IMPORTED_THIS_TIME)
+             + result.left_for_later(doc_import.NOT_READ_THIS_TIME))
+    message = (f"{len(taken)} file{'s' if len(taken) != 1 else ''} "
+               f"imported, each original copied into the project's folder "
+               f"of originals.")
+    if later:
+        message += (f" {len(later)} more {'were' if len(later) != 1 else 'was'}"
+                    f" not imported this time (below).")
+    # The files over the batch's cap, which the preview counted: said in
+    # the message too, so the batch is never taken for the whole folder.
+    over_the_cap = result.left_for_later("")
+    if over_the_cap:
+        message += (f" {len(over_the_cap)} more in the folder "
+                    f"{'are' if len(over_the_cap) != 1 else 'is'} for the "
+                    f"next batch (below).")
+    answer: Dict[str, Any] = {
+        "success": True,
+        "message": message,
+        "files": files,
+    }
+    if ctx.names_list == "entries":
+        answer["names_replaced"] = sum(i.replacements for i in taken)
+    held_now = [i for i in result.items if i.status == "held"]
+    refused_now = [i for i in result.items if i.status == "refused"]
+    if held_now:
+        answer["held_back"], steps = doc_import.held_back_entries(held_now)
+        if steps:
+            answer["saving_a_copy_as_utf8"] = steps
+    if refused_now or result.path_refusals:
+        # Refused at the preview, as it said: each named, with its reason.
+        answer["not_imported"] = (
+            [{"path": r["given"],
+              "reason": doc_import.words.PATH_REFUSALS.get(
+                  r["code"], doc_import.words.PATH_REFUSALS["unreadable"])}
+             for r in result.path_refusals]
+            + [{"file": doc_import.item_label(i),
+                "reason": doc_import.refusal_words(i)} for i in refused_now])
+    if later:
+        # Left for the next call by this call's time or the preview's
+        # (provisional, 0.14.3): what was done, and how to go on.
+        answer["not_imported_this_time"] = {
+            "files": [doc_import.item_label(i) for i in later],
+            "note": doc_import.not_imported_note(len(later)),
+        }
+    if over_the_cap:
+        answer["not_taken_this_time"] = doc_import.not_taken_note(
+            len(over_the_cap))
+    if any(i.kind == doc_readers.PDF for i in taken):
+        answer["pymupdf_version"] = _pymupdf_version()
+    if written.marks_lost:
+        answer["internet_origin_marks_not_carried"] = written.marks_lost
+    backup_name = Path(backup_path).name if backup_path else "none"
+    lines = [IMPORT_DONE_LINES["take_back"].format(backup=backup_name),
+             IMPORT_DONE_LINES["corrections"],
+             IMPORT_DONE_LINES["owner"].format(owner=owner)]
+    if any(i.kind == doc_readers.PDF and i.numbers.get("listed_count")
+           for i in taken):
+        lines.append(IMPORT_DONE_LINES["pdf_names"])
+    if any(i.listed_name_in_name for i in taken):
+        lines.append(IMPORT_DONE_LINES["file_name_names"])
+    if any(i.check_text is not None for i in taken):
+        lines.append(IMPORT_DONE_LINES["garbled"])
+    if any(i.kind == doc_readers.PDF for i in taken):
+        lines.append(IMPORT_DONE_LINES["pdf_release"].format(
+            version=answer.get("pymupdf_version") or "unknown"))
+    if ctx.names_list in ("none", "empty"):
+        lines.append(IMPORT_DONE_LINES["no_list"].format(
+            lead=IMPORT_NO_LIST_LEAD[ctx.names_list]))
+        if any(i.kind == doc_readers.PDF for i in taken):
+            lines.append(IMPORT_DONE_LINES["no_list_pdf"])
+    backups = [b for b in _collect_backups(ctx.project_folder)
+               if b["kind"] == "mcp"]
+    size = round(sum(b["size_mb"] for b in backups))
+    if size >= PRUNE_MENTION_MB:
+        lines.append(IMPORT_DONE_LINES["prune"].format(size=size))
+    answer["for_the_researcher"] = lines
+    if backup_path:
+        answer["backup_path"] = str(backup_path)
+    return answer
 
 
 @mcp.tool(annotations=TOOL_ADDS)
@@ -10806,6 +11759,7 @@ def restore_backup(backup_path: str,
         return json.dumps(failed)
 
     switch_project(current_project_path)
+    _forget_reading_copies()
 
     result = {
         "success": True,
@@ -11061,6 +12015,82 @@ def cleanup_old_sessions(days_old: int = 30) -> str:
         logger.error("Error in cleanup_old_sessions: %s", error_label(e))
         return json.dumps({"error": error_text(e)})
 
+
+
+# The pandoc defaults file the converted_documents topic names (0.14.3,
+# decision 3): two lines, checked against this digest before
+# its place is given, so a file changed on the disk is never named.
+PANDOC_DEFAULTS_NAME = "pandoc-defaults.yaml"
+PANDOC_DEFAULTS_SHA256 = (
+    "b4d754a14793defdc74218602a5550f2e853756c60c61e35f571f5a4904d80d6")
+
+
+def _pandoc_defaults_place() -> Optional[str]:
+    """The defaults file's place in the installed package, if its
+    contents are Exegete's own."""
+    path = Path(__file__).resolve().parent / PANDOC_DEFAULTS_NAME
+    try:
+        if path.is_symlink() or not path.is_file():
+            return None
+        data = path.read_bytes()[:4096]
+    except OSError:
+        return None
+    # A checkout that turns line endings into Windows' own (git's
+    # autocrlf) holds the same two lines; pandoc reads either.
+    data = data.replace(b"\r\n", b"\n")
+    if hashlib.sha256(data).hexdigest() != PANDOC_DEFAULTS_SHA256:
+        return None
+    return str(path)
+
+
+def _converted_documents_help() -> Dict[str, Any]:
+    place = _pandoc_defaults_place()
+    return {
+        "title": "Bringing in a document converted by another tool, such "
+                 "as a pandoc server",
+        "why": "Exegete reads Word, OpenDocument, RTF, web page, Markdown, "
+               "plain text and subtitle files itself, following QualCoder's "
+               "import; where QualCoder's readers lose or garble content, "
+               "Exegete keeps it, and names the departure (TOOLS.md lists "
+               "each one). A converter gives other text, so a converted "
+               "file comes in as a .txt of its own.",
+        "steps": [
+            "Convert file to file: the original in, a .txt out, in a folder "
+            "outside the project. Always give an output file: without one, "
+            "a converter server returns the whole document into the "
+            "conversation.",
+            "With pandoc, from the first conversion, pass Exegete's "
+            "defaults file (below): it stops pandoc's line wrapping (wrap: "
+            "none) and keeps pandoc from fetching from the web or reading "
+            "other files (sandbox: true). Use no other defaults file and no "
+            "filters: either can make pandoc run programs.",
+            "Import the .txt with import_documents, by its path, and say in "
+            "memo which document it was converted from and with what. The "
+            "project keeps the .txt as its original, not the document it "
+            "came from; its text is not QualCoder's reading of that "
+            "document.",
+            "The preview warns of a converter's layout (lines broken at 72 "
+            "characters, ruled tables, numbered notes gathered at the "
+            "end); with wrap: none the first does not arise."],
+        "never": [
+            "Do not convert .tex files this way: a LaTeX file can pull in "
+            "private files from the computer.",
+            "Do not convert .html files: Exegete reads them itself; nor "
+            ".epub files where Exegete has its optional part (without it, "
+            "an EPUB can be converted to .txt this way).",
+            "Never convert to .odt: QualCoder's own import finds no text "
+            "in a pandoc-made .odt and stores the file's raw bytes, so the "
+            "two programs would read the same file differently; a .txt "
+            "reads the same in both. Pandoc cannot read PDF."],
+        "defaults_file": place if place is not None else (
+            "not available: the file in Exegete's package is missing or "
+            "has been changed, so it is not named. Reinstall Exegete."),
+        "what_leaves_the_computer": (
+            "The two paths, the options and pandoc's one-line answer (its "
+            "warnings can quote addresses or paths found in the document); "
+            "not the text, unless the output file is left out or the "
+            "converted file is read back."),
+    }
 
 
 @mcp.tool(annotations=TOOL_READS)
@@ -11496,6 +12526,10 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         # the exegete://guidance/brief resource return
         return _brief()
 
+    if tool_name == "converted_documents":
+        # 0.14.3: import_documents' description points here
+        return json.dumps(_converted_documents_help(), indent=2)
+
     if tool_name is None:
         # Return overview
         return json.dumps(tool_help["overview"], indent=2)
@@ -11517,7 +12551,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "methodology_vocabulary",
                 "methods_notes",
                 "moving_from_qualcoder_mcp",
-                "brief"
+                "brief",
+                "converted_documents"
             ],
             "tip": "Use explain_ai_coding_tools() with no arguments for an "
                    "overview of the coding loop. Only the topics listed above "
@@ -16389,6 +17424,9 @@ def pseudonymise_source(
                 Path(tmp).unlink()
             except OSError:
                 pass
+    _forget_reading_copies(
+        None if captured["written"].get("memos") is not None else
+        [item["file_id"] for item in captured["written"]["files"]])
     manifest = _pseudonymise_manifest(
         captured["plan"], captured["written"], compiled, bind, backup_path,
         captured.get("journal_entry"), when, secret, project_path_at_start,
@@ -17395,6 +18433,8 @@ def rename_file(file_id: int, new_name: str,
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="the file was not renamed")
+    if result.get("changed"):
+        _forget_reading_copies([file_id])
     # A rename back that only a backup licensed goes in v0.15 (owner
     # ruling 25, question 8)
     if result.get("changed") and any(name is not None
@@ -18633,18 +19673,27 @@ Ground the profile in verbatim quotes from this case's segments, and keep what t
 
 def _create_project_refusal(text: str, **extra: Any) -> str:
     return json.dumps({"success": False, "created": False, "error": text,
-                       **extra}, indent=2)
+                       "projects_folder": _projects_folder(), **extra},
+                      indent=2)
 
 
 # The question create_project asks when the researcher's coder name is
 # missing (the owner's ruling 6 of 2026-09-25), and the warning for an
-# explicit "not known" (the study's 7.5 wording).
+# explicit "not known" (the study's 7.5 wording). QualCoder 4.0 labels
+# the setting "Current coder", in Project, Settings (on a Mac, Qt moves
+# Settings to the QualCoder menu); the question presumes no QualCoder
+# (0.14.3, from the maintainer's sitting). Nothing in Exegete changes the
+# name once the project is made; QualCoder's Settings window does
+# (`update project set codername=?` in its settings.py at the tag 4.0).
 CODER_NAME_ASK = (
-    "Ask the researcher for their own coder name, exactly as they give it "
-    "(in QualCoder: Settings, Coder name), and call again with it as "
+    "Ask the researcher what name their own codings should carry; if they "
+    "use QualCoder, the name in its settings (\"Current coder\"), exactly "
+    "as there; if not, any name they choose. Call again with it as "
     "coder_name. It is the researcher's own name for their codings, not "
-    "the AI's, and must never be guessed. If they do not use QualCoder or "
-    "do not know it, call again with coder_name_not_known=true instead.")
+    "the AI's, and must never be guessed. Exegete cannot change it once "
+    "the project is made (QualCoder's settings can), so ask for the name "
+    "as they want it to stay. If they do not know it, call again with "
+    "coder_name_not_known=true instead.")
 CODER_NAME_NOT_KNOWN_WARNING = (
     "The researcher's own coder name is not known, so the check that "
     "keeps the AI's codings apart from the researcher's own is off. It "
@@ -18723,6 +19772,22 @@ def _opening_in_qualcoder_40(folder: Path, coder: str) -> str:
         "of the project beside it.")
 
 
+def _created_project_material_step() -> str:
+    """The next step for bringing material in (0.14.3): documents on the
+    researcher's computer through import_documents, which keeps their
+    text off the conversation, wherever the tool set serves it (the
+    lifecycle set, where create_project is, always does);
+    import_text_file is for text typed or pasted in the conversation."""
+    if "import_documents" in mcp._tool_manager._tools:
+        return ("Bring the researcher's documents in from their computer "
+                "with import_documents, giving their paths, so that their "
+                "text stays off the conversation; import_text_file is for "
+                "text typed or pasted in the conversation. Sub-codes are "
+                "available at once (create_code with parent_code_id).")
+    return ("Add material with import_text_file; sub-codes are available at "
+            "once (create_code with parent_code_id).")
+
+
 def _created_project_next_steps(coder: str,
                                 previous: Optional[str]) -> List[str]:
     differ = (f"it must differ from the researcher's own coder name, "
@@ -18734,8 +19799,7 @@ def _created_project_next_steps(coder: str,
          "which name the AI's codings and other writes should be stored "
          "under, and call set_project_ai_coder_name before the first write "
          "that needs it; " + differ),
-        ("Add material with import_text_file; sub-codes are available at "
-         "once (create_code with parent_code_id)."),
+        _created_project_material_step(),
         ("The project memo is empty, as QualCoder leaves a new project's; "
          "set_memo with target_type 'project' writes it (research topic "
          "and questions, methodology, participants), and QualCoder 4.0's "
@@ -18837,38 +19901,36 @@ def create_project(name: str, directory: Optional[str] = None,
                    coder_name_not_known: bool = False) -> str:
     """Create a new, empty project, and select it.
 
-    Makes the project folder "<name>.qda" with its four subfolders and a
-    database in QualCoder 4.0's format, exactly as QualCoder 4.0's own New
-    Project makes them, then selects the new project so material can be
-    imported at once. Nothing existing is ever changed: a name already in
+    Makes the project folder "<name>.qda", in directory or in the folder set
+    for projects (get_current_project's projects_folder), with its four
+    subfolders and a database in QualCoder 4.0's format, exactly as QualCoder
+    4.0's own New Project makes them, then selects the project so material can
+    be imported at once. Nothing existing is ever changed: a name already in
     use is refused, never replaced or given a "_1".
 
-    THE RESEARCHER'S CODER NAME: ask the researcher for their own coder
-    name (in QualCoder: Settings, Coder name) and pass it exactly as
-    they give it. It is their own name, not the AI's, and must never be
-    guessed or taken from anywhere else: a wrong name makes QualCoder ask
-    them to keep or switch names when they open the project. If they do
-    not use QualCoder or do not know it, pass coder_name_not_known=true
-    instead; the project is then created, and the result says what that
-    means. With neither, nothing is created and the answer asks for it.
+    THE RESEARCHER'S CODER NAME: ask the researcher what name their own codings
+    should carry; if they use QualCoder, the name in its settings
+    ("Current coder"), exactly as there; if not, any name they choose. It is
+    their own name, not the AI's, and must never be guessed or taken from
+    anywhere else: a wrong name makes QualCoder ask them to keep or switch
+    names when they open the project. If they do not know it, pass
+    coder_name_not_known=true instead; the project is then created, and the
+    result says what that means. With neither, nothing is created and the
+    answer asks for it.
 
-    Names: the name becomes a folder, so it may not hold / \\ : < > | ? *
-    or ", end in a dot or a space, start with a dot, be a Windows device
-    name such as CON, hold "_backup_" or "_BKUP_", or pass 200 bytes. A
-    name already used in that folder, in any letter case, is refused, and
-    so is a name whose older backup folders sit there. Each refusal says
-    why.
+    Names: the name becomes a folder, so it may not hold / \\ : < > | ? * or ",
+    end in a dot or a space, start with a dot, be a Windows device name such as
+    CON, hold "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in
+    that folder, in any letter case, is refused, and so is a name whose older
+    backup folders sit there. Each refusal says why.
 
     Args:
         name: The project's name, without ".qda" (a typed ".qda" is
               dropped)
         directory: An existing folder to create the project in, as a
-                   full path or one starting with ~; leave it out to use
-                   Exegete's workspace, ~/Documents/Exegete projects
-                   unless the host set another (the answer gives the
-                   path)
-        coder_name: The researcher's own coder name (in QualCoder:
-                    Settings, Coder name), exactly as they give it
+                   full path or one starting with ~; leave it out for
+                   the folder set for projects
+        coder_name: The researcher's own coder name, exactly as given
         coder_name_not_known: True when the researcher does not know it;
                     then leave coder_name out
 
@@ -18888,11 +19950,18 @@ def create_project(name: str, directory: Optional[str] = None,
         extra = ({"action_required": "ask_researcher_coder_name"}
                  if coder_problem == CODER_NAME_ASK else {})
         return _create_project_refusal(refusal, **extra)
-    if coder_problem is not None:
-        extra = ({"action_required": "ask_researcher_coder_name"}
-                 if coder_problem == CODER_NAME_ASK else {})
-        return _create_project_refusal(coder_problem, **extra)
     stem, parent, is_default, folder = refusal
+    if coder_problem is not None:
+        if coder_problem != CODER_NAME_ASK:
+            return _create_project_refusal(coder_problem)
+        # The place checks passed, so the path is known: projects_folder
+        # is the folder that is set, and `directory` may name another
+        # (0.14.3, the review of the maintainer's sitting).
+        return _create_project_refusal(
+            f"{coder_problem} The project will be made as '{folder}': "
+            f"tell the researcher when you ask.",
+            action_required="ask_researcher_coder_name",
+            will_be_made_as=str(folder))
     folder_name = folder.name
     warnings: List[str] = []
     too_long = new_project.long_path_warning(folder)
@@ -18958,6 +20027,7 @@ def create_project(name: str, directory: Optional[str] = None,
         "coder_name_known": bool(stored_coder),
         "selected": False,
         "previous_project": previous,
+        "projects_folder": _projects_folder(),
         "warnings": warnings,
     }
     note = _earlier_workspace_note(is_default)
@@ -19040,6 +20110,10 @@ CORE_TOOLSET = frozenset({
     "get_project_summary",
     # file search and read-with-coding
     "search_files", "analyze_file_with_coding",
+    # reading a whole file on the computer, its text kept off the
+    # conversation (v0.14.3): most useful with local models,
+    # where reading a file otherwise pulls all of it into a small context
+    "open_file_for_reading",
     # coded-text retrieval and frequencies
     "search_coded_text", "get_coded_segments", "get_coding_frequencies",
     # the supervised suggestion loop
@@ -19395,6 +20469,14 @@ def main(argv: Optional[List[str]] = None, *,
     # never for --version (state_folder says how, and what happens when
     # the move cannot be made)
     _settle_state_folder()
+
+    # v0.14.3: the reading folder's stale pages and copies
+    # (previews after an hour, everything after a week) go at each start
+    try:
+        reading_folder.sweep()
+    except Exception as e:
+        logger.warning("Could not tidy the reading folder: %s",
+                       error_label(e))
 
     # The check for new versions (the owner's ruling of 5 October 2026):
     # after the state folder is settled, since it keeps its record there,

@@ -148,8 +148,16 @@ def test_how_it_works_explains_before_it_instructs():
     # the two ways a text comes in, and what each sends, where data is
     # discussed
     data = _between(_readme(), "## Where your data goes", "## Start here")
+    # v0.14.3: a document brought in through Exegete too, and what the
+    # import's preview sends
     assert ("Text you paste or attach goes in full; a document imported in "
-            "QualCoder, only as far as the assistant reads it.") in data
+            "QualCoder or brought in through Exegete, only as far as the "
+            "assistant reads it: Exegete's preview of an import gives the "
+            "assistant the documents' names, sizes, lengths and "
+            "warnings, never their "
+            "text ([PRIVACY.md, \"Bringing documents in\"]"
+            "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
+            "#bringing-documents-in-0143)).") in data
 
 
 # Modules that would give Exegete an AI, or a way onto the network, of its
@@ -206,15 +214,18 @@ NETWORK_ONLY = ("socket", "ssl", "urllib.request")
 
 
 def test_it_has_no_ai_of_its_own():
-    """"It has no AI of its own" (README, "How it works"): its one
-    dependency is the MCP library, and nothing in its source imports a
-    model's client or asks the host's model through MCP's sampling call;
-    a network library only in the check for new versions, which the
-    README names. The day that changes, this fails."""
+    """"It has no AI of its own" (README, "How it works"): its
+    dependencies are the MCP library and, from 0.14.3, the two small
+    libraries the document import reads with (a safe XML parser,
+    QualCoder's RTF reader), neither a model's client nor a network
+    library; nothing in its source imports a model's client or asks the
+    host's model through MCP's sampling call; and a network library only
+    in the check for new versions, which the README names. The day that
+    changes, this fails."""
     with open(REPO / "pyproject.toml", "rb") as handle:
         dependencies = tomllib.load(handle)["project"]["dependencies"]
     assert [re.match(r"[A-Za-z0-9_.-]+", d).group(0) for d in dependencies] \
-        == ["mcp"]
+        == ["mcp", "defusedxml", "striprtf"]
     found = {}
     for path in sorted((REPO / "src").rglob("*.py")):
         uses = _model_or_network_uses(path.read_text(encoding="utf-8"))
@@ -293,14 +304,18 @@ def test_a_first_session_names_both_coder_names():
                      "**A project you already have.**")
     # v0.14.2, the README's first round of checks: two sentences, and what
     # to say without QualCoder; since the owner's ruling of 7 October 2026,
-    # without assuming that the reader uses QualCoder at all
+    # without assuming that the reader uses QualCoder at all; since 0.14.3
+    # (the review of the maintainer's sitting), a reader without QualCoder
+    # chooses a name, and "say so" is for one who does not know theirs
     assert ("When it makes the project, the assistant asks for your own "
             "coder name, which the project keeps so that your work and the "
             "AI's stay apart (QualCoder, if you use it, records your coding "
-            "under it). Not using QualCoder, or no coder name? Say so. Before "
+            "under it). Not using QualCoder? Any name you choose will do. "
+            "Do not know yours? Say so. Before "
             "its first write, it asks for the AI coder name, kept per "
             "project, under which Exegete writes what is done through the "
             "conversation.") in names
+    assert "Not using QualCoder, or no coder name?" not in names
     assert "no QualCoder yet" not in names
     # the example on the first screen shows the second ask, before the
     # first write (import_text_file asks through _resolve_write_owner)

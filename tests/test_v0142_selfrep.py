@@ -64,10 +64,11 @@ BRIEF_SECTION_4 = (
     "QualCoder; they can work on it in either program, one at a time. The "
     "two programs do not talk to each other: they meet only in the "
     "project. "
+    # v0.14.3: documents come in through import_documents
+    # and a whole file opens for reading through open_file_for_reading,
+    # so neither is on the list any more
     "- Some researchers also use QualCoder, by choice or for what Exegete "
-    "does not do yet: bringing in documents other than text, reading a "
-    "whole file with its coding highlighted, and images, audio, video and "
-    "graphs.")
+    "does not do yet, among them images, audio, video and graphs.")
 
 # What the proposal retired, and the first impressions' older bans. A
 # sentence about QualCoder itself ("a project QualCoder 3.8.2 has open")
@@ -668,10 +669,12 @@ class TestQualCoderIsOptional:
 
     def test_the_rule_for_coding_agents(self):
         claude = _flat((REPO / "CLAUDE.md").read_text(encoding="utf-8"))
+        # The owner's wording of 9 October 2026 (ruling 67)
         assert ("**Interoperability with QualCoder:** follow QualCoder's "
                 "formats and conventions; name every departure, with its "
-                "reason; be better than QualCoder where its behaviour loses "
-                "or garbles content") in claude
+                "reason; where QualCoder's readers lose or garble content, "
+                "keep it, and name the departure") in claude
+        assert "be better than QualCoder" not in claude
         assert "follow QualCoder's own behaviour" not in claude
         assert claude.index("Exegete is a qualitative analysis application"
                             ) < claude.index("## Commands")
@@ -771,14 +774,23 @@ BEFORE = {
 
 class TestNoDescriptionGrew:
 
+    # v0.14.3 adds two tools, and lengthens two descriptions
+    # on purpose (tests/test_v0142_description_cut.py pins their words in
+    # CHANGED_0143); every other description is still held to 0.14.1's
+    NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
+    CHANGED_IN_0143 = {"analyze_file_with_coding", "import_text_file"}
+
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("lifecycle")
         registered = server.mcp.original_descriptions
-        assert set(registered) == set(BEFORE) | {"check_for_updates"}
+        assert set(registered) == set(BEFORE) | {"check_for_updates"} | \
+            self.NEW_IN_0143
         exact = sys.version_info[:2] == (3, 13)
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
+            if name in self.CHANGED_IN_0143:
+                continue
             text = registered[name]
             now_solid = len("".join(text.split()))
             if now_solid > solid:

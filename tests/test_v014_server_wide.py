@@ -95,12 +95,18 @@ EXPECTED_HINTS = {
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
+    # 0.14.3: a repeat of the preview reads again, and a
+    # repeat of the import finds its files there and its token spent
+    "import_documents": A1,
     # adds
     "copy_project_to_workspace": A, "analyze_for_coding": A,
     "apply_codings": A, "create_proposed_codes": A,
     "add_journal_entry": A, "import_text_file": A,
     "link_file_to_case": A, "create_attribute_type": A,
     "add_annotation": A,
+    # writes a page or a copy outside the project and opens it on the
+    # researcher's screen; a repeat opens it again (v0.14.3)
+    "open_file_for_reading": A,
     # replaces what exists, and a repeat changes nothing
     "rename_code": C1,
     "rename_category": C1, "rename_case": C1, "rename_file": C1,
@@ -173,10 +179,16 @@ class TestToolAnnotations:
                  if "preview_token" in tool.inputSchema.get("properties",
                                                             {})]
         assert sorted(gated) == sorted([
-            "delete_category", "delete_code", "merge_category",
-            "merge_codes", "prune_backups", "pseudonymise_source",
-            "restore_backup"])
+            "delete_category", "delete_code", "import_documents",
+            "merge_category", "merge_codes", "prune_backups",
+            "pseudonymise_source", "restore_backup"])
         for name in gated:
+            if name == "import_documents":
+                # 0.14.3: a preview first for the researcher's approval of
+                # what comes in, but the import only adds (the design's
+                # Part 5), so it is not marked destructive
+                assert listed[name].annotations.destructiveHint is False
+                continue
             assert listed[name].annotations.destructiveHint is True, name
             assert listed[name].annotations.readOnlyHint is False, name
 
@@ -196,8 +208,13 @@ class TestToolAnnotations:
         server._apply_toolset("lifecycle")
         listed = host_session(lambda client: client.list_tools()).tools
         marked = {tool.name: tool.meta for tool in listed if tool.meta}
-        assert marked == {"read_pseudonym_list": {
-            "anthropic/requiresUserInteraction": True}}
+        # 0.14.3: and import_documents, whose two calls the researcher
+        # approves (the design's "Asking every time")
+        assert marked == {
+            "read_pseudonym_list": {
+                "anthropic/requiresUserInteraction": True},
+            "import_documents": {
+                "anthropic/requiresUserInteraction": True}}
         wire = next(t for t in listed
                     if t.name == "read_pseudonym_list").model_dump(
                         by_alias=True, exclude_none=True)
@@ -745,6 +762,27 @@ async def call_every_tool(client, root, lock_check=False):
                                    "memo": "First interview"})
     await run("import_text_file", {"filename": "int2.txt",
                                    "content": TEXT_2})
+    # 0.14.3: a document brought in by its path, preview then import
+    interviews = root / "interviews"
+    interviews.mkdir()
+    (interviews / "int3.txt").write_text("Notes from the third visit.\n",
+                                         encoding="utf-8")
+    # pytest's scratch folders lie under the hidden AppData on Windows,
+    # which the import refuses for the researcher's own places
+    from exegete import import_paths
+    real_hidden_step = import_paths.hidden_step
+    excused = {os.path.normcase(str(p)) for p in Path(root).parents}
+    import_paths.hidden_step = lambda step, info: (
+        os.path.normcase(str(step)) not in excused
+        and real_hidden_step(step, info))
+    try:
+        preview = await run("import_documents",
+                            {"paths": [str(interviews)]})
+        await run("import_documents",
+                  {"paths": [str(interviews)],
+                   "preview_token": preview["preview_token"]})
+    finally:
+        import_paths.hidden_step = real_hidden_step
     await run("create_category", {"name": "Feelings"})
     await run("create_category", {"name": "Other"})
     await run("create_code", {"name": "Trust", "category": "Feelings",
@@ -784,6 +822,7 @@ async def call_every_tool(client, root, lock_check=False):
     await run("export_code_report", {"code_name": "Doubt"})
     await run("get_project_summary", {})
     await run("analyze_file_with_coding", {"file_id": 1})
+    await run("open_file_for_reading", {"file_id": 1})
     await run("list_attribute_types", {})
     await run("get_file_attributes", {"file_id": 1})
     await run("get_case_attributes", {"case_id": 1})
@@ -1961,6 +2000,9 @@ NOT_PROJECT_WRITES = {
     "export_codebook": "file", "export_coded_segments_report": "file",
     "export_frequencies_csv": "file", "export_case_code_matrix_csv": "file",
     "read_pseudonym_list": "reads only (marked so that hosts ask)",
+    "open_file_for_reading": "writes a page or a copy in the reading "
+                             "folder, outside the project, and works "
+                             "while QualCoder has it open, as reads do",
 }
 
 

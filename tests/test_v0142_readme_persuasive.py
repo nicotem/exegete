@@ -164,7 +164,42 @@ def _tools(mode="lifecycle"):
 # "server or plugin", Claude Code's starting folder, Codex's untested
 # setting). That takes 405 characters, and the limit is raised by what
 # the page needs and no more: 34,705.
-README_LIMIT = 34_705
+# 0.14.3 brings documents in through Exegete and opens a
+# whole file for reading: "What you can do" says both (transcripts as
+# documents from the computer, and a whole transcript read by you on a
+# page), "Not in Exegete yet" loses them and gains coding by selecting
+# text yourself, "In short" says what an import sends, "What stays on
+# your computer" names the reading pages, the one-click steps and a
+# first session say how to see the coding, the tables carry the import
+# row and the new counts, and the advanced list names the two tools;
+# "What comes next" loses its first item. That takes 497 characters, and
+# the link from the sentence on imports to PRIVACY.md's section on them
+# (which tests/test_v0143_import_review_minors.py holds) 136 more, and
+# the limit is raised by that and no more: 35,338.
+# 0.14.3's last round takes out the eight "provisional" marks the owner's
+# decisions settled (the brief keeps its own) and says, in "A first
+# session", that the practice page can come in from a Word or text file,
+# its text off the conversation: 35,336 characters, within the limit.
+# Its review then asked for four corrections: PDF and EPUB "with the
+# optional part" (not "in the extension", which suggested an install
+# from PyPI cannot read them) in "What you can do" and the table, plain
+# words for where an imported document is read, the preview "gives the
+# assistant" what it sends, and how to copy a file's place in "A first
+# session". That takes 148 characters, and the limit is raised by that
+# and no more: 35,486.
+# Its second review asked for five more: what "the optional part" is
+# (the extension has it) in "What you can do" and the table, "read by
+# Exegete on your computer", Windows 11 for "Copy as path", that an EPUB
+# opened in Apple Books joins its library (and iCloud, if Books syncs)
+# in "What stays on your computer", and the table re-dated for 0.14.3,
+# whose import row it carries. That takes 146 characters, and the limit
+# is raised by that and no more: 35,630.
+# The review of the maintainer's sitting found "Two coder names" still
+# sending a reader without QualCoder to "say so", which leads to the
+# flag that leaves the check off; a reader without QualCoder now chooses
+# any name, and "say so" is for one who does not know theirs. That takes
+# 30 characters, and the limit is raised by that and no more: 35,660.
+README_LIMIT = 35_660
 
 
 def test_the_readme_stays_short():
@@ -576,14 +611,17 @@ def test_the_assistants_table():
 # ---------------------------------------------------------------------------
 
 def _measured():
+    # v0.14.3 moves the figures, so its entry carries them
+    # (test_toolset_modes.py pins them)
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [0.14.2-alpha]",
-                           "## [0.14.1-alpha]"))
+    entry = _flat(_between(changelog, "## [0.14.3-alpha]",
+                           "## [0.14.2-alpha]"))
     measured = entry[entry.index("### Measured"):]
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) .*? "
                       r"lifecycle set = ([\d,]+)", measured)
     full, core, lifecycle = (int(n.replace(",", "")) for n in found.groups())
-    later = re.search(r"on Python 3\.11\.13 \(the `\.venv/`\), ([\d,]+),",
+    # the 3.11 figures follow the environment named in brackets
+    later = re.search(r"on Python 3\.11\.13 \([^)]*`\.venv/`\), ([\d,]+),",
                       measured)
     return ({"full": full, "core": core, "lifecycle": lifecycle},
             int(later.group(1).replace(",", "")))
@@ -739,11 +777,11 @@ def test_what_comes_next_is_plans():
     assert ("Plans, not promises: the order may change with what testers "
             "report.") in section
     items = re.findall(r" - ([^ ]+(?: [^ ]+)?)", section)
+    # v0.14.3: bringing documents in and reading a whole
+    # file yourself are in Exegete, so they are no longer the next plan
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "Next", "v0.15", "v0.16", "v0.17", "Later"]
-    assert ("- Next, in development: bringing in documents, not only text, "
-            "and an easy way to read a whole imported file yourself, beyond "
-            "the passages the assistant quotes") in section
+        "v0.15", "v0.16", "v0.17", "Later"]
+    assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
     for words in ("undo everything a session did",
@@ -766,11 +804,11 @@ def test_what_comes_next_is_plans():
     for engineering in ("the removal of what 0.14", "QualCoder's extraction",
                         "rather than by position"):
         assert engineering not in section, engineering
-    # and the list of what still needs QualCoder says the gap is worked on
+    # and the list of what still needs QualCoder no longer says that
+    # bringing documents in and reading a whole file are worked on: they
+    # are in Exegete (v0.14.3)
     can_do = _flat(_section("What you can do", "How it works"))
-    assert ("Bringing in documents, and reading a whole file yourself, are "
-            "in development ([What comes next](https://github.com/nicotem/"
-            "exegete#what-comes-next)).") in can_do
+    assert "in development" not in can_do
 
 
 def test_two_badges_and_no_test_badge():

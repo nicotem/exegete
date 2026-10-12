@@ -389,7 +389,7 @@ class TestTheCoderName:
         answer = json.loads(server.create_project("Study"))
         text = refused(answer)
         assert answer["action_required"] == "ask_researcher_coder_name"
-        assert "Settings, Coder name" in text and "never be guessed" in text
+        assert '("Current coder")' in text and "never be guessed" in text
         assert "coder_name_not_known=true" in text
         assert not workspace().exists()
 
@@ -595,6 +595,53 @@ class TestAfterCreation:
         steps = " ".join(json.loads(server.create_project(
             "Steps2", coder_name_not_known=True))["next_steps"])
         assert "is not known" in steps
+
+    def test_the_next_steps_bring_documents_in_with_import_documents(self):
+        """0.14.3: documents on the researcher's computer come in through
+        import_documents, which keeps their text off the conversation;
+        import_text_file is for text typed or pasted in the conversation
+        (its own description says so). create_project is served in the
+        lifecycle set, which has import_documents."""
+        server._apply_toolset("lifecycle")
+        assert "import_documents" in server.mcp._tool_manager._tools
+        steps = create("Material")["next_steps"]
+        (step,) = [s for s in steps if "import_documents" in s]
+        assert step == (
+            "Bring the researcher's documents in from their computer with "
+            "import_documents, giving their paths, so that their text "
+            "stays off the conversation; import_text_file is for text "
+            "typed or pasted in the conversation. Sub-codes are available "
+            "at once (create_code with parent_code_id).")
+        assert not any("Add material with import_text_file" in s
+                       for s in steps)
+
+    def test_a_set_without_import_documents_keeps_the_earlier_step(self):
+        """Where import_documents is not served, the step names only
+        import_text_file, as before (the registry is put back after the
+        test by conftest's fixture)."""
+        server.mcp.remove_tool("import_documents")
+        steps = create("NoDocuments")["next_steps"]
+        assert "Add material with import_text_file; sub-codes are " \
+               "available at once (create_code with parent_code_id)." \
+            in steps
+        assert not any("import_documents" in s for s in steps)
+
+    def test_the_changelog_names_the_new_step(self):
+        """The CHANGELOG's 0.14.3 entry says, beside import_text_file's
+        change, that create_project's next steps now send documents to
+        import_documents: the assistant sees the change."""
+        text = (Path(__file__).resolve().parent.parent / "CHANGELOG.md"
+                ).read_text(encoding="utf-8")
+        entry = text[text.index("## [0.14.3-alpha]"):]
+        entry = " ".join(entry[:entry.index("## [0.14.2-alpha]")].split())
+        said = ("- `create_project`'s next steps send the researcher's "
+                "documents on their computer to `import_documents`, by "
+                "their paths, so that their text stays off the "
+                "conversation, and keep `import_text_file` for text typed "
+                "or pasted in the conversation.")
+        assert said in entry
+        assert entry.index("- `import_text_file`'s description says first") \
+            < entry.index(said) < entry.index("### Deprecated")
 
     def test_created_but_not_selected_is_said(self, monkeypatch):
         def refuse(path, read_only=True):

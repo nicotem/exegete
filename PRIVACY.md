@@ -78,6 +78,14 @@ What stays local, always, unless a sync service copies the folder it is in:
   removed by hand is left as it is, and a fresh `~/.exegete` is made.
   The export tools, `create_project` and the workspace setting refuse
   both names, whether or not the old one exists, in every run.
+- the reading folder (v0.14.3), where Exegete writes the
+  pages and read-only copies it opens for you to read a file, and the
+  page on which you check an import's letters that look garbled:
+  `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
+  `%LOCALAPPDATA%\Exegete\Reading` on Windows,
+  `~/.cache/exegete/reading` on Linux; out of iCloud and OneDrive, not
+  indexed by the computer's search, readable by your account only, and
+  tidied ("Reading a whole file", below)
 - AI-coding session files (`~/.exegete/sessions/`), written
   atomically and created owner-only on POSIX systems (mode 0600)
 - the preview-token secret (`~/.exegete/preview_secret`): 64
@@ -514,6 +522,97 @@ coder visibility section was also verified against the 3.8.2 tag,
 which already creates the `coder_names` table, its `visibility` column
 and the four views (schema v14).
 
+## Reading a whole file: what leaves the computer
+
+New in v0.14.3. When you ask to read a file, the assistant calls
+`open_file_for_reading`, and the file opens on your own screen: a page
+in your browser with its whole text and its codings, or a read-only copy
+of the original in its own app, or that copy shown in Finder or File
+Explorer. What reaches the AI provider:
+
+| What you asked for | Sent to the AI provider | Not sent |
+|---|---|---|
+| A reading copy (the default) | the file's id, the page's place on your computer (which includes the project's and the file's names), and counts of codings, codes, annotations and notes | the text, the memos |
+| The original, or the original in its folder | the file's id, its name and the place of the read-only copy | its contents |
+| The whole text in the chat (`analyze_file_with_coding` and the file and case resources, unchanged) | the text, a part at a time, with its codings | |
+| The whole text in the chat without codes (`analyze_file_with_coding` with `without_codes=true`) | the text, a part at a time, and the file's details, with counts of the codings and annotations left out | the codings, the codes, the annotations |
+
+To talk about a passage you have read on the page, copy a few words of
+it into the conversation: those words go to the provider, like anything
+you type.
+
+**What a page holds, and where it is written.** A reading page holds
+the file's whole text as stored, its codings (each passage in its
+code's colour and named), the list of its codes, its annotations, and
+the public part of the codings' memos and of the file's memo; asked
+without codes, the text and the public part of the file's memo alone.
+Exegete writes it, and the read-only copy of an original, into its
+reading folder, never into the project or the folder a document came
+from: `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
+`%LOCALAPPDATA%\Exegete\Reading` on Windows, `~/.cache/exegete/reading`
+on Linux, each page in a folder named after its project, then one
+named after the file's number. The
+folder is out of iCloud and OneDrive, not indexed by the computer's
+search and readable by your account only; it is tidied as said below,
+and you can delete it at any time.
+
+The page itself never reaches out: it holds no script, fetches nothing
+(its own content security policy forbids it) and links to nothing
+outside itself, and a web address in a document stays plain text. The
+private part of every memo (from `#####`) is left out of it, and the
+page says so. Asked without codes, for a fresh reading, the page holds
+the text and the file's memo alone, its private part left out in the
+same way. The copy of an original is not pseudonymised, as in
+QualCoder, which applies the names list to the stored text only. On a
+Mac, an EPUB's copy opened in its own app (`show="original"`) goes into
+Apple Books, which adds it to its library and, with Books' iCloud Drive
+setting on, keeps a copy in iCloud; `show="in_folder"` shows it in
+Finder instead, without opening it.
+
+Three cautions:
+
+- **Assistants with file tools of their own** (Claude Code, Cowork,
+  Codex) can read any file your account can, the pages and copies
+  included. The page, the tool's description and the assistant's brief
+  ask the assistant not to; nothing enforces it. In Claude Code, a
+  permission rule that denies its file-reading tool on the reading
+  folder narrows this, for example `"deny":
+  ["Read(~/Library/Caches/Exegete/**)"]` in the `permissions` of its
+  settings on a Mac; a shell command could still read the file, so it
+  narrows the reach without closing it.
+- **Assistants that can see your browser** (Claude in Chrome, a desktop
+  app's browser pane, computer use, servers that drive a browser) can
+  read a page once it is open. The page says it is not meant for an
+  assistant; nothing enforces that either.
+- **A page opens when it is written**, and the tool's description says
+  to call it only when you ask to read a file: a participant's words
+  opening unasked, in a shared office or a meeting with your screen
+  shared, would be a disclosure.
+
+**Where a transcript's text can end up** on your computer: the original
+document where you keep it; the project (its database, and its own
+folder of originals for imported documents); every backup taken after it
+came in (a file brought in by mistake stays in those backups until they
+are pruned); a reading copy or a copy of the original in the reading
+folder, and the page on which an import's preview shows letters that
+look garbled (`show_text`), which goes after the import, or at
+Exegete's first tidy of the folder once it is an hour old (it tidies
+when it starts, and at most every five minutes while it writes there,
+so in an app that keeps Exegete running such a page can stay longer);
+and any backup of the whole disk, such as Time Machine or
+File History, that copies those folders. Exegete tidies
+the reading folder itself: a file's page and copy go whenever Exegete
+changes that file's text or name (renaming, pseudonymising, restoring a
+backup over the project), a page left for a file deleted in QualCoder
+goes when a new file that takes its number comes in through Exegete,
+or when Exegete next writes a page or a copy for that file, and
+anything there goes at Exegete's first tidy once it is a week old. A
+page written
+before you pseudonymised a file would otherwise keep the real names; a
+file deleted or renamed in QualCoder keeps its page until then. A study with
+a date for deleting its data should include the reading folder, which
+can be deleted at any time.
+
 ## Attribution: the AI coder name is yours to choose
 
 Every row Exegete writes carries one coder name, so AI work stays
@@ -733,6 +832,130 @@ project has the coder-visibility capability:
 Projects without the coder-visibility capability (schemas older than
 v14) are unaffected.
 
+## Bringing documents in (0.14.3)
+
+`import_documents` reads documents on your computer, by their paths,
+following QualCoder's own import; where QualCoder's readers lose or
+garble content, Exegete keeps it, and names the departure (TOOLS.md
+lists each one). The documents'
+text does not pass through the conversation on the way in. What does reach the AI
+provider, and what does not:
+
+| Step | Sent to the AI provider | Not sent |
+|---|---|---|
+| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token; with `show_text`, where the page it opens on your screen is | the text, also when that page shows it to you; any library's or the document's own messages |
+| The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's place | the text |
+| Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
+
+Seven cautions:
+
+- **File names travel everywhere** (in the paths, the answers and every
+  later read), so a participant's name in a file's name reaches the
+  provider. Naming files by pseudonym or number before importing keeps
+  it out. With a names list, a file whose name holds a listed name (in
+  any letter case, across any separator, or inside a longer word, so
+  that `maria_interview.docx` and `MariaB.docx` are caught) is held
+  back, and is referred to only by its position; it comes in under that
+  name only if you say so for that import
+  (`import_file_names_with_listed_names`), and the name then reaches
+  the provider whenever an answer names the file. Renaming the file
+  first is the way to keep the name out. A subfolder, and the real place
+  a link leads to, are shown with any part holding a listed name
+  replaced by words saying so. While the names list cannot be used (a
+  name typed with a space at its end, say), the import is stopped and
+  its preview still shows no file name holding a name from it.
+- **A folder's preview is a listing**: given any folder your account can
+  read, it returns the names and sizes of the documents in it, before
+  any import.
+- **What is not pseudonymised**: the originals (copied unchanged into
+  the project's folder of originals, as QualCoder does), a PDF's text
+  and its notes. A PDF holding names from your list, written as the
+  list writes them, is held back unless you say so for that import
+  (`import_pdfs_with_listed_names`). A name written otherwise in the
+  PDF, in capitals ("MARIA BROWN"), split across two lines, or broken
+  by a hyphen at a line's end, is not seen, and such a PDF comes in
+  without a word. Plain
+  text, Markdown, subtitle files and web pages are read as UTF-8 alone:
+  a file saved in another character set is held back, with steps to
+  save a copy as UTF-8, under a new name so that the original stays as
+  it is until the copy is checked, in Word, TextEdit or Notepad (each
+  saying how to open it in the encoding it was saved in, should its
+  accents look wrong), and is never read by a guess, by a set you name,
+  or by the set a web page declares.
+  Read any of those ways, a listed name can come out with other letters
+  ("Agnès" as "Agnčs"), which the list would then not replace. A file
+  saved as UTF-16 or UTF-32 without the mark that names it, which reads
+  as UTF-8 with an invisible character beside each letter, is held back
+  too. A
+  file whose letters look garbled, as when a file is opened once in the
+  wrong character set and saved again ("WÄ…sik" for "Wąsik", "Agn√®s"
+  for "Agnès", or "AgnËs" when a file from Windows is opened as the
+  Mac's own set, and "didnít" or "OíBrien" for an apostrophe), is held
+  back with a warning that says in how many places, the first one's
+  line and through which encoding, in TextEdit's names, never the
+  text, and how to put the letters right. It comes in as it is only if you say so for that import
+  (`import_files_with_garbled_letters`), after checking its letters on
+  a page Exegete opens on your own screen (`show_text`), whose text
+  does not reach the provider. A garbled name may not match the
+  names list: it is then not replaced, and reaches the provider
+  whenever the file is read. The warning finds signs, not proof:
+  correct text can show them (Chinese with English words written inside
+  it, a sum straight after an opening quotation mark), and a garbled
+  name can show none, above all a garbled capital at a word's start
+  ("Ã–zdemir" for "Özdemir"), a single garbled letter in a name ("MĂĽller"
+  for "Müller"), an English file from Windows opened as the Mac's own
+  set whose only apostrophes are in possessives ("Maryís"), or a file
+  garbled on a Chinese or Japanese Windows computer; such a file comes
+  in without a word, and a garbled name in
+  it may not match the names list either (TOOLS.md has the
+  detail). So the names are looked for, and replaced, in the text
+  exactly as it is stored. Three limits remain, as in QualCoder: an RTF
+  file is read by the code page it declares, so a wrong declaration
+  changes letters; letters written straight into an RTF file, outside
+  its escapes, are read as Latin-1 whatever code page it declares; and
+  a name typed with a separate accent mark (as some Mac programs write
+  "é") is not replaced when the list has the accented letter, or the
+  other way round.
+- **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
+  can read any file your account can, originals included. Exegete's
+  descriptions ask the assistant to give paths and never to open a
+  document with its own tools; nothing enforces that.
+- **Hidden instructions in a document** can try to steer an assistant
+  into previewing and importing some other document. The short list of
+  formats, the refusal of hidden places and links, the preview and your
+  approval stand against it. Set to "always allow", the import would
+  run without asking, and such instructions could then bring in another
+  file unasked; allowing it once, after reading the preview, keeps you
+  asked each time. Codex's default mode runs it without asking.
+- **A file imported by mistake** stays in every backup taken after it,
+  since a backup copies the whole project. Restoring the backup taken
+  just before the import takes it back while nothing else has changed.
+- **More of a document comes in than in QualCoder**: a Word,
+  OpenDocument or RTF file's footnotes, endnotes, comments, headers and
+  footers (and an RTF file's text boxes) come after its text, where
+  QualCoder's import leaves them out (an OpenDocument file's notes and
+  comments it keeps inside the sentence, with their markup and a
+  comment's author and date); each note and comment leaves a marker
+  such as "[Footnote 1]" where it stood. So a comment a transcriber or a
+  colleague left, or a header naming the interview's date and place,
+  becomes part of the text the assistant reads. The names list is
+  applied to these parts as to the rest, and reads through the markers:
+  a comment on a first name alone leaves its marker inside the full
+  name ("Maria[Comment 1] Brown"), and the name is still replaced, with
+  the marker after the pseudonym ("Participant A[Comment 1]");
+  `pseudonymise_source`, run on such a file after the import, reads it
+  the same way. Comments' authors, initials and dates are left out. If a document's comments are not meant to be read, you
+  could delete them, or save a copy without them, in its own app before
+  importing; the preview says when a file has such parts.
+
+Each document is read in a separate, short-lived process with a time
+limit and a memory cap, handed the file's bytes rather than its path;
+it runs without a sandbox for now (one where the system offers it, on a
+Mac and on Linux, is planned; Windows offers none). Import and reading
+use no network. A document converted with another tool, such as a pandoc
+server, should be converted file to file, never into the conversation
+(`explain_ai_coding_tools('converted_documents')`).
+
 ## Backups, project copies, and the `ai_data/` folder
 
 QualCoder 4.0 keeps its AI state in `<project>/ai_data/`: the prompt
@@ -825,8 +1048,9 @@ Two further rules touch files on your disk:
 - **Process listing.** To warn when a QualCoder 4.0 window appears to
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
-  get_current_project, analyze_for_coding and the restore_backup
-  preview, which is the call without a preview_token) also looks at the
+  get_current_project, analyze_for_coding, and the restore_backup and
+  import_documents previews, each the call without a preview_token)
+  also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for
   processes that are QualCoder itself: a program whose own name holds

@@ -7,6 +7,529 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.14.3-alpha] - 2026-10-12
+
+v0.14.3. What a researcher notices first: documents now come into a
+project through Exegete, not only text passed through the conversation.
+`import_documents` brings in Word, OpenDocument, RTF, plain text,
+Markdown, web pages and subtitle files, and PDF and EPUB with an
+optional part that the Claude Desktop extension switches on; Exegete
+reads them on the researcher's own computer, so their text never passes
+through the conversation, and writes them only after a preview and on
+the researcher's word. A whole file can now be read on the researcher's
+own computer with `open_file_for_reading`: a page in the browser with
+its codings in their codes' colours, the original in its own app, or the
+original shown in Finder or File Explorer, again without the text
+passing through the conversation. A file can also be read without its
+codings, for a fresh reading, by the researcher on that page and by the
+assistant. Less visible: a long file is read a part at a time, sized to
+fit one answer; a coding made in QualCoder is found where QualCoder
+draws it; and the README's table of assistants says first why it
+matters.
+
+The maintainer decided the questions of the import and reading design
+on 6 October 2026: as recommended, except that where QualCoder's readers lose or garble
+content, Exegete keeps it, and names the departure (a PDF's text stays
+identical to QualCoder's), and with one new rule, that files not saved
+as UTF-8 are held back. In short: PDF and EPUB through QualCoder 4.0's
+own libraries, as an optional part switched on in the Claude Desktop
+extension; every departure from QualCoder's text named; no guessing of
+character sets; PDFs and file names holding listed names, and files
+whose letters look garbled, held back, each with a way through on the
+researcher's word; imported files under the AI coder name; reading
+pages in a private folder of Exegete's own, tidied; and reading without
+codes. On 9 October 2026 the maintainer settled the wording ("where QualCoder's
+readers lose or garble content, Exegete keeps it, and names the
+departure") and the marker a moved note leaves ("[Footnote 1]"). What
+follows is built to those decisions. Two
+things stay provisional: how long one call may run, until the limit of
+the assistants' apps has been timed, and the figures of the import's
+other limits.
+
+### Added: reading a whole file on your own computer
+
+- `open_file_for_reading(file_id, show, without_codes)`, in every tool
+  set: a researcher can read a whole file without its text passing
+  through the conversation, native first. `show="in_folder"` shows a read-only copy
+  of the original in Finder or File Explorer (on a Mac the space bar
+  then gives Quick Look); `show="original"` opens that copy in its own
+  app (QualCoder's "View original text file", done on a copy, so that a
+  change saved in Word cannot leave the project's copy disagreeing with
+  its stored text); `show="reading_copy"`, the default and the one view
+  that shows the codings, writes a web page with the whole text laid
+  out as stored and its codings in their codes' colours, after
+  QualCoder's own HTML export of a coded file, and opens it in the
+  researcher's browser. The answer gives the place of what was opened,
+  and counts; never the text, never a memo. TOOLS.md, "Reading a whole
+  file", and PRIVACY.md, "Reading a whole file: what leaves the
+  computer", say more.
+- The reading copy: every overlapping coding drawn as an underline of
+  its own; the code's name after each passage as a tag of its own, never
+  as text: a small label edged in the code's colour, with no colon, cut
+  short with an ellipsis when long, the whole name on hover, to screen
+  readers and in print, and left out when text is copied (the maintainer's
+  sitting with the test build found the earlier label, the name in
+  small grey type and a colon before the passage, read as part of the
+  text: QualCoder's in-vivo coding names a code with the words it
+  codes, so the passage seemed to come twice, and a name ending in a
+  full stop gave ".:"); a list of the codes with a tick box that hides
+  each one, and a "text only" switch, done in the style sheet with no
+  script, which hide the tags too; laid out at a phone's own width,
+  where the list's headings and links break only between words;
+  annotations and the public part of memos as numbered
+  notes linked both ways; the private part of every memo (from `#####`)
+  left out, with a line saying so; what the page cannot draw (areas on
+  images and PDF pages, audio and video codings) counted; suggestions
+  awaiting a decision counted. A coding is placed where its stored
+  passage matches the text, at its positions read as characters or,
+  failing that, as QualCoder's text coder counts them (an emoji as two
+  characters, a Windows line break as one, a byte-order mark at the
+  start as none), so that codings QualCoder 3.8.2 made in the plain text
+  files it imported with Windows line endings or a byte-order mark are
+  drawn on their own words; the paragraph mark QualCoder stores for a
+  line break inside a coded passage matches the line break in the
+  text, whatever its form, and Windows and old Mac line breaks show as
+  line breaks.
+  Safe by structure: project data only in escaped text and quoted
+  attributes, colours checked, selectors by number, a content security
+  policy that allows no script, fetch, form or base address, and no
+  link outside the page. Converted with pandoc, the page becomes a Word
+  file with one comment per coding, named after its code.
+- The reading folder: a private folder of Exegete's own, outside every
+  project, out of iCloud and OneDrive and not indexed
+  (`~/Library/Caches/Exegete/Reading.noindex` on a Mac,
+  `%LOCALAPPDATA%\Exegete\Reading` on Windows, marked not to be
+  indexed, `~/.cache/exegete/reading` on Linux), readable by its owner
+  only. Only originals of the document and media types QualCoder
+  imports are copied and shown; any other type (a program or a shortcut,
+  say, in a project from someone else) is neither copied nor shown,
+  since read-only does not stop such a file acting when opened. A long
+  name is shortened before its ending, never through it, and the
+  copy's own name must pass the same rule. Copies
+  are read-only and keep the internet-origin mark Windows and macOS put
+  on a downloaded file, so Word still opens a stranger's attachment in
+  Protected View.
+  Tidied: a file's page and copy go whenever Exegete changes the file's
+  text or name (`rename_file`, `pseudonymise_source`, which with
+  `rewrite_memos` clears the whole project's pages, and
+  `restore_backup`), and a page or copy left for a file deleted in
+  QualCoder (QualCoder gives a new file the highest number plus one)
+  when a new file that takes its number comes in through Exegete, or
+  when Exegete next writes a page or a copy for it, whichever program
+  brought it in; everything at Exegete's first tidy of the folder once
+  it is a week old; a temporary file an interrupted copy left beside an
+  original's copy goes after ten
+  minutes, as one beside a page does. An original of another type is
+  refused in words that say it is not one of the types Exegete copies
+  for reading (a project QualCoder 3.8.2 made can hold one, since 3.8.2
+  imports any file it can read as plain text).
+- Opening is narrow: only files Exegete has just written into the
+  reading folder; never a shell, never Python's `webbrowser` module,
+  never `qlmanage`; only the document and media types QualCoder
+  imports (a web page that was a project's original is only shown); and
+  with no screen (an SSH session, Linux without a desktop) nothing
+  opens and the answer gives the place.
+- Reading without codes: `without_codes=true` on
+  `open_file_for_reading` writes the page with the file's text alone,
+  for a fresh reading (no codings, no list of codes, no annotations and
+  no switches; the file's memo kept, its private part left out with a
+  line saying so), and on `analyze_file_with_coding` gives the
+  assistant the text and the file's details alone, with counts of the
+  codings and annotations it left out, so that it can say whether the
+  file has any without seeing them. Nothing in the project changes.
+- The assistant's brief gains one line under Privacy: use
+  `open_file_for_reading` when the researcher wants to read a whole
+  file, and never open, read or look at what it opens. The line on a
+  fresh reading that 0.14.2 held back is served, now that a file can be
+  read without its codings: when the researcher wants a fresh reading,
+  read the file with `analyze_file_with_coding(without_codes=true)`,
+  which leaves their codings out, and tell them whether you have seen
+  any. Section 4's list of what Exegete does not do yet keeps images,
+  audio, video and graphs: documents now come in through Exegete, and a
+  whole file opens for reading. The full brief is now about 12,400
+  characters.
+
+### Changed: whole-file reads in parts
+
+- `analyze_file_with_coding` (with a new `start` argument), the
+  `exegete://files/{file_id}` resource and the `exegete://cases/{case_id}`
+  resource returned a whole file's text with no limit: a
+  1,000,000-character file came back as about 250,000 tokens, ten times
+  the 25,000 Claude Code allows one answer. A long file now comes a
+  part at a time, sized to fit that limit with the codings beside it
+  (about 60,000 characters of English text a part, fewer in other
+  scripts), with `part` saying where the next starts; every position,
+  in every part, counts from the start of the whole file. A file that
+  fits one part reads as before. The file resource's later parts are at
+  `exegete://files/{file_id}/from/{start}`; a case's excerpts are cut
+  to one answer's size, each saying where its text continues.
+- A coding made in QualCoder is found in `analyze_file_with_coding` by
+  QualCoder's own count of positions, as on the reading page (an emoji
+  as two characters, a Windows line break as one, a byte-order mark at
+  the start as none), and gives its words' place in the text as
+  `text_start` and `text_end` beside its stored positions, which are
+  never moved; the answer tells the assistant to quote it from there,
+  so a quote after an emoji, or in a transcript QualCoder 3.8.2 imported
+  with Windows line endings, is the passage the researcher coded. The
+  paragraph mark QualCoder stores for a line break inside a coded
+  passage is read as that line break, whatever its form. A coding whose
+  stored passage neither count finds is marked `stored_passage_differs`,
+  never moved.
+- `import_text_file`'s description says first that its text passes
+  through the conversation, points to `import_documents` for a document
+  on the computer, and gives the 1,000,000-character limit.
+- `create_project`'s next steps send the researcher's documents on their
+  computer to `import_documents`, by their paths, so that their text
+  stays off the conversation, and keep `import_text_file` for text typed
+  or pasted in the conversation.
+
+### Deprecated
+
+- `import_text_file`'s `create_backup=false`, removed in v0.15 with the
+  other options v0.14 deprecated: an import always takes a backup
+  first. A call that passes it is answered with the deprecation.
+
+### Added: bringing documents in
+
+- `import_documents` brings Word (.docx), OpenDocument (.odt), RTF,
+  plain text (.txt), Markdown (.md), web pages (.html, .htm) and
+  subtitle files (.srt, .vtt) into the open project from the
+  researcher's computer, by their paths or a folder's, and PDF and EPUB
+  with an optional part (below). Exegete reads each document on the
+  computer, following QualCoder 4.0's own import; where QualCoder's
+  readers lose or garble content, Exegete keeps it, and names the
+  departure (below). The documents' text never passes through the
+  conversation.
+- Two steps, as Exegete's other changes that matter: the first call
+  writes nothing and answers with a preview (a summary line, the names
+  list's state, each file's name, size, length and warnings in plain
+  words with a way round, the files held back or refused and why, the
+  backup it will take), never the text; only with the preview's token,
+  on the researcher's word, does the second call take one backup, copy
+  each original unchanged into the project's folder of originals
+  (`documents`, stored path `/docs/<name>`, as QualCoder does) and store
+  its text. The token binds the files' contents, each folder's list of
+  files and the project's names: a file changed or added after the
+  preview refuses the import. QualCoder 3.8.2's lock refuses it before
+  any backup; QualCoder 4.0 writes no lock, so the signs that it may
+  have the project open are passed on as a warning in the preview
+  (`qualcoder_gui_hint`), as the other write tools pass them on, and
+  only you can make sure no 4.0 window has the project open. A failure
+  after the backup takes the batch back and names the backup.
+  Claude Code asks before both calls
+  (`anthropic/requiresUserInteraction`).
+- Where QualCoder's readers lose or garble content, Exegete keeps it,
+  and names the departure, each departure a line of TOOLS.md with an
+  example. In
+  Word files, a line break inside a paragraph stays a line break (where
+  QualCoder joins the words either side), tab stops set on a paragraph
+  add no tabs, a text box comes once (QualCoder repeats it up to four
+  times), moved text once, and non-breaking hyphens and positioned tabs
+  are kept; footnotes, endnotes, comments, headers and footers come
+  after the text, each labelled ("Footnote 1: ..."), comments' authors
+  and dates left out, and a note or comment referred to only from text
+  deleted with tracked changes left out with that text; each note and
+  comment leaves its label in square brackets where it stood ("was
+  far.[Footnote 1] We moved", a comment's where the words it is on
+  end), so a quote across that spot includes it, and a note with no
+  text, which has no label, leaves nothing; a comment inside a footnote
+  or endnote leaves its marker in the note's own text, in Word,
+  OpenDocument and RTF alike, where an RTF file had lost such a
+  comment's text, as QualCoder's import does (files already in a
+  project keep the text they were imported with); an emoji Word writes as an extension element comes in once, as
+  in QualCoder. In
+  OpenDocument files, runs of spaces, tabs and line breaks are kept, a
+  text box (a frame, or a shape holding text, as LibreOffice's Insert >
+  Text Box makes and as LibreOffice saves a Word text box) starts on a
+  line of its own, notes and comments leave the
+  sentence they sat in with their markup and come after the text as in
+  Word (a comment's author, initials and date left out), with headers
+  and footers, other markup is taken out and character codes read, and a
+  file not saved by LibreOffice (pandoc's, TextEdit's) is read, where
+  QualCoder finds no text. In RTF files, text deleted with tracked
+  changes is left out, notes, comments, headers, footers and text boxes
+  come after the text (notes and comments leaving their labels where
+  they stood, as in Word), and an emoji (two halves in RTF) is one
+  character, where QualCoder's import fails. In web pages and EPUB
+  chapters, blocks and table cells start on lines of their own, and a
+  note stays where the page has it, so no marker is needed. What
+  QualCoder's reading leaves out comes after the text, so the text it
+  does read keeps its place. A PDF's text is QualCoder's to the
+  character, since QualCoder 4.0 re-reads a PDF and compares. The
+  preview names each departure a file shows, for information, and that
+  within the project both programs read the text Exegete stores.
+- The proof, against QualCoder's own extraction functions
+  (`scripts/qualcoder_parity.py`, `tests/test_v0143_import_parity.py`):
+  with every departure switched off, Exegete's readers give QualCoder's
+  text to the character on every test document; and on every test
+  document, each difference from QualCoder's text is listed with the
+  departure that makes it, and nothing else differs. The test documents
+  include files written by LibreOffice, pandoc and TextEdit. QualCoder's
+  Word walk is kept with its MIT notice, each departure a switch on it,
+  and parses through defusedxml, in every part it reads; OpenDocument
+  follows QualCoder's string recipe with no parser, each departure a
+  step before or after it; RTF uses striprtf, as QualCoder does; web
+  pages follow QualCoder's rules, written afresh.
+- Named departures, each with its reason in TOOLS.md: a file in which no
+  text is found is refused, where QualCoder stores its raw bytes; a file
+  declaring XML entities is refused; a file not saved as UTF-8 is held
+  back (below); a file whose letters look garbled is held back with a
+  warning, and comes in on the researcher's word (below); subtitle files
+  come in as
+  documents, with every byte-order mark at their start removed; an RTF
+  file holding half of an emoji without the other half is refused with
+  the way round; originals are always copied, never linked, and keep
+  their internet-origin mark; per-format size
+  limits, archive limits and time and memory limits; the AI coder name
+  owns the rows and their attribute values, Exegete's rule for every
+  write.
+- The project's names list is applied to the stored text by
+  default, as QualCoder's import does (never to PDFs, nor to the
+  originals); an empty list counts as none; a list Exegete cannot use
+  stops the import, and turning the list off is never offered as the way
+  round; its preview then shows no file or folder name holding a name
+  from it, since QualCoder's Pseudonyms dialog saves lists Exegete
+  cannot use (a name with a space at its end, a chain, an emoji in a
+  pseudonym) and the names in them are names all the same (every name is
+  hidden when the list cannot be read at all). The list reads through
+  the markers the import leaves where a note or comment stood: a
+  comment on a first name alone puts its marker inside the full name
+  ("Maria[Comment 1] Brown"), which the list had then missed, so the
+  real name was stored without a word; the name is now replaced, with
+  the marker after the pseudonym ("Participant A[Comment 1]").
+  `pseudonymise_source` reads a Word, OpenDocument or RTF file through
+  the markers in the same way, and counts the names left in the
+  sentence as a reader sees it, without them: it had found no name in
+  such a file, said the name did not occur and counted none left. After
+  an import into a project with no names list, or an empty one, the line
+  for the researcher names the two ways that replace names afterwards,
+  `pseudonymise_source` on each file, or restoring the backup taken
+  just before, making the list and importing again, since a list made
+  after the import changes nothing already stored. A PDF holding listed
+  names is held back unless the researcher says so
+  (`import_pdfs_with_listed_names`). A file whose own name holds a
+  listed name, found in any letter case, across any separator or inside
+  a longer word (`maria_interview.docx`, `MariaB.docx`), is held back
+  and referred to only by its position (among the folder's documents of
+  the kinds Exegete imports, in A to Z order), with the advice to rename
+  it; it comes in under that name only if the researcher says so
+  (`import_file_names_with_listed_names`). A folder's subfolders and
+  other files are named by the same rule, hidden when they hold a listed
+  name, and so is a step of the real place a link leads to.
+- Letters that look garbled are the researcher's to decide. A UTF-8 file
+  once opened in another character set and saved again carries its
+  letters as other characters ("Ã©" for "é", "Ä…" for "ą", "Ð˜" for "И",
+  "√©" for "é" through a Mac's own set), in any script and any format
+  but PDF, and a garbled name may not match the names list. Each run
+  of characters that a common Windows, Mac, DOS or KOI8 set, Shift JIS
+  or GBK could have made of UTF-8 is read back through it, and counts
+  where the reading back fits its word better than the text as written.
+  So does a file saved in one of the two Western sets and opened once
+  in the other, then saved as UTF-8, each letter as one other
+  character: "cafÈ" for "café" when a Windows file is opened as the
+  Mac's own set, as TextEdit did with the practice field notes at the
+  maintainer's sitting (the file came in without a word), and "cafŽ"
+  the other way round. That reading is tried on the whole text, only
+  where every character outside ASCII could have come from it, and
+  counts only where the whole text reads back less odd; a run counts
+  only where it reads back with nothing odd while as written it is
+  clearly odd (a capital straight after a small letter, a symbol between
+  letters), or where a character can only be punctuation or "á" read
+  the other way, so that English and Irish text whose only special
+  characters are these shows signs too ("didnít", "OíBrien", "ñ" for a
+  dash between spaces, "Siobh·n", "didnÕt" from a Mac); a bullet or a
+  trade mark alone and the Mac's ring after a number, typed for degrees
+  ("31˚c"), are not counted. Checked on some 1.4 million strings of
+  macOS's own translations and LibreOffice's autocorrect lists, on some
+  700,000 of Word's and Pages' translations, LibreOffice's contributors'
+  names and its French and Spanish dictionaries, and on French, Spanish,
+  Portuguese, German, Nordic, Irish and Italian words, names and
+  all-capital headings, it raised no warning on correct prose, only on
+  some 150 of those interface strings, each alone: command names written
+  without spaces ("InsertarÍndice"); read the wrong way, seven in ten Western
+  strings from Windows and six in ten from a Mac showed signs a string at
+  a time, and 99 or more in a hundred files of fifty strings; English
+  strings, 96 in a hundred files of fifty strings, both ways.
+  Such a file is held back with a warning that says what was seen (in
+  how many places, the first one's line, the encoding they read back
+  through, in TextEdit's names), never the text, and how to put the
+  letters right: for a Western file opened in the other Western set,
+  open the file as it was before in the encoding it was saved in (named
+  as TextEdit and Word name it) and import a copy saved as UTF-8. `show_text`, on the preview only, opens
+  a page on the researcher's own screen with the text as it would be
+  stored and each place marked with what it would read as; the answer
+  gives the page's location, never the text, and the page goes after the
+  import, or at Exegete's first tidy of its reading folder once it is an
+  hour old (when it starts, and at most every five minutes while it
+  writes there). The file comes in as it is only with
+  `import_files_with_garbled_letters`, on the researcher's word, the
+  names list applied to the rest, and its line in the preview and the
+  import's answer say that a name written with garbled letters is not
+  matched by a names list. These are signs, not proof: correct text can
+  show them (Chinese with English words written inside it, a sum
+  straight after an opening quotation mark or in a range, a capital
+  inside a Cyrillic word as in "ПриватБанк", Arabic punctuation typed
+  straight before the next word), which no longer keeps a correct file
+  out for good; and garbled text can show none (a garbled capital at a
+  word's start through the Western and Central European sets, a single
+  garbled letter in a name through Windows Central European or ISO
+  8859-2, most garbled letters through GBK). TOOLS.md lists both. An RTF
+  file's warning speaks of letters written as UTF-8 straight into the
+  file only when it holds them (RTF's rule reads such bytes one by one,
+  in QualCoder as in Exegete); for any other RTF file it is the general
+  warning, since QualCoder reads it rightly.
+- Files not saved as UTF-8 (plain text, Markdown and subtitle files, and
+  web pages whatever character set they declare) are held back, with
+  plain steps to save a copy as UTF-8, under a new name so that the
+  original stays as it is until the copy is checked, in Word, TextEdit
+  or Notepad (for a web page, or as a Word document), each app on a
+  line of its own and each saying how to open the file in the encoding
+  it was saved in when its accents look wrong, in the app's own words:
+  TextEdit's Show Options and Plain Text Encoding in its Open window
+  ("Western (Windows Latin 1)" for most files from Windows), Word's
+  Confirm file format conversion setting and its File Conversion window
+  with a preview, and Notepad's status bar, which names the encoding it
+  read ("ANSI" for Windows Latin 1); nothing is guessed, and no
+  character set can be named. Each such file is held back with a short
+  reason, and the steps are given once in the answer for all of them
+  (`saving_a_copy_as_utf8`).
+  Read by a guess, by a set the researcher names or by the set a page
+  declares, accented letters can come out as others, and a listed name
+  written with other letters is not replaced: a Polish or Turkish file
+  guessed as Western, a set chosen to read the names that read the rest
+  of the text wrongly, and a page declaring the wrong set all let a name
+  through or stored the wrong letters. The names list is now applied to,
+  and its names looked for in, the text exactly as it is stored. A file
+  saved as UTF-16 or UTF-32 without the byte-order mark that names it,
+  which is valid UTF-8 byte for byte with a NUL beside each letter, is
+  held back too, with the same steps: text saved as UTF-8 rarely holds
+  a NUL, and a listed name written with NULs between its letters is not
+  replaced. QualCoder guesses instead, and stores such a file as read; a
+  file saved as UTF-8 has the same letters in both programs.
+  charset-normalizer, QualCoder's guesser, is not one of Exegete's
+  libraries.
+- A file the preview read as ready that reads otherwise at the import
+  (out of its own time or memory, say) stops the whole batch, naming the
+  file, and nothing goes in; a file the preview held back or refused is
+  skipped without being read again, and the answer names each file not
+  imported, with its reason. A batch the call's time cuts short goes in
+  as far as it got, and the answer names the rest (below).
+- How long one call may run (provisional, until the limit of the
+  assistants' apps has been timed): a host can stop a tool call that runs long (Claude
+  Desktop's own text is said to give 180 seconds, and 60 to a local
+  server added by hand), and the largest files the limits allow took up
+  to 39 seconds each to read on a fast Mac (a 9,000-page PDF, a book of
+  75 million characters, both refused as too long only once read),
+  where a batch could read for five minutes and one file for a minute.
+  So each call now stops between files within a
+  time counted from its start: the preview reads for about 30 seconds,
+  so that the import, which reads the same files again from their
+  copies, fits within its own 45; one file has 30 seconds to be read at
+  the preview and 40 at the import, and the first file a call reads
+  always has its whole time, so every call reads at least one file. The
+  files a preview had no time for, or whose reading the time left cut
+  short, are counted in its summary line and listed as not read this
+  time, with how to go on: import
+  the files it read, then ask again with the same paths, the files
+  already imported skipped. An import that runs out of time between
+  files imports the files it has done and names the rest, with the same
+  way on. When every file a call read was held back or refused, the
+  same paths would read them first again and stop at the same place,
+  so the preview says to leave those files out (naming the others, or
+  moving them out of the folder) rather than to ask again. The files
+  over the batch's cap of 50 are counted in the summary line too, and
+  in the import's message, as the files left for later are. A file
+  kept online only by a cloud drive is downloaded when it is named,
+  every file of the batch at each call: the download counts towards
+  the call's time but is never cut short by it, so a large folder
+  kept online only can make a call run long; making the folder
+  available offline first avoids that. While something
+  stops the whole import, the summary line says how many files would be
+  ready, and that the import is stopped. A file over its own time is
+  refused, as before. A batch of 20
+  everyday documents (Word, OpenDocument, RTF, web pages, text,
+  subtitles, PDFs and EPUBs) took about 5 seconds for each call.
+- Limits that hold whatever a file declares: every part EbookLib reads
+  from an EPUB counts towards the 100 MB, each time it is read (a
+  chapter listed thirty times is thirty reads), and is checked for
+  entity declarations whatever its name and in every encoding an XML
+  parser reads by itself (UTF-32 too); an archive's directory larger
+  than 10,000 entries could need is refused before it is parsed, and so
+  is an archive whose zip64 locator points away from the record Python's
+  zipfile reads. An EPUB part's XML declaration is read whatever white
+  space comes before its character set, and one that does not end
+  within the part's first 1,024 bytes refuses the book; refusing a part
+  in such a character set, which QualCoder imports, is named among
+  TOOLS.md's other departures.
+- A project whose folder of originals is a link stops the import (the
+  copies would land outside the project, where its backups do not
+  reach), as it already stopped the reading tool.
+- In a project QualCoder 3.8.2 made (no sub-codes column), each PDF's
+  preview says that 3.8.2's PDF view shows it but will not let it be
+  coded there (its Code text window can); the switch had looked at
+  coder visibility, which 3.8.2 projects have too. TOOLS.md lists what
+  else differs in a 3.8.2 project, and names LaTeX files, which
+  QualCoder 4.0 imports linked and Exegete does not import. After a PDF
+  is imported, the answer says what to do if QualCoder 4.0 reports a
+  text mismatch, which another PyMuPDF release can cause.
+- Every document is read in a separate, short-lived process: started
+  isolated, handed the file's bytes rather than a path, answering in
+  plain data, its error output dropped, with a time limit and a memory
+  cap on every system. On a Mac, where the cap is watched rather than
+  enforced, the process's own peak is also read when it ends, so a
+  reading that passed the cap between two looks is refused all the
+  same. No library's message reaches an answer.
+- Paths: `~` and quoted paths accepted; hidden places, links (except
+  into a Mac's cloud drive folders), network paths typed as such, the
+  open project, Exegete's state folders and its reading folder refused,
+  each with a next step in plain words; Windows' long form of a path on
+  the computer's own drive (`\\?\C:\...`) is refused in words of its
+  own, not as a network path. On Windows with long paths switched off,
+  a place on the computer longer than the 259 characters Windows opens
+  is refused as too long (it had been refused as not there), and so is
+  a file whose place in the folder of originals would pass them, before
+  it is read, with the way round; the temporary copy's name no longer
+  carries the file's own name, so it is never the longer of the two for
+  a name of 27 characters or more, and when it is the longer, the
+  refusal says so and does not advise renaming the file (TOOLS.md names
+  this departure).
+- `explain_ai_coding_tools('converted_documents')`: how to bring in a
+  document converted by another tool, such as a pandoc server (file to
+  file, with Exegete's defaults file, which keeps pandoc sandboxed from
+  the first conversion), named by the import's description; an EPUB
+  may be converted this way where Exegete has no optional part.
+- The optional part `pdf-epub` (PyMuPDF and EbookLib, the libraries
+  QualCoder 4.0 reads PDF and EPUB with, AGPL-licensed) is switched on in
+  the Claude Desktop extension; an install with it is, as a whole, under the AGPL's terms, and
+  Exegete's own code stays LGPL. New libraries in every install:
+  defusedxml, and striprtf pinned exactly.
+
+### Changed: what the documents say Exegete does not do yet
+
+- With documents brought in through Exegete and a whole file opened
+  for reading, the README's "Not in Exegete yet" lists bringing in
+  images, audio and video, coding by selecting text yourself, coding
+  images, audio, video or an area of a PDF page, graphs, and
+  QualCoder's Reports menu. "What you can do" says that transcripts come
+  in as documents from the computer too, and that you can read a whole
+  transcript on a page in your browser; "Where your data goes" says
+  what an import's preview sends; "What comes next" no longer lists the
+  two as in development; the tables carry the import and the new tool
+  counts. INSTALL.md's note on QualCoder, the brief's section 4,
+  TOOLS.md, the coding guide, the extension's description and the maps
+  of the code in CLAUDE.md and CONTRIBUTING.md say the same.
+- The README's "A first session" says that the practice page can come
+  in from a Word or text file, its text off the conversation. INSTALL.md
+  gains "PDF and EPUB: the optional part": which formats need it, that
+  the Claude Desktop extension switches it on, how to add it to an
+  install from PyPI, and its licence (an install with it is, as a whole,
+  under the AGPL's terms; Exegete's own code stays LGPL). PRIVACY.md
+  says what a reading page holds and where it is written. TOOLS.md's
+  contents list its sections on reading a whole file and on the
+  import's departures.
+
 ### Changed: the README's table of assistants
 
 - "Where your data goes" now says first why the table matters: Exegete's
@@ -25,6 +548,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   kept out of the folders connected to it, with computer use off and no
   other extension that reads files; LM Studio's chat is suggested with
   no other server or plugin that reads files.
+
+### Changed: the coder name and the folder for projects, from the maintainer's sitting
+
+- `create_project` asked for the researcher's coder name "in
+  QualCoder: Settings, Coder name"; QualCoder 4.0's Settings window
+  calls it "Current coder" (Project, Settings; on a Mac, Qt moves
+  Settings to the QualCoder menu). The question, in the tool's
+  description and in its answer, now asks what name the researcher's
+  own codings should carry: if they use QualCoder, the name in its
+  settings ("Current coder"), exactly as there; if not, any name they
+  choose. Until now a researcher without QualCoder was sent to
+  `coder_name_not_known`, which leaves the check that keeps the AI's
+  codings apart from theirs off; that flag is now for a researcher who
+  does not know the name. The answer's question also says that Exegete
+  cannot change the name once the project is made (QualCoder's
+  settings can), so that the assistant asks for it as the researcher
+  wants it to stay: at the sitting a project was made again for a
+  fuller name. TOOLS.md says the same. The README told a reader
+  without QualCoder to say so, which leads to the flag; it now says that
+  any name they choose will do, and "say so" is for a reader who does
+  not know theirs.
+- At the sitting the assistant said a new project would go to
+  `~/Documents/Exegete projects`, the folder `create_project`'s
+  description named as the default, and the project went to
+  `~/QualCoder projects`, the Claude Desktop extension's "Folder for
+  projects". `list_available_projects`, `get_current_project` and
+  `create_project` (its refusals too) now give the folder that is set
+  as `projects_folder`. When `create_project` asks for the coder name,
+  its answer also gives the full path the project will be made as, in
+  the folder given as `directory` or else in the folder set, as
+  `will_be_made_as`, and asks the assistant to tell the researcher, so
+  that they hear where a project will go before it is made.
+  `create_project`, `copy_project_to_workspace` and `import_text_file`
+  name "the folder set for projects" rather than a default, each
+  description shorter than before or as long.
+
+### Measured
+
+- Serialised tool JSON: full = 201,739 characters (about 50.4k tokens
+  at chars/4) over 77 tools, core = 67,225 (about 16.8k) over 23, and
+  the opt-in lifecycle set = 204,244 (about 51.1k) over 78, measured on
+  Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a separate
+  environment, not the repository's own `venv/`: for the tree before the
+  wording from the maintainer's sitting, it gives exactly the figures
+  measured in `venv/`; on Python 3.11.13 (likewise a separate
+  environment, which gives exactly the figures measured in the
+  `.venv/`), 211,611, 70,617 and 214,248. Against
+  0.14.2's figures (196,387, 65,140 and 198,944 on 3.13), every set
+  grew by `open_file_for_reading`'s own entry (1,630 characters on
+  3.13, 1,632 with its separator) and by 471 characters on
+  `analyze_file_with_coding` (its `start` and `without_codes`
+  arguments); `full` and `lifecycle` also by `import_documents`' own
+  entry (2,970, 2,972 with its separator; it is in the standard and
+  lifecycle sets, not in core, and its two arguments for letters that
+  look garbled, `import_files_with_garbled_letters` and `show_text`,
+  are in it) and by 295 on `import_text_file` (the description changed
+  above). The wording from the maintainer's sitting (see "Changed: the
+  coder name and the folder for projects, from the maintainer's
+  sitting") shortened three entries: `copy_project_to_workspace`'s by
+  18 characters, in every set, `create_project`'s by 52, in lifecycle,
+  and `import_text_file`'s by 1, counted in the 295 above (on 3.11, 18,
+  60 and 5). No other tool's entry changed. Both new tools put their
+  rules first, and each whole description fits within the 2,048 characters
+  Claude Code keeps: `open_file_for_reading`'s is 1,187 characters on
+  3.13 (1,267 on 3.11) and `import_documents`' 1,976 (2,032 on 3.11).
 
 ## [0.14.2-alpha] - 2026-10-09
 

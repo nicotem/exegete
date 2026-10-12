@@ -95,7 +95,8 @@ def _edit(path, old, new):
     # the page's own date, which a slipped release day would leave behind
     ("update/index.html", updates.spoken_date(RELEASE_DAY),
      "1 October 2026", "does not give the version"),
-    ("update/index.html", "QualCoder 4.0", "QualCoder 3.8",
+    # a word of this release's summary (0.14.2's named QualCoder 4.0)
+    ("update/index.html", "Word, PDF and other", "Word and other",
      "does not give the summary"),
     ("update/index.html", "/releases/download/v", "/releases/tag/v",
      "does not link the download link"),

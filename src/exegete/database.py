@@ -25,7 +25,7 @@ from datetime import datetime
 from contextlib import closing, contextmanager
 import glob
 
-from . import env_settings, names
+from . import doc_readers, env_settings, names
 from .memo_privacy import (
     PERSONAL_NOTE_MARK,
     extract_ai_memo,
@@ -1230,7 +1230,7 @@ PDF_HEADER_WINDOW = 1024
 PDF_PROBLEM_MESSAGES = {
     PDF_NO_TEXT_LAYER: (
         "This PDF has no text layer (a scanned PDF, or pages that are "
-        "images): QualCoder stored no text for it, so there is nothing "
+        "images): no text was stored for it, so there is nothing "
         "here to read, search or code as text. QualCoder can code it only "
         "by drawing regions in its PDF view. To code its words, run OCR "
         "on the PDF outside Exegete (it bundles none) and "
@@ -7571,6 +7571,72 @@ class QualcoderDatabase:
 
         return name
 
+    def _insert_source_row(self, name: str, fulltext: str,
+                           mediapath: Optional[str], memo: str, owner: str,
+                           date_str: str) -> Tuple[int, int]:
+        """The write steps shared by import_text_file and the document
+        import (0.14.3): the source row, then one empty value for each
+        file attribute type, with the same owner and date, as QualCoder's
+        own import writes them (manage_files.py 3352-3376 at 9bddf17).
+        Returns (file id, attribute values written). Raises
+        sqlite3.Error; the caller owns the transaction."""
+        cursor = self.conn.execute("""
+            INSERT INTO source (name, fulltext, mediapath, memo, owner, date)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, fulltext, mediapath, memo, owner, date_str))
+        file_id = cursor.lastrowid
+        # Placeholders for file-type attribute types, driven by
+        # caseOrFile='file' exactly like QualCoder's own file writers. The
+        # real domain set is case|file|journal; 'both' does not exist
+        # (cases-attributes.md section 1).
+        attr_types = self.conn.execute(
+            "SELECT name FROM attribute_type WHERE caseOrFile = 'file'"
+        ).fetchall()
+        for attr_type_row in attr_types:
+            self.conn.execute("""
+                INSERT INTO attribute (name, attr_type, value, id, date, owner)
+                VALUES (?, 'file', '', ?, ?, ?)
+            """, (attr_type_row["name"], file_id, date_str, owner))
+        return file_id, len(attr_types)
+
+    def insert_imported_document(self, name: str, fulltext: str,
+                                 mediapath: str, memo: str,
+                                 owner: str) -> Dict[str, Any]:
+        """One document's row for import_documents (0.14.3),
+        in the caller's transaction (no commit here).
+
+        The text arrives as QualCoder's import would store it, already
+        normalised for its format (a PDF's not at all), so nothing is done
+        to it here. The checks are QualCoder's emptiness test (exactly
+        empty text refused; text of spaces goes in, as a scanned PDF's
+        line breaks do), Exegete's name rules and length limit, and the
+        owner's rules; the name must be new.
+        """
+        self._require_write_access()
+        if not isinstance(name, str) or file_name_problem(name) is not None:
+            raise ValueError("The file's name cannot be used in a project.")
+        if not isinstance(fulltext, str) or fulltext == "":
+            raise ValueError("The document's text is empty.")
+        if len(fulltext) > MAX_TEXT_CONTENT_LENGTH:
+            raise ValueError("The document's text is over the length limit.")
+        if not isinstance(mediapath, str) or mediapath != "/docs/" + name:
+            raise ValueError("The stored path must be the project's own "
+                             "folder of originals.")
+        validate_coder_name(owner, "owner")
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            file_id, attributes = self._insert_source_row(
+                name, fulltext, mediapath, memo or "", owner, date_str)
+        except sqlite3.IntegrityError:
+            raise ValueError("A file with this name is already in the "
+                             "project.") from None
+        except sqlite3.Error as e:
+            if _is_locked_error(e):
+                raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
+            raise
+        return {"id": file_id, "name": name, "date": date_str,
+                "owner": owner, "attributes_created": attributes}
+
     def import_text_file(
         self,
         name: str,
@@ -7625,25 +7691,8 @@ class QualcoderDatabase:
         memo = extract_ai_memo(memo or "")
 
         try:
-            cursor = self.conn.execute("""
-                INSERT INTO source (name, fulltext, mediapath, memo, owner, date)
-                VALUES (?, ?, NULL, ?, ?, ?)
-            """, (name, content, memo, owner, date_str))
-            file_id = cursor.lastrowid
-
-            # Create attribute placeholders for file-type attribute types —
-            # driven by caseOrFile='file' exactly like QualCoder's own file
-            # writers (manage_files.py:1387-1392). The real domain set is
-            # case|file|journal; 'both' does not exist (cases-attributes.md
-            # §1), so the old IN ('file','both') superset was wrong.
-            attr_types = self.conn.execute(
-                "SELECT name FROM attribute_type WHERE caseOrFile = 'file'"
-            ).fetchall()
-            for attr_type_row in attr_types:
-                self.conn.execute("""
-                    INSERT INTO attribute (name, attr_type, value, id, date, owner)
-                    VALUES (?, 'file', '', ?, ?, ?)
-                """, (attr_type_row["name"], file_id, date_str, owner))
+            file_id, attributes = self._insert_source_row(
+                name, content, None, memo, owner, date_str)
 
             if auto_commit:
                 self.conn.commit()
@@ -7656,7 +7705,7 @@ class QualcoderDatabase:
                 "content_length": len(content),
                 "owner": owner,
                 "date": date_str,
-                "attributes_created": len(attr_types)
+                "attributes_created": attributes
             }
 
         except sqlite3.IntegrityError as e:
@@ -10581,7 +10630,9 @@ class QualcoderDatabase:
                 skipped.append({"file_id": fid, "name": name,
                                 "reason": "no_fulltext"})
                 continue
-            eligible.append({"file_id": fid, "name": name, "text": text})
+            eligible.append({"file_id": fid, "name": name, "text": text,
+                             "through_markers": doc_readers.leaves_markers(
+                                 mediapath)})
         return eligible, skipped
 
     def _pseudonymise_rows(self, file_id: int) -> Dict[str, List[Dict]]:
@@ -10664,7 +10715,15 @@ class QualcoderDatabase:
             text = source["text"]
             length, sha = self.fingerprint_of_text(text)
             digest_files.append([source["file_id"], length, sha])
-            replacements = engine.find_replacements(compiled, text)
+            # A Word, OpenDocument or RTF file is read through the markers
+            # Exegete's import left where a note or comment stood, as the
+            # import's own names list reads it: a comment on a first name
+            # puts "[Comment 1]" inside the full name (0.14.3).
+            if source["through_markers"]:
+                replacements = engine.find_replacements_through(
+                    compiled, text, doc_readers.NOTE_MARKER)
+            else:
+                replacements = engine.find_replacements(compiled, text)
             if not replacements:
                 # A file with no match is not touched at all: no rewrite,
                 # no row update, no row read beyond the fingerprint.
@@ -10685,6 +10744,7 @@ class QualcoderDatabase:
                 "file_id": source["file_id"],
                 "name": source["name"],
                 "old_text": text,
+                "through_markers": source["through_markers"],
                 "new_text": engine.apply_replacements(text, replacements),
                 "old_fingerprint": (length, sha),
                 "position_safe": position_safe(text),
@@ -11429,6 +11489,15 @@ class QualcoderDatabase:
             if not isinstance(text, str) or text == "":
                 continue
             fid = int(row["id"])
+            if doc_readers.leaves_markers(row["mediapath"]):
+                # A reader sees a name whole where Exegete's import left a
+                # note's marker inside it ("Maria[Comment 1] Brown"), so a
+                # Word, OpenDocument or RTF file's names are counted with
+                # the markers taken out (0.14.3).
+                if fid in rewritten:
+                    rewritten[fid] = engine.without_markers(
+                        rewritten[fid], doc_readers.NOTE_MARKER)
+                text = engine.without_markers(text, doc_readers.NOTE_MARKER)
             if fid in rewritten:
                 sources.append((fid, row["name"], rewritten[fid], None))
                 continue
@@ -12161,7 +12230,9 @@ class QualcoderDatabase:
                 hidden["override_required"])
             collisions = {table: rows for table, rows
                           in item["collisions"].items() if rows}
-            variants = engine.case_variants_seen(compiled, text)
+            variants = engine.case_variants_seen(
+                compiled, engine.without_markers(text, doc_readers.NOTE_MARKER)
+                if item.get("through_markers") else text)
             totals["files"] += 1
             totals["codings_changed"] += codings["changed"]
             totals["annotations_changed"] += (

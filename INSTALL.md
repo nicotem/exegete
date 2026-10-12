@@ -14,7 +14,8 @@ Exegete comes as a desktop extension, one file ending in `.mcpb`, which
 Claude Desktop installs itself. Claude fetches what Exegete needs (a
 tool called uv, which then fetches Python and Exegete's own
 libraries), so you need no Python, no Terminal and no configuration
-file.
+file. The extension switches on the optional part that reads PDF and
+EPUB documents ("PDF and EPUB: the optional part", below).
 
 1. **Get Claude Desktop**, the latest version, from
    https://claude.ai/download, and sign in.
@@ -166,7 +167,10 @@ provisional: a later release may change it.
 Before starting, make sure you have:
 
 - ✅ **A computer** with macOS, Windows or Linux (paths differ
-  slightly), and **Python 3.10 or newer**
+  slightly), and **Python 3.10 or newer**. Opening a file for you to
+  read (v0.14.3) needs a screen: on Linux, a desktop
+  session; in an SSH session nothing opens, and Exegete gives the
+  page's place instead
   - Check by opening Terminal and typing: `python3 --version`
   - If not installed, get it from: https://www.python.org/downloads/
 - ✅ **An MCP host**: the step-by-step guide below uses Claude Desktop
@@ -184,19 +188,21 @@ Before starting, make sure you have:
   (project schemas v14 through v17); see "Supported QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
 - **QualCoder, optional.** Today it does what Exegete does not do
-  yet: bringing in documents (Word, PDF, images, audio, video) and any
-  text you would rather not pass through the conversation (Exegete
-  imports only text the assistant hands it), reading a whole transcript
-  with its coding highlighted, coding images, audio, video or an area
-  of a PDF page, and graphs. If your study needs any of these now, get
-  it from the start: https://github.com/ccbogel/QualCoder/releases. 4.0 is at the top of
+  yet: bringing in images, audio and video, coding images, audio, video
+  or an area of a PDF page, and graphs. If your study needs any of
+  these now, get it from the start: https://github.com/ccbogel/QualCoder/releases. 4.0 is at the top of
   the page, the release marked "Latest" when this was checked, on
   6 October 2026, and 3.8.2 just below it. Exegete works with both,
   but can tell that QualCoder has a project open only with 3.8.2,
   whose lock file shows it. Each release's downloads are under its
   notes, in Assets, for Windows, Linux and Macs with Apple Silicon (M1
   or later): QualCoder offers none for older Intel Macs, and its notes
-  there say how to open it the first time
+  there say how to open it the first time. Since 0.14.3,
+  Exegete brings in documents itself with
+  `import_documents`, their text staying on the computer on the way in
+  (Word, OpenDocument, RTF, plain text, Markdown, web pages and
+  subtitle files; PDF and EPUB need its optional part, below), and
+  opens a page in your browser with a whole file's text and its codings
 
 ---
 
@@ -219,6 +225,45 @@ This gives you an `exegete` command; get its absolute path with
 `which exegete` and use THAT as the `command` in the Claude
 configuration of Step 6 (no `args` needed). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
+
+### PDF and EPUB: the optional part
+
+`import_documents` reads Word, OpenDocument, RTF, plain text, Markdown,
+web pages and subtitle files in every install. PDF and EPUB need an
+optional part, `pdf-epub`: the two libraries QualCoder 4.0 reads them
+with, PyMuPDF and EbookLib (with lxml, which EbookLib needs). The
+Claude Desktop extension switches it on by itself. Installed from PyPI
+without it, Exegete imports the other formats and says it cannot read
+PDF or EPUB yet; to add it:
+
+```bash
+~/exegete-venv/bin/pip install "exegete[pdf-epub]"
+# or
+pipx install --force "exegete[pdf-epub]"
+uv tool install "exegete[pdf-epub]"
+```
+
+or in PowerShell on Windows, for the virtual environment of the steps
+above:
+
+```powershell
+$HOME\exegete-venv\Scripts\pip install "exegete[pdf-epub]"
+```
+
+**Its licence.** PyMuPDF and EbookLib are under the GNU Affero General
+Public License, version 3 (AGPL-3.0), so an install with this part is,
+taken as a whole, under the AGPL's terms, as QualCoder's own installs
+are; Exegete's own code stays under the LGPL (LGPL-3.0-or-later), and an
+install without the part is untouched. Neither library is inside
+Exegete's package or its extension file: both are fetched from PyPI on
+your computer. NOTICE lists them, with lxml (BSD-3-Clause). If your
+institution or your project's terms rule out AGPL software, the Claude
+Desktop extension would not suit, since it always has the part; an
+install from PyPI without it keeps AGPL software off your computer.
+PDFs can then be saved as plain text from a PDF program that offers
+it, and EPUBs converted to text with pandoc
+(`explain_ai_coding_tools('converted_documents')`); a PDF's text saved
+that way can differ from QualCoder's reading of it.
 
 The step-by-step install below is the **contributor path**: use it if
 you want to read or modify the source, or run the test suite.
@@ -294,6 +339,9 @@ pytest from the repository root:
 pip install -e ".[dev]"
 python -m pytest
 ```
+
+With `pip install -e ".[dev,pdf-epub]"`, as the automated checks
+install it, the tests of PDF and EPUB import run too.
 
 ---
 
@@ -549,10 +597,10 @@ versions, below, are new and have one spelling only.
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 75 tools;
-  `core` registers the 22-tool supervised coding set for local models
+- `EXEGETE_TOOLSET`: `full` (default) registers 77 tools;
+  `core` registers the 23-tool supervised coding set for local models
   (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
-  registers the full set plus `create_project`, 76 tools, so that a
+  registers the full set plus `create_project`, 78 tools, so that a
   study can be started from the conversation (TOOLS.md, "Starting a
   project from the conversation"). Configured by hand, creating
   projects stays out of the default set, so that researchers opt in to
@@ -824,9 +872,9 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 75 tools by
+**Step 3. Use the core toolset.** Exegete offers 77 tools by
 default, and the serialised tool definitions alone measure about
-196,000 characters, roughly 49k tokens (measured for 0.14.2 under
+202,000 characters, roughly 50k tokens (measured for 0.14.3 under
 Python 3.13.5 with mcp 1.30.0, in the
 repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
@@ -841,15 +889,15 @@ definitions measure about five per cent more).
 That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
-(in the config of Step 5) to register only the 22-tool supervised
-coding set, measured at about 65,000 characters, roughly 16k tokens.
+(in the config of Step 5) to register only the 23-tool supervised
+coding set, measured at about 67,000 characters, roughly 17k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-16k tokens of schema exceed the 8k default context. When loading the
+17k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
-(that leaves about 16k tokens for your transcript excerpts and
+(that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
-or 64k if you must run the full surface (its schema alone is about 49k
+or 64k if you must run the full surface (its schema alone is about 50k
 tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
@@ -1290,7 +1338,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 199,000 characters with `lifecycle`; TOOLS.md says how that
+  (about 204,000 characters with `lifecycle`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1386,11 +1434,12 @@ annotation, which takes priority)."). Under a server's default,
 `auto`, Codex asks before a tool that can replace or remove, runs a
 read-only tool without asking, and also runs without asking a tool that
 is neither but is marked as reaching nothing beyond this computer. Here
-that is the 14 tools that only add (`import_text_file`,
-`apply_codings`, `create_proposed_codes`, `create_code` and the rest)
+that is the 16 tools that only add (`import_text_file`,
+`apply_codings`, `create_proposed_codes`, `create_code` and the rest,
+`open_file_for_reading` and `import_documents` among them from 0.14.3)
 and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
-mark Codex does not read. With `default_tools_approval_mode =
-"writes"` in the server's entry, Codex asks before every tool not
+mark Codex does not read (`import_documents` carries it too). With
+`default_tools_approval_mode = "writes"` in the server's entry, Codex asks before every tool not
 marked read-only; the recipe above sets it, and asks before
 `read_pseudonym_list` whichever of the server's approval modes is set.
 The desktop app's "Approve for me" sends what needs approval to an
@@ -1404,7 +1453,29 @@ with "allow once" for anything that writes. In an auto mode, a
 classifier, not you, decides on the writing tools, and on
 `read_pseudonym_list` in any host that does not honour its mark; in
 "Skip all approvals" or `bypassPermissions`, nothing is asked except,
-in Claude Code 2.1.199 and later, `read_pseudonym_list`.
+in Claude Code 2.1.199 and later, `read_pseudonym_list` and
+`import_documents`.
+
+Bringing documents in (`import_documents`, 0.14.3) takes
+two calls: the first only looks and changes nothing in the project (if
+letters look garbled, it can open a page on your screen to check them
+on); the second brings the files in. Set to "always allow", the
+import would run without asking, and a document's hidden instructions
+could then have an assistant bring in another file unasked; allowing
+it once, after reading the preview, keeps you asked each time. PRIVACY.md, "Bringing documents in", says what reaches the AI
+provider. The Claude Desktop extension switches on the optional part
+for PDF and EPUB (PyMuPDF 1.28.2 and EbookLib 0.20, the releases it
+pins, with which Exegete's text is checked against QualCoder's; about
+24 to 35 MB more to
+download at the first start, AGPL-licensed); installed from PyPI
+without it (`pip install exegete`), Exegete imports the other formats
+and says it cannot read PDF or EPUB yet ("PDF and EPUB: the optional
+part", above, says how to add it for each way of installing). A PDF's
+text is QualCoder 4.0's only at
+the same PyMuPDF release: with another, QualCoder may report a text
+mismatch and offer to restructure, which moves codings, so take a
+backup and check them before you accept; the import's answer names the
+release it used.
 
 ---
 
@@ -1716,7 +1787,7 @@ steps again with the newer version.
 it fetched first, until the command names a version or uv's cache is
 cleared. To update, quit the client, change `exegete` (or the earlier
 name, qualcoder-mcp) in that entry to `exegete@` and the newest version
-as PyPI spells it (for example `exegete@0.14.2a0`), and open the client
+as PyPI spells it (for example `exegete@0.14.3a0`), and open the client
 again: it fetches that version when it next starts, which needs the
 internet that once. With the check for new versions on, "How do I
 update Exegete?" gives this step with the version filled in.
@@ -1756,7 +1827,7 @@ terminal:
 ```
 
 It prints `exegete` followed by the version and exits; version
-`0.14.2-alpha` shows as `0.14.2a0`, its normalised form. The server
+`0.14.3-alpha` shows as `0.14.3a0`, its normalised form. The server
 also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a

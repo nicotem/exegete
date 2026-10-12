@@ -73,8 +73,12 @@ never put participant data in an issue.
 
 - **Start a project** in QualCoder's format (Experimental), or work on
   a copy of yours.
-- **Bring in transcripts** through the conversation; sort them into
-  cases with attributes such as age, role or site.
+- **Bring in transcripts** as documents from your computer (Word,
+  OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB
+  with the optional part, which the extension has), read by Exegete on
+  your computer, their text kept off the conversation, or through the
+  conversation; sort them into cases
+  with attributes such as age, role or site.
 - **Code the files you choose, with suggestions you approve**: each
   quotes the text word for word (Exegete checks the words are in the
   file), with the assistant's reading: explicit (the passage states
@@ -86,7 +90,8 @@ never put participant data in an issue.
   and delete, with a preview before merging or deleting.
 - **Explore**: search texts, codings and memos; frequencies; codes that
   occur together; a case-by-code matrix; cases and files by attribute;
-  a whole transcript with its codings, read by the assistant.
+  a whole transcript with its codings, read by the assistant, or by
+  you on a page in your browser.
 - **Write** memos, annotations and a research journal.
 - **Coder comparison**: per-code agreement between two coders, with
   QualCoder's own coefficient and Cohen's kappa side by side.
@@ -99,15 +104,10 @@ never put participant data in an issue.
   restore one.
 
 **Not in Exegete yet**, and done in QualCoder for now: bringing in
-documents other than text (Word, PDF, images, audio, video) and text
-you would rather not pass through the conversation; reading a whole
-transcript yourself with its coding highlighted (today the assistant
-reads coded passages back to you); coding images, audio, video or an
-area of a PDF page; graphs; and QualCoder's Reports menu. If your study
-needs any of these now, get QualCoder from the start. Bringing in
-documents, and
-reading a whole file yourself, are in development
-([What comes next](https://github.com/nicotem/exegete#what-comes-next)).
+images, audio and video; coding by selecting text yourself; coding
+images, audio, video or an area of a PDF page; graphs; and QualCoder's
+Reports menu. If your study needs any of these now, get QualCoder from
+the start.
 
 **The aim** is the whole life of a project in Exegete, from its
 creation to the finished analysis, without needing QualCoder for any of
@@ -188,8 +188,11 @@ you switch it off ("Updating", below). What the assistant reads through it (pass
 codes, memos, names) goes to the maker of the AI behind your assistant:
 Anthropic for Claude's apps, OpenAI for ChatGPT's desktop app and
 Codex, no one with a local model. Text you paste or attach goes in
-full; a document imported in QualCoder, only as far as the assistant
-reads it.
+full; a document imported in QualCoder or brought in through Exegete,
+only as far as the assistant reads it: Exegete's preview
+of an import gives the assistant the documents' names, sizes, lengths
+and warnings, never their text
+([PRIVACY.md, "Bringing documents in"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#bringing-documents-in-0143)).
 
 **Assistants that open files by themselves.** Exegete's answers hold
 some things back from the assistant, such as the private part of a memo
@@ -251,6 +254,8 @@ copies its folder
 says where):
 
 - your project, backups, exports and pending suggestions;
+- the pages and copies Exegete opens for you to read a file (an EPUB
+  opened in Apple Books joins its library, and iCloud if Books syncs);
 - Claude Desktop's log of the extension, with every request and answer;
 - Codex's session files, with what Codex read by itself.
 
@@ -304,8 +309,9 @@ listed. Then:
   Manual keeps Claude asking; the checks keep your files out of its
   reach and switch training off.
 
-**QualCoder, if you want it.** To see your coding highlighted in the
-text, open the project in QualCoder:
+**QualCoder, if you want it.** Exegete opens a file for you to read
+with its coding highlighted; QualCoder shows it too, and
+does what Exegete does not do yet:
 [download](https://github.com/ccbogel/QualCoder/releases) 3.8.2 or
 4.0. Exegete works with both, but can tell that QualCoder has a
 project open only with 3.8.2 (below). 3.8.2 is listed just below 4.0,
@@ -348,17 +354,21 @@ does not put the study out of reach, and what they open goes to their
 maker, which may train on it while training is on.
 
 Ask the assistant to "Create a new project in Exegete called
-Practice" (Experimental), then bring in your page as in the example.
-With the extension or OpenAI's steps, the project is made in "QualCoder
-projects", in your home folder: open it in QualCoder (Project, Open
-Project) to see your coding in the text.
+Practice" (Experimental), then bring in your page: paste it, as in the
+example, or save it as a Word or text file and give the assistant its
+place, which keeps its text off the conversation (on a Mac, hold
+Option, right-click it and choose Copy as Pathname; on Windows 11, Copy
+as path). With the extension or
+OpenAI's steps, the project is made in "QualCoder projects", in your
+home folder: ask to open a file for reading, or open the project in
+QualCoder (Project, Open Project), to see your coding in the text.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).
 
 **Two coder names.** When it makes the project, the assistant asks for
 your own coder name, which the project keeps so that your work and the
 AI's stay apart (QualCoder, if you use it, records your coding under
-it). Not using QualCoder, or no coder name? Say so. Before its first
-write, it asks for the AI coder name,
+it). Not using QualCoder? Any name you choose will do. Do not know
+yours? Say so. Before its first write, it asks for the AI coder name,
 kept per project, under which Exegete writes what is done through the
 conversation.
 
@@ -426,13 +436,13 @@ them, with where each comes from.
 **Symmetry: the same work in either place, as a commitment.** The aim
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
-directions. Checked on 6 October 2026, Exegete 0.14.2 against
+directions. Checked on 10 October 2026, Exegete 0.14.3 against
 QualCoder 3.8.2 and 4.0:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
 | Create a project | Yes | Yes, in the extension's default tool set (Experimental) |
-| Import sources | Text, documents, PDFs, images, audio, video | Text the assistant hands over |
+| Import sources | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part, which the extension has), and text the assistant hands over |
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
 | Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting; nesting an existing code under another is done in QualCoder |
@@ -499,9 +509,9 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `lifecycle` | 76: all, creating a project (Experimental) included | about 199,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | the one-click extension; elsewhere, set `EXEGETE_TOOLSET=lifecycle` |
-| `full` | 75: all but creating a project | about 196,000 characters, 49k tokens | the same | the Terminal route |
-| `core` | 22: the coding loop and its safety tools | about 65,000 characters, 16k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
+| `lifecycle` | 78: all, creating a project (Experimental) included | about 204,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | the one-click extension; elsewhere, set `EXEGETE_TOOLSET=lifecycle` |
+| `full` | 77: all but creating a project | about 202,000 characters, 50k tokens | the same | the Terminal route |
+| `core` | 23: the coding loop and its safety tools | about 67,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:
@@ -530,6 +540,10 @@ cent more on 3.10 to 3.12.
   preview: `merge_codes`, `merge_category`, `delete_code`,
   `delete_category`, `pseudonymise_source` (these five also say whose
   work is affected), `restore_backup`, `prune_backups`.
+- **Documents in, whole files read**: `import_documents`
+  (a preview, then the import on its token, after a backup; PDF and
+  EPUB need `exegete[pdf-epub]`) and `open_file_for_reading` (on the
+  researcher's screen, never in the conversation).
 - **The brief** (provisional), how the assistant is to work with you
   (`read_brief`). Claude Code shows only the first 2,048 characters of
   a tool's description, so the rules that matter come first; the rest
@@ -571,9 +585,6 @@ github.com/nicotem/exegete
 
 Plans, not promises: the order may change with what testers report.
 
-- Next, in development: bringing in documents, not only text, and an
-  easy way to read a whole imported file yourself, beyond the passages
-  the assistant quotes
 - v0.15, the safety net: undo everything a session did; when replacing
   names, choose which mentions to keep; old tools marked as going are
   retired (TOOLS.md names each)

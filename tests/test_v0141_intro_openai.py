@@ -175,7 +175,10 @@ class TestTheIntroduction:
             "sort them into cases with attributes such as age, role or "
             "site": ["create_case", "create_attribute_type",
                      "set_attribute", "link_file_to_case"],
-            "**Bring in transcripts** through the conversation": [
+            # v0.14.3: as documents from the computer too
+            "**Bring in transcripts** as documents from your computer": [
+                "import_documents"],
+            "or through the conversation; sort them into cases": [
                 "import_text_file"],
             "**Code the files you choose, with suggestions you approve**": [
                 "analyze_for_coding", "record_suggestions",
@@ -203,6 +206,10 @@ class TestTheIntroduction:
             # reading of a whole file yourself, which is in development
             "a whole transcript with its codings, read by the assistant": [
                 "analyze_file_with_coding"],
+            # v0.14.3: and by the researcher, on a page (no longer
+            # marked provisional once the owner decided the design)
+            "or by you on a page in your browser.": [
+                "open_file_for_reading"],
             "**Write** memos, annotations and a research journal": [
                 "set_memo", "add_annotation", "add_journal_entry"],
             "**Coder comparison**": ["compare_coders"],
@@ -229,15 +236,18 @@ class TestTheIntroduction:
         # Exegete's, and QualCoder is for a study that needs it now
         needs = _between(_what_you_can_do(), "**Not in Exegete yet**",
                          "**The aim**")
+        # v0.14.3: documents come in through Exegete, and a
+        # whole file opens for reading on the researcher's screen, so
+        # neither is on the list any more
         assert ("**Not in Exegete yet**, and done in QualCoder for now: "
-                "bringing in documents other than text (Word, PDF, images, "
-                "audio, video) and text you would rather not pass through "
-                "the conversation; reading a whole transcript yourself with "
-                "its coding highlighted (today the assistant reads coded "
-                "passages back to you); coding images, audio, video or an "
-                "area of a PDF page; graphs; and QualCoder's Reports menu. "
-                "If your study needs any of these now, get QualCoder from "
-                "the start.") in needs
+                "bringing in images, audio and video; coding by selecting "
+                "text yourself; coding images, audio, video or an area of a "
+                "PDF page; graphs; and QualCoder's Reports menu. If your "
+                "study needs any of these now, get QualCoder from the "
+                "start.") in needs
+        for gone in ("documents other than text", "Word, PDF",
+                     "coding highlighted", "in development"):
+            assert gone not in needs, gone
         assert "recommended from the start" not in needs
         assert "You do not need QualCoder to start" in _opening()
         assert "lists everything" not in needs
@@ -493,7 +503,11 @@ class TestCodexAsksBeforeEveryChange:
                          and not codex_asks(tool.annotations, "auto"))
         assert "read_pseudonym_list" in unasked
         adding = [n for n in unasked if n != "read_pseudonym_list"]
-        assert len(adding) == 14
+        # 0.14.3: open_file_for_reading and import_documents add, so
+        # Codex's default mode runs them unasked too, which INSTALL.md
+        # says (allow the import once elsewhere)
+        assert len(adding) == 16
+        assert "import_documents" in adding
         for name in ("import_text_file", "apply_codings",
                      "create_proposed_codes", "create_code"):
             assert name in adding, name
@@ -502,10 +516,11 @@ class TestCodexAsksBeforeEveryChange:
             assert codex_asks(tools[name].annotations, "auto"), name
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("Here that is the 14 tools that only add "
+        assert ("Here that is the 16 tools that only add "
                 "(`import_text_file`, `apply_codings`, "
-                "`create_proposed_codes`, `create_code` and the rest) and "
-                "`read_pseudonym_list`") in marks
+                "`create_proposed_codes`, `create_code` and the rest, "
+                "`open_file_for_reading` and `import_documents` among them "
+                "from 0.14.3) and `read_pseudonym_list`") in marks
 
     def test_the_rule_would_notice(self):
         from mcp.types import ToolAnnotations

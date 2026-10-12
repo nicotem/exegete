@@ -201,8 +201,9 @@ def test_the_three_commitments():
             "directions") in section
     # v0.14.2, the README review: every row checked again, and re-dated;
     # then checked against QualCoder 4.0, released on 2 October 2026 (the
-    # owner's ruling of 6 October 2026: the release, not the beta)
-    dated = section.index("Checked on 6 October 2026, Exegete 0.14.2 "
+    # owner's ruling of 6 October 2026: the release, not the beta); and
+    # checked again for 0.14.3, whose import row it carries
+    dated = section.index("Checked on 10 October 2026, Exegete 0.14.3 "
                           "against QualCoder 3.8.2 and 4.0:")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
@@ -282,8 +283,11 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
     # in Exegete yet")
     assert ("That is a direction, not yet a fact: today QualCoder is "
             "still needed for several things (above).") in stance
+    # v0.14.3: Exegete brings documents in and opens a
+    # whole file for reading, so the list starts with images, audio and
+    # video
     assert ("**Not in Exegete yet**, and done in QualCoder for now: "
-            "bringing in documents other than text") in readme
+            "bringing in images, audio and video") in readme
     assert readme.index("**Not in Exegete yet**") < \
         readme.index("**QualCoder's own MCP server**")
     # The interoperability commitments, restated

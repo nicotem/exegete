@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
-## [0.14.3-alpha] - 2026-10-10
+## [0.14.3-alpha] - 2026-10-12
 
 v0.14.3. What a researcher notices first: documents now come into a
 project through Exegete, not only text passed through the conversation.

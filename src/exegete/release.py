@@ -15,7 +15,7 @@ same character rule as everything else this server echoes.
 # pyproject.toml's version, as written there
 VERSION = "0.14.3-alpha"
 # The release date, as the CHANGELOG heading gives it
-RELEASED = "2026-10-10"
+RELEASED = "2026-10-12"
 # One or two plain sentences: what is new for a researcher
 # (0.14.3's note after an update reaches everyone coming from 0.14.2,
 # whether their checking is on or off, since 0.14.2 has already given

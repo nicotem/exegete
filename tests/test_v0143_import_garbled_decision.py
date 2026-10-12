@@ -140,7 +140,7 @@ class TestTheWarningSaysWhatWasSeen:
         (held,) = preview["held_back"]
         reason = held["reason"]
         for said in ("look garbled", "2 places", "the first on line 2",
-                     "Windows Western", ARGUMENT, "show_text",
+                     '"Western (Windows Latin 1)"', ARGUMENT, "show_text",
                      "on your own screen"):
             assert said in reason, (said, reason)
         # what was seen, never the text: no garbled name, no listed one

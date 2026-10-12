@@ -206,64 +206,100 @@ FILE_REFUSALS = {
 # that guesses wrongly reads accented letters as others (the owner's
 # sitting of 11 October 2026: TextEdit read a Windows file as the Mac's
 # own set, "cafÈ" for "café"). TextEdit's names are its own on macOS 15
-# (the Open window's Show Options and Plain Text Encoding, and the names
-# of the encodings), as Apple's TextEdit guide gives them; Word's are its
-# File Conversion window's, on Windows and on a Mac, as Microsoft's guide
-# gives them.
+# (the Open window's Show Options and Plain Text Encoding, Customize
+# Encodings List, spelt Customise on a Mac set to UK English, and the
+# names of the encodings, which are macOS's own), as Apple's TextEdit
+# guide gives them; Word's are its File Conversion window's, on Windows
+# and on a Mac, as Microsoft's guide gives them; Notepad's "ANSI" is
+# Windows Latin 1 on a Western Windows. The reviews of 12 October 2026:
+# a copy under a new name, so that the original stays until the copy is
+# checked (the sitting's copy replaced its original); each app on a line
+# of its own; and the steps said once in an answer, however many files
+# they serve (`SAVING_AS_UTF8`), each file with a short reason.
 _WHY_NOT_UTF8 = (
     "so it is held back rather than read by a guess: a wrong guess reads "
     "accented letters as others, and a name from your list written with "
     "other letters would not be replaced. Saved as UTF-8, its letters "
     "read the same way in QualCoder too.")
+_A_COPY = (
+    " You could save a copy as UTF-8 under a new name, so that the "
+    "original stays as it is until you have checked the copy, and import "
+    "the copy. The steps, in TextEdit, Word or Notepad, are given once "
+    "below for every file like this (saving_a_copy_as_utf8).")
 _CHECK_ACCENTS = (
-    "checking first that its accents look right (\"café\", not \"cafÈ\"): "
-    "if they do not, the app read it in another encoding, so close it and "
-    "open it again in the one it was saved in, most often Windows Latin 1 "
-    "for a file from Windows. ")
+    "Before saving, check that its accents look right (\"café\", not "
+    "\"cafÈ\"): if they do not, the app read it in another encoding, so "
+    "close it without saving and open it again in the one it was saved "
+    "in, most often Windows Latin 1 for a file from Windows.")
+_CHECK_GAPS = (
+    "Before saving, check that its text reads right: if it shows gaps or "
+    "odd characters between the letters, close it without saving and "
+    "open it again as UTF-16.")
+_TEXTEDIT_ENCODING = (
+    "click Show Options if you see it, and set Plain Text Encoding, for "
+    "example to \"{textedit}\" (if that is not in the list, choose "
+    "Customize Encodings List, spelt Customise on a Mac set to UK English, "
+    "and tick it there); click Open, then choose File, Duplicate, and "
+    "File, Save, with a new name and \"Unicode (UTF-8)\" as the plain text "
+    "encoding.")
+_NOTEPAD = (
+    "In Notepad on Windows: open the file, and look at the encoding its "
+    "status bar names ({ansi}Word can open the file in another); then "
+    "choose File, Save As, with a new name and UTF-8 as the encoding.")
+_ANSI = "\"ANSI\" there means Windows Latin 1 on a Western Windows; "
 
 
-def _steps_text(textedit: str, word: str) -> str:
-    """Open in a chosen encoding, then save as UTF-8, in TextEdit, Word
-    and Notepad; `textedit` and `word` name the likely encoding in each
-    app's own words."""
-    return (
-        "In TextEdit on a Mac, choose File, Open, select the file, click "
-        "Show Options if you see it, set Plain Text Encoding (to "
-        f"\"{textedit}\", say; Customise Encodings List adds one not "
-        "listed) and click Open, then choose File, Duplicate and File, "
-        "Save, with \"Unicode (UTF-8)\" as the plain text encoding. In "
-        "Word, tick \"Confirm file format conversion on open\" (File, "
-        "Options, Advanced; on a Mac, \"at Open\", in Word's settings, "
-        "General), open the file, choose Encoded Text if asked, and in "
-        "File Conversion choose Other encoding and the one whose preview "
-        f"reads right (\"{word}\", say), then choose File, Save As, Plain "
-        "Text, and \"Unicode (UTF-8)\" in the window that follows. In "
-        "Notepad on Windows, open it (the status bar names the encoding it "
-        "read; Word can open it in another), then choose File, Save As, "
-        "with UTF-8 as the encoding.")
+def _steps_text(check: str, textedit: str, word: str, ansi: str) -> str:
+    """Open in a chosen encoding, then save a copy as UTF-8, in TextEdit,
+    Word and Notepad, each on a line of its own; `textedit` and `word`
+    name the likely encoding in each app's own words."""
+    return "\n".join((
+        check,
+        "In TextEdit on a Mac: choose File, Open, select the file, "
+        + _TEXTEDIT_ENCODING.format(textedit=textedit),
+        "In Word: tick \"Confirm file format conversion on open\" (on "
+        "Windows: File, Options, Advanced, under General; on a Mac: Word, "
+        "Settings, General, where it ends \"at Open\"), open the file, "
+        "choose Encoded Text if asked, and in the File Conversion window "
+        "choose Other encoding and the one whose preview reads right, for "
+        f"example \"{word}\"; then choose File, Save As, give a new name, "
+        "choose Plain Text, and in the File Conversion window that follows "
+        "choose Other encoding, then \"Unicode (UTF-8)\".",
+        _NOTEPAD.format(ansi=ansi)))
 
 
-_STEPS_TEXT = _steps_text("Western (Windows Latin 1)",
-                          "Western European (Windows)")
-
-
-def _steps_web(textedit: str) -> str:
+def _steps_web(check: str, textedit: str, ansi: str) -> str:
     """The same for a web page: TextEdit shows it as code, and Word
     saves it as a Word document."""
-    return (
-        "In TextEdit on a Mac, first tick \"Display HTML files as HTML "
-        "code\" in its settings (Open and Save), then choose File, Open, "
-        "select the page, click Show Options if you see it, set Plain Text "
-        f"Encoding (to \"{textedit}\", say) and click Open, then choose "
-        "File, Duplicate and File, Save, with \"Unicode (UTF-8)\" as the "
-        "plain text encoding. In Word, open the page, then choose File, "
-        "Save As, Word Document (.docx), and import the .docx (Word reads "
-        "the page in the character set it declares). In Notepad on "
-        "Windows, open it (the status bar names the encoding it read), "
-        "then choose File, Save As, with UTF-8 as the encoding.")
+    return "\n".join((
+        check,
+        "In TextEdit on a Mac: first tick \"Display HTML files as HTML code "
+        "instead of formatted text\" in its settings (Open and Save); then "
+        "choose File, Open, select the page, "
+        + _TEXTEDIT_ENCODING.format(textedit=textedit),
+        "In Word: open the page, then choose File, Save As, give a new "
+        "name, choose Word Document (.docx), and import the .docx; Word "
+        "reads the page in the encoding it declares.",
+        _NOTEPAD.format(ansi=ansi)))
 
 
-_STEPS_WEB = _steps_web("Western (Windows Latin 1)")
+# The steps, by the kind of file they serve, said once in an answer
+# (`doc_import.steps_once`); HELD_BACK's reasons point to them.
+SAVING_AS_UTF8 = {
+    "text_files": _steps_text(_CHECK_ACCENTS, "Western (Windows Latin 1)",
+                              "Western European (Windows)", _ANSI),
+    "web_pages": _steps_web(_CHECK_ACCENTS, "Western (Windows Latin 1)",
+                            _ANSI),
+    "text_files_with_nul_characters": _steps_text(
+        _CHECK_GAPS, "Unicode (UTF-16LE)", "Unicode", ""),
+    "web_pages_with_nul_characters": _steps_web(
+        _CHECK_GAPS, "Unicode (UTF-16LE)", ""),
+}
+STEPS_FOR = {
+    "not_utf8": "text_files", "not_utf8_web": "web_pages",
+    "nul_characters": "text_files_with_nul_characters",
+    "nul_characters_web": "web_pages_with_nul_characters",
+}
 # A file whose text holds NUL characters: most often UTF-16 or UTF-32
 # saved without the byte-order mark that names it, which reads as UTF-8
 # with a NUL beside every letter.
@@ -273,24 +309,20 @@ _WHY_NUL = (
     "or UTF-32 (\"Unicode\") without the mark at its start that says so. "
     "Read as it stands, it would come in with a NUL beside each letter, "
     "and a name from your list written that way would not be replaced, "
-    "so it is held back rather than read by a guess. You could save a "
-    "copy as UTF-8 and import that, checking first that its text reads "
-    "right: if it shows gaps or odd characters between the letters, close "
-    "it and open it again as UTF-16. ")
-_STEPS_NUL = _steps_text("Unicode (UTF-16LE)", "Unicode")
-_STEPS_NUL_WEB = _steps_web("Unicode (UTF-16LE)")
+    "so it is held back rather than read by a guess.")
 
 # Letters that look garbled: how to look before deciding.
 _CHECK_ON_SCREEN = (
     "To check, ask to see the text (show_text): a page opens on your own "
     "screen with each place marked, and its text does not reach the AI "
     "provider; or open the file in its own app.")
-# What was seen, in the garbled_fixed words: the character sets the odd
-# characters read back through, and characters standing for letters lost
-# earlier.
+# What was seen, in the garbled_fixed words: the encodings the odd
+# characters read back through, in TextEdit's names (the review of 12
+# October 2026: names a researcher can find in an app's menu), and
+# characters standing for letters lost earlier.
 GARBLED_SEEN = {
-    "sets": "they read better as if the file had once been opened in "
-            "another character set ({sets}) and saved again",
+    "sets": "they read better as if the file had once been opened in the "
+            "wrong encoding and saved again (in TextEdit's names: {sets})",
     "lost": "the text holds characters that stand for letters lost "
             "earlier (the replacement character, or an invisible control "
             "character)",
@@ -313,16 +345,42 @@ def sets_phrase(names: Sequence[str], more: bool) -> str:
     return said + (", among others" if more else "")
 
 
+# How to put garbled letters right, by the way the commonest of them
+# read back (the review of 12 October 2026). A UTF-8 file opened once in
+# another encoding and saved again was UTF-8 before, so the file as it
+# was imports as it is; a Western file opened in the other Western set
+# was saved in that set, so it opens rightly in it, in each app's names.
+_STILL_HAVE = ("If not, and you still have the file as it was before it "
+               "was saved again, ")
+_OR_CORRECT = ("otherwise correct the letters in the file's own app, save "
+               "it, then ask again.")
+_OPEN_IN = (_STILL_HAVE + "open that in the encoding it was saved in "
+            "(\"{textedit}\" in TextEdit, \"{word}\" in Word), save a copy "
+            "as UTF-8 under a new name and import the copy (importing the "
+            "file as it was gives the steps); " + _OR_CORRECT)
+GARBLED_REMEDY = {
+    None: _STILL_HAVE + "import that instead; " + _OR_CORRECT,
+    "mac_roman_for_cp1252": _OPEN_IN.format(
+        textedit="Western (Windows Latin 1)",
+        word="Western European (Windows)"),
+    "cp1252_for_mac_roman": _OPEN_IN.format(
+        textedit="Western (Mac OS Roman)", word="Western European (Mac)"),
+}
+
+
 def garbled_words(code: str, numbers: Dict[str, Any]) -> str:
     """The words for a file whose letters look garbled, with what was
-    seen: how many places, the first line, the sets."""
+    seen: how many places, the first line, the encodings; and how to put
+    them right, by the commonest way they read back (`way`)."""
     seen = []
     if numbers.get("sets"):
         seen.append(GARBLED_SEEN["sets"].format(sets=numbers["sets"]))
     if numbers.get("lost"):
         seen.append(GARBLED_SEEN["lost"])
+    remedy = GARBLED_REMEDY.get(numbers.get("way"), GARBLED_REMEDY[None])
     return say(HELD_BACK, code, where=numbers.get("where", "in places"),
-               seen="; and ".join(seen) or GARBLED_SEEN["lost"])
+               seen="; and ".join(seen) or GARBLED_SEEN["lost"],
+               remedy=remedy)
 
 
 HELD_BACK = {
@@ -341,17 +399,14 @@ HELD_BACK = {
                         "you say so for this import "
                         "(import_pdfs_with_listed_names).",
     "not_utf8": "It is not saved as UTF-8, the one form of text Exegete "
-                "reads, " + _WHY_NOT_UTF8 + " You could save a copy as "
-                "UTF-8 and import that, " + _CHECK_ACCENTS + _STEPS_TEXT,
+                "reads, " + _WHY_NOT_UTF8 + _A_COPY,
     "not_utf8_web": "This web page is not saved as UTF-8, the one form of "
-                    "text Exegete reads (whatever character set the page "
+                    "text Exegete reads (whatever encoding the page "
                     "declares, since a declaration can be wrong), "
-                    + _WHY_NOT_UTF8 + " You could save a copy as UTF-8 "
-                    "and import that, " + _CHECK_ACCENTS + _STEPS_WEB,
-    "nul_characters": _WHY_NUL + _STEPS_NUL,
+                    + _WHY_NOT_UTF8 + _A_COPY,
+    "nul_characters": _WHY_NUL + _A_COPY,
     "nul_characters_web": _WHY_NUL.replace(
-        "Its text holds", "This web page's text holds", 1)
-    + _STEPS_NUL_WEB,
+        "Its text holds", "This web page's text holds", 1) + _A_COPY,
     # Letters that look garbled (the owner's ruling of 7 October 2026,
     # "Warn, and let me decide"): what was seen, never the text; a page
     # to check them on; and the way through, on the researcher's word.
@@ -372,9 +427,8 @@ HELD_BACK = {
                      "text: {seen}. Garbled "
                      "letters look like \"Ã©\" or \"È\" for \"é\", "
                      "\"Ä…\" for \"ą\" or \"Ð˜\" for \"И\", as happens "
-                     "when a file is opened once in the wrong character "
-                     "set and saved again, and a name written that way is "
-                     "not "
+                     "when a file is opened once in the wrong encoding and "
+                     "saved again, and a name written that way is not "
                      "matched by a names list, though the assistant still "
                      "reads it. This can also be correct text that only "
                      "looks so: a brand name with a capital inside it, "
@@ -382,9 +436,7 @@ HELD_BACK = {
                      "languages written side by side. " + _CHECK_ON_SCREEN
                      + " If its letters are right, or will do as they "
                      "are, it comes in on your word "
-                     "(import_files_with_garbled_letters); if not, "
-                     "correct them in the file's own app, save it, then "
-                     "ask again.",
+                     "(import_files_with_garbled_letters). {remedy}",
 }
 
 # Said once for a file whose text a warning changes: why the import does

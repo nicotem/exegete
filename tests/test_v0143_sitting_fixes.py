@@ -311,67 +311,75 @@ class TestTheCodingsNameIsATagNotText:
 # ---------------------------------------------------------------------------
 
 class TestTheStepsSayHowToChooseAnEncoding:
+    """The steps as the reviews of 12 October 2026 left them: said once
+    in an answer (`SAVING_AS_UTF8`), each app on a line of its own."""
 
-    def _flat(self, code):
-        return " ".join(import_words.HELD_BACK[code].split())
+    def _flat(self, kind):
+        return " ".join(import_words.SAVING_AS_UTF8[kind].split())
 
     def test_the_accents_check_says_what_to_do(self):
-        words = self._flat("not_utf8")
-        assert ('checking first that its accents look right ("café", not '
+        words = self._flat("text_files")
+        assert ('check that its accents look right ("café", not '
                 '"cafÈ"): if they do not, the app read it in another '
-                "encoding, so close it and open it again in the one it was "
-                "saved in, most often Windows Latin 1 for a file from "
-                "Windows.") in words
+                "encoding, so close it without saving and open it again "
+                "in the one it was saved in, most often Windows Latin 1 "
+                "for a file from Windows.") in words
         assert "choose another encoding when you open it" not in words
 
     def test_textedit(self):
         """In TextEdit's own words on macOS 15 (its Open window and its
         list of encodings)."""
-        for code in ("not_utf8", "not_utf8_web"):
-            words = self._flat(code)
-            assert ("click Show Options if you see it, set Plain Text "
-                    'Encoding (to "Western (Windows Latin 1)", say') in words
-            assert ('then choose File, Duplicate and File, Save, with '
-                    '"Unicode (UTF-8)" as the plain text encoding.') in words
-        assert "Customise Encodings List adds one not listed" in \
-            self._flat("not_utf8")
+        for kind in ("text_files", "web_pages"):
+            words = self._flat(kind)
+            assert ("click Show Options if you see it, and set Plain Text "
+                    'Encoding, for example to "Western (Windows Latin 1)"'
+                    ) in words
+            assert ('then choose File, Duplicate, and File, Save, with a '
+                    'new name and "Unicode (UTF-8)" as the plain text '
+                    "encoding.") in words
+            assert "Customize Encodings List" in words
 
     def test_word(self):
-        words = self._flat("not_utf8")
-        for step in ('tick "Confirm file format conversion on open" (File, '
-                     'Options, Advanced; on a Mac, "at Open", in Word\'s '
-                     "settings, General)",
+        words = self._flat("text_files")
+        for step in ('tick "Confirm file format conversion on open"',
                      "choose Encoded Text if asked",
-                     "in File Conversion choose Other encoding and the one "
-                     'whose preview reads right ("Western European '
-                     '(Windows)", say)'):
+                     "in the File Conversion window choose Other encoding "
+                     "and the one whose preview reads right, for example "
+                     '"Western European (Windows)"'):
             assert step in words, step
 
     def test_notepad(self):
-        for code in ("not_utf8", "nul_characters"):
-            assert "the status bar names the encoding it read" in \
-                self._flat(code)
+        for kind in ("text_files", "text_files_with_nul_characters"):
+            assert "look at the encoding its status bar names" in \
+                self._flat(kind)
 
     def test_a_file_without_its_mark_is_pointed_to_utf16(self):
-        for code in ("nul_characters", "nul_characters_web"):
-            words = self._flat(code)
-            assert "close it and open it again as UTF-16." in words
-            assert 'Plain Text Encoding (to "Unicode (UTF-16LE)", say' in \
-                words
+        for kind in ("text_files_with_nul_characters",
+                     "web_pages_with_nul_characters"):
+            words = self._flat(kind)
+            assert "close it without saving and open it again as UTF-16." \
+                in words
+            assert ('set Plain Text Encoding, for example to "Unicode '
+                    '(UTF-16LE)"') in words
             assert "Windows Latin 1" not in words
-        assert '("Unicode", say)' in self._flat("nul_characters")
+        assert 'for example "Unicode";' in self._flat(
+            "text_files_with_nul_characters")
 
     def test_the_words_keep_their_rules_and_a_size(self):
-        """Plain words, a suggestion, no long dash; each hold's words
-        within 1,500 characters, since a preview repeats them for every
-        file held back."""
+        """Plain words, a suggestion, no long dash; each hold's own words
+        short, since a preview gives them for every file held back, and
+        the steps said once."""
         for code in ("not_utf8", "not_utf8_web", "nul_characters",
                      "nul_characters_web"):
             words = import_words.HELD_BACK[code]
             assert "You could" in words and "guess" in words
             assert "—" not in words and "must" not in words
             assert "{" not in words
-            assert len(words) <= 1500, (code, len(words))
+            assert len(words) <= 700, (code, len(words))
+        for kind, steps in import_words.SAVING_AS_UTF8.items():
+            assert "—" not in steps and "must" not in steps
+            assert "{" not in steps
+            assert len(steps) <= 2000, (kind, len(steps))
 
 
 # ---------------------------------------------------------------------------
@@ -497,8 +505,10 @@ class TestAWesternFileOpenedInTheOtherWesternSet:
         found = garbled_text.places(once)
         assert found and {p.set_name for p in found} == {
             "cp1252_for_mac_roman"}
+        # "na•ve" for "naïve" is not weighed: a bullet alone is correct
+        # between words ("red•green"; the review of 12 October 2026)
         assert "".join(p.reads_as for p in found) == \
-            "ééïé"
+            "ééé"
 
     def test_held_back_with_the_warning_and_brought_in_on_the_word(
             self, project, folder):
@@ -512,8 +522,9 @@ class TestAWesternFileOpenedInTheOtherWesternSet:
             "garbled_fixed"].split("{")[0])
         assert "in 10 places, the first on line 3" in reason
         assert ("they read better as if the file had once been opened in "
-                "another character set (the Mac's own Western set, for a "
-                "file saved in Windows Western) and saved again") in reason
+                "the wrong encoding and saved again (in TextEdit's names: "
+                '"Western (Mac OS Roman)", for a file saved in "Western '
+                '(Windows Latin 1)")') in reason
         said = json.dumps(preview, ensure_ascii=False)
         for word in ("ZoÎ", "MuÒoz", "Practice field notes"):
             assert word not in said
@@ -584,7 +595,8 @@ def test_the_set_names_say_both_sets():
     for name in garbled_text.MISREAD:
         assert name in garbled_text.SET_NAMES
     assert garbled_text.SET_NAMES["mac_roman_for_cp1252"] == (
-        "the Mac's own Western set, for a file saved in Windows Western")
+        '"Western (Mac OS Roman)", for a file saved in "Western (Windows '
+        'Latin 1)"')
     assert "\"È\" for \"é\"" in import_words.HELD_BACK[
         "garbled_fixed"]
 

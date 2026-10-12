@@ -167,48 +167,59 @@ class TestNotUtf8IsHeldBack:
 
     @pytest.mark.parametrize("name", sorted(NOT_UTF8))
     def test_text_markdown_and_subtitles(self, project, folder, name):
-        _preview, held = _held_alone(folder, name, NOT_UTF8[name])
+        preview, held = _held_alone(folder, name, NOT_UTF8[name])
         assert held["file"] == name
         reason = held["reason"]
         assert reason == import_words.HELD_BACK["not_utf8"]
+        assert "You could save a copy as UTF-8 under a new name" in reason
+        # the steps, once in the answer (the reviews of 12 October 2026)
+        steps = preview["saving_a_copy_as_utf8"]["text_files"]
         for step in (
-                "You could save a copy as UTF-8 and import that",
-                "In Word, tick \"Confirm file format conversion on open\"",
-                "in File Conversion choose Other encoding and the one "
-                "whose preview reads right (\"Western European "
-                "(Windows)\", say), then choose File, Save As, Plain "
-                "Text, and \"Unicode (UTF-8)\" in the window that follows",
-                "In TextEdit on a Mac, choose File, Open, select the file, "
-                "click Show Options if you see it, set Plain Text Encoding "
-                "(to \"Western (Windows Latin 1)\", say;",
-                "then choose File, Duplicate and File, Save, with "
-                "\"Unicode (UTF-8)\" as the plain text encoding",
-                "In Notepad on Windows, open it (the status bar names the "
-                "encoding it read; Word can open it in another), then "
-                "choose File, Save As, with UTF-8 as the encoding."):
-            assert step in reason, step
+                "In Word: tick \"Confirm file format conversion on open\"",
+                "in the File Conversion window choose Other encoding and "
+                "the one whose preview reads right, for example \"Western "
+                "European (Windows)\"; then choose File, Save As, give a new "
+                "name, choose Plain Text, and in the File Conversion window "
+                "that follows choose Other encoding, then \"Unicode "
+                "(UTF-8)\".",
+                "In TextEdit on a Mac: choose File, Open, select the file, "
+                "click Show Options if you see it, and set Plain Text "
+                "Encoding, for example to \"Western (Windows Latin 1)\"",
+                "then choose File, Duplicate, and File, Save, with a new "
+                "name and \"Unicode (UTF-8)\" as the plain text encoding",
+                "In Notepad on Windows: open the file, and look at the "
+                "encoding its status bar names (\"ANSI\" there means "
+                "Windows Latin 1 on a Western Windows; Word can open the "
+                "file in another); then choose File, Save As, with a new "
+                "name and UTF-8 as the encoding."):
+            assert step in " ".join(steps.split()), step
         assert _stored(project) == {}
 
     @pytest.mark.parametrize("name", sorted(NOT_UTF8_PAGES))
     def test_web_pages_whatever_they_declare(self, project, folder, name):
-        _preview, held = _held_alone(folder, name, NOT_UTF8_PAGES[name])
+        preview, held = _held_alone(folder, name, NOT_UTF8_PAGES[name])
         reason = held["reason"]
         assert reason == import_words.HELD_BACK["not_utf8_web"]
+        assert ("whatever encoding the page declares, since a "
+                "declaration can be wrong") in reason
+        steps = " ".join(
+            preview["saving_a_copy_as_utf8"]["web_pages"].split())
         for step in (
-                "whatever character set the page declares, since a "
-                "declaration can be wrong",
-                "In Word, open the page, then choose File, Save As, Word "
-                "Document (.docx), and import the .docx",
-                "In Notepad on Windows, open it (the status bar names the "
-                "encoding it read), then choose File, Save As, with UTF-8 "
-                "as the encoding.",
-                "In TextEdit on a Mac, first tick \"Display HTML files as "
-                "HTML code\" in its settings (Open and Save), then choose "
-                "File, Open, select the page, click Show Options if you see "
-                "it, set Plain Text Encoding",
-                "then choose File, Duplicate and File, Save, with "
-                "\"Unicode (UTF-8)\" as the plain text encoding."):
-            assert step in reason, step
+                "In Word: open the page, then choose File, Save As, give a "
+                "new name, choose Word Document (.docx), and import the "
+                ".docx",
+                "In Notepad on Windows: open the file, and look at the "
+                "encoding its status bar names",
+                "then choose File, Save As, with a new name and UTF-8 as "
+                "the encoding.",
+                "In TextEdit on a Mac: first tick \"Display HTML files as "
+                "HTML code instead of formatted text\" in its settings "
+                "(Open and Save); then choose File, Open, select the page, "
+                "click Show Options if you see it, and set Plain Text "
+                "Encoding",
+                "then choose File, Duplicate, and File, Save, with a new "
+                "name and \"Unicode (UTF-8)\" as the plain text encoding."):
+            assert step in steps, step
         assert _stored(project) == {}
 
     def test_the_words_explain_and_suggest(self):
@@ -216,8 +227,10 @@ class TestNotUtf8IsHeldBack:
             words = import_words.HELD_BACK[code]
             assert "guess" in words              # why: no guessing
             assert "You could" in words          # a suggestion
-            assert "accents look right" in words  # check before saving
             assert "—" not in words and "must" not in words
+        for kind in ("text_files", "web_pages"):
+            # check before saving
+            assert "accents look right" in import_words.SAVING_AS_UTF8[kind]
 
     def test_the_cases_that_escaped_the_names_list_are_held(self, project,
                                                             folder):

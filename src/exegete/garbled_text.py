@@ -114,24 +114,44 @@ Windows Western leaves unused) or any letter the opened set lacks ("ł",
   at a word's start ("na hÉireann", "Tír na nÓg"), so there the small
   letter is not counted against the capital;
 - quotation marks alone (typed between letters by mistake, or for
-  Hawaiian's okina, "Hawai‘i") and a run holding a control or
-  private-use character (Apple's logo, in Apple's own text) are not
-  weighed.
+  Hawaiian's okina, "Hawai‘i"), a bullet or a trade mark alone
+  ("red•green", "Coca-Cola™s"), the Mac's ring after a number, typed
+  for degrees ("31˚c"), and a run holding a control or private-use
+  character (Apple's logo, in Apple's own text) are not weighed;
+- a character counts as odd by two as written, and as letters, where
+  it can only be punctuation or "á" read the other way, so that English
+  and Irish text whose only special characters are these shows signs
+  too (the review of 12 October 2026): from Windows, "í" for an
+  apostrophe in an English contraction or a name ("didnít", "Iím",
+  "itís", "OíBrien"), "ñ" for a dash between spaces or numbers, "ì" and
+  "î" (or "ë" and "í") for quotation marks opening a word and closing a
+  later one on the same line, "Ö" for an ellipsis after a word of small
+  letters, "·" for "á" between letters (not Catalan's "l·l", nor French
+  inclusive writing, "étudiant·e·s"); from a Mac, "Õ", "Ð" or "Ñ", "Ò"
+  and "Ó" (or "Ô" and "Õ"), and "É" in the same places.
 
 Measured on correct text (macOS 15's own translations and LibreOffice's
 autocorrect lists, some 1.4 million strings in about a hundred
 languages, each string alone and in files of 300), no string was a sign
 of this reading, nor were French, Spanish, Portuguese, German, Nordic,
 Irish and Italian words, names and all-capital headings, or the correct
-text the earlier checks gathered. Read once the wrong way, the Western
-strings among them were signs 66 times in a hundred a string at a time
-(a Windows file opened as the Mac's set) and 58 the other way round, and
-99 times in a hundred in files of fifty strings. Missed: a file whose
-only accented letters read naturally either way ("CAFÉ" in capitals
-becomes "CAF…"; "ö" becomes the modifier letter "ˆ"; "ñ" from a Mac
-becomes a dash, "ã" from Windows a quotation mark), a misread file in
-which something was typed afterwards that the opened set lacks, and the
-other pairs of sets (a DOS file read as Windows', say).
+text the earlier checks gathered; among some 700,000 strings of Word's
+and Pages' translations, LibreOffice's contributors' names and its
+French and Spanish dictionaries, some 150 command names written without
+spaces ("InsertarÍndice") were, each alone, and no prose. Read once the
+wrong way, the Western strings among them were signs 72 times in a
+hundred a string at a time (a Windows file opened as the Mac's set) and
+62 the other way round, and 99 or more times in a hundred in files of
+fifty strings; macOS's English strings, 45 and 65 times in a hundred a
+string at a time, and 96 in files of fifty strings, both ways. Missed: a
+file whose only accented letters read naturally either way ("CAFÉ" in
+capitals becomes "CAF…"; "ö" becomes the modifier letter "ˆ"; "ñ" from
+a Mac becomes a dash, "ã" from Windows a quotation mark, "ï" from a Mac
+a bullet); an English file whose only apostrophes are in possessives
+("Maryís") or whose only dashes join words with no spaces ("wordówith");
+a misread file in which something was typed afterwards that the opened
+set lacks; and the other pairs of sets (a DOS file read as Windows',
+say).
 
 The cost is one scan a set and a few small steps a run, and the same
 run between the same neighbours is weighed once, so a file costs about
@@ -424,6 +444,135 @@ _IRISH_PREFIXES = frozenset("nht")
 _QUOTES = frozenset("\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f"
                     "\u2039\u203a\u00ab\u00bb")
 _IRISH_CAPITALS = frozenset("\u00c1\u00c9\u00cd\u00d3\u00da")
+# A bullet or a trade mark alone: correct between words ("red•green",
+# "Coca-Cola™s"), and never weighed (the review of 12 October 2026).
+_SYMBOLS_ALONE = frozenset("\u2022\u2122")
+_RING = "\u02da"           # the Mac's ring, typed for degrees ("31˚c")
+
+# Punctuation and "á" read the other way: places where the character as
+# written stands for an apostrophe, a quotation mark, a dash, an
+# ellipsis or "á", so that an English or Irish text whose only special
+# characters are these shows signs too (the review of 12 October 2026:
+# "didnít", "OíBrien", "Siobh·n", "ñ" for "–"). Each pattern
+# captures the character; a pair captures both.
+_LETTER = "[^\\W\\d_]"
+_NOT_BEFORE_LETTER = "(?!" + _LETTER + ")"
+_WORD_START = "(?<!" + _LETTER + ")"
+# An apostrophe in an English contraction, after the words that take
+# it: never after any word, since other languages end words with the
+# same letters ("país" and "Luís", Hungarian "tanít" and "híd", Slovak
+# "kurzíve").
+_CONTRACTIONS = (
+    ("don|doesn|didn|isn|aren|wasn|weren|hasn|haven|hadn|couldn|wouldn|"
+     "shouldn|mustn|needn|can|won|ain", "t"),
+    ("i|you|he|she|it|we|they|that|there|who|what", "ll"),
+    ("i|you|we|they|could|would|should|might|must|who", "ve"),
+    ("you|we|they|who|what|there", "re"),
+    ("i|you|he|she|we|they", "d"),
+    ("i", "m"),
+    ("it|that|what|let|he|she|there|here|who|where", "s"),
+)
+
+
+def _apostrophes(mark: str, openings: str) -> Tuple[str, ...]:
+    """The places `mark` stands for an apostrophe: in a contraction
+    ("didn’t", "I’m", "it’s"), and in a name ("O’Brien"), each word
+    starting a word or straight after an opening quotation mark, which
+    `openings` writes as a letter."""
+    start = "(?:" + _WORD_START + "|(?<=[" + openings + "]))"
+    return tuple(
+        start + "(?i:" + words + ")(" + mark + ")(?=" + ending
+        + _NOT_BEFORE_LETTER + ")" for words, ending in _CONTRACTIONS) + (
+        start + "[A-Z](" + mark + ")(?=[A-Z][a-z])",)
+
+
+def _quotes(opening: str, closing: str, before_closing: str) -> str:
+    """A quotation mark opening a word and its closing ending a later
+    word on the same line; the closing mark may stand inside a word
+    between, as an apostrophe."""
+    return (_WORD_START + "(" + opening + ")" + _LETTER + "(?:[^\n"
+            + opening + closing + "]|" + closing + "(?=" + _LETTER
+            + "))*?(?<=" + before_closing + ")(" + closing + ")"
+            + _NOT_BEFORE_LETTER)
+
+
+def _ellipsis(mark: str) -> str:
+    """An ellipsis straight after a word of small letters ("did…"),
+    not after a name joined from words ("SortAToZ")."""
+    return (_WORD_START + "[A-Za-z]?[a-z]+(" + mark + ")"
+            + _NOT_BEFORE_LETTER)
+
+
+_PUNCTUATION_SIGNS: Dict[str, Tuple[Pattern, ...]] = {
+    # A Windows file opened as the Mac's set: "’" as "í", "‘" as "ë",
+    # "“" and "”" as "ì" and "î", "–" as "ñ", "…" as "Ö", "á" as "·".
+    "mac_roman_for_cp1252": tuple(re.compile(p) for p in _apostrophes(
+        "\u00ed", "\u00ec\u00eb") + (
+        # a dash between spaces or between numbers
+        "(?<= )(\u00f1)(?= )", "(?<=[0-9])(\u00f1)(?=[0-9])",
+        _quotes("\u00ec", "\u00ee", "\\S"),
+        _quotes("\u00eb", "\u00ed", "\\S"),
+        _ellipsis("\u00d6"),
+        # "á" between letters (checked further in _punctuation_signs)
+        "(?<=" + _LETTER + ")(\u00b7)(?=" + _LETTER + ")",
+    )),
+    # A Mac file opened as Windows Western: "’" as "Õ", "‘" as "Ô",
+    # "“" and "”" as "Ò" and "Ó", "–" as "Ð", the long dash as "Ñ",
+    # "…" as "É";
+    # a closing mark after a small letter or punctuation, since
+    # Catalan and Portuguese write "Ó" and "Õ" after a capital
+    # ("ACCIÓ", "LIÇÕES").
+    "cp1252_for_mac_roman": tuple(re.compile(p) for p in _apostrophes(
+        "\u00d5", "\u00d2\u00d4") + (
+        "(?<= )([\u00d0\u00d1])(?= )",
+        "(?<=[0-9])(\u00d0)(?=[0-9])", "(?<=[a-z])(\u00d1)(?=[a-z])",
+        _quotes("\u00d2", "\u00d3", "[a-z.,!?;:]"),
+        _quotes("\u00d4", "\u00d5", "[a-z.,!?;:]"),
+        _ellipsis("\u00c9"),
+    )),
+}
+_MIDDLE_DOT = "\u00b7"
+# French inclusive writing puts a middle dot before these endings
+# ("étudiant·e·s", "auteur·rice"): not "á".
+_INCLUSIVE = frozenset((
+    "e", "es", "s", "x", "ne", "nes", "le", "les", "te", "tes", "se",
+    "ses", "fe", "fes", "ve", "ves", "ice", "ices", "rice", "rices",
+    "trice", "trices", "euse", "euses", "eure", "eures", "esse", "esses"))
+
+
+def _punctuation_signs(text: str, name: str) -> frozenset:
+    """Where `text`, read the `name` way, holds a character standing for
+    punctuation or "á" in one of the places above."""
+    found = set()
+    for pattern in _PUNCTUATION_SIGNS.get(name, ()):
+        for match in pattern.finditer(text):
+            for group in range(1, (pattern.groups or 0) + 1):
+                at = match.start(group)
+                if at < 0:
+                    continue
+                if text[at] == _MIDDLE_DOT and not _an_a(text, at):
+                    continue
+                found.add(at)
+    return frozenset(found)
+
+
+def _an_a(text: str, at: int) -> bool:
+    """Whether the middle dot at `at`, between letters, can stand for
+    "á": not Catalan's "l·l", nor French inclusive writing."""
+    if text[at - 1] in "lL" and text[at + 1] in "lL":
+        return False
+    start = at
+    while start > 0 and (text[start - 1].isalpha() or
+                         text[start - 1] == _MIDDLE_DOT):
+        start -= 1
+    end = at + 1
+    while end < len(text) and (text[end].isalpha() or
+                               text[end] == _MIDDLE_DOT):
+        end += 1
+    word = text[start:end]
+    if word.count(_MIDDLE_DOT) > 1:
+        return False
+    return text[at + 1:end].lower() not in _INCLUSIVE
 
 
 def read_back(name: str, run: str) -> str:
@@ -446,17 +595,22 @@ def _misread_way(text: str, name: str
         return None
     length = len(text)
     weighed: Dict[Tuple[str, str, str], Tuple[int, int, bool]] = {}
+    marked = _punctuation_signs(text, name)
     as_written = as_read_back = 0
     signs: List[Tuple[int, int]] = []
     for match in _NON_ASCII.finditer(text):
         start, end = match.span()
         run = match.group()
-        if all(c in _QUOTES for c in run) or any(
-                _info(c)[0] in ("Cc", "Co", "Cn") for c in run):
-            # quotation marks alone; a control or private-use character
-            # (Apple's logo in Apple's own text), a sign of its own
-            continue
         left = text[start - 1] if start else ""
+        if all(c in _QUOTES for c in run) or all(
+                c in _SYMBOLS_ALONE for c in run) or (
+                    set(run) == {_RING} and left.isdigit()) or any(
+                _info(c)[0] in ("Cc", "Co", "Cn") for c in run):
+            # quotation marks alone; a bullet or a trade mark alone; the
+            # ring after a number, a degree sign; a control or
+            # private-use character (Apple's logo in Apple's own text),
+            # a sign of its own
+            continue
         if left in _IRISH_PREFIXES and run[0] in _IRISH_CAPITALS and \
                 (start < 2 or not text[start - 2].isalpha()):
             left = ""
@@ -475,6 +629,10 @@ def _misread_way(text: str, name: str
         written, back, letters = got
         if back < 0:
             return None         # it cannot stand there: not this reading
+        if marked and any(at in marked for at in range(start, end)):
+            # punctuation or "á" written as another letter, in a place
+            # only that reading explains: odd as written
+            written, letters = max(written, 2), True
         as_written += written
         as_read_back += back
         if back == 0 and written >= 2 and letters:
@@ -543,25 +701,29 @@ def garbled(text: str, enough: int = 10) -> int:
     return found
 
 
-# The sets in the researcher's words, for the preview's warning.
+# The sets in the researcher's words, for the preview's warning: the
+# names TextEdit gives them, which are macOS's own (the review of 12
+# October 2026: a name the researcher can find in an app's menu).
 SET_NAMES = {
-    "cp1252": "Windows Western", "cp1250": "Windows Central European",
-    "cp1251": "Windows Cyrillic", "cp1253": "Windows Greek",
-    "cp1254": "Windows Turkish", "cp1255": "Windows Hebrew",
-    "cp1256": "Windows Arabic", "cp1257": "Windows Baltic",
-    "cp1258": "Windows Vietnamese", "mac_roman": "the Mac's own Western set",
-    "mac_latin2": "the Mac's Central European set",
-    "mac_cyrillic": "the Mac's Cyrillic set",
-    "mac_greek": "the Mac's Greek set",
-    "mac_iceland": "the Mac's Icelandic set", "cp437": "DOS (437)",
-    "cp850": "DOS Western (850)", "cp852": "DOS Central European (852)",
-    "cp866": "DOS Cyrillic (866)", "koi8_r": "KOI8-R", "koi8_u": "KOI8-U",
-    "shift_jis": "Shift JIS (Japanese Windows)",
-    "gbk": "GBK (Chinese Windows)",
-    "mac_roman_for_cp1252": "the Mac's own Western set, for a file saved "
-                            "in Windows Western",
-    "cp1252_for_mac_roman": "Windows Western, for a file saved in the "
-                            "Mac's own Western set",
+    "cp1252": '"Western (Windows Latin 1)"',
+    "cp1250": '"Central European (Windows Latin 2)"',
+    "cp1251": '"Cyrillic (Windows)"', "cp1253": '"Greek (Windows)"',
+    "cp1254": '"Turkish (Windows Latin 5)"',
+    "cp1255": '"Hebrew (Windows)"', "cp1256": '"Arabic (Windows)"',
+    "cp1257": '"Baltic (Windows)"', "cp1258": '"Vietnamese (Windows)"',
+    "mac_roman": '"Western (Mac OS Roman)"',
+    "mac_latin2": '"Central European (Mac OS)"',
+    "mac_cyrillic": '"Cyrillic (Mac OS)"', "mac_greek": '"Greek (Mac OS)"',
+    "mac_iceland": '"Icelandic (Mac OS)"', "cp437": '"Latin-US (DOS)"',
+    "cp850": '"Western (DOS Latin 1)"',
+    "cp852": '"Central European (DOS Latin 2)"',
+    "cp866": '"Russian (DOS)"', "koi8_r": '"Cyrillic (KOI8-R)"',
+    "koi8_u": '"Ukrainian (KOI8-U)"', "shift_jis": '"Japanese (Shift JIS)"',
+    "gbk": '"Chinese (GBK)"',
+    "mac_roman_for_cp1252": '"Western (Mac OS Roman)", for a file saved in '
+                            '"Western (Windows Latin 1)"',
+    "cp1252_for_mac_roman": '"Western (Windows Latin 1)", for a file saved '
+                            'in "Western (Mac OS Roman)"',
 }
 # A control character or the replacement character: no set to name.
 LOST = None

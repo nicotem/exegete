@@ -14,12 +14,13 @@ name after it), reimplemented here, and adds, each a named departure:
 - the code's name after each passage as a tag of its own, never as
   text: a small rounded label on the page's panel colour, edged in the
   code's colour, cut short with an ellipsis when long (the whole name on
-  hover and to screen readers), with no colon, and left out when text
-  is copied (the owner's sitting of 11 October 2026 found the earlier
-  label, the name in small grey type before the passage, read as part
-  of the text: an in-vivo code repeats its passage, and a name ending
-  in a full stop gave ".:"); the name at the start of each passage kept
-  for screen readers and for the Word comment, not for the eye;
+  hover, to screen readers and in print), with no colon, and left out
+  when text is copied (the owner's sitting of 11 October 2026 found the
+  earlier label, the name in small grey type before the passage, read
+  as part of the text: an in-vivo code repeats its passage, and a name
+  ending in a full stop gave ".:"); the name at the start of each
+  passage kept for screen readers and for the Word comment, not for the
+  eye;
   overlapping codings drawn with all their codes, each as an underline
   of its own (QualCoder's export colours only the first); important
   codings and annotated passages in bold, as QualCoder's coding window
@@ -27,7 +28,9 @@ name after it), reimplemented here, and adds, each a named departure:
   linked both ways, instead of hover tooltips;
 - "with codings" and "text only" switches and a tick box per code, done
   in the page's style sheet alone, with no script;
-- a list of the codes on the page, with categories, colours and counts;
+- a list of the codes on the page, with categories, colours and counts,
+  whose headings and links break only between words at a phone's width
+  (a code's name or category, inside a word too, when it is long);
   what the page cannot draw (areas on images and PDF pages, audio and
   video codings), counted;
 - each coding placed where its stored passage matches the text, at its
@@ -299,7 +302,8 @@ border-radius:6px}
 .controls legend{font-weight:600;padding:0}
 table{border-collapse:collapse;width:100%;margin:.5rem 0}
 th,td{text-align:left;padding:.2rem .4rem;border-bottom:1px solid var(--line);
-vertical-align:top;overflow-wrap:anywhere}
+vertical-align:top;overflow-wrap:break-word}
+td:nth-child(-n+2){overflow-wrap:anywhere}
 .sw{display:inline-block;width:1.4em;padding:0 .2em;border-radius:3px;
 text-align:center}
 #text{margin-top:1.5rem}
@@ -337,7 +341,8 @@ body:has(#mode-text:checked) .comment-start,
 body:has(#mode-text:checked) .comment-end,
 body:has(#mode-text:checked) .ref{display:none}
 @media print{.controls,.skip{display:none}
-body{max-width:none}}
+body{max-width:none}
+.end{max-width:none;white-space:normal;overflow:visible}}
 """
 
 

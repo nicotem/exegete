@@ -10546,9 +10546,9 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     held_now = [i for i in result.items if i.status == "held"]
     refused_now = [i for i in result.items if i.status == "refused"]
     if held_now:
-        answer["held_back"] = [{"file": doc_import.item_label(i),
-                                "reason": doc_import.refusal_words(i)}
-                               for i in held_now]
+        answer["held_back"], steps = doc_import.held_back_entries(held_now)
+        if steps:
+            answer["saving_a_copy_as_utf8"] = steps
     if refused_now or result.path_refusals:
         # Refused at the preview, as it said: each named, with its reason.
         answer["not_imported"] = (

@@ -694,6 +694,7 @@ def _garbled_seen(item: Item, read: str, stored: str) -> None:
         "sets": words.sets_phrase(
             [garbled_text.SET_NAMES[name] for name in order[:2]],
             len(order) > 2),
+        "way": order[0] if order else None,
         "lost": sum(1 for place in found if place.set_name is None)})
 
 
@@ -879,6 +880,22 @@ def refusal_words(item: Item) -> str:
     return words.say(words.FILE_REFUSALS, code, **numbers)
 
 
+def held_back_entries(items: Sequence[Item]) -> Tuple[
+        List[Dict[str, str]], Optional[Dict[str, str]]]:
+    """The files held back, each with its reason, and the steps to save a
+    copy as UTF-8 for those not saved so, once for every such file, by
+    the kind of file they serve (the review of 12 October 2026: a preview
+    of fifty such files repeated the same steps fifty times)."""
+    entries = [{"file": item_label(i), "reason": refusal_words(i)}
+               for i in items]
+    steps: Dict[str, str] = {}
+    for item in items:
+        kind = words.STEPS_FOR.get(item.code)
+        if kind is not None and kind not in steps:
+            steps[kind] = words.SAVING_AS_UTF8[kind]
+    return entries, steps or None
+
+
 def names_list_line(ctx: Context) -> str:
     if ctx.names_list == "none":
         return ("This project has no names list. If these documents name "
@@ -998,8 +1015,9 @@ def preview_answer(result: Survey, ctx: Context,
                                      bool(stops))
     answer["names_list"] = names_list_line(ctx)
     if held:
-        answer["held_back"] = [{"file": item_label(i),
-                                "reason": refusal_words(i)} for i in held]
+        answer["held_back"], steps = held_back_entries(held)
+        if steps:
+            answer["saving_a_copy_as_utf8"] = steps
     answer["files"] = [file_entry(i) for i in ready]
     if refused or result.path_refusals:
         answer["refused"] = (

@@ -164,7 +164,8 @@ class TestUtf16And32WithoutTheirMark:
         (held,) = preview["held_back"]
         assert held["reason"] == import_words.HELD_BACK["nul_characters_web"]
         assert "web page" in held["reason"]
-        assert "Word Document (.docx)" in held["reason"]
+        assert "Word Document (.docx)" in preview["saving_a_copy_as_utf8"][
+            "web_pages_with_nul_characters"]
         assert _stored(project) == {}
 
     def test_the_readers_refuse_them_with_exegetes_own_codes(self):

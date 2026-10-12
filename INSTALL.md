@@ -2198,7 +2198,10 @@ If you want to remove the MCP server:
 
 3. **Optionally remove Exegete's own state**: `~/.exegete/`
    (and `~/.qualcoder_mcp`, the link to it left under its earlier name)
-   holds the AI-coding session files (`sessions/`), the last-used
+   holds the texts an import's preview read, kept for its import
+   (`import-texts.noindex/`, one file per document with its whole text
+   as read, before the names list; removed after the import), the
+   AI-coding session files (`sessions/`), the last-used
    project pointer (`mru_project.json`), the preview-token secret
    (`preview_secret`, which signs the tokens that authorise a destructive
    operation and keys the digests in the run manifests; deleting it

@@ -387,6 +387,14 @@ def _checked_answer(raw: bytes) -> Dict[str, Any]:
         answer = json.loads(raw.decode("ascii"))
     except (UnicodeDecodeError, ValueError):
         raise ReadFailed("reader_failed") from None
+    return checked_result(answer)
+
+
+def checked_result(answer: Any) -> Dict[str, Any]:
+    """A parsed answer, its shape checked: the text, signs, notes,
+    character set and counts, or ReadFailed with the child's own code (or
+    `reader_failed`). The import checks a kept answer the same way
+    (kept_texts), wrapped as the child sends it."""
     if not isinstance(answer, dict) or not isinstance(answer.get("ok"), bool):
         raise ReadFailed("reader_failed")
     if not answer["ok"]:

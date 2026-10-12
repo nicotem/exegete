@@ -293,7 +293,7 @@ CONDITIONS = {
     "10 another digest": (lambda c: _rewrite(
         _entry_path(c.a), sha256="0" * 64), 1),
     "11 another size": (lambda c: _rewrite(
-        _entry_path(c.a), size=len(A_TEXT) + 1), 1),
+        _entry_path(c.a), size=os.path.getsize(c.a) + 1), 1),
     "12 another kind": (lambda c: _rewrite(
         _entry_path(c.a), kind=doc_readers.MARKDOWN), 1),
     "13 another length limit": (lambda c: _rewrite(
@@ -323,8 +323,9 @@ class TestReadAgain:
             monkeypatch):
         if condition.startswith("4 ") and not WINDOWS and not POSIX:
             pytest.skip("no links here")
-        (folder / "P01.txt").write_text(A_TEXT, encoding="utf-8")
-        (folder / "P02.txt").write_text(B_TEXT, encoding="utf-8")
+        # As bytes: Windows would write each line's end as two characters
+        (folder / "P01.txt").write_bytes(A_TEXT.encode("utf-8"))
+        (folder / "P02.txt").write_bytes(B_TEXT.encode("utf-8"))
         preview = _preview([str(folder)])
         assert len(starts) == 2 and len(_entries()) == 2
         # Reading the clock first: the entries were kept at or before it

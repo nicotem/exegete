@@ -17,7 +17,8 @@ kept text is found only under that digest.
   POSIX this account's, or nothing is kept or used (one warning names
   it and why). Spotlight skips it by its ending; on Windows it is marked
   "not content indexed"; on a Mac, Time Machine is asked once, when the
-  folder is made, to leave it out (best effort).
+  folder is made, to leave it out (best effort; a warning only when
+  Time Machine then says the folder is not left out).
 - One entry per text, `<name>.json` (0600): the name is keyed with the
   preview-token secret, so it confirms no guessed content; the content
   is ASCII JSON signed with the same secret.
@@ -25,7 +26,8 @@ kept text is found only under that digest.
   otherwise None, and the import reads that file again as 0.14.3 did.
 - An entry is used for up to 65 minutes (the token's hour and its five
   minutes of skew), removed after a committed import, and swept once
-  that time has passed, at each start and each import.
+  that time has passed (or when dated more than five minutes ahead, a
+  clock put back since), at each start and each import.
 
 Nothing here ever logs a document's text or a file's name.
 """
@@ -69,6 +71,9 @@ ENTRY_SKEW = preview_tokens.TOKEN_MAX_SKEW_SECONDS
 TEMP_LIFETIME = 10 * 60
 TMUTIL = "/usr/bin/tmutil"
 EXCLUDE_SECONDS = 3
+# Asking whether the folder is left out answers at once (about a tenth
+# of a second), so it has less time than the request.
+EXCLUDED_CHECK_SECONDS = 1
 
 NOTE = """\
 About this folder
@@ -142,11 +147,27 @@ def _usable(path: Path) -> bool:
     return True
 
 
+def _is_excluded(path: Path) -> bool:
+    """Whether Time Machine says it leaves the folder out (`tmutil
+    isexcluded`); False when it says otherwise or cannot say in time."""
+    try:
+        done = subprocess.run(
+            [TMUTIL, "isexcluded", str(path)], stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            timeout=EXCLUDED_CHECK_SECONDS, check=False)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return False
+    return done.returncode == 0 and b"[Excluded]" in (done.stdout or b"")
+
+
 def _exclude_from_backups(path: Path, platform: Optional[str] = None) -> bool:
     """On a Mac, ask Time Machine to leave the folder out (its sticky
     exclusion, which needs no administrator), within a few seconds, best
-    effort: a failure is logged once and keeping carries on. Elsewhere,
-    nothing."""
+    effort. The tool can write its mark at once and still take seconds
+    to end, so a request stopped at its limit, or ending with an error,
+    is followed by asking Time Machine whether the folder is left out;
+    only when it is not (or cannot say) is a warning logged, once, and
+    keeping carries on. Elsewhere, nothing."""
     platform = platform or sys.platform
     if platform != "darwin":
         return False
@@ -162,7 +183,7 @@ def _exclude_from_backups(path: Path, platform: Optional[str] = None) -> bool:
                f"{EXCLUDE_SECONDS} seconds")
     except (OSError, subprocess.SubprocessError, ValueError):
         why = "Time Machine's tool could not be run"
-    if why is None:
+    if why is None or _is_excluded(path):
         return True
     logger.warning(
         "Exegete could not confirm that Time Machine leaves out its folder "
@@ -405,8 +426,10 @@ def load(digest: str, size: int, kind: str,
 
 def sweep() -> int:
     """Remove entries kept more than 65 minutes ago (by their modification
-    time) and temporary files over 10 minutes old; a file already gone is
-    no matter. With no folder, nothing is made. Returns how many went."""
+    time) and temporary files over 10 minutes old, and either kind dated
+    more than five minutes ahead of now (a clock put back since; `load`
+    refuses such an entry too); a file already gone is no matter. With no
+    folder, nothing is made. Returns how many went."""
     path = folder()
     if not _usable(path):
         return 0
@@ -426,7 +449,7 @@ def sweep() -> int:
             continue
         try:
             info = entry.stat(follow_symlinks=False)
-            if now - info.st_mtime <= lifetime:
+            if -ENTRY_SKEW <= now - info.st_mtime <= lifetime:
                 continue
             os.unlink(entry.path)
             removed += 1

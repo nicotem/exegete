@@ -886,8 +886,10 @@ Seven cautions:
   any import.
 - **What is not pseudonymised**: the originals (copied unchanged into
   the project's folder of originals, as QualCoder does), a PDF's text
-  and its notes. A PDF holding names from your list, written as the
-  list writes them, is held back unless you say so for that import
+  and its notes, and the texts an import's preview read, kept outside
+  the project for its import ("How your data flows", above). A PDF
+  holding names from your list, written as the list writes them, is
+  held back unless you say so for that import
   (`import_pdfs_with_listed_names`). A name written otherwise in the
   PDF, in capitals ("MARIA BROWN"), split across two lines, or broken
   by a hyphen at a line's end, is not seen, and such a PDF comes in

@@ -467,13 +467,14 @@ class TestTimeMachine:
     @pytest.fixture
     def runs(self, monkeypatch):
         """subprocess.run as kept_texts calls it, recorded; `answer`
-        decides what it does."""
+        decides what it does: `answer[verb]` for that verb of tmutil
+        when given, else `answer["do"]`."""
         calls = []
         answer = {"do": lambda: subprocess.CompletedProcess([], 0)}
 
         def run(command, **kwargs):
             calls.append((list(command), kwargs.get("timeout")))
-            return answer["do"]()
+            return answer.get(command[1], answer["do"])()
         monkeypatch.setattr(kept_texts.subprocess, "run", run)
         return calls, answer
 
@@ -516,7 +517,45 @@ class TestTimeMachine:
         assert _load() == ANSWER
         said = [r.getMessage() for r in caplog.records]
         assert len(said) == 1 and "Time Machine" in said[0]
-        assert len(calls) == 1
+        # The request, then the question whether the folder is left out,
+        # which fails the same way here
+        assert [command[1] for command, _limit in calls] == [
+            "addexclusion", "isexcluded"]
+
+    @pytest.mark.parametrize("failure", ["code", "slow"])
+    @pytest.mark.parametrize("excluded", [True, False])
+    def test_after_a_failure_time_machine_is_asked_before_any_warning(
+            self, failure, excluded, monkeypatch, runs, caplog):
+        """On the owner's Mac the tool writes its mark at once and takes
+        about eleven seconds to end, so it is stopped at its limit with
+        the folder already left out: no warning then."""
+        calls, answer = runs
+
+        def fail():
+            if failure == "code":
+                return subprocess.CompletedProcess([], 1)
+            raise subprocess.TimeoutExpired("tmutil", 3)
+        answer["do"] = fail
+        said_by_tool = b"[Excluded]" if excluded else b"[Included]"
+        answer["isexcluded"] = lambda: subprocess.CompletedProcess(
+            [], 0, stdout=said_by_tool + b"  " + str(
+                kept_texts.folder()).encode() + b"\n")
+        monkeypatch.setattr(
+            kept_texts, "_exclude_from_backups",
+            lambda path, platform=None: REAL_EXCLUDE(path, "darwin"))
+        caplog.set_level(logging.WARNING, logger="exegete.kept_texts")
+        assert _keep() is True
+        assert _load() == ANSWER
+        assert calls == [
+            (["/usr/bin/tmutil", "addexclusion", str(kept_texts.folder())],
+             3),
+            (["/usr/bin/tmutil", "isexcluded", str(kept_texts.folder())],
+             1)]
+        said = [r.getMessage() for r in caplog.records]
+        if excluded:
+            assert said == []
+        else:
+            assert len(said) == 1 and "could not confirm" in said[0]
 
 
 # ---------------------------------------------------------------------------
@@ -580,6 +619,28 @@ class TestTheSweep:
         place = _stale_and_fresh()
         _start(monkeypatch)
         assert _left(place) == FRESH
+
+    def test_files_dated_ahead_of_the_clock_go(self):
+        """An entry written while the clock ran ahead, the clock put back
+        since: `load` refuses it, and the sweep removes it rather than
+        keep it until the clock catches up."""
+        assert _keep() is True
+        place = kept_texts.folder()
+        now = kept_texts._now()
+        ahead = {"far.json": kept_texts.ENTRY_SKEW + 60,
+                 "near.json": kept_texts.ENTRY_SKEW - 60,
+                 ".exegete-tmp-0000cccc": kept_texts.ENTRY_SKEW + 60,
+                 ".exegete-tmp-0000dddd": kept_texts.ENTRY_SKEW - 60,
+                 "days.json": 3 * 24 * 60 * 60}
+        for name, by in ahead.items():
+            (place / name).write_bytes(b"{}")
+            os.utime(place / name, (now + by, now + by))
+        assert kept_texts.sweep() == 3
+        left = {p.name for p in place.iterdir()}
+        assert {"near.json", ".exegete-tmp-0000dddd"} <= left
+        assert not {"far.json", ".exegete-tmp-0000cccc",
+                    "days.json"} & left
+        assert _load() == ANSWER
 
     def test_no_folder_is_made(self, project, folder, monkeypatch):
         (folder / "notes.xyz").write_bytes(b"Not a document.\n")
@@ -645,6 +706,40 @@ class TestTheOrderAtStart:
         assert sweep > source.index("_settle_state_folder()")
         assert sweep > source.index("reading_folder.sweep()")
         assert sweep < source.index('mcp.run(transport="stdio")')
+
+
+# ---------------------------------------------------------------------------
+# Only what an import can use is kept
+# ---------------------------------------------------------------------------
+
+# Letters that look garbled: read, then held back unless the researcher
+# says so for that import
+GARBLED = "Le cafÃ© Ã©tait fermÃ©, dit-elle, et la rÃ©union reportÃ©e.\n"
+
+
+class TestOnlyWhatAnImportCanUse:
+
+    def test_a_file_held_back_after_its_reading_keeps_no_text(
+            self, project, folder, starts):
+        (folder / "G01.txt").write_bytes(GARBLED.encode("utf-8"))
+        (folder / "P01.txt").write_bytes(b"Plain.\n")
+        preview = _preview([str(folder)])
+        assert len(starts) == 2                 # both were read
+        assert [held["file"] for held in preview["held_back"]] == [
+            "G01.txt"], preview
+        assert _entries() == [_entry_path(folder / "P01.txt").name]
+
+    def test_a_preview_that_issues_no_token_keeps_nothing(
+            self, project, folder, starts):
+        # A names list that cannot be used (a name typed with a space at
+        # its end) stops the import; the file is read all the same
+        _names_list(project, [("Zorvathi ", "Participant A")])
+        (folder / "P01.txt").write_bytes(b"Zorvathi spoke.\n")
+        answer = _call(paths=[str(folder)])
+        assert "preview_token" not in answer, answer
+        assert "nothing_to_import" in answer, answer
+        assert len(starts) == 1
+        assert not os.path.lexists(kept_texts.folder())
 
 
 # ---------------------------------------------------------------------------
@@ -956,6 +1051,11 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
     assert ("The import uses the text its preview read, kept in Exegete's "
             "own folder (above), and reads a file again only when that "
             "text cannot be used.") in section
+    caution = privacy[privacy.index("- **What is not pseudonymised**"):]
+    caution = caution[:caution.index("- **", 2)]
+    assert ("a PDF's text and its notes, and the texts an import's preview "
+            "read, kept outside the project for its import (\"How your "
+            "data flows\", above)") in caution
     stays = privacy[privacy.index("**What stays on the computer"):]
     stays = stays[:stays.index("## Practical mitigations")]
     assert "the texts an import's preview read" in stays

@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **An import reads each document once** (the owner's decision of 11
+  October 2026): `import_documents` now uses the text its preview read
+  instead of reading each file again. The preview keeps that text,
+  readable by your account only and signed, in Exegete's own folder
+  (`~/.exegete/import-texts.noindex`), and the import removes it once
+  the files are in. A kept text is used only when the file is byte for
+  byte the one previewed (its size and SHA-256, as the import already
+  checked); a file whose kept text cannot be used is read again, as
+  before. So an import usually takes seconds. The time limits are
+  unchanged: a preview still reads for about 30 seconds a call.
 
 ## [0.14.3-alpha] - 2026-10-12
 

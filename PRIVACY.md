@@ -55,8 +55,9 @@ What stays local, always, unless a sync service copies the folder it is in:
   apply to it)
 - Exegete's own folder, `~/.exegete` (before 0.14.1,
   `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
-  the session files, the secret, the pointer and the run manifests
-  below, and `update_check.json` (when Exegete last checked for a new
+  the texts an import's preview read, the session files, the secret,
+  the pointer and the run manifests below, and `update_check.json`
+  (when Exegete last checked for a new
   version, what it found, which versions it has told you about, and
   the newest version that has run here; nothing from your projects;
   "Checking for new versions" says more). At the first start of 0.14.1
@@ -86,6 +87,22 @@ What stays local, always, unless a sync service copies the folder it is in:
   `~/.cache/exegete/reading` on Linux; out of iCloud and OneDrive, not
   indexed by the computer's search, readable by your account only, and
   tidied ("Reading a whole file", below)
+- the texts an import's preview read (v0.15.0), kept for its import in
+  `~/.exegete/import-texts.noindex`: one file for each document the
+  preview found ready, holding the document's whole text as the preview
+  read it, before your names list is applied, so it can hold the names
+  the document holds. The folder is readable by your account only, is
+  not indexed by the computer's search and, on a Mac, is left out of
+  Time Machine when Exegete could mark it so. The import uses a file for
+  up to an hour after the preview and removes it after the import; a
+  file left by a preview that was not imported goes when Exegete next
+  starts, or next prepares an import, once that hour has passed, so it
+  can stay longer in an app that keeps Exegete running. Deleting the
+  folder changes nothing in any project (the next import reads the
+  documents again), and nothing in it is sent anywhere. Another backup
+  of your home folder can copy it, as it copies the documents
+  themselves: leaving this folder out of that backup keeps these copies
+  out of it
 - AI-coding session files (`~/.exegete/sessions/`), written
   atomically and created owner-only on POSIX systems (mode 0600)
 - the preview-token secret (`~/.exegete/preview_secret`): 64
@@ -956,6 +973,9 @@ use no network. A document converted with another tool, such as a pandoc
 server, should be converted file to file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).
 
+The import uses the text its preview read, kept in Exegete's own folder
+(above), and reads a file again only when that text cannot be used.
+
 ## Backups, project copies, and the `ai_data/` folder
 
 QualCoder 4.0 keeps its AI state in `<project>/ai_data/`: the prompt
@@ -1668,6 +1688,9 @@ will ask, and the summary above depends on them:
 - **What stays on the computer, and for how long.** Copies stay on the
   computer you work on: the project, its backups and your exports; the
   lists of suggestions waiting for review (`~/.exegete/sessions/`);
+  the texts an import's preview read, until the import or, when none
+  follows, until Exegete next starts or prepares an import an hour or
+  more later (`~/.exegete/import-texts.noindex`);
   Claude Desktop's log of the extension, which keeps every request and
   answer, names and quoted text included (INSTALL.md, "Reading the
   server log"); Codex's session files (`~/.codex/sessions`) and Claude

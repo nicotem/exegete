@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    name: tests (${{ matrix.os }}, py${{ matrix.python-version }})
+    name: tests (${{ matrix.os }}, py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format(', part {0} of 3', matrix.part) || '' }})
     runs-on: ${{ matrix.os }}
     # A limit on the whole job (v0.14): GitHub's default is six hours, so
     # a hung test held a runner that long. In the 120 green runs from 7 to
@@ -32,6 +32,23 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10", "3.13"]
+        # v0.15: Windows runs the suite in three parts, a job each, as one
+        # job there took 40 to 60 minutes against 15 at most on Linux and
+        # macOS; those two keep one job, part 1 alone (the exclusions
+        # below). tests/conftest.py makes the parts from whole files,
+        # weighed by their number of tests. Not pytest-xdist: it would be
+        # a new dependency, and tests run side by side would slow the
+        # ones that measure time.
+        part: [1, 2, 3]
+        exclude:
+          - os: ubuntu-latest
+            part: 2
+          - os: ubuntu-latest
+            part: 3
+          - os: macos-latest
+            part: 2
+          - os: macos-latest
+            part: 3
 
     steps:
       # Actions are SHA-pinned (supply-chain hardening); the trailing
@@ -58,12 +75,15 @@ jobs:
 
       - name: Run test suite
         shell: bash
+        # "k/3" on Windows (tests/conftest.py); empty elsewhere: every test
+        env:
+          EXEGETE_TEST_SHARD: ${{ matrix.os == 'windows-latest' && format('{0}/3', matrix.part) || '' }}
         run: |
           set +e
           python -m pytest -ra --tb=short -q 2>&1 | tee pytest_output.txt
           code=${PIPESTATUS[0]}
           {
-            echo "### pytest: ${{ matrix.os }} / py${{ matrix.python-version }}"
+            echo "### pytest: ${{ matrix.os }} / py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format(', part {0} of 3', matrix.part) || '' }}"
             echo ""
             echo '```'
             grep -E "^[0-9]+ (passed|failed)| failed,| error" pytest_output.txt | tail -3
@@ -112,7 +132,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: pytest-${{ matrix.os }}-py${{ matrix.python-version }}
+          # a name used twice in one run is refused, so each part's own
+          name: pytest-${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format('-part{0}', matrix.part) || '' }}
           path: pytest_output.txt
 
   desktop-extension:

@@ -4,6 +4,7 @@
 import gc
 import os
 import pytest
+import re
 import sqlite3
 import sys
 import tempfile
@@ -151,6 +152,78 @@ def _isolate_home(tmp_path, _sandbox_patch):
     assert Path.home().resolve() == home.resolve()
     assert _database.default_workspace().resolve().is_relative_to(
         tmp_path.resolve())
+
+
+# v0.15, the groundwork: the suite in parts. CI runs Windows' suite in
+# three jobs, a part each, as one job took 40 to 60 minutes there against
+# 15 at most on Linux and macOS (.github/workflows/ci.yml says why not
+# pytest-xdist). EXEGETE_TEST_SHARD="k/n" keeps part k of n; unset or
+# empty, every test runs; anything else stops the run before it starts.
+# A part is made of whole files, so a file's tests stay together and run
+# in their usual order. Each file is weighed by the number of tests
+# collected in it: the files are taken largest first (ties by path), each
+# into the part with the fewest tests so far (ties to the lower number),
+# so the jobs of one Python, which collect alike, make the same parts.
+# By the counts of 0.14.3's Windows run, the parts take 17 to 18 minutes
+# on Python 3.13 (52 in one job); by each file's time would need a table
+# of times kept up to date.
+TEST_PART_VARIABLE = "EXEGETE_TEST_SHARD"
+TEST_PART_KEY = pytest.StashKey()
+_TEST_PART = re.compile(r"([0-9]+)/([0-9]+)")
+
+
+def parse_test_part(value):
+    """`(k, n)` for "k/n" with 1 <= k <= n; None when unset or empty."""
+    if not value:
+        return None
+    match = _TEST_PART.fullmatch(value)
+    if match is not None:
+        part, parts = int(match[1]), int(match[2])
+        if 1 <= part <= parts:
+            return part, parts
+    raise pytest.UsageError(
+        f"{TEST_PART_VARIABLE} is {value!r}: give the part to run as "
+        f"\"k/n\", k from 1 to n (\"2/3\" runs the second of three "
+        f"parts), or leave it empty to run every test.")
+
+
+def parts_of(nodeids, parts):
+    """The part, from 1 to `parts`, of each node id, in the order given."""
+    sizes = {}
+    for nodeid in nodeids:
+        path = nodeid.split("::", 1)[0]
+        sizes[path] = sizes.get(path, 0) + 1
+    totals = [0] * parts
+    part_of = {}
+    for path in sorted(sizes, key=lambda path: (-sizes[path], path)):
+        smallest = min(range(parts), key=lambda index: totals[index])
+        part_of[path] = smallest + 1
+        totals[smallest] += sizes[path]
+    return [part_of[nodeid.split("::", 1)[0]] for nodeid in nodeids]
+
+
+def pytest_configure(config):
+    """Read the part to run, and take the variable out of the environment
+    at once: the suite's own inner runs copy the environment and load
+    this file, and given "2/3" one would split its single file in three
+    and fail (tests/test_v015_test_parts.py)."""
+    config.stash[TEST_PART_KEY] = parse_test_part(
+        os.environ.pop(TEST_PART_VARIABLE, None))
+
+
+def pytest_collection_modifyitems(config, items):
+    """Keep the chosen part's tests, in order; report the rest as
+    deselected, so the run's summary counts them."""
+    chosen = config.stash.get(TEST_PART_KEY, None)
+    if chosen is None:
+        return
+    part, parts = chosen
+    numbers = parts_of([item.nodeid for item in items], parts)
+    kept = [item for item, number in zip(items, numbers) if number == part]
+    left = [item for item, number in zip(items, numbers) if number != part]
+    if left:
+        config.hook.pytest_deselected(items=left)
+    items[:] = kept
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):

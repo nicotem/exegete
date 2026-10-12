@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed: the tests on Windows in three parts
+
+- **The automated tests run on Windows in three jobs**, a part each, so
+  the checks on a change finish sooner: one job there took 40 to 60
+  minutes. A part is made of whole test files, weighed by their number
+  of tests. `EXEGETE_TEST_SHARD="k/n"` (such as `2/3`) runs part k of n
+  on any computer; left empty, every test runs. Linux and macOS still
+  run every test in one job each.
 
 ## [0.14.3-alpha] - 2026-10-12
 

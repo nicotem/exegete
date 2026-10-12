@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fingerprint of the whole split, the same in every part of one run.
   Linux and macOS still run every test in one job each.
 
+### Added: made-up documents for timing the preview
+
+- **`scripts/make_timing_documents.py`**, for contributors: it writes
+  made-up Word files that are slow to read for their size (made-up
+  English from a fixed list of plain words, no names; each letter a run
+  of its own), the same bytes for the same arguments, with the standard
+  library only. Its defaults make the 45 files of the timing session
+  that measures how long a host lets an import's preview read.
+
 ## [0.14.3-alpha] - 2026-10-12
 
 v0.14.3. What a researcher notices first: documents now come into a

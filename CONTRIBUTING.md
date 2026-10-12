@@ -246,6 +246,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release
+│   ├── make_timing_documents.py  # Made-up Word files for timing how long an import's preview reads
 │   └── create_test_project.py  # Test project generator
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/

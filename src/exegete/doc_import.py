@@ -20,6 +20,7 @@ stored.
 """
 
 import hashlib
+import logging
 import os
 import secrets
 import stat
@@ -32,6 +33,9 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import doc_readers, garbled_text, import_paths, import_reading
 from . import import_words as words
+from . import kept_texts
+
+logger = logging.getLogger(__name__)
 
 MAX_PATHS = 50
 MAX_BATCH = 50
@@ -41,14 +45,17 @@ MAX_MEMO = 10_000
 # 180 seconds, and 60 to a local server added by hand; not yet timed), so
 # each call stops between files within these, counted from the call's
 # start, and says how to go on with the rest. The preview reads for 30
-# seconds, so that the import, which reads the same files again from
-# their copies, fits within its own 45; one file read at the import has
-# 40 seconds (the preview's 30 for a file, and a margin), and the first
-# file a call reads always has its whole time, so each call reads at
-# least one file.
+# seconds; the import uses the text the preview read (kept_texts) and
+# reads a file again from its copy only when that text cannot be used,
+# within its own 45; one file read again at the import has 40 seconds
+# (the preview's 30 for a file, and a margin), and the first file a call
+# reads always has its whole time, so each call reads at least one file.
 PREVIEW_SECONDS = 30
 IMPORT_SECONDS = 45
 IMPORT_FILE_SECONDS = 40
+# Keeping the preview's texts stops this long after the preview's own
+# time: a file not kept by then is read again at the import.
+KEEP_SECONDS = 5
 # Less time than this left in a call: no file is started.
 LEAST_SECONDS = 1.0
 
@@ -298,6 +305,48 @@ def apply_outcomes(result: "Survey", token: Any) -> None:
 def forget_outcomes(token: Any) -> None:
     if isinstance(token, str):
         _PREVIEW_OUTCOMES.pop(token, None)
+
+
+# ---------------------------------------------------------------------------
+# The texts the preview read, kept for the import (kept_texts)
+# ---------------------------------------------------------------------------
+
+def keep_texts(result: "Survey", ctx: "Context",
+               now: Optional[Callable[[], float]] = None) -> int:
+    """Keep each ready file's text as the preview read it, for the
+    import, once the preview's token is issued; how many were kept. No
+    more is kept once the call has run the preview's time and
+    KEEP_SECONDS: a file not kept is read again at the import. One
+    warning gives the number not kept, never a name or a text."""
+    if not kept_texts.KEEPING:
+        return 0
+    now = now or clock
+    started = ctx.call_started if ctx.call_started is not None else now()
+    ready = [item for item in result.items
+             if item.status == "ready" and item.read is not None]
+    kept = 0
+    for item in ready:
+        if now() - started >= ctx.preview_seconds + KEEP_SECONDS:
+            break
+        if kept_texts.keep(item.digest, item.size, item.kind,
+                           ctx.max_characters, item.read):
+            kept += 1
+    if kept < len(ready):
+        logger.warning(
+            "%d of the %d files ready to import were not kept for the "
+            "import, which reads them again.", len(ready) - kept, len(ready))
+    return kept
+
+
+def forget_texts(result: "Survey", ctx: "Context") -> None:
+    """After a committed import: the kept texts of every file the preview
+    found ready, imported or left for the next call (which previews
+    afresh), are removed."""
+    for item in result.items:
+        if item.status == "ready" or (
+                item.status == "later"
+                and item.code == NOT_IMPORTED_THIS_TIME):
+            kept_texts.forget(item.digest, item.kind, ctx.max_characters)
 
 
 def _supported_suffixes() -> List[str]:
@@ -1286,10 +1335,11 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
                 ctx: Context, owner: str, written: Written,
                 now: Optional[Callable[[], float]] = None) -> List[Item]:
     """Copy each file's original into the folder of originals under a
-    temporary name, check the copy, read its text from the copy's bytes,
-    and write its row through `insert_row`; then give the copies their
-    names. Raises BatchFailed; the caller rolls back and calls
-    `written.remove_all()`.
+    temporary name, check the copy, take its text as the preview read it
+    (kept_texts), or read it again from the copy's bytes only when that
+    text cannot be used, and write its row through `insert_row`; then
+    give the copies their names. Raises BatchFailed; the caller rolls
+    back and calls `written.remove_all()`.
 
     The import works for `ctx.import_seconds` from the call's start: the
     first file always has its whole time (IMPORT_FILE_SECONDS); after
@@ -1339,8 +1389,16 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
             raise BatchFailed("not_copied") from None
         if copy is None or digest_of(copy) != item.digest:
             raise BatchFailed("not_copied")
-        _read_one(item, copy, ctx, timeout, IMPORT_FILE_SECONDS,
-                  NOT_IMPORTED_THIS_TIME)
+        # The text the preview read, kept under this very digest: the
+        # names list and every decision after it are today's, on the
+        # preview's own input.
+        kept = kept_texts.load(item.digest, item.size, item.kind,
+                               ctx.max_characters)
+        if kept is not None:
+            evaluate(item, kept, ctx)
+        else:
+            _read_one(item, copy, ctx, timeout, IMPORT_FILE_SECONDS,
+                      NOT_IMPORTED_THIS_TIME)
         if item.status == "later":
             # Its reading was cut short by the call's time: neither it
             # nor any file after it goes in this time.

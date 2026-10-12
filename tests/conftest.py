@@ -153,6 +153,27 @@ def _isolate_home(tmp_path, _sandbox_patch):
         tmp_path.resolve())
 
 
+@pytest.fixture(autouse=True)
+def _no_time_machine_request(_sandbox_patch):
+    """v0.15.0: making the folder of kept texts asks Time Machine, on a
+    Mac, to leave it out, through `tmutil`, which can take seconds; no
+    test makes that request unless it asks for it (the tests of the
+    request call the real function, with `subprocess.run` replaced).
+    Each test also starts with no folder problem already logged."""
+    from exegete import kept_texts
+    _sandbox_patch.setattr(kept_texts, "_exclude_from_backups",
+                           lambda path, platform=None: False)
+    kept_texts._warned.clear()
+
+
+@pytest.fixture
+def keeping_off(monkeypatch):
+    """v0.15.0: the preview keeps no text and the import reads every file
+    again, as 0.14.3 did; for the tests of that path."""
+    from exegete import kept_texts
+    monkeypatch.setattr(kept_texts, "KEEPING", False)
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     """Print the file-text count's measured rate at the end of the run.
 

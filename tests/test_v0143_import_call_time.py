@@ -178,7 +178,11 @@ class TestThePreview:
         assert "preview_token" not in preview
 
 
+@pytest.mark.usefixtures("keeping_off")
 class TestTheImport:
+    """With no kept text (v0.15.0's reading once switched off), so that
+    these go on proving the import's own reading, which it falls back on
+    when a kept text cannot be used."""
 
     def test_what_the_preview_read_goes_in_and_the_rest_follows(
             self, project, folder, clock):

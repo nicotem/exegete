@@ -94,7 +94,7 @@ from . import pseudonymise as pseudo
 from . import new_project
 from . import parts, reading, reading_folder
 from .path_identity import is_inside, is_inside_any
-from . import doc_import, doc_readers
+from . import doc_import, doc_readers, kept_texts
 from .cursors import (
     CURSOR_MAX_LENGTH,
     CURSOR_TOO_LONG,
@@ -10298,6 +10298,13 @@ def import_documents(
             error = marker
     if error is not None:
         return json.dumps({"error": error}, indent=2)
+    # v0.15.0: the texts earlier previews kept and no import used go once
+    # their hour has passed
+    try:
+        kept_texts.sweep()
+    except Exception as e:
+        logger.warning("Could not tidy the texts kept by earlier "
+                       "previews: %s", error_label(e))
     _adopt_configured_project()
     if current_project_path is None:
         return json.dumps({"error": _no_project_message()}, indent=2)
@@ -10382,6 +10389,13 @@ def _import_documents_preview(paths, ctx, stops, token_args,
         return json.dumps(
             _token_error("preview_secret_unavailable", "import_documents"))
     doc_import.remember_outcomes(payload["preview_token"], result)
+    # v0.15.0: the text each ready file was read as, kept for the import,
+    # which then reads a file again only when that text cannot be used
+    try:
+        doc_import.keep_texts(result, ctx)
+    except Exception as e:
+        logger.warning("Could not keep the texts this preview read: %s",
+                       error_label(e))
     # The preview's own order first (what stops it, the summary line, the
     # names list, ...), then the token and how to use it.
     answer = dict(payload.pop("preview"))
@@ -10477,6 +10491,11 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                 write_db.conn.commit()
                 committed = True
                 doc_import.forget_outcomes(preview_token)
+                try:
+                    doc_import.forget_texts(result, ctx)
+                except Exception as e:
+                    logger.warning("Could not remove the texts the preview "
+                                   "kept: %s", error_label(e))
                 # The preview's page to check letters on has done its
                 # work.
                 try:
@@ -20477,6 +20496,13 @@ def main(argv: Optional[List[str]] = None, *,
     except Exception as e:
         logger.warning("Could not tidy the reading folder: %s",
                        error_label(e))
+    # v0.15.0: and the texts previews kept that no import used, once their
+    # hour has passed (in the state folder this run settled on above)
+    try:
+        kept_texts.sweep()
+    except Exception as e:
+        logger.warning("Could not tidy the texts kept by earlier "
+                       "previews: %s", error_label(e))
 
     # The check for new versions (the owner's ruling of 5 October 2026):
     # after the state folder is settled, since it keeps its record there,

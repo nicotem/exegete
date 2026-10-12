@@ -38,7 +38,8 @@ of a project from the conversation. It runs as an MCP server.
   state folder. `transition.py`: tidying up after the rename.
 - `path_identity.py`: containment checks by folder identity.
 - `doc_import.py`, `doc_readers.py`, `import_reading.py` and their
-  neighbours (`import_*.py`, `garbled_text.py`): bringing documents in
+  neighbours (`import_*.py`, `garbled_text.py`, `kept_texts.py`, the
+  text a preview read, kept for its import): bringing documents in
   (`import_documents`, 0.14.3; the optional part
   `pdf-epub` reads PDF and EPUB). `reading.py`, `reading_copy.py`,
   `reading_folder.py`, `opener.py`, `origin_mark.py`: reading a whole

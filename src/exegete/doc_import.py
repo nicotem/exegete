@@ -31,7 +31,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from . import doc_readers, garbled_text, import_paths, import_reading
+from . import doc_readers, env_settings, garbled_text, import_paths
+from . import import_reading
 from . import import_words as words
 from . import kept_texts
 
@@ -58,6 +59,18 @@ IMPORT_FILE_SECONDS = 40
 KEEP_SECONDS = 5
 # Less time than this left in a call: no file is started.
 LEAST_SECONDS = 1.0
+# A timing build, never released: in the desktop extension the preview
+# reads for this long, far longer than a host waits, so that the owner
+# can time when his app stops a call. Elsewhere, PREVIEW_SECONDS.
+TIMING_BUILD_SECONDS = 600
+
+
+def timing_build() -> bool:
+    """Whether this copy runs as the desktop extension, by its own mark
+    (read as updates.detect_route reads it): only there does the preview
+    read for TIMING_BUILD_SECONDS and say how long it took."""
+    return (env_settings.installed_as() or "").strip().lower() == \
+        "extension"
 
 
 def clock() -> float:

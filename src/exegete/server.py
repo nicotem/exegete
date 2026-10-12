@@ -10314,6 +10314,10 @@ def import_documents(
         import_pdfs_with_listed_names, import_file_names_with_listed_names,
         memo, bool(import_files_with_garbled_letters))
     ctx.call_started = call_started
+    if doc_import.timing_build():
+        # A timing build: in the extension the preview reads far longer
+        # than a host waits (the import's time is unchanged).
+        ctx.preview_seconds = doc_import.TIMING_BUILD_SECONDS
     stops = []
     gate = _write_gate_error()
     if gate is not None:
@@ -10367,6 +10371,7 @@ def _import_documents_preview(paths, ctx, stops, token_args,
                "no file is ready."))
         if page is not None:
             preview["page_to_check"] = page
+        _timing_build_line(preview, ctx)
         return json.dumps(preview, indent=2, ensure_ascii=False)
     try:
         payload = _issue_preview(
@@ -10402,7 +10407,20 @@ def _import_documents_preview(paths, ctx, stops, token_args,
     if page is not None:
         answer["page_to_check"] = page
     answer.update(payload)
+    _timing_build_line(answer, ctx)
     return json.dumps(answer, indent=2, ensure_ascii=False)
+
+
+def _timing_build_line(answer, ctx) -> None:
+    """A timing build, in the extension only: how long the preview took,
+    from the call's start, as the answer's last key."""
+    if not doc_import.timing_build():
+        return
+    seconds = int(doc_import.clock() - ctx.call_started)
+    answer["timing_build"] = (
+        f"A timing build, not a release: this preview took {seconds} "
+        f"second{'s' if seconds != 1 else ''} in Exegete, from the call's "
+        f"start to this answer.")
 
 
 def _import_page_to_check(result, ctx):

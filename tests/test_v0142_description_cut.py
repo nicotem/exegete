@@ -558,10 +558,18 @@ REWORDED_0142 = {
 # `start` argument, and the `without_codes` argument, reading without
 # codes) and import_text_file (that its text passes through the
 # conversation, its pointer to import_documents, the deprecated
-# create_backup=false, and 0.14.2's "joins the project's documents")
+# create_backup=false, and 0.14.2's "joins the project's documents");
+# and from the maintainer's sitting, each no longer than before
+# (tests/test_v0143_sitting_wording.py): create_project (the
+# researcher's coder name as QualCoder 4.0 labels it, "Current coder",
+# asked without presuming QualCoder, and the folder set for projects
+# named rather than a default), copy_project_to_workspace and
+# import_text_file (the folder set for projects, likewise)
 CHANGED_0143 = {
     "analyze_file_with_coding": (2293, 1878, "892912ccbe8f76ac"),
-    "import_text_file": (4022, 2995, "b3bfa6902065b9a0"),
+    "copy_project_to_workspace": (1801, 1483, "997bac5f12875338"),
+    "create_project": (1915, 1505, "3f93233739c71562"),
+    "import_text_file": (4022, 2994, "087c5ad64cf6f50a"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143}
 

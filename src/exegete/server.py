@@ -1326,6 +1326,21 @@ def _resource_guard(fn):
     return wrapper
 
 
+def _projects_folder() -> Optional[str]:
+    """The folder set for projects, as a full path: where create_project
+    creates a project and copy_project_to_workspace copies one when no
+    folder is given (the desktop extension's "Folder for projects", or
+    the standard workspace). list_available_projects, get_current_project
+    and create_project give it as `projects_folder` (0.14.3: at the
+    maintainer's sitting the assistant announced the standard folder
+    while the extension's setting named another). None only for a
+    setting the server refuses to start with."""
+    try:
+        return str(default_workspace())
+    except ValueError:
+        return None
+
+
 def _host_set_workspace() -> Optional[str]:
     """The workspace EXEGETE_WORKSPACE names, as text, or None when
     it is not set (or not usable, which stops the server at start-up)."""
@@ -3832,6 +3847,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
         if not projects:
             return json.dumps({
                 "projects": [],
+                "projects_folder": _projects_folder(),
                 "message": _mark_unregistered(_no_projects_message(
                     folders if search_directories else None,
                     searched["not_found"])),
@@ -3844,6 +3860,7 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
             "project_count": len(projects),
             "projects": projects,
             "current_project": current_project_path,
+            "projects_folder": _projects_folder(),
             "searched": searched,
         }, indent=2)
 
@@ -4646,6 +4663,7 @@ def get_current_project() -> str:
                 "current_project": None,
                 "message": "No project currently open. Use 'list_available_projects' "
                           "and 'select_project' to open one." + _mru_hint(),
+                "projects_folder": _projects_folder(),
                 "brief": BRIEF_REMINDER,
             }, indent=2)
 
@@ -4656,6 +4674,7 @@ def get_current_project() -> str:
             "project_name": project_display_name(current_project_path),
             "project_info": project_info,
             "schema": _schema_block(),
+            "projects_folder": _projects_folder(),
         }
         # The project's AI coder name, reported and never asked for (D7 4.4)
         result.update(_ai_coder_name_report())
@@ -4759,8 +4778,8 @@ def copy_project_to_workspace(
     """Copy a project folder (.qda) into the workspace to work on a copy.
 
     This is the recommended first step before any AI coding: work on a copy
-    in the workspace folder (~/Documents/Exegete projects/ unless the
-    host set another; the answer gives the path) so your
+    in the workspace folder (the folder set for projects:
+    get_current_project's projects_folder) so your
     original project is never touched. If a project with the same name
     already exists in the workspace, the copy gets a timestamped name.
 
@@ -9716,9 +9735,8 @@ def import_text_file(
     case-based analysis (matrices, case reports). You can also link later
     with link_file_to_case.
 
-    IMPORTANT: work on a project in the workspace
-    (~/Documents/Exegete projects/ unless the host set another), or on a
-    copy there.
+    IMPORTANT: work on a project in the workspace, the folder set for
+    projects (get_current_project gives it), or on a copy there.
 
     Refused while QualCoder has the project open (its heartbeat lock): ask the user to close the project in QualCoder, re-check with get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
@@ -19655,18 +19673,23 @@ Ground the profile in verbatim quotes from this case's segments, and keep what t
 
 def _create_project_refusal(text: str, **extra: Any) -> str:
     return json.dumps({"success": False, "created": False, "error": text,
-                       **extra}, indent=2)
+                       "projects_folder": _projects_folder(), **extra},
+                      indent=2)
 
 
 # The question create_project asks when the researcher's coder name is
 # missing (the owner's ruling 6 of 2026-09-25), and the warning for an
-# explicit "not known" (the study's 7.5 wording).
+# explicit "not known" (the study's 7.5 wording). QualCoder 4.0 labels
+# the setting "Current coder", in Project, Settings (on a Mac, Qt moves
+# Settings to the QualCoder menu); the question presumes no QualCoder
+# (0.14.3, from the maintainer's sitting).
 CODER_NAME_ASK = (
-    "Ask the researcher for their own coder name, exactly as they give it "
-    "(in QualCoder: Settings, Coder name), and call again with it as "
+    "Ask the researcher what name their own codings should carry; if they "
+    "use QualCoder, the name in its settings (\"Current coder\"), exactly "
+    "as there; if not, any name they choose. Call again with it as "
     "coder_name. It is the researcher's own name for their codings, not "
-    "the AI's, and must never be guessed. If they do not use QualCoder or "
-    "do not know it, call again with coder_name_not_known=true instead.")
+    "the AI's, and must never be guessed. If they do not know it, call "
+    "again with coder_name_not_known=true instead.")
 CODER_NAME_NOT_KNOWN_WARNING = (
     "The researcher's own coder name is not known, so the check that "
     "keeps the AI's codings apart from the researcher's own is off. It "
@@ -19874,38 +19897,36 @@ def create_project(name: str, directory: Optional[str] = None,
                    coder_name_not_known: bool = False) -> str:
     """Create a new, empty project, and select it.
 
-    Makes the project folder "<name>.qda" with its four subfolders and a
-    database in QualCoder 4.0's format, exactly as QualCoder 4.0's own New
-    Project makes them, then selects the new project so material can be
-    imported at once. Nothing existing is ever changed: a name already in
+    Makes the project folder "<name>.qda", in directory or in the folder set
+    for projects (get_current_project's projects_folder), with its four
+    subfolders and a database in QualCoder 4.0's format, exactly as QualCoder
+    4.0's own New Project makes them, then selects the project so material can
+    be imported at once. Nothing existing is ever changed: a name already in
     use is refused, never replaced or given a "_1".
 
-    THE RESEARCHER'S CODER NAME: ask the researcher for their own coder
-    name (in QualCoder: Settings, Coder name) and pass it exactly as
-    they give it. It is their own name, not the AI's, and must never be
-    guessed or taken from anywhere else: a wrong name makes QualCoder ask
-    them to keep or switch names when they open the project. If they do
-    not use QualCoder or do not know it, pass coder_name_not_known=true
-    instead; the project is then created, and the result says what that
-    means. With neither, nothing is created and the answer asks for it.
+    THE RESEARCHER'S CODER NAME: ask the researcher what name their own codings
+    should carry; if they use QualCoder, the name in its settings
+    ("Current coder"), exactly as there; if not, any name they choose. It is
+    their own name, not the AI's, and must never be guessed or taken from
+    anywhere else: a wrong name makes QualCoder ask them to keep or switch
+    names when they open the project. If they do not know it, pass
+    coder_name_not_known=true instead; the project is then created, and the
+    result says what that means. With neither, nothing is created and the
+    answer asks for it.
 
-    Names: the name becomes a folder, so it may not hold / \\ : < > | ? *
-    or ", end in a dot or a space, start with a dot, be a Windows device
-    name such as CON, hold "_backup_" or "_BKUP_", or pass 200 bytes. A
-    name already used in that folder, in any letter case, is refused, and
-    so is a name whose older backup folders sit there. Each refusal says
-    why.
+    Names: the name becomes a folder, so it may not hold / \\ : < > | ? * or ",
+    end in a dot or a space, start with a dot, be a Windows device name such as
+    CON, hold "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in
+    that folder, in any letter case, is refused, and so is a name whose older
+    backup folders sit there. Each refusal says why.
 
     Args:
         name: The project's name, without ".qda" (a typed ".qda" is
               dropped)
         directory: An existing folder to create the project in, as a
-                   full path or one starting with ~; leave it out to use
-                   Exegete's workspace, ~/Documents/Exegete projects
-                   unless the host set another (the answer gives the
-                   path)
-        coder_name: The researcher's own coder name (in QualCoder:
-                    Settings, Coder name), exactly as they give it
+                   full path or one starting with ~; leave it out for
+                   the folder set for projects
+        coder_name: The researcher's own coder name, exactly as given
         coder_name_not_known: True when the researcher does not know it;
                     then leave coder_name out
 
@@ -19995,6 +20016,7 @@ def create_project(name: str, directory: Optional[str] = None,
         "coder_name_known": bool(stored_coder),
         "selected": False,
         "previous_project": previous,
+        "projects_folder": _projects_folder(),
         "warnings": warnings,
     }
     note = _earlier_workspace_note(is_default)

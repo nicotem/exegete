@@ -549,13 +549,38 @@ other limits.
   other extension that reads files; LM Studio's chat is suggested with
   no other server or plugin that reads files.
 
+### Changed: the coder name and the folder for projects, from the maintainer's sitting
+
+- `create_project` asked for the researcher's coder name "in
+  QualCoder: Settings, Coder name"; QualCoder 4.0's Settings window
+  calls it "Current coder" (Project, Settings; on a Mac, Qt moves
+  Settings to the QualCoder menu). The question, in the tool's
+  description and in its answer, now asks what name the researcher's
+  own codings should carry: if they use QualCoder, the name in its
+  settings ("Current coder"), exactly as there; if not, any name they
+  choose. Until now a researcher without QualCoder was sent to
+  `coder_name_not_known`, which leaves the check that keeps the AI's
+  codings apart from theirs off; that flag is now for a researcher who
+  does not know the name. TOOLS.md says the same.
+- At the sitting the assistant said a new project would go to
+  `~/Documents/Exegete projects`, the folder `create_project`'s
+  description named as the default, and the project went to
+  `~/QualCoder projects`, the Claude Desktop extension's "Folder for
+  projects". `list_available_projects`, `get_current_project` and
+  `create_project` (its refusals too, so the question for the coder
+  name carries it) now give the folder that is set as
+  `projects_folder`, so the assistant can say where a project will go
+  before it is made; `create_project`, `copy_project_to_workspace` and
+  `import_text_file` name "the folder set for projects" rather than a
+  default, each description shorter than before or as long.
+
 ### Measured
 
-- Serialised tool JSON: full = 201,758 characters (about 50.4k tokens
-  at chars/4) over 77 tools, core = 67,243 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 204,315 (about 51.1k) over 78, measured on
+- Serialised tool JSON: full = 201,739 characters (about 50.4k tokens
+  at chars/4) over 77 tools, core = 67,225 (about 16.8k) over 23, and
+  the opt-in lifecycle set = 204,244 (about 51.1k) over 78, measured on
   Python 3.13.5 with mcp 1.30.0 in the repository's own `venv/`; on
-  Python 3.11.13 (the `.venv/`), 211,634, 70,635 and 214,331. Against
+  Python 3.11.13 (the `.venv/`), 211,611, 70,617 and 214,248. Against
   0.14.2's figures (196,387, 65,140 and 198,944 on 3.13), every set
   grew by `open_file_for_reading`'s own entry (1,630 characters on
   3.13, 1,632 with its separator) and by 471 characters on
@@ -564,9 +589,14 @@ other limits.
   entry (2,970, 2,972 with its separator; it is in the standard and
   lifecycle sets, not in core, and its two arguments for letters that
   look garbled, `import_files_with_garbled_letters` and `show_text`,
-  are in it) and by 296 on `import_text_file` (the description changed
-  above). No other tool's entry changed. Both new tools put their rules
-  first, and each whole description fits within the 2,048 characters
+  are in it) and by 295 on `import_text_file` (the description changed
+  above). The wording from the maintainer's sitting (see "Changed: the
+  coder name and the folder for projects, from the maintainer's
+  sitting") shortened three entries: `copy_project_to_workspace`'s by
+  18 characters, in every set, `create_project`'s by 52, in lifecycle,
+  and `import_text_file`'s by 1, counted in the 295 above (on 3.11, 18,
+  60 and 5). No other tool's entry changed. Both new tools put their
+  rules first, and each whole description fits within the 2,048 characters
   Claude Code keeps: `open_file_for_reading`'s is 1,187 characters on
   3.13 (1,267 on 3.11) and `import_documents`' 1,976 (2,032 on 3.11).
 

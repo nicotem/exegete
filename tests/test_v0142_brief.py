@@ -510,12 +510,17 @@ class TestTheSizes:
     # The same tools as this tree serves them: v0.14.3
     # lengthens two, analyze_file_with_coding (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
-    # import_documents); tests/test_v0142_description_cut.py pins their
-    # words. Their entries as 0.14.2 served them are below, so every
-    # other tool is still held to 0.14.2's figure.
-    NOW = {"full": 195_796, "core": 65_158, "lifecycle": 198_353}
+    # import_documents), and, from the maintainer's sitting, shortens
+    # copy_project_to_workspace and create_project (the folder set for
+    # projects, and the coder name as QualCoder 4.0 labels it);
+    # tests/test_v0142_description_cut.py pins their words. Their entries
+    # as 0.14.2 served them are below, so every other tool is still held
+    # to 0.14.2's figure.
+    NOW = {"full": 195_777, "core": 65_140, "lifecycle": 198_282}
     CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
-                          "import_text_file": 4_553}
+                          "import_text_file": 4_553,
+                          "copy_project_to_workspace": 2_232,
+                          "create_project": 2_555}
     # Each new tool's entry on Python 3.13, and the sets it is in
     NEW = {"read_brief": (451, {"full", "core", "lifecycle"}),
            "check_for_updates": (903, {"full", "lifecycle"})}

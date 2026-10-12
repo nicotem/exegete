@@ -262,7 +262,10 @@ tools plus `create_project`.
   `~/Documents/Exegete projects`, unless the host sets another
   folder with `EXEGETE_WORKSPACE` (projects made there before 0.14.1
   stay in `~/Documents/Qualcoder MCP Projects`, where the listing still
-  finds them). The answer gives the full path.
+  finds them). The answer gives the full path. So that the assistant
+  can say where a project will go before it is made,
+  `list_available_projects`, `get_current_project` and `create_project`
+  give the folder that is set as `projects_folder`.
   Keep projects on a local disk that is not synced (iCloud, OneDrive,
   Dropbox): sync services can copy the database and its journal
   separately. On a Mac with iCloud's "Desktop & Documents Folders"
@@ -271,14 +274,14 @@ tools plus `create_project`.
   where Documents has been moved (to OneDrive, say), the workspace may
   not be where QualCoder's Open dialog starts; the result gives the full
   path.
-- **Your coder name.** The assistant asks for the coder name your own
-  work goes under (if you use QualCoder, it is under Project menu,
-  Settings, "Current coder"; on a Mac it may be under the QualCoder menu
-  instead), after every other check, so you are asked once. If you have
-  none yet, or do not use QualCoder, say so: the project is created,
-  and the check that keeps the AI's codings apart from yours stays off
-  until a name is recorded, which today happens when QualCoder first
-  opens the project. Exegete never reads QualCoder's settings file,
+- **Your coder name.** The assistant asks what name your own codings
+  should carry: if you use QualCoder, the name in its settings, exactly
+  as there (Project menu, Settings, "Current coder"; on a Mac it may be
+  under the QualCoder menu instead); if not, any name you choose. It
+  asks after every other check, so you are asked once. If you do not
+  know it, say so: the project is created, and the check that keeps the
+  AI's codings apart from yours stays off until a name is recorded,
+  which today happens when QualCoder first opens the project. Exegete never reads QualCoder's settings file,
   which holds API keys.
 - **Names.** A name already used in that folder is refused, never given
   a "_1", and so is one that differs from it only in letter case or

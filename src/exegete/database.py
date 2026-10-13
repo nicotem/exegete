@@ -9,6 +9,7 @@ import math
 import os
 import sqlite3
 import stat
+import sys
 from pathlib import Path
 from typing import (Optional, List, Dict, Any, Callable, NamedTuple,
                     Sequence, Tuple, Union)
@@ -695,12 +696,15 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
 #   1744-1753 and 1732-1742), so the change may be the session's own
 #   last write. Either way it says nothing about an open window once
 #   QualCoder has closed. So the sign is left out when the process scan
-#   ran, saw each process's command line and found no QualCoder; the
-#   file then counts as a trace in the project's history with QualCoder
+#   ran, could read programs' command lines and found no QualCoder, and
+#   no line that may be one (ProcessScan.found_none); the file then
+#   counts as a trace in the project's history with QualCoder
 #   (qualcoder_history.py). Where the scan was not asked for, could not
 #   run, saw program names only (Windows' tasklist, which cannot see a
-#   QualCoder run from Python) or found a QualCoder, the sign is given
-#   as before.
+#   QualCoder run from Python; psutil when a Python's command line was
+#   withheld; a Linux sandbox with a process list of its own), found a
+#   line that may be a QualCoder it could not read (a path holding a
+#   space), or found a QualCoder, the sign is given as before.
 # - A best-effort local process scan for a running QualCoder
 #   (platform-guarded, optional, cached; never a hard dependency and
 #   never allowed to crash or block, including on Windows CI runners).
@@ -773,20 +777,37 @@ def _program_and_arguments(line: str) -> Tuple[str, List[str]]:
     return (tokens[0], tokens[1:]) if tokens else ("", [])
 
 
+def _is_a_python(name: str) -> bool:
+    """Whether a program's own file name (no folder, `.exe` taken off,
+    in any letter case) is a Python, or Windows' launcher (`py -m
+    qualcoder`, as QualCoder's own README says to start it on
+    Windows)."""
+    return name.startswith("python") or name in ("py", "pyw")
+
+
+def _program_name(program: str) -> str:
+    """A program's own file name, in lower case, `.exe` taken off."""
+    name = program.replace("\\", "/").rsplit("/", 1)[-1].casefold()
+    return name[:-4] if name.endswith(".exe") else name
+
+
 def _process_is_qualcoder(line: str) -> bool:
     """Whether one process line is a running QualCoder (see above)."""
     program, arguments = _program_and_arguments(line)
-    name = program.replace("\\", "/").rsplit("/", 1)[-1].casefold()
-    if name.endswith(".exe"):
-        name = name[:-4]
+    return _program_is_qualcoder(program, arguments)
+
+
+def _program_is_qualcoder(program: str, arguments: List[str]) -> bool:
+    """Whether a program and its arguments are a running QualCoder: the
+    rule above, given the program apart (psutil's `cmdline[0]`, or what
+    `_program_and_arguments` reads off a line)."""
+    name = _program_name(program)
     own_names_out = name
     for own in _OWN_NAMES:
         own_names_out = own_names_out.replace(own, "")
     if "qualcoder" in own_names_out:
         return True
-    # a Python, or Windows' launcher (`py -m qualcoder`, as QualCoder's
-    # own README says to start it on Windows)
-    if not (name.startswith("python") or name in ("py", "pyw")):
+    if not _is_a_python(name):
         return False
     index = 0
     while index < len(arguments):
@@ -828,6 +849,51 @@ def _filter_qualcoder_processes(lines) -> List[str]:
     return hits
 
 
+# A looser reading of a process line (v0.15.0), used only to decide
+# whether a scan that found no QualCoder is trusted to say that none is
+# running, never to give the process sign. `ps` gives a command
+# line as one string, and the rule above takes its first word as the
+# program, so a Python or a `qualcoder` script in a folder whose path
+# holds a space ("/Users/x/My Apps/env/bin/python3 -m qualcoder") is not
+# recognised. With Exegete's own names taken out, a line that holds
+# `-m qualcoder` (or `-mqualcoder`), or a word ending in
+# `qualcoder/__main__.py`, `/bin/qualcoder` or `\Scripts\qualcoder`
+# (`.exe` aside), may be such a QualCoder.
+_MAY_BE_QUALCODER_MODULE = re.compile(r"-m\s*qualcoder")
+_MAY_BE_QUALCODER_ENDINGS = ("qualcoder/__main__.py", "/bin/qualcoder",
+                             "/scripts/qualcoder")
+
+
+def _may_be_qualcoder(line: str) -> bool:
+    """Whether one process line may be a QualCoder the rule above cannot
+    read (see above). Never raises."""
+    try:
+        text = line.casefold().replace("\\", "/")
+        for own in _OWN_NAMES:
+            text = text.replace(own, "")
+        if _MAY_BE_QUALCODER_MODULE.search(text):
+            return True
+        for word in text.split():
+            word = word.strip("\"'")
+            if word.endswith(".exe"):
+                word = word[:-4]
+            if word.endswith(_MAY_BE_QUALCODER_ENDINGS):
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def _possible_miss(lines) -> bool:
+    """Whether a line that is not a QualCoder by the rule above may still
+    be one by the looser reading."""
+    for line in lines:
+        if isinstance(line, str) and _may_be_qualcoder(line) \
+                and not _filter_qualcoder_processes([line]):
+            return True
+    return False
+
+
 def _listing_lines(output: str, own_pid: int, windows: bool) -> List[str]:
     """The process lines of a `ps -axo pid=,args=` listing, this process
     left out, or of `tasklist /fo csv /nh` (whose rows the filter reads
@@ -849,16 +915,31 @@ class ProcessScan(NamedTuple):
 
     `hits`: the process lines that are a QualCoder, as
     `_filter_qualcoder_processes` gives them. `saw_command_lines`: True
-    when the listing gave each process's command line (psutil, when at
-    least one process gave its own, and `ps -axo pid=,args=`), so that a
-    QualCoder run from Python could have been seen; False for Windows'
-    `tasklist /fo csv /nh`, the listing there when psutil is absent,
-    which gives program names only: a QualCoder started with
-    `py -m qualcoder` (as QualCoder's README starts it on Windows) shows
-    as py.exe or python.exe and is never seen.
+    when the listing could read programs' command lines (`ps -axo
+    pid=,args=`; psutil, when at least one process gave its own and no
+    Python withheld its), so that a QualCoder run from Python could have
+    been seen; False for Windows' `tasklist /fo csv /nh`, the listing
+    there when psutil is absent, which gives program names only (a
+    QualCoder started with `py -m qualcoder`, as QualCoder's README
+    starts it on Windows, shows as py.exe or python.exe and is never
+    seen), for psutil when a process named like a Python gave no command
+    line, and on Linux in a sandbox with a process list of its own
+    (`_sees_only_its_own_processes`). `possible_miss`: a line that is
+    not a hit may still be a QualCoder by the looser reading
+    (`_may_be_qualcoder`), such as one run from a folder whose path
+    holds a space.
     """
     hits: Tuple[str, ...]
     saw_command_lines: bool
+    possible_miss: bool = False
+
+    @property
+    def found_none(self) -> bool:
+        """The one case where the scan's negative is trusted: it could
+        read command lines, found no QualCoder, and found no line that
+        may be one."""
+        return (self.saw_command_lines and not self.hits
+                and not self.possible_miss)
 
 
 def _scan_from_listing(output: str, own_pid: int,
@@ -871,7 +952,67 @@ def _scan_from_listing(output: str, own_pid: int,
         return None
     lines = _listing_lines(output, own_pid, windows)
     return ProcessScan(tuple(_filter_qualcoder_processes(lines)),
-                       not windows)
+                       not windows, _possible_miss(lines))
+
+
+# Files that say that this process runs in a sandbox whose process list
+# holds its own processes only (a Flatpak app's, a Docker or Podman
+# container's), on Linux: a QualCoder running on the computer outside it
+# is not in the listing (v0.15.0).
+_OWN_PROCESS_LIST_MARKERS = ("/.flatpak-info", "/.dockerenv",
+                             "/run/.containerenv")
+
+
+def _sees_only_its_own_processes(platform: Optional[str] = None) -> bool:
+    """On Linux, whether one of the files above is there. Never
+    raises."""
+    try:
+        if not (platform or sys.platform).startswith("linux"):
+            return False
+        return any(os.path.exists(marker)
+                   for marker in _OWN_PROCESS_LIST_MARKERS)
+    except Exception:
+        return False
+
+
+def _psutil_scan(psutil: Any, own_pid: int) -> Optional[ProcessScan]:
+    """What psutil's list of processes shows; None when it lists none.
+    Each program is read from its `cmdline[0]` and its arguments from the
+    rest, never from the list joined and split again, which cut a path
+    holding a space. A process that gives no command line is read by its
+    name; when that name is a Python's, the scan counts as names only,
+    since such a Python may be a QualCoder."""
+    hits: List[str] = []
+    listed = 0
+    saw_command_lines = False
+    python_unread = False
+    possible_miss = False
+    for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            if proc.info.get("pid") == own_pid:
+                continue
+            cmdline = [str(part) for part in
+                       (proc.info.get("cmdline") or [])]
+            name = str(proc.info.get("name") or "")
+            listed += 1
+            if cmdline:
+                saw_command_lines = True
+                line = " ".join(cmdline)
+                if _program_is_qualcoder(cmdline[0], cmdline[1:]):
+                    hits.append(line.strip()[:200])
+                elif _may_be_qualcoder(line):
+                    possible_miss = True
+                continue
+            if _is_a_python(_program_name(name)):
+                python_unread = True
+            if _program_is_qualcoder(name, []):
+                hits.append(name.strip()[:200])
+        except Exception:
+            continue
+    if not listed:
+        return None
+    return ProcessScan(tuple(hits), saw_command_lines and not python_unread,
+                       possible_miss)
 
 
 def _qualcoder_process_scan() -> Optional[ProcessScan]:
@@ -883,7 +1024,8 @@ def _qualcoder_process_scan() -> Optional[ProcessScan]:
     with an error or prints nothing, or psutil listing no process
     (v0.15.0: until then a failed scan answered "no hits", which a
     caller could not tell from a scan that saw every process and found
-    none). The answer, None included, is kept for
+    none). On Linux in a sandbox with a process list of its own it
+    counts as names only. The answer, None included, is kept for
     _PROCESS_SCAN_CACHE_SECONDS. It never raises.
     """
     now = time.monotonic()
@@ -899,24 +1041,7 @@ def _qualcoder_process_scan() -> Optional[ProcessScan]:
         except ImportError:
             psutil = None
         if psutil is not None:
-            lines: List[str] = []
-            saw_command_lines = False
-            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
-                try:
-                    if proc.info.get("pid") == own_pid:
-                        continue
-                    cmdline = proc.info.get("cmdline") or []
-                    if cmdline:
-                        saw_command_lines = True
-                        lines.append(" ".join(cmdline))
-                    else:
-                        lines.append(str(proc.info.get("name") or ""))
-                except Exception:
-                    continue
-            if lines:
-                scan = ProcessScan(
-                    tuple(_filter_qualcoder_processes(lines)),
-                    saw_command_lines)
+            scan = _psutil_scan(psutil, own_pid)
         else:
             import subprocess
             windows = os.name == "nt"
@@ -930,6 +1055,9 @@ def _qualcoder_process_scan() -> Optional[ProcessScan]:
                 scan = _scan_from_listing(
                     completed.stdout.decode("utf-8", errors="replace"),
                     own_pid, windows)
+        if scan is not None and scan.saw_command_lines \
+                and _sees_only_its_own_processes():
+            scan = scan._replace(saw_command_lines=False)
     except Exception:
         scan = None
     _process_scan_cache["at"] = now
@@ -948,17 +1076,16 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
     recent AI indexing or chat); an idle window leaves none, so only
     the process scan can see one. With `include_process_scan` the scan
     runs first, and a recent change to the chat history is left out when
-    the scan saw each process's command line and found no QualCoder
-    (v0.15.0, see above). This function never raises.
+    the scan could read programs' command lines and found no QualCoder
+    (`ProcessScan.found_none`; v0.15.0, see above). This function never
+    raises.
     """
     signals: List[str] = []
     try:
         project = Path(project_dir)
         # The scan runs first: what it saw decides the chat sign (3)
         scan = _qualcoder_process_scan() if include_process_scan else None
-        none_where_it_could_see = (scan is not None
-                                   and scan.saw_command_lines
-                                   and not scan.hits)
+        none_where_it_could_see = scan is not None and scan.found_none
 
         # 1. Hot write on the project database itself
         for sidecar in ("data.qda-journal", "data.qda-wal", "data.qda-shm"):

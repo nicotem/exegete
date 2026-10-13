@@ -1150,12 +1150,18 @@ Two further rules touch files on your disk:
   This is a heuristic: it can miss an open window (an idle 4.0 window
   with no recent AI activity leaves no file trace, so only the process
   scan can see it; on Windows without psutil, a QualCoder run through
-  `python.exe` is not seen), and a recently modified chat history file
-  means a first open of the project by either QualCoder build, or its
-  AI chat used; a later open leaves the file as it is. Since v0.15.0
-  that file's recent change is not given as a sign when the process
-  scan saw each program's command line and found no QualCoder (it then
-  says nothing about an open window).
+  `python.exe` is not seen; without psutil, a QualCoder started from a
+  folder whose path holds a space is not counted as running; and in a
+  Linux sandbox whose process list holds only its own programs, such as
+  a Flatpak app's or a container's, a QualCoder outside it is not seen),
+  and a recently modified chat history file means a first open of the
+  project by either QualCoder build, or its AI chat used; a later open
+  leaves the file as it is. Since v0.15.0 that file's recent change is
+  not given as a sign when the process scan could read programs' command
+  lines and found no QualCoder (it then says nothing about an open
+  window). It is still given when a program may be a QualCoder the scan
+  could not read (one started from a folder whose path holds a space),
+  when a Python withheld its command line, and in such a sandbox.
   `create_project` runs no process scan for the project it has just
   made. `select_project` and `get_current_project` also give the
   project's history with QualCoder (`qualcoder_history`, v0.15.0),
@@ -1166,10 +1172,11 @@ Two further rules touch files on your disk:
   names, in the folder that holds it, that begin with the project's
   name, as `list_backups` reads them); whether its lock file is a
   leftover; whether QualCoder's settings folder (`~/.qualcoder`)
-  exists; and whether the process scan found QualCoder. Only presence
-  is checked: the settings folder's contents (QualCoder's settings and
-  API keys) are never listed, opened or measured, and the answer holds
-  plain sentences and a yes or no, never a path or a project's name.
+  exists; and whether the process scan found QualCoder. For the settings
+  folder and the files in `ai_data`, only presence is checked: the
+  settings folder's contents (QualCoder's settings and API keys) are
+  never listed, opened or measured, and the answer holds plain sentences
+  and a yes or no, never a path or a project's name.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
   folder with four empty subfolders and a new `data.qda`, and records

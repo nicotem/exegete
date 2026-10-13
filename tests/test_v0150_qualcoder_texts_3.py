@@ -13,11 +13,14 @@ Two questions, kept apart:
   get_current_project when something was found.
 - "Is QualCoder open on it now?" stays the live check, with one change:
   a recently changed chat history is not read as an open window when the
-  process scan saw each process's command line and found no QualCoder
+  process scan could read programs' command lines and found no QualCoder
   (the owner's sitting of 11 October: a false "APPEARS to be open" a
   minute after QualCoder had closed). A scan of program names only
-  (Windows' tasklist) cannot see a QualCoder run from Python, so it is
-  not trusted to say that none runs.
+  (Windows' tasklist; psutil when a Python withheld its command line; a
+  Linux sandbox with a process list of its own) cannot see a QualCoder
+  run from Python, and a line that may be a QualCoder the rule cannot
+  read (a path holding a space) leaves the question open, so neither is
+  trusted to say that none runs.
 
 Every other test in the suite sees a scan that did not run (None,
 tests/conftest.py); the tests here that run the real scan are marked
@@ -55,6 +58,7 @@ PROCESS_SIGN = "a process that looks like QualCoder is running"
 SAW_NONE = ProcessScan((), True)
 NAMES_ONLY = ProcessScan((), False)
 A_HIT = ProcessScan(("/usr/bin/python3 -m qualcoder",), True)
+POSSIBLE_MISS = ProcessScan((), True, True)
 
 
 def _scan_gives(monkeypatch, value):
@@ -152,8 +156,19 @@ def _fake_psutil(processes):
     return FakePsutil
 
 
+def _not_in_a_sandbox(monkeypatch):
+    """The scan as on a computer whose process list is its own: a
+    container or Flatpak runner would otherwise count as names only."""
+    monkeypatch.setattr(database, "_sees_only_its_own_processes",
+                        lambda platform=None: False)
+
+
 @pytest.mark.real_process_scan
 class TestTheScanRuns:
+
+    @pytest.fixture(autouse=True)
+    def _outside_a_sandbox(self, monkeypatch):
+        _not_in_a_sandbox(monkeypatch)
 
     @pytest.mark.parametrize("how", ["raises", "times out", "exits 1",
                                      "exits 1 with a listing"])
@@ -263,8 +278,9 @@ class TestTheClosingWrite:
         assert qualcoder_gui_signals(folder) == []
         assert calls == [1]
 
-    @pytest.mark.parametrize("scan", [NAMES_ONLY, None],
-                             ids=["names only", "did not run"])
+    @pytest.mark.parametrize("scan", [NAMES_ONLY, None, POSSIBLE_MISS],
+                             ids=["names only", "did not run",
+                                  "a possible miss"])
     def test_the_chat_sign_when_the_scan_could_not_see(
             self, tmp_path, monkeypatch, scan):
         folder = _folder(tmp_path)
@@ -422,8 +438,10 @@ class TestWorkOut:
 
     @pytest.mark.parametrize("scan, running, level", [
         (A_HIT, True, "computer"), (SAW_NONE, False, "none"),
-        (NAMES_ONLY, None, "none"), (None, None, "none")],
-        ids=["a hit", "found none", "names only", "did not run"])
+        (NAMES_ONLY, None, "none"), (None, None, "none"),
+        (POSSIBLE_MISS, None, "none")],
+        ids=["a hit", "found none", "names only", "did not run",
+             "a possible miss"])
     def test_what_the_scan_adds(self, tmp_path, monkeypatch, scan,
                                 running, level):
         calls = _scan_gives(monkeypatch, scan)
@@ -731,8 +749,8 @@ class TestTheWords:
         assert ("the settings folder's contents (QualCoder's settings and "
                 "API keys) are never listed, opened or measured") in bullet
         assert "never a path or a project's name" in bullet
-        assert ("not given as a sign when the process scan saw each "
-                "program's command line and found no QualCoder") in bullet
+        assert ("not given as a sign when the process scan could read "
+                "programs' command lines and found no QualCoder") in bullet
 
     def test_tools_names_the_field(self):
         tools = (REPO / "TOOLS.md").read_text(encoding="utf-8")
@@ -740,3 +758,261 @@ class TestTheWords:
             line = next(row for row in tools.splitlines()
                         if row.startswith(f"- `{tool}`"))
             assert "`qualcoder_history`" in line, tool
+
+
+# =============================================================================
+# WHEN THE SCAN'S "NONE" IS NOT TRUSTED: a path holding a space, a Python
+# that withholds its command line, a sandbox's own process list
+# =============================================================================
+
+SPACED_LINES = (
+    "/Users/x/My Apps/env/bin/python3 -m qualcoder",
+    "/Library/Frameworks/Python.framework/Versions/3.13/Resources/"
+    "Python.app/Contents/MacOS/Python /Users/x/My Apps/env/bin/qualcoder",
+    "/home/x/Research Tools/QualCoder-master/env/bin/python "
+    "src/qualcoder/__main__.py",
+)
+SPACED_IDS = ["python -m", "app bundle and script", "its __main__.py"]
+
+
+def _without_the_space(line):
+    return line.replace("My Apps", "MyApps").replace("Research Tools",
+                                                     "ResearchTools")
+
+
+class TestTrustedNone:
+
+    def test_found_none_is_the_one_trusted_case(self):
+        assert SAW_NONE.found_none is True
+        assert NAMES_ONLY.found_none is False
+        assert A_HIT.found_none is False
+        assert POSSIBLE_MISS.found_none is False
+
+
+class TestAPathWithASpace:
+    """A Python or a `qualcoder` script in a folder whose path holds a
+    space: `ps` gives the command line as one string and the rule takes
+    its first word as the program, so it is no hit; the looser reading
+    keeps the scan from saying that none runs."""
+
+    @pytest.mark.parametrize("line", SPACED_LINES, ids=SPACED_IDS)
+    def test_the_process_sign_stays_strict(self, line):
+        """A guard: the rule for the process sign is unchanged."""
+        assert database._filter_qualcoder_processes([line]) == []
+        assert database._filter_qualcoder_processes(
+            [_without_the_space(line)]) != []
+
+    @pytest.mark.parametrize("line", SPACED_LINES, ids=SPACED_IDS)
+    def test_a_ps_listing_no_longer_rules_qualcoder_out(self, line):
+        own = os.getpid()
+        listing = f"  {own + 1} {line}\n  {own + 2} /bin/zsh\n"
+        scan = database._scan_from_listing(listing, own, False)
+        assert scan == POSSIBLE_MISS
+        assert scan.found_none is False
+
+    def test_exegetes_own_lines_still_rule_it_out(self):
+        """A guard: Exegete's own names, in a folder whose path holds a
+        space, are no possible miss."""
+        own = os.getpid()
+        listing = (
+            f"  {own + 1} /Users/x/My Apps/exegete/.venv/bin/python -m "
+            f"exegete\n"
+            f"  {own + 2} /Users/x/My Apps/env/bin/qualcoder-mcp\n"
+            f"  {own + 3} /Users/x/My Apps/env/bin/python -m qualcoder_mcp\n"
+            f"  {own + 4} tail -f /x/mcp-server-qualcoder.log\n")
+        scan = database._scan_from_listing(listing, own, False)
+        assert scan == SAW_NONE and scan.found_none is True
+
+    @pytest.mark.real_process_scan
+    @pytest.mark.skipif(os.name == "nt", reason="ps is the listing off "
+                        "Windows; tasklist sees names only anyway")
+    @pytest.mark.parametrize("line", SPACED_LINES, ids=SPACED_IDS)
+    def test_the_chat_sign_stays_end_to_end(self, tmp_path, monkeypatch,
+                                            line):
+        _no_psutil(monkeypatch)
+        _not_in_a_sandbox(monkeypatch)
+        own = os.getpid()
+        monkeypatch.setattr(
+            subprocess, "run",
+            lambda cmd, **kwargs: _Completed(0, f"  {own + 1} {line}\n"
+                                             .encode()))
+        folder = _folder(tmp_path)
+        _chat_changed(folder)
+        signals = qualcoder_gui_signals(folder)
+        assert len(signals) == 1 and signals[0].startswith(CHAT_SIGN)
+        assert work_out(folder, scan_processes=True,
+                        home=_quiet_home(tmp_path)).running is None
+
+    @pytest.mark.real_process_scan
+    @pytest.mark.parametrize("cmdline", [
+        ["/Users/x/My Apps/env/bin/python3", "-m", "qualcoder"],
+        ["/Library/Frameworks/Python.framework/Versions/3.13/Resources/"
+         "Python.app/Contents/MacOS/Python",
+         "/Users/x/My Apps/env/bin/qualcoder"],
+        ["/home/x/Research Tools/QualCoder-master/env/bin/python",
+         "src/qualcoder/__main__.py"]], ids=SPACED_IDS)
+    def test_psutil_reads_the_program_from_its_first_word(
+            self, monkeypatch, cmdline):
+        _not_in_a_sandbox(monkeypatch)
+        own = os.getpid()
+        monkeypatch.setitem(sys.modules, "psutil", _fake_psutil([
+            _Proc(own + 1, "python3", cmdline),
+            _Proc(own + 2, "zsh", ["/bin/zsh"])]))
+        assert database._qualcoder_process_scan() == \
+            ProcessScan((" ".join(cmdline),), True)
+
+
+@pytest.mark.real_process_scan
+class TestAWithheldCommandLine:
+    """With psutil, a process whose command line is refused (another
+    account's, or one run as administrator) is read by its name alone. A
+    Python's name says nothing about whether it runs QualCoder, so the
+    scan then counts as names only."""
+
+    @pytest.fixture(autouse=True)
+    def _outside_a_sandbox(self, monkeypatch):
+        _not_in_a_sandbox(monkeypatch)
+
+    @pytest.mark.parametrize("name", ["python.exe", "Python", "python3.11",
+                                      "py.exe", "pyw.exe"])
+    def test_a_python_without_its_command_line(self, monkeypatch, name):
+        own = os.getpid()
+        monkeypatch.setitem(sys.modules, "psutil", _fake_psutil([
+            _Proc(own + 1, "explorer.exe", ["C:\\Windows\\explorer.exe"]),
+            _Proc(own + 2, name, None)]))
+        assert database._qualcoder_process_scan() == NAMES_ONLY
+
+    def test_another_program_without_its_command_line(self, monkeypatch):
+        """A guard: a program that is not a Python keeps the scan's
+        sight."""
+        own = os.getpid()
+        monkeypatch.setitem(sys.modules, "psutil", _fake_psutil([
+            _Proc(own + 1, "explorer.exe", ["C:\\Windows\\explorer.exe"]),
+            _Proc(own + 2, "svchost.exe", None)]))
+        assert database._qualcoder_process_scan() == SAW_NONE
+
+    def test_the_chat_sign_stays(self, tmp_path, monkeypatch):
+        own = os.getpid()
+        monkeypatch.setitem(sys.modules, "psutil", _fake_psutil([
+            _Proc(own + 1, "explorer.exe", ["C:\\Windows\\explorer.exe"]),
+            _Proc(own + 2, "python.exe", [])]))
+        folder = _folder(tmp_path)
+        _chat_changed(folder)
+        signals = qualcoder_gui_signals(folder)
+        assert len(signals) == 1 and signals[0].startswith(CHAT_SIGN)
+
+
+class TestASandboxOfItsOwn:
+    """On Linux, a Flatpak app or a container lists its own processes
+    only, so a QualCoder outside it cannot be seen."""
+
+    def test_the_three_files(self):
+        assert database._OWN_PROCESS_LIST_MARKERS == (
+            "/.flatpak-info", "/.dockerenv", "/run/.containerenv")
+
+    @pytest.mark.parametrize("marker", [".flatpak-info", ".dockerenv",
+                                        ".containerenv"])
+    def test_a_file_on_linux(self, tmp_path, monkeypatch, marker):
+        present = tmp_path / marker
+        present.write_text("")
+        monkeypatch.setattr(database, "_OWN_PROCESS_LIST_MARKERS",
+                            (str(tmp_path / "absent"), str(present)))
+        assert database._sees_only_its_own_processes("linux") is True
+        assert database._sees_only_its_own_processes("darwin") is False
+        assert database._sees_only_its_own_processes("win32") is False
+
+    def test_no_file(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(database, "_OWN_PROCESS_LIST_MARKERS",
+                            (str(tmp_path / "absent"),))
+        assert database._sees_only_its_own_processes("linux") is False
+
+    @pytest.mark.real_process_scan
+    def test_the_scan_counts_as_names_only(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(database, "_sees_only_its_own_processes",
+                            lambda platform=None: True)
+        monkeypatch.setitem(sys.modules, "psutil", _fake_psutil([
+            _Proc(os.getpid() + 1, "zsh", ["/bin/zsh"])]))
+        assert database._qualcoder_process_scan() == NAMES_ONLY
+        folder = _folder(tmp_path)
+        _chat_changed(folder)
+        signals = qualcoder_gui_signals(folder)
+        assert len(signals) == 1 and signals[0].startswith(CHAT_SIGN)
+
+    @pytest.mark.real_process_scan
+    @pytest.mark.skipif(os.name == "nt", reason="ps is the listing off "
+                        "Windows")
+    def test_the_ps_path_counts_as_names_only(self, monkeypatch):
+        _no_psutil(monkeypatch)
+        monkeypatch.setattr(database, "_sees_only_its_own_processes",
+                            lambda platform=None: True)
+        monkeypatch.setattr(
+            subprocess, "run",
+            lambda cmd, **kwargs: _Completed(0, b"  1 /usr/bin/vim x\n"))
+        assert database._qualcoder_process_scan() == NAMES_ONLY
+
+    @pytest.mark.real_process_scan
+    def test_a_hit_is_still_a_hit(self, monkeypatch):
+        """What the sandbox shows of QualCoder still counts (as names
+        only)."""
+        monkeypatch.setattr(database, "_sees_only_its_own_processes",
+                            lambda platform=None: True)
+        monkeypatch.setitem(sys.modules, "psutil", _fake_psutil([
+            _Proc(os.getpid() + 1, "Python",
+                  ["/usr/bin/python3", "-m", "qualcoder"])]))
+        assert database._qualcoder_process_scan() == \
+            ProcessScan(A_HIT.hits, False)
+
+
+class TestTheWordsAfterReview:
+
+    def _privacy_bullet(self):
+        privacy = (REPO / "PRIVACY.md").read_text(encoding="utf-8")
+        start = privacy.index("**Process listing.**")
+        return _collapsed(privacy[start:privacy.find("\n- **", start)])
+
+    def test_the_note_says_how_to_read_false(self):
+        assert REPORT_NOTE.endswith(
+            "A false qualcoder_on_this_computer means only that no sign "
+            "of QualCoder was found on this computer.")
+
+    def test_privacy_names_what_the_scan_can_miss(self):
+        bullet = self._privacy_bullet()
+        assert ("without psutil, a QualCoder started from a folder whose "
+                "path holds a space is not counted as running") in bullet
+        assert "a Flatpak app's or a container's" in bullet
+        assert "when a Python withheld its command line" in bullet
+
+    def test_privacy_says_what_only_presence_means(self):
+        bullet = self._privacy_bullet()
+        assert ("For the settings folder and the files in `ai_data`, only "
+                "presence is checked") in bullet
+        assert "Only presence is checked" not in bullet
+
+    def test_no_text_says_each_programs_command_line(self):
+        changelog = _collapsed((REPO / "CHANGELOG.md").read_text(
+            encoding="utf-8"))
+        # TOOLS' note on the heuristics is a quotation, each line "> "
+        tools = _collapsed("\n".join(
+            row[2:] if row.startswith("> ") else row
+            for row in (REPO / "TOOLS.md").read_text(
+                encoding="utf-8").splitlines()))
+        privacy = self._privacy_bullet()
+        for text in (changelog, tools, privacy):
+            assert "saw each program's" not in text
+            assert ("could read programs' command lines and found no "
+                    "QualCoder") in text
+
+    def test_the_changelog_gives_the_locks_caveat(self):
+        changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        section = _collapsed(_section(
+            changelog, "### Changed: a project's history with QualCoder"))
+        assert ("a lock file left over, by QualCoder 3.8 or by an "
+                "interrupted write of Exegete's") in section
+
+    def test_contributing_puts_the_module_beside_path_identity(self):
+        rows = (REPO / "CONTRIBUTING.md").read_text(
+            encoding="utf-8").splitlines()
+        at = next(i for i, row in enumerate(rows)
+                  if "── path_identity.py" in row)
+        assert "── qualcoder_history.py" in rows[at + 1]
+        assert sum("qualcoder_history.py" in row for row in rows) == 1

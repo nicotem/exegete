@@ -70,7 +70,9 @@ STALE_LOCK_SIGN = (
 REPORT_NOTE = (
     "What Exegete found when the project was selected; it decides which "
     "notes about QualCoder its answers carry. Whether QualCoder has the "
-    "project open now is qualcoder_open and qualcoder_gui_signals.")
+    "project open now is qualcoder_open and qualcoder_gui_signals. A "
+    "false qualcoder_on_this_computer means only that no sign of "
+    "QualCoder was found on this computer.")
 
 PathLike = Union[str, Path]
 
@@ -80,11 +82,13 @@ class History(NamedTuple):
 
     `signs`: plain sentences, the traces on this project, in a fixed
     order. `installed`: QualCoder's settings folder is there. `running`:
-    True when the process scan found a QualCoder; False when it ran, saw
-    command lines and found none; None when it was not asked for, could
-    not run, or saw program names only and found none. `setting`: the
-    researcher's answer to "Do you also use QualCoder on this computer?"
-    ("not sure" until that setting exists).
+    True when the process scan found a QualCoder; False when it ran,
+    could read command lines and found none, and no line that may be one
+    (`ProcessScan.found_none`); None when it was not asked for, could not
+    run, saw program names only, or found a line that may be a QualCoder
+    it could not read. `setting`: the researcher's answer to "Do you
+    also use QualCoder on this computer?" ("not sure" until that setting
+    exists).
     """
     signs: Tuple[str, ...]
     installed: bool
@@ -167,7 +171,7 @@ def _running(scan_processes: bool) -> Optional[bool]:
         return None
     if scan.hits:
         return True
-    return False if scan.saw_command_lines else None
+    return False if scan.found_none else None
 
 
 def work_out(project_folder: PathLike, *, scan_processes: bool,

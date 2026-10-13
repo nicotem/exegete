@@ -203,7 +203,7 @@ required-environments = [
 # it) is a Rust build without a wheel: without this, uv falls back to
 # compiling it, which downloads a Rust toolchain and then fails for want
 # of OpenSSL. With it, uv locks a version that has a wheel for each
-# computer: 50.0.1 in general, 48.0.1 on Intel Macs (the last with a
+# computer: 50.0.2 in general, 48.0.1 on Intel Macs (the last with a
 # universal2 wheel) and 46.0.3 on Windows on Arm (the last with a
 # win_arm64 wheel).
 no-build-package = ["cryptography"]

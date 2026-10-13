@@ -326,7 +326,8 @@ class TestTheDocumentsInFixRound1:
             readme
 
     def test_every_place_that_asks_for_the_toolset_names_them_all(self):
-        """QA m4: `lifecycle` can be reported."""
+        """QA m4: `lifecycle` can be reported (v0.15.0: as the earlier
+        name of `full`, in the bug report)."""
         template = (REPO / ".github" / "ISSUE_TEMPLATE" /
                     "bug_report.yml").read_text(encoding="utf-8")
         block = template[template.index("id: toolset"):]
@@ -343,3 +344,4 @@ class TestTheDocumentsInFixRound1:
         for mode in server._VALID_TOOLSET_MODES:
             for where, text in places.items():
                 assert mode in text, (mode, where)
+        assert "lifecycle (the earlier name of full)" in options

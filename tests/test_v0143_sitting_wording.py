@@ -84,7 +84,7 @@ def projects_folder(tmp_path, monkeypatch):
 
 
 def _descriptions():
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     return server.mcp.original_descriptions
 
 

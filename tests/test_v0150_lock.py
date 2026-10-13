@@ -221,5 +221,8 @@ class TestStartingLoadsNeitherLibrary:
         assert answer["loaded"] == [], proc.stderr
 
     def test_every_mode_is_covered(self):
-        assert set(server._VALID_TOOLSET_MODES) >= {"full", "core",
-                                                    "lifecycle"}
+        # v0.15.0: two sets (names.TOOLSETS); `lifecycle` is read as `full`
+        from exegete import names
+        assert server._VALID_TOOLSET_MODES == names.TOOLSETS
+        assert set(names.TOOLSETS) == {"full", "core"}
+        assert set(names.OLD_TOOLSET_NAMES.values()) <= set(names.TOOLSETS)

@@ -116,21 +116,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   while the project's lock file is active, rather than while QualCoder
   3.x has the project open.
 
+### Changed: one tool set called full
+
+- **`full` and `lifecycle` are one tool set, called `full`** (the
+  owner's decision of 12 October 2026): 78 tools, creating a project
+  (still Experimental) included, the default on every route, in the
+  Claude Desktop extension and wherever Exegete is configured by hand.
+  An install whose tool set is `full` gains creating a project.
+  `lifecycle`, the earlier name of `full`, set anywhere (the extension's
+  "Tool set" setting, `EXEGETE_TOOLSET` or `QUALCODER_MCP_TOOLSET`, in
+  any letter case), means `full` and is read until v1.0; the log says so
+  once at each start, never in an answer. `core` is unchanged: 23
+  tools, without creating a project. The extension's "Tool set"
+  setting now comes as `full` and names the two words, and the bug
+  report offers `full`, `core` and
+  `lifecycle (the earlier name of full)`.
+- **On the Terminal routes the assistant can now create a project
+  without a setting.** New projects go to
+  `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
+  another folder. iCloud
+  (Desktop and Documents) or OneDrive may sync Documents, and a sync
+  service can copy a project's database and its journal separately, so
+  a folder outside Documents, such as `~/Exegete projects`, is worth
+  considering (INSTALL.md, "What You'll Need").
+
 ### Measured
 
-- Serialised tool JSON: full = 201,720 characters (about 50.4k tokens
-  at chars/4) over 77 tools, core = 67,223 (about 16.8k) over 23, and
-  the opt-in lifecycle set = 204,225 (about 51.1k) over 78, measured on
-  Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a separate
-  environment, not the repository's own `venv/`: for 0.14.3's tree it
-  gives exactly 0.14.3's figures; on Python 3.11.13 (likewise a
-  separate environment, which also gives exactly 0.14.3's figures for
-  its tree), 211,588, 70,611 and 214,225. Against 0.14.3's figures
-  (201,739, 67,225 and 204,244 on 3.13), three entries changed with the
-  names list's wording: `get_current_project`'s by 2 characters fewer,
-  in every set, `pseudonymise_source`'s by 14 fewer and
-  `read_pseudonym_list`'s by 3 fewer, in full and lifecycle (on 3.11, 6
-  fewer, 14 fewer and 3 fewer). No other tool's entry changed.
+- Serialised tool JSON: full = 204,225 characters (about 51.1k tokens
+  at chars/4) over 78 tools, and core = 67,223 (about 16.8k) over 23,
+  measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
+  separate environment installed from the repository's lock file, not
+  the repository's own `venv/`: for 0.14.3's tree it gives exactly
+  0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
+  which also gives exactly 0.14.3's figures for its tree), 214,225 and
+  70,611. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), two changes
+  moved them. `full` and `lifecycle` became one set of 78 tools, so
+  `full` starts from what `lifecycle` measured: the same 78
+  descriptions, none marked, listed in another order. And three
+  descriptions changed with the names list's wording:
+  `get_current_project`'s by 2 characters fewer, in both sets,
+  `pseudonymise_source`'s by 14 fewer and `read_pseudonym_list`'s by 3
+  fewer, in `full` only (on 3.11, 6 fewer, 14 fewer and 3 fewer). No
+  other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

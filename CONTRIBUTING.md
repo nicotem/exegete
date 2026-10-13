@@ -20,9 +20,9 @@ When you report a bug, use the issue template. It asks for the
 Exegete version, the QualCoder version if you use QualCoder, the
 project's schema version (the `databaseversion` value in the `schema` block that
 `get_current_project` returns), your MCP host (Claude Desktop, Claude
-Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`,
-`lifecycle`, or `full` when the variable is not set) and your operating
-system.
+Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`, or
+`full` when the variable is not set; `lifecycle` is the earlier name of
+`full`, before 0.15.0) and your operating system.
 Never paste participant data, interview text or anything sensitive into
 an issue; describe the problem structurally ("a code name with an
 apostrophe", "a file of about 40k characters"). Security concerns take

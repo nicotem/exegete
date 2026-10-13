@@ -589,7 +589,7 @@ def _flat(name: str) -> str:
 
 class TestTheDocuments:
 
-    @pytest.mark.parametrize("mode", ["full", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full"])
     def test_the_description_names_the_switch_and_the_page(self, mode):
         import asyncio
         server._apply_toolset(mode)

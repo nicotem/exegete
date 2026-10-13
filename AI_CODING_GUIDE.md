@@ -49,8 +49,9 @@ reports against what you said.
 
 - Exegete installed in your assistant (the one-click extension for
   Claude Desktop, or [INSTALL.md](INSTALL.md))
-- A project: a new one the assistant creates (the extension's default
-  tool set), or a copy of one you have, in the workspace: say "Copy my
+- A project: a new one the assistant creates (Experimental; in the
+  default tool set, `full`, on every route), or a copy of one you have,
+  in the workspace: say "Copy my
   project 'Interview Study' to the workspace"
   (`copy_project_to_workspace`), then open the copy with `select_project`
 - **QualCoder closed** for the project you are writing to. Writes are

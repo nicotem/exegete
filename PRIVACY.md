@@ -45,13 +45,14 @@ What stays local, always, unless a sync service copies the folder it is in:
   `<project>_backup_<timestamp>.qda` folders (the safety backup's name
   ends `_prerestore.qda`) placed next to the project folder
 - exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
-- project copies made by copy_project_to_workspace, in
+- new projects made by create_project and project copies made by
+  copy_project_to_workspace, in
   `~/Documents/Exegete projects/` by default (before 0.14.1,
   `~/Documents/Qualcoder MCP Projects/`, left as it was), or in the folder
   `EXEGETE_WORKSPACE` names, which the desktop extension sets
   from its "Folder for projects", by default `~/QualCoder projects/`
-  (each carries the
-  same content as a backup, so the `ai_data/` and symlink rules below
+  (each copy carries
+  the same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
 - Exegete's own folder, `~/.exegete` (before 0.14.1,
   `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
@@ -1101,11 +1102,10 @@ Two further rules touch files on your disk:
   AI chat used; a later open leaves the file as it is.
   `create_project` runs no process scan for the project it has just
   made.
-- **Creating a project** (`create_project`, only with
-  `EXEGETE_TOOLSET=lifecycle`, which the desktop extension sets
-  by default, v0.14). It writes a new folder
-  with four empty subfolders and a new `data.qda`, and records the new
-  project as the last-used one (the pointer above, whose path is then
+- **Creating a project** (`create_project`, in the full tool set, the
+  default on every route, and not in `core`; v0.14). It writes a new
+  folder with four empty subfolders and a new `data.qda`, and records
+  the new project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
   selects a project); nothing else: no backup, no `exegete.json`,
   no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
@@ -1116,7 +1116,13 @@ Two further rules touch files on your disk:
   test pins that. To refuse a name already in use, it lists the target
   folder's entries and opens an existing project's database read-only;
   the log line says only that a project was created, with no name or
-  path.
+  path. A new project is made in the folder the researcher names, or
+  else in the folder for projects: the extension's "Folder for
+  projects"; on every other route `~/Documents/Exegete projects`,
+  unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
+  Documents) or OneDrive may sync Documents, and so copy the project,
+  imported originals included, off the computer: consider a folder
+  outside it (INSTALL.md, "What You'll Need").
 
 ## Your governance options, from default to fully local (Experimental)
 
@@ -1770,9 +1776,9 @@ will ask, and the summary above depends on them:
     backup. `get_current_project` reports whether the file is present
     and how many entries it has, never a name. The names themselves
     reach the conversation only through a tool of their own,
-    `read_pseudonym_list` (in the full and lifecycle tool sets, so in
-    the desktop extension by default, and not in core; deprecated, and
-    removed in v0.15), whose description says first that it sends the
+    `read_pseudonym_list` (in the full tool set, the default, and not
+    in core; deprecated, and removed in v0.15), whose description says
+    first that it sends the
     real names to the AI provider. It
     carries `anthropic/requiresUserInteraction`, so Claude Code (2.1.199
     and later) asks the researcher before every call of it, in every

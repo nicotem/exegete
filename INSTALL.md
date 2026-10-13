@@ -32,10 +32,11 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    fetch a few dependencies. The first install takes a minute or two.
 4. **Look at its three settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
-   - **Tool set**: `lifecycle` (the default) gives every tool, creating
-     a new project included; `full` every tool except creating a
-     project; `core` a smaller set for local models. Type one of the
-     three words: any other word stops the extension from starting.
+   - **Tool set**: `full` (the default) gives every tool, creating a
+     new project included (recommended); `core` a smaller set for local
+     models. Type one of the two words: any other word stops the
+     extension from starting. Installed before 0.15.0, it may show
+     `lifecycle`, the earlier name of `full`; it works as `full`.
    - **Folder for projects**: where new projects are created and
      working copies of projects are kept. The default,
      `~/QualCoder projects` (a folder called "QualCoder projects" in
@@ -177,14 +178,19 @@ Before starting, make sure you have:
   configured by hand (download from: https://claude.ai/download);
   recipes for Claude Code, LM Studio, and OpenAI's ChatGPT desktop app
   and Codex follow further down
-- ✅ **A project, or the `lifecycle` tool set.** On this route the
-  default tool set, `full`, has no tool that creates a project, so you
-  need an existing project (a folder ending in `.qda`, made by Exegete
-  or by QualCoder, with a `data.qda` database file inside; know where it
-  is), unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
-  variables the server reads", below), which lets the assistant create
-  one in the conversation. Projects in the formats of QualCoder 3.8.x
-  and 4.0 work
+- ✅ **A project, or a new one.** The default tool set, `full`,
+  includes creating a project (Experimental): the assistant can start
+  one in the conversation, in a new folder, never changing an existing
+  one. On this route new projects, and copies made by
+  `copy_project_to_workspace`, go to `~/Documents/Exegete projects`
+  unless `EXEGETE_WORKSPACE` names another folder ("Environment
+  variables the server reads", below). iCloud (Desktop and Documents)
+  or OneDrive may sync Documents, and a sync service can copy a
+  project's database and its journal separately: consider naming a
+  folder outside Documents, such as `~/Exegete projects`. Or use an
+  existing project (a folder ending in `.qda`, made by Exegete or by
+  QualCoder, with a `data.qda` database file inside; know where it
+  is). Projects in the formats of QualCoder 3.8.x and 4.0 work
   (project schemas v14 through v17); see "Supported QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
 - **QualCoder, optional.** Today it does what Exegete does not do
@@ -598,26 +604,17 @@ spelling only.
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 77 tools;
-  `core` registers the 23-tool supervised coding set for local models
-  (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
-  registers the full set plus `create_project`, 78 tools, so that a
-  study can be started from the conversation (TOOLS.md, "Starting a
-  project from the conversation"). Configured by hand, creating
-  projects stays out of the default set, so that researchers opt in to
-  a tool that makes folders on their disk; the desktop extension sets
-  this variable from its "Tool set" setting, whose default is
-  `lifecycle`. Any other value stops the server at start-up with an error
+- `EXEGETE_TOOLSET`: `full` (default) registers 78 tools, every tool,
+  creating a project (Experimental) included, so that a study can be
+  started from the conversation (TOOLS.md, "Starting a project from
+  the conversation"); `core` registers the 23-tool supervised coding
+  set for local models (see the LM Studio recipe), which cannot create
+  a project. `lifecycle`, the earlier name of `full` (the desktop
+  extension's default before 0.15.0), is read as `full` until v1.0,
+  and Exegete names it in its log at each start. The desktop extension
+  sets this variable from its "Tool set" setting, whose default is
+  `full`. Any other value stops the server at start-up with an error
   naming the valid values. Resources and prompts are not affected.
-  In Claude Desktop, add `"EXEGETE_TOOLSET": "lifecycle"` to the
-  server's `env` block; for Claude Code, in the folder you start it in
-  (`~/claude-exegete`: started in your home folder, Claude Code could
-  read any study kept there without asking; "Alternative: Claude Code
-  and other MCP clients", above, says more):
-
-  ```bash
-  claude mcp add exegete -e EXEGETE_TOOLSET=lifecycle -- ~/Documents/exegete/venv/bin/python -m exegete.server
-  ```
 - `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
@@ -891,11 +888,11 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 77 tools by
+**Step 3. Use the core toolset.** Exegete offers 78 tools by
 default, and the serialised tool definitions alone measure about
-202,000 characters, roughly 50k tokens (measured for 0.14.3 under
-Python 3.13.5 with mcp 1.30.0, in the
-repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
+204,000 characters, roughly 51k tokens (measured for 0.15.0 under
+Python 3.13.5 with mcp 1.30.0, in an environment installed from the
+repository's lock file; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 19,500 characters of that on its own, because a tool
 that rewrites the researcher's text has to say in its own definition
 what it rewrites, what it leaves behind and what the backup then
@@ -916,7 +913,7 @@ coding set, measured at about 67,000 characters, roughly 17k tokens.
 model, set the context length to at least 32k for the core toolset
 (that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
-or 64k if you must run the full surface (its schema alone is about 50k
+or 64k if you must run the full surface (its schema alone is about 51k
 tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
@@ -1155,7 +1152,7 @@ tool_timeout_sec = 300
 default_tools_approval_mode = "writes"
 
 [mcp_servers.exegete.env]
-EXEGETE_TOOLSET = "lifecycle"
+EXEGETE_TOOLSET = "full"
 EXEGETE_WORKSPACE = "~/QualCoder projects"
 
 [mcp_servers.exegete.tools.read_pseudonym_list]
@@ -1177,7 +1174,7 @@ What the lines do:
 - `approval_mode = "prompt"` for `read_pseudonym_list`: Codex asks
   before that tool whatever the line above says. It sends every real
   name in the project's pseudonyms file to OpenAI.
-- `EXEGETE_TOOLSET = "lifecycle"`: every tool, creating a project
+- `EXEGETE_TOOLSET = "full"`: every tool, creating a project
   included, as in the Claude Desktop extension.
 - `EXEGETE_WORKSPACE`: where new projects and working copies go; here,
   as in the extension, a folder called "QualCoder projects" in your
@@ -1204,7 +1201,7 @@ the full path from step 1 as the command; then Save), and the command
 line has one command:
 
 ```bash
-codex mcp add exegete --env EXEGETE_TOOLSET=lifecycle --env "EXEGETE_WORKSPACE=~/QualCoder projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
+codex mcp add exegete --env EXEGETE_TOOLSET=full --env "EXEGETE_WORKSPACE=~/QualCoder projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
 ```
 
 OpenAI does not document that either writes the approval lines, so
@@ -1349,15 +1346,16 @@ safeguard", below, says holds in Codex too.
   `tool_timeout_sec`, and before asking again check whether the change
   was made (ask for the project summary, or the list of backups):
   Exegete may have finished it.
-- An `EXEGETE_TOOLSET` other than `full`, `core` or `lifecycle` stops
-  the server at start-up, and so does a relative path in
+- An `EXEGETE_TOOLSET` other than `full` or `core` stops the server at
+  start-up (`lifecycle`, the earlier name of `full`, is read as
+  `full`), and so does a relative path in
   `EXEGETE_WORKSPACE`; the error names the setting.
 - To switch Exegete off without removing it, add `enabled = false` on
   the line after `[mcp_servers.exegete]` (and delete it to switch it
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 204,000 characters with `lifecycle`; TOOLS.md says how that
+  (about 204,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1385,9 +1383,8 @@ depend on them.
 One tool that changes nothing is not marked read-only, on purpose:
 `read_pseudonym_list` sends every real name in the project's pseudonyms
 file to the AI provider, so the host should ask before it runs. It is
-in the `full` and `lifecycle` tool sets (the one-click extension's
-"Tool set" setting, `lifecycle` by default), not in `core`. It also
-carries `anthropic/requiresUserInteraction`, a mark Anthropic documents
+in the `full` tool set, the default on every route, not in `core`. It
+also carries `anthropic/requiresUserInteraction`, a mark Anthropic documents
 for Claude Code: from version 2.1.199, Claude Code asks before every
 call of such a tool in every permission mode, auto and
 `bypassPermissions` included, offers no "don't ask again", lets no
@@ -1399,8 +1396,8 @@ anywhere).
 
 `check_for_updates` is not marked read-only either: it records each
 check in Exegete's own folder, so a host that asks before a tool runs
-asks before it. It is in the `full` and `lifecycle` tool sets, not in
-`core`.
+asks before it. It is in the `full` tool set, the default on every
+route, not in `core`.
 
 What each host does, from Anthropic's pages as read on 27 September
 2026 ("Choose a permission mode" and the MCP page on code.claude.com;
@@ -1772,7 +1769,7 @@ Create a case-code matrix
 Updates are manual (a new release does not install itself). With the
 extension, Exegete tells you when one is out unless you switched that
 off; ask "How do I update Exegete?" for the steps (with the
-`lifecycle` or `full` tool set; with `core`, which has no check tool,
+`full` tool set; with `core`, which has no check tool,
 the notice links the update page). On the Terminal route the check is
 off unless you set `EXEGETE_UPDATE_CHECK` to `on` ("Environment
 variables the server reads").
@@ -2175,8 +2172,7 @@ around.
   see [SUPPORT.md](SUPPORT.md). Never paste research data into an
   issue; a redacted or synthetic example is enough. Include the
   Exegete version, your QualCoder version if you use it, your host (Claude Desktop,
-  Claude Code, LM Studio) and the toolset mode (full, core or
-  lifecycle).
+  Claude Code, LM Studio) and the toolset mode (full or core).
 - **MCP Documentation**: https://modelcontextprotocol.io/
 - **QualCoder Help**: https://github.com/ccbogel/QualCoder/wiki
 - **Claude Desktop**: https://claude.ai/help

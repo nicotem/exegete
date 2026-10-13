@@ -41,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import exegete.server as server  # noqa: E402
 
 REPO = Path(__file__).parent.parent
-TOOL_SETS = ("full", "core", "lifecycle")
+TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
 # The full brief's line on exports, which names the exports whose file
 # keeps memos, private notes included
@@ -229,7 +229,7 @@ class TestTheStartTool:
         assert "reads nothing from the project" in text
 
     def test_it_returns_the_full_version(self):
-        for mode in ("full", "lifecycle"):
+        for mode in ("full",):
             with _in_set(mode):
                 assert _call("read_brief") == server.BRIEF_FULL, mode
 
@@ -381,7 +381,7 @@ class TestTheReminder:
         monkeypatch.setattr(server, "db", server.db)
         monkeypatch.setattr(server, "current_project_path",
                             server.current_project_path)
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         answer = json.loads(_call("create_project", name="Brief study",
                                   coder_name="carol"))
         try:
@@ -494,19 +494,22 @@ class TestProvisionalAndHeldBack:
 
 class TestTheSizes:
     """What every request carries grows by read_brief's own entry in the
-    tool list, by check_for_updates' in `full` and `lifecycle` (pull
+    tool list, by check_for_updates' in `full` (pull
     request #11), and by nothing else: every other description is as
     v0.14.1 served it or, where the rewording of how Exegete describes
     itself reached it, shorter (tests/test_v0142_description_cut.py pins
     their words, tests/test_v0142_selfrep.py that none is longer;
     test_toolset_modes.py pins the new totals). v0.14.3
     adds two tools, left out here, and lengthens two descriptions,
-    measured apart below."""
+    measured apart below. v0.15.0 makes `full` and `lifecycle` one set,
+    `full`, with `lifecycle`'s tools, so `full`'s figures below are the
+    ones `lifecycle` had; those of the earlier `full`, without
+    create_project (195,266, 195,029 and 195,777), are history."""
 
     # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
-    BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
+    BEFORE = {"full": 197_845, "core": 64_804}
     # The same tools as 0.14.2 served them, on the same interpreter
-    NOW_0142 = {"full": 195_029, "core": 64_687, "lifecycle": 197_586}
+    NOW_0142 = {"full": 197_586, "core": 64_687}
     # The same tools as this tree serves them: v0.14.3
     # lengthens two, analyze_file_with_coding (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
@@ -518,7 +521,7 @@ class TestTheSizes:
     # and pseudonymise_source (not presuming QualCoder, piece 1). Their
     # entries as 0.14.2 served them are below, so every other tool is
     # still held to 0.14.2's figure.
-    NOW = {"full": 195_758, "core": 65_138, "lifecycle": 198_263}
+    NOW = {"full": 198_263, "core": 65_138}
     CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -527,8 +530,8 @@ class TestTheSizes:
                           "read_pseudonym_list": 1_234,
                           "pseudonymise_source": 19_391}
     # Each new tool's entry on Python 3.13, and the sets it is in
-    NEW = {"read_brief": (451, {"full", "core", "lifecycle"}),
-           "check_for_updates": (903, {"full", "lifecycle"})}
+    NEW = {"read_brief": (451, {"full", "core"}),
+           "check_for_updates": (903, {"full"})}
 
     @staticmethod
     def _entry(tool):

@@ -95,7 +95,7 @@ class TestTheWholeFileRead:
         assert "coded_segments" not in second
 
     def test_the_description_names_the_option(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         text = " ".join(server.mcp.original_descriptions[
             "analyze_file_with_coding"].split())
         assert "without_codes" in text
@@ -168,7 +168,7 @@ class TestTheReadingPage:
         assert answer["shown"] == show
 
     def test_the_description_names_the_option(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         text = " ".join(server.mcp.original_descriptions[
             "open_file_for_reading"].split())
         assert "without_codes" in text

@@ -145,16 +145,13 @@ def test_the_documents_count_the_tools_the_server_registers():
     before, so a tool added without them would have left both stale."""
     import asyncio
     count = len(asyncio.run(server.mcp.list_tools()))
-    assert count == 77                 # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3)
-    # v0.14's release preparation: the default when configured by hand;
-    # the desktop extension's own default is `lifecycle`
-    assert f"(the default when you configure the server yourself, " \
-           f"`EXEGETE_TOOLSET=full`; the Claude Desktop extension " \
-           f"defaults to `lifecycle`) registers {count} tools" \
-        in _flat("TOOLS.md")
+    assert count == 78                 # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`)
+    # v0.15.0: one set, `full`, the default everywhere
+    assert f"(`EXEGETE_TOOLSET=full`, the default everywhere: in the " \
+           f"Claude Desktop extension and when you configure the server " \
+           f"yourself) registers {count} tools" in _flat("TOOLS.md")
     install = _flat("INSTALL.md")
-    # v0.14: `full` is no longer every tool once `lifecycle` exists
-    assert f"`full` (default) registers {count} tools" in install
+    assert f"`full` (default) registers {count} tools, every tool" in install
     assert f"registers all {count} tools" not in install
     assert f"Exegete offers {count} tools by default" in install
 

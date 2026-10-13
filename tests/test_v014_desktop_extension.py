@@ -120,10 +120,11 @@ class TestTypedOnce:
 
 class TestTheToolsAreTheServers:
 
-    def test_the_list_is_the_lifecycle_set_in_the_servers_order(self, built):
+    def test_the_list_is_the_full_set_in_the_servers_order(self, built):
+        # v0.15.0: `full`, every tool (v0.14's `lifecycle` until then)
         manifest, _, _ = built
         names = [t["name"] for t in manifest["tools"]]
-        assert names == _server_tools("lifecycle")
+        assert names == _server_tools("full")
         assert "create_project" in names
 
     def test_every_other_set_is_inside_it(self, built):
@@ -178,12 +179,14 @@ class TestTheSettings:
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
-    def test_the_tool_set_defaults_to_lifecycle_and_names_the_others(self):
+    def test_the_tool_set_defaults_to_full_and_names_the_others(self):
         option = TEMPLATE["user_config"]["toolset"]
         assert option["type"] == "string"
-        assert option["default"] == "lifecycle"
+        # v0.15.0: `full`, every tool; `lifecycle` named as its earlier name
+        assert option["default"] == "full"
         for mode in server._VALID_TOOLSET_MODES:
             assert f"{mode}:" in option["description"]
+        assert "lifecycle, the earlier name of full" in option["description"]
 
     def test_an_empty_folder_stops_the_extension(self, monkeypatch):
         """Fix round 1: the app lays a saved empty value over the default,

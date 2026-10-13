@@ -606,14 +606,16 @@ def _isolate_session_manager(tmp_path, _sandbox_patch):
 def _restore_tool_registry():
     """Put the server's tool registry back as it was after every test.
 
-    v0.14's `lifecycle` toolset ADDS a tool at start-up, where `core`
+    v0.14's `lifecycle` toolset added a tool at start-up, where `core`
     only removes, and the tests that undo `_apply_toolset` by putting
-    back what it returned cannot see an addition: a lifecycle test that
-    forgot would leave `create_project` registered, and every later
-    count in that run would read one too many, in an order depending on which
-    tests were selected (the create-project study's check). Copying the
-    registry before a test and restoring it after undoes additions and
-    removals alike, whatever the test did.
+    back what it returned could not see an addition: a test that forgot
+    would leave a tool registered, and every later count in that run
+    would read one too many, in an order depending on which tests were
+    selected (the create-project study's check). Since 0.15.0 every
+    tool is registered at import and `lifecycle` is read as `full`, but
+    a test may still add or remove a tool or mark a description.
+    Copying the registry before a test and restoring it after undoes
+    additions and removals alike, whatever the test did.
     """
     tools = server.mcp._tool_manager._tools
     before = dict(tools)

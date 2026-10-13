@@ -919,8 +919,9 @@ class _ExegeteMCP(FastMCP):
     MCP request handler calls, and the one this suite's host-path tests
     call. Every tool's input schema also says so
     (`additionalProperties: false`), for a host that checks arguments
-    before it sends them; `add_tool` is where both the decorator and
-    `_apply_toolset` register a tool, so none is missed.
+    before it sends them; `add_tool` is where the decorator registers
+    every tool, `create_project` included since 0.15.0, so none is
+    missed.
     """
 
     def __init__(self, *args, **kwargs):
@@ -19710,10 +19711,11 @@ Ground the profile in verbatim quotes from this case's segments, and keep what t
 
 
 # ============================================================================
-# Creating a project (v0.14). Registered only in the opt-in `lifecycle`
-# toolset (the owner's design of 2026-09-08, ruled on 2026-09-25), so the
-# default `full` set and `core` do not change. The format, the name rules
-# and the folder guard are in new_project.py.
+# Creating a project (v0.14). Since 0.15.0 in the `full` tool set, the
+# default on every route (the owner's ruling of 12 October 2026: the
+# earlier `lifecycle` set and `full` became one set, called `full`);
+# `core` leaves it out. The format, the name rules and the folder guard
+# are in new_project.py.
 # ============================================================================
 
 def _create_project_refusal(text: str, **extra: Any) -> str:
@@ -19821,7 +19823,7 @@ def _created_project_material_step() -> str:
     """The next step for bringing material in (0.14.3): documents on the
     researcher's computer through import_documents, which keeps their
     text off the conversation, wherever the tool set serves it (the
-    lifecycle set, where create_project is, always does);
+    full set, where create_project is, always does);
     import_text_file is for text typed or pasted in the conversation."""
     if "import_documents" in mcp._tool_manager._tools:
         return ("Bring the researcher's documents in from their computer "
@@ -19940,6 +19942,7 @@ def _create_project_place_refusal(name: Any, directory: Any):
     return stem, parent, is_default, folder
 
 
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
 def create_project(name: str, directory: Optional[str] = None,
                    coder_name: Optional[str] = None,
@@ -20131,7 +20134,7 @@ async def check_for_updates() -> str:
 # ============================================================================
 
 # ============================================================================
-# Toolset modes (EXPERIMENTAL): EXEGETE_TOOLSET=full|core|lifecycle
+# Toolset modes (EXPERIMENTAL): EXEGETE_TOOLSET=full|core
 # ============================================================================
 # Local models break on large tool surfaces long before frontier models do:
 # tool-selection accuracy collapses as the menu grows, and the full tool
@@ -20141,11 +20144,11 @@ async def check_for_updates() -> str:
 # surface (backward compatible). Required for local models, optional
 # elsewhere. Resources and prompts are unaffected.
 #
-# `lifecycle` (v0.14) is the full set plus the project-lifecycle tools,
-# today only `create_project`. Those tools are not decorated: they are
-# added by `_apply_toolset("lifecycle")` at start-up, so every count taken
-# at import, `full` and `core` stay as they are, and a researcher opts in
-# to a tool that makes folders on their disk.
+# Since 0.15.0 `full` is every tool, `create_project` (Experimental)
+# included, registered at import like the others. From 0.14.0 to 0.14.3
+# creating a project was added at start-up by a third set, `lifecycle`,
+# the desktop extension's default; that name is now read as `full`
+# (names.OLD_TOOLSET_NAMES) until v1.0, and the start-up log says so once.
 
 CORE_TOOLSET = frozenset({
     # the assistant's brief (v0.14.2), in every set
@@ -20174,14 +20177,15 @@ CORE_TOOLSET = frozenset({
     "copy_project_to_workspace", "delete_coding", "list_backups",
 })
 
-# The project-lifecycle tools: registered only by `lifecycle`, in this
-# order, from the module-level functions of the same names, each with its
-# hints (create_project only adds, and a second identical call is refused
-# as a name in use, which changes nothing).
-LIFECYCLE_TOOLS = ("create_project",)
-LIFECYCLE_TOOL_ANNOTATIONS = {"create_project": TOOL_ADDS_ONCE}
+_VALID_TOOLSET_MODES = names.TOOLSETS
 
-_VALID_TOOLSET_MODES = ("full", "core", "lifecycle")
+# Said once at start, on standard error, when the tool set is given as
+# `lifecycle`, the earlier name of `full` ({setting}: the spelling read)
+LIFECYCLE_NOTE = (
+    "{setting} is set to lifecycle, the earlier name of the full tool set, "
+    "which since 0.15.0 includes creating a project; lifecycle is read as "
+    f"full until {names.OLD_SPELLINGS_UNTIL}. Use full in the host's "
+    "configuration (the extension's \"Tool set\" setting) instead.")
 
 
 def _workspace_start_problem() -> Optional[str]:
@@ -20246,24 +20250,29 @@ def _install_folder() -> Optional[Path]:
 
 
 def _resolve_toolset_mode() -> str:
-    """Read EXEGETE_TOOLSET (default full); unknown values raise."""
+    """Read EXEGETE_TOOLSET (default full); `lifecycle`, the earlier name
+    of `full`, is read as `full` in any letter case; unknown values
+    raise."""
     reading = env_settings.read("toolset")
     raw = ("full" if reading.value is None else reading.value).strip().lower()
+    raw = names.OLD_TOOLSET_NAMES.get(raw, raw)
     if raw not in _VALID_TOOLSET_MODES:
         raise ValueError(
             f"Unknown {reading.name} value {raw!r}: valid values "
-            f"are 'full' (the standard set, used when the variable is not "
-            f"set), 'core' (the reduced "
-            f"supervised-coding set for local models) and 'lifecycle' (the "
-            f"standard set plus creating a project)."
+            f"are 'full' (every tool, creating a project included; used "
+            f"when the variable is not set) and 'core' (the reduced "
+            f"supervised-coding set for local models). 'lifecycle', the "
+            f"earlier name of 'full', is still read until "
+            f"{names.OLD_SPELLINGS_UNTIL}."
         )
     return raw
 
 
-# Every tool this server defines, whichever set is registered now: the
-# standard set, registered at import, and the lifecycle tools.
+# Every tool this server defines, whichever set is registered now: all
+# of them are registered at import (the `full` set); `core` removes some
+# at start-up.
 STANDARD_TOOL_NAMES = frozenset(mcp._tool_manager._tools)
-ALL_TOOL_NAMES = STANDARD_TOOL_NAMES | frozenset(LIFECYCLE_TOOLS)
+ALL_TOOL_NAMES = STANDARD_TOOL_NAMES
 
 
 def _refresh_served_texts() -> Dict[str, Any]:
@@ -20299,10 +20308,10 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
     `core` removes every tool outside CORE_TOOLSET and returns the
     removed tools keyed by name, so tests can restore them; the tools
     whose descriptions it replaced with marked copies (v0.14,
-    `_refresh_served_texts`) are returned with them, as they were. `lifecycle`
-    adds the LIFECYCLE_TOOLS (adding one already registered changes
-    nothing) and removes nothing. `full` changes nothing. The tests'
-    registry-restoring fixture undoes either.
+    `_refresh_served_texts`) are returned with them, as they were. `full`
+    changes nothing (since 0.15.0 every tool is registered at import,
+    `create_project` included). The tests' registry-restoring fixture
+    undoes either.
     """
     removed: Dict[str, Any] = {}
     if mode == "core":
@@ -20310,11 +20319,6 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
             if name not in CORE_TOOLSET:
                 removed[name] = mcp._tool_manager._tools[name]
                 mcp.remove_tool(name)
-    elif mode == "lifecycle":
-        for name in LIFECYCLE_TOOLS:
-            if name not in mcp._tool_manager._tools:
-                mcp.add_tool(globals()[name],
-                             annotations=LIFECYCLE_TOOL_ANNOTATIONS[name])
     for name, tool in _refresh_served_texts().items():
         removed.setdefault(name, tool)
     active = len(mcp._tool_manager._tools)
@@ -20458,6 +20462,12 @@ def main(argv: Optional[List[str]] = None, *,
         sys.exit(1)
     for line in env_settings.old_spellings_in_use():
         logger.warning(line)
+    # v0.15.0: `lifecycle`, the earlier name of `full`, is named once, here
+    # and never in an answer
+    toolset_reading = env_settings.read("toolset")
+    if (toolset_reading.value or "").strip().lower() in \
+            names.OLD_TOOLSET_NAMES:
+        logger.warning(LIFECYCLE_NOTE.format(setting=toolset_reading.name))
 
     # Check for optional pre-configured project (Option B: Fixed Project)
     # EXPERIMENTAL: reduced tool surface for local-model hosts. Fail

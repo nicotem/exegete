@@ -41,6 +41,12 @@ SETTINGS = {
 }
 # Until when the earlier spellings are read, as messages say it.
 OLD_SPELLINGS_UNTIL = "v1.0"
+# The tool sets EXEGETE_TOOLSET names (v0.15.0): `full`, every tool, the
+# default; `core`, the smaller set for local models. `lifecycle` was the
+# larger set's name in the extension until 0.15.0 (`full` plus creating
+# a project); it is read as `full` until OLD_SPELLINGS_UNTIL.
+TOOLSETS = ("full", "core")
+OLD_TOOLSET_NAMES = {"lifecycle": "full"}
 # The settings that never had an earlier spelling (the check for new
 # versions, the owner's ruling of 5 October 2026, and the time per import
 # call, v0.15.0): kept apart from SETTINGS, whose pairs end at v1.0, and

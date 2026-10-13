@@ -243,11 +243,11 @@ def test_the_older_claude_mcp_lines_say_which_folder():
                        "- `EXEGETE_WORKSPACE` (v0.14)")
     # (the judge, 6 October 2026, after the owner's "warn, don't
     # prescribe": what could go wrong, instead of "never your home folder")
-    assert ("for Claude Code, in the folder you start it in "
-            "(`~/claude-exegete`: started in your home folder, Claude Code "
-            "could read any study kept there without asking; \"Alternative: "
-            "Claude Code and other MCP clients\", above, says more):") \
-        in toolset
+    # v0.15.0: the tool set's own `claude mcp add` line went with the
+    # instruction to set `lifecycle` by hand (unset is `full`, every tool),
+    # and with it its folder warning; Path B's, below, stays
+    assert "claude mcp add" not in toolset
+    assert "EXEGETE_TOOLSET=lifecycle" not in toolset
     path_b = _between(install, "### Path B: switch to the PyPI install",
                       "claude mcp remove qualcoder")
     assert ("so run `claude mcp remove` in the folder where you added it, "

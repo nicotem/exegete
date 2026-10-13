@@ -601,8 +601,8 @@ class TestAfterCreation:
         import_documents, which keeps their text off the conversation;
         import_text_file is for text typed or pasted in the conversation
         (its own description says so). create_project is served in the
-        lifecycle set, which has import_documents."""
-        server._apply_toolset("lifecycle")
+        full set (every tool since 0.15.0), which has import_documents."""
+        server._apply_toolset("full")
         assert "import_documents" in server.mcp._tool_manager._tools
         steps = create("Material")["next_steps"]
         (step,) = [s for s in steps if "import_documents" in s]

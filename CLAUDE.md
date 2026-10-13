@@ -28,8 +28,9 @@ of a project from the conversation. It runs as an MCP server.
 ## Where things are
 
 - `src/exegete/server.py`: the MCP server, with its tools, resources,
-  prompts, help topics and the assistant's brief. Tool sets: `full`,
-  `core` and `lifecycle` (`EXEGETE_TOOLSET`).
+  prompts, help topics and the assistant's brief. Tool sets: `full`
+  and `core` (`EXEGETE_TOOLSET`); `lifecycle`, the earlier name of
+  `full`, is read as `full`.
 - `database.py`: the project database, in QualCoder's format (schema
   v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.
 - `preview_tokens.py`: preview before confirm. `memo_privacy.py`: the

@@ -30,12 +30,12 @@ RESERVED_ARGUMENT_NAMES = {"session_id", "request_id", "conversation_id",
 
 class TestSessionIdDuplicateRemoved:
 
-    @pytest.mark.parametrize("toolset", ["full", "lifecycle"])
+    @pytest.mark.parametrize("toolset", ["full"])
     def test_no_tool_argument_uses_a_reserved_routing_name(self, toolset):
         # Self-checking: without this the guard would pass on an emptied
-        # or half-registered registry. Also under `lifecycle` (v0.14),
-        # whose tool is registered after import and would otherwise be
-        # the one tool this guard never sees.
+        # or half-registered registry. `full` holds every tool since
+        # 0.15.0, create_project included (v0.14's `lifecycle` set added
+        # it after import, and was swept as a second set until then).
         server._apply_toolset(toolset)
         assert len(server.mcp._tool_manager._tools) == _count(toolset)
         for name, tool in server.mcp._tool_manager._tools.items():
@@ -87,13 +87,13 @@ class TestSessionIdDuplicateRemoved:
 # the live registry so a tool added later is covered without an edit here.
 # ===========================================================================
 
-TOOL_COUNT = 77          # pinned in tests/test_v012_cli.py too (check_for_updates, v0.14.2; open_file_for_reading and import_documents, v0.14.3)
+TOOL_COUNT = 78          # pinned in tests/test_v012_cli.py too (check_for_updates, v0.14.2; open_file_for_reading and import_documents, v0.14.3; create_project, in `full` from 0.15.0)
 
 
 def _count(toolset):
-    """The registry's size under `toolset` ("full" or "lifecycle")."""
-    extra = len(server.LIFECYCLE_TOOLS) if toolset == "lifecycle" else 0
-    return TOOL_COUNT + extra
+    """The registry's size under `toolset` ("full", every tool)."""
+    assert toolset == "full"
+    return TOOL_COUNT
 
 UNKNOWN_SESSION_ID = "00000000-0000-4000-8000-000000000000"
 
@@ -313,7 +313,7 @@ class TestNoResponseCarriesSessionId:
         # above, would pass vacuously on an emptied registry.
         assert len(server.mcp._tool_manager._tools) == TOOL_COUNT
 
-    @pytest.mark.parametrize("toolset", ["full", "lifecycle"])
+    @pytest.mark.parametrize("toolset", ["full"])
     def test_no_tool_response_anywhere_carries_session_id(
         self, setup_server, tmp_path, monkeypatch, toolset
     ):
@@ -366,11 +366,11 @@ class TestNoResponseCarriesSessionId:
         # the question is what was NOT redirected (fix round 4, W1).
         assert _module_paths_under(real_home, tmp_path) == []
 
-        # Under `lifecycle` (v0.14) the sweep also calls create_project,
-        # which a sweep of the registry at import would never see. Its
-        # probe arguments give no coder name, so it asks and makes no
-        # folder; it runs last all the same, so that a creation, were it
-        # ever to happen, could not change what the other tools see.
+        # The sweep also calls create_project, in `full` since 0.15.0 (in
+        # v0.14's `lifecycle` set before). Its probe arguments give no
+        # coder name, so it asks and makes no folder; it runs last all the
+        # same, so that a creation, were it ever to happen, could not
+        # change what the other tools see.
         server._apply_toolset(toolset)
         tools = server.mcp._tool_manager._tools
         assert len(tools) == _count(toolset)
@@ -383,7 +383,7 @@ class TestNoResponseCarriesSessionId:
         scanned, envelopes, offenders = set(), set(), []
         excluded = {}
         order = sorted(tools.items(), key=lambda item: (
-            item[0] in server.LIFECYCLE_TOOLS, item[0]))
+            item[0] == "create_project", item[0]))
         for name, tool in order:
             try:
                 response = tool.fn(**_probe_arguments(tool, tmp_path))

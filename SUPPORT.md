@@ -62,8 +62,10 @@ Issues help everyone, permanently. Please use
   spell `0.14.3-alpha` as `0.14.3a0`; an install made under the
   earlier name answers `qualcoder-mcp --version` too), your MCP host (Claude Desktop, Claude
   Code, LM Studio, other), and the toolset (`EXEGETE_TOOLSET`:
-  `core`, `lifecycle`, or `full` when the variable is not set). With the
-  Claude Desktop extension, the version is in the name of the `.mcpb`
-  file you installed, and the toolset is its Tool set setting
-  (`lifecycle` unless you changed it). The bug report template asks for
+  `core`, or `full` when the variable is not set; `lifecycle` is the
+  earlier name of `full`, before 0.15.0). With the Claude Desktop
+  extension, the version is in the name of the `.mcpb` file you
+  installed, and the toolset is its Tool set setting (`full` unless you
+  changed it; an extension installed before 0.15.0 may show
+  `lifecycle`, which works as `full`). The bug report template asks for
   all of these.

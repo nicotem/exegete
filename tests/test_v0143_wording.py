@@ -112,7 +112,7 @@ def _strings(value):
 
 def _new_tools_descriptions():
     texts = {}
-    for mode in ("full", "lifecycle"):
+    for mode in ("full",):
         server._apply_toolset(mode)
         for tool in asyncio.run(server.mcp.list_tools()):
             if tool.name in ("import_documents", "open_file_for_reading"):
@@ -144,7 +144,7 @@ def _answers_and_refusals():
 
 def test_the_new_tools_descriptions_make_exegete_the_subject():
     texts = _new_tools_descriptions()
-    assert len(texts) == 4
+    assert len(texts) == 2      # v0.15.0: one set, `full`, holds both
     found = {name: SUBORDINATING.findall(text)
              for name, text in texts.items()}
     assert not {name: hits for name, hits in found.items() if hits}

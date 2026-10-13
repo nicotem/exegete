@@ -194,7 +194,7 @@ def answer_texts():
 
 
 def served_descriptions():
-    server._apply_toolset("lifecycle")      # the set that serves every tool
+    server._apply_toolset("full")      # every tool (v0.15.0: `lifecycle` is read as `full`)
     return {name: _flat(text)
             for name, text in server.mcp.original_descriptions.items()}
 

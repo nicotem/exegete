@@ -146,7 +146,7 @@ class TestSessionFilesBothWays:
         suggestion whose coding was deleted (`removed`) and a proposal
         merged away (`merged`) both keep their passages in the session
         file, so both sessions are listed; neither is work to apply."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
         text = ("Maria said: I feel stressed about deadlines. "
@@ -275,7 +275,7 @@ class TestDeleteUnderTheOtherSpelling:
     TEXT = "Maria said: I feel stressed about deadlines. I cope by walking."
 
     def _run(self, tmp_path, name, recorded_as, applied_as, deleted_as):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir(parents=True)
 

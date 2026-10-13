@@ -4714,12 +4714,14 @@ def get_current_project() -> str:
                 "state": "stale",
                 "holder": holder or "unknown",
                 # Exegete writes the same file during each of its own
-                # writes (hold_project_lock), so a write cut short
-                # leaves the same leftover.
-                "note": "A leftover lock file: QualCoder 3.8 leaves one "
-                        "when it does not close cleanly, and so can a "
-                        "write by Exegete that was cut short. Writes "
-                        "proceed normally."
+                # writes (hold_project_lock), once and never refreshed:
+                # a write cut short leaves the same leftover, and a
+                # write still running after 30 seconds reads as one.
+                "note": "A lock file not refreshed for over 30 seconds: "
+                        "QualCoder 3.8 leaves one when it does not close "
+                        "cleanly, and a write by Exegete leaves one when "
+                        "it is cut short, or shows as one while it runs "
+                        "longer than that. Writes proceed normally."
             }
 
         # P1-5: best-effort 4.0 GUI-open heuristics (4.0 writes no lock

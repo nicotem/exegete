@@ -86,9 +86,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the project in QualCoder, or waiting a moment. `select_project`'s
   warning, `get_current_project`'s note and `analyze_for_coding`'s
   request and banner say the same. `get_current_project`'s note on a
-  leftover lock file says that QualCoder 3.8 leaves one when it does
-  not close cleanly, and so can a write by Exegete that was cut short.
-  When each is given has not changed.
+  lock file not refreshed for over 30 seconds says that QualCoder 3.8
+  leaves one when it does not close cleanly, and that a write by
+  Exegete leaves one when it is cut short, or shows as one while it
+  runs longer than that. When each is given has not changed.
 - **A missing coder-visibility view** is reported as damage to the
   project, with a backup made before it as the way back
   (`list_backups`, `restore_backup`), saying that a restore takes the
@@ -111,7 +112,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The methods notes and the help** no longer say that QualCoder seeds
   a new project memo with headings.
 - AI_CODING_WORKFLOW.md quotes the new refusal whole, with its two
-  ways through.
+  ways through, and its rule in bold says that every write is refused
+  while the project's lock file is active, rather than while QualCoder
+  3.x has the project open.
 
 ### Measured
 

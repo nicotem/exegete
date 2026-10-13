@@ -77,9 +77,14 @@ OLD_IN_ANSWERS = (
     "from a QualCoder session that did not close cleanly",
     "A backup made before the damage has it",
     "; for those, edit pseudonyms.json",
+    # Fix round 2: the leftover-lock note gave a cut-short write as the
+    # only way Exegete leaves one, when a long write shows as one too
+    "and so can a write by Exegete that was cut short",
 )
 OLD_IN_DESCRIPTIONS = ("import-time list",)
 OLD_IN_PRIVACY = ("import-time list", "every backup either tool makes")
+# Fix round 2: the workflow guide's rule named QualCoder 3.x alone
+OLD_IN_WORKFLOW = ("refused while QualCoder 3.x has the project open",)
 
 # The new texts, word for word
 BUSY = (
@@ -233,6 +238,12 @@ def f(holder):
         for phrase in OLD_IN_PRIVACY:
             assert phrase not in privacy, phrase
 
+    def test_no_old_phrase_is_in_the_workflow_guide(self):
+        guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+            encoding="utf-8"))
+        for phrase in OLD_IN_WORKFLOW:
+            assert phrase not in guide, phrase
+
 
 # ---------------------------------------------------------------------------
 # The new texts, where they are served
@@ -334,7 +345,10 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     """Fix round 1: Exegete writes the same file during its own writes,
     so a write cut short leaves the same leftover as a QualCoder 3.8
     that did not close cleanly; the note beside the corrected one says
-    both."""
+    both. Fix round 2: Exegete writes the file once and never refreshes
+    it, so a write that runs longer than 30 seconds shows as one while
+    it runs (the guard below); the note says what the file is, not why
+    it was left."""
     lock = Path(qualcoder_db_path) / QUALCODER_LOCK_FILENAME
     lock.write_text(f"someone\n{time.time() - 3600}", encoding="utf-8")
     try:
@@ -344,9 +358,38 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     assert answer["qualcoder_open"] is False
     assert answer["qualcoder_lock"] == {
         "state": "stale", "holder": "someone",
-        "note": "A leftover lock file: QualCoder 3.8 leaves one when it "
-                "does not close cleanly, and so can a write by Exegete "
-                "that was cut short. Writes proceed normally."}
+        "note": "A lock file not refreshed for over 30 seconds: "
+                "QualCoder 3.8 leaves one when it does not close cleanly, "
+                "and a write by Exegete leaves one when it is cut short, "
+                "or shows as one while it runs longer than that. Writes "
+                "proceed normally."}
+
+
+def test_guard_a_long_write_by_exegete_shows_as_a_leftover(
+        tmp_path, monkeypatch):
+    """Named as a guard of the fact the leftover note states (fix round
+    2), green before and after: Exegete writes its lock file once, when a
+    write begins, and never refreshes it, so a write still running after
+    30 seconds reads as a lock file not refreshed for that long."""
+    from types import SimpleNamespace
+
+    from exegete import database
+    folder = tmp_path / "Study.qda"
+    folder.mkdir()
+    lock = folder / QUALCODER_LOCK_FILENAME
+    with database.hold_project_lock(folder) as held:
+        assert held is True
+        written = lock.read_text(encoding="utf-8")
+        assert database.qualcoder_lock_state(folder)[0] == "active"
+        later = float(written.splitlines()[1]) + \
+            database.QUALCODER_LOCK_TIMEOUT + 1
+        monkeypatch.setattr(database, "time", SimpleNamespace(
+            time=lambda: later, sleep=time.sleep))
+        assert database.qualcoder_lock_state(folder)[0] == "stale"
+        monkeypatch.undo()
+        # Still the file written when the write began
+        assert lock.read_text(encoding="utf-8") == written
+    assert not lock.exists()
 
 
 class TestAMissingVisibilityView:
@@ -415,6 +458,19 @@ def test_the_workflow_guide_quotes_the_whole_refusal():
     guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
         encoding="utf-8"))
     assert f'"{refusal("...")}"' in guide
+
+
+def test_the_workflow_guides_rule_is_the_lock_file():
+    """Fix round 2: the guide's rule in bold said writes are refused while
+    QualCoder 3.x has the project open, and its quote of the refusal then
+    named another conversation using Exegete; the rule is now the lock
+    file, which the next sentence explains."""
+    guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+        encoding="utf-8"))
+    assert ("Exegete respects it: **every write operation is refused while "
+            "the project's lock file is active**. Exegete writes the same "
+            "file during each of its own writes, so the refusal names both "
+            "causes and both ways through") in guide
 
 
 class TestTheMemoIsNotSaidToBeSeeded:

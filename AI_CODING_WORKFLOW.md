@@ -53,7 +53,7 @@ the full path: use that one.
 
 QualCoder 3.x marks an open project with a `project_in_use.lock`
 heartbeat file, and Exegete respects it: **every write operation is
-refused while QualCoder 3.x has the project open**. Exegete writes the
+refused while the project's lock file is active**. Exegete writes the
 same file during each of its own writes, so the refusal names both
 causes and both ways through: "This project is in use by another
 program: its lock file is active (user ...), so QualCoder 3.8 has it

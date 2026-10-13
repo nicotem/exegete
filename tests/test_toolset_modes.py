@@ -441,7 +441,7 @@ class TestThePublishedSchemaBudget:
     CORE_CHARS = "68,611"
     FULL_ROUNDED = "206,000"
     CORE_ROUNDED = "69,000"
-    FULL_TOKENS = "51k"
+    FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"
 
     @staticmethod

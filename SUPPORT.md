@@ -66,4 +66,6 @@ Issues help everyone, permanently. Please use
   earlier name of `full`, before 0.15.0). With the Claude Desktop
   extension, the version is in the name of the `.mcpb` file you
   installed, and the toolset is its Tool set setting (`full` unless you
-  changed it). The bug report template asks for all of these.
+  changed it; an extension installed before 0.15.0 may show
+  `lifecycle`, which works as `full`). The bug report template asks for
+  all of these.

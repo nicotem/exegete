@@ -611,7 +611,7 @@ spelling only.
   set for local models (see the LM Studio recipe), which cannot create
   a project. `lifecycle`, the earlier name of `full` (the desktop
   extension's default before 0.15.0), is read as `full` until v1.0,
-  and the server's log names it at each start. The desktop extension
+  and Exegete names it in its log at each start. The desktop extension
   sets this variable from its "Tool set" setting, whose default is
   `full`. Any other value stops the server at start-up with an error
   naming the valid values. Resources and prompts are not affected.

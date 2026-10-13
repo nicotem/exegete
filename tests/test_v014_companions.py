@@ -344,4 +344,4 @@ class TestTheDocumentsInFixRound1:
         for mode in server._VALID_TOOLSET_MODES:
             for where, text in places.items():
                 assert mode in text, (mode, where)
-        assert "lifecycle (before 0.15.0)" in options
+        assert "lifecycle (the earlier name of full)" in options

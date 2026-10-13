@@ -45,7 +45,8 @@ What stays local, always, unless a sync service copies the folder it is in:
   `<project>_backup_<timestamp>.qda` folders (the safety backup's name
   ends `_prerestore.qda`) placed next to the project folder
 - exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
-- project copies made by copy_project_to_workspace, in
+- new projects made by create_project and project copies made by
+  copy_project_to_workspace, in
   `~/Documents/Exegete projects/` by default (before 0.14.1,
   `~/Documents/Qualcoder MCP Projects/`, left as it was), or in the folder
   `EXEGETE_WORKSPACE` names, which the desktop extension sets
@@ -1115,7 +1116,13 @@ Two further rules touch files on your disk:
   test pins that. To refuse a name already in use, it lists the target
   folder's entries and opens an existing project's database read-only;
   the log line says only that a project was created, with no name or
-  path.
+  path. A new project is made in the folder the researcher names, or
+  else in the folder for projects: the extension's "Folder for
+  projects"; on every other route `~/Documents/Exegete projects`,
+  unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
+  Documents) or OneDrive may sync Documents, and so copy the project,
+  imported originals included, off the computer: consider a folder
+  outside it (INSTALL.md, "What you need").
 
 ## Your governance options, from default to fully local (Experimental)
 

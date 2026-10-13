@@ -78,6 +78,9 @@ You can find it by:
 - In QualCoder, if you use it: the recent projects list
 - Searching for `.qda` folders: `find ~ -name "*.qda" -type d 2>/dev/null`
 
+**No project yet?** Skip this step: step 3 says what to leave out, and
+in step 5 you can ask the assistant to create one.
+
 ### 3. Configure Claude Desktop
 
 **Get the paths you'll need:**
@@ -121,6 +124,33 @@ Replace:
 - `yourname` with your actual username
 - The paths with your actual paths from steps above
 
+**No project yet?** Leave out the `env` block, as below: Exegete then
+starts with no project selected, and in step 5 you can ask the
+assistant to create one (Experimental).
+
+```json
+{
+  "mcpServers": {
+    "exegete": {
+      "command": "/Users/yourname/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"]
+    }
+  }
+}
+```
+
+On this setup a new project goes to `~/Documents/Exegete projects`
+unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
+Documents) or OneDrive may sync Documents, and so copy the project,
+transcripts imported into it included, off the computer; a sync
+service can also copy a project's database and its journal separately.
+Consider naming a folder outside Documents, such as
+`~/Exegete projects`: add
+`"env": {"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"}`
+after the `"args"` line, with a comma at the end of that line
+(INSTALL.md, "What you need" and "Environment variables the server
+reads").
+
 ### 4. Restart Claude Desktop
 
 1. Quit Claude Desktop completely (Cmd+Q)
@@ -141,7 +171,16 @@ that conversation.
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
 
-In Claude Desktop, try these prompts:
+In Claude Desktop, try these prompts: the first only if you have no
+project yet.
+
+```
+Create a new project in Exegete called Practice
+```
+
+Exegete asks the assistant to check your coder name with you first
+(the name your own codings will carry) and to say where the project
+will be made. Then:
 
 ```
 Can you give me a summary of my project?

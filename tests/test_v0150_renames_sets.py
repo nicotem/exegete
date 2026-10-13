@@ -270,10 +270,16 @@ class TestTheMarks:
 
 class TestOverStandardInput:
 
-    @pytest.mark.parametrize("variable,value", [
-        (None, None), (NEW, "lifecycle"), (OLD, "lifecycle")])
+    @pytest.mark.parametrize("variable,value,with_project", [
+        (None, None, True), (NEW, "lifecycle", True),
+        (OLD, "lifecycle", True),
+        # QUICKSTART's start with no project yet: no `env` block at all
+        (None, None, False)])
     def test_full_lists_78_and_creates_a_project(self, variable, value,
-                                                 tmp_path):
+                                                 with_project, tmp_path):
+        """The new project is made in the workspace and is then the one
+        selected (as the test this one replaced checked); with no project
+        set, Exegete starts with none selected."""
         from mcp import ClientSession, StdioServerParameters
         from mcp.client.stdio import stdio_client
         project = _build_project(tmp_path)
@@ -281,11 +287,18 @@ class TestOverStandardInput:
         home.mkdir()
         env = _server_env(home, project)
         env.pop(NEW, None)
+        if not with_project:
+            for spelling in names.SETTINGS["project_path"]:
+                env.pop(spelling, None)
         if variable is not None:
             env[variable] = value
         params = StdioServerParameters(
             command=sys.executable, args=["-m", "exegete.server"], env=env)
         log = tmp_path / "stderr.txt"
+
+        async def current(session):
+            return json.loads(_text_of(await session.call_tool(
+                "get_current_project", {})))
 
         async def drive():
             with open(log, "w", encoding="utf-8") as errlog:
@@ -295,17 +308,25 @@ class TestOverStandardInput:
                         await session.initialize()
                         tools = [t.name for t in
                                  (await session.list_tools()).tools]
+                        before = await current(session)
                         made = json.loads(_text_of(await session.call_tool(
                             "create_project",
                             {"name": "Stdio study", "coder_name": "carol"})))
-                        return tools, made
+                        after = await current(session)
+                        return tools, before, made, after
 
-        tools, made = asyncio.run(drive())
+        tools, before, made, after = asyncio.run(drive())
         assert len(tools) == 78 and "create_project" in tools
+        if with_project:
+            assert Path(before["current_project"]).resolve() == \
+                project.resolve()
+        else:
+            assert before["current_project"] is None, before
         assert made["created"] is True, made
         folder = home / "Documents" / "Exegete projects" / "Stdio study.qda"
         assert Path(made["project_path"]).resolve() == folder.resolve()
         assert (folder / "data.qda").is_file()
+        assert Path(after["current_project"]).resolve() == folder.resolve()
         stderr = log.read_text(encoding="utf-8", errors="replace")
         if variable is None:
             assert "is set to lifecycle" not in stderr
@@ -353,10 +374,18 @@ class TestTheExtension:
                 "models; `lifecycle` was `full`'s name in the extension "
                 "before 0.15.0. With the Claude Desktop extension, it is the "
                 "extension's Tool set setting (`full` unless you changed "
-                "it).\"") in block
+                "it; an extension installed before 0.15.0 may show "
+                "`lifecycle`, which works as `full`).\"") in block
         options = re.findall(r"^        - (.+)$", block, re.M)
+        # Fix round 1: the option no longer reads as a version the
+        # researcher is not on, since 0.15.0 may still show `lifecycle`
         assert options == ["full (default, or variable not set)", "core",
-                           "lifecycle (before 0.15.0)", "Not sure"]
+                           "lifecycle (the earlier name of full)",
+                           "Not sure"]
+        support = _flat("SUPPORT.md")
+        assert ("the toolset is its Tool set setting (`full` unless you "
+                "changed it; an extension installed before 0.15.0 may show "
+                "`lifecycle`, which works as `full`).") in support
 
 
 # ---------------------------------------------------------------------------
@@ -467,6 +496,82 @@ class TestTheDocuments:
         assert f"registers {EXPECTED_FULL} tools" in tools
         assert (f"about {rounded} characters for `full`, roughly {tokens} "
                 f"tokens") in tools
+
+    def test_quickstart_can_be_followed_without_a_project(self):
+        """Fix round 1: the checklist offers starting with no project, so
+        the steps say what to leave out, where a new project goes, the
+        warning on synced folders, and the prompt that creates one."""
+        flat = _flat("QUICKSTART.md")
+        step2 = flat[flat.index("### 2. Find your project"):]
+        step2 = step2[:step2.index("### 3.")]
+        assert ("**No project yet?** Skip this step: step 3 says what to "
+                "leave out, and in step 5 you can ask the assistant to "
+                "create one.") in step2
+        step3 = flat[flat.index("### 3. Configure Claude Desktop"):]
+        step3 = step3[:step3.index("### 4.")]
+        assert ("**No project yet?** Leave out the `env` block, as below: "
+                "Exegete then starts with no project selected, and in step "
+                "5 you can ask the assistant to create one (Experimental)."
+                ) in step3
+        text = (REPO / "QUICKSTART.md").read_text(encoding="utf-8")
+        blocks = re.findall(r"```json\n(.*?)```", text, re.S)
+        configs = [json.loads(block) for block in blocks]
+        bare = [c for c in configs
+                if "env" not in c["mcpServers"]["exegete"]]
+        assert bare == [{"mcpServers": {"exegete": {
+            "command": "/Users/yourname/Documents/exegete/venv/bin/python",
+            "args": ["-m", "exegete.server"]}}}]
+        assert ("On this setup a new project goes to `~/Documents/Exegete "
+                "projects` unless `EXEGETE_WORKSPACE` names another folder. "
+                "iCloud (Desktop and Documents) or OneDrive may sync "
+                "Documents, and so copy the project, transcripts imported "
+                "into it included, off the computer; a sync service can "
+                "also copy a project's database and its journal separately. "
+                "Consider naming a folder outside Documents, such as "
+                "`~/Exegete projects`:") in step3
+        assert ("`\"env\": {\"EXEGETE_WORKSPACE\": \"/Users/yourname/Exegete "
+                "projects\"}`") in step3
+        assert ("(INSTALL.md, \"What you need\" and \"Environment variables "
+                "the server reads\")") in step3
+        step5 = flat[flat.index("### 5. Test It Out"):]
+        step5 = step5[:step5.index("## Updating Later")]
+        assert ("In Claude Desktop, try these prompts: the first only if "
+                "you have no project yet. ``` Create a new project in "
+                "Exegete called Practice ```") in step5
+        assert "Can you give me a summary of my project?" in step5
+
+    def test_install_says_exegete_names_it_in_its_log(self):
+        flat = _flat("INSTALL.md")
+        item = flat[flat.index("- `EXEGETE_TOOLSET`: `full` (default)"):]
+        item = item[:item.index("- `EXEGETE_WORKSPACE` (v0.14)")]
+        assert ("is read as `full` until v1.0, and Exegete names it in its "
+                "log at each start.") in item
+        assert "the server's log names it" not in item
+
+    def test_privacy_says_where_new_projects_go(self):
+        flat = _flat("PRIVACY.md")
+        local = flat[flat.index("What stays local, always"):]
+        local = local[:local.index("- Exegete's own folder")]
+        assert ("- new projects made by create_project and project copies "
+                "made by copy_project_to_workspace, in `~/Documents/Exegete "
+                "projects/` by default") in local
+        item = flat[flat.index("- **Creating a project** (`create_project`"):]
+        item = item[:item.index("## Your governance options")]
+        assert ("A new project is made in the folder the researcher names, "
+                "or else in the folder for projects: the extension's "
+                "\"Folder for projects\"; on every other route "
+                "`~/Documents/Exegete projects`, unless `EXEGETE_WORKSPACE` "
+                "names another folder. iCloud (Desktop and Documents) or "
+                "OneDrive may sync Documents, and so copy the project, "
+                "imported originals included, off the computer: consider a "
+                "folder outside it (INSTALL.md, \"What you need\").") in item
+
+    def test_the_ai_coding_guide_on_every_route(self):
+        flat = _flat("AI_CODING_GUIDE.md")
+        assert ("A project: a new one the assistant creates (Experimental; "
+                "in the default tool set, `full`, on every route), or a "
+                "copy of one you have") in flat
+        assert "(the extension's default tool set)" not in flat
 
     def test_the_readme_sentences(self):
         readme = _flat("README.md")

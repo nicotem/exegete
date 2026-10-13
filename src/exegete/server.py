@@ -94,7 +94,7 @@ from .database import (
 from . import pseudonymise as pseudo
 from . import new_project
 from . import parts, reading, reading_folder
-from .path_identity import is_inside, is_inside_any
+from .path_identity import is_inside, is_inside_any, is_same
 from . import doc_import, doc_readers, kept_texts
 from .cursors import (
     CURSOR_MAX_LENGTH,
@@ -1380,20 +1380,26 @@ def _earlier_workspace_note(used_the_workspace: bool) -> Optional[str]:
     return EARLIER_WORKSPACE_NOTE
 
 
-# The usual places the listing walks, as its answer names them.
+# The usual places the listing walks, as its answer names them, each
+# three levels deep. v0.15.0: the desktop extension's folder for projects
+# and its earlier default join, so a project the extension made, under
+# either default, is found on every route (names.py says why there are
+# two). discover_projects builds its own list from this one.
 _USUAL_SEARCH_PLACES = ["~/Documents/QualCoder_projects",
-                        "~/Documents/QualCoder", "~/QualCoder", "~/Documents"]
+                        "~/Documents/QualCoder", "~/QualCoder",
+                        "~/" + names.EXTENSION_WORKSPACE_FOLDER,
+                        "~/" + names.OLD_EXTENSION_WORKSPACE_FOLDER,
+                        "~/Documents"]
 
 
 def _is_one_of(folder: str, places: List[str]) -> bool:
-    """Whether `folder` is the same folder as one of `places`."""
-    def key(text):
-        try:
-            return Path(text).expanduser().resolve()
-        except (OSError, RuntimeError, ValueError):
-            return None
-    target = key(folder)
-    return target is not None and any(key(p) == target for p in places)
+    """Whether `folder` is the same folder as one of `places`: the same
+    path once resolved, or, where both exist, the same folder by identity
+    (path_identity.is_same). v0.15.0, fix round 1: compared as text, a
+    workspace spelt in another letter case on a disk that ignores it
+    (`~/exegete projects` on a Mac) was taken for a folder elsewhere,
+    searched first at its top level, and its projects listed twice."""
+    return any(is_same(folder, place) for place in places)
 
 
 def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str, Any]]:
@@ -1407,13 +1413,8 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
     """
     top_level_only = None
     if search_paths is None:
-        home = Path.home()
-        search_paths = [
-            str(home / "Documents" / "QualCoder_projects"),
-            str(home / "Documents" / "QualCoder"),
-            str(home / "QualCoder"),
-            str(home / "Documents"),
-        ]
+        search_paths = [str(Path(place).expanduser())
+                        for place in _USUAL_SEARCH_PLACES]
         # A workspace the host set (EXEGETE_WORKSPACE, v0.14) is
         # searched first, at its top level only: create_project and
         # copy_project_to_workspace put projects there, and the folder is
@@ -1421,7 +1422,9 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
         # folder, where a recursive search would walk everything in it.
         # When it is one of the usual places above, that place is walked
         # as before and nothing is added (fix round 1: it used to lose
-        # its depth). The added entry is the first, marked by position.
+        # its depth). So the extension's own folder for projects, under
+        # either default, is walked three levels deep (v0.15.0). The
+        # added entry is the first, marked by position.
         workspace = _host_set_workspace()
         if workspace is not None and not _is_one_of(workspace, search_paths):
             top_level_only = workspace
@@ -3791,10 +3794,11 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
 
     This tool searches common locations for .qda folders and lists the
     projects found. By default, it searches:
-    - the workspace folder, when the host set one (its top level only)
+    - the workspace folder, when the host set one (its top level only, unless it is one of the places below)
     - ~/Documents/QualCoder_projects
     - ~/Documents/QualCoder
     - ~/QualCoder
+    - ~/Exegete projects and ~/QualCoder projects (the desktop extension's folder, and its earlier default)
     - ~/Documents
 
     Args:
@@ -3829,8 +3833,9 @@ def list_available_projects(search_directories: Optional[List[str]] = None) -> s
         top_level_only: List[str] = []
     else:
         # The usual places, and first the workspace the host set, at its
-        # top level only (the desktop extension's folder for projects),
-        # unless it is one of the usual places (walked as before)
+        # top level only, unless it is one of the usual places (walked
+        # as before), as the desktop extension's folder for projects is
+        # under either default
         workspace = _host_set_workspace()
         top_level_only = ([workspace] if workspace is not None
                           and not _is_one_of(workspace, usual) else [])

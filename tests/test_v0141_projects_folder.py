@@ -6,7 +6,9 @@ and new projects go to ~/Documents/Exegete projects. The earlier
 ~/Documents/Qualcoder MCP Projects is never moved or emptied and stays
 found by the project listing; when it holds projects, the first answer
 of the run that names the workspace says so, once. The extension's own
-default (~/QualCoder projects) is unchanged.
+default was unchanged in 0.14.1 (~/QualCoder projects); from 0.15.0 it is
+~/Exegete projects, the earlier one still searched
+(tests/test_v0150_renames_folder.py).
 """
 
 import json
@@ -124,11 +126,13 @@ def test_a_project_created_in_a_named_folder_says_nothing(tmp_path):
     assert "earlier_projects" not in out
 
 
-def test_the_extensions_default_is_unchanged():
+def test_the_extensions_default_is_its_own():
+    """Unchanged in 0.14.1; from 0.15.0 `~/Exegete projects`, the earlier
+    default still searched (tests/test_v0150_renames_folder.py)."""
     template = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
     folder = template["user_config"]["projects_folder"]
-    assert folder["default"] == "~/QualCoder projects"
+    assert folder["default"] == "~/Exegete projects"
 
 
 def test_the_upgrading_list_says_it():

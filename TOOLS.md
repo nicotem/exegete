@@ -255,7 +255,8 @@ default on every route; the `core` set for local models leaves it out.
 - **Where.** In Exegete's workspace, unless you name an existing
   folder (give its full path, or one starting with `~`). With the Claude
   Desktop extension the workspace is its "Folder for projects", by
-  default `~/QualCoder projects`, outside Documents; otherwise it is
+  default `~/Exegete projects` (or `~/QualCoder projects`, the earlier
+  default, in an install that kept it), outside Documents; otherwise it is
   `~/Documents/Exegete projects`, unless the host sets another
   folder with `EXEGETE_WORKSPACE` (projects made there before 0.14.1
   stay in `~/Documents/Qualcoder MCP Projects`, where the listing still
@@ -454,7 +455,7 @@ Claude can help you code your qualitative data with a conversational approval wo
 
 ### Conversational Workflow
 
-**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/QualCoder projects/`), otherwise `~/Documents/Exegete projects/` unless the host sets another with `EXEGETE_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while QualCoder 3.x has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them Exegete can only warn on heuristics: make sure no QualCoder window has the project open before any write.
+**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/Exegete projects/`), otherwise `~/Documents/Exegete projects/` unless the host sets another with `EXEGETE_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while QualCoder 3.x has the project open**; close it there first. QualCoder 4.0 builds write no lock file, so for them Exegete can only warn on heuristics: make sure no QualCoder window has the project open before any write.
 
 ### Quick Start Example
 
@@ -586,7 +587,7 @@ The AI coding workflow uses a workspace directory for safe modifications:
 
 A host can name another folder with `EXEGETE_WORKSPACE`; the
 Claude Desktop extension does, from its "Folder for projects" setting
-(by default `~/QualCoder projects/`, outside Documents, which iCloud or
+(by default `~/Exegete projects/`, outside Documents, which iCloud or
 OneDrive may sync).
 
 Never work on your original projects with AI coding! Always:
@@ -1135,7 +1136,7 @@ For AI-assisted coding with direct database writes:
   file never copied; prune them with `prune_backups`)
 - 🔒 Workspace directory: `~/Documents/Exegete projects/`, or the
   folder `EXEGETE_WORKSPACE` names (the desktop extension's default
-  is `~/QualCoder projects/`)
+  is `~/Exegete projects/`)
 - 🔒 Session files: `~/.exegete/sessions/`
 - 🔒 Last-used project pointer: `~/.exegete/mru_project.json` (one
   project path and a timestamp, echoed only into the "no project selected"

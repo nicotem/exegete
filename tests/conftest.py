@@ -356,7 +356,9 @@ def _nothing_is_written_to_the_real_workspace():
     the constants, and this one proves that no route into the
     researcher's own `~/Documents/Qualcoder MCP Projects` or
     the state folders (`~/.exegete`, and `~/.qualcoder_mcp`, its earlier
-    name) survived. In the spirit of the test-rot guard, it
+    name), or, from 0.15.0, the desktop extension's folders for projects
+    (`~/Exegete projects`, and `~/QualCoder projects`, its earlier
+    default) survived. In the spirit of the test-rot guard, it
     pins the ABSENCE, so a future test that reaches a real folder by
     another route (a hard-coded path, a `workspace=` argument built from
     Path.home(), an import-bound object nobody redirected, a re-import

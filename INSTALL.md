@@ -39,7 +39,7 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      `lifecycle`, the earlier name of `full`; it works as `full`.
    - **Folder for projects**: where new projects are created and
      working copies of projects are kept. The default,
-     `~/QualCoder projects` (a folder called "QualCoder projects" in
+     `~/Exegete projects` (a folder called "Exegete projects" in
      your home folder), is outside Documents, which iCloud or OneDrive
      may sync; it is made when the first project needs it. Choose
      another with the folder button if you prefer, but not a folder a
@@ -47,6 +47,10 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      folder).
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
+     Installed before 0.15.0, the setting may still show
+     `~/QualCoder projects`, the earlier default: it keeps working. To
+     use the new folder, change the setting; the projects already in
+     the earlier folder stay there and are still found.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
      small file from its website on GitHub to see whether a newer
@@ -618,15 +622,19 @@ spelling only.
 - `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
-  also searches its top level. A full path, or one starting with `~`.
+  also searches its top level, or three levels deep when it is one of
+  the usual places, as the extension's default folder is (the usual
+  places are listed under "No projects found in the usual places",
+  below). A full path, or one starting with `~`.
   Unset or blank, it is `~/Documents/Exegete projects` (until 0.14.0,
   `~/Documents/Qualcoder MCP Projects`, which is never moved or emptied,
   and whose projects the listing still finds). The desktop extension
   sets it from its "Folder for projects" setting,
-  whose default is `~/QualCoder projects`, because iCloud (Desktop and
-  Documents) and OneDrive may sync `~/Documents`. A relative path, or a
-  folder inside `~/.exegete` (or `~/.qualcoder_mcp`, its earlier
-  name), QualCoder's settings folder
+  whose default is `~/Exegete projects` (the earlier default,
+  `~/QualCoder projects`, is kept by an install that has it), because
+  iCloud (Desktop and Documents) and OneDrive may sync `~/Documents`.
+  A relative path, or a folder inside `~/.exegete` (or
+  `~/.qualcoder_mcp`, its earlier name), QualCoder's settings folder
   `~/.qualcoder`, a `.qda` project or the folder the server itself is
   installed in, or a path holding `|`, stops the server at start-up
   with "Error: EXEGETE_WORKSPACE ..." on stderr (naming no path).
@@ -1153,7 +1161,7 @@ default_tools_approval_mode = "writes"
 
 [mcp_servers.exegete.env]
 EXEGETE_TOOLSET = "full"
-EXEGETE_WORKSPACE = "~/QualCoder projects"
+EXEGETE_WORKSPACE = "~/Exegete projects"
 
 [mcp_servers.exegete.tools.read_pseudonym_list]
 approval_mode = "prompt"
@@ -1177,8 +1185,11 @@ What the lines do:
 - `EXEGETE_TOOLSET = "full"`: every tool, creating a project
   included, as in the Claude Desktop extension.
 - `EXEGETE_WORKSPACE`: where new projects and working copies go; here,
-  as in the extension, a folder called "QualCoder projects" in your
+  as in the extension, a folder called "Exegete projects" in your
   home folder, outside Documents, which iCloud or OneDrive may sync.
+  An entry written from the steps before 0.15.0, naming
+  `~/QualCoder projects`, the earlier default, keeps working, and the
+  projects there are still found.
   Codex passes Exegete only the settings its entry names ("Environment
   variables the server reads", above, lists them all), so a setting
   exported in a shell profile does not reach it (Codex's source code).
@@ -1201,7 +1212,7 @@ the full path from step 1 as the command; then Save), and the command
 line has one command:
 
 ```bash
-codex mcp add exegete --env EXEGETE_TOOLSET=full --env "EXEGETE_WORKSPACE=~/QualCoder projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
+codex mcp add exegete --env EXEGETE_TOOLSET=full --env "EXEGETE_WORKSPACE=~/Exegete projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
 ```
 
 OpenAI does not document that either writes the approval lines, so
@@ -1241,8 +1252,9 @@ Windows, File Explorer opens your home folder when you type
 `%USERPROFILE%` in its address bar): the lines above end by starting
 `codex`, the command line, which the desktop app does not need. You
 open the folder in the app once Codex is chosen, below. Given your home
-folder, Documents, your projects folder (`~/QualCoder projects`) or a
-folder with transcripts or other study files instead, Codex would work
+folder, Documents, your projects folder (`~/Exegete projects`, or
+`~/QualCoder projects`, the earlier default) or a folder with
+transcripts or other study files instead, Codex would work
 among them: what it reads there goes to OpenAI without passing through
 Exegete, and what it changes there is changed without Exegete's
 approval step, preview or backup.
@@ -1588,10 +1600,13 @@ Analyse the transcript for file 1 with all its coding
 Exegete searches these locations by default:
 - the folder `EXEGETE_WORKSPACE` names, when it is set (with the
   desktop extension, its "Folder for projects", by default
-  `~/QualCoder projects`), at its top level only
+  `~/Exegete projects`), at its top level only, unless it is one of
+  the places below
 - `~/Documents/QualCoder_projects`
 - `~/Documents/QualCoder`
 - `~/QualCoder`
+- `~/Exegete projects` and `~/QualCoder projects` (the extension's
+  default folder, and its earlier default)
 - `~/Documents`
 
 Make sure your `.qda` project folder is in one of these locations, or tell Claude to search elsewhere:
@@ -1940,7 +1955,9 @@ yet, and the first start after the update moves the server's own folder
   copies and new projects go there. `~/Documents/Qualcoder MCP Projects`
   is never moved or emptied, and `list_available_projects` still finds
   the projects in it; the first answer that names the workspace says so
-  once. The extension's folder, `~/QualCoder projects`, is unchanged.
+  once. The extension's folder, `~/QualCoder projects`, is unchanged;
+  from 0.15.0 it is the earlier default, and new installs use
+  `~/Exegete projects`.
 - **Your projects** are unchanged, except for one small file. Exegete
   keeps the AI coder name in `exegete.json` in the project folder. A
   project from before still has `qualcoder_mcp.json`, which is read as
@@ -2250,7 +2267,8 @@ uninstalling, or by hand afterwards. Workspace copies made with
 (those made before 0.14.1, in `~/Documents/Qualcoder MCP Projects/`),
 or in the folder `EXEGETE_WORKSPACE` names (with the
 desktop extension, its "Folder for projects", by default
-`~/QualCoder projects/`).
+`~/Exegete projects/`, or `~/QualCoder projects/`, the earlier default,
+in an install that kept it).
 
 ---
 

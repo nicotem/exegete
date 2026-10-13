@@ -1118,8 +1118,10 @@ class TestTextsThatSentTheAssistantNowhere:
         answer = host_json("list_available_projects")
         assert answer["searched"]["instead_of_the_usual_places"] is False
         # the usual places, expanded in the sandbox's home (the suite
-        # never names the real Documents folder)
-        assert len(answer["searched"]["folders"]) == 4
+        # never names the real Documents folder); six from v0.15.0, with
+        # the extension's folder and its earlier default
+        assert len(answer["searched"]["folders"]) == \
+            len(server._USUAL_SEARCH_PLACES) == 6
         assert all(Path(folder).is_relative_to(Path.home())
                    for folder in answer["searched"]["folders"])
         doc = server.mcp._tool_manager._tools[

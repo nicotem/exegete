@@ -579,10 +579,15 @@ CHANGED_0143 = {
 # pseudonymise_source's use_project_pseudonyms; get_current_project
 # also has one line rewrapped so that it is no longer than before, and
 # its fix round gave read_pseudonym_list get_current_project's words,
-# so that it too is shorter than before. Later v0.15.0 pieces add their
-# lines here.
+# so that it too is shorter than before. The renames, piece 2
+# (tests/test_v0150_renames_folder.py): list_available_projects names the
+# desktop extension's folder for projects and its earlier default among
+# its places, and that the workspace is searched at its top level only
+# unless it is one of them; it grows by 142 characters, as its design
+# says. Later v0.15.0 pieces add their lines here.
 CHANGED_0150 = {
     "get_current_project": (1920, 1570, "da157f879c430be0"),
+    "list_available_projects": (904, 716, "0117f9141c0b48ea"),
     "pseudonymise_source": (17339, 12705, "b497f4c553410195"),
     "read_pseudonym_list": (1037, 856, "637792f4e7f7de38"),
 }

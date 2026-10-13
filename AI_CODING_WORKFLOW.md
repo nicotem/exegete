@@ -36,7 +36,7 @@ Desktop extension it is the extension's "Folder for projects", by
 default:
 
 ```
-~/QualCoder projects/
+~/Exegete projects/
 ```
 
 Otherwise it is `~/Documents/Exegete projects/`, unless the host
@@ -99,7 +99,7 @@ Copy my project "Interview Study.qda" to the workspace for AI coding
 
 Claude will:
 - Copy the entire project folder to the workspace (with the Claude
-  Desktop extension `~/QualCoder projects/` by default, otherwise
+  Desktop extension `~/Exegete projects/` by default, otherwise
   `~/Documents/Exegete projects/`, unless the host set another)
 - Create unique name if one already exists
 - Report the workspace path
@@ -108,7 +108,7 @@ Claude will:
 uses the extension's default folder):
 ```
 ✓ Copied project to workspace:
-  /Users/YOUR_NAME/QualCoder projects/Interview Study.qda
+  /Users/YOUR_NAME/Exegete projects/Interview Study.qda
 
   This is now your working copy for AI coding.
   Your original project is untouched.
@@ -342,7 +342,7 @@ In QualCoder, if you use it:
    open must close and reopen it to show the new codings)
 2. Open the workspace project, at the path the copy's answer gave (with
    the Claude Desktop extension's default,
-   `~/QualCoder projects/Interview Study.qda`; otherwise
+   `~/Exegete projects/Interview Study.qda`; otherwise
    `~/Documents/Exegete projects/Interview Study.qda`, unless the
    host set another folder)
 3. Go to **Coding > Code Text**
@@ -362,10 +362,10 @@ Copy "Focus Group Study.qda" to the workspace
 ```
 
 **Claude** (the path is the workspace's; here the Claude Desktop
-extension's default folder, `~/QualCoder projects/`):
+extension's default folder, `~/Exegete projects/`):
 ```
 ✓ Copied project to:
-  ~/QualCoder projects/Focus Group Study.qda
+  ~/Exegete projects/Focus Group Study.qda
 ```
 
 **You:**
@@ -699,11 +699,11 @@ Copy the project at <path> to the workspace   (copy_project_to_workspace;
 
 **Find backups:**
 Backups are in the same folder as your workspace projects (the
-workspace: with the Claude Desktop extension `~/QualCoder projects/` by
+workspace: with the Claude Desktop extension `~/Exegete projects/` by
 default, otherwise `~/Documents/Exegete projects/`, unless the
 host set another with `EXEGETE_WORKSPACE`):
 ```
-~/QualCoder projects/ProjectName_backup_TIMESTAMP.qda
+~/Exegete projects/ProjectName_backup_TIMESTAMP.qda
 ```
 
 **Restore from backup:**
@@ -785,7 +785,7 @@ The workspace is the folder the answer to `copy_project_to_workspace`
 named. With the Claude Desktop extension it is the extension's "Folder
 for projects" (Settings, Extensions, Exegete), by default:
 ```
-/Users/YOUR_NAME/QualCoder projects/
+/Users/YOUR_NAME/Exegete projects/
 ```
 Otherwise it is `/Users/YOUR_NAME/Documents/Exegete projects/`,
 unless the host sets another folder with `EXEGETE_WORKSPACE`. A

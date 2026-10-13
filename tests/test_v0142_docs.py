@@ -746,13 +746,16 @@ def test_a_first_session_says_what_to_do_next():
     # (test_the_terminal_route_says_where_projects_go, below)
     # v0.14.3: a file opened for reading shows the coding too, and the
     # page can come in from a file, its text off the conversation
+    # v0.15.0: the extension's folder is "Exegete projects", by default,
+    # and the answer gives the full path (tests/test_v0150_renames_folder.py)
     assert ("then bring in your page: paste it, as in the example, or save "
             "it as a Word or text file and give the assistant its place, "
             "which keeps its text off the conversation (on a Mac, hold "
             "Option, right-click it and choose Copy as Pathname; on "
             "Windows 11, Copy as path). With the extension "
-            "or OpenAI's steps, the project is made in \"QualCoder "
-            "projects\", in your home folder: ask to open a file for "
+            "or OpenAI's steps, the project is made, by default, in "
+            "\"Exegete projects\", in your home folder (the assistant's "
+            "answer gives the full path): ask to open a file for "
             "reading, or open the project in QualCoder (Project, Open "
             "Project), to see your coding in the text. [More requests to "
             "try](https://github.com/nicotem/exegete/blob/main/TOOLS.md"
@@ -761,15 +764,15 @@ def test_a_first_session_says_what_to_do_next():
     manifest = json.loads(_read("packaging/desktop-extension/"
                                 "manifest.in.json"))
     assert manifest["user_config"]["projects_folder"]["default"] == \
-        "~/QualCoder projects"
+        "~/Exegete projects"
     assert first.index("Practice") < first.index("**Two coder names.**")
     assert "_resolve_write_owner" in inspect.getsource(
         server.import_text_file)
     # OpenAI's steps set the same folder (INSTALL.md's settings lines)
     openai = _flat("INSTALL.md")
-    assert "EXEGETE_WORKSPACE = \"~/QualCoder projects\"" in openai
+    assert "EXEGETE_WORKSPACE = \"~/Exegete projects\"" in openai
     assert ("`EXEGETE_WORKSPACE`: where new projects and working copies go; "
-            "here, as in the extension, a folder called \"QualCoder "
+            "here, as in the extension, a folder called \"Exegete "
             "projects\" in your home folder") in openai
 
 

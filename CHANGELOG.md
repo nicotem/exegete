@@ -192,17 +192,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   place, compared by which folder it is rather than by its spelling,
   so its projects are listed once, not twice.
 
+### Changed: two tools renamed, and Exegete's backups
+
+- **Two tools have names that say what they do** (the owner's decision
+  of 12 October 2026): `analyze_for_coding` is now
+  `start_coding_session` (it starts a coding session and reads
+  nothing), and `analyze_file_with_coding` is now
+  `read_file_with_codings` (a file's text with its codings). Every
+  description, answer, refusal and help text that names them uses the
+  new names, and so do the documents.
+- **The earlier names are still listed**, each with a one-sentence
+  description, and do exactly what the new ones do, with the same
+  arguments and the same answers, until the release on method (planned
+  as v0.15.2) removes them. Listing them adds 1,231 characters to
+  every request, in `full` and in `core` (see "Measured"). A host
+  that remembers a choice to run an earlier name without asking may ask
+  again for the new one. The help topic `analyze_for_coding` of
+  `explain_ai_coding_tools`, deprecated, keeps its name until the
+  deprecated topics go; its text names `start_coding_session`.
+- **"MCP backups" is now "Exegete's backups"**, and `list_backups` gives
+  Exegete's own backups the kind `exegete` (it was `mcp`). The kind is
+  worked out from each folder's name whenever the backups are listed,
+  so no backup changes and `prune_backups` removes exactly what it
+  removed before; but an assistant or a script that looked for the kind
+  `mcp` now sees `exegete`.
+
 ### Measured
 
-- Serialised tool JSON: full = 204,951 characters (about 51.2k tokens
-  at chars/4) over 78 tools, and core = 67,366 (about 16.8k) over 23,
+- Serialised tool JSON: full = 206,194 characters (about 51.5k tokens
+  at chars/4) over 80 tools, and core = 68,611 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 214,991 and
-  70,758. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), four changes
+  which also gives exactly 0.14.3's figures for its tree), 216,230 and
+  72,003. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), five changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -215,7 +240,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   143 characters more, in both sets (147 on 3.11). Then
   `pseudonymise_source`'s description gained a paragraph on what
   pseudonymisation is for: its entry grew by 583 characters, 619 on
-  3.11, in `full` only. No other tool's entry changed.
+  3.11, in `full` only. And two tools were renamed: their earlier
+  names, listed with one sentence each, add 1,231 characters to both
+  sets on both interpreters (their two entries and the separators
+  between entries), and the new names in the descriptions that name the
+  two tools, with "Exegete's backups" in `list_backups` and
+  `prune_backups` and the example dropped from
+  `explain_ai_coding_tools`, 12 more in `full` and 14 in `core` (8 and
+  14 on 3.11). No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

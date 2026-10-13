@@ -84,7 +84,7 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > which Exegete honours; QualCoder 4.0 uses no lock file, so Exegete
 > falls back to best-effort heuristics there (reported as
 > `qualcoder_gui_signals` by `select_project`, `get_current_project`,
-> `analyze_for_coding` and the `restore_backup` and `import_documents`
+> `start_coding_session` and the `restore_backup` and `import_documents`
 > previews:
 > database write sidecars, recent activity on the 4.0 AI search index, a
 > chat-history file changed recently (QualCoder 3.8.2 and 4.0 both create
@@ -362,7 +362,7 @@ reads and
 analytics (`get_coded_segments`, `search_coded_text`,
 `get_coding_frequencies`, `find_cooccurring_codes`,
 `get_case_code_matrix`, `get_codes_by_case`, `get_cases_by_code`, the
-codings and annotations in `analyze_file_with_coding`, and the
+codings and annotations in `read_file_with_codings`, and the
 coding-memo and annotation matches of `search_memos`) read what the user sees in
 QualCoder by default and disclose how many coders are hidden, never
 their names (with one stated exception, a project that gained the
@@ -480,7 +480,7 @@ Claude is told to:
   (`get_coding_session_info` shows it)
 
 Claude will:
-- Create an analysis session (`analyze_for_coding`)
+- Create an analysis session (`start_coding_session`)
 - Examine the files
 - Record its suggestions into the session (`record_suggestions`; every
   suggestion is verified against the file text before it is stored)
@@ -650,7 +650,7 @@ characters or, failing that, as QualCoder counts; the page says how
 many were placed the second way, and draws with a dotted underline any
 whose passage neither count finds. Windows and old Mac line breaks show
 as line breaks, as in QualCoder. The whole-file read
-(`analyze_file_with_coding`) uses the same count, and gives such a
+(`read_file_with_codings`) uses the same count, and gives such a
 coding's place in the text beside its stored positions, so the
 assistant quotes the words you coded.
 
@@ -733,7 +733,7 @@ reaches it four ways:
   and the resource `exegete://guidance/brief`;
 - a one-line reminder in the answers that open or check a project
   (`select_project`, `get_current_project`, `create_project`) and that
-  start a coding session (`analyze_for_coding`).
+  start a coding session (`start_coding_session`).
 
 The brief is **provisional**: it carries the tools' own rules, adds how
 to work with the researcher where no single tool says, and leaves out,
@@ -901,8 +901,9 @@ no longer listed, until v1.0.
 
 Claude can use these tools to analyse your data. The full toolset
 (`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
-extension and when you configure the server yourself) registers 78
-tools; the argument lists below name every argument each tool
+extension and when you configure the server yourself) registers 80
+tools, two of them the earlier names of two renamed tools (see "Earlier
+names" below); the argument lists below name every argument each tool
 declares, and each tool's own description says what each one does.
 
 > **Creating projects (Experimental):** `create_project` makes a new,
@@ -913,22 +914,23 @@ declares, and each tool's own description says what each one does.
 
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in the server's environment, only the
-> 23-tool supervised coding set is registered: read_brief,
+> 25-tool supervised coding set is registered: read_brief,
 > list_available_projects, select_project, get_current_project,
 > get_project_summary,
-> search_files, analyze_file_with_coding, open_file_for_reading,
+> search_files, read_file_with_codings, open_file_for_reading,
 > search_coded_text,
-> get_coded_segments, get_coding_frequencies, analyze_for_coding,
+> get_coded_segments, get_coding_frequencies, start_coding_session,
 > record_suggestions, review_suggestions, edit_suggestion,
 > update_suggestion_status, apply_codings, create_code, set_memo,
 > set_project_ai_coder_name,
-> copy_project_to_workspace, delete_coding, list_backups.
+> copy_project_to_workspace, delete_coding, list_backups, and the two
+> earlier names below.
 > Required for local models, optional elsewhere; unknown values fail
 > loudly at startup. Measured for 0.15.0 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 205,000 characters for `full`, roughly 51k
-> tokens at four characters per token, and about 67,000 characters for
+> definitions run to about 206,000 characters for `full`, roughly 51k
+> tokens at four characters per token, and about 69,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
@@ -974,7 +976,7 @@ never a coder hidden in QualCoder). A known value with nothing in scope
 still answers empty, and that answer is a finding.
 
 **Rich Transcript Analysis:**
-- `analyze_file_with_coding(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
+- `read_file_with_codings(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and names a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts (v0.14.3): about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's 25,000-token limit with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
 - `open_file_for_reading(file_id, show, without_codes)` - **Let the researcher read a whole file on their own computer** (v0.14.3; in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). `without_codes=true` writes the page with the text alone, for a fresh reading. See "Reading a whole file" above
 
 **Attributes & Demographics:**
@@ -985,7 +987,7 @@ still answers empty, and that answer is a finding.
 
 **Co-occurrence Analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. Window 0 is QualCoder's co-occurrence report's overlap, and at N the gap is the distance its Code relations report gives; the counts are not the co-occurrence report's
-- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; in the full tool set, not in core. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with the AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant is told to read each file with `analyze_file_with_coding` before suggesting, which gives it every visible coder's codings; do not report it as intercoder reliability
+- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; in the full tool set, not in core. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with the AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant is told to read each file with `read_file_with_codings` before suggesting, which gives it every visible coder's codings; do not report it as intercoder reliability
 
 **Case-Code Matrix & Comparative Analysis:**
 - `get_case_code_matrix(coder)` - Create cross-tabulation of cases vs codes
@@ -993,7 +995,7 @@ still answers empty, and that answer is a finding.
 - `get_cases_by_code(code_id, coder)` - Get all cases containing a specific code
 
 **AI-Assisted Coding (Conversational Workflow):**
-- `analyze_for_coding(file_ids, code_names, instruction)` - Start a coding session for the files, and the codes if named (matched exactly, else ignoring letter case, spacing and Unicode form, the rule for code names throughout; a name matching two codes that way is listed in `ambiguous_code_names` and used for neither), that suggestions may then be recorded for; `instruction` is required (there is no default): the researcher's answers to what to look for, how long a coded passage should be and whether a passage may carry more than one code; it reads no file and makes no suggestion, returns the `coding_session_id` the other session tools take, and lists in `not_found` any id or name that matched nothing; a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside Exegete, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
+- `start_coding_session(file_ids, code_names, instruction)` - Start a coding session for the files, and the codes if named (matched exactly, else ignoring letter case, spacing and Unicode form, the rule for code names throughout; a name matching two codes that way is listed in `ambiguous_code_names` and used for neither), that suggestions may then be recorded for; `instruction` is required (there is no default): the researcher's answers to what to look for, how long a coded passage should be and whether a passage may carry more than one code; it reads no file and makes no suggestion, returns the `coding_session_id` the other session tools take, and lists in `not_found` any id or name that matched nothing; a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside Exegete, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
 - `record_suggestions(coding_session_id, suggestions, replace)` - Record Claude's suggestions into the session (each verified against the file text; positions auto-corrected when the excerpt is unique; a PDF with no usable text is refused, as it is by `edit_suggestion`, `apply_codings`, proposal evidence and `add_annotation`)
 - `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show each suggestion in the order a researcher reads it: the nearest earlier turn by another speaker, found by speaker labels (a name of a few words and a colon starting a paragraph, compared by name, and counted only when that name opens more than one paragraph; an unbracketed time after the name, as in Otter's "Name  0:03", is not read; nothing is shown otherwise), whatever it says; a turn of three words or fewer with no question mark is shown with the one before it, and the turns and paragraphs left out between are counted, then the passage in its paragraph or speaker turn, then the code, the reading and the reason; the surrounding text, and that of any shorter or longer span offered, is read from the file each time and never stored
 - `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` - Adjust a pending suggestion's span, code or reading before approval (session-only; server-computed shorter/longer alternatives); moving it to another code without a new `reading` clears it, which was given for the old code
@@ -1083,6 +1085,15 @@ coders' codings are affected. `restore_backup` rolls the whole project
 back: its preview does not count codings by owner, and it has no such
 gate; `pseudonymise_source` reports hidden coders' rows as counts and
 gates a narrower set (see its own entry).
+
+## Earlier names
+
+Two tools were renamed in 0.15.0. Their earlier names are still listed,
+and do exactly what the new ones do, until the release on method
+(planned as v0.15.2) removes them: `analyze_for_coding` is now
+`start_coding_session`, and `analyze_file_with_coding` is now
+`read_file_with_codings`. If your host remembers a choice to run one of
+the earlier names without asking, it may ask again for the new one.
 
 ## Available Prompts
 

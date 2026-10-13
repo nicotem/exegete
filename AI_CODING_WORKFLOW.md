@@ -64,7 +64,7 @@ work, with a warning that data may change underneath.
 
 QualCoder 4.0 writes no lock file. For it Exegete can only report
 that the project appears to be open (`qualcoder_gui_signals` in
-`select_project`, `get_current_project` and `analyze_for_coding`: a
+`select_project`, `get_current_project` and `start_coding_session`: a
 heuristic that can miss an idle window), so make sure yourself that no
 QualCoder window has the project open before writing. An open 4.0
 window will not show changes written by Exegete until the project
@@ -143,7 +143,7 @@ Only suggest a code where the participant says it in so many words
    session without an instruction but cannot tell whether it holds your
    answers: check the instruction the session records
    (`get_coding_session_info` shows it)
-2. Creates a new analysis session with unique ID (`analyze_for_coding`),
+2. Creates a new analysis session with unique ID (`start_coding_session`),
    which hands Claude the public part of your project memo, the study in
    your own words
 3. Reads the specified files

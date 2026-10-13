@@ -605,8 +605,8 @@ Explorer. What reaches the AI provider:
 |---|---|---|
 | A reading copy (the default) | the file's id, the page's place on your computer (which includes the project's and the file's names), and counts of codings, codes, annotations and notes | the text, the memos |
 | The original, or the original in its folder | the file's id, its name and the place of the read-only copy | its contents |
-| The whole text in the chat (`analyze_file_with_coding` and the file and case resources, unchanged) | the text, a part at a time, with its codings | |
-| The whole text in the chat without codes (`analyze_file_with_coding` with `without_codes=true`) | the text, a part at a time, and the file's details, with counts of the codings and annotations left out | the codings, the codes, the annotations |
+| The whole text in the chat (`read_file_with_codings` and the file and case resources, unchanged) | the text, a part at a time, with its codings | |
+| The whole text in the chat without codes (`read_file_with_codings` with `without_codes=true`) | the text, a part at a time, and the file's details, with counts of the codings and annotations left out | the codings, the codes, the annotations |
 
 To talk about a passage you have read on the page, copy a few words of
 it into the conversation: those words go to the provider, like anything
@@ -1124,7 +1124,7 @@ Two further rules touch files on your disk:
 - **Process listing.** To warn when a QualCoder 4.0 window appears to
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
-  get_current_project, analyze_for_coding, and the restore_backup and
+  get_current_project, start_coding_session, and the restore_backup and
   import_documents previews, each the call without a preview_token)
   also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or

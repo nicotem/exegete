@@ -15,7 +15,7 @@ qualcoder-mcp), in the conversational workflow.
 
 1. **You** ask Claude to analyse files for specific codes and answer
    the three questions it is told to ask; your answers become the
-   session's instruction (`analyze_for_coding` creates the session;
+   session's instruction (`start_coding_session` creates the session;
    `get_coding_session_info` shows the instruction it recorded)
 2. **Claude** reads the files and records its suggestions into the
    session (`record_suggestions`); every suggestion is verified against
@@ -108,7 +108,7 @@ a session. None of this replaces your approval of each suggestion.
 
 | Tool | Purpose |
 |---|---|
-| `analyze_for_coding(file_ids, code_names, instruction)` | Create an analysis session |
+| `start_coding_session(file_ids, code_names, instruction)` | Create an analysis session |
 | `record_suggestions(coding_session_id, suggestions, replace)` | Persist Claude's suggestions (text-verified) |
 | `review_suggestions(coding_session_id, suggestion_guids, show_context)` | Inspect suggestions in detail |
 | `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` | Adjust a pending suggestion's span, code or reading before approval (session-only); a new code without a new reading clears the reading |

@@ -623,8 +623,9 @@ spelling only.
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
   also searches its top level, or three levels deep when it is one of
-  the usual places, as the extension's folder is. A full path, or one
-  starting with `~`.
+  the usual places, as the extension's default folder is (the usual
+  places are listed under "No projects found in the usual places",
+  below). A full path, or one starting with `~`.
   Unset or blank, it is `~/Documents/Exegete projects` (until 0.14.0,
   `~/Documents/Qualcoder MCP Projects`, which is never moved or emptied,
   and whose projects the listing still finds). The desktop extension
@@ -1186,6 +1187,9 @@ What the lines do:
 - `EXEGETE_WORKSPACE`: where new projects and working copies go; here,
   as in the extension, a folder called "Exegete projects" in your
   home folder, outside Documents, which iCloud or OneDrive may sync.
+  An entry written from the steps before 0.15.0, naming
+  `~/QualCoder projects`, the earlier default, keeps working, and the
+  projects there are still found.
   Codex passes Exegete only the settings its entry names ("Environment
   variables the server reads", above, lists them all), so a setting
   exported in a shell profile does not reach it (Codex's source code).
@@ -1248,8 +1252,9 @@ Windows, File Explorer opens your home folder when you type
 `%USERPROFILE%` in its address bar): the lines above end by starting
 `codex`, the command line, which the desktop app does not need. You
 open the folder in the app once Codex is chosen, below. Given your home
-folder, Documents, your projects folder (`~/Exegete projects`) or a
-folder with transcripts or other study files instead, Codex would work
+folder, Documents, your projects folder (`~/Exegete projects`, or
+`~/QualCoder projects`, the earlier default) or a folder with
+transcripts or other study files instead, Codex would work
 among them: what it reads there goes to OpenAI without passing through
 Exegete, and what it changes there is changed without Exegete's
 approval step, preview or backup.
@@ -1601,7 +1606,7 @@ Exegete searches these locations by default:
 - `~/Documents/QualCoder`
 - `~/QualCoder`
 - `~/Exegete projects` and `~/QualCoder projects` (the extension's
-  folder, and its earlier default)
+  default folder, and its earlier default)
 - `~/Documents`
 
 Make sure your `.qda` project folder is in one of these locations, or tell Claude to search elsewhere:

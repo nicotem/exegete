@@ -148,7 +148,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its description says so. An install whose setting shows
   `~/QualCoder projects`, the earlier default, keeps it, and Exegete
   never moves or empties that folder; Exegete never writes the
-  setting, so a folder you chose reaches it unchanged.
+  setting, so a folder you chose reaches it unchanged. INSTALL's steps
+  for Codex name `~/Exegete projects` too; an entry written from the
+  earlier steps, naming `~/QualCoder projects`, the earlier default,
+  keeps working.
 - **Both folders are among the usual places, on every route**: with no
   folders given, `list_available_projects` searches `~/Exegete projects`
   and `~/QualCoder projects` after `~/QualCoder` and before
@@ -160,7 +163,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was searched at its top level only; the answer's
   `searched.top_level_only` is absent for it. A workspace anywhere else
   is still searched at its top level only, and `top_level_only` names
-  it. `list_available_projects`' description says both.
+  it. `list_available_projects`' description says both. A workspace
+  that is one of the usual places spelt in another letter case, on a
+  Mac's usual disk, which ignores letter case, is now taken for that
+  place, compared by which folder it is rather than by its spelling,
+  so its projects are listed once, not twice.
 
 ### Measured
 

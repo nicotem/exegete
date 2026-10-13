@@ -820,8 +820,10 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "project for the chat.\" "
                 "(<https://learn.chatgpt.com/docs/projects>",
                 # (the owner, 1 October 2026: warn, don't prescribe)
+                # v0.15.0, fix round 1: both folders, as PRIVACY names them
                 "Given your home folder, Documents, your projects folder "
-                "(`~/Exegete projects`) or a folder with transcripts or "
+                "(`~/Exegete projects`, or `~/QualCoder projects`, the "
+                "earlier default) or a folder with transcripts or "
                 "other study files instead, Codex would work among them: "
                 "what it reads there goes to OpenAI without passing through "
                 "Exegete",

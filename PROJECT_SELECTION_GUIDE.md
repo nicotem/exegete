@@ -31,12 +31,16 @@ When you start Claude Desktop, ask:
 List my available projects
 ```
 
-Claude will search these locations automatically:
+Exegete searches these places by default:
+- the folder `EXEGETE_WORKSPACE` names, when it is set (with the
+  desktop extension, its "Folder for projects", by default
+  `~/Exegete projects/`), at its top level only, unless it is one of
+  the places below
 - `~/Documents/QualCoder_projects/`
 - `~/Documents/QualCoder/`
 - `~/QualCoder/`
 - `~/Exegete projects/` and `~/QualCoder projects/` (the desktop
-  extension's folder for projects, and its earlier default)
+  extension's default folder for projects, and its earlier default)
 - `~/Documents/`
 
 You'll get a list like:

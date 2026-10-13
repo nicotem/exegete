@@ -94,7 +94,7 @@ from .database import (
 from . import pseudonymise as pseudo
 from . import new_project
 from . import parts, reading, reading_folder
-from .path_identity import is_inside, is_inside_any
+from .path_identity import is_inside, is_inside_any, is_same
 from . import doc_import, doc_readers, kept_texts
 from .cursors import (
     CURSOR_MAX_LENGTH,
@@ -1393,14 +1393,13 @@ _USUAL_SEARCH_PLACES = ["~/Documents/QualCoder_projects",
 
 
 def _is_one_of(folder: str, places: List[str]) -> bool:
-    """Whether `folder` is the same folder as one of `places`."""
-    def key(text):
-        try:
-            return Path(text).expanduser().resolve()
-        except (OSError, RuntimeError, ValueError):
-            return None
-    target = key(folder)
-    return target is not None and any(key(p) == target for p in places)
+    """Whether `folder` is the same folder as one of `places`: the same
+    path once resolved, or, where both exist, the same folder by identity
+    (path_identity.is_same). v0.15.0, fix round 1: compared as text, a
+    workspace spelt in another letter case on a disk that ignores it
+    (`~/exegete projects` on a Mac) was taken for a folder elsewhere,
+    searched first at its top level, and its projects listed twice."""
+    return any(is_same(folder, place) for place in places)
 
 
 def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str, Any]]:

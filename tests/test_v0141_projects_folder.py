@@ -6,7 +6,9 @@ and new projects go to ~/Documents/Exegete projects. The earlier
 ~/Documents/Qualcoder MCP Projects is never moved or emptied and stays
 found by the project listing; when it holds projects, the first answer
 of the run that names the workspace says so, once. The extension's own
-default (~/QualCoder projects) is unchanged.
+default was unchanged in 0.14.1 (~/QualCoder projects); from 0.15.0 it is
+~/Exegete projects, the earlier one still searched
+(tests/test_v0150_renames_folder.py).
 """
 
 import json

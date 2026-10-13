@@ -14,6 +14,7 @@ cannot drift. Every test runs in the suite's sandboxed home (conftest).
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -191,6 +192,30 @@ class TestOnce:
         assert found.count("Also once") == 1
         assert answer["project_count"] == len(found)
 
+    @pytest.mark.parametrize("folder", [NEW_FOLDER, OLD_FOLDER])
+    def test_the_workspace_spelt_in_another_letter_case(
+            self, folder, monkeypatch):
+        """Fix round 1: on a disk that ignores letter case (a Mac's usual
+        disk, Windows), `~/exegete projects` is `~/Exegete projects`.
+        Compared as text it was taken for a folder elsewhere, added first
+        at its top level, and each project there was listed twice;
+        compared by identity, it is the usual place it names."""
+        _project(folder, "Only once")
+        spelt = "~/" + Path(folder).name.lower()
+        real = Path(folder).expanduser()
+        other = Path(spelt).expanduser()
+        if not (os.path.exists(other) and os.path.samefile(other, real)):
+            pytest.skip("this disk tells letter case apart: the two "
+                        "spellings are two folders")
+        monkeypatch.setenv(WORKSPACE, spelt)
+        answer = _listing()
+        assert "top_level_only" not in answer["searched"]
+        assert answer["searched"]["folders"] == [
+            _expanded(p) for p in server._USUAL_SEARCH_PLACES]
+        assert _names(answer).count("Only once") == 1
+        assert [p["name"] for p in server.discover_projects()].count(
+            "Only once") == 1
+
 
 # ---------------------------------------------------------------------------
 # One list
@@ -241,6 +266,20 @@ class TestOneList:
         _project(Path("~/An added place") / "a", "Added study")
         assert any(p["name"] == "Added study"
                    for p in server.discover_projects())
+
+    @pytest.mark.parametrize("folder", [NEW_FOLDER, OLD_FOLDER])
+    def test_a_workspace_that_is_a_usual_place_is_not_added(
+            self, folder, monkeypatch):
+        """discover_projects' own check: either folder as the workspace
+        is not searched first at its top level; the usual places alone
+        are, each three levels deep (fix round 1)."""
+        for place in server._USUAL_SEARCH_PLACES:
+            Path(place).expanduser().mkdir(parents=True, exist_ok=True)
+        monkeypatch.setenv(WORKSPACE, folder)
+        calls = _spy_on_the_search(monkeypatch)
+        server.discover_projects()
+        assert calls == [("deep", _expanded(p))
+                         for p in server._USUAL_SEARCH_PLACES]
 
     def test_with_no_workspace_only_the_usual_places(
             self, monkeypatch, no_workspace):
@@ -321,8 +360,26 @@ class TestTheDocuments:
         listed = [p for item in items[1:]
                   for p in re.findall(r"`(~/[^`]+)`", item)]
         assert listed == server._USUAL_SEARCH_PLACES
+        # its default folder: a folder chosen elsewhere is not a usual
+        # place (fix round 1)
         assert ("- `~/Exegete projects` and `~/QualCoder projects` (the "
-                "extension's folder, and its earlier default)") in items
+                "extension's default folder, and its earlier default)") \
+            in items
+
+    def test_installs_workspace_item_says_the_default_folder(self):
+        """The `EXEGETE_WORKSPACE` item: three levels deep only when the
+        workspace is one of the usual places, as the extension's default
+        folder is; a folder chosen elsewhere keeps the top-level rule
+        (fix round 1)."""
+        flat = " ".join((REPO / "INSTALL.md").read_text(
+            encoding="utf-8").split())
+        item = flat[flat.index("- `EXEGETE_WORKSPACE` (v0.14):"):]
+        item = item[:item.index(" - `", 4)]
+        assert ("`list_available_projects` also searches its top level, or "
+                "three levels deep when it is one of the usual places, as "
+                "the extension's default folder is (the usual places are "
+                "listed under \"No projects found in the usual places\", "
+                "below).") in item
 
     def test_the_extension_step_in_install(self):
         flat = " ".join((REPO / "INSTALL.md").read_text(
@@ -342,20 +399,57 @@ class TestTheDocuments:
         assert 'EXEGETE_WORKSPACE = "~/Exegete projects"' in install
         assert '--env "EXEGETE_WORKSPACE=~/Exegete projects"' in install
         assert "QualCoder projects\"" not in install
+        # an entry written from the earlier steps (fix round 1)
+        flat = " ".join(install.split())
+        item = flat[flat.index("- `EXEGETE_WORKSPACE`: where new "
+                               "projects and working copies go"):]
+        item = item[:item.index(" - `", 4)]
+        assert ("An entry written from the steps before 0.15.0, naming "
+                "`~/QualCoder projects`, the earlier default, keeps "
+                "working, and the projects there are still found.") in item
 
     def test_the_selection_guides_list_is_the_codes(self):
+        """The workspace first, as INSTALL lists it, then the usual
+        places in the code's order (fix round 1: the workspace, and the
+        extension's default folder)."""
         text = (REPO / "PROJECT_SELECTION_GUIDE.md").read_text(
             encoding="utf-8")
-        start = text.index("Claude will search these locations")
+        start = text.index("Exegete searches these places by default:")
         section = text[start:text.index("You'll get a list like", start)]
-        listed = [p.rstrip("/") for p in re.findall(r"`(~/[^`]+)`",
-                                                    section)]
+        items = [b for b in _blocks(section) if b.startswith("- ")]
+        assert items[0].startswith(
+            "- the folder `EXEGETE_WORKSPACE` names, when it is set")
+        assert items[0].endswith(
+            "at its top level only, unless it is one of the places below")
+        listed = [p.rstrip("/") for item in items[1:]
+                  for p in re.findall(r"`(~/[^`]+)`", item)]
         assert listed == server._USUAL_SEARCH_PLACES
+        assert ("- `~/Exegete projects/` and `~/QualCoder projects/` (the "
+                "desktop extension's default folder for projects, and its "
+                "earlier default)") in items
 
     def test_the_ai_coding_guide_names_the_new_folder_only(self):
+        """Its nine mentions of the extension's folder, in the two forms
+        they take (`~/Exegete projects/` and the full path under
+        `/Users/YOUR_NAME/`), not counting the Terminal routes' folder
+        in Documents (fix round 1: that one was counted too)."""
         guide = (REPO / "AI_CODING_WORKFLOW.md").read_text(encoding="utf-8")
-        assert guide.count("Exegete projects/") >= 9
+        home_level = re.findall(r"(?:~|/Users/YOUR_NAME)/Exegete projects/",
+                                guide)
+        assert len(home_level) == 9
         assert "QualCoder projects" not in guide
+
+    def test_the_readmes_first_session_says_by_default(self):
+        """An install that kept the earlier default, or a folder chosen
+        elsewhere, puts the project elsewhere; the answer says where (fix
+        round 1)."""
+        flat = " ".join((REPO / "README.md").read_text(
+            encoding="utf-8").split())
+        first = flat[flat.index("### A first session"):
+                     flat.index("### Other assistants, and updates")]
+        assert ("With the extension or OpenAI's steps, the project is made, "
+                "by default, in \"Exegete projects\", in your home folder "
+                "(the assistant's answer gives the full path):") in first
 
     def test_the_changelog_says_it(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -371,5 +465,34 @@ class TestTheDocuments:
                       "Both folders are among the usual places, on every "
                       "route",
                       "Either folder, as the workspace, is now searched "
-                      "three levels deep"):
+                      "three levels deep",
+                      # fix round 1
+                      "INSTALL's steps for Codex name `~/Exegete projects` "
+                      "too; an entry written from the earlier steps, "
+                      "naming `~/QualCoder projects`, the earlier default, "
+                      "keeps working.",
+                      "A workspace that is one of the usual places spelt "
+                      "in another letter case"):
             assert words in entry, words
+
+
+# ---------------------------------------------------------------------------
+# The suite's own guard
+# ---------------------------------------------------------------------------
+
+class TestTheSuitesGuard:
+
+    def test_it_watches_both_folders_in_the_real_home(self):
+        """The suite now makes projects in both folders, inside the
+        sandboxed home; the session-end guard watches the same folders in
+        the home read at import, before any fixture moved it, as it
+        watches the workspace: entries added (fix round 1)."""
+        import track5_helpers as helpers
+        home = helpers.REAL_STATE_HOME.parent
+        watched = set(helpers.GUARDED_REAL_FOLDERS.values())
+        for folder in (names.EXTENSION_WORKSPACE_FOLDER,
+                       names.OLD_EXTENSION_WORKSPACE_FOLDER):
+            assert home / folder in watched, folder
+        assert not set(helpers.GUARDED_STATE_FOLDERS.values()) & {
+            home / names.EXTENSION_WORKSPACE_FOLDER,
+            home / names.OLD_EXTENSION_WORKSPACE_FOLDER}

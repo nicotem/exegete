@@ -17,7 +17,10 @@ not exist yet and for file systems that report no file numbers.
 
 One check for every tool that refuses a place: the export tools'
 refusals of the project and state folders, and the document import's
-refusals of the project, the state folder and the reading folder.
+refusals of the project, the state folder and the reading folder. And
+`is_same` (0.15.0), for the project listing, which must not take one
+of its usual places, spelt another way as the workspace, for a folder
+elsewhere and list its projects twice.
 """
 
 import os
@@ -81,3 +84,22 @@ def is_inside_any(path: PathLike,
                   folders: Iterable[Optional[PathLike]]) -> bool:
     """Whether `path` lies inside any of `folders`."""
     return any(is_inside(path, folder) for folder in folders)
+
+
+def is_same(path: PathLike, other: PathLike) -> bool:
+    """Whether two paths name the same file or folder (0.15.0).
+
+    Both are resolved first; then they are the same when their spellings
+    match (with Windows' own case folding), or, when both exist, when
+    their device and file number do: on a disk that ignores letter case,
+    `~/exegete projects` is `~/Exegete projects`.
+    """
+    try:
+        first = Path(path).expanduser().resolve()
+        second = Path(other).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    if os.path.normcase(str(first)) == os.path.normcase(str(second)):
+        return True
+    known = _identity(first)
+    return known is not None and known == _identity(second)

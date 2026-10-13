@@ -92,6 +92,19 @@ GUARDED_STATE_FOLDERS = {
 if Path(_database.standard_workspace()) != REAL_WORKSPACE:
     GUARDED_REAL_FOLDERS["standard workspace"] = Path(
         _database.standard_workspace())
+# v0.15.0 (the renames, fix round 1): the desktop extension's folder for
+# projects and its earlier default, in the home folder, are among the
+# listing's usual places, and the suite makes projects in both inside the
+# sandboxed home; they are where an extension user keeps real projects,
+# so they are watched too, read from the home at import like the state
+# folders, for entries added, as the workspace is.
+for _label, _folder in (
+        ("extension's folder",
+         Path.home() / _names.EXTENSION_WORKSPACE_FOLDER),
+        ("extension's earlier folder",
+         Path.home() / _names.OLD_EXTENSION_WORKSPACE_FOLDER)):
+    if _folder not in GUARDED_REAL_FOLDERS.values():
+        GUARDED_REAL_FOLDERS[_label] = _folder
 
 
 def state_folder_snapshot(folder):

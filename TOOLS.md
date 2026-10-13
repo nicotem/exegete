@@ -239,11 +239,8 @@ than through Exegete.
 ## Starting a project from the conversation (Experimental)
 
 Exegete can create a new, empty project, in QualCoder's format, so a
-study can begin in the conversation. The Claude Desktop extension turns it on
-(its tool set setting defaults to `lifecycle`); the Terminal route does
-not: there, add `EXEGETE_TOOLSET=lifecycle` to the server's
-environment (INSTALL.md shows where), which registers the full set of
-tools plus `create_project`.
+study can begin in the conversation. It is in the full tool set, the
+default on every route; the `core` set for local models leaves it out.
 
 - **The format.** The project is made in QualCoder 4.0's format, exactly
   as 4.0's own New Project makes it (the folder `<name>.qda` with its
@@ -902,21 +899,16 @@ no longer listed, until v1.0.
 ## Available Tools
 
 Claude can use these tools to analyse your data. The full toolset
-(the default when you configure the server yourself,
-`EXEGETE_TOOLSET=full`; the Claude Desktop extension defaults to
-`lifecycle`) registers 77 tools; the argument lists below name every
-argument each tool declares, and each tool's own description says what
-each one does.
+(`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
+extension and when you configure the server yourself) registers 78
+tools; the argument lists below name every argument each tool
+declares, and each tool's own description says what each one does.
 
-> **Creating projects (Experimental):** with
-> `EXEGETE_TOOLSET=lifecycle` the server registers the full set
-> plus `create_project`, 78 tools. The Claude Desktop extension's tool
-> set setting defaults to `lifecycle`, so creating projects is on there;
-> configured by hand, the server defaults to `full`, so that researchers
-> opt in to a tool that makes folders on their disk; it is not in `core`
-> either. Measured as below, the
-> `lifecycle` definitions run to about 204,000 characters, roughly 51k
-> tokens.
+> **Creating projects (Experimental):** `create_project` makes a new,
+> empty project folder and never changes an existing one. Since 0.15.0
+> it is in `full` on every route; `lifecycle`, the earlier name of
+> `full` (the Claude Desktop extension's default before 0.15.0), is read
+> as `full`. It is not in `core`.
 
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in the server's environment, only the
@@ -931,10 +923,10 @@ each one does.
 > set_project_ai_coder_name,
 > copy_project_to_workspace, delete_coding, list_backups.
 > Required for local models, optional elsewhere; unknown values fail
-> loudly at startup. Measured for 0.14.3 (the
+> loudly at startup. Measured for 0.15.0 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 202,000 characters for `full`, roughly 50k
+> definitions run to about 204,000 characters for `full`, roughly 51k
 > tokens at four characters per token, and about 67,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -947,12 +939,12 @@ each one does.
 - `list_available_projects(search_directories)` - Discover projects (folders ending in .qda) on your system
 - `select_project(project_path)` - Open/switch to a different project (reports `qualcoder_gui_signals` and remembers the selection for the recovery hint)
 - `get_current_project()` - Show which project is open, whether QualCoder 3.x has it open (its lock file, `qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name
-- `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (the `lifecycle` toolset only): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in Exegete's workspace or an existing folder, then selects it. Asks for the researcher's own coder name (or an explicit "not known") after every other check; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
+- `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (not in `core`): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in Exegete's workspace or an existing folder, then selects it. Asks for the researcher's own coder name (or an explicit "not known") after every other check; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
 - `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `exegete.json`); refuses the researcher's own coder name, QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
-- `read_pseudonym_list()` - **Sends real names to the AI provider**: returns the entries of the project's own `pseudonyms.json` (the researcher's reverse key), for use only when the researcher asks to see or check the list; each call writes one log line with the count and no name. In the full and lifecycle tool sets (so in the Claude Desktop extension by default), not in core. QualCoder's Pseudonyms dialog (the button in Manage Files) shows the same list without sending it anywhere. **Deprecated, removed in v0.15** (its answer says so)
+- `read_pseudonym_list()` - **Sends real names to the AI provider**: returns the entries of the project's own `pseudonyms.json` (the researcher's reverse key), for use only when the researcher asks to see or check the list; each call writes one log line with the count and no name. In the full tool set (so in the Claude Desktop extension by default), not in core. QualCoder's Pseudonyms dialog (the button in Manage Files) shows the same list without sending it anywhere. **Deprecated, removed in v0.15** (its answer says so)
 
 **Keeping Exegete up to date:**
-- `check_for_updates()` - Whether a newer version of Exegete exists, and how to install it: the installed version and its date, the newest version and its date, and numbered steps for the way Exegete was installed (the desktop extension's download link; the exact command for pip, pipx, uv tool or a copy of the source; or, for uvx, the version to name in the app's entry), with the install and update page. Its description asks the assistant to call it only when the user asks, and to leave the steps to the user. **The only tool that reaches beyond this computer**: while checking is on (the extension's setting "Tell me when a new version is out", or `EXEGETE_UPDATE_CHECK` on the Terminal route) it fetches Exegete's version file from GitHub, at most once a day; switched off, it makes no connection. Not marked read-only, since it records the check, so hosts ask before it runs where they ask at all. In the full and lifecycle tool sets, not in core. The weekly check and the one-time notes are in [PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)
+- `check_for_updates()` - Whether a newer version of Exegete exists, and how to install it: the installed version and its date, the newest version and its date, and numbered steps for the way Exegete was installed (the desktop extension's download link; the exact command for pip, pipx, uv tool or a copy of the source; or, for uvx, the version to name in the app's entry), with the install and update page. Its description asks the assistant to call it only when the user asks, and to leave the steps to the user. **The only tool that reaches beyond this computer**: while checking is on (the extension's setting "Tell me when a new version is out", or `EXEGETE_UPDATE_CHECK` on the Terminal route) it fetches Exegete's version file from GitHub, at most once a day; switched off, it makes no connection. Not marked read-only, since it records the check, so hosts ask before it runs where they ask at all. In the full tool set, not in core. The weekly check and the one-time notes are in [PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)
 
 **Core Data Analysis:**
 - `search_files(pattern, search_filename, search_content, search_memo, case_sensitive, limit, exclude_code_ids, cursor, max_matches_per_file)` - Find files by name, content, or memo with smart clarification workflow; `exclude_code_ids` hides content matches that are already coded under those codes, and `cursor` walks the results page by page. A PDF with no usable text (no text layer, or a PDF QualCoder 3.8.2 stored as the file itself) is not content-searched and is counted and named as not searched, so finding nothing there is not a "not found"; a search of any PDF covers its text layer only. `search_memo` is deprecated, removed in v0.15: `search_memos` searches file memos and every other kind of note
@@ -992,7 +984,7 @@ still answers empty, and that answer is a finding.
 
 **Co-occurrence Analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. Window 0 is QualCoder's co-occurrence report's overlap, and at N the gap is the distance its Code relations report gives; the counts are not the co-occurrence report's
-- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; in the full and lifecycle tool sets, not in core. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with the AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant is told to read each file with `analyze_file_with_coding` before suggesting, which gives it every visible coder's codings; do not report it as intercoder reliability
+- `compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes, per_file, allow_hidden_coder)` - Compare two coders' text coding per code: agreement, dual-coded and uncoded percentages, and two agreement coefficients (`kappa_qualcoder`, which reproduces QualCoder's own column, and `kappa_cohen`). Read-only; in the full tool set, not in core. A character a coder did not code is not a decision, so the result names the files only one of the two coded (`files_coded_by_one_coder_only`): narrow `file_ids` to the files both worked on. Comparing a person with the AI is not comparing independent coders: the AI's codings are the suggestions the person approved, and the assistant is told to read each file with `analyze_file_with_coding` before suggesting, which gives it every visible coder's codings; do not report it as intercoder reliability
 
 **Case-Code Matrix & Comparative Analysis:**
 - `get_case_code_matrix(coder)` - Create cross-tabulation of cases vs codes
@@ -1021,7 +1013,7 @@ still answers empty, and that answer is a finding.
 - `create_proposed_codes(coding_session_id, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first
 
 **Data Import, Cases & Attributes (Write Operations):**
-- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` - **WRITES TO DATABASE** (0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer following QualCoder 4.0's own import; where QualCoder's readers lose or garble content, Exegete keeps it, and names the departure (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's names list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice); so are files whose letters look garbled (`import_files_with_garbled_letters`), with a warning that says what was seen, never the text, and `show_text` on the preview opens a page on the researcher's own screen to check them on first. Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so, under a new name, in Word, TextEdit or Notepad, given once in the answer for every such file, `saving_a_copy_as_utf8`; nothing is guessed). QualCoder 3.8.2's lock refuses the import before any backup, and the signs that QualCoder 4.0 may have the project open (it writes no lock) are passed on as a warning in the preview (`qualcoder_gui_hint`). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" above. In the full and lifecycle sets, not core
+- `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` - **WRITES TO DATABASE** (0.14.3) - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer following QualCoder 4.0's own import; where QualCoder's readers lose or garble content, Exegete keeps it, and names the departure (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's names list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice); so are files whose letters look garbled (`import_files_with_garbled_letters`), with a warning that says what was seen, never the text, and `show_text` on the preview opens a page on the researcher's own screen to check them on first. Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so, under a new name, in Word, TextEdit or Notepad, given once in the answer for every such file, `saving_a_copy_as_utf8`; nothing is guessed). QualCoder 3.8.2's lock refuses the import before any backup, and the signs that QualCoder 4.0 may have the project open (it writes no lock) are passed on as a warning in the preview (`qualcoder_gui_hint`). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" above. In the full set, not core
 - `import_text_file(filename, content, memo, owner, create_backup, case_name, apply_project_pseudonyms)` - **WRITES TO DATABASE** - Add a new text source, optionally linked to a case. The name follows `rename_file`'s rules (at most 200 bytes in UTF-8; no path, control or invisible characters; no name Windows cannot store; not a name already in the project's `documents/` folder). With `apply_project_pseudonyms=true` the project's own `pseudonyms.json` is applied to the text before it is stored, which is what QualCoder does to every text file it imports; default off; `owner` is deprecated, removed in v0.15 (see "The `owner` argument is deprecated" above)
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **WRITES TO DATABASE** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and names it)
 - `create_case(name, memo, create_backup)` - **WRITES TO DATABASE** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)

@@ -33,10 +33,9 @@ is the easier start.
       Claude Code's reach, and what it opens goes to the AI provider,
       which may train on it while training is on (PRIVACY.md,
       "Assistants that open files by themselves")
-- [ ] A project to work on (a `.qda` folder, in QualCoder's format):
-      the standard tool set this setup uses cannot create one; the
-      one-click extension can, and so can this setup with
-      `EXEGETE_TOOLSET=lifecycle` (INSTALL.md)
+- [ ] A project to work on (a `.qda` folder, in QualCoder's format),
+      or none: the default tool set, `full`, can create one in the
+      conversation (Experimental; INSTALL.md says where it goes)
 
 > Choosing between Claude plans, an API key, or a fully local model?
 > See "Choosing your AI host: data-governance options" in INSTALL.md

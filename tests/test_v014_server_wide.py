@@ -144,11 +144,12 @@ def _listed(mode):
 class TestToolAnnotations:
     """Every tool declares its four hints, as the table says."""
 
-    def test_the_table_names_every_tool_of_the_lifecycle_set(self):
-        # lifecycle is the largest set: full plus create_project
-        assert set(_listed("lifecycle")) == set(EXPECTED_HINTS)
+    def test_the_table_names_every_tool_of_the_full_set(self):
+        # full is the largest set: every tool, create_project included
+        # since 0.15.0 (v0.14's `lifecycle` set until then)
+        assert set(_listed("full")) == set(EXPECTED_HINTS)
 
-    @pytest.mark.parametrize("mode", ["full", "core", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full", "core"])
     def test_every_listed_tool_carries_the_tables_hints(self, mode):
         listed = _listed(mode)
         wrong = {name: _hints(tool.annotations)
@@ -161,7 +162,7 @@ class TestToolAnnotations:
     def test_the_hints_reach_the_host_in_the_tool_list(self):
         # The wire form a host reads: tools/list serialises annotations
         # with the MCP field names.
-        listed = _listed("lifecycle")
+        listed = _listed("full")
         wire = listed["delete_code"].model_dump(by_alias=True,
                                                 exclude_none=True)
         assert wire["annotations"] == {
@@ -174,7 +175,7 @@ class TestToolAnnotations:
     def test_every_token_gated_tool_is_marked_destructive(self):
         # The tools that ask for a preview first (preview_token) are the
         # ones whose writes cannot be taken back by the next call.
-        listed = _listed("lifecycle")
+        listed = _listed("full")
         gated = [name for name, tool in listed.items()
                  if "preview_token" in tool.inputSchema.get("properties",
                                                             {})]
@@ -196,7 +197,7 @@ class TestToolAnnotations:
         """The host must ask before read_pseudonym_list sends the real
         names: a read-only mark lets Cowork and the desktop Code sessions
         in auto mode run it without asking."""
-        hints = _listed("lifecycle")["read_pseudonym_list"].annotations
+        hints = _listed("full")["read_pseudonym_list"].annotations
         assert hints.readOnlyHint is False
         assert hints.destructiveHint is False
 
@@ -205,7 +206,7 @@ class TestToolAnnotations:
         "anthropic/requiresUserInteraction": true (Claude Code 2.1.199
         and later asks before every call of it in every mode), read over
         the host's path; no other tool carries it."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         listed = host_session(lambda client: client.list_tools()).tools
         marked = {tool.name: tool.meta for tool in listed if tool.meta}
         # 0.14.3: and import_documents, whose two calls the researcher
@@ -257,7 +258,7 @@ class TestToolAnnotations:
         # check_for_updates, which fetches Exegete's version file (the
         # owner's ruling of 5 October 2026); every other tool works on
         # this computer's files and nothing else
-        open_world = sorted(name for name, tool in _listed("lifecycle")
+        open_world = sorted(name for name, tool in _listed("full")
                             .items() if tool.annotations.openWorldHint)
         assert open_world == ["check_for_updates"]
 
@@ -268,7 +269,7 @@ class TestUnknownArgumentsRefused:
 
     def test_every_tool_refuses_an_extra_argument_and_changes_nothing(
             self, setup_server, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         selected = server.current_project_path
         before = tree(tmp_path)
 
@@ -333,7 +334,7 @@ class TestUnknownArgumentsRefused:
             assert conn.execute(sources).fetchone()[0] == n_before
 
     def test_every_input_schema_says_no_other_argument(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         listed = host_session(lambda client: client.list_tools()).tools
         assert len(listed) == len(EXPECTED_HINTS)
         for tool in listed:
@@ -433,7 +434,7 @@ def all_tool_names():
 
 def argument_names():
     names = set()
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     for tool in server.mcp._tool_manager._tools.values():
         names |= set(tool.parameters.get("properties", {}))
     return names
@@ -521,7 +522,7 @@ def _served_texts_now():
 class TestEveryNamedToolIsThere:
     """A model told to call a tool can call it, in every tool set."""
 
-    @pytest.mark.parametrize("mode", ["full", "core", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full", "core"])
     def test_every_tool_a_served_text_names_is_registered(self, mode):
         tools, arguments = all_tool_names(), argument_names()
         texts, registered = served_texts(mode)
@@ -919,7 +920,7 @@ class TestEveryToolThroughTheHost:
     host's path, and does what its hints say."""
 
     def test_every_tool_answers_its_described_call(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         run = host_session(lambda client: call_every_tool(client,
                                                           tmp_path))
         assert run.problems == [], "\n".join(map(repr, run.problems))
@@ -930,7 +931,7 @@ class TestEveryToolThroughTheHost:
         left: refusals are fine here (the state has moved on), but no
         answer may send the model to a tool `core` does not register,
         unmarked."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             full = await call_every_tool(client, tmp_path)
@@ -974,7 +975,7 @@ def args_section(description):
 def test_every_description_names_exactly_the_tools_arguments():
     """The audit's "true today" item 4: every argument a description's
     Args section names exists, and every argument is named there."""
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     listed = host_session(lambda client: client.list_tools()).tools
     differ = {}
     for tool in listed:
@@ -1245,7 +1246,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
                                       "public text ##### private text"])
     def test_every_such_tool_refuses_and_changes_nothing(self, tmp_path,
                                                          text):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
@@ -1264,7 +1265,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
             assert unchanged, name
 
     def test_the_audits_three_runs_keep_the_notes(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
@@ -1295,7 +1296,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
         """A suggestion's reasoning or a proposal's definition recorded
         by an earlier release can hold the marker; the write that would
         cut it refuses first."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def setup(client):
             ids = await _marker_project(client, tmp_path)
@@ -1335,7 +1336,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
         assert work_tree(tmp_path) == before
 
     def test_every_such_tool_says_so_in_its_description(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         tools = server.mcp._tool_manager._tools
         for name in MARKER_TOOLS:
             doc = " ".join(tools[name].description.split())
@@ -1404,7 +1405,7 @@ class TestBackupsDatedByTheirNames:
         ago, the safety backup a restore takes inherits that date; it
         was listed last, ten days old, and prune_backups(older_than_days
         =5) offered it."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
         ten_days_ago = time.time() - 10 * 86400
@@ -1486,7 +1487,7 @@ class TestBackupsDatedByTheirNames:
         folder and flagged; the prune keeps the real newest, keeps the
         future-named folder (new by its folder), and never offers the
         copy, which it names."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -1537,7 +1538,7 @@ class TestBackupsDatedByTheirNames:
         to carry the time too; neither is a name this server gives, so
         both are listed as never removed and neither takes the newest's
         place."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -1679,7 +1680,7 @@ class TestSessionFilesAfterPseudonymising:
         after the run both are listed, their files still hold the name,
         and list_coding_sessions finds them by folder and by data.qda,
         under the folder's name."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -1821,7 +1822,7 @@ class TestHiddenCodersOnTheCodebook:
     behaviour together."""
 
     def _project(self, client_root):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = client_root / "projects"
         projects.mkdir()
 
@@ -2031,7 +2032,7 @@ class TestPromisesKeptOverEveryTool:
         it is named above with its reason: each call of the run above,
         made first while QualCoder 3.x holds the project, is refused and
         leaves the database and its backups as they were."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         run = host_session(lambda client: call_every_tool(
             client, tmp_path, lock_check=True))
         assert run.problems == [], "\n".join(map(repr, run.problems))
@@ -2044,7 +2045,7 @@ class TestPromisesKeptOverEveryTool:
         """Every read-only tool, called as above, and every resource, on a
         project with a private part in every kind of note: the private
         text is never in an answer."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         secret = "PRIVATE-7f3a"
 
         async def drive(client):
@@ -2094,7 +2095,7 @@ class TestCoreAnswersAreMarked:
     marks, in a reduced set, the tools the set does not register."""
 
     def _project(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -2239,8 +2240,9 @@ def _core_reachable_texts():
             if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
                 uses.setdefault(node.id, []).append(id(node) in marked)
     # SERVER_INSTRUCTIONS is marked by _refresh_served_texts whenever a
-    # set is applied; LIFECYCLE_TOOLS is a list of names, never sent
-    settled = {"SERVER_INSTRUCTIONS", "LIFECYCLE_TOOLS"}
+    # set is applied (v0.15.0: LIFECYCLE_TOOLS, a list of names never
+    # sent, went with the `lifecycle` set)
+    settled = {"SERVER_INSTRUCTIONS"}
 
     def refs(node):
         out = set()
@@ -2368,7 +2370,7 @@ class TestOneProjectUnderTwoSpellings:
         """A project made by create_project; a suggestion recorded while
         it is selected under one spelling; then the session's own check,
         the session list and the pseudonymising run under the other."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -2472,7 +2474,7 @@ class TestTheMarkerChecksHoldForEveryShape:
     the session file's bytes are unchanged in each case."""
 
     def _session(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
@@ -2593,7 +2595,7 @@ def test_a_replace_of_items_already_in_the_session_replaces_as_before(
     whose items are all such keeps nothing back: the pending suggestion
     goes, as it did before fix round 1, and no answer says an item was
     refused."""
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
 
     async def drive(client):
         async def call(name, args):
@@ -2631,7 +2633,7 @@ def test_a_null_note_is_stored_empty_never_as_none(tmp_path):
     """Fix round 2 (QA's m2): a reasoning, a rationale or a definition
     sent as null is empty; no memo the project holds reads "None" after
     the suggestion is applied and the proposal created."""
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
 
     async def drive(client):
         async def call(name, args):

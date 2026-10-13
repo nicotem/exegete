@@ -32,9 +32,8 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 77              # 73, plus read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3)
-EXPECTED_CORE = 23              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3); check_for_updates and import_documents are not in core
-EXPECTED_LIFECYCLE = 78          # full plus create_project (v0.14)
+EXPECTED_FULL = 78              # 73, plus read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), and create_project (v0.15.0: `full` and `lifecycle` became one set)
+EXPECTED_CORE = 23              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3); check_for_updates, import_documents and create_project are not in core
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -109,8 +108,9 @@ class TestToolsetResolution:
         assert server._resolve_toolset_mode() == "full"
 
     def test_explicit_values_case_insensitive(self, monkeypatch):
+        # v0.15.0: `lifecycle`, the earlier name of `full`, is read as `full`
         for raw, expect in [("core", "core"), ("FULL", "full"),
-                            (" Core ", "core"), ("Lifecycle", "lifecycle")]:
+                            (" Core ", "core"), ("Lifecycle", "full")]:
             monkeypatch.setenv("QUALCODER_MCP_TOOLSET", raw)
             assert server._resolve_toolset_mode() == expect
 
@@ -120,9 +120,10 @@ class TestToolsetResolution:
             server._resolve_toolset_mode()
         msg = str(ei.value)
         assert "banana" in msg and "core" in msg and "full" in msg
-        assert "'lifecycle'" in msg
-        # `full` is no longer every tool once `lifecycle` exists (v0.14)
-        assert "all tools" not in msg
+        # v0.15.0: `full` is every tool again, and `lifecycle` is named
+        # only as its earlier name
+        assert "'lifecycle', the earlier name of 'full'" in msg
+        assert "'full' (every tool, creating a project included" in msg
 
     def test_default_surface_is_backward_compatible(self):
         """No env var -> the full surface, untouched."""
@@ -153,43 +154,36 @@ class TestToolsetResolution:
         assert server.CORE_TOOLSET <= names
 
 
-class TestLifecycleToolset:
-    """`lifecycle` (v0.14): the full set plus create_project, registered
-    only in that mode, so every count taken at import stays 75."""
+class TestTheMergedSet:
+    """v0.15.0: `full` holds create_project, registered at import like
+    every other tool (v0.14's `lifecycle` set added it at start-up);
+    `lifecycle` is read as `full`."""
 
-    def test_membership_is_full_plus_create_project(self):
+    def test_full_holds_create_project_at_import(self):
         full = {t.name for t in asyncio.run(server.mcp.list_tools())}
-        assert "create_project" not in full and len(full) == EXPECTED_FULL
-        server._apply_toolset("lifecycle")
+        assert "create_project" in full and len(full) == EXPECTED_FULL
+        assert server._apply_toolset("full") == {}
         names = {t.name for t in asyncio.run(server.mcp.list_tools())}
-        assert names == full | {"create_project"}
-        assert len(names) == EXPECTED_LIFECYCLE
-        assert set(server.LIFECYCLE_TOOLS) == {"create_project"}
+        assert names == full
 
     def test_applying_it_twice_changes_nothing(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         once = dict(server.mcp._tool_manager._tools)
-        assert server._apply_toolset("lifecycle") == {}
+        assert server._apply_toolset("full") == {}
         assert server.mcp._tool_manager._tools == once
 
     def test_core_gains_nothing(self):
-        assert not set(server.LIFECYCLE_TOOLS) & server.CORE_TOOLSET
+        assert "create_project" not in server.CORE_TOOLSET
 
-    def test_lifecycle_tools_are_module_functions_the_mode_registers(self):
-        """The drift guard's twin for LIFECYCLE_TOOLS: each name is a
-        module-level function of the server, absent from the registry
-        at import, and the mode registers that very function."""
-        for name in server.LIFECYCLE_TOOLS:
-            assert callable(getattr(server, name, None)), name
-            assert name not in server.mcp._tool_manager._tools, name
-        server._apply_toolset("lifecycle")
-        for name in server.LIFECYCLE_TOOLS:
-            tool = server.mcp._tool_manager._tools[name]
-            assert tool.fn is getattr(server, name)
+    def test_create_project_is_the_module_function(self):
+        """The drift guard's twin: the registered tool is the server's
+        module-level function, registered at import with its hints."""
+        tool = server.mcp._tool_manager._tools["create_project"]
+        assert tool.fn is server.create_project
+        assert tool.annotations == server.TOOL_ADDS_ONCE
 
     def test_the_tool_answers_through_the_guard(self):
         """Registered like every decorated tool: its errors are JSON."""
-        server._apply_toolset("lifecycle")
         tool = server.mcp._tool_manager._tools["create_project"]
         assert json.loads(tool.fn(12345))["success"] is False
         props = tool.parameters["properties"]
@@ -197,14 +191,14 @@ class TestLifecycleToolset:
         assert props["coder_name_not_known"]["type"] == "boolean"
         assert props["coder_name_not_known"]["default"] is False
 
-    def test_leak_1_a_lifecycle_test_that_forgets_to_undo(self):
-        """The first of a pair: applies the mode and never undoes it."""
-        server._apply_toolset("lifecycle")
-        assert len(server.mcp._tool_manager._tools) == EXPECTED_LIFECYCLE
+    def test_leak_1_a_core_test_that_forgets_to_undo(self):
+        """The first of a pair: applies `core` and never undoes it."""
+        server._apply_toolset("core")
+        assert len(server.mcp._tool_manager._tools) == EXPECTED_CORE
 
     def test_leak_2_does_not_leak_into_the_next_test(self):
         """The registry-restoring fixture in conftest put it back."""
-        assert "create_project" not in server.mcp._tool_manager._tools
+        assert "create_project" in server.mcp._tool_manager._tools
         assert len(asyncio.run(server.mcp.list_tools())) == EXPECTED_FULL
 
 
@@ -346,54 +340,16 @@ class TestTheReadmeToolList:
         readme = (REPO / "TOOLS.md").read_text(encoding="utf-8")
         section = readme[readme.index("## Available Tools"):]
         section = section[:section.index("\n## ", 5)]
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         names = [t.name for t in asyncio.run(server.mcp.list_tools())]
-        assert len(names) == EXPECTED_LIFECYCLE
+        assert len(names) == EXPECTED_FULL
         missing = [n for n in names if f"`{n}(" not in section]
         assert missing == []
-        assert f"registers {EXPECTED_FULL} tools" in section
-        assert f"`EXEGETE_TOOLSET=lifecycle`" in section
-        assert f"plus `create_project`, {EXPECTED_LIFECYCLE} tools" in \
-            " ".join(section.replace("\n>", " ").split())
-
-
-class TestLifecycleModeEndToEnd:
-
-    def test_lifecycle_mode_creates_a_project_over_stdio(self, tmp_path):
-        """Started with QUALCODER_MCP_TOOLSET=lifecycle, the server lists
-        76 tools and creates a project in its workspace, which it then
-        has selected (the real transport, the real start-up path)."""
-        project = _build_project(tmp_path)
-        home = tmp_path / "home"
-        home.mkdir()
-        params = StdioServerParameters(
-            command=str(VENV_PY),
-            args=["-m", "exegete.server"],
-            env=_server_env(home, project, toolset="lifecycle"),
-        )
-
-        async def drive():
-            async with stdio_client(params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    tools = await session.list_tools()
-                    names = {t.name for t in tools.tools}
-                    assert len(names) == EXPECTED_LIFECYCLE
-                    assert "create_project" in names
-                    out = json.loads(_text_of(await session.call_tool(
-                        "create_project",
-                        {"name": "Stdio study", "coder_name": "carol"})))
-                    assert out["created"] is True, out
-                    current = json.loads(_text_of(await session.call_tool(
-                        "get_current_project", {})))
-                    return out, current
-
-        out, current = asyncio.run(drive())
-        folder = home / "Documents" / "Exegete projects" / \
-            "Stdio study.qda"
-        assert Path(out["project_path"]).resolve() == folder.resolve()
-        assert (folder / "data.qda").is_file()
-        assert Path(current["current_project"]).resolve() == folder.resolve()
+        flat = " ".join(section.replace("\n>", " ").split())
+        assert f"registers {EXPECTED_FULL} tools" in flat
+        # v0.15.0: one set; `lifecycle` only as `full`'s earlier name
+        assert "`lifecycle`, the earlier name of `full`" in flat
+        assert "`EXEGETE_TOOLSET=lifecycle`" not in flat
 
 
 class TestThePublishedSchemaBudget:
@@ -429,13 +385,13 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 201_739          # 77 tools, Python 3.13.5, mcp 1.30.0
+    # v0.15.0: `full` and `lifecycle` became one set, `full`, which
+    # measures what `lifecycle` measured at 0.14.3, to the character (the
+    # same 78 descriptions, none marked, in another order).
+    FULL_MEASURED = 204_244          # 78 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 67_225           # 23 tools, same environment
-    FULL_MEASURED_310 = 211_611      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 214_248      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 70_617
-    # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 204_244     # 78 tools, same environment
-    LIFECYCLE_MEASURED_310 = 214_248
 
     # Why two per cent, away from the reference environment.
     #
@@ -450,8 +406,8 @@ class TestThePublishedSchemaBudget:
     # What the loose half does NOT do, stated plainly because the
     # previous version of this comment claimed the opposite: away from
     # the reference interpreter it does not report a single tool added
-    # or removed. The average tool contributes 2,343 characters, about
-    # 1.4 per cent, which is INSIDE two per cent; two tools, about 2.7
+    # or removed. The average tool contributes 2,619 characters, about
+    # 1.3 per cent, which is INSIDE two per cent; two tools, about 2.6
     # per cent, are outside it. So away from 3.13 this is an alarm for
     # large drift and not a gate on the figure.
     #
@@ -462,11 +418,11 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "201,739"
+    FULL_CHARS = "204,244"
     CORE_CHARS = "67,225"
-    FULL_ROUNDED = "202,000"
+    FULL_ROUNDED = "204,000"
     CORE_ROUNDED = "67,000"
-    FULL_TOKENS = "50k"
+    FULL_TOKENS = "51k"
     CORE_TOKENS = "17k"
 
     @staticmethod
@@ -507,8 +463,19 @@ class TestThePublishedSchemaBudget:
         reads in parts), so the current entry is the Unreleased one
         alone, and 0.14.2's figure is history (`_v0142_entry`). From the
         release on, the current entry is 0.14.3's, under an Unreleased
-        heading that says nothing yet.
+        heading that says nothing yet. v0.15.0 moves it again (`full` and
+        `lifecycle` become one set, `full`, of 78 tools), so the current
+        entry is the Unreleased one, and 0.14.3's figure is history
+        (`_v0143_entry`).
         """
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [Unreleased]"):text.index("## [0.14.3")]
+
+    @classmethod
+    def _v0143_entry(cls):
+        """The 0.14.3 entry, whose figure is history and stays put
+        (v0.15.0's one tool set moves the figure, so the current entry
+        is the Unreleased one, above the 0.14.3 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.14.3"):text.index("## [0.14.2")]
 
@@ -609,10 +576,6 @@ class TestThePublishedSchemaBudget:
         self._assert_matches("core", self.CORE_MEASURED,
                              self.CORE_MEASURED_310, EXPECTED_CORE)
 
-    def test_the_lifecycle_toolset_measures_its_pinned_figure(self):
-        self._assert_matches("lifecycle", self.LIFECYCLE_MEASURED,
-                             self.LIFECYCLE_MEASURED_310, EXPECTED_LIFECYCLE)
-
     def test_the_tolerance_is_a_real_comparison(self):
         """A tolerance nobody drives is a tolerance that passes anything.
 
@@ -646,19 +609,24 @@ class TestThePublishedSchemaBudget:
         assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
         # The environment, by path: this repository holds two, at
         # different interpreters, and a version alone does not say which
-        # was used. 0.14.3's figures were taken in separate environments
-        # with the same mcp and pydantic, and the entry says so, with the
-        # check that they give the repository's own figures exactly (the
-        # review of 12 October 2026 found it naming `venv/` instead).
+        # was used. v0.15.0's figures were taken in separate environments
+        # installed from the lock, and the entry says so.
         flat = " ".join(entry.split())
+        assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a "
+                "separate environment installed from the repository's lock "
+                "file, not the repository's own `venv/`") in flat
+        assert "on Python 3.11.13 (likewise a separate environment)" in flat
+        assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
+        # 0.14.3's, as history (the review of 12 October 2026 found it
+        # naming `venv/` instead)
+        v0143 = " ".join(self._v0143_entry().split())
         assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a "
                 "separate environment, not the repository's own `venv/`"
-                ) in flat
-        assert "gives exactly the figures measured in `venv/`" in flat
+                ) in v0143
+        assert "gives exactly the figures measured in `venv/`" in v0143
         assert ("Python 3.11.13 (likewise a separate environment, which "
                 "gives exactly the figures measured in the `.venv/`)"
-                ) in flat
-        assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
+                ) in v0143
 
     def test_each_entry_carries_one_measurement_of_its_own(self):
         """The 0.12 entry used to state two, a batch apart, both in the
@@ -667,6 +635,9 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0143 = self._v0143_entry()
+        assert v0143.count("Serialised tool") == 1
+        assert "full = 201,739 characters" in v0143
         v0142 = self._v0142_entry()
         assert v0142.count("Serialised tool") == 1
         assert "full = 196,387 characters" in v0142
@@ -698,22 +669,15 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "204,000"
-    LIFECYCLE_TOKENS = "51k"
-
-    def test_the_readme_quotes_the_lifecycle_measurement(self):
+    def test_the_readme_quotes_the_same_measurement(self):
         # v0.14.1: the README's measurement block moved to TOOLS.md
         readme = self._read("TOOLS.md")
-        assert (f"the `lifecycle` definitions run to about "
-                f"{self.LIFECYCLE_ROUNDED} characters, roughly "
-                f"{self.LIFECYCLE_TOKENS} tokens") in readme
-        assert round(self.LIFECYCLE_MEASURED / 1000) * 1000 == int(
-            self.LIFECYCLE_ROUNDED.replace(",", ""))
-        assert round(self.LIFECYCLE_MEASURED / 4000) == int(
-            self.LIFECYCLE_TOKENS[:-1])
-
-    def test_the_readme_quotes_the_same_measurement(self):
-        readme = self._read("TOOLS.md")
+        # v0.15.0: one figure for `full`, which holds creating a project;
+        # the `lifecycle` figure is gone with the set
+        assert "the `lifecycle` definitions run to" not in readme
+        assert round(self.FULL_MEASURED / 1000) * 1000 == int(
+            self.FULL_ROUNDED.replace(",", ""))
+        assert round(self.FULL_MEASURED / 4000) == int(self.FULL_TOKENS[:-1])
         assert f"about {self.FULL_ROUNDED} characters for `full`" in readme
         assert f"about {self.CORE_ROUNDED} characters for" in readme
         assert f"roughly {self.FULL_TOKENS} tokens" in readme

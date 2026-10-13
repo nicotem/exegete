@@ -80,13 +80,13 @@ class TestWhatTheServerSays:
 def _served_texts():
     """Every text the server serves or answers with that is fixed in
     its code: the instructions, the methods notes, the notices, every
-    tool's description (the lifecycle set holds them all), every prompt,
+    tool's description (the full set holds them all), every prompt,
     and the message constants of the modules that answer."""
     texts = {"instructions": server.SERVER_INSTRUCTIONS,
              "methods notes": server.METHODS_GUIDANCE,
              "terminal notice": server.TTY_NOTICE,
              "old name's note": server.OLD_NAME_NOTE}
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     for tool in asyncio.run(server.mcp.list_tools()):
         texts[f"tool {tool.name}"] = tool.description or ""
     for prompt in asyncio.run(server.mcp.list_prompts()):

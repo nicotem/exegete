@@ -306,9 +306,10 @@ class TestTheDescriptionsSayIt:
         assert "get_current_project" in text
 
     def test_the_tool_set_error_is_neutral(self, monkeypatch):
-        """The extension's default is lifecycle, the variable's full: the
-        error says which is used when the variable is not set, not that
-        full is the default (fix round 1)."""
+        """The error says which set is used when the variable is not set,
+        not that it is the default (fix round 1, when the extension's
+        default was `lifecycle`, the earlier name of `full`, and the
+        variable's `full`)."""
         monkeypatch.setenv("QUALCODER_MCP_TOOLSET", "")
         with pytest.raises(ValueError) as caught:
             server._resolve_toolset_mode()

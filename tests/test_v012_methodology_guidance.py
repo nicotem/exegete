@@ -118,7 +118,7 @@ class TestPlacement:
         carriers = [n for n, t in server.mcp._tool_manager._tools.items()
                     if "reframe_and_ask" in (t.description or "")]
         assert carriers == ["analyze_for_coding"]
-        assert len(server.mcp._tool_manager._tools) == 77  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3)
+        assert len(server.mcp._tool_manager._tools) == 78  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), create_project (0.15.0, in `full`)
 
     def test_docstring_of_the_function_object_matches_the_registration(self):
         # _tool_guard uses functools.wraps, so the amended __doc__ travels
@@ -255,12 +255,10 @@ class TestPromptTemplates:
 class TestHouseRules:
 
     def test_no_em_dash_on_any_registered_surface(self):
-        # `lifecycle` first (v0.14): its tool is registered after import,
-        # so a sweep of the registry as it stands at import would never
-        # read create_project's description.
-        server._apply_toolset("lifecycle")
-        assert set(server.LIFECYCLE_TOOLS) <= set(
-            server.mcp._tool_manager._tools)
+        # Every tool is registered at import since 0.15.0, create_project
+        # included (v0.14's `lifecycle` set added it at start-up, and the
+        # sweep applied that set first so as to read its description).
+        assert "create_project" in server.mcp._tool_manager._tools
         for name, tool in server.mcp._tool_manager._tools.items():
             assert EM_DASH not in (tool.description or ""), name
         for r in asyncio.run(server.mcp.list_resources()):

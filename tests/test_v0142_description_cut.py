@@ -17,10 +17,10 @@ places, nothing is reworded and nothing is shortened; the shortening is
 v0.15's. What this file pins:
 
 - every rule listed below sits wholly within the first 2,048 characters
-  of every description that carries it, in every tool set (full, core,
-  lifecycle), on the interpreter running the suite (3.10 to 3.12 keep
-  a docstring's indentation, so the same rule sits further in there,
-  and CI runs 3.10 and 3.13);
+  of every description that carries it, in every tool set (full and
+  core; lifecycle too until 0.15.0), on the interpreter running the
+  suite (3.10 to 3.12 keep a docstring's indentation, so the same rule
+  sits further in there, and CI runs 3.10 and 3.13);
 - the rules that do not fit are listed, each with its reason, and are
   checked to be past the cut, so the list cannot rot;
 - which tools carry each rule, so a rule dropped from a tool is seen;
@@ -175,7 +175,7 @@ RULES = {
     "shared_name": ("safety", "Two people who share a name", None),
 }
 
-# Which tools carry each rule, in the lifecycle set (every tool)
+# Which tools carry each rule, in the full set (every tool)
 CARRIERS = {
     "qualcoder_open_refusal": {
         "add_annotation", "add_journal_entry", "create_attribute_type",
@@ -300,7 +300,7 @@ LEFT_PAST_THE_CUT = {
         "to relay it",
 }
 
-TOOL_SETS = ("full", "core", "lifecycle")
+TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
 
 def _words(text):
@@ -343,8 +343,8 @@ def _served(mode):
 def served():
     """Every tool set, measured once for the module. A module fixture is
     set up before conftest's per-test snapshot of the registry, so it
-    puts the registry and the opening text back itself: `lifecycle`
-    adds a tool that must not stay registered for later tests."""
+    puts the registry and the opening text back itself: `core` removes
+    tools and marks texts, which must not stay so for later tests."""
     tools = server.mcp._tool_manager._tools
     before = dict(tools)
     instructions = server.mcp._mcp_server.instructions
@@ -393,7 +393,7 @@ class TestTheRulesSitWithinTheCut:
                     f"take it off LEFT_PAST_THE_CUT")
 
     def test_each_rule_is_carried_by_the_tools_listed(self, served):
-        tools, _ = served["lifecycle"]
+        tools, _ = served["full"]
         for rule in RULES:
             carriers = {name for name, description in tools.items()
                         if _spans(rule, description)}
@@ -594,7 +594,7 @@ def _fingerprint(description):
 class TestTheDescriptionsKeepTheirWords:
 
     def test_every_description_keeps_its_words_and_length(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         assert set(registered) == set(WORDS) | NEW_IN_0142 | NEW_IN_0143
         exact = sys.version_info[:2] == (3, 13)
@@ -614,7 +614,7 @@ class TestTheDescriptionsKeepTheirWords:
     def test_what_moved_is_what_the_release_says(self):
         """The fourteen descriptions this release reorders: in each, a
         rule now comes before the text it was moved past."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         moved = {
             "analyze_for_coding": ("METHODOLOGICAL JUDGEMENT",

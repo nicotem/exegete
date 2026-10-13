@@ -56,7 +56,7 @@ Exegete yet (listed below).
   it reads goes there; some assistants also open files by themselves.
 - **Advanced user, developer or IT?**
   [For advanced users](https://github.com/nicotem/exegete#for-advanced-users):
-  an MCP server over stdio, three tool sets, every tool,
+  an MCP server over stdio, two tool sets, every tool,
   `pipx install exegete`.
 
 Exegete is free, open-source software, under QualCoder's own licence
@@ -291,7 +291,8 @@ a local model; its pages recommend 16 GB of memory or more.
    the newest release that has one under its Assets.
 3. **Install it**: double-click the file, click Install, then Install
    again to fetch what it needs. Leave its "Tool set" setting as it
-   comes (`lifecycle`): the other two choices cannot create a project
+   comes (`full`): `core`, the smaller set for local models, cannot
+   create a project
    ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#claude-desktop-the-one-click-extension-recommended)).
 
 To check, click "+" in a new conversation, then Connectors: Exegete is
@@ -390,7 +391,7 @@ the changes only once the project is opened again.
 Studio, other MCP hosts and Claude Desktop set up by hand take the
 Terminal route
 ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)),
-whose standard tool set cannot create a project unless switched on.
+whose default tool set, `full`, can create a project too (Experimental).
 There, new projects and copies go to `~/Documents/Exegete projects`,
 which iCloud or OneDrive may sync, unless
 [`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
@@ -441,7 +442,7 @@ QualCoder 3.8.2 and 4.0:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
-| Create a project | Yes | Yes, in the extension's default tool set (Experimental) |
+| Create a project | Yes | Yes (Experimental) |
 | Import sources | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part, which the extension has), and text the assistant hands over |
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
@@ -509,14 +510,14 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `lifecycle` | 78: all, creating a project (Experimental) included | about 204,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | the one-click extension; elsewhere, set `EXEGETE_TOOLSET=lifecycle` |
-| `full` | 77: all but creating a project | about 202,000 characters, 50k tokens | the same | the Terminal route |
+| `full` | 78: all, creating a project (Experimental) included | about 204,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 23: the coding loop and its safety tools | about 67,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:
 measured on Python 3.13, at four characters a token; about five per
-cent more on 3.10 to 3.12.
+cent more on 3.10 to 3.12. `lifecycle`, the earlier name of `full` in
+the extension, is still accepted and means `full`.
 
 **Beyond the basics**:
 

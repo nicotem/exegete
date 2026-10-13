@@ -72,6 +72,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tools, and a test now checks that. PyMuPDF, EbookLib and lxml are
   unchanged, so PDFs and EPUBs are read as before.
 
+### Changed: one tool set called full
+
+- **`full` and `lifecycle` are one tool set, called `full`** (the
+  owner's decision of 12 October 2026): 78 tools, creating a project
+  (still Experimental) included, the default on every route, in the
+  Claude Desktop extension and wherever Exegete is configured by hand.
+  An install whose tool set is `full` gains creating a project.
+  `lifecycle`, the earlier name of `full`, set anywhere (the extension's
+  "Tool set" setting, `EXEGETE_TOOLSET` or `QUALCODER_MCP_TOOLSET`, in
+  any letter case), means `full` and is read until v1.0; the log says so
+  once at each start, never in an answer. `core` is unchanged: 23
+  tools, without creating a project. The extension's "Tool set"
+  setting now comes as `full` and names the two words, and the bug
+  report offers `full`, `core` and `lifecycle (before 0.15.0)`.
+- **On the Terminal routes the assistant can now create a project
+  without a setting.** New projects go to
+  `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
+  another folder. iCloud
+  (Desktop and Documents) or OneDrive may sync Documents, and a sync
+  service can copy a project's database and its journal separately, so
+  a folder outside Documents, such as `~/Exegete projects`, is worth
+  considering (INSTALL.md, "What you need").
+
+### Measured
+
+- Serialised tool JSON: full = 204,244 characters (about 51.1k tokens
+  at chars/4) over 78 tools, and core = 67,225 (about 16.8k) over 23,
+  measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
+  separate environment installed from the repository's lock file, not
+  the repository's own `venv/`; on Python 3.11.13 (likewise a separate
+  environment), 214,248 and 70,617. `full` measures what 0.14.3's
+  `lifecycle` set measured, to the character, on both interpreters: the
+  same 78 descriptions, none marked, listed in another order. `core` is
+  unchanged.
+
 ## [0.14.3-alpha] - 2026-10-12
 
 v0.14.3. What a researcher notices first: documents now come into a

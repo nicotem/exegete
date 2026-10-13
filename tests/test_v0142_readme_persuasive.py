@@ -63,7 +63,7 @@ def _words(block):
     return " ".join("".join(c for c in block if c not in DRAWING).split())
 
 
-def _tools(mode="lifecycle"):
+def _tools(mode="full"):
     """The tools a set registers, the registry put back afterwards (the
     conftest's fixture restores it only between tests)."""
     registry = server.mcp._tool_manager._tools
@@ -582,7 +582,7 @@ def test_the_assistants_table():
         flat.index("| Assistant |")
     # (the review of the redraft: the real names behind pseudonyms are not
     # held back while a tool of the extension's default set sends them)
-    assert "read_pseudonym_list" in _tools("lifecycle")
+    assert "read_pseudonym_list" in _tools("full")
     assert "pseudonym" not in _between(
         flat, "**Assistants that open files by themselves.**",
         "| Assistant |")
@@ -611,19 +611,19 @@ def test_the_assistants_table():
 # ---------------------------------------------------------------------------
 
 def _measured():
-    # v0.14.3 moves the figures, so its entry carries them
-    # (test_toolset_modes.py pins them)
+    # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
+    # carries them (test_toolset_modes.py pins them)
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [0.14.3-alpha]",
-                           "## [0.14.2-alpha]"))
+    entry = _flat(_between(changelog, "## [Unreleased]",
+                           "## [0.14.3-alpha]"))
     measured = entry[entry.index("### Measured"):]
-    found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) .*? "
-                      r"lifecycle set = ([\d,]+)", measured)
-    full, core, lifecycle = (int(n.replace(",", "")) for n in found.groups())
-    # the 3.11 figures follow the environment named in brackets
-    later = re.search(r"on Python 3\.11\.13 \([^)]*`\.venv/`\), ([\d,]+),",
+    found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",
                       measured)
-    return ({"full": full, "core": core, "lifecycle": lifecycle},
+    full, core = (int(n.replace(",", "")) for n in found.groups())
+    # the 3.11 figures follow the environment named in brackets
+    later = re.search(r"on Python 3\.11\.13 \([^)]*\), ([\d,]+) and",
+                      measured)
+    return ({"full": full, "core": core},
             int(later.group(1).replace(",", "")))
 
 
@@ -635,7 +635,8 @@ def test_the_tool_set_table():
             in section)
     rows = {_cells(row)[0].strip("`"): _cells(row)
             for row in _rows(section, "| `")}
-    assert list(rows) == ["lifecycle", "full", "core"]
+    # v0.15.0: one set, `full`, every tool; `lifecycle` is its earlier name
+    assert list(rows) == ["full", "core"]
     sizes, full_on_311 = _measured()
     for mode, cells in rows.items():
         count = len(_tools(mode))
@@ -643,17 +644,16 @@ def test_the_tool_set_table():
         size = sizes[mode]
         assert cells[2] == (f"about {round(size / 1000) * 1000:,} "
                             f"characters, {round(size / 4000)}k tokens"), mode
-    assert "create_project" in _tools("lifecycle")
-    assert "create_project" not in _tools("full")
+    assert "create_project" in _tools("full")
+    assert "create_project" not in _tools("core")
     # the defaults: the extension's manifest, the server's own, and none
     manifest = json.loads(_read("packaging/desktop-extension/"
                                 "manifest.in.json"))
-    assert manifest["user_config"]["toolset"]["default"] == "lifecycle"
-    assert rows["lifecycle"][4] == ("the one-click extension; elsewhere, "
-                                    "set `EXEGETE_TOOLSET=lifecycle`")
-    assert "'lifecycle'" in inspect.getsource(server._resolve_toolset_mode)
+    assert manifest["user_config"]["toolset"]["default"] == "full"
     assert "(default full)" in server._resolve_toolset_mode.__doc__
-    assert rows["full"][4] == "the Terminal route"
+    assert rows["full"][4] == "every route"
+    assert ("`lifecycle`, the earlier name of `full` in the extension, is "
+            "still accepted and means `full`.") in _flat(section)
     assert rows["core"][4] == "none: set `EXEGETE_TOOLSET=core`"
     assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
     # the sentence under it, with the interpreters and the per cent
@@ -716,7 +716,7 @@ def test_the_advanced_section_rests_on_the_code():
     # every name in the list is a tool the assistant is given, or one of
     # the arguments it names
     beyond = _between(flat, "**Beyond the basics**", "**Tested.**")
-    tools = _tools("lifecycle")
+    tools = _tools("full")
     for name in re.findall(r"`([a-z_]+)`", beyond):
         assert name in tools or name in ("exclude_code_ids", "coder"), name
     for tool, arguments in ARGUMENTS.items():

@@ -271,7 +271,8 @@ class TestTheExtensionSetsBothSpellings:
         # the app lays the manifest's env over what it passes on
         proc = _run_server(home, {**stray, **config["env"]})
         assert proc.returncode == 0, proc.stderr
-        assert "Toolset mode: lifecycle" in proc.stderr
+        # v0.15.0: the extension's default is `full`, every tool
+        assert "Toolset mode: full (78 tools registered)" in proc.stderr
         assert "earlier spelling" not in proc.stderr
 
 

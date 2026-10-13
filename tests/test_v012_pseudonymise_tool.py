@@ -8679,9 +8679,9 @@ class TestTheDocumentsTellTheTruth:
         "confirms an exact pair. Neither writes anything or takes a "
         "backup.",
         "The names themselves reach the conversation only through a tool "
-        "of their own, `read_pseudonym_list` (in the full and lifecycle "
-        "tool sets, so in the desktop extension by default, and not in "
-        "core; deprecated, and removed in v0.15), whose description says "
+        "of their own, `read_pseudonym_list` (in the full tool set, the "
+        "default, and not in core; deprecated, and removed in v0.15), "
+        "whose description says "
         "first that it sends the real names to the AI provider",
         "each is an audit record of which rows a run changed and where the "
         "pseudonyms now sit, kept so a run can be accounted for afterwards. "

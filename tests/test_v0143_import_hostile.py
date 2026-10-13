@@ -110,7 +110,7 @@ class TestTheDescription:
         return {t.name: t.description
                 for t in asyncio.run(server.mcp.list_tools())}
 
-    @pytest.mark.parametrize("mode", ["full", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full"])
     def test_the_whole_description_is_within_claude_codes_cut(self, mode):
         description = self._served(mode)["import_documents"]
         assert len(description) <= 2048
@@ -119,7 +119,7 @@ class TestTheDescription:
                      "never to get past a refusal", "give its path"):
             assert rule in " ".join(description.split()), rule
 
-    @pytest.mark.parametrize("mode", ["full", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full"])
     def test_the_text_it_promises_is_the_decided_one(self, mode):
         """The owner's decisions of 6 and 9 October 2026: where
         QualCoder's readers lose or garble content, Exegete keeps it, and
@@ -133,7 +133,7 @@ class TestTheDescription:
                 "readers lose or garble, and names each departure.") in flat
         assert "better" not in flat
 
-    @pytest.mark.parametrize("mode", ["full", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full"])
     def test_the_rules_come_first(self, mode):
         """What a model must not miss comes before what it may look up:
         the paths rule in the opening paragraph, then the two steps and

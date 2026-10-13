@@ -67,8 +67,10 @@ def _how_it_works():
                     "## Where your data goes")
 
 
-def _lifecycle_tools():
-    server._apply_toolset("lifecycle")
+def _full_tools():
+    # `full`, every tool, creating a project included since 0.15.0 (v0.14's
+    # `lifecycle` set until then)
+    server._apply_toolset("full")
     return {t.name: t for t in asyncio.run(server.mcp.list_tools())}
 
 
@@ -167,7 +169,7 @@ class TestTheIntroduction:
         # v0.14.2, the README rewritten to persuade: the list of what it
         # covers is "What you can do", one bold-led item per feature
         covers = _what_you_can_do()
-        tools = _lifecycle_tools()
+        tools = _full_tools()
         # Each item the list names, and the tools that carry it
         claims = {
             "**Start a project** in QualCoder's format (Experimental)": [
@@ -226,7 +228,8 @@ class TestTheIntroduction:
             assert words in covers, words
             for name in needed:
                 assert name in tools, (words, name)
-        # Creating a project is in the extension's default set only
+        # Creating a project is in `full`, the default set, not in core
+        assert "create_project" in tools
         assert "create_project" not in server.CORE_TOOLSET
 
     def test_what_still_needs_qualcoder_is_named_and_true(self):
@@ -256,7 +259,7 @@ class TestTheIntroduction:
         params = inspect.signature(server.import_text_file).parameters
         assert "content" in params and "path" not in params
         # No tool codes media or draws a graph
-        for name in _lifecycle_tools():
+        for name in _full_tools():
             assert not re.search(r"image|audio|video|media|graph", name), name
 
     def test_the_whole_life_of_a_project_is_the_aim(self):
@@ -417,7 +420,7 @@ class TestTheSettingsEntry:
         env = _entry()["env"]
         assert set(env) <= _new_setting_names()
         assert env["EXEGETE_TOOLSET"] in server._VALID_TOOLSET_MODES
-        assert env["EXEGETE_TOOLSET"] == "lifecycle"
+        assert env["EXEGETE_TOOLSET"] == "full"
         # The folder, as the extension's default, is one the server
         # starts with and uses (the sandbox's home stands in for yours)
         manifest = json.loads(_read("packaging/desktop-extension/"
@@ -434,7 +437,7 @@ class TestTheSettingsEntry:
         assert entry["default_tools_approval_mode"] == "writes"
         assert entry["tools"] == {"read_pseudonym_list":
                                   {"approval_mode": "prompt"}}
-        assert "read_pseudonym_list" in _lifecycle_tools()
+        assert "read_pseudonym_list" in _full_tools()
         for key in ("startup_timeout_sec", "tool_timeout_sec"):
             assert isinstance(entry[key], int) and entry[key] > 0, key
 
@@ -491,13 +494,13 @@ class TestCodexAsksBeforeEveryChange:
         mode = entry["default_tools_approval_mode"]
         per_tool = {name: settings["approval_mode"]
                     for name, settings in entry["tools"].items()}
-        for name, tool in _lifecycle_tools().items():
+        for name, tool in _full_tools().items():
             asks = codex_asks(tool.annotations, per_tool.get(name, mode))
             assert asks == (not tool.annotations.readOnlyHint), name
 
     def test_without_it_the_adding_tools_run_unasked(self):
         """What INSTALL.md and README say Codex's default does."""
-        tools = _lifecycle_tools()
+        tools = _full_tools()
         unasked = sorted(name for name, tool in tools.items()
                          if not tool.annotations.readOnlyHint
                          and not codex_asks(tool.annotations, "auto"))
@@ -624,7 +627,7 @@ class TestServedTextsAreHostNeutral:
     def test_no_description_or_guidance_addresses_claude(self):
         texts = {"instructions": server.SERVER_INSTRUCTIONS,
                  "methods notes": server.METHODS_GUIDANCE}
-        for name, tool in _lifecycle_tools().items():
+        for name, tool in _full_tools().items():
             texts[f"tool {name}"] = tool.description or ""
         for prompt in asyncio.run(server.mcp.list_prompts()):
             texts[f"prompt {prompt.name}"] = prompt.description or ""
@@ -1130,11 +1133,11 @@ class TestTheOtherFirstImpressions:
                         "AI-assisted qualitative analysis of QualCoder "
                         "projects"):
                 assert old not in text, (where, old)
+        # v0.15.0: the default set creates a project on every route
         assert ("- [ ] A project to work on (a `.qda` folder, in "
-                "QualCoder's format): the standard tool set this setup uses "
-                "cannot create one; the one-click extension can, and so can "
-                "this setup with `EXEGETE_TOOLSET=lifecycle` (INSTALL.md)"
-                ) in _flat("QUICKSTART.md")
+                "QualCoder's format), or none: the default tool set, `full`, "
+                "can create one in the conversation (Experimental; "
+                "INSTALL.md says where it goes)") in _flat("QUICKSTART.md")
 
     def test_the_texts_the_first_pass_did_not_read(self):
         """v0.14.2 (the owner's ruling of 7 October 2026): the opening
@@ -1459,7 +1462,7 @@ class TestAssistantsOwnFileAccess:
                    for value in project.values())
         for name in ("list_available_projects", "select_project",
                      "get_current_project", "create_project"):
-            assert name in _lifecycle_tools(), name
+            assert name in _full_tools(), name
 
     def test_readme_links_to_the_hosts_section(self):
         link = ("[PRIVACY.md, \"Assistants that open files by themselves\"]"

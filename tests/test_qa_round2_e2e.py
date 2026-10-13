@@ -93,6 +93,9 @@ EXPECTED_TOOLS = {
     # the check for new versions (the owner's ruling of 5 October 2026),
     # full toolset only
     "check_for_updates",
+    # creating a project, in the full toolset since 0.15.0 (v0.14's
+    # `lifecycle` set until then)
+    "create_project",
 }
 
 
@@ -118,7 +121,7 @@ class TestToolSurfaceRegistration:
         tools = asyncio.run(server.mcp.list_tools())
         names = {t.name for t in tools}
         assert names == EXPECTED_TOOLS
-        assert len(names) == 77          # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3)
+        assert len(names) == 78          # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`)
 
 
 class TestEndToEndLoop:

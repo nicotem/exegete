@@ -108,7 +108,7 @@ def test_every_tool_through_the_host_with_a_workspace_set(tmp_path,
     workspace = tmp_path / "ws"
     workspace.mkdir()
     monkeypatch.setenv("QUALCODER_MCP_WORKSPACE", str(workspace))
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     run = host_session(lambda client: call_every_tool(client, tmp_path))
     assert run.problems == [], "\n".join(map(repr, run.problems))
     assert set(run.answers) == set(EXPECTED_HINTS)

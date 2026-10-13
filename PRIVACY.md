@@ -1101,11 +1101,10 @@ Two further rules touch files on your disk:
   AI chat used; a later open leaves the file as it is.
   `create_project` runs no process scan for the project it has just
   made.
-- **Creating a project** (`create_project`, only with
-  `EXEGETE_TOOLSET=lifecycle`, which the desktop extension sets
-  by default, v0.14). It writes a new folder
-  with four empty subfolders and a new `data.qda`, and records the new
-  project as the last-used one (the pointer above, whose path is then
+- **Creating a project** (`create_project`, in the full tool set, the
+  default on every route, and not in `core`; v0.14). It writes a new
+  folder with four empty subfolders and a new `data.qda`, and records
+  the new project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
   selects a project); nothing else: no backup, no `exegete.json`,
   no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
@@ -1769,9 +1768,9 @@ will ask, and the summary above depends on them:
     backup. `get_current_project` reports whether the file is present
     and how many entries it has, never a name. The names themselves
     reach the conversation only through a tool of their own,
-    `read_pseudonym_list` (in the full and lifecycle tool sets, so in
-    the desktop extension by default, and not in core; deprecated, and
-    removed in v0.15), whose description says first that it sends the
+    `read_pseudonym_list` (in the full tool set, the default, and not
+    in core; deprecated, and removed in v0.15), whose description says
+    first that it sends the
     real names to the AI provider. It
     carries `anthropic/requiresUserInteraction`, so Claude Code (2.1.199
     and later) asks the researcher before every call of it, in every

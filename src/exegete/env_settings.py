@@ -24,9 +24,9 @@ The rule when both spellings are set:
 
 "The same thing" is judged after each value is tidied exactly as its
 read tidies it (spaces stripped where the read strips them, the tool set
-in lower case, a workspace path with `~` expanded, the two switches
-compared as "is it 1", the AI coder name after validate_coder_name), and
-a blank value counts as unset. The value then used is the raw text of
+in lower case, `lifecycle` read as `full`, a workspace path with `~`
+expanded, the two switches compared as "is it 1", the AI coder name
+after validate_coder_name), and a blank value counts as unset. The value then used is the raw text of
 the spelling chosen, so it behaves exactly as it did before the rename.
 """
 
@@ -53,7 +53,8 @@ def _blank(value: Optional[str]) -> bool:
 
 
 def _toolset(value: str) -> Any:
-    return value.strip().lower()
+    tidied = value.strip().lower()
+    return names.OLD_TOOLSET_NAMES.get(tidied, tidied)
 
 
 def _coder_name(value: str) -> Any:

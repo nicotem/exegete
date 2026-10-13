@@ -70,11 +70,11 @@ body:
     id: toolset
     attributes:
       label: Toolset (EXEGETE_TOOLSET, or QUALCODER_MCP_TOOLSET before 0.14.1)
-      description: "`full` is the default when the variable is not set; `core` is the reduced set for local models; `lifecycle` is the full set plus creating a project. With the Claude Desktop extension, it is the extension's Tool set setting (`lifecycle` unless you changed it)."
+      description: "`full` is the default, every tool, creating a project included; `core` is the reduced set for local models; `lifecycle` was `full`'s name in the extension before 0.15.0. With the Claude Desktop extension, it is the extension's Tool set setting (`full` unless you changed it)."
       options:
         - full (default, or variable not set)
         - core
-        - lifecycle
+        - lifecycle (before 0.15.0)
         - Not sure
     validations:
       required: true

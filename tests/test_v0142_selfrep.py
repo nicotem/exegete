@@ -36,7 +36,7 @@ sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server  # noqa: E402
 
-TOOL_SETS = ("full", "core", "lifecycle")
+TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
 TAGLINE = ("A qualitative analysis application you use in conversation "
            "with an AI assistant, compatible with QualCoder.")
@@ -660,7 +660,8 @@ class TestQualCoderIsOptional:
         install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
         assert "- **QualCoder, optional.** Today it does what Exegete does " \
                "not do yet:" in install
-        assert "- ✅ **A project, or the `lifecycle` tool set.**" in install
+        # v0.15.0: the default set creates a project on every route
+        assert "- ✅ **A project, or a new one.**" in install
         quick = _flat((REPO / "QUICKSTART.md").read_text(encoding="utf-8"))
         assert "- [ ] A project to work on (a `.qda` folder, in QualCoder's " \
                "format)" in quick
@@ -781,7 +782,7 @@ class TestNoDescriptionGrew:
     CHANGED_IN_0143 = {"analyze_file_with_coding", "import_text_file"}
 
     def test_every_description_is_no_longer_than_before(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         assert set(registered) == set(BEFORE) | {"check_for_updates"} | \
             self.NEW_IN_0143
@@ -805,7 +806,7 @@ class TestNoDescriptionGrew:
 
     def test_the_reworded_ones_are_the_ones_the_changelog_counts(self):
         """40 of the 74 tools 0.14.1 had, and read_brief."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         sys.path.insert(0, str(Path(__file__).parent))
         import test_v0142_description_cut as cut
         registered = server.mcp.original_descriptions

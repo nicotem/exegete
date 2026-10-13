@@ -40,6 +40,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   library only. Its defaults make the 45 files of the timing session
   that measures how long a host lets an import's preview read.
 
+### Changed: the libraries the extension installs, brought up to date
+
+- **The locked libraries are brought up to date** (`uv.lock`, which the
+  Claude Desktop extension installs from): 31 move to newer releases,
+  none uploaded in the week before the refresh. This clears the 20
+  advisories OSV listed on 12 October 2026 for eight of them: pyjwt
+  2.14.0 to 2.15.1 (two), starlette 0.49.1 to 1.7.0 (five),
+  python-multipart 0.0.20 to 0.0.32 (seven), anyio 4.11.0 to 4.15.1
+  (two), idna 3.11 to 3.20 and python-dotenv 1.2.1 to 1.2.4 (one each),
+  and, for contributors, pytest 8.4.2 to 9.1.1 and pygments 2.19.2 to
+  2.21.0 (one each). A scanner reading the lock still flags
+  `cryptography` 48.0.1 on Intel Macs and 46.0.3 on Windows on Arm, the
+  last releases with a ready-made package for those computers; Exegete
+  does not load `cryptography` or pyjwt when it starts and sets up its
+  tools, and a test now checks that. PyMuPDF, EbookLib and lxml are
+  unchanged, so PDFs and EPUBs are read as before.
+
 ## [0.14.3-alpha] - 2026-10-12
 
 v0.14.3. What a researcher notices first: documents now come into a

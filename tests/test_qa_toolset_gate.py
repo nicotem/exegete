@@ -108,7 +108,7 @@ class TestSubprocessBehavior:
         through the real transport, not just the unit resolver."""
         names, _, _ = _session_lists(tmp_path, " CoRe ")
         assert names == sorted(server.CORE_TOOLSET)
-        assert len(names) == 23           # with open_file_for_reading (v0.14.3)
+        assert len(names) == 25           # with open_file_for_reading (v0.14.3) and the two earlier names (0.15.0)
 
     def test_resources_and_prompts_byte_identical_across_modes(self, tmp_path):
         """The mode must not touch resources or prompts AT ALL — byte-equal
@@ -129,7 +129,7 @@ class TestSubprocessBehavior:
         full_dir.mkdir()
         names_full, _, _ = _session_lists(full_dir, "full")
         assert names_unset == names_full
-        assert len(names_full) == 78     # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`)
+        assert len(names_full) == 80     # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0)
 
 
 class TestRegistryIsolation:
@@ -139,12 +139,12 @@ class TestRegistryIsolation:
         and confirm the registry returns to the identical full state
         (same objects, not lookalikes)."""
         before = dict(server.mcp._tool_manager._tools)
-        assert len(before) == 78     # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`)
+        assert len(before) == 80     # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0)
 
         for _ in range(2):
             removed = server._apply_toolset("core")
             try:
-                assert len(server.mcp._tool_manager._tools) == 23
+                assert len(server.mcp._tool_manager._tools) == 25
                 assert set(server.mcp._tool_manager._tools) \
                     == set(server.CORE_TOOLSET)
             finally:
@@ -160,6 +160,6 @@ class TestRegistryIsolation:
         """Importing the module must never shrink the surface — the filter
         runs only in main(). (A regression here would contaminate every
         in-process consumer, including the whole test suite.)"""
-        assert len(server.mcp._tool_manager._tools) == 78     # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`)
+        assert len(server.mcp._tool_manager._tools) == 80     # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0)
         # and CORE_TOOLSET stays a strict subset of the live surface
         assert server.CORE_TOOLSET < set(server.mcp._tool_manager._tools)

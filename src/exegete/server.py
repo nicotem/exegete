@@ -336,7 +336,7 @@ DEPRECATED_RENAME_BACK = (
     "Deprecated, removed in v0.15: a rename back recognised from the "
     "project's backups; QualCoder's own Rename makes it.")
 
-# analyze_for_coding without the researcher's answers (owner ruling 25,
+# start_coding_session without the researcher's answers (owner ruling 25,
 # question 5, with the Saldaña reading's item 17)
 INSTRUCTION_REQUIRED = (
     "instruction is required, and nothing was started: ask the researcher "
@@ -395,7 +395,7 @@ instruction."""
 #
 # Its shape is decision 2's: what no tool says, plus the two rules that span
 # every tool, GROUNDING_RULES and METHODOLOGY_VOCABULARY, composed into the
-# full version from the very constants analyze_for_coding's description
+# full version from the very constants start_coding_session's description
 # carries, so the two copies cannot drift (tests/test_v0142_brief.py). Lines
 # that would take a new position on method are held back for the owner's
 # statement and are in no constant here. Four sections (2, 10, 12 and 13)
@@ -456,7 +456,7 @@ BRIEF_SHORT = (
 BRIEF_SHORT_SMALL_SET = BRIEF_SHORT.replace(f" {BRIEF_START}", "")
 
 # The second net, in the answers of select_project, get_current_project,
-# create_project and analyze_for_coding
+# create_project and start_coding_session
 BRIEF_REMINDER = (
     "If the brief is not already in this conversation, call read_brief "
     "first: it sets out how Exegete expects you to work.")
@@ -585,7 +585,7 @@ are not checked, so copy them from a tool's answer.
 ## 9. Rules the tools give where they apply
 
 Each is stated in full by its tool:
-- Starting a coding session: analyze_for_coding lists three questions
+- Starting a coding session: start_coding_session lists three questions
   to ask the researcher; their answers are the session's instruction,
   without which no session starts.
 - The reading label (explicit or interpretive, no score):
@@ -599,7 +599,7 @@ Each is stated in full by its tool:
 - When the task concerns the researcher's existing codes, start from
   them and their coded passages, which may be incomplete. When the
   researcher wants a fresh reading, read the file with
-  analyze_file_with_coding(without_codes=true), which leaves their
+  read_file_with_codings(without_codes=true), which leaves their
   codings out, and tell them whether you have seen any.
 - For an overview, use the project summary and the lists of files and
   cases.
@@ -3520,7 +3520,7 @@ def _file_content_part(file_id: int, start: Any) -> str:
         file_data["part"] = parts.part_block(
             start, end, len(whole),
             f"read {names.RESOURCE_SCHEME}://files/{file_id}/from/{end}, "
-            f"or call analyze_file_with_coding(file_id={file_id}, "
+            f"or call read_file_with_codings(file_id={file_id}, "
             f"start={end}).")
     return _ai_json(file_data, indent=2)
 
@@ -3559,7 +3559,7 @@ def _case_excerpts_in_parts(case: Dict[str, Any]) -> None:
     case linked to whole files carries each file's whole text. Excerpts
     are given in order until the budget is spent; the one that spends it
     is cut, and it and every later one say where their text continues,
-    as a whole-file position to read from with analyze_file_with_coding."""
+    as a whole-file position to read from with read_file_with_codings."""
     left = float(parts.BUDGET)
     cut = False
     for segment in case.get("text_segments") or []:
@@ -3582,7 +3582,7 @@ def _case_excerpts_in_parts(case: Dict[str, Any]) -> None:
         case["parts_note"] = (
             "The excerpts' text is cut to fit one answer. Each excerpt "
             "marked text_continues_at continues there, a whole-file "
-            "position: call analyze_file_with_coding(file_id=..., "
+            "position: call read_file_with_codings(file_id=..., "
             "start=...) with it.")
 
 
@@ -3653,7 +3653,7 @@ QualCoder 4.0 carries a prompt library (system, user and project scopes;
 project prompts live in <project>/ai_data/ai_prompts) that its own
 assistant loads by /name. Exegete does not read or reproduce those
 prompts. The sources they cite, for researchers who want to bring a
-method into an analyze_for_coding instruction or into the project memo:
+method into a start_coding_session instruction or into the project memo:
 
 - Friese, S. (2024). Prompting for Themes.
   https://community.qeludra.com/posts/prompts-for-qualitative-research-prompting-for-themes
@@ -3678,9 +3678,9 @@ when the data base is thin and the assessment is provisional.
 ## How to bring a method into a session
 
 Put the method's rules into the project memo's public part, where they
-last, or into analyze_for_coding's instruction, for one session; the
+last, or into start_coding_session's instruction, for one session; the
 session stores the instruction on disk, so it survives a host restart.
-analyze_for_coding's answer carries the project memo's public part
+start_coding_session's answer carries the project memo's public part
 (project_memo), as QualCoder 4.0 hands the memo to its own assistant in
 every chat; outside a coding session, read it through
 get_project_summary or exegete://project/info. Ask the
@@ -5544,7 +5544,7 @@ def get_coded_segments(code_id: int, limit: int = 100,
             # always returned, truncated if it has to be, so a caller is
             # never handed a cursor that returns nothing while more
             # segments remain. Positions are unchanged, so the rest can
-            # be read with analyze_file_with_coding.
+            # be read with read_file_with_codings.
             row["text"] = text[:max_chars]
             row["text_truncated"] = True
             row["text_full_length"] = len(text)
@@ -5728,7 +5728,7 @@ def search_files(
     - For finding specific quotes or themes, use search_content
     - For notes of any kind, file memos included, use search_memos
     - You can combine multiple search locations
-    - Once you have file_id, use analyze_file_with_coding() to get full content
+    - Once you have file_id, use read_file_with_codings() to get full content
     """
     db_ = get_db()
     if isinstance(max_matches_per_file, bool) or \
@@ -6314,7 +6314,7 @@ def get_project_summary() -> str:
             "import the result); pdf_file_stored_as_text is a PDF that "
             "QualCoder 3.8.2 stored as the file itself, recognised by a "
             "heuristic (repair it with 'Restructure' in QualCoder 4.0's "
-            "PDF view). analyze_file_with_coding says more for each.")
+            "PDF view). read_file_with_codings says more for each.")
 
     not_counted = _not_shown_block(get_db().non_text_coding_counts(),
                                    "counts", "in this project")
@@ -6350,8 +6350,8 @@ STORED_PASSAGE_NOTE = (
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 @_with_guidance(GROUNDING_READ, before="Args:")
-def analyze_file_with_coding(file_id: int, start: int = 0,
-                             without_codes: bool = False) -> str:
+def read_file_with_codings(file_id: int, start: int = 0,
+                           without_codes: bool = False) -> str:
     """Return a text file's whole text with its coded segments.
 
     Read a file this way before suggesting codings for it, or to answer a
@@ -6503,7 +6503,7 @@ def _in_parts(result: Dict[str, Any], file_id: int, start: int,
     again = ", without_codes=true" if without_codes else ""
     result["part"] = parts.part_block(
         start, end, len(whole),
-        f"call analyze_file_with_coding(file_id={file_id}, start={end}"
+        f"call read_file_with_codings(file_id={file_id}, start={end}"
         f"{again}).")
 
 
@@ -7025,7 +7025,7 @@ def compare_coders(coder_a: Optional[str] = None,
     project are the suggestions the person approved (and perhaps edited),
     so their agreement partly counts the person's own judgement twice,
     and the suggestions they rejected are not in the project at all. And
-    the assistant is told to read each file with analyze_file_with_coding
+    the assistant is told to read each file with read_file_with_codings
     before suggesting, which gives it every visible coder's codings
     (every coder not hidden), the person's included unless their
     coder was hidden.
@@ -7411,7 +7411,7 @@ def compare_coders(coder_a: Optional[str] = None,
         result["notes"].append(
             "One coder is the AI: its codings are the suggestions "
             "the person approved (and perhaps edited), and the assistant is "
-            "told to read each file with analyze_file_with_coding before "
+            "told to read each file with read_file_with_codings before "
             "suggesting, which gives it every visible coder's codings. The "
             "agreement is not between independent coders; do not report it "
             "as intercoder reliability.")
@@ -7673,7 +7673,7 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
 # beside it and follow the workflow, as before
 @_with_guidance(GROUNDING_RULES, before="SPAN STYLE")
 @_with_guidance(METHODOLOGY_VOCABULARY, before="It reads no file")
-def analyze_for_coding(
+def start_coding_session(
     file_ids: List[int],
     code_names: Optional[List[str]] = None,
     instruction: Optional[str] = None,
@@ -7695,7 +7695,7 @@ def analyze_for_coding(
 
     It reads no file and returns no suggestion. It records the scope and
     the instruction, and returns the session id, the project memo's public
-    part and the next steps: read each file (analyze_file_with_coding),
+    part and the next steps: read each file (read_file_with_codings),
     record suggestions (record_suggestions), present them for the
     researcher to decide. Nothing is written until apply_codings writes
     approved suggestions (or create_proposed_codes approved proposals).
@@ -7938,7 +7938,7 @@ YOU, the assistant, need to:
    result, say so. Excerpts must be verbatim (they are checked). If the
    request itself seems too broad or premature for this study, say so and
    propose a first step before recording anything.
-2. **Read each file** (use `analyze_file_with_coding`) and identify segments
+2. **Read each file** (use `read_file_with_codings`) and identify segments
    that match the requested codes and instruction
 3. **Record your suggestions** with the `record_suggestions` tool, passing this
    session ID and a list of suggestion objects:
@@ -8014,7 +8014,7 @@ def _match_code_name(codes: List[Dict[str, Any]], name: Any
     "Code, category and case NAMES follow the opposite rule"). A name that
     folds onto two codes (a project made before 4.0 can hold 'Stress' and
     'stress') and matches neither exactly names none. Used by
-    analyze_for_coding, record_suggestions and edit_suggestion, which
+    start_coding_session, record_suggestions and edit_suggestion, which
     before v0.14 matched three different ways."""
     if not isinstance(name, str):
         return None
@@ -8282,13 +8282,13 @@ def _scope_refusal(session: AICodingSession, outside: str,
     if outside == "unreadable":
         return {"reason": "this session's scope (its files and codes) "
                           "cannot be read, so nothing is recorded into it; "
-                          "start a new session (analyze_for_coding)"}
+                          "start a new session (start_coding_session)"}
     if outside == "file":
         reason = (f"file '{file_name}' is outside this session's files; "
-                  f"start a session that includes it (analyze_for_coding)")
+                  f"start a session that includes it (start_coding_session)")
     else:
         reason = (f"code '{code_name}' is outside this session's codes; "
-                  f"start a session that includes it (analyze_for_coding)")
+                  f"start a session that includes it (start_coding_session)")
     return {"reason": reason,
             "session_file_ids": list(session.scope["file_ids"]),
             "session_codes": list(session.code_names)[:50]}
@@ -8380,7 +8380,7 @@ def record_suggestions(
 ) -> str:
     """Record AI coding suggestions into an analysis session for user review.
 
-    This is step 2 of the AI coding workflow: after analyze_for_coding creates
+    This is step 2 of the AI coding workflow: after start_coding_session creates
     a session, use this tool to persist the suggestions you identified
     by reading the files. Nothing is written to the project: the
     suggestions are stored in the session for the user to review, approve, and
@@ -8394,10 +8394,10 @@ def record_suggestions(
 
     Every suggestion is validated against the project before it is stored:
     - the file must exist and be a text source
-    - the code must exist (code_id, or code_name by analyze_for_coding's
+    - the code must exist (code_id, or code_name by start_coding_session's
       rule; a name matching two codes is refused)
     - the file, and the code when the session names codes, must be in
-      the session's scope (analyze_for_coding's file_ids and code_names);
+      the session's scope (start_coding_session's file_ids and code_names);
       anything outside it is refused with the reason
     - segment_text must be an exact, verbatim excerpt of the file text
     - positions are verified: if fulltext[start_pos:end_pos] != segment_text
@@ -8407,7 +8407,7 @@ def record_suggestions(
       the excerpt is unique in the file.
 
     Args:
-        coding_session_id: The session ID from analyze_for_coding
+        coding_session_id: The session ID from start_coding_session
         suggestions: List of suggestion objects with keys:
             file_id (int, required), code_id (int) or code_name (str),
             start_pos/end_pos (int, optional if the excerpt is unique),
@@ -8723,7 +8723,7 @@ def review_suggestions(
     no offers.
 
     Args:
-        coding_session_id: The session ID from analyze_for_coding
+        coding_session_id: The session ID from start_coding_session
         suggestion_guids: Optional list of specific suggestion GUIDs to review
         show_context: Include the text around each passage (default:
                       True; pass False for a compact listing)
@@ -8896,7 +8896,7 @@ def edit_suggestion(
     the result's changes.span.from.
 
     Args:
-        coding_session_id: The session ID from analyze_for_coding
+        coding_session_id: The session ID from start_coding_session
         suggestion_guid: The suggestion to edit
         start_pos: New start position (code-point offset, 0-based)
         end_pos: New end position (end-exclusive)
@@ -8913,7 +8913,7 @@ def edit_suggestion(
             segment_text. Mutually exclusive with the manual span
             parameters.
         code_id: Change the code by id (existing codes only)
-        code_name: Change the code by name (analyze_for_coding's rule;
+        code_name: Change the code by name (start_coding_session's rule;
                    a name matching two codes is refused)
         reading: "explicit" or "interpretive", for the suggestion as
                  edited
@@ -9250,7 +9250,7 @@ def update_suggestion_status(
     changes.
 
     Args:
-        coding_session_id: The session ID from analyze_for_coding
+        coding_session_id: The session ID from start_coding_session
         approve: List of suggestion GUIDs the user approved
         reject: List of suggestion GUIDs the user rejected
         reopen: List of suggestion GUIDs to return to pending
@@ -10190,7 +10190,7 @@ def _folder_megabytes(folder: Path) -> float:
 
 def _import_backup_note(project_folder: Path, adding_bytes: int):
     backups = [b for b in _collect_backups(project_folder)
-               if b["kind"] == "mcp"]
+               if b["kind"] == OWN_BACKUP_KIND]
     return {"backup": "one backup of the whole project is taken first, "
                       "before anything is written",
             "backup_size_mb": _folder_megabytes(project_folder),
@@ -10660,7 +10660,7 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
         if any(i.kind == doc_readers.PDF for i in taken):
             lines.append(IMPORT_DONE_LINES["no_list_pdf"])
     backups = [b for b in _collect_backups(ctx.project_folder)
-               if b["kind"] == "mcp"]
+               if b["kind"] == OWN_BACKUP_KIND]
     size = round(sum(b["size_mb"] for b in backups))
     if size >= PRUNE_MENTION_MB:
         lines.append(IMPORT_DONE_LINES["prune"].format(size=size))
@@ -10804,7 +10804,7 @@ def delete_coding(coding_id: int, create_backup: bool = True,
     Args:
         coding_id: The ctid of the coding to delete. You can find ctids in
                    the output of apply_codings, get_coded_segments, or
-                   analyze_file_with_coding (segment_id).
+                   read_file_with_codings (segment_id).
         create_backup: Create timestamped backup before deleting (default:
                    True; ignored, always on, for a row carrying a private note)
         allow_hidden_coder: Override to delete a hidden coder's coding
@@ -10952,7 +10952,7 @@ def list_backups() -> str:
     Every write operation (apply_codings, import_text_file, delete_coding,
     restore_backup and the other write tools) creates a timestamped backup
     folder next to the project by default, named
-    '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'mcp')
+    '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
     together with QualCoder's own '<project>_BKUP_*' backups found next to
     the project (kind 'qualcoder'), newest first, so you can pick one for
     restore_backup. Each is dated by the time in its name, when it was
@@ -11017,7 +11017,8 @@ def list_backups() -> str:
             "QualCoder settings 'directory' (not listed here); newer "
             "QualCoder builds write _BKUP_ backups next to the project "
             "again, and those ARE listed with kind='qualcoder'.",
-            "MCP backups (kind='mcp') accumulate until pruned; use "
+            "Exegete's backups (kind='exegete', which was kind='mcp' "
+            "before 0.15.0) accumulate until pruned; use "
             "prune_backups(keep_last=..., older_than_days=...) to reclaim "
             "disk space (retention never touches QualCoder's own backups).",
             "Backups include the whole project tree, ai_data/ included "
@@ -11060,10 +11061,16 @@ def _backup_log_name(name: str, project_folder: Path) -> str:
     return "(name withheld)"
 
 
+# The kind list_backups gives Exegete's own backups (0.15.0; it was
+# 'mcp'), worked out from each folder's name at every listing and never
+# stored, so no earlier value can reach the comparisons that use it
+OWN_BACKUP_KIND = "exegete"
+
+
 def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     """Collect both backup families next to the project, newest first.
 
-    Families: this server's {name}_backup_{ts}[...].qda (kind 'mcp',
+    Families: this server's {name}_backup_{ts}[...].qda (kind 'exegete',
     including the *_prerestore safety copies) and QualCoder's own
     {name}_BKUP_{...}.qda (kind 'qualcoder'). Each entry carries name,
     path, kind, created, age_days and size_mb.
@@ -11071,7 +11078,7 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     backups: List[Dict[str, Any]] = []
     order: Dict[str, Tuple[datetime, int]] = {}
     now = datetime.now()
-    for prefix, kind in ((f"{project_folder.stem}_backup_", "mcp"),
+    for prefix, kind in ((f"{project_folder.stem}_backup_", OWN_BACKUP_KIND),
                          (f"{project_folder.stem}_BKUP_", "qualcoder")):
         for entry in project_folder.parent.glob(f"{prefix}*.qda"):
             if not entry.is_dir():
@@ -11134,8 +11141,8 @@ def prune_backups(keep_last: Optional[int] = None,
     backup copy and they accumulate forever; this tool prunes them by a
     retention policy you choose:
 
-    - keep_last=N: keep only the N newest MCP backups
-    - older_than_days=D: remove MCP backups older than D days
+    - keep_last=N: keep only the N newest of Exegete's backups
+    - older_than_days=D: remove Exegete's backups older than D days
     - both: a backup is removed only if it fails BOTH criteria (beyond the
       newest N AND older than D days), the conservative intersection
 
@@ -11147,7 +11154,7 @@ def prune_backups(keep_last: Optional[int] = None,
       duplicate's " copy" after it) is not one of them: it is listed
       under never_removed and never removed. QualCoder's own _BKUP_
       backups are NEVER removed.
-    - At least the newest MCP backup is always kept, unless you
+    - At least the newest of Exegete's backups is always kept, unless you
       explicitly pass keep_last=0; the newest is the newest by the time
       in its name, so a folder whose name is dated ahead of the clock
       (dated by its folder instead, list_backups says so) never takes
@@ -11178,9 +11185,9 @@ def prune_backups(keep_last: Optional[int] = None,
     those recovery points for the AI prompt library and chat history.
 
     Args:
-        keep_last: Keep only this many newest MCP backups (0 allowed, but
-                   must be explicit)
-        older_than_days: Remove MCP backups older than this many days
+        keep_last: Keep only this many of Exegete's newest backups (0
+                   allowed, but must be explicit)
+        older_than_days: Remove Exegete's backups older than this many days
         preview_token: The token from this operation's preview; omit it to
                        get the preview
 
@@ -11216,19 +11223,19 @@ def prune_backups(keep_last: Optional[int] = None,
     # " copy"), is someone's own copy, listed and never removed. _BKUP_
     # is never touched.
     prefix = f"{project_folder.stem}_backup_"
-    mcp_backups, not_ours = [], []
+    own_backups, not_ours = [], []
     for b in all_backups:                            # newest first
-        if b["kind"] != "mcp":
+        if b["kind"] != OWN_BACKUP_KIND:
             continue
         if not is_this_servers_backup_name(b["name"], prefix):
             not_ours.append(b["name"])
         else:
-            mcp_backups.append(b)
+            own_backups.append(b)
 
     # Apply the policy. With both criteria, a backup is pruned only if it
     # fails BOTH (conservative intersection).
     to_remove = []
-    for index, backup in enumerate(mcp_backups):
+    for index, backup in enumerate(own_backups):
         beyond_keep = keep_last is not None and index >= keep_last
         too_old = (older_than_days is not None
                    and backup["age_days"] > older_than_days)
@@ -11239,18 +11246,19 @@ def prune_backups(keep_last: Optional[int] = None,
         if prune:
             to_remove.append(backup)
 
-    # Floor: always keep the newest MCP backup unless keep_last=0 explicit.
+    # Floor: always keep the newest of Exegete's backups unless keep_last=0
+    # explicit.
     # The newest by the time in its name (fix round 1): a folder named
     # ahead of the clock is dated by its folder and never takes the
     # floor from the real newest.
-    floor = next((b for b in mcp_backups
+    floor = next((b for b in own_backups
                   if b["dated_from"] == BACKUP_DATED_BY_NAME),
-                 mcp_backups[0] if mcp_backups else None)
+                 own_backups[0] if own_backups else None)
     if (floor is not None and keep_last != 0
             and any(b["name"] == floor["name"] for b in to_remove)):
         to_remove = [b for b in to_remove if b["name"] != floor["name"]]
 
-    kept = [b for b in mcp_backups
+    kept = [b for b in own_backups
             if not any(r["name"] == b["name"] for r in to_remove)]
     reclaimed_mb = round(sum(b["size_mb"] for b in to_remove), 2)
 
@@ -11263,7 +11271,7 @@ def prune_backups(keep_last: Optional[int] = None,
     prerestore_removed = [b for b in to_remove if "_prerestore" in b["name"]]
     if prerestore_removed:
         newest_prerestore = next(
-            (b for b in mcp_backups if "_prerestore" in b["name"]), None)
+            (b for b in own_backups if "_prerestore" in b["name"]), None)
         if newest_prerestore and any(
                 b["name"] == newest_prerestore["name"]
                 for b in prerestore_removed):
@@ -11273,8 +11281,8 @@ def prune_backups(keep_last: Optional[int] = None,
     if not to_remove:
         return json.dumps({
             "success": True,
-            "message": "Nothing to prune: every MCP backup satisfies the "
-                       "retention policy.",
+            "message": "Nothing to prune: every one of Exegete's backups "
+                       "satisfies the retention policy.",
             "kept_count": len(kept),
             **_never_removed_block(not_ours),
         }, indent=2)
@@ -11408,7 +11416,7 @@ def _prune_only_mapping_copies(project_folder: Path,
     removing = {b["name"] for b in to_remove}
     held = {pseudonyms_json_fingerprint(project_folder), None}
     held |= {pseudonyms_json_fingerprint(b["path"]) for b in backups
-             if b["kind"] == "mcp" and b["name"] not in removing}
+             if b["kind"] == OWN_BACKUP_KIND and b["name"] not in removing}
     copies = sorted(
         [b["name"], fingerprint] for b in to_remove
         for fingerprint in [pseudonyms_json_fingerprint(b["path"])]
@@ -12163,7 +12171,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
 
     Example usage:
         "Explain the AI coding tools"
-        "How do I use analyze_for_coding?"
         "What's the workflow for AI coding?"
     """
     # Comprehensive help documentation
@@ -12175,7 +12182,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "step_1": "Ask the researcher the three questions first, "
                           "then start a coding session for the files and "
                           "codes they named, with the answers as "
-                          "instruction (analyze_for_coding; it reads "
+                          "instruction (start_coding_session; it reads "
                           "nothing and suggests nothing)",
                 "step_2": "The assistant reads the files and records its "
                           "suggestions (record_suggestions; each one is "
@@ -12239,7 +12246,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                                 "the person approved (the ones they kept, "
                                 "perhaps edited), and the assistant is told "
                                 "to read each file with "
-                                "analyze_file_with_coding before suggesting, "
+                                "read_file_with_codings before suggesting, "
                                 "which gives it every visible coder's codings, "
                                 "so "
                                 "never report that agreement as intercoder "
@@ -12298,12 +12305,15 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "Full recovery tools: delete_coding, list_backups, restore_backup"
             ]
         },
+        # The deprecated topic keeps the tool's earlier name until the
+        # help topics go (v0.15.1); its text names the tool by its new one
         "analyze_for_coding": {
-            "purpose": "Starts a coding session: records the files, codes and "
+            "purpose": "Starts a coding session (start_coding_session): "
+                       "records the files, codes and "
                        "instruction the researcher asked for, and returns "
                        "the session id and the next steps. It reads no file "
                        "and makes no suggestion: you read each file with "
-                       "analyze_file_with_coding and record suggestions "
+                       "read_file_with_codings and record suggestions "
                        "with record_suggestions",
             "when_to_use": "Before suggesting codings for the researcher to "
                            "review, one session per request",
@@ -12341,7 +12351,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             "purpose": "Write approved coding suggestions to the project",
             "when_to_use": "After reviewing suggestions and approving the ones you want",
             "workflow": [
-                "1. Run analyze_for_coding on your files",
+                "1. Run start_coding_session on your files",
                 "2. Record the suggestions with record_suggestions",
                 "3. Review with review_suggestions",
                 "4. Adjust spans/codes in place with edit_suggestion",
@@ -12389,7 +12399,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             "span_style": [
                 "Ask how long a coded passage should be: a phrase, whole "
                 "sentences (the default) or a whole answer; pass the "
-                "answer in analyze_for_coding's instruction and honour it",
+                "answer in start_coding_session's instruction and honour it",
                 "Researchers can widen or narrow any span at review with "
                 "edit_suggestion, where shorter and longer alternatives "
                 "exist (use_alternative)",
@@ -12626,14 +12636,14 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     the session for the user to review, refine and approve; only
     create_proposed_codes (after approval) touches the codebook.
 
-    WORKFLOW: analyze_for_coding creates a session -> you read
+    WORKFLOW: start_coding_session creates a session -> you read
     the files and record the codes you see emerging with this tool ->
     present them -> the user refines (update_proposal / merge_proposals)
     and decides (update_proposal_status) -> create_proposed_codes writes
     the approved ones.
 
     Args:
-        coding_session_id: The session ID from analyze_for_coding
+        coding_session_id: The session ID from start_coding_session
         proposals: List of proposal objects with keys:
             name (required): the proposed code name
             memo: the code definition (what belongs under this code)
@@ -17711,7 +17721,7 @@ def update_annotation(annotation_id: int, memo: str,
     get_current_project (qualcoder_open must be false), then retry. The lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds no longer use a lock file, so 4.0 detection is best-effort heuristics (qualcoder_gui_signals in get_current_project); never write while any QualCoder window has this project open.
 
     Args:
-        annotation_id: The annotation's anid (from analyze_file_with_coding
+        annotation_id: The annotation's anid (from read_file_with_codings
                        or search_memos)
         memo: The new note text ('' deletes the annotation)
         create_backup: Create a timestamped backup before writing (default True)
@@ -20145,6 +20155,36 @@ async def check_for_updates() -> str:
 
 
 # ============================================================================
+# Two tools renamed in 0.15.0, still listed under their earlier names
+# ============================================================================
+# The owner's ruling 73 (items 4 and 10): analyze_for_coding analysed
+# nothing (it starts a coding session) and analyze_file_with_coding reads
+# a file with its codings, so each now has a name that says what it does.
+# The earlier names are still listed, with one sentence, until the release
+# on method (planned as v0.15.2) removes them, so that an instruction or a
+# conversation that names one still reaches the tool. Each runs the very
+# same function, with the same arguments, annotations and answer;
+# registered after the last tool, so the others keep their order. An
+# error inside it is answered as the new name answers it (_tool_guard's
+# answer names no tool), and logged under the new name.
+RENAMED_TOOLS = {
+    "analyze_for_coding": "start_coding_session",
+    "analyze_file_with_coding": "read_file_with_codings",
+}
+
+OLD_NAME_DESCRIPTION = (
+    "The earlier name of {new}, which a later release removes: call {new} "
+    "instead. The arguments and the answer are the same.")
+
+for _old_name, _new_name in RENAMED_TOOLS.items():
+    _renamed = mcp._tool_manager._tools[_new_name]
+    mcp.add_tool(_renamed.fn, name=_old_name,
+                 description=OLD_NAME_DESCRIPTION.format(new=_new_name),
+                 annotations=_renamed.annotations)
+del _old_name, _new_name, _renamed
+
+
+# ============================================================================
 # Main entry point
 # ============================================================================
 
@@ -20172,7 +20212,7 @@ CORE_TOOLSET = frozenset({
     "list_available_projects", "select_project", "get_current_project",
     "get_project_summary",
     # file search and read-with-coding
-    "search_files", "analyze_file_with_coding",
+    "search_files", "read_file_with_codings",
     # reading a whole file on the computer, its text kept off the
     # conversation (v0.14.3): most useful with local models,
     # where reading a file otherwise pulls all of it into a small context
@@ -20180,7 +20220,7 @@ CORE_TOOLSET = frozenset({
     # coded-text retrieval and frequencies
     "search_coded_text", "get_coded_segments", "get_coding_frequencies",
     # the supervised suggestion loop
-    "analyze_for_coding", "record_suggestions", "review_suggestions",
+    "start_coding_session", "record_suggestions", "review_suggestions",
     "edit_suggestion", "update_suggestion_status", "apply_codings",
     # minimal codebook/memo writes a coding session needs
     "create_code", "set_memo",
@@ -20190,6 +20230,10 @@ CORE_TOOLSET = frozenset({
     "set_project_ai_coder_name",
     # the safety pair: workspace isolation and undo
     "copy_project_to_workspace", "delete_coding", "list_backups",
+    # the earlier names of start_coding_session and read_file_with_codings
+    # (0.15.0, RENAMED_TOOLS), in every set that has the new ones, until
+    # the release on method removes them
+    "analyze_for_coding", "analyze_file_with_coding",
 })
 
 _VALID_TOOLSET_MODES = names.TOOLSETS

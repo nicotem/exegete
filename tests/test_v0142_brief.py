@@ -18,7 +18,7 @@ assistant four ways (the brief study's decision 1):
 
 The full version carries the two rules that span every tool, the
 grounding rules and the judgement of requests, composed from the very
-constants analyze_for_coding's description carries (decision 2), so the
+constants start_coding_session's description carries (decision 2), so the
 two copies cannot drift. Nothing held back for the owner's methods
 statement is served. The per-request sizes grow by read_brief's own
 entry and nothing else.
@@ -295,8 +295,8 @@ class TestTheSecondDoors:
 
 class TestTheSharedRulesHaveOneSource:
 
-    def test_the_brief_and_analyze_for_coding_carry_the_same_words(self):
-        tool = server.mcp._tool_manager._tools["analyze_for_coding"]
+    def test_the_brief_and_start_coding_session_carry_the_same_words(self):
+        tool = server.mcp._tool_manager._tools["start_coding_session"]
         for rule in (server.GROUNDING_RULES, server.METHODOLOGY_VOCABULARY):
             assert server.BRIEF_FULL.count(rule) == 1
             assert tool.description.count(rule) == 1
@@ -372,7 +372,7 @@ class TestTheReminder:
                 server.db.close()
 
     def test_a_coding_session_carries_it(self, setup_server):
-        answer = json.loads(_call("analyze_for_coding", file_ids=[1],
+        answer = json.loads(_call("start_coding_session", file_ids=[1],
                                   instruction="test"))
         assert answer["coding_session_id"]
         assert answer["brief"] == server.BRIEF_REMINDER
@@ -511,7 +511,7 @@ class TestTheSizes:
     # The same tools as 0.14.2 served them, on the same interpreter
     NOW_0142 = {"full": 197_586, "core": 64_687}
     # The same tools as this tree serves them: v0.14.3
-    # lengthens two, analyze_file_with_coding (the `start` and
+    # lengthens two, read_file_with_codings (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
     # import_documents), and, from the maintainer's sitting, shortens
     # copy_project_to_workspace and create_project (the folder set for
@@ -523,18 +523,44 @@ class TestTheSizes:
     # folder for projects and its earlier default among its places (the
     # renames, piece 2; 143 characters in both sets), and pseudonymise_source
     # gains a paragraph on what pseudonymisation is for (not presuming
-    # QualCoder, piece 2: 583 characters more in `full`). Their entries as
-    # 0.14.2 served them are below, so every other tool is still held to
-    # 0.14.2's figure.
-    NOW = {"full": 198_989, "core": 65_281}
-    CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
+    # QualCoder, piece 2: 583 characters more in `full`). The renames,
+    # piece 3, renames two tools, start_coding_session and
+    # read_file_with_codings (their entries below are as 0.14.2 served
+    # them under their earlier names, which are now listed apart and left
+    # out here, as tools added after 0.14.2), and so changes the entries
+    # of the tools whose descriptions name them, and of list_backups and
+    # prune_backups ("Exegete's backups"). Their entries as 0.14.2 served
+    # them are below, so every other tool is still held to 0.14.2's
+    # figure.
+    NOW = {"full": 199_001, "core": 65_295}
+    CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
                           "create_project": 2_555,
                           "get_current_project": 2_133,
                           "read_pseudonym_list": 1_234,
                           "pseudonymise_source": 19_391,
-                          "list_available_projects": 1_113}
+                          "list_available_projects": 1_113,
+                          # the renames, piece 3
+                          "start_coding_session": 6_742,
+                          "search_files": 5_916,
+                          "compare_coders": 4_074,
+                          "record_suggestions": 5_046,
+                          "review_suggestions": 1_864,
+                          "edit_suggestion": 4_564,
+                          "update_suggestion_status": 2_239,
+                          "delete_coding": 3_576,
+                          "list_backups": 2_363,
+                          "prune_backups": 3_542,
+                          "explain_ai_coding_tools": 981,
+                          "propose_codes": 3_207,
+                          "update_annotation": 2_581}
+    # Where `core` serves one of them marked (it names a tool `core`
+    # lacks), its entry there as 0.14.2 served it
+    CHANGED_AFTER_0142_IN_CORE = {"start_coding_session": 6_775,
+                                  "search_files": 6_015,
+                                  "delete_coding": 3_609,
+                                  "list_backups": 2_495}
     # Each new tool's entry on Python 3.13, and the sets it is in
     NEW = {"read_brief": (451, {"full", "core"}),
            "check_for_updates": (903, {"full"})}
@@ -562,9 +588,11 @@ class TestTheSizes:
                                 for e in new.values()), mode
             if sys.version_info[:2] == (3, 13):
                 assert len(json.dumps(others)) == self.NOW[mode], mode
-                later = sum(len(json.dumps(e)) - self.CHANGED_AFTER_0142[
-                    e["name"]] for e in others
-                    if e["name"] in self.CHANGED_AFTER_0142)
+                before = {**self.CHANGED_AFTER_0142,
+                          **(self.CHANGED_AFTER_0142_IN_CORE
+                             if mode == "core" else {})}
+                later = sum(len(json.dumps(e)) - before[e["name"]]
+                            for e in others if e["name"] in before)
                 assert self.NOW[mode] - later == self.NOW_0142[mode], mode
                 assert self.NOW_0142[mode] <= self.BEFORE[mode], mode
                 for name, entry in new.items():
@@ -572,7 +600,10 @@ class TestTheSizes:
 
 
 # Tools added after 0.14.2, left out of its growth figure.
-ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading")
+# 0.15.0: and the earlier names of the two tools renamed then, listed
+# after the last tool
+ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading",
+                    "analyze_for_coding", "analyze_file_with_coding")
 
 
 # ---------------------------------------------------------------------------

@@ -73,7 +73,7 @@ EXPECTED_HINTS = {
     "get_coded_segments": R, "search_files": R,
     "get_coding_frequencies": R, "search_memos": R,
     "export_code_report": R, "get_project_summary": R,
-    "analyze_file_with_coding": R, "list_attribute_types": R,
+    "read_file_with_codings": R, "list_attribute_types": R,
     "get_file_attributes": R, "get_case_attributes": R,
     "query_by_attribute": R, "compare_coders": R,
     "find_cooccurring_codes": R, "get_case_code_matrix": R,
@@ -99,7 +99,7 @@ EXPECTED_HINTS = {
     # repeat of the import finds its files there and its token spent
     "import_documents": A1,
     # adds
-    "copy_project_to_workspace": A, "analyze_for_coding": A,
+    "copy_project_to_workspace": A, "start_coding_session": A,
     "apply_codings": A, "create_proposed_codes": A,
     "add_journal_entry": A, "import_text_file": A,
     "link_file_to_case": A, "create_attribute_type": A,
@@ -126,6 +126,9 @@ EXPECTED_HINTS = {
     "set_project_ai_coder_name": C,
     "set_attribute": C, "update_annotation": C,
     "pseudonymise_source": C, "restore_backup": C, "prune_backups": C,
+    # the earlier names of the two tools renamed in 0.15.0, with the new
+    # tools' hints
+    "analyze_for_coding": A, "analyze_file_with_coding": R,
 }
 
 
@@ -796,7 +799,7 @@ async def call_every_tool(client, root, lock_check=False):
     await run("set_attribute", {"target_type": "case", "target_id": 1,
                                 "attribute_name": "Age", "value": "30"})
     # the suggestion loop
-    session = (await run("analyze_for_coding",
+    session = (await run("start_coding_session",
                          {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
     recorded = await run("record_suggestions", {
         "coding_session_id": session, "suggestions": [{"reading": "explicit",
@@ -822,6 +825,8 @@ async def call_every_tool(client, root, lock_check=False):
     await run("search_memos", {"query": "interview"})
     await run("export_code_report", {"code_name": "Doubt"})
     await run("get_project_summary", {})
+    await run("read_file_with_codings", {"file_id": 1})
+    # its earlier name, listed until the release on method (0.15.0)
     await run("analyze_file_with_coding", {"file_id": 1})
     await run("open_file_for_reading", {"file_id": 1})
     await run("list_attribute_types", {})
@@ -849,8 +854,10 @@ async def call_every_tool(client, root, lock_check=False):
     await run("export_case_code_matrix_csv",
               {"output_path": str(exports / "m.csv")})
     # proposing codes
-    session_2 = (await run("analyze_for_coding",
+    session_2 = (await run("start_coding_session",
                            {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
+    # its earlier name, listed until the release on method (0.15.0)
+    await run("analyze_for_coding", {"instruction": "test", "file_ids": [1]})
     proposed = await run("propose_codes", {
         "coding_session_id": session_2, "proposals": [
             {"name": "Reliance", "memo": "Leaning on others",
@@ -979,6 +986,11 @@ def test_every_description_names_exactly_the_tools_arguments():
     listed = host_session(lambda client: client.list_tools()).tools
     differ = {}
     for tool in listed:
+        if tool.name in server.RENAMED_TOOLS:
+            # An earlier name's one sentence sends the model to the new
+            # name, whose description names them; its arguments are the
+            # new tool's (tests/test_v0150_renames_tools.py)
+            continue
         named = args_section(tool.description or "")
         schema = list(tool.inputSchema.get("properties", {}))
         if sorted(named) != sorted(schema):
@@ -1149,7 +1161,7 @@ class TestTextsThatSentTheAssistantNowhere:
         text = " ".join(server.METHODS_GUIDANCE.split())
         assert "once, for every future session" not in text
         # fix round 2 of the coding loop: the session's answer carries it
-        assert ("analyze_for_coding's answer carries the project memo's "
+        assert ("start_coding_session's answer carries the project memo's "
                 "public part (project_memo)") in text
 
     def test_readme_no_longer_says_a_journal_entry_is_updated(self):
@@ -1192,7 +1204,7 @@ async def _marker_project(client, root):
         "file_id": 1, "start_pos": 0, "end_pos": 5,
         "memo": "Researcher note about P3"})))
     session = json.loads(text_of(await client.call_tool(
-        "analyze_for_coding", {"instruction": "test", "file_ids": [1]})))["coding_session_id"]
+        "start_coding_session", {"instruction": "test", "file_ids": [1]})))["coding_session_id"]
     proposed = json.loads(text_of(await client.call_tool("propose_codes", {
         "coding_session_id": session, "proposals": [{
             "name": "Reliance", "memo": "Leaning on others",
@@ -1698,7 +1710,7 @@ class TestSessionFilesAfterPseudonymising:
             await call("import_text_file", {"filename": "int2.txt",
                                             "content": TEXT_2})
             await call("create_code", {"name": "Trust"})
-            suggesting = (await call("analyze_for_coding",
+            suggesting = (await call("start_coding_session",
                                      {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": suggesting, "suggestions": [{"reading": "explicit",
@@ -1708,7 +1720,7 @@ class TestSessionFilesAfterPseudonymising:
             await call("update_suggestion_status", {
                 "coding_session_id": suggesting,
                 "reject": [recorded["recorded"][0]["guid"]]})
-            proposing = (await call("analyze_for_coding",
+            proposing = (await call("start_coding_session",
                                     {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             await call("propose_codes", {
                 "coding_session_id": proposing, "proposals": [{
@@ -1720,7 +1732,7 @@ class TestSessionFilesAfterPseudonymising:
             finished = {}
             for outcome, name in (("reject", "Distrust"),
                                   ("create", "Loyalty")):
-                sid = (await call("analyze_for_coding",
+                sid = (await call("start_coding_session",
                                   {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
                 proposed = await call("propose_codes", {
                     "coding_session_id": sid, "proposals": [{
@@ -1736,7 +1748,7 @@ class TestSessionFilesAfterPseudonymising:
                                          {"coding_session_id": sid})
                     assert "error" not in created, created
                 finished[outcome] = sid
-            elsewhere = (await call("analyze_for_coding",
+            elsewhere = (await call("start_coding_session",
                                     {"instruction": "test", "file_ids": [2]}))["coding_session_id"]
             await call("record_suggestions", {
                 "coding_session_id": elsewhere, "suggestions": [{"reading": "explicit",
@@ -1924,7 +1936,7 @@ class TestHiddenCodersOnTheCodebook:
 
         async def read(client):
             view = json.loads(text_of(await client.call_tool(
-                "analyze_file_with_coding", {"file_id": 1})))
+                "read_file_with_codings", {"file_id": 1})))
             found = {}
             for uri in ("exegete://files/list", "exegete://cases/list",
                         "exegete://journal"):
@@ -1994,7 +2006,7 @@ NOT_PROJECT_WRITES = {
                                  "database, as its description says",
     "copy_project_to_workspace": "reads the project, writes a copy",
     "prune_backups": "removes backups, never the project",
-    "analyze_for_coding": "session file", "record_suggestions": "session",
+    "start_coding_session": "session file", "record_suggestions": "session",
     "edit_suggestion": "session", "update_suggestion_status": "session",
     "propose_codes": "session", "update_proposal": "session",
     "update_proposal_status": "session", "merge_proposals": "session",
@@ -2006,6 +2018,8 @@ NOT_PROJECT_WRITES = {
     "open_file_for_reading": "writes a page or a copy in the reading "
                              "folder, outside the project, and works "
                              "while QualCoder has it open, as reads do",
+    "analyze_for_coding": "session file (the earlier name of "
+                          "start_coding_session)",
 }
 
 
@@ -2163,8 +2177,8 @@ class TestCoreAnswersAreMarked:
         async def read(client):
             async def call(name, args):
                 return body_of(text_of(await client.call_tool(name, args)))
-            view = await call("analyze_file_with_coding", {"file_id": 1})
-            session = (await call("analyze_for_coding",
+            view = await call("read_file_with_codings", {"file_id": 1})
+            session = (await call("start_coding_session",
                                   {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": session, "suggestions": [{"reading": "explicit",
@@ -2389,7 +2403,7 @@ class TestOneProjectUnderTwoSpellings:
             await call("create_code", {"name": "Trust"})
             await call("select_project", {"project_path": str(
                 folder.parent / recorded_as(folder.name))})
-            session = (await call("analyze_for_coding",
+            session = (await call("start_coding_session",
                                   {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": session, "suggestions": [{"reading": "explicit",

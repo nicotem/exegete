@@ -100,7 +100,7 @@ def _house_rules(texts, labels=None):
         assert "\u2014" not in text, label
         lowered = text.lower()
         for word in forbidden_spellings:
-            # Identifiers are exempt by house rule (analyze_file_with_coding,
+            # Identifiers are exempt by house rule (read_file_with_codings,
             # honor_visibility, color): the word counts only when it is
             # prose, that is, not glued to another identifier character.
             pattern = r"(?<![A-Za-z_])" + word + r"(?![A-Za-z_])"

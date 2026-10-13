@@ -371,7 +371,7 @@ class TestLadderWiring:
         ai = Path(qualcoder_db_path) / "ai_data"
         ai.mkdir()
         (ai / "chat_history.sqlite").write_bytes(b"c")
-        out = json.loads(server.analyze_for_coding([1], instruction="test"))
+        out = json.loads(server.start_coding_session([1], instruction="test"))
         assert out["qualcoder_open"] is False
         assert out["qualcoder_gui_signals"]
         assert "ASK THE USER" in out["qualcoder_gui_hint"]
@@ -606,7 +606,7 @@ def _paragraph_after(text, marker):
 class TestProcessScanCallersAreDocumented:
 
     EXPECTED = {"select_project", "get_current_project",
-                "analyze_for_coding", "restore_backup", "import_documents"}
+                "start_coding_session", "restore_backup", "import_documents"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's

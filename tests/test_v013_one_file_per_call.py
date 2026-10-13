@@ -315,7 +315,7 @@ class TestWhatWentWithTheList:
         than one file. Read from the syntax: no f-string in the server
         formats `len(files)` in front of " files", and the journal-name
         function no longer branches on how many files it was given.
-        (`analyze_for_coding` formats `len(files_to_analyze)`, another
+        (`start_coding_session` formats `len(files_to_analyze)`, another
         list for another purpose, which is why the argument is read.)"""
         tree = _server_tree()
         for node in ast.walk(tree):

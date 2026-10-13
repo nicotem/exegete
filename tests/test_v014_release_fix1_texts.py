@@ -41,7 +41,7 @@ def _changelog_entry():
 
 def test_the_span_hint_offers_the_shortcut_only_where_one_was_computed(
         setup_server):
-    out = server.analyze_for_coding(
+    out = server.start_coding_session(
         [f["id"] for f in server.get_db().list_files()], instruction="test")
     sid = out.split("Session ID: `")[1].split("`")[0]
     recorded = json.loads(server.record_suggestions(sid, [{
@@ -186,7 +186,7 @@ def test_the_changelog_names_no_book_and_quotes_the_memo_line():
     assert "to read through it" not in entry
     assert "the assistant to use it to focus its reading" in entry
     # the served line it reports
-    source = _flat(inspect.getsource(server.analyze_for_coding))
+    source = _flat(inspect.getsource(server.start_coding_session))
     assert 'use it to focus your " "reading' in source
 
 

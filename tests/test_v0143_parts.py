@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """v0.14.3: whole-file reads in parts.
 
-`analyze_file_with_coding`, the file resource and the case resource
+`read_file_with_codings`, the file resource and the case resource
 returned a whole file's text with no limit; a long document overflowed
 Claude Code's 25,000-token cap on one answer. They now return a part at
 a time, with whole-file positions, and say where the next part starts.
@@ -72,7 +72,7 @@ class TestTheTool:
     def test_walking_the_parts_gives_the_whole_text(self, long_file):
         pieces, seen, start, answers = [], set(), 0, 0
         while True:
-            raw = host("analyze_file_with_coding", file_id=60, start=start)
+            raw = host("read_file_with_codings", file_id=60, start=start)
             assert len(raw) < MAX_ANSWER
             answer = json.loads(raw)
             answers += 1
@@ -95,16 +95,16 @@ class TestTheTool:
         assert answers >= 4
 
     def test_a_part_ends_at_a_line_or_a_space(self, long_file):
-        answer = json.loads(host("analyze_file_with_coding", file_id=60))
+        answer = json.loads(host("read_file_with_codings", file_id=60))
         assert answer["part_text"][-1] in "\n "
 
     def test_a_short_file_reads_as_before(self, setup_server):
-        answer = json.loads(host("analyze_file_with_coding", file_id=1))
+        answer = json.loads(host("read_file_with_codings", file_id=1))
         assert "full_text" in answer and "part" not in answer
 
     @pytest.mark.parametrize("start", [-1, 10_000_000])
     def test_a_start_outside_the_text(self, long_file, start):
-        answer = json.loads(host("analyze_file_with_coding", file_id=60,
+        answer = json.loads(host("read_file_with_codings", file_id=60,
                                  start=start))
         assert "start must be from 0" in answer["error"]
 
@@ -113,7 +113,7 @@ class TestTheTool:
         text = "Η πτέρυγα ήταν ήσυχη εκείνη τη νύχτα. " * 4000
         sql(folder, "INSERT INTO source (id, name, fulltext, owner, date) "
             "VALUES (61, 'greek.txt', ?, 'TestCoder', '2026-10-01')", (text,))
-        raw = host("analyze_file_with_coding", file_id=61)
+        raw = host("read_file_with_codings", file_id=61)
         answer = json.loads(raw)
         assert len(raw) < MAX_ANSWER * 1.2
         assert len(answer["part_text"]) < 20_000
@@ -132,7 +132,7 @@ class TestTheTool:
             "pos1, owner, date, memo, important) VALUES (620, 1, 62, "
             "'after', ?, ?, 'TestCoder', '2026-10-01', '', 0)",
             (index + 1, index + 6))         # QualCoder's count
-        answer = json.loads(host("analyze_file_with_coding", file_id=62))
+        answer = json.loads(host("read_file_with_codings", file_id=62))
         (segment,) = answer["coded_segments"]
         assert "stored_passage_differs" not in segment
         assert segment["position_start"] == index + 1      # never moved
@@ -149,7 +149,7 @@ class TestTheTool:
         sql(folder, "INSERT INTO code_text (ctid, cid, fid, seltext, pos0, "
             "pos1, owner, date, memo, important) VALUES (620, 1, 62, "
             "'later', 3, 8, 'TestCoder', '2026-10-01', '', 0)")
-        answer = json.loads(host("analyze_file_with_coding", file_id=62))
+        answer = json.loads(host("read_file_with_codings", file_id=62))
         (segment,) = answer["coded_segments"]
         assert segment["stored_passage_differs"] is True
         assert segment["position_start"] == 3              # never moved
@@ -174,7 +174,7 @@ class TestTheResources:
         assert len(raw) < MAX_ANSWER
         case = json.loads(raw)
         cut = [s for s in case["text_segments"] if "text_continues_at" in s]
-        assert cut and "analyze_file_with_coding" in case["parts_note"]
+        assert cut and "read_file_with_codings" in case["parts_note"]
         (segment,) = [s for s in cut if s["file_id"] == 60]
         assert segment["text"] == long_file[:segment["text_continues_at"]]
 

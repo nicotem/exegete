@@ -5,7 +5,7 @@ Claude Code keeps only the first 2,048 characters of each tool
 description, and of the server's opening text, and tells the model
 nothing about the rest. In v0.14.1, 30 of the 73 descriptions were
 longer, and some of the rules a model must not miss sat past the cut
-(measured on 3.13.5; 3.10 to 3.12 had more past it): analyze_for_coding's
+(measured on 3.13.5; 3.10 to 3.12 had more past it): start_coding_session's
 judgement of requests (from character 3,489), the preview-then-confirm
 paragraphs of merge_codes and prune_backups, the refusal while QualCoder
 has the project open in five write tools, the private-note refusal in
@@ -119,7 +119,7 @@ RULES = {
     "approve_on_the_users_word": (
         "approval", "Use this to record the USER'S decisions", None),
     "proposal_workflow_approval": (
-        "approval", "WORKFLOW: analyze_for_coding creates a session", None),
+        "approval", "WORKFLOW: start_coding_session creates a session", None),
     "ask_for_the_coder_name": (
         "approval", "Covers codings, annotations, journal entries", None),
     "researchers_coder_name": ("approval", "THE RESEARCHER'S CODER NAME:",
@@ -199,21 +199,21 @@ CARRIERS = {
     "hidden_coder_override": {"set_memo", "update_annotation"},
     "close_qualcoder_40_before_renaming": {"rename_case", "rename_file"},
     "relay_position_safety_warning": {
-        "add_annotation", "analyze_file_with_coding", "apply_codings",
+        "add_annotation", "read_file_with_codings", "apply_codings",
         "edit_suggestion", "propose_codes", "record_suggestions"},
-    "grounding_read": {"analyze_file_with_coding"},
+    "grounding_read": {"read_file_with_codings"},
     "grounding_record": {"record_suggestions"},
     "grounding_propose": {"propose_codes"},
-    "grounding_rules": {"analyze_for_coding"},
-    "methodological_judgement": {"analyze_for_coding"},
+    "grounding_rules": {"start_coding_session"},
+    "methodological_judgement": {"start_coding_session"},
     "not_intercoder_reliability": {"compare_coders"},
     "report_both_kappas": {"compare_coders"},
     "not_qualcoder_cooccurrence": {"find_cooccurring_codes"},
     "reading_and_code": {"edit_suggestion"},
     "reread_after_run": {"pseudonymise_source"},
-    "three_questions": {"analyze_for_coding"},
-    "coding_workflow_approval": {"analyze_for_coding"},
-    "session_pairings": {"analyze_for_coding"},
+    "three_questions": {"start_coding_session"},
+    "coding_workflow_approval": {"start_coding_session"},
+    "session_pairings": {"start_coding_session"},
     "suggestion_pairings": {"record_suggestions"},
     "approved_only": {"apply_codings"},
     "decide_again": {"edit_suggestion"},
@@ -221,7 +221,7 @@ CARRIERS = {
     "proposal_workflow_approval": {"propose_codes"},
     "ask_for_the_coder_name": {"set_project_ai_coder_name"},
     "researchers_coder_name": {"create_project"},
-    "qualcoder_open_stop": {"analyze_for_coding"},
+    "qualcoder_open_stop": {"start_coding_session"},
     "apply_refused_while_open": {"apply_codings"},
     "apply_other_project_refused": {"apply_codings"},
     "relay_open_warning": {"select_project"},
@@ -245,29 +245,29 @@ CARRIERS = {
 
 # What does not fit, and why. Moving words and nothing else, the first
 # 2,048 characters of these two descriptions cannot hold every rule
-# they carry: analyze_for_coding's grounding rules (1,394 characters)
+# they carry: start_coding_session's grounding rules (1,394 characters)
 # and judgement of requests (1,245) are 2,641 together, and ten of
 # pseudonymise_source's paragraphs are rules. The ones placed first are
 # the ones no other text gives the model. The rest reach the model
 # another way, named in each reason, and v0.15's shorter descriptions
 # are where they return.
 LEFT_PAST_THE_CUT = {
-    ("analyze_for_coding", "grounding_rules"):
+    ("start_coding_session", "grounding_rules"):
         "does not fit beside the judgement of requests; the short "
         "grounding rules sit within the cut of the three tools that read, "
-        "record and propose (analyze_file_with_coding, record_suggestions, "
+        "record and propose (read_file_with_codings, record_suggestions, "
         "propose_codes), and the opening text names them; one sentence, "
         "where the participant is unsure or contradicts themselves, is in "
         "none of those and reaches Claude Code only through read_brief, "
         "whose answer carries the grounding rules whole",
-    ("analyze_for_coding", "coding_workflow_approval"):
+    ("start_coding_session", "coding_workflow_approval"):
         "update_suggestion_status says within its cut to approve only "
         "what the user confirmed; the opening text and this tool's answer "
         "say the same",
-    ("analyze_for_coding", "qualcoder_open_stop"):
+    ("start_coding_session", "qualcoder_open_stop"):
         "the answer carries qualcoder_open and, when it is true, "
         "action_required, which asks the user to close QualCoder",
-    ("analyze_for_coding", "session_pairings"):
+    ("start_coding_session", "session_pairings"):
         "record_suggestions, where a pairing is recorded, carries its "
         "own rule on pairings within its cut",
     ("pseudonymise_source", "qualcoder_open_refusal"):
@@ -402,10 +402,10 @@ class TestTheRulesSitWithinTheCut:
         assert {rule for _, rule in LEFT_PAST_THE_CUT} <= set(RULES)
 
     def test_the_rules_the_brief_names_are_within_the_cut(self, served):
-        """The two the mandate names, spelled out: analyze_for_coding's
+        """The two the mandate names, spelled out: start_coding_session's
         judgement of requests and its three questions, in every set."""
         for mode, (tools, _) in served.items():
-            d = tools["analyze_for_coding"]
+            d = tools["start_coding_session"]
             assert server.METHODOLOGY_VOCABULARY in d
             assert (d.index(server.METHODOLOGY_VOCABULARY)
                     + len(server.METHODOLOGY_VOCABULARY)) <= CUT, mode
@@ -427,8 +427,8 @@ class TestTheRulesSitWithinTheCut:
 WORDS_0141 = {
     "add_annotation": (1697, 1406, "eb754cae1fd5fd0c"),
     "add_journal_entry": (1137, 943, "c3a73ee84df3096d"),
-    "analyze_file_with_coding": (1977, 1620, "c800e920aaa2fe59"),
-    "analyze_for_coding": (6101, 4958, "c774dca8502c1ab6"),
+    "read_file_with_codings": (1977, 1620, "c800e920aaa2fe59"),
+    "start_coding_session": (6101, 4958, "c774dca8502c1ab6"),
     "apply_codings": (2627, 2152, "f9afa83a8784cd88"),
     "cleanup_old_sessions": (842, 684, "e2e05fad8d2357ea"),
     "compare_coders": (3019, 2472, "de6c406b324c2ce9"),
@@ -512,8 +512,8 @@ WORDS_0141 = {
 REWORDED_0142 = {
     "add_annotation": (1697, 1405, "7e67b8e3fa3560e5"),
     "add_journal_entry": (1137, 942, "4c7856247accfc00"),
-    "analyze_file_with_coding": (1971, 1616, "a2610f4cbbf9c988"),
-    "analyze_for_coding": (6098, 4956, "552625d8365c92bd"),
+    "read_file_with_codings": (1971, 1616, "a2610f4cbbf9c988"),
+    "start_coding_session": (6098, 4956, "552625d8365c92bd"),
     "apply_codings": (2627, 2151, "17b1da5dbe428f09"),
     "compare_coders": (3006, 2460, "765d945ba6b6883d"),
     "copy_project_to_workspace": (1819, 1496, "aff3f80aba8508d9"),
@@ -554,7 +554,7 @@ REWORDED_0142 = {
 
 # Every description as this release serves it
 # The descriptions v0.14.3 changes, as it serves them, on
-# top of 0.14.2's words: analyze_file_with_coding (reads in parts, the
+# top of 0.14.2's words: read_file_with_codings (reads in parts, the
 # `start` argument, and the `without_codes` argument, reading without
 # codes) and import_text_file (that its text passes through the
 # conversation, its pointer to import_documents, the deprecated
@@ -566,7 +566,7 @@ REWORDED_0142 = {
 # named rather than a default), copy_project_to_workspace and
 # import_text_file (the folder set for projects, likewise)
 CHANGED_0143 = {
-    "analyze_file_with_coding": (2293, 1878, "892912ccbe8f76ac"),
+    "read_file_with_codings": (2293, 1878, "892912ccbe8f76ac"),
     "copy_project_to_workspace": (1801, 1483, "997bac5f12875338"),
     "create_project": (1915, 1505, "3f93233739c71562"),
     "import_text_file": (4022, 2994, "f51bac7ab0c34434"),
@@ -589,12 +589,32 @@ CHANGED_0143 = {
 # pseudonymise_source's description, after every rule pinned within the
 # first 2,048 characters (the owner's decision of 12 October 2026: no
 # ceiling on the tool texts; the size is reported in the CHANGELOG).
-# Later v0.15.0 pieces add their lines here.
+# The renames, piece 3 (tests/test_v0150_renames_tools.py): two
+# tools renamed, start_coding_session and read_file_with_codings (their
+# lines above are under their new names), and the new names, word for
+# word, in every description that names them; explain_ai_coding_tools
+# drops its example "How do I use analyze_for_coding?"; list_backups and
+# prune_backups say "Exegete's backups" and the kind 'exegete'. Later
+# v0.15.0 pieces add their lines here.
 CHANGED_0150 = {
     "get_current_project": (1920, 1570, "da157f879c430be0"),
     "list_available_projects": (904, 716, "0117f9141c0b48ea"),
     "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f"),
     "read_pseudonym_list": (1037, 856, "637792f4e7f7de38"),
+    # the renames, piece 3
+    "compare_coders": (3004, 2458, "d2d2e9480ae8fbae"),
+    "delete_coding": (2992, 2420, "11210044336ce58c"),
+    "edit_suggestion": (3389, 2721, "8b47aab19f6e5052"),
+    "explain_ai_coding_tools": (633, 515, "4bce34c0ba922adc"),
+    "list_backups": (2168, 1823, "79414633203c51eb"),
+    "propose_codes": (2696, 2145, "9f80d0ddcfc067bd"),
+    "prune_backups": (3030, 2464, "d7d3ffb7136f16b2"),
+    "record_suggestions": (4455, 3574, "8eebddf228bc704c"),
+    "review_suggestions": (1327, 1093, "7175c61a45e95f8e"),
+    "search_files": (4800, 3794, "60efa551cbfa9147"),
+    "start_coding_session": (6096, 4954, "6f9dd3d79152da08"),
+    "update_annotation": (2052, 1709, "32e8e8c22ca88105"),
+    "update_suggestion_status": (1537, 1263, "f885b390be42a9ab"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 
@@ -608,6 +628,9 @@ NEW_IN_0142 = {"read_brief", "check_for_updates"}
 # tests/test_v0143_reading.py pins, and the import tool, whose description
 # tests/test_v0143_import_hostile.py pins
 NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
+# and in v0.15.0: the earlier names of the two tools renamed then, whose
+# one-sentence description tests/test_v0150_renames_tools.py pins
+EARLIER_NAMES_0150 = {"analyze_for_coding", "analyze_file_with_coding"}
 
 
 def _fingerprint(description):
@@ -621,7 +644,8 @@ class TestTheDescriptionsKeepTheirWords:
     def test_every_description_keeps_its_words_and_length(self):
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
-        assert set(registered) == set(WORDS) | NEW_IN_0142 | NEW_IN_0143
+        assert set(registered) == (set(WORDS) | NEW_IN_0142 | NEW_IN_0143
+                                   | EARLIER_NAMES_0150)
         exact = sys.version_info[:2] == (3, 13)
         changed = []
         for name, (length, solid, digest) in sorted(WORDS.items()):
@@ -642,7 +666,7 @@ class TestTheDescriptionsKeepTheirWords:
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         moved = {
-            "analyze_for_coding": ("METHODOLOGICAL JUDGEMENT",
+            "start_coding_session": ("METHODOLOGICAL JUDGEMENT",
                                    "It reads no file"),
             "apply_codings": ("Text containing '#####'",
                               "Safety guarantees:"),
@@ -678,8 +702,10 @@ class TestTheDescriptionsKeepTheirWords:
             "### Changed: the rules a model must not miss come first"):]
         entry = entry[:entry.index("### ", 4)]
         assert "In fourteen descriptions" in entry
+        # 0.14.2's entry names start_coding_session by its earlier name
+        earlier = {new: old for old, new in server.RENAMED_TOOLS.items()}
         for name in moved:
-            assert f"`{name}`" in entry, name
+            assert f"`{earlier.get(name, name)}`" in entry, name
         assert "is as 0.14.1 served it" not in entry_0142
         assert ("each keeps the words 0.14.1 served (fourteen changed "
                 "order; see above), and none is longer" in entry_0142)
@@ -714,7 +740,7 @@ class TestTheOtherWaysInAreReal:
             con.commit()
         finally:
             con.close()
-        session = json.loads(_call("analyze_for_coding", file_ids=[70],
+        session = json.loads(_call("start_coding_session", file_ids=[70],
                                    instruction="test"))
         answer = json.loads(_call(
             "record_suggestions",
@@ -746,6 +772,6 @@ class TestTheOtherWaysInAreReal:
             for name, description in tools.items():
                 found = re.search(_words(sentence), description)
                 assert not found or found.end() > CUT, (mode, name)
-        reason = LEFT_PAST_THE_CUT[("analyze_for_coding", "grounding_rules")]
+        reason = LEFT_PAST_THE_CUT[("start_coding_session", "grounding_rules")]
         assert "unsure or contradicts themselves" in reason
         assert "only through read_brief" in reason

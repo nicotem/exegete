@@ -1041,7 +1041,7 @@ class TestEveryReadRechecksWhoIsHidden:
 
     @pytest.mark.parametrize("read", [
         "get_coded_segments", "search_coded_text", "get_coding_frequencies",
-        "find_cooccurring_codes", "analyze_file_with_coding",
+        "find_cooccurring_codes", "read_file_with_codings",
         "get_project_summary"])
     def test_every_read_of_codings_answers_as_a_fresh_connection_would(
             self, arriving, read):
@@ -1056,8 +1056,8 @@ class TestEveryReadRechecksWhoIsHidden:
             "get_coding_frequencies": lambda: server.get_coding_frequencies(),
             "find_cooccurring_codes": lambda: server.find_cooccurring_codes(
                 code_id=1),
-            "analyze_file_with_coding": lambda:
-                server.analyze_file_with_coding(file_id=1),
+            "read_file_with_codings": lambda:
+                server.read_file_with_codings(file_id=1),
             "get_project_summary": lambda: server.get_project_summary(),
         }[read]
         before = json.loads(call())

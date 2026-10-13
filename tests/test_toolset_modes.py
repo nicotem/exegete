@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """QUALCODER_MCP_TOOLSET modes (EXPERIMENTAL, multi-host plan section 3.1).
 
-Default full = the backward-compatible full surface. core = the 23-tool
+Default full = the backward-compatible full surface. core = the 25-tool
 supervised-coding-loop subset for local-model hosts. Unknown values fail
 loudly at startup. The functional smoke drives a core-mode server over the
 REAL stdio transport through the whole suggest -> apply loop, proving the
@@ -32,8 +32,8 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 78              # 73, plus read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), and create_project (v0.15.0: `full` and `lifecycle` became one set)
-EXPECTED_CORE = 23              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3); check_for_updates, import_documents and create_project are not in core
+EXPECTED_FULL = 80              # 73, plus read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), and create_project (v0.15.0: `full` and `lifecycle` became one set), and the earlier names of the two tools renamed in 0.15.0
+EXPECTED_CORE = 25              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), and the earlier names of the two tools renamed in 0.15.0; check_for_updates, import_documents and create_project are not in core
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -267,7 +267,7 @@ class TestCoreModeEndToEnd:
 
                     # full suggestion loop, S2-style
                     out = _text_of(await session.call_tool(
-                        "analyze_for_coding", {"instruction": "test", "file_ids": [1]}))
+                        "start_coding_session", {"instruction": "test", "file_ids": [1]}))
                     sid = out.split("Session ID: `")[1].split("`")[0]
 
                     out = _text_of(await session.call_tool(
@@ -343,8 +343,14 @@ class TestTheReadmeToolList:
         server._apply_toolset("full")
         names = [t.name for t in asyncio.run(server.mcp.list_tools())]
         assert len(names) == EXPECTED_FULL
-        missing = [n for n in names if f"`{n}(" not in section]
+        # v0.15.0: the two earlier names have no entry of their own; the
+        # section after this one, "Earlier names", names each beside its
+        # new name (tests/test_v0150_renames_tools.py)
+        missing = [n for n in names if f"`{n}(" not in section
+                   and n not in server.RENAMED_TOOLS]
         assert missing == []
+        assert set(server.RENAMED_TOOLS) <= set(names)
+        assert set(server.RENAMED_TOOLS.values()) <= set(names)
         flat = " ".join(section.replace("\n>", " ").split())
         assert f"registers {EXPECTED_FULL} tools" in flat
         # v0.15.0: one set; `lifecycle` only as `full`'s earlier name
@@ -398,10 +404,13 @@ class TestThePublishedSchemaBudget:
     # 3.11 (`core` does not serve the tool), and its fix round 126 more,
     # 134 on 3.11 (where names were not replaced, and not to open
     # originals to work round a problem).
-    FULL_MEASURED = 204_951          # 78 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 67_366           # 23 tools, same environment
-    FULL_MEASURED_310 = 214_991      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 70_758
+    # The two tools renamed (the renames, piece 3), their earlier
+    # names listed with one sentence each, added 1,243 to `full` and
+    # 1,245 to `core` (1,239 and 1,245 on 3.11).
+    FULL_MEASURED = 206_194          # 80 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_611           # 25 tools, same environment
+    FULL_MEASURED_310 = 216_230      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 72_003
 
     # Why two per cent, away from the reference environment.
     #
@@ -416,7 +425,7 @@ class TestThePublishedSchemaBudget:
     # What the loose half does NOT do, stated plainly because the
     # previous version of this comment claimed the opposite: away from
     # the reference interpreter it does not report a single tool added
-    # or removed. The average tool contributes 2,619 characters, about
+    # or removed. The average tool contributes 2,570 characters, about
     # 1.3 per cent, which is INSIDE two per cent; two tools, about 2.6
     # per cent, are outside it. So away from 3.13 this is an alarm for
     # large drift and not a gate on the figure.
@@ -428,11 +437,11 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "204,951"
-    CORE_CHARS = "67,366"
-    FULL_ROUNDED = "205,000"
-    CORE_ROUNDED = "67,000"
-    FULL_TOKENS = "51k"
+    FULL_CHARS = "206,194"
+    CORE_CHARS = "68,611"
+    FULL_ROUNDED = "206,000"
+    CORE_ROUNDED = "69,000"
+    FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"
 
     @staticmethod

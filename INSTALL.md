@@ -608,17 +608,19 @@ spelling only.
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 78 tools, every tool,
+- `EXEGETE_TOOLSET`: `full` (default) registers 80 tools, every tool,
   creating a project (Experimental) included, so that a study can be
   started from the conversation (TOOLS.md, "Starting a project from
-  the conversation"); `core` registers the 23-tool supervised coding
-  set for local models (see the LM Studio recipe), which cannot create
-  a project. `lifecycle`, the earlier name of `full` (the desktop
-  extension's default before 0.15.0), is read as `full` until v1.0,
-  and Exegete names it in its log at each start. The desktop extension
-  sets this variable from its "Tool set" setting, whose default is
-  `full`. Any other value stops the server at start-up with an error
-  naming the valid values. Resources and prompts are not affected.
+  the conversation"); two of them are the earlier names of two renamed
+  tools (TOOLS.md, "Earlier names"). `core` registers the 25-tool
+  supervised coding set for local models (see the LM Studio recipe),
+  which cannot create a project. `lifecycle`, the earlier name of
+  `full` (the desktop extension's default before 0.15.0), is read as
+  `full` until v1.0, and Exegete names it in its log at each start.
+  The desktop extension sets this variable from its "Tool set"
+  setting, whose default is `full`. Any other value stops the server
+  at start-up with an error naming the valid values. Resources and
+  prompts are not affected.
 - `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
@@ -896,9 +898,9 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 78 tools by
+**Step 3. Use the core toolset.** Exegete offers 80 tools by
 default, and the serialised tool definitions alone measure about
-205,000 characters, roughly 51k tokens (measured for 0.15.0 under
+206,000 characters, roughly 52k tokens (measured for 0.15.0 under
 Python 3.13.5 with mcp 1.30.0, in an environment installed from the
 repository's lock file; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 20,000 characters of that on its own, because a tool
@@ -913,15 +915,15 @@ definitions measure about five per cent more).
 That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
-(in the config of Step 5) to register only the 23-tool supervised
-coding set, measured at about 67,000 characters, roughly 17k tokens.
+(in the config of Step 5) to register only the 25-tool supervised
+coding set, measured at about 69,000 characters, roughly 17k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
 17k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
 (that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
-or 64k if you must run the full surface (its schema alone is about 51k
+or 64k if you must run the full surface (its schema alone is about 52k
 tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
@@ -1367,7 +1369,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 205,000 characters with `full`; TOOLS.md says how that
+  (about 206,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1462,7 +1464,7 @@ annotation, which takes priority)."). Under a server's default,
 `auto`, Codex asks before a tool that can replace or remove, runs a
 read-only tool without asking, and also runs without asking a tool that
 is neither but is marked as reaching nothing beyond this computer. Here
-that is the 16 tools that only add (`import_text_file`,
+that is the 17 tools that only add (`import_text_file`,
 `apply_codings`, `create_proposed_codes`, `create_code` and the rest,
 `open_file_for_reading` and `import_documents` among them from 0.14.3)
 and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`

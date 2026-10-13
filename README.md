@@ -521,8 +521,8 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 78: all, creating a project (Experimental) included | about 205,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
-| `core` | 23: the coding loop and its safety tools | about 67,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
+| `full` | 80: all, creating a project (Experimental) and two renamed tools' earlier names included | about 206,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `core` | 25: the coding loop and its safety tools | about 69,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:
@@ -533,7 +533,7 @@ the extension, is still accepted and means `full`.
 **Beyond the basics**:
 
 - **Coding with your approval**, the path drawn above:
-  `analyze_for_coding`, `record_suggestions`, `review_suggestions`,
+  `start_coding_session`, `record_suggestions`, `review_suggestions`,
   `edit_suggestion`, `update_suggestion_status`, `apply_codings`;
   codes the assistant proposes: `propose_codes`, `update_proposal`,
   `create_proposed_codes`.

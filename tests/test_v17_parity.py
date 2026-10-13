@@ -59,7 +59,7 @@ class TestT13ImportNormalization:
         fid = _sql(qualcoder_db_path,
                    "SELECT id FROM source WHERE name='norm2.txt'")[0]["id"]
         # the session covers the file coded (v0.14: its scope holds)
-        analyze = server.analyze_for_coding([1, fid], instruction="test")
+        analyze = server.start_coding_session([1, fid], instruction="test")
         sid = analyze.split("Session ID: `")[1].split("`")[0]
         out = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": fid, "code_name": "Stress",
@@ -182,7 +182,7 @@ class TestT16JournalAndOwnerTolerance:
         """W16: owner names are opaque strings, emoji included."""
         out = json.loads(server.get_coding_frequencies())
         assert out["total_coded_segments"] >= 4
-        analysis = json.loads(server.analyze_file_with_coding(1))
+        analysis = json.loads(server.read_file_with_codings(1))
         owners = {s["coder"] if "coder" in s else s.get("owner")
                   for s in analysis["coded_segments"]}
         assert "AI Agent" in owners

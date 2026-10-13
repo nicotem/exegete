@@ -149,7 +149,7 @@ class TestExportValidatesAgainstXsd:
     def test_session_export(self, setup_server, qualcoder_db_path,
                             refi_schema, tmp_path):
         """Session mode (AI suggestions with their reading in words)."""
-        out = server.analyze_for_coding([1], instruction="test")
+        out = server.start_coding_session([1], instruction="test")
         sid = out.split("Session ID: `")[1].split("`")[0]
         rec = json.loads(server.record_suggestions(sid, [{
             "file_id": 1, "code_name": "Stress",

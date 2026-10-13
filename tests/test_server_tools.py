@@ -244,16 +244,16 @@ class TestGetProjectSummary:
 
 
 class TestAnalyzeFileWithCoding:
-    """Test analyze_file_with_coding tool."""
+    """Test read_file_with_codings tool."""
 
     def test_valid_file(self, setup_server):
-        result = server.analyze_file_with_coding(1)
+        result = server.read_file_with_codings(1)
         data = json.loads(result)
         assert "file_info" in data
         assert "coded_segments" in data
 
     def test_nonexistent_file(self, setup_server):
-        result = server.analyze_file_with_coding(999)
+        result = server.read_file_with_codings(999)
         data = json.loads(result)
         assert "error" in data
 
@@ -382,10 +382,10 @@ class TestGetCasesByCode:
 # =============================================================================
 
 class TestAnalyzeForCoding:
-    """Test analyze_for_coding tool."""
+    """Test start_coding_session tool."""
 
     def test_valid_files_and_codes(self, setup_server):
-        result = server.analyze_for_coding(
+        result = server.start_coding_session(
             file_ids=[1],
             code_names=["Stress"],
             instruction="Find stress indicators"
@@ -395,12 +395,12 @@ class TestAnalyzeForCoding:
         assert "Session ID" in result
 
     def test_invalid_file_ids(self, setup_server):
-        result = server.analyze_for_coding(file_ids=[999], instruction="test")
+        result = server.start_coding_session(file_ids=[999], instruction="test")
         data = json.loads(result)
         assert "error" in data
 
     def test_invalid_code_names(self, setup_server):
-        result = server.analyze_for_coding(
+        result = server.start_coding_session(
             file_ids=[1],
             code_names=["NonexistentCode"],
             instruction="test",
@@ -409,7 +409,7 @@ class TestAnalyzeForCoding:
         assert "error" in data
 
     def test_all_codes_when_none_specified(self, setup_server):
-        result = server.analyze_for_coding(file_ids=[1], instruction="test")
+        result = server.start_coding_session(file_ids=[1], instruction="test")
         assert "SESSION STARTED" in result
         # Should use all available codes
         assert "2 codes" in result

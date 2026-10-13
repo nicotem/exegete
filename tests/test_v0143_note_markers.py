@@ -272,7 +272,7 @@ def test_a_quote_across_the_marker_includes_it(setup_server,
         con.close()
     assert stored.startswith(FIRST)
     assert stored.rstrip("\n").endswith("Comment 1: Check the year.")
-    sid = _sid(server.analyze_for_coding([file_id], instruction="test"))
+    sid = _sid(server.start_coding_session([file_id], instruction="test"))
     across = "was far[Footnote 1] from home."
     recorded = json.loads(server.record_suggestions(sid, [{
         "reading": "explicit", "file_id": file_id, "code_name": "Stress",

@@ -430,7 +430,7 @@ class TestNothingSaysExegeteOpensAQualCoderProject:
 # a host. Anywhere else in what is served, and in the messages, "the
 # server" or "this server" would speak for Exegete (the sweep's
 # relationship check found it in the methods notes, in
-# analyze_for_coding's lines for the researcher and in a refusal of
+# start_coding_session's lines for the researcher and in a refusal of
 # rename_file, beside a brief that says "Exegete").
 THE_SERVER_AS_A_PROCESS = (
     "the server's own working folder",
@@ -503,7 +503,7 @@ class TestExegeteNotTheServer:
 
     def test_the_lines_for_the_researcher_say_exegete(self, setup_server):
         out = asyncio.run(server.mcp.call_tool(
-            "analyze_for_coding", {"file_ids": [1], "instruction": "test"}))
+            "start_coding_session", {"file_ids": [1], "instruction": "test"}))
         blocks = out[0] if isinstance(out, tuple) else out
         text = json.loads("".join(getattr(b, "text", "")
                                   for b in blocks))["instructions"]
@@ -697,8 +697,8 @@ class TestQualCoderIsOptional:
 BEFORE = {
     "add_annotation": (1697, 1781, 1406),
     "add_journal_entry": (1137, 1193, 943),
-    "analyze_file_with_coding": (1977, 2081, 1620),
-    "analyze_for_coding": (6101, 6345, 4958),
+    "read_file_with_codings": (1977, 2081, 1620),
+    "start_coding_session": (6101, 6345, 4958),
     "apply_codings": (2627, 2791, 2152),
     "cleanup_old_sessions": (842, 898, 684),
     "compare_coders": (3019, 3231, 2472),
@@ -779,7 +779,7 @@ class TestNoDescriptionGrew:
     # on purpose (tests/test_v0142_description_cut.py pins their words in
     # CHANGED_0143); every other description is still held to 0.14.1's
     NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
-    CHANGED_IN_0143 = {"analyze_file_with_coding", "import_text_file"}
+    CHANGED_IN_0143 = {"read_file_with_codings", "import_text_file"}
     # and v0.15.0 lengthens two on purpose. As its design says (the
     # renames, piece 2), list_available_projects names the extension's
     # folder for projects and its earlier default among its places
@@ -792,17 +792,29 @@ class TestNoDescriptionGrew:
     # it is still held to 0.14.1's length, measured with that paragraph
     # taken out
     LENGTHENED_IN_0150 = {"pseudonymise_source"}
+    # and the renames, piece 3: two tools renamed (their lines above are
+    # under their new names), and the new names, word for word, in the
+    # descriptions that name them, where start_coding_session is two
+    # characters longer than analyze_for_coding; "Exegete's backups" in
+    # list_backups and prune_backups (tests/test_v0150_renames_tools.py;
+    # their words pinned in tests/test_v0142_description_cut.py,
+    # CHANGED_0150). Their earlier names are listed with one sentence.
+    RENAMED_IN_0150 = {"edit_suggestion", "list_backups", "propose_codes",
+                       "prune_backups", "record_suggestions",
+                       "review_suggestions", "update_suggestion_status"}
+    EARLIER_NAMES_0150 = {"analyze_for_coding", "analyze_file_with_coding"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         assert set(registered) == set(BEFORE) | {"check_for_updates"} | \
-            self.NEW_IN_0143
+            self.NEW_IN_0143 | self.EARLIER_NAMES_0150
         exact = sys.version_info[:2] == (3, 13)
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
-            if name in self.CHANGED_IN_0143 | self.CHANGED_IN_0150:
+            if name in (self.CHANGED_IN_0143 | self.CHANGED_IN_0150
+                        | self.RENAMED_IN_0150):
                 continue
             text = registered[name]
             if name in self.LENGTHENED_IN_0150:

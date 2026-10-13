@@ -170,8 +170,8 @@ rather than fewer.
   and prompt descriptions, error strings, result notes, CHANGELOG
   entries and commit messages use British spelling (behaviour, colour,
   analyse, organise, initialise, licence as a noun). Identifiers are
-  never changed: tool names (`analyze_for_coding`, `sanitize_formulas`,
-  `recolor_code`), argument names, JSON result keys, environment
+  never changed: tool names (`sanitize_formulas`, `recolor_code`),
+  argument names, JSON result keys, environment
   variable names, file names, SQL, and proper names such as "GNU
   Lesser General Public License" keep their exact spelling, including
   when a sentence mentions them. Code comments follow the same rule when a line is

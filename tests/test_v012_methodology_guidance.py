@@ -4,7 +4,7 @@ grounding language in tool guidance.
 
 Pins the two canonical blocks (GROUNDING_RULES, METHODOLOGY_VOCABULARY),
 their placement on the entry points of the supervised coding loop, the
-analyze_for_coding result reminder, the explain_ai_coding_tools entries,
+start_coding_session result reminder, the explain_ai_coding_tools entries,
 the four reworded prompt templates, the static methods-notes resource,
 the initialize `instructions` string, and the house rules (no em dashes,
 ASCII punctuation in the added constants, British spelling).
@@ -78,8 +78,8 @@ class TestCanonicalBlocks:
 
 class TestPlacement:
 
-    def test_analyze_for_coding_carries_both_blocks_before_span_style(self):
-        d = _desc("analyze_for_coding")
+    def test_start_coding_session_carries_both_blocks_before_span_style(self):
+        d = _desc("start_coding_session")
         assert server.GROUNDING_RULES in d
         assert server.METHODOLOGY_VOCABULARY in d
         # v0.14.2: the judgement of requests moved up, after the three
@@ -107,7 +107,7 @@ class TestPlacement:
         d = _desc("propose_codes")
         assert server.GROUNDING_PROPOSE in d
         assert d.index("WORKFLOW") < d.index(server.GROUNDING_PROPOSE) < d.index("Args:")
-        d = _desc("analyze_file_with_coding")
+        d = _desc("read_file_with_codings")
         assert server.GROUNDING_READ in d
         # v0.14 fix round 2: the opening is shorter; the block still sits
         # after it and before the arguments
@@ -117,12 +117,12 @@ class TestPlacement:
     def test_placement_discipline_no_other_tool_teaches_the_labels(self):
         carriers = [n for n, t in server.mcp._tool_manager._tools.items()
                     if "reframe_and_ask" in (t.description or "")]
-        assert carriers == ["analyze_for_coding"]
-        assert len(server.mcp._tool_manager._tools) == 78  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), create_project (0.15.0, in `full`)
+        assert carriers == ["start_coding_session"]
+        assert len(server.mcp._tool_manager._tools) == 80  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0)
 
     def test_docstring_of_the_function_object_matches_the_registration(self):
         # _tool_guard uses functools.wraps, so the amended __doc__ travels
-        assert server.GROUNDING_RULES in (server.analyze_for_coding.__doc__ or "")
+        assert server.GROUNDING_RULES in (server.start_coding_session.__doc__ or "")
 
 
 class TestWithGuidanceDecorator:
@@ -151,8 +151,8 @@ class TestWithGuidanceDecorator:
 
 class TestResultText:
 
-    def test_analyze_for_coding_reminder_is_item_one(self, setup_server):
-        out = json.loads(server.analyze_for_coding([1], instruction="test"))
+    def test_start_coding_session_reminder_is_item_one(self, setup_server):
+        out = json.loads(server.start_coding_session([1], instruction="test"))
         # the banner wraps at 80 columns; compare with whitespace collapsed
         text = " ".join(out["instructions"].split())
         assert "1. **Read before you code, and stay with the text.**" in text

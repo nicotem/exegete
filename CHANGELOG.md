@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conversation using Exegete is writing to it (Exegete writes the same
   file during each of its own writes), and both ways through: closing
   the project in QualCoder, or waiting a moment. `select_project`'s
-  warning, `get_current_project`'s note and `analyze_for_coding`'s
+  warning, `get_current_project`'s note and `start_coding_session`'s
   request and banner say the same. `get_current_project`'s note on a
   lock file not refreshed for over 30 seconds says that QualCoder 3.8
   leaves one when it does not close cleanly, and that a write by
@@ -142,17 +142,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the
-  owner's decision of 12 October 2026): 78 tools, creating a project
-  (still Experimental) included, the default on every route, in the
+  owner's decision of 12 October 2026): 78 tools (80 with the earlier
+  names of the two tools renamed below), creating a project (still
+  Experimental) included, the default on every route, in the
   Claude Desktop extension and wherever Exegete is configured by hand.
   An install whose tool set is `full` gains creating a project.
   `lifecycle`, the earlier name of `full`, set anywhere (the extension's
   "Tool set" setting, `EXEGETE_TOOLSET` or `QUALCODER_MCP_TOOLSET`, in
   any letter case), means `full` and is read until v1.0; the log says so
-  once at each start, never in an answer. `core` is unchanged: 23
-  tools, without creating a project. The extension's "Tool set"
-  setting now comes as `full` and names the two words, and the bug
-  report offers `full`, `core` and
+  once at each start, never in an answer. `core` keeps its 23 tools
+  (25 with the two earlier names below), without creating a project.
+  The extension's "Tool set" setting now comes as `full` and names the
+  two words, and the bug report offers `full`, `core` and
   `lifecycle (the earlier name of full)`.
 - **On the Terminal routes the assistant can now create a project
   without a setting.** New projects go to
@@ -192,17 +193,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   place, compared by which folder it is rather than by its spelling,
   so its projects are listed once, not twice.
 
+### Changed: two tools renamed, and Exegete's backups
+
+- **Two tools have names that say what they do** (the owner's decision
+  of 12 October 2026): `analyze_for_coding` is now
+  `start_coding_session` (it starts a coding session and reads
+  nothing), and `analyze_file_with_coding` is now
+  `read_file_with_codings` (a file's text with its codings). Every
+  description, answer, refusal and help text that names them uses the
+  new names, and so do the documents.
+- **The earlier names are still listed**, each with a short
+  description, and do exactly what the new ones do, with the same
+  arguments and the same answers, until a later release (planned as
+  v0.15.2) removes them. Listing them adds 1,231 characters to
+  every request, in `full` and in `core` (see "Measured"). A host
+  that remembers a choice to run an earlier name without asking may ask
+  again for the new one. Likewise, a choice to block or switch off an
+  earlier name does not carry over to its new name: if you blocked one,
+  you may want to block the new name too. The help topic
+  `analyze_for_coding` of `explain_ai_coding_tools`, deprecated, keeps
+  its name until the deprecated topics go; its text names
+  `start_coding_session`.
+- **"MCP backups" is now "Exegete's backups"**, and `list_backups` gives
+  Exegete's own backups the kind `exegete` (it was `mcp`). The kind is
+  worked out from each folder's name whenever the backups are listed,
+  so no backup changes and `prune_backups` removes exactly what it
+  removed before; but an assistant or a script that looked for the kind
+  `mcp` now sees `exegete`.
+
 ### Measured
 
-- Serialised tool JSON: full = 204,951 characters (about 51.2k tokens
-  at chars/4) over 78 tools, and core = 67,366 (about 16.8k) over 23,
+- Serialised tool JSON: full = 206,194 characters (about 51.5k tokens
+  at chars/4) over 80 tools, and core = 68,611 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 214,991 and
-  70,758. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), four changes
+  which also gives exactly 0.14.3's figures for its tree), 216,230 and
+  72,003. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), five changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -215,7 +244,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   143 characters more, in both sets (147 on 3.11). Then
   `pseudonymise_source`'s description gained a paragraph on what
   pseudonymisation is for: its entry grew by 583 characters, 619 on
-  3.11, in `full` only. No other tool's entry changed.
+  3.11, in `full` only. And two tools were renamed: their earlier
+  names, listed with a short description each, add 1,231 characters
+  to both sets on both interpreters (their two entries and the
+  separators between entries), and the new names in the descriptions
+  that name the two tools, with "Exegete's backups" in `list_backups`
+  and `prune_backups` and the example dropped from
+  `explain_ai_coding_tools`, 12 more in `full` and 14 in `core` (8 and
+  14 on 3.11). No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

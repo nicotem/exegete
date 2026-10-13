@@ -205,7 +205,13 @@ def _tools(mode="full"):
 # trusted blindly for what the assistant reads, and the safer way, with
 # a link to PRIVACY.md's section. That takes 512 characters, and the
 # limit is raised by that and no more: 36,172.
-README_LIMIT = 36_172
+# Its fix round names the two ways Exegete replaces names, says that
+# the project's folder still holds the originals and any names list,
+# that the tools return the pseudonyms only where names were replaced
+# (PRIVACY.md says what is not), and "the computer where the assistant
+# works". That takes 284 characters, and the limit is raised by that
+# and no more: 36,456.
+README_LIMIT = 36_456
 
 
 def test_the_readme_stays_short():

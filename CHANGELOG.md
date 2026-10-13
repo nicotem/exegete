@@ -121,18 +121,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PRIVACY.md says what pseudonymisation is for**, in a section of its
   own, "What pseudonymisation is for": the names list and
   `pseudonymise_source` are useful for managing what is shared with
-  other people (a colleague or second coder, a supervisor, a
-  transcriber, whoever receives an export). For what reaches the AI
-  assistant they help, but they should not be trusted blindly: an
-  assistant that opens files by itself can read the originals by a
-  route outside Exegete, as an imagined example shows. For anyone who
-  wants to be sure that real names never reach the assistant, it
-  suggests replacing them before the documents come to the computer
-  where the assistant works. "Practical mitigations" points to the
-  section.
+  other people (a colleague or second coder, a supervisor, whoever
+  receives an export), though the project's folder still holds the
+  originals and any names list. For what reaches the AI assistant they
+  help, but they should not be trusted blindly: what Exegete's tools
+  return carries the pseudonyms only where names were replaced (the
+  section says what is not), and an assistant that opens files by
+  itself can read the originals by a route outside Exegete, as an
+  imagined example shows. For anyone who wants to be sure that real
+  names never reach the assistant, it suggests replacing them before
+  the documents come to the computer where the assistant works.
+  "Practical mitigations" points to the section.
 - **The README** ("Where your data goes") **and `pseudonymise_source`'s
-  description** say so briefly. The description grows by that paragraph
-  (see "Measured"); what pseudonymisation does has not changed.
+  description** say so briefly; the description also asks the
+  assistant not to open originals itself to work round a problem, and
+  to ask the researcher. The description grows by that paragraph (see
+  "Measured"); what pseudonymisation does has not changed.
 
 ### Changed: one tool set called full
 
@@ -160,13 +164,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Measured
 
-- Serialised tool JSON: full = 204,682 characters (about 51.2k tokens
+- Serialised tool JSON: full = 204,808 characters (about 51.2k tokens
   at chars/4) over 78 tools, and core = 67,223 (about 16.8k) over 23,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 214,710 and
+  which also gives exactly 0.14.3's figures for its tree), 214,844 and
   70,611. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the opt-in lifecycle set's 204,244 over 78, on 3.13), three changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
@@ -177,7 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pseudonymise_source`'s by 14 fewer and `read_pseudonym_list`'s by 3
   fewer, in `full` only (on 3.11, 6 fewer, 14 fewer and 3 fewer).
   Then `pseudonymise_source`'s description gained a paragraph on what
-  pseudonymisation is for: its entry grew by 457 characters, 485 on
+  pseudonymisation is for: its entry grew by 583 characters, 619 on
   3.11, in `full` only. No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12

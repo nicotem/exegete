@@ -587,7 +587,7 @@ CHANGED_0143 = {
 # Later v0.15.0 pieces add their lines here.
 CHANGED_0150 = {
     "get_current_project": (1920, 1570, "da157f879c430be0"),
-    "pseudonymise_source": (17786, 13079, "f6997b24a2137947"),
+    "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f"),
     "read_pseudonym_list": (1037, 856, "637792f4e7f7de38"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}

@@ -477,7 +477,7 @@ class TestTheDocuments:
         tokens = f"{round(Budget.FULL_MEASURED / 4000)}k"
         # v0.15.0, what pseudonymisation is for (not presuming
         # QualCoder, piece 2): a paragraph in pseudonymise_source's
-        # description took `full` from 204,225 to 204,682 characters
+        # description took `full` from 204,225 to 204,808 characters
         assert (rounded, tokens) == ("205,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "

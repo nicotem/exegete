@@ -19,6 +19,13 @@ before they come to the computer doing the work. So:
   characters (the owner's decision of the same day: no ceiling on the
   tool texts; the size is reported in the CHANGELOG).
 
+The review's first round found that the texts said more than the code
+does: they made what Exegete returns sound free of names, naming a route
+outside Exegete as the only gap, and offered the tools for sharing the
+project without saying what its folder still holds. The fix round says
+both, points to where PRIVACY.md lists what stays, and asks the
+assistant not to open originals itself to work round a problem.
+
 The guard keeps an earlier draft's words from coming back.
 """
 
@@ -45,28 +52,74 @@ OLD_PHRASES = (
 )
 FIRST_LINE = "Replace names with pseudonyms in a project's stored text."
 
-# The new texts, word for word, white space collapsed
+# Fix round 1 of the review: the passage named one gap, a route outside
+# Exegete, and made what Exegete returns sound free of names; and it
+# offered the tools for sharing the project without saying what its
+# folder still holds. Each sentence that says so is its own constant,
+# so that a test names what it guards.
+SHARING_THE_FOLDER = (
+    "Sharing the project's folder itself, though, shares what it still "
+    "holds, real names included: the imported documents' originals, copied "
+    "unchanged into its folder of originals, and `pseudonyms.json`, if you "
+    "keep one, the reverse key at its root. \"Pseudonymising a project does "
+    "not empty it of names\", below, says what stays, the backups beside "
+    "the project included.")
+NOT_EVERYTHING = (
+    "Once the names are replaced, what Exegete's tools return of the "
+    "replaced text carries the pseudonyms. Not everything is replaced, "
+    "though: a PDF's text, file and case names, attribute values, notes and "
+    "journal entries unless you ask for them to be rewritten, and any name "
+    "the list or the mapping does not hold still reach the assistant "
+    "through Exegete, and names you type into the conversation for a "
+    "mapping reach it as you type them (\"What is not pseudonymised\", in "
+    "\"Bringing documents in\", and \"Pseudonymising a project does not "
+    "empty it of names\", in \"Practical mitigations\", say what stays).")
+ANOTHER_COPY = (
+    "Removing the file from Downloads would not have closed that route: "
+    "the nine that came in have unchanged copies, real names included, in "
+    "the project's folder of originals, which such an assistant can read "
+    "as easily.")
+# The description's sentence: the pseudonyms only where names were
+# replaced, and not to open originals to work round a problem
+ONLY_WHERE_REPLACED = (
+    "Exegete's answers then carry the pseudonyms where names were replaced "
+    "(not in what is listed above), but a read outside Exegete reaches the "
+    "original, so do not open originals yourself to work round a problem; "
+    "ask the researcher.")
+# The places the section points to, each a bold item in its section
+POINTED_TO = (
+    ("Bringing documents in", "**What is not pseudonymised**"),
+    ("Practical mitigations",
+     "**Pseudonymising a project does not empty it of names.**"),
+)
+# The paragraph of the description that "listed above" refers to
+LISTED_ABOVE = "What this does NOT rewrite, and where the names will remain:"
+# The new texts, word for word, white space collapsed (fix round 1:
+# what the project's folder still holds, what is not replaced, where
+# else an unchanged copy sits, and three phrases)
 SECTION = (
     "## What pseudonymisation is for "
     "The project's names list (`pseudonyms.json`) replaces participants' "
     "names as documents are imported, and `pseudonymise_source` replaces "
     "them in a file already in the project. They are useful for managing "
     "what you disclose to other people: a colleague or second coder you "
-    "share the project with, a supervisor, a transcriber, or whoever "
-    "receives an export. "
+    "share the project with, a supervisor, or whoever receives an export. "
+    + SHARING_THE_FOLDER + " "
     "For what reaches the AI assistant, they help, but they should not be "
-    "trusted blindly. Once the names are replaced, what Exegete's tools "
-    "return carries the pseudonyms. But depending on how your assistant is "
-    "set up, an assistant that meets a problem may work round it by a route "
-    "outside Exegete, and what it reads that way goes to its AI provider in "
-    "full (the section above). "
+    "trusted blindly. "
+    + NOT_EVERYTHING + " "
+    "And depending on how your assistant is set up, an assistant that "
+    "meets a problem may work round it by a route outside Exegete, and "
+    "what it reads that way goes to its AI provider in full (the section "
+    "above). "
     "An imagined example. You bring ten interview transcripts into a "
     "project, meaning to replace the names before any coding starts. One "
     "file is refused. The assistant, which in your set-up can open files on "
-    "the computer by itself, offers to find out why: it opens the original "
-    "in your Downloads folder and reads its first page, real names "
+    "the computer by itself, sets out to find out why: it opens the "
+    "original in your Downloads folder and reads its first page, real names "
     "included. Nothing in Exegete saw that read, and nothing in Exegete "
     "could have stopped it. "
+    + ANOTHER_COPY + " "
     "If an assistant has broad and deep access to the computer, there is "
     "little Exegete can do about what it reads. So, if you want to be sure "
     "that participants' real names never reach the assistant, a safer way "
@@ -75,7 +128,7 @@ SECTION = (
     "computer or before the files are copied to this one, and bring only "
     "those copies here. Exegete's tools remain useful for a name that was "
     "missed, and for what you share with others. This is a suggestion to "
-    "weigh with your ethics approval and your data protection officer, not "
+    "weigh with your ethics committee and your data protection officer, not "
     "a requirement.")
 # The phrases the design names, each looked for on its own as well
 SECTION_PHRASES = (
@@ -86,25 +139,37 @@ SECTION_PHRASES = (
     "computer where the assistant works",
     "not a requirement",
 )
+# Words the first round had and its review replaced: a transcriber
+# works from the recordings, which nothing here rewrites; one weighs a
+# suggestion with people, not with an approval; and an assistant may
+# read without offering first
+FIRST_ROUND_WORDS = (
+    "a supervisor, a transcriber,",
+    "weigh with your ethics approval",
+    "offers to find out why",
+)
 MITIGATION = (
     "The section \"What pseudonymisation is for\", above, says what it is "
     "for and suggests a safer way to keep names from the assistant.")
 README_SENTENCES = (
     "Replacing names reduces the risk; it does not make anyone anonymous. "
-    "It helps you manage what you share with other people. For what the "
-    "assistant reads, it should not be trusted blindly: Exegete's tools "
-    "return the pseudonyms, but an assistant that opens files by itself "
-    "can reach the originals outside Exegete. To keep real names from the "
+    "Exegete can replace them, with the project's names list as documents "
+    "come in or with `pseudonymise_source` afterwards. That helps you "
+    "manage what you share with other people, though the project's folder "
+    "still holds the originals and any names list. For what the assistant "
+    "reads, the replacement should not be trusted blindly: Exegete's tools "
+    "return the pseudonyms where names were replaced (PRIVACY.md says what "
+    "is not replaced), but an assistant that opens files by itself can "
+    "reach the originals outside Exegete. To keep real names from the "
     "assistant altogether, a safer way is to replace them before the "
-    "documents reach the computer where it works ([PRIVACY.md, \"What "
-    "pseudonymisation is for\"](https://github.com/nicotem/exegete/blob/"
-    "main/PRIVACY.md#what-pseudonymisation-is-for)).")
+    "documents reach the computer where the assistant works ([PRIVACY.md, "
+    "\"What pseudonymisation is for\"](https://github.com/nicotem/exegete/"
+    "blob/main/PRIVACY.md#what-pseudonymisation-is-for)).")
 PARAGRAPH = (
     "What it is for: it helps manage what the researcher shares with other "
     "people (a colleague, a second coder, an export). For what an assistant "
-    "reads, it is not to be trusted blindly: Exegete's answers then carry "
-    "the pseudonyms, but a read by a route outside Exegete reaches the "
-    "original. To keep real names from the assistant altogether, suggest "
+    "reads, it is not to be trusted blindly: " + ONLY_WHERE_REPLACED + " "
+    "To keep real names from the assistant altogether, suggest "
     "replacing them before the documents reach this computer (PRIVACY.md, "
     "\"What pseudonymisation is for\").")
 DEPRECATION = "Deprecated, removed in v0.15: overlap_policy"
@@ -196,6 +261,39 @@ class TestPrivacy:
         for phrase in SECTION_PHRASES:
             assert phrase in section, phrase
 
+    def test_the_section_says_what_the_projects_folder_still_holds(self):
+        # sharing the folder shares the originals and the reverse key:
+        # said where the tools are offered for sharing, and in the
+        # example, where an unchanged copy sits besides Downloads
+        section = _flat(_section(_doc("PRIVACY.md"),
+                                 "What pseudonymisation is for"))
+        assert SHARING_THE_FOLDER in section
+        assert section.index("whoever receives an export. "
+                             + SHARING_THE_FOLDER) > 0
+        assert ("could have stopped it. " + ANOTHER_COPY) in section
+
+    def test_the_section_says_not_everything_is_replaced_and_where(self):
+        privacy = _doc("PRIVACY.md")
+        section = _flat(_section(privacy, "What pseudonymisation is for"))
+        assert ("they should not be trusted blindly. " + NOT_EVERYTHING
+                + " And depending on how your assistant") in section
+        # the first round's wider claim is gone
+        assert "what Exegete's tools return carries the pseudonyms" \
+            not in section
+        # each place it points to says so under that name
+        for heading, item in POINTED_TO:
+            assert item in _section(privacy, heading), (heading, item)
+            assert '"%s"' % item.strip("*").rstrip(".") in section, item
+
+    def test_the_first_rounds_words_are_gone(self):
+        section = _flat(_section(_doc("PRIVACY.md"),
+                                 "What pseudonymisation is for"))
+        for words in FIRST_ROUND_WORDS:
+            assert words not in section, words
+        assert ("weigh with your ethics committee and your data protection "
+                "officer") in section
+        assert "sets out to find out why" in section
+
     def test_practical_mitigations_points_to_it(self):
         privacy = _doc("PRIVACY.md")
         mitigations = _section(privacy, "Practical mitigations")
@@ -218,10 +316,14 @@ class TestPrivacy:
         changelog = _flat(_doc("CHANGELOG.md"))
         entry = changelog[changelog.index(ENTRY):]
         entry = entry[:entry.index("### ", len(ENTRY))]
+        description = served("full")[TOOL]
+        served_paragraph = description[
+            description.index("What it is for:"):
+            description.index("for\").") + len("for\").")]
         for label, text in (("PRIVACY section", section),
                             ("Practical mitigations", mitigation),
                             ("README", paragraph), ("CHANGELOG", entry),
-                            ("description", PARAGRAPH)):
+                            ("description", served_paragraph)):
             assert LONG_DASH not in text, label
 
 
@@ -232,6 +334,25 @@ class TestReadme:
         paragraph = readme[readme.index("**Private notes and names.**"):]
         paragraph = paragraph[:paragraph.index("**What stays on your")]
         assert paragraph.rstrip().endswith(README_SENTENCES)
+
+    def test_it_names_the_replacement_and_says_what_stays(self):
+        readme = _flat(_doc("README.md"))
+        paragraph = readme[readme.index("**Private notes and names.**"):]
+        paragraph = paragraph[:paragraph.index("**What stays on your")]
+        for phrase in (
+                "Exegete can replace them, with the project's names list "
+                "as documents come in or with `pseudonymise_source` "
+                "afterwards.",
+                "though the project's folder still holds the originals and "
+                "any names list",
+                "the replacement should not be trusted blindly",
+                "Exegete's tools return the pseudonyms where names were "
+                "replaced (PRIVACY.md says what is not replaced)",
+                "before the documents reach the computer where the "
+                "assistant works"):
+            assert phrase in paragraph, phrase
+        assert "Exegete's tools return the pseudonyms, but" not in paragraph
+        assert "the computer where it works" not in paragraph
 
     def test_the_links_anchor_is_a_privacy_heading(self):
         # tests/test_v0141_readme_review.py checks every README link to a
@@ -263,6 +384,19 @@ class TestTheDescription:
                 description.index("What it is for:"):
                 description.index("for\").") + len("for\").")]
             assert LONG_DASH not in served_paragraph, mode
+
+    def test_it_says_where_the_pseudonyms_are_and_not_to_open_originals(
+            self):
+        sets = sets_serving_the_tool()
+        assert sets
+        for mode, description in sets.items():
+            flat = _flat(description)
+            assert ONLY_WHERE_REPLACED in flat, mode
+            # "listed above" is the list of what it does not rewrite
+            assert flat.index(LISTED_ABOVE) < flat.index(
+                ONLY_WHERE_REPLACED), mode
+            assert ("Exegete's answers then carry the pseudonyms, but"
+                    not in flat), mode
 
     def test_guard_nothing_else_in_it_moved(self):
         """A guard: taken out again, the paragraph leaves the description exactly
@@ -306,7 +440,17 @@ def test_the_changelog_says_so():
     assert ("**The README** (\"Where your data goes\") **and "
             "`pseudonymise_source`'s description** say so briefly") in entry
     assert "what pseudonymisation does has not changed" in entry
+    # fix round 1: what the folder still holds, the pseudonyms only where
+    # names were replaced, and the description's request to the assistant
+    assert ("whoever receives an export), though the project's folder "
+            "still holds the originals and any names list") in entry
+    assert ("what Exegete's tools return carries the pseudonyms only where "
+            "names were replaced (the section says what is not)") in entry
+    assert ("the description also asks the assistant not to open originals "
+            "itself to work round a problem, and to ask the researcher") \
+        in entry
+    assert "transcriber" not in entry
     measured = unreleased[unreleased.index("### Measured"):]
     assert ("`pseudonymise_source`'s description gained a paragraph on what "
-            "pseudonymisation is for: its entry grew by 457 characters, 485 "
+            "pseudonymisation is for: its entry grew by 583 characters, 619 "
             "on 3.11, in `full` only") in measured

@@ -246,12 +246,16 @@ assistant, whichever program made the project. The mark works in
 memos, annotations and journal entries, not in the text of a
 transcript, and exported files keep the whole memo, private part
 included. Replacing names reduces the risk; it does not make anyone
-anonymous. It helps you manage what you share with other people. For
-what the assistant reads, it should not be trusted blindly: Exegete's
-tools return the pseudonyms, but an assistant that opens files by
-itself can reach the originals outside Exegete. To keep real names
-from the assistant altogether, a safer way is to replace them before
-the documents reach the computer where it works
+anonymous. Exegete can replace them, with the project's names list as
+documents come in or with `pseudonymise_source` afterwards. That helps
+you manage what you share with other people, though the project's
+folder still holds the originals and any names list. For what the
+assistant reads, the replacement should not be trusted blindly:
+Exegete's tools return the pseudonyms where names were replaced
+(PRIVACY.md says what is not replaced), but an assistant that opens
+files by itself can reach the originals outside Exegete. To keep real
+names from the assistant altogether, a safer way is to replace them
+before the documents reach the computer where the assistant works
 ([PRIVACY.md, "What pseudonymisation is for"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#what-pseudonymisation-is-for)).
 
 **What stays on your computer**, unless a sync service such as iCloud

@@ -521,10 +521,12 @@ class TestTheSizes:
     # and pseudonymise_source (not presuming QualCoder, piece 1), and
     # lengthens list_available_projects, which names the extension's
     # folder for projects and its earlier default among its places (the
-    # renames, piece 2; 143 characters in both sets). Their entries as
+    # renames, piece 2; 143 characters in both sets), and pseudonymise_source
+    # gains a paragraph on what pseudonymisation is for (not presuming
+    # QualCoder, piece 2: 583 characters more in `full`). Their entries as
     # 0.14.2 served them are below, so every other tool is still held to
     # 0.14.2's figure.
-    NOW = {"full": 198_406, "core": 65_281}
+    NOW = {"full": 198_989, "core": 65_281}
     CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

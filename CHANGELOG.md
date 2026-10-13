@@ -116,6 +116,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   while the project's lock file is active, rather than while QualCoder
   3.x has the project open.
 
+### Changed: what pseudonymisation is for
+
+- **PRIVACY.md says what pseudonymisation is for**, in a section of its
+  own, "What pseudonymisation is for": the names list and
+  `pseudonymise_source` are useful for managing what is shared with
+  other people (a colleague or second coder, a supervisor, whoever
+  receives an export), though the project's folder still holds the
+  originals and any names list, and an export can still carry real
+  names (the section says where). For what reaches the AI assistant
+  they help, but they should not be trusted blindly: what Exegete's
+  tools return carries the pseudonyms only where names were replaced
+  (the section says what is not), and an assistant that opens files by
+  itself can read the originals by a route outside Exegete, as an
+  imagined example shows. For anyone who wants to be sure that real
+  names never reach the assistant, it suggests replacing them before
+  the documents come to the computer where the assistant works.
+  "Practical mitigations" points to the section.
+- **The README** ("Where your data goes") **and `pseudonymise_source`'s
+  description** say so briefly; the description also asks the
+  assistant not to open originals itself to work round a problem, and
+  to ask the researcher. The description grows by that paragraph (see
+  "Measured"); what pseudonymisation does has not changed.
+
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the
@@ -171,15 +194,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Measured
 
-- Serialised tool JSON: full = 204,368 characters (about 51.1k tokens
+- Serialised tool JSON: full = 204,951 characters (about 51.2k tokens
   at chars/4) over 78 tools, and core = 67,366 (about 16.8k) over 23,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 214,372 and
+  which also gives exactly 0.14.3's figures for its tree), 214,991 and
   70,758. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), three changes
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), four changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -189,8 +212,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fewer, in `full` only (on 3.11, 6 fewer, 14 fewer and 3 fewer). And
   `list_available_projects`' description names the extension's folder
   for projects and its earlier default among the places it searches:
-  143 characters more, in both sets (147 on 3.11). No other tool's
-  entry changed.
+  143 characters more, in both sets (147 on 3.11). Then
+  `pseudonymise_source`'s description gained a paragraph on what
+  pseudonymisation is for: its entry grew by 583 characters, 619 on
+  3.11, in `full` only. No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

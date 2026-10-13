@@ -584,11 +584,16 @@ CHANGED_0143 = {
 # desktop extension's folder for projects and its earlier default among
 # its places, and that the workspace is searched at its top level only
 # unless it is one of them; it grows by 142 characters, as its design
-# says. Later v0.15.0 pieces add their lines here.
+# says. Not presuming QualCoder, piece 2 (what pseudonymisation is for,
+# tests/test_v0150_qualcoder_texts_2.py) adds a paragraph to
+# pseudonymise_source's description, after every rule pinned within the
+# first 2,048 characters (the owner's decision of 12 October 2026: no
+# ceiling on the tool texts; the size is reported in the CHANGELOG).
+# Later v0.15.0 pieces add their lines here.
 CHANGED_0150 = {
     "get_current_project": (1920, 1570, "da157f879c430be0"),
     "list_available_projects": (904, 716, "0117f9141c0b48ea"),
-    "pseudonymise_source": (17339, 12705, "b497f4c553410195"),
+    "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f"),
     "read_pseudonym_list": (1037, 856, "637792f4e7f7de38"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}

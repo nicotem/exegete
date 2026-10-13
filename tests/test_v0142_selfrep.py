@@ -780,12 +780,18 @@ class TestNoDescriptionGrew:
     # CHANGED_0143); every other description is still held to 0.14.1's
     NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
     CHANGED_IN_0143 = {"analyze_file_with_coding", "import_text_file"}
-    # and v0.15.0 lengthens one on purpose, as its design says (the
-    # renames, piece 2): list_available_projects names the extension's
+    # and v0.15.0 lengthens two on purpose. As its design says (the
+    # renames, piece 2), list_available_projects names the extension's
     # folder for projects and its earlier default among its places
     # (tests/test_v0150_renames_folder.py; its words pinned in
     # tests/test_v0142_description_cut.py, CHANGED_0150)
     CHANGED_IN_0150 = {"list_available_projects"}
+    # And pseudonymise_source gains a paragraph on what pseudonymisation
+    # is for (not presuming QualCoder, piece 2,
+    # tests/test_v0150_qualcoder_texts_2.py, which pins it); the rest of
+    # it is still held to 0.14.1's length, measured with that paragraph
+    # taken out
+    LENGTHENED_IN_0150 = {"pseudonymise_source"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
@@ -799,6 +805,13 @@ class TestNoDescriptionGrew:
             if name in self.CHANGED_IN_0143 | self.CHANGED_IN_0150:
                 continue
             text = registered[name]
+            if name in self.LENGTHENED_IN_0150:
+                sys.path.insert(0, str(Path(__file__).parent))
+                from test_v0150_qualcoder_texts_2 import \
+                    without_the_paragraph
+                taken_out = without_the_paragraph(text)
+                assert taken_out != text, name
+                text = taken_out
             now_solid = len("".join(text.split()))
             if now_solid > solid:
                 grew.append(f"{name}: {now_solid} characters that are not "

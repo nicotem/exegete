@@ -392,10 +392,15 @@ class TestThePublishedSchemaBudget:
     # then took 19 characters off it, 23 on 3.11, and 2 off `core`, 6 on
     # 3.11; the extension's folder for projects and its earlier default,
     # named among list_available_projects' places (the renames, piece 2),
-    # added 143 to both sets, 147 on 3.11.
-    FULL_MEASURED = 204_368          # 78 tools, Python 3.13.5, mcp 1.30.0
+    # added 143 to both sets, 147 on 3.11. What pseudonymisation is for
+    # (not presuming QualCoder, piece 2), a paragraph in
+    # pseudonymise_source's description, then added 457 to `full`, 485 on
+    # 3.11 (`core` does not serve the tool), and its fix round 126 more,
+    # 134 on 3.11 (where names were not replaced, and not to open
+    # originals to work round a problem).
+    FULL_MEASURED = 204_951          # 78 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 67_366           # 23 tools, same environment
-    FULL_MEASURED_310 = 214_372      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 214_991      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 70_758
 
     # Why two per cent, away from the reference environment.
@@ -423,9 +428,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "204,368"
+    FULL_CHARS = "204,951"
     CORE_CHARS = "67,366"
-    FULL_ROUNDED = "204,000"
+    FULL_ROUNDED = "205,000"
     CORE_ROUNDED = "67,000"
     FULL_TOKENS = "51k"
     CORE_TOKENS = "17k"
@@ -708,8 +713,10 @@ class TestThePublishedSchemaBudget:
     # INSTALL.md states rounded to the nearest 500 (v0.13: the one-file
     # signature and the file-text count moved it from about 10,500 to
     # about 11,500 characters without anything saying so, and Brief 1's
-    # fix round to about 12,500).
-    FLAGSHIP_ROUNDED = "19,500"
+    # fix round to about 12,500). v0.15.0: the paragraph on what
+    # pseudonymisation is for took it from 19,377 to 19,834 on 3.13, so
+    # from about 19,500 to about 20,000, and its fix round to 19,960.
+    FLAGSHIP_ROUNDED = "20,000"
 
     def test_install_quotes_the_flagships_own_share(self):
         install = self._read("INSTALL.md")

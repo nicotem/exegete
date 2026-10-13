@@ -524,13 +524,23 @@ class TestTheThreeDescriptions:
         raw = server.mcp.original_descriptions
         exact = sys.version_info[:2] == (3, 13)
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
+        # pseudonymise_source then gains a paragraph on what
+        # pseudonymisation is for (piece 2,
+        # tests/test_v0150_qualcoder_texts_2.py, which pins it): this
+        # piece's change is still held to 0.14.3's length, measured
+        # with that paragraph taken out
+        from test_v0150_qualcoder_texts_2 import without_the_paragraph
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
-            assert len("".join(raw[name].split())) <= solid, name
+            text = raw[name]
+            if name == "pseudonymise_source":
+                text = without_the_paragraph(text)
+                assert text != raw[name], name
+            assert len("".join(text.split())) <= solid, name
             if exact:
-                assert len(raw[name]) <= length, name
+                assert len(text) <= length, name
             if indented:
-                assert len(raw[name]) <= length_311, name
+                assert len(text) <= length_311, name
             assert name in CHANGED_0150 and WORDS[name] == \
                 CHANGED_0150[name], name
 

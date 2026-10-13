@@ -50,7 +50,7 @@ What stays local, always, unless a sync service copies the folder it is in:
   `~/Documents/Exegete projects/` by default (before 0.14.1,
   `~/Documents/Qualcoder MCP Projects/`, left as it was), or in the folder
   `EXEGETE_WORKSPACE` names, which the desktop extension sets
-  from its "Folder for projects", by default `~/QualCoder projects/`
+  from its "Folder for projects", by default `~/Exegete projects/`
   (each copy carries
   the same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
@@ -1426,7 +1426,9 @@ the system's folders, the working folder and every folder at the top of
 your home folder except a short list that holds keys and credentials,
 such as `.ssh` and `.aws` (`windows-sandbox-rs/src/setup.rs`), and with
 its fallback sandbox, which limits only writing, any file your account
-can read. That takes in `~/QualCoder projects`, Documents and wherever
+can read. That takes in the extension's folder for projects
+(`~/Exegete projects`, or `~/QualCoder projects`, the earlier default),
+Documents and wherever
 else you keep projects and transcripts. OpenAI's page on permission
 modes (<https://learn.chatgpt.com/docs/permission-modes>, read 30
 September 2026) describes "Ask for approval" in words a reader may take

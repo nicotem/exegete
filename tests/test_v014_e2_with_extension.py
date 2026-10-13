@@ -66,7 +66,10 @@ class TestTheListingWithAWorkspace:
         answer = host_json("list_available_projects")
         assert "Walked" in {p["name"] for p in answer["projects"]}
         assert "top_level_only" not in answer["searched"]
-        assert len(answer["searched"]["folders"]) == 4
+        # the usual places alone (six from v0.15.0, with the extension's
+        # folder and its earlier default)
+        assert len(answer["searched"]["folders"]) == \
+            len(server._USUAL_SEARCH_PLACES) == 6
 
 
 class TestExports:

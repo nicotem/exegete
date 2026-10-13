@@ -69,11 +69,20 @@ OLD_STATE_FOLDER = ".qualcoder_mcp"
 
 # The workspace inside the Documents folder: where copies and new projects
 # go when no workspace is set (installs from PyPI or from the source; the
-# desktop extension always sets one, `~/QualCoder projects`). The earlier
-# one is never moved or emptied, and the project listing still finds its
-# projects (it walks ~/Documents).
+# desktop extension always sets one, by default `~/` +
+# EXTENSION_WORKSPACE_FOLDER below). The earlier one is never moved or
+# emptied, and the project listing still finds its projects (it walks
+# ~/Documents).
 WORKSPACE_FOLDER = "Exegete projects"
 OLD_WORKSPACE_FOLDER = "Qualcoder MCP Projects"
+
+# The desktop extension's "Folder for projects", in the home folder: its
+# default for new installs from 0.15.0, and the earlier one, still
+# searched (both are among the project listing's usual places). An
+# install whose setting names a folder keeps it: Exegete never writes
+# the setting, and never moves or empties either folder.
+EXTENSION_WORKSPACE_FOLDER = "Exegete projects"
+OLD_EXTENSION_WORKSPACE_FOLDER = "QualCoder projects"
 
 # The resources' address scheme; the earlier one is still answered, and
 # no longer listed, until v1.0. (QualCoder's own

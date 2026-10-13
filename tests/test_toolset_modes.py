@@ -390,11 +390,13 @@ class TestThePublishedSchemaBudget:
     # descriptions, none marked, in another order); the names list's new
     # wording in three descriptions (not presuming QualCoder, piece 1)
     # then took 19 characters off it, 23 on 3.11, and 2 off `core`, 6 on
-    # 3.11.
-    FULL_MEASURED = 204_225          # 78 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 67_223           # 23 tools, same environment
-    FULL_MEASURED_310 = 214_225      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 70_611
+    # 3.11; the extension's folder for projects and its earlier default,
+    # named among list_available_projects' places (the renames, piece 2),
+    # added 143 to both sets, 147 on 3.11.
+    FULL_MEASURED = 204_368          # 78 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 67_366           # 23 tools, same environment
+    FULL_MEASURED_310 = 214_372      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 70_758
 
     # Why two per cent, away from the reference environment.
     #
@@ -421,8 +423,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "204,225"
-    CORE_CHARS = "67,223"
+    FULL_CHARS = "204,368"
+    CORE_CHARS = "67,366"
     FULL_ROUNDED = "204,000"
     CORE_ROUNDED = "67,000"
     FULL_TOKENS = "51k"

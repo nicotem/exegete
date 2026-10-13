@@ -429,8 +429,10 @@ class TestTheSettingsEntry:
             manifest["user_config"]["projects_folder"]["default"]
         monkeypatch.setenv("EXEGETE_WORKSPACE", env["EXEGETE_WORKSPACE"])
         assert server._workspace_start_problem() is None
+        # v0.15.0: the extension's default, and so the recipe's, is
+        # ~/Exegete projects (tests/test_v0150_renames_folder.py)
         assert database.default_workspace() == \
-            Path.home() / "QualCoder projects"
+            Path.home() / "Exegete projects"
 
     def test_the_approval_lines(self):
         entry = _entry()
@@ -819,7 +821,7 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "(<https://learn.chatgpt.com/docs/projects>",
                 # (the owner, 1 October 2026: warn, don't prescribe)
                 "Given your home folder, Documents, your projects folder "
-                "(`~/QualCoder projects`) or a folder with transcripts or "
+                "(`~/Exegete projects`) or a folder with transcripts or "
                 "other study files instead, Codex would work among them: "
                 "what it reads there goes to OpenAI without passing through "
                 "Exegete",

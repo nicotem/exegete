@@ -780,6 +780,12 @@ class TestNoDescriptionGrew:
     # CHANGED_0143); every other description is still held to 0.14.1's
     NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
     CHANGED_IN_0143 = {"analyze_file_with_coding", "import_text_file"}
+    # and v0.15.0 lengthens one on purpose, as its design says (the
+    # renames, piece 2): list_available_projects names the extension's
+    # folder for projects and its earlier default among its places
+    # (tests/test_v0150_renames_folder.py; its words pinned in
+    # tests/test_v0142_description_cut.py, CHANGED_0150)
+    CHANGED_IN_0150 = {"list_available_projects"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
@@ -790,7 +796,7 @@ class TestNoDescriptionGrew:
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
-            if name in self.CHANGED_IN_0143:
+            if name in self.CHANGED_IN_0143 | self.CHANGED_IN_0150:
                 continue
             text = registered[name]
             now_solid = len("".join(text.split()))

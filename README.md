@@ -360,7 +360,7 @@ example, or save it as a Word or text file and give the assistant its
 place, which keeps its text off the conversation (on a Mac, hold
 Option, right-click it and choose Copy as Pathname; on Windows 11, Copy
 as path). With the extension or
-OpenAI's steps, the project is made in "QualCoder projects", in your
+OpenAI's steps, the project is made in "Exegete projects", in your
 home folder: ask to open a file for reading, or open the project in
 QualCoder (Project, Open Project), to see your coding in the text.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).

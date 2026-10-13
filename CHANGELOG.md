@@ -140,25 +140,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a folder outside Documents, such as `~/Exegete projects`, is worth
   considering (INSTALL.md, "What You'll Need").
 
+### Changed: the extension's folder for projects
+
+- **New installs of the Claude Desktop extension keep projects in
+  `~/Exegete projects`** (the owner's decision of 12 October 2026): its
+  "Folder for projects" setting now comes as `~/Exegete projects`, and
+  its description says so. An install whose setting shows
+  `~/QualCoder projects`, the earlier default, keeps it, and Exegete
+  never moves or empties that folder; Exegete never writes the
+  setting, so a folder you chose reaches it unchanged.
+- **Both folders are among the usual places, on every route**: with no
+  folders given, `list_available_projects` searches `~/Exegete projects`
+  and `~/QualCoder projects` after `~/QualCoder` and before
+  `~/Documents`. So a project the extension made, under either default,
+  is found in the extension and on the Terminal routes alike, and an
+  install moved to the new folder still finds its earlier projects.
+- **Either folder, as the workspace, is now searched three levels
+  deep**, as the other usual places are, where the extension's folder
+  was searched at its top level only; the answer's
+  `searched.top_level_only` is absent for it. A workspace anywhere else
+  is still searched at its top level only, and `top_level_only` names
+  it. `list_available_projects`' description says both.
+
 ### Measured
 
-- Serialised tool JSON: full = 204,225 characters (about 51.1k tokens
-  at chars/4) over 78 tools, and core = 67,223 (about 16.8k) over 23,
+- Serialised tool JSON: full = 204,368 characters (about 51.1k tokens
+  at chars/4) over 78 tools, and core = 67,366 (about 16.8k) over 23,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 214,225 and
-  70,611. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), two changes
+  which also gives exactly 0.14.3's figures for its tree), 214,372 and
+  70,758. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), three changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
   descriptions changed with the names list's wording:
   `get_current_project`'s by 2 characters fewer, in both sets,
   `pseudonymise_source`'s by 14 fewer and `read_pseudonym_list`'s by 3
-  fewer, in `full` only (on 3.11, 6 fewer, 14 fewer and 3 fewer). No
-  other tool's entry changed.
+  fewer, in `full` only (on 3.11, 6 fewer, 14 fewer and 3 fewer). And
+  `list_available_projects`' description names the extension's folder
+  for projects and its earlier default among the places it searches:
+  143 characters more, in both sets (147 on 3.11). No other tool's
+  entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

@@ -35,6 +35,8 @@ Claude will search these locations automatically:
 - `~/Documents/QualCoder_projects/`
 - `~/Documents/QualCoder/`
 - `~/QualCoder/`
+- `~/Exegete projects/` and `~/QualCoder projects/` (the desktop
+  extension's folder for projects, and its earlier default)
 - `~/Documents/`
 
 You'll get a list like:

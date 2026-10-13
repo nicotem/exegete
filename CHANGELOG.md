@@ -139,6 +139,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to ask the researcher. The description grows by that paragraph (see
   "Measured"); what pseudonymisation does has not changed.
 
+### Changed: a project's history with QualCoder
+
+- **What Exegete finds of QualCoder is worked out once, when a project
+  is selected** (the owner's decision of 12 October 2026), and kept in
+  memory for the session: whether the project shows traces of QualCoder
+  (an `ai_data` folder, which QualCoder 3.8.2 and 4.0 make when they
+  first open a project and Exegete never makes; the AI chat history or
+  search index in it; QualCoder's own `_BKUP_` backups beside the
+  project; a lock file left over), and whether QualCoder is installed
+  (its settings folder, `~/.qualcoder`, looked for but never read) or
+  running on this computer. `select_project` and `get_current_project`
+  give it as `qualcoder_history` when there is something to say. Later
+  changes use it to decide which notes about QualCoder an answer
+  carries. Whether QualCoder has the project open now is checked as
+  before, at every write and every `get_current_project`.
+- **A recently changed chat history is no longer read as a sign that
+  QualCoder has the project open when no QualCoder is running** (from
+  the maintainer's sitting of 11 October, where `select_project` said
+  that the project appeared to be open in QualCoder a minute after
+  QualCoder had closed). When the check of running programs saw each
+  program's full command and found no QualCoder, the change says
+  nothing about an open window and is left out of
+  `qualcoder_gui_signals`; the file still counts as a trace in
+  `qualcoder_history`. Where that check could not run, or cannot see a
+  QualCoder started from Python (Windows without psutil, which lists
+  program names only), the sign is given as before.
+
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the

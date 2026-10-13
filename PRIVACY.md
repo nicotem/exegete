@@ -1152,9 +1152,24 @@ Two further rules touch files on your disk:
   scan can see it; on Windows without psutil, a QualCoder run through
   `python.exe` is not seen), and a recently modified chat history file
   means a first open of the project by either QualCoder build, or its
-  AI chat used; a later open leaves the file as it is.
+  AI chat used; a later open leaves the file as it is. Since v0.15.0
+  that file's recent change is not given as a sign when the process
+  scan saw each program's command line and found no QualCoder (it then
+  says nothing about an open window).
   `create_project` runs no process scan for the project it has just
-  made.
+  made. `select_project` and `get_current_project` also give the
+  project's history with QualCoder (`qualcoder_history`, v0.15.0),
+  worked out once when the project is selected and kept in memory for
+  the session, never on disk: whether the project folder holds
+  `ai_data/`, and in it `chat_history.sqlite` or `search.sqlite`;
+  whether QualCoder's own `_BKUP_` backups sit beside the project (the
+  names, in the folder that holds it, that begin with the project's
+  name, as `list_backups` reads them); whether its lock file is a
+  leftover; whether QualCoder's settings folder (`~/.qualcoder`)
+  exists; and whether the process scan found QualCoder. Only presence
+  is checked: the settings folder's contents (QualCoder's settings and
+  API keys) are never listed, opened or measured, and the answer holds
+  plain sentences and a yes or no, never a path or a project's name.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
   folder with four empty subfolders and a new `data.qda`, and records

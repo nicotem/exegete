@@ -96,6 +96,7 @@ from . import new_project
 from . import parts, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
 from . import doc_import, doc_readers, kept_texts
+from . import qualcoder_history
 from .cursors import (
     CURSOR_MAX_LENGTH,
     CURSOR_TOO_LONG,
@@ -1060,6 +1061,13 @@ _database_module._unregistered_marker = _mark_unregistered
 db: Optional[QualcoderDatabase] = None
 current_project_path: Optional[str] = None
 
+# The selected project's history with QualCoder (v0.15.0; ruling 73, item
+# 12): worked out once per selection and kept here, in memory only, under
+# the project's data.qda path as validate_qda_path gives it.
+# _install_project clears it.
+_qualcoder_history_cache: Optional[
+    Tuple[str, "qualcoder_history.History"]] = None
+
 # Global session manager for AI coding
 session_manager = SessionManager()
 
@@ -1528,10 +1536,14 @@ def switch_project(project_path: str, read_only: bool = True) -> None:
 
 def _install_project(new_db: QualcoderDatabase, project_path: str) -> None:
     """Make an opened project the selected one, then close the previous
-    connection."""
-    global db, current_project_path
+    connection. The project's history with QualCoder is worked out
+    afresh at its next consult (v0.15.0): a selection, create_project and
+    restore_backup's reopen all come through here; get_db's read-write
+    reopen does not, and keeps it."""
+    global db, current_project_path, _qualcoder_history_cache
     old_db, db = db, new_db
     current_project_path = project_path
+    _qualcoder_history_cache = None
     if old_db is not None and old_db is not new_db:
         try:
             old_db.close()
@@ -1542,6 +1554,37 @@ def _install_project(new_db: QualcoderDatabase, project_path: str) -> None:
     # often named after its participant, and the host keeps the log.
     logger.info("Switched to the selected project (read_only=%s)",
                 new_db.read_only)
+
+
+def _qualcoder_history() -> Optional[qualcoder_history.History]:
+    """The selected project's history with QualCoder (v0.15.0): the
+    traces of QualCoder it shows, and whether QualCoder is installed or
+    running on this computer. It decides whether a text's notes about
+    QualCoder are relevant; whether QualCoder has the project open now
+    stays the live check (the lock file, qualcoder_gui_signals).
+
+    Worked out once, at the first consult after the project was
+    installed (select_project consults it at once), with the process
+    scan, and kept for the session, in memory only. None, with nothing
+    worked out or kept, when no project is selected or its path does
+    not validate; a caller treats None as the level "none".
+    """
+    global _qualcoder_history_cache
+    if current_project_path is None:
+        return None
+    try:
+        key = str(validate_qda_path(current_project_path))
+    except Exception as e:
+        logger.debug("No history with QualCoder for the selected "
+                     "project: %s", error_label(e))
+        return None
+    kept = _qualcoder_history_cache
+    if kept is not None and kept[0] == key:
+        return kept[1]
+    history = qualcoder_history.work_out(Path(key).parent,
+                                         scan_processes=True)
+    _qualcoder_history_cache = (key, history)
+    return history
 
 
 def project_display_name(project_path: Any) -> str:
@@ -4069,6 +4112,8 @@ def _select_project(project_path: str) -> Dict[str, Any]:
         new_db.close()
         raise
     _install_project(new_db, project_path)
+    # Worked out now, once for this selection (v0.15.0)
+    history_field = qualcoder_history.report(_qualcoder_history())
     name = project_display_name(project_path)
     result = {
         "success": True,
@@ -4146,6 +4191,8 @@ def _select_project(project_path: str) -> Dict[str, Any]:
 
     if warnings:
         result["warning"] = " | ".join(warnings)
+    if history_field is not None:
+        result["qualcoder_history"] = history_field
 
     return result
 
@@ -4743,6 +4790,11 @@ def get_current_project() -> str:
                 "window will not display external changes until the "
                 "project is reopened there."
             )
+        # The project's history with QualCoder, as worked out at its
+        # selection (v0.15.0); left out when nothing was found
+        history_field = qualcoder_history.report(_qualcoder_history())
+        if history_field is not None:
+            result["qualcoder_history"] = history_field
 
         return _ai_json(result, indent=2)
 

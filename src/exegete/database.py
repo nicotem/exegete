@@ -10,7 +10,8 @@ import os
 import sqlite3
 import stat
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Callable, Sequence, Tuple, Union
+from typing import (Optional, List, Dict, Any, Callable, NamedTuple,
+                    Sequence, Tuple, Union)
 import json
 import re
 import time
@@ -686,7 +687,20 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
 #   A later open leaves an existing file as it is (the QA gate of brief
 #   C measured it in both builds). So a recent mtime means a first open,
 #   or the chat used, in either build; it is not worded as a 4.0 or AI
-#   signal (v0.14).
+#   signal (v0.14). v0.15.0: a recent change is also seen just after
+#   QualCoder has closed (the owner's sitting of 11 October 2026: a false
+#   "APPEARS to be open" a minute after QualCoder closed). No write at
+#   closing was found in 4.0's close path at the tag 4.0, which only
+#   closes the connection (__main__.py:2990-2991, ai_chat.py:1793-1796,
+#   1744-1753 and 1732-1742), so the change may be the session's own
+#   last write. Either way it says nothing about an open window once
+#   QualCoder has closed. So the sign is left out when the process scan
+#   ran, saw each process's command line and found no QualCoder; the
+#   file then counts as a trace in the project's history with QualCoder
+#   (qualcoder_history.py). Where the scan was not asked for, could not
+#   run, saw program names only (Windows' tasklist, which cannot see a
+#   QualCoder run from Python) or found a QualCoder, the sign is given
+#   as before.
 # - A best-effort local process scan for a running QualCoder
 #   (platform-guarded, optional, cached; never a hard dependency and
 #   never allowed to crash or block, including on Windows CI runners).
@@ -702,7 +716,9 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
 # argues for a tighter or looser value (re-examined in QA round 1, F2).
 GUI_SIGNAL_FRESH_SECONDS = 15 * 60
 _PROCESS_SCAN_CACHE_SECONDS = 5.0
-_process_scan_cache: Dict[str, Any] = {"at": 0.0, "lines": []}
+# "at": the monotonic time of the last scan (None before the first);
+# "scan": what it gave, None included (v0.15.0)
+_process_scan_cache: Dict[str, Any] = {"at": None, "scan": None}
 
 
 def _mtime_age_seconds(path: Path) -> Optional[float]:
@@ -828,17 +844,54 @@ def _listing_lines(output: str, own_pid: int, windows: bool) -> List[str]:
     return lines
 
 
-def _qualcoder_process_hits() -> List[str]:
+class ProcessScan(NamedTuple):
+    """What one look at this computer's processes saw (v0.15.0).
+
+    `hits`: the process lines that are a QualCoder, as
+    `_filter_qualcoder_processes` gives them. `saw_command_lines`: True
+    when the listing gave each process's command line (psutil, when at
+    least one process gave its own, and `ps -axo pid=,args=`), so that a
+    QualCoder run from Python could have been seen; False for Windows'
+    `tasklist /fo csv /nh`, the listing there when psutil is absent,
+    which gives program names only: a QualCoder started with
+    `py -m qualcoder` (as QualCoder's README starts it on Windows) shows
+    as py.exe or python.exe and is never seen.
+    """
+    hits: Tuple[str, ...]
+    saw_command_lines: bool
+
+
+def _scan_from_listing(output: str, own_pid: int,
+                       windows: bool) -> Optional[ProcessScan]:
+    """What a `ps` listing (`windows` False) or a `tasklist` listing
+    (`windows` True) shows; None for an empty listing, which says
+    nothing. A pure function, so the `tasklist` path is tested on every
+    platform."""
+    if not output or not output.strip():
+        return None
+    lines = _listing_lines(output, own_pid, windows)
+    return ProcessScan(tuple(_filter_qualcoder_processes(lines)),
+                       not windows)
+
+
+def _qualcoder_process_scan() -> Optional[ProcessScan]:
     """Best-effort scan for running QualCoder processes (cached).
 
     psutil when available, else one short-lived ps/tasklist call with a
-    hard timeout. This process itself is left out. Any failure
-    whatsoever returns no hits.
+    hard timeout. This process itself is left out. None when the scan
+    could not run: any exception, a timeout, a listing call that exits
+    with an error or prints nothing, or psutil listing no process
+    (v0.15.0: until then a failed scan answered "no hits", which a
+    caller could not tell from a scan that saw every process and found
+    none). The answer, None included, is kept for
+    _PROCESS_SCAN_CACHE_SECONDS. It never raises.
     """
     now = time.monotonic()
-    if now - _process_scan_cache["at"] < _PROCESS_SCAN_CACHE_SECONDS:
-        return _process_scan_cache["lines"]
-    lines: List[str] = []
+    cached_at = _process_scan_cache["at"]
+    if cached_at is not None and \
+            now - cached_at < _PROCESS_SCAN_CACHE_SECONDS:
+        return _process_scan_cache["scan"]
+    scan: Optional[ProcessScan] = None
     own_pid = os.getpid()
     try:
         try:
@@ -846,32 +899,42 @@ def _qualcoder_process_hits() -> List[str]:
         except ImportError:
             psutil = None
         if psutil is not None:
+            lines: List[str] = []
+            saw_command_lines = False
             for proc in psutil.process_iter(["pid", "name", "cmdline"]):
                 try:
                     if proc.info.get("pid") == own_pid:
                         continue
                     cmdline = proc.info.get("cmdline") or []
-                    lines.append(" ".join(cmdline) if cmdline
-                                 else str(proc.info.get("name") or ""))
+                    if cmdline:
+                        saw_command_lines = True
+                        lines.append(" ".join(cmdline))
+                    else:
+                        lines.append(str(proc.info.get("name") or ""))
                 except Exception:
                     continue
+            if lines:
+                scan = ProcessScan(
+                    tuple(_filter_qualcoder_processes(lines)),
+                    saw_command_lines)
         else:
             import subprocess
-            if os.name == "nt":
+            windows = os.name == "nt"
+            if windows:
                 cmd = ["tasklist", "/fo", "csv", "/nh"]
             else:
                 cmd = ["ps", "-axo", "pid=,args="]
             completed = subprocess.run(
                 cmd, capture_output=True, timeout=3, check=False)
-            lines = _listing_lines(
-                completed.stdout.decode("utf-8", errors="replace"),
-                own_pid, os.name == "nt")
+            if completed.returncode == 0:
+                scan = _scan_from_listing(
+                    completed.stdout.decode("utf-8", errors="replace"),
+                    own_pid, windows)
     except Exception:
-        lines = []
-    hits = _filter_qualcoder_processes(lines)
+        scan = None
     _process_scan_cache["at"] = now
-    _process_scan_cache["lines"] = hits
-    return hits
+    _process_scan_cache["scan"] = scan
+    return scan
 
 
 def qualcoder_gui_signals(project_dir: Union[str, Path],
@@ -883,11 +946,19 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
     project APPEARS to be open, never that it certainly is. The
     file-based signals are traces of recent activity (a hot write,
     recent AI indexing or chat); an idle window leaves none, so only
-    the process scan can see one. This function never raises.
+    the process scan can see one. With `include_process_scan` the scan
+    runs first, and a recent change to the chat history is left out when
+    the scan saw each process's command line and found no QualCoder
+    (v0.15.0, see above). This function never raises.
     """
     signals: List[str] = []
     try:
         project = Path(project_dir)
+        # The scan runs first: what it saw decides the chat sign (3)
+        scan = _qualcoder_process_scan() if include_process_scan else None
+        none_where_it_could_see = (scan is not None
+                                   and scan.saw_command_lines
+                                   and not scan.hits)
 
         # 1. Hot write on the project database itself
         for sidecar in ("data.qda-journal", "data.qda-wal", "data.qda-shm"):
@@ -918,10 +989,13 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
                         "unclean exit)")
                 break
 
-        # 3. Recent AI chat activity
+        # 3. Recent AI chat activity, left out when a scan that could
+        #    have seen a QualCoder run from Python found none: the change
+        #    then says nothing about an open window (v0.15.0, above)
         chat = ai_data / "chat_history.sqlite"
         age = _mtime_age_seconds(chat) if chat.exists() else None
-        if age is not None and age <= GUI_SIGNAL_FRESH_SECONDS:
+        if age is not None and age <= GUI_SIGNAL_FRESH_SECONDS \
+                and not none_where_it_could_see:
             signals.append(
                 f"the project's chat history file "
                 f"(ai_data/chat_history.sqlite) was modified "
@@ -930,12 +1004,10 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
                 f"changes when their AI chat is used")
 
         # 4. A QualCoder process is running on this machine
-        if include_process_scan:
-            hits = _qualcoder_process_hits()
-            if hits:
-                signals.append(
-                    f"a process that looks like QualCoder is running on "
-                    f"this machine ({len(hits)} match(es))")
+        if scan is not None and scan.hits:
+            signals.append(
+                f"a process that looks like QualCoder is running on "
+                f"this machine ({len(scan.hits)} match(es))")
     except Exception as e:  # never let a heuristic break a tool
         logger.debug(f"GUI-open heuristics failed: {error_label(e)}")
     return signals

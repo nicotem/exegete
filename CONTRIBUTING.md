@@ -224,6 +224,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── doc_readers.py       # Each format's text, as QualCoder 4.0 reads it, with every departure named
 │   │   ├── import_reading.py    # The separate, short-lived process each document is read in
 │   │   ├── kept_texts.py        # The text a preview read, kept owner-only for its import (0.15.0)
+│   │   ├── qualcoder_history.py # A project's history with QualCoder, worked out once per selection (0.15.0)
 │   │   ├── import_paths.py      # Where documents may be imported from
 │   │   ├── import_words.py      # What the import says, in fixed plain words
 │   │   ├── import_page.py       # The page for checking letters that look garbled

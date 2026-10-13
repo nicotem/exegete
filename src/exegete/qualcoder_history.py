@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Union
 
 from . import database
+from .database import error_label
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ def _safely(check: Callable[[], Any]) -> bool:
         return bool(check())
     except Exception as error:
         logger.debug("A trace of QualCoder could not be read: %s",
-                     database.error_label(error))
+                     error_label(error))
         return False
 
 
@@ -161,7 +162,7 @@ def _running(scan_processes: bool) -> Optional[bool]:
         scan = database._qualcoder_process_scan()
     except Exception as error:
         logger.debug("The process scan failed: %s",
-                     database.error_label(error))
+                     error_label(error))
         return None
     if scan is None:
         return None

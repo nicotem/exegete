@@ -4091,10 +4091,11 @@ def _select_project(project_path: str) -> Dict[str, Any]:
             f"This project is in use by another program (its lock file "
             f"is active, user {holder or 'unknown'}): QualCoder 3.8 has "
             f"it open, or another conversation using Exegete is writing "
-            f"to it. Ask the user to close the project "
-            f"in QualCoder before any coding they intend to save; all "
-            f"write operations will be refused until it is closed. Reads "
-            f"work but may return changing data."
+            f"to it. Ask the researcher to close the project in "
+            f"QualCoder, or wait a moment, before any coding they intend "
+            f"to save; all write operations will be refused while the "
+            f"lock file is active. Reads work but may return changing "
+            f"data."
         )
     else:
         # C5/T17 + P1-5: only released QualCoder (3.x) signals "open"
@@ -4704,15 +4705,21 @@ def get_current_project() -> str:
                 "holder": holder or "unknown",
                 "note": "QualCoder 3.8, or another conversation using "
                         "Exegete, has this project in use; all database "
-                        "writes will be refused until it is closed there. "
-                        "Ask the user to close it, then re-check."
+                        "writes will be refused while the lock file is "
+                        "active. Ask the researcher to close it in "
+                        "QualCoder, or wait a moment, then re-check."
             }
         elif state == "stale":
             result["qualcoder_lock"] = {
                 "state": "stale",
                 "holder": holder or "unknown",
-                "note": "A leftover lock file from a QualCoder session that "
-                        "did not close cleanly; writes proceed normally."
+                # Exegete writes the same file during each of its own
+                # writes (hold_project_lock), so a write cut short
+                # leaves the same leftover.
+                "note": "A leftover lock file: QualCoder 3.8 leaves one "
+                        "when it does not close cleanly, and so can a "
+                        "write by Exegete that was cut short. Writes "
+                        "proceed normally."
             }
 
         # P1-5: best-effort 4.0 GUI-open heuristics (4.0 writes no lock
@@ -4752,7 +4759,7 @@ def read_pseudonym_list() -> str:
     whether the file exists and how many entries it has without any name.
 
     The list is the project's pseudonyms.json: its names list, applied at
-    import, and the researcher's reverse key. Each call that returns it
+    import; the researcher's reverse key. Each call that returns it
     writes one line to the server's log saying that the list was
     returned and how many entries it had, with no name in it, so the
     host's log shows every time the list left the project.
@@ -7873,13 +7880,12 @@ def analyze_for_coding(
             f"This project is in use by another program (its lock file "
             f"is active, user {holder or 'unknown'}): QualCoder 3.8 has "
             f"it open, or another conversation using Exegete is writing "
-            f"to it. Ask the user to close the project in QualCoder, or "
-            f"wait a moment, before continuing; all database writes will "
-            f"be refused while the lock file is active, so the "
-            f"review-and-approve work would be wasted. Once they confirm it "
-            f"is closed, re-check via get_current_project (the "
-            f"`qualcoder_open` field must be false) and only then proceed "
-            f"with the coding workflow."
+            f"to it. Ask the researcher to close the project in "
+            f"QualCoder, or wait a moment, before continuing; all database "
+            f"writes will be refused while the lock file is active, so the "
+            f"review-and-approve work would be wasted. Then re-check via "
+            f"get_current_project (the `qualcoder_open` field must be "
+            f"false) and only then proceed with the coding workflow."
         )
         qualcoder_banner = f"""
 ⚠️ **STOP: THIS PROJECT IS IN USE BY ANOTHER PROGRAM**
@@ -16029,8 +16035,9 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"at a time, in file order, so the entry already in the file "
             f"replaces that word first and the longer name is never "
             f"matched (an Ann listed before Mary Ann turns Mary Ann into "
-            f"Mary and Ann's pseudonym); for those, edit pseudonyms.json "
-            f"after the save so that the longer name comes first (see "
+            f"Mary and Ann's pseudonym). For QualCoder's imports, edit "
+            f"pseudonyms.json after the save so that the longer name "
+            f"comes first (see "
             f"mapping_retention.if_saved.pre_empted_by_existing).")
     if retention.get("chosen") in ("save_requested", "both") and \
             preview.get("case_mode") not in (None, "exact"):
@@ -16740,7 +16747,7 @@ def pseudonymise_source(
                  that integer before this tool runs: "1", 1.0, true, "01"
                  and "+1" are file 1, and "1_0" is file 10.
         use_project_pseudonyms: Read the mapping from the project's own
-                 pseudonyms.json instead (the project's names list).
+                 pseudonyms.json instead (its names list).
                  Give this or `mapping`, not both. The original names in
                  that file are the researcher's reverse key and you did not supply
                  them, so on this path no diagnostic and no refusal

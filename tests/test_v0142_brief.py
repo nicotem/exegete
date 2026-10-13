@@ -518,7 +518,7 @@ class TestTheSizes:
     # and pseudonymise_source (not presuming QualCoder, piece 1). Their
     # entries as 0.14.2 served them are below, so every other tool is
     # still held to 0.14.2's figure.
-    NOW = {"full": 195_772, "core": 65_138, "lifecycle": 198_277}
+    NOW = {"full": 195_758, "core": 65_138, "lifecycle": 198_263}
     CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

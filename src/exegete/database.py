@@ -3547,9 +3547,11 @@ class QualcoderDatabase:
             raise CoderVisibilityUnreadable(_mark_unregistered(
                 "Could not determine coder visibility for this project: "
                 "one of its coder-visibility views is missing, so the "
-                "project is damaged. A backup made before the damage has "
-                "it (list_backups, restore_backup); QualCoder 4.0, if you "
-                "use it, recreates the views when it opens the project."))
+                "project is damaged. A backup made before the damage "
+                "still has the views: restoring it (list_backups, "
+                "restore_backup) takes the whole project back to that "
+                "backup's state; QualCoder 4.0, if you use it, recreates "
+                "the views when it opens the project."))
         return view
 
     def _visibility_in_force(self) -> Optional[bool]:

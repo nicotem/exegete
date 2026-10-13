@@ -68,9 +68,18 @@ OLD_IN_ANSWERS = (
     "import-time list",
     "so on the next one the entry already in the file",
     "QualCoder seeds",
+    # Fix round 1: the lock texts that kept QualCoder as the only way
+    # through, the leftover lock blamed on QualCoder alone, the unclear
+    # "it" of the visibility text, and the pre-empt warning's long
+    # sentence
+    "will be refused until it is closed",
+    "Once they confirm it is closed",
+    "from a QualCoder session that did not close cleanly",
+    "A backup made before the damage has it",
+    "; for those, edit pseudonyms.json",
 )
 OLD_IN_DESCRIPTIONS = ("import-time list",)
-OLD_IN_PRIVACY = ("import-time list",)
+OLD_IN_PRIVACY = ("import-time list", "every backup either tool makes")
 
 # The new texts, word for word
 BUSY = (
@@ -98,9 +107,10 @@ def in_use(holder):
 VISIBILITY = (
     "Could not determine coder visibility for this project: one of its "
     "coder-visibility views is missing, so the project is damaged. A "
-    "backup made before the damage has it (list_backups, restore_backup); "
-    "QualCoder 4.0, if you use it, recreates the views when it opens the "
-    "project.")
+    "backup made before the damage still has the views: restoring it "
+    "(list_backups, restore_backup) takes the whole project back to that "
+    "backup's state; QualCoder 4.0, if you use it, recreates the views "
+    "when it opens the project.")
 
 
 def names_note(count):
@@ -122,13 +132,16 @@ def pre_empted(entries):
         f"apply the file one entry at a time, in file order, so the entry "
         f"already in the file replaces that word first and the longer name "
         f"is never matched (an Ann listed before Mary Ann turns Mary Ann "
-        f"into Mary and Ann's pseudonym); for those, edit pseudonyms.json "
-        f"after the save so that the longer name comes first (see "
+        f"into Mary and Ann's pseudonym). For QualCoder's imports, edit "
+        f"pseudonyms.json after the save so that the longer name comes "
+        f"first (see "
         f"mapping_retention.if_saved.pre_empted_by_existing).")
 
 
 PRIVACY_SENTENCE = ("It is the project's names list, applied when files "
                     "are imported, and it is")
+PRIVACY_BACKUPS = ("so it travels into every backup of the project "
+                   "(Exegete's, and QualCoder's if you use it).")
 FRAMEWORK = ("The project memo (exegete://project/info) may state the "
              "study's methodology. If it is unclear, ask, and suggest "
              "recording it there")
@@ -280,35 +293,60 @@ class TestTheActiveLockFile:
         assert _dump(locked) == before
         assert _backups(locked) == []
 
+    # Each names both ways through, as the refusal does: closing the
+    # project in QualCoder, or waiting while another conversation's write
+    # ends (fix round 1: two of them gave closing it in QualCoder alone).
     def test_select_project_warns_with_both_causes(self, locked):
         answer = json.loads(server.select_project(str(locked)))
         assert answer["success"] is True
         assert answer["warning"].startswith(
-            in_use("someone") + " Ask the user to close the project in "
-            "QualCoder before any coding they intend to save; all write "
-            "operations will be refused until it is closed.")
+            in_use("someone") + " Ask the researcher to close the project "
+            "in QualCoder, or wait a moment, before any coding they intend "
+            "to save; all write operations will be refused while the lock "
+            "file is active. Reads work but may return changing data.")
 
     def test_get_current_project_notes_both_causes(self, locked):
         answer = json.loads(server.get_current_project())
         assert answer["qualcoder_open"] is True
         assert answer["qualcoder_lock"]["note"] == (
             "QualCoder 3.8, or another conversation using Exegete, has this "
-            "project in use; all database writes will be refused until it "
-            "is closed there. Ask the user to close it, then re-check.")
+            "project in use; all database writes will be refused while the "
+            "lock file is active. Ask the researcher to close it in "
+            "QualCoder, or wait a moment, then re-check.")
 
     def test_analyze_for_coding_asks_with_both_causes(self, locked):
         answer = json.loads(server.analyze_for_coding([1],
                                                       instruction="test"))
         assert answer["action_required"] == (
-            in_use("someone") + " Ask the user to close the project in "
-            "QualCoder, or wait a moment, before continuing; all database "
-            "writes will be refused while the lock file is active, so the "
-            "review-and-approve work would be wasted. Once they confirm it "
-            "is closed, re-check via get_current_project (the "
-            "`qualcoder_open` field must be false) and only then proceed "
-            "with the coding workflow.")
+            in_use("someone") + " Ask the researcher to close the project "
+            "in QualCoder, or wait a moment, before continuing; all "
+            "database writes will be refused while the lock file is "
+            "active, so the review-and-approve work would be wasted. Then "
+            "re-check via get_current_project (the `qualcoder_open` field "
+            "must be false) and only then proceed with the coding "
+            "workflow.")
         assert ("**STOP: THIS PROJECT IS IN USE BY ANOTHER PROGRAM**"
                 in answer["instructions"])
+
+
+def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
+        setup_server, qualcoder_db_path):
+    """Fix round 1: Exegete writes the same file during its own writes,
+    so a write cut short leaves the same leftover as a QualCoder 3.8
+    that did not close cleanly; the note beside the corrected one says
+    both."""
+    lock = Path(qualcoder_db_path) / QUALCODER_LOCK_FILENAME
+    lock.write_text(f"someone\n{time.time() - 3600}", encoding="utf-8")
+    try:
+        answer = json.loads(server.get_current_project())
+    finally:
+        lock.unlink()
+    assert answer["qualcoder_open"] is False
+    assert answer["qualcoder_lock"] == {
+        "state": "stale", "holder": "someone",
+        "note": "A leftover lock file: QualCoder 3.8 leaves one when it "
+                "does not close cleanly, and so can a write by Exegete "
+                "that was cut short. Writes proceed normally."}
 
 
 class TestAMissingVisibilityView:
@@ -353,6 +391,9 @@ class TestTheNamesListIsTheProjects:
     def test_privacy_says_so(self):
         privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
         assert PRIVACY_SENTENCE in privacy
+        # Fix round 1: the backups it travels into are named, now that
+        # the sentence no longer names QualCoder for "either tool"
+        assert PRIVACY_BACKUPS in privacy
 
     def test_the_pre_empt_warning_says_exegetes_imports_are_not_affected(
             self, project):
@@ -366,6 +407,14 @@ class TestTheNamesListIsTheProjects:
                    if "pre_empted_by_existing" in w]
         assert warning == [pre_empted("[1]")]
         assert "Pnine" not in json.dumps(out)
+
+
+def test_the_workflow_guide_quotes_the_whole_refusal():
+    """Fix round 1: AI_CODING_WORKFLOW.md quoted the refusal without the
+    ways through; it now quotes the whole message."""
+    guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+        encoding="utf-8"))
+    assert f'"{refusal("...")}"' in guide
 
 
 class TestTheMemoIsNotSaidToBeSeeded:
@@ -397,19 +446,18 @@ NEW_WORDS = {
     "get_current_project": "the project's pseudonyms.json (its names "
                            "list, applied at import; the researcher's "
                            "reverse key)",
+    # Fix round 1: get_current_project's words, so that the description
+    # is no longer than before (the design's words made it one character
+    # longer) and the two say the same
     "read_pseudonym_list": "The list is the project's pseudonyms.json: its "
-                           "names list, applied at import, and the "
+                           "names list, applied at import; the "
                            "researcher's reverse key.",
-    "pseudonymise_source": "pseudonyms.json instead (the project's names "
-                           "list).",
+    # Fix round 1: "the project's" said once, not twice
+    "pseudonymise_source": "the project's own pseudonyms.json instead (its "
+                           "names list).",
 }
-# The new words for read_pseudonym_list carry one more space than the
-# words they replace and one fewer character that is not white space,
-# and that description has no indented line to rewrap within the line
-# width, so it is one character longer than before (on 3.13, 1,041, its
-# length at 0.14.1). get_current_project's one orphaned line is joined
-# to the line before it, which keeps that description shorter.
-ALLOWED_GROWTH = {"read_pseudonym_list": 1}
+# get_current_project's one orphaned line is joined to the line before
+# it, which keeps that description shorter than before.
 
 
 class TestTheThreeDescriptions:
@@ -423,11 +471,10 @@ class TestTheThreeDescriptions:
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
             assert len("".join(raw[name].split())) <= solid, name
-            growth = ALLOWED_GROWTH.get(name, 0)
             if exact:
-                assert len(raw[name]) <= length + growth, name
+                assert len(raw[name]) <= length, name
             if indented:
-                assert len(raw[name]) <= length_311 + growth, name
+                assert len(raw[name]) <= length_311, name
             assert name in CHANGED_0150 and WORDS[name] == \
                 CHANGED_0150[name], name
 

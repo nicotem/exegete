@@ -577,12 +577,14 @@ CHANGED_0143 = {
 # is "its names list, applied at import", not QualCoder's import-time
 # list, in get_current_project, read_pseudonym_list and
 # pseudonymise_source's use_project_pseudonyms; get_current_project
-# also has one line rewrapped so that it is no longer than before.
-# Later v0.15.0 pieces add their lines here.
+# also has one line rewrapped so that it is no longer than before, and
+# its fix round gave read_pseudonym_list get_current_project's words,
+# so that it too is shorter than before. Later v0.15.0 pieces add their
+# lines here.
 CHANGED_0150 = {
     "get_current_project": (1920, 1570, "da157f879c430be0"),
-    "pseudonymise_source": (17349, 12714, "33924dcbc2ab2389"),
-    "read_pseudonym_list": (1041, 859, "b465e6e0d9fce6ea"),
+    "pseudonymise_source": (17339, 12705, "b497f4c553410195"),
+    "read_pseudonym_list": (1037, 856, "637792f4e7f7de38"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

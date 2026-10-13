@@ -26,6 +26,13 @@ project without saying what its folder still holds. The fix round says
 both, points to where PRIVACY.md lists what stays, and asks the
 assistant not to open originals itself to work round a problem.
 
+Its second round found the words could still mislead: the list of what
+is not replaced read as complete, and its condition ("unless you ask
+for them to be rewritten") as covering every item; one sentence ran to
+about eighty words; an export was offered as a use without saying what
+it still carries; and "removing the file from Downloads" pointed at the
+one file. The second fix round says so in PRIVACY.md and the CHANGELOG.
+
 The guard keeps an earlier draft's words from coming back.
 """
 
@@ -64,18 +71,37 @@ SHARING_THE_FOLDER = (
     "keep one, the reverse key at its root. \"Pseudonymising a project does "
     "not empty it of names\", below, says what stays, the backups beside "
     "the project included.")
+# Fix round 2: what an export still carries, said after the folder
+EXPORTS = (
+    "An export from Exegete carries the replaced text, but file and case "
+    "names as they are, and notes in full, private parts included; an "
+    "export made in QualCoder carries the unchanged originals.")
+# Fix round 2: the list is a selection, a name in another form is
+# named, the condition is on the last item alone, and the long sentence
+# is three
+AMONG_WHAT_REACHES = (
+    "Not everything is replaced, though; among what still reaches the "
+    "assistant through Exegete: a PDF's text, file and case names, "
+    "attribute values, any name, or form of a name, that the list or the "
+    "mapping does not match, and notes and journal entries unless you ask "
+    "for them to be rewritten.")
+TYPED_NAMES = (
+    "Names you type into the conversation for a mapping reach the "
+    "assistant as you type them.")
+POINTERS = (
+    "\"What is not pseudonymised\", in \"Bringing documents in\", and "
+    "\"Pseudonymising a project does not empty it of names\", in "
+    "\"Practical mitigations\", say what stays.")
 NOT_EVERYTHING = (
     "Once the names are replaced, what Exegete's tools return of the "
-    "replaced text carries the pseudonyms. Not everything is replaced, "
-    "though: a PDF's text, file and case names, attribute values, notes and "
-    "journal entries unless you ask for them to be rewritten, and any name "
-    "the list or the mapping does not hold still reach the assistant "
-    "through Exegete, and names you type into the conversation for a "
-    "mapping reach it as you type them (\"What is not pseudonymised\", in "
-    "\"Bringing documents in\", and \"Pseudonymising a project does not "
-    "empty it of names\", in \"Practical mitigations\", say what stays).")
+    "replaced text carries the pseudonyms. " + AMONG_WHAT_REACHES + " "
+    + TYPED_NAMES + " " + POINTERS)
+# The longest sentence the second paragraph may hold, in words: its
+# list is 51; the first round's sentence was 80
+LONGEST_SENTENCE = 55
 ANOTHER_COPY = (
-    "Removing the file from Downloads would not have closed that route: "
+    "Deleting the originals from Downloads after the import would not "
+    "have closed that route: "
     "the nine that came in have unchanged copies, real names included, in "
     "the project's folder of originals, which such an assistant can read "
     "as easily.")
@@ -104,7 +130,7 @@ SECTION = (
     "them in a file already in the project. They are useful for managing "
     "what you disclose to other people: a colleague or second coder you "
     "share the project with, a supervisor, or whoever receives an export. "
-    + SHARING_THE_FOLDER + " "
+    + SHARING_THE_FOLDER + " " + EXPORTS + " "
     "For what reaches the AI assistant, they help, but they should not be "
     "trusted blindly. "
     + NOT_EVERYTHING + " "
@@ -147,6 +173,16 @@ FIRST_ROUND_WORDS = (
     "a supervisor, a transcriber,",
     "weigh with your ethics approval",
     "offers to find out why",
+)
+# Words the first fix round had and the second replaced: a list that
+# read as complete, a condition that read as covering it all, a name
+# "held" rather than matched, and the one file in Downloads
+SECOND_ROUND_WORDS = (
+    "Not everything is replaced, though: a PDF's text",
+    "unless you ask for them to be rewritten, and any name",
+    "the list or the mapping does not hold",
+    "for a mapping reach it as you type them (",
+    "Removing the file from Downloads",
 )
 MITIGATION = (
     "The section \"What pseudonymisation is for\", above, says what it is "
@@ -293,6 +329,53 @@ class TestPrivacy:
         assert ("weigh with your ethics committee and your data protection "
                 "officer") in section
         assert "sets out to find out why" in section
+
+    def test_the_section_says_what_an_export_still_carries(self):
+        # after what sharing the folder shares, in the first paragraph,
+        # where an export is offered as a use
+        section = _flat(_section(_doc("PRIVACY.md"),
+                                 "What pseudonymisation is for"))
+        assert (SHARING_THE_FOLDER + " " + EXPORTS
+                + " For what reaches the AI assistant") in section
+
+    def test_the_list_is_a_selection_with_its_condition_last(self):
+        section = _flat(_section(_doc("PRIVACY.md"),
+                                 "What pseudonymisation is for"))
+        assert AMONG_WHAT_REACHES in section
+        # a selection, not the whole account
+        assert ("Not everything is replaced, though; among what still "
+                "reaches the assistant through Exegete:") in section
+        # a name in another form is named, and "match" rather than "hold"
+        assert ("any name, or form of a name, that the list or the mapping "
+                "does not match") in section
+        # the condition is on notes and journal entries alone: the last
+        # item, and the sentence ends with it
+        listed = AMONG_WHAT_REACHES[AMONG_WHAT_REACHES.index(":") + 1:]
+        assert listed.endswith(", and notes and journal entries unless you "
+                               "ask for them to be rewritten.")
+        assert listed.count("unless") == 1
+        assert ("unless you ask for them to be rewritten. " + TYPED_NAMES
+                + " " + POINTERS) in section
+
+    def test_no_sentence_of_the_second_paragraph_is_very_long(self):
+        section = _section(_doc("PRIVACY.md"), "What pseudonymisation is for")
+        paragraphs = [_flat(p) for p in section.split("\n\n")]
+        second = next(p for p in paragraphs
+                      if p.startswith("For what reaches the AI assistant"))
+        sentences = re.split(r'(?<=\.) (?=["A-Z])', second)
+        longest = max(sentences, key=lambda s: len(s.split()))
+        assert len(longest.split()) <= LONGEST_SENTENCE, longest
+        # what the first round said in one sentence is now three
+        assert len(sentences) == 6, sentences
+
+    def test_the_second_rounds_words_are_gone(self):
+        section = _flat(_section(_doc("PRIVACY.md"),
+                                 "What pseudonymisation is for"))
+        for words in SECOND_ROUND_WORDS:
+            assert words not in section, words
+        assert ("could have stopped it. Deleting the originals from "
+                "Downloads after the import would not have closed that "
+                "route") in section
 
     def test_practical_mitigations_points_to_it(self):
         privacy = _doc("PRIVACY.md")
@@ -450,6 +533,10 @@ def test_the_changelog_says_so():
             "itself to work round a problem, and to ask the researcher") \
         in entry
     assert "transcriber" not in entry
+    # fix round 2: an export can still carry real names
+    assert ("though the project's folder still holds the originals and any "
+            "names list, and an export can still carry real names (the "
+            "section says where)") in entry
     measured = unreleased[unreleased.index("### Measured"):]
     assert ("`pseudonymise_source`'s description gained a paragraph on what "
             "pseudonymisation is for: its entry grew by 583 characters, 619 "

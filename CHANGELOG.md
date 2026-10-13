@@ -123,10 +123,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pseudonymise_source` are useful for managing what is shared with
   other people (a colleague or second coder, a supervisor, whoever
   receives an export), though the project's folder still holds the
-  originals and any names list. For what reaches the AI assistant they
-  help, but they should not be trusted blindly: what Exegete's tools
-  return carries the pseudonyms only where names were replaced (the
-  section says what is not), and an assistant that opens files by
+  originals and any names list, and an export can still carry real
+  names (the section says where). For what reaches the AI assistant
+  they help, but they should not be trusted blindly: what Exegete's
+  tools return carries the pseudonyms only where names were replaced
+  (the section says what is not), and an assistant that opens files by
   itself can read the originals by a route outside Exegete, as an
   imagined example shows. For anyone who wants to be sure that real
   names never reach the assistant, it suggests replacing them before

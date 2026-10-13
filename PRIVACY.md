@@ -467,21 +467,24 @@ holds, real names included: the imported documents' originals, copied
 unchanged into its folder of originals, and `pseudonyms.json`, if you
 keep one, the reverse key at its root. "Pseudonymising a project does
 not empty it of names", below, says what stays, the backups beside the
-project included.
+project included. An export from Exegete carries the replaced text, but
+file and case names as they are, and notes in full, private parts
+included; an export made in QualCoder carries the unchanged originals.
 
 For what reaches the AI assistant, they help, but they should not be
 trusted blindly. Once the names are replaced, what Exegete's tools
 return of the replaced text carries the pseudonyms. Not everything is
-replaced, though: a PDF's text, file and case names, attribute values,
-notes and journal entries unless you ask for them to be rewritten, and
-any name the list or the mapping does not hold still reach the
-assistant through Exegete, and names you type into the conversation
-for a mapping reach it as you type them ("What is not pseudonymised",
-in "Bringing documents in", and "Pseudonymising a project does not
-empty it of names", in "Practical mitigations", say what stays). And
-depending on how your assistant is set up, an assistant that meets a
-problem may work round it by a route outside Exegete, and what it
-reads that way goes to its AI provider in full (the section above).
+replaced, though; among what still reaches the assistant through
+Exegete: a PDF's text, file and case names, attribute values, any name,
+or form of a name, that the list or the mapping does not match, and
+notes and journal entries unless you ask for them to be rewritten.
+Names you type into the conversation for a mapping reach the assistant
+as you type them. "What is not pseudonymised", in "Bringing documents
+in", and "Pseudonymising a project does not empty it of names", in
+"Practical mitigations", say what stays. And depending on how your
+assistant is set up, an assistant that meets a problem may work round
+it by a route outside Exegete, and what it reads that way goes to its
+AI provider in full (the section above).
 
 An imagined example. You bring ten interview transcripts into a
 project, meaning to replace the names before any coding starts. One
@@ -489,10 +492,10 @@ file is refused. The assistant, which in your set-up can open files on
 the computer by itself, sets out to find out why: it opens the
 original in your Downloads folder and reads its first page, real names
 included. Nothing in Exegete saw that read, and nothing in Exegete
-could have stopped it. Removing the file from Downloads would not have
-closed that route: the nine that came in have unchanged copies, real
-names included, in the project's folder of originals, which such an
-assistant can read as easily.
+could have stopped it. Deleting the originals from Downloads after the
+import would not have closed that route: the nine that came in have
+unchanged copies, real names included, in the project's folder of
+originals, which such an assistant can read as easily.
 
 If an assistant has broad and deep access to the computer, there is
 little Exegete can do about what it reads. So, if you want to be sure

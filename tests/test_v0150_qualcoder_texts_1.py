@@ -474,3 +474,28 @@ def test_guard_exegetes_import_applies_the_longer_name_first(
     finally:
         con.close()
     assert text == "Participant B met Participant A.\n"
+
+
+def test_in_core_the_visibility_text_marks_restore_backup(tmp_path):
+    """Core does not register restore_backup, so the text marks it where
+    it is written, as every text a core tool can reach does
+    (tests/test_v014_server_wide.py)."""
+    server._apply_toolset("core")       # the registry fixture restores it
+    assert "restore_backup" not in server.mcp._tool_manager._tools
+    folder = tmp_path / "Study.qda"
+    new_project.write_project(folder, new_project.creation_statements(
+        "Researcher", "x (Exegete)", "2026-10-13 10:00:00"))
+    con = sqlite3.connect(str(folder / "data.qda"))
+    con.execute("DROP VIEW code_text_visible")
+    con.commit()
+    con.close()
+    original = server.db, server.current_project_path
+    server.db = QualcoderDatabase(str(folder))
+    server.current_project_path = str(folder)
+    try:
+        answer = json.loads(server.get_coding_frequencies())
+    finally:
+        server.db.close()
+        server.db, server.current_project_path = original
+    assert answer == {"error": VISIBILITY.replace(
+        "restore_backup", "restore_backup" + server.NOT_IN_THIS_TOOL_SET)}

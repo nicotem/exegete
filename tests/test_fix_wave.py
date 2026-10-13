@@ -157,7 +157,7 @@ class TestSessionStartQualcoderCheck:
             out = server.analyze_for_coding([1], instruction="test")
             assert "qualcoder_open: true" in out
             assert "action_required" in out
-            assert "close QualCoder" in out
+            assert "close the project in QualCoder" in out
             assert "get_current_project" in out
             assert "gemma" in out
             # the session was still created
@@ -395,7 +395,7 @@ class TestQualcoderLockProtocol:
         try:
             result = json.loads(server.import_text_file(
                 "new.txt", "some new content", create_backup=False))
-            assert "open in QualCoder" in result["error"]
+            assert "is in use by another program" in result["error"]
             assert "someone" in result["error"]
         finally:
             lock.unlink()

@@ -480,6 +480,21 @@ DB_LOCKED_MESSAGE = (
 )
 
 
+# The server's marking of the tools the current tool set does not
+# register (server._mark_unregistered), which the server installs here
+# when it loads. A text in this module that names a tool goes through
+# `_mark_unregistered`, so it is marked where it is written, as the
+# server's own texts are (tests/test_v014_server_wide.py pins that every
+# text a core tool can reach is). Before the server loads there is no
+# tool set, and the text is left as it is.
+_unregistered_marker: Callable[[str], str] = lambda text: text
+
+
+def _mark_unregistered(text: str) -> str:
+    """`text` with each tool the current tool set lacks marked."""
+    return _unregistered_marker(text)
+
+
 class CoderVisibilityUnreadable(RuntimeError):
     """`coder_names` did not answer on a project that has the capability.
 
@@ -3529,12 +3544,12 @@ class QualcoderDatabase:
             # its open_project calls update_coder_names (__main__.py
             # 2869-2870 at tag 4.0, b95e021), which creates the four
             # with CREATE VIEW IF NOT EXISTS (app.py 1555-1669).
-            raise CoderVisibilityUnreadable(
+            raise CoderVisibilityUnreadable(_mark_unregistered(
                 "Could not determine coder visibility for this project: "
                 "one of its coder-visibility views is missing, so the "
                 "project is damaged. A backup made before the damage has "
                 "it (list_backups, restore_backup); QualCoder 4.0, if you "
-                "use it, recreates the views when it opens the project.")
+                "use it, recreates the views when it opens the project."))
         return view
 
     def _visibility_in_force(self) -> Optional[bool]:

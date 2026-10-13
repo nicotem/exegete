@@ -237,7 +237,7 @@ class TestRenameCase:
         try:
             for args in ((1, "Case A"), (99, "x"), (1, "New")):
                 out = _case(*args)
-                assert "open in QualCoder (user gui_user)" in out["error"]
+                assert "lock file is active (user gui_user)" in out["error"]
         finally:
             lock.unlink()
         assert _backups(project) == []

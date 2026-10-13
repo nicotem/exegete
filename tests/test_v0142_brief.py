@@ -513,14 +513,19 @@ class TestTheSizes:
     # import_documents), and, from the maintainer's sitting, shortens
     # copy_project_to_workspace and create_project (the folder set for
     # projects, and the coder name as QualCoder 4.0 labels it);
-    # tests/test_v0142_description_cut.py pins their words. Their entries
-    # as 0.14.2 served them are below, so every other tool is still held
-    # to 0.14.2's figure.
-    NOW = {"full": 195_777, "core": 65_140, "lifecycle": 198_282}
+    # tests/test_v0142_description_cut.py pins their words. v0.15.0
+    # rewords the names list in get_current_project, read_pseudonym_list
+    # and pseudonymise_source (not presuming QualCoder, piece 1). Their
+    # entries as 0.14.2 served them are below, so every other tool is
+    # still held to 0.14.2's figure.
+    NOW = {"full": 195_772, "core": 65_138, "lifecycle": 198_277}
     CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
-                          "create_project": 2_555}
+                          "create_project": 2_555,
+                          "get_current_project": 2_133,
+                          "read_pseudonym_list": 1_234,
+                          "pseudonymise_source": 19_391}
     # Each new tool's entry on Python 3.13, and the sets it is in
     NEW = {"read_brief": (451, {"full", "core", "lifecycle"}),
            "check_for_updates": (903, {"full", "lifecycle"})}

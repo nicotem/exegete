@@ -30,6 +30,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from . import env_settings, names, state_folder, updates
+from . import database as _database_module
 from .database import (
     QualcoderDatabase,
     sqlite_error_label,
@@ -1048,6 +1049,11 @@ def _mark_unregistered(text: str) -> str:
             return match.group(0)
         return match.group(0) + NOT_IN_THIS_TOOL_SET
     return pattern.sub(mark, text)
+
+
+# The database module's texts that name a tool are marked by the same rule
+# (database._mark_unregistered).
+_database_module._unregistered_marker = _mark_unregistered
 
 # Global database instance and current project path
 db: Optional[QualcoderDatabase] = None

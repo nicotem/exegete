@@ -5520,11 +5520,14 @@ class TestQualCoderAppliesTheSavedFileAsThisRunDid:
         assert len(warning) == 1 and warning[0].startswith(
             "Warning: entry [1] holds, as a word, a name that "
             "pseudonyms.json already lists.")
-        # Fix round 2, B2P-N1: said of the imports that match this way.
-        assert ("QualCoder's text and transcript imports (not PDFs) apply "
-                "the file one entry at a time, in file order, so on the next "
-                "one the entry already in the file replaces that word first"
-                in warning[0])
+        # Fix round 2, B2P-N1: said of the imports that match this way;
+        # v0.15.0: Exegete's own imports are not affected, and the trait
+        # is QualCoder's, for imports made there.
+        assert ("Exegete's imports apply the longest name first and are "
+                "not affected. If later imports are made in QualCoder, its "
+                "text and transcript imports (not PDFs) apply the file one "
+                "entry at a time, in file order, so the entry already in "
+                "the file replaces that word first" in warning[0])
         assert "Pnine" not in json.dumps(out)
         _house_rules(warning)
         # QualCoder's loop over the file as it would be saved shows why.
@@ -5591,11 +5594,12 @@ class TestTheInspectionRoutes:
         assert out["pseudonyms_json"] == {
             "present": True, "entries": 2, "encoding": "utf-8",
             "note": (
-                "The project's own pseudonyms.json (QualCoder's import-time "
-                "list) is present with 2 entr(ies). Its contents are the "
-                "researcher's reverse key and are not returned here; "
-                "QualCoder's Pseudonyms dialog (the button in Manage Files) "
-                "shows them to the researcher.")}
+                "The project's pseudonyms.json (its list of real names and "
+                "their pseudonyms, applied when files are imported) is "
+                "present with 2 entr(ies). Its contents are the "
+                "researcher's reverse key and are not returned here; the "
+                "researcher can read the file in the project folder, or in "
+                "QualCoder's Pseudonyms dialog if they use QualCoder.")}
         serialised = json.dumps(out)
         for name in ("Thomas", "Mary Ann", "Alex", "Sam"):
             assert name not in serialised, name

@@ -72,6 +72,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tools, and a test now checks that. PyMuPDF, EbookLib and lxml are
   unchanged, so PDFs and EPUBs are read as before.
 
+### Changed: messages that named QualCoder as the only cause
+
+- **A busy database** no longer says that QualCoder may have the project
+  open. QualCoder holds no database lock while a project is merely open,
+  so a busy database means a program is writing to it: the message now
+  names another conversation using Exegete, a sync or backup service,
+  or QualCoder if you use it, and says to wait a moment and try again.
+- **The refusal while a project's lock file is active** names both of
+  its causes: QualCoder 3.8 has the project open, or another
+  conversation using Exegete is writing to it (Exegete writes the same
+  file during each of its own writes). `select_project`'s warning,
+  `get_current_project`'s note and `analyze_for_coding`'s request and
+  banner say the same. When each is given has not changed.
+- **A missing coder-visibility view** is reported as damage to the
+  project, with a backup made before it as the way back
+  (`list_backups`, `restore_backup`); QualCoder 4.0, if you use it,
+  recreates the views when it opens the project.
+- **The names list** (`pseudonyms.json`) is described as the project's
+  own, applied when files are imported, rather than as QualCoder's
+  import-time list: in `get_current_project`'s answer (which also says
+  the researcher can read the file in the project folder) and
+  description, in `read_pseudonym_list`'s description, in
+  `pseudonymise_source`'s `use_project_pseudonyms`, and in PRIVACY.md.
+  `get_current_project`'s and `pseudonymise_source`'s descriptions are
+  shorter than before; `read_pseudonym_list`'s is one character longer
+  on Python 3.13 (one more space, one fewer letter).
+- **The warning about a shorter name already in `pseudonyms.json`**,
+  given by `pseudonymise_source`'s preview when a mapping is to be
+  saved, says that Exegete's imports apply the longest name first and
+  are not affected, and that reordering the file is for imports made in
+  QualCoder.
+- **The methods notes and the help** no longer say that QualCoder seeds
+  a new project memo with headings.
+- AI_CODING_WORKFLOW.md quotes the new refusal.
+
+### Measured
+
+- Serialised tool JSON: full = 201,734 characters (about 50.4k tokens
+  at chars/4) over 77 tools, core = 67,223 (about 16.8k) over 23, and
+  the opt-in lifecycle set = 204,239 (about 51.1k) over 78, measured on
+  Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a separate
+  environment, not the repository's own `venv/`: for 0.14.3's tree it
+  gives exactly 0.14.3's figures; on Python 3.11.13 (likewise a
+  separate environment, which also gives exactly 0.14.3's figures for
+  its tree), 211,602, 70,611 and 214,239. Against 0.14.3's figures
+  (201,739, 67,225 and 204,244 on 3.13), three entries changed with the
+  names list's wording: `get_current_project`'s by 2 characters fewer,
+  in every set, `pseudonymise_source`'s by 4 fewer and
+  `read_pseudonym_list`'s by 1 more, in full and lifecycle (on 3.11, 6
+  fewer, 4 fewer and 1 more). No other tool's entry changed.
+
 ## [0.14.3-alpha] - 2026-10-12
 
 v0.14.3. What a researcher notices first: documents now come into a

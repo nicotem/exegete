@@ -468,9 +468,15 @@ def nfc_ordered(text: str) -> str:
     return unicodedata.normalize("NFC", _ordered_mark_runs(text))
 
 
+# QualCoder holds no database lock while a project is merely open (see
+# the comment above QUALCODER_LOCK_FILENAME), so a busy database means a
+# program is writing to it, and the message names no program as the
+# only cause (v0.15.0).
 DB_LOCKED_MESSAGE = (
-    "The project database is locked; QualCoder may have it open. "
-    "Close the project in QualCoder (or wait a moment) and try again."
+    "The project database is busy: another program is writing to it "
+    "(another conversation using Exegete, a sync or backup service, or "
+    "QualCoder if you use it). Wait a moment and try again; if it goes "
+    "on, close the project in the program that has it open."
 )
 
 
@@ -577,10 +583,19 @@ LOCK_READ_MAX_BYTES = 4096  # a real lock is two short lines; cap the read
 
 
 def qualcoder_open_message(holder: Optional[str]) -> str:
-    """Actionable message for a project currently open in QualCoder."""
+    """The refusal of every write while the lock file is active.
+
+    Exegete writes the same file during each of its own writes
+    (`hold_project_lock`), so an active lock file means QualCoder 3.8 has
+    the project open or another conversation using Exegete is writing
+    to it; the message names both (v0.15.0).
+    """
     return (
-        f"This project is open in QualCoder (user "
-        f"{holder or 'unknown'}). Close the project in QualCoder, then retry."
+        f"This project is in use by another program: its lock file is "
+        f"active (user {holder or 'unknown'}), so QualCoder 3.8 has it "
+        f"open, or another conversation using Exegete is writing to it. "
+        f"Ask the researcher to close it in QualCoder, or wait a moment; "
+        f"once get_current_project shows qualcoder_open false, retry."
     )
 
 
@@ -3509,11 +3524,17 @@ class QualcoderDatabase:
                    and caps.visibility_declared()
                    else view in getattr(self, "_arrived_views", ()))
         if not (whole and present):
+            # Exegete's own projects have these views (new_project.py),
+            # so a missing one is damage. QualCoder 4.0 recreates them:
+            # its open_project calls update_coder_names (__main__.py
+            # 2869-2870 at tag 4.0, b95e021), which creates the four
+            # with CREATE VIEW IF NOT EXISTS (app.py 1555-1669).
             raise CoderVisibilityUnreadable(
-                "Could not determine coder visibility for this project "
-                "(one of its coder-visibility views is missing). Open "
-                "the project in QualCoder, which recreates them, and "
-                "try again")
+                "Could not determine coder visibility for this project: "
+                "one of its coder-visibility views is missing, so the "
+                "project is damaged. A backup made before the damage has "
+                "it (list_backups, restore_backup); QualCoder 4.0, if you "
+                "use it, recreates the views when it opens the project.")
         return view
 
     def _visibility_in_force(self) -> Optional[bool]:

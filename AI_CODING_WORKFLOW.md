@@ -54,8 +54,10 @@ the full path: use that one.
 QualCoder 3.x marks an open project with a `project_in_use.lock`
 heartbeat file, and Exegete respects it: **every write operation is
 refused while QualCoder 3.x has the project open** ("This project
-is open in QualCoder (user ...). Close the project in QualCoder, then
-retry."). Reads still work, with a warning that data may change
+is in use by another program: its lock file is active (user ...), so
+QualCoder 3.8 has it open, or another conversation using Exegete is
+writing to it."; Exegete writes the same file during each of its own
+writes). Reads still work, with a warning that data may change
 underneath.
 
 QualCoder 4.0 writes no lock file. For it Exegete can only report

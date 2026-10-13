@@ -3632,8 +3632,7 @@ write on the call itself, with a backup.
 ## Where the study's framework lives
 
 The project memo is the conventional home for research questions,
-methodology and data description; QualCoder seeds an empty project memo
-with those three headings. Read its public part through
+methodology and data description. Read its public part through
 exegete://project/info or get_project_summary. Text after a '#####'
 marker is the researcher's private zone and is never shown to you; do
 not try to infer it.
@@ -4083,8 +4082,10 @@ def _select_project(project_path: str) -> Dict[str, Any]:
     state, holder = qualcoder_lock_state(_current_project_folder())
     if state == "active":
         warnings.append(
-            f"QualCoder currently has this project open (user "
-            f"{holder or 'unknown'}). Ask the user to close the project "
+            f"This project is in use by another program (its lock file "
+            f"is active, user {holder or 'unknown'}): QualCoder 3.8 has "
+            f"it open, or another conversation using Exegete is writing "
+            f"to it. Ask the user to close the project "
             f"in QualCoder before any coding they intend to save; all "
             f"write operations will be refused until it is closed. Reads "
             f"work but may return changing data."
@@ -4596,10 +4597,13 @@ def _pseudonyms_json_report() -> Dict[str, Any]:
     No name enters the conversation by this route (ruling 14b, and the
     owner's ruling of 2026-09-24 that the list itself has a tool of its
     own, `read_pseudonym_list`): whether the file is present, how many
-    entries it has, which encoding it read as, and a pointer to
-    QualCoder's Pseudonyms dialog (the button in Manage Files,
-    `manage_files.py:285`, `:733-743` at the pin), where the human sees
-    the list. It does not invite the call that returns the names. An
+    entries it has, which encoding it read as, and where the human sees
+    the list: the file in the project folder, or QualCoder's Pseudonyms
+    dialog (the button in Manage Files, `manage_files.py:285`,
+    `:733-743` at the pin) if they use QualCoder. The list is the
+    project's own, applied by Exegete's imports and written by
+    `pseudonymise_source` (v0.15.0). It does not invite the call that
+    returns the names. An
     unreadable file is reported with the reader's own value-free message.
     """
     block, entries = _pseudonyms_json_read()
@@ -4608,11 +4612,12 @@ def _pseudonyms_json_report() -> Dict[str, Any]:
     return {
         **block,
         "note": (
-            f"The project's own pseudonyms.json (QualCoder's import-time "
-            f"list) is present with {len(entries)} entr(ies). Its contents "
-            f"are the researcher's reverse key and are not returned here; "
-            f"QualCoder's Pseudonyms dialog (the button in Manage Files) "
-            f"shows them to the researcher.")}
+            f"The project's pseudonyms.json (its list of real names and "
+            f"their pseudonyms, applied when files are imported) is "
+            f"present with {len(entries)} entr(ies). Its contents are the "
+            f"researcher's reverse key and are not returned here; the "
+            f"researcher can read the file in the project folder, or in "
+            f"QualCoder's Pseudonyms dialog if they use QualCoder.")}
 
 
 @mcp.tool(annotations=TOOL_READS)
@@ -4632,8 +4637,7 @@ def get_current_project() -> str:
       the 4.0 AI search index, a chat history file changed recently,
       which both QualCoder builds create on a first open and change when
       the chat is used, a running process that looks like QualCoder).
-      When any are present a
-      `qualcoder_gui_hint`
+      When any are present a `qualcoder_gui_hint`
       says the project APPEARS to be open; that is a heuristic, so confirm
       with the user before writing rather than treating it as certain. An
       idle 4.0 window with no recent AI activity leaves no file trace, so
@@ -4642,8 +4646,8 @@ def get_current_project() -> str:
     An open QualCoder 4.0 window will not display external changes until
     the project is reopened there.
 
-    Also reports the project's own pseudonyms.json (QualCoder's
-    import-time list, the researcher's reverse key) as `pseudonyms_json`:
+    Also reports the project's pseudonyms.json (its names list, applied
+    at import; the researcher's reverse key) as `pseudonyms_json`:
     whether it is present, how many entries it has and which encoding it
     read as, with no name in it.
 
@@ -4692,7 +4696,8 @@ def get_current_project() -> str:
             result["qualcoder_lock"] = {
                 "state": "active",
                 "holder": holder or "unknown",
-                "note": "QualCoder has this project open; all database "
+                "note": "QualCoder 3.8, or another conversation using "
+                        "Exegete, has this project in use; all database "
                         "writes will be refused until it is closed there. "
                         "Ask the user to close it, then re-check."
             }
@@ -4740,8 +4745,8 @@ def read_pseudonym_list() -> str:
     see or check the project's pseudonym list. get_current_project says
     whether the file exists and how many entries it has without any name.
 
-    The list is the project's own pseudonyms.json: QualCoder's import-time
-    list, and the researcher's reverse key. Each call that returns it
+    The list is the project's pseudonyms.json: its names list, applied at
+    import, and the researcher's reverse key. Each call that returns it
     writes one line to the server's log saying that the list was
     returned and how many entries it had, with no name in it, so the
     host's log shows every time the list left the project.
@@ -7859,17 +7864,19 @@ def analyze_for_coding(
     state, holder = qualcoder_lock_state(_current_project_folder())
     if state == "active":
         action_required = (
-            f"QualCoder appears to have this project open (user "
-            f"{holder or 'unknown'}). Ask the user to close QualCoder (or "
-            f"close this project in it) before continuing; all database "
-            f"writes will be refused while it is open, so the "
+            f"This project is in use by another program (its lock file "
+            f"is active, user {holder or 'unknown'}): QualCoder 3.8 has "
+            f"it open, or another conversation using Exegete is writing "
+            f"to it. Ask the user to close the project in QualCoder, or "
+            f"wait a moment, before continuing; all database writes will "
+            f"be refused while the lock file is active, so the "
             f"review-and-approve work would be wasted. Once they confirm it "
             f"is closed, re-check via get_current_project (the "
             f"`qualcoder_open` field must be false) and only then proceed "
             f"with the coding workflow."
         )
         qualcoder_banner = f"""
-⚠️ **STOP: QUALCODER HAS THIS PROJECT OPEN**
+⚠️ **STOP: THIS PROJECT IS IN USE BY ANOTHER PROGRAM**
 
 qualcoder_open: true
 action_required: {action_required}
@@ -12447,9 +12454,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                                "the labels are for your own reasoning and for "
                                "this help text",
             "framework": "The project memo (exegete://project/info) may state "
-                         "the study's methodology; QualCoder seeds new project "
-                         "memos with a Methodology heading. If it is unclear, "
-                         "ask, and suggest recording it there",
+                         "the study's methodology. If it is unclear, ask, "
+                         "and suggest recording it there",
             "limits": "Prefer a caveat or a reframing over a refusal. This "
                       "judgement never replaces the researcher's approval of each "
                       "suggestion, and it is never a reason to withhold project "
@@ -16011,13 +16017,14 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         warnings.append(
             f"Warning: entry {if_saved['pre_empted_by_existing']} holds, as "
             f"a word, a name that pseudonyms.json already lists. "
-            f"QualCoder's text and transcript imports (not PDFs) apply the "
-            f"file one entry at a time, in file order, so on the next one "
-            f"the entry already in the file replaces that word first and "
-            f"the longer name is never matched (an Ann "
-            f"listed before Mary Ann turns Mary Ann into Mary and Ann's "
-            f"pseudonym). After the save, edit pseudonyms.json so that the "
-            f"longer name comes first (see "
+            f"Exegete's imports apply the longest name first and are not "
+            f"affected. If later imports are made in QualCoder, its text "
+            f"and transcript imports (not PDFs) apply the file one entry "
+            f"at a time, in file order, so the entry already in the file "
+            f"replaces that word first and the longer name is never "
+            f"matched (an Ann listed before Mary Ann turns Mary Ann into "
+            f"Mary and Ann's pseudonym); for those, edit pseudonyms.json "
+            f"after the save so that the longer name comes first (see "
             f"mapping_retention.if_saved.pre_empted_by_existing).")
     if retention.get("chosen") in ("save_requested", "both") and \
             preview.get("case_mode") not in (None, "exact"):
@@ -16727,7 +16734,7 @@ def pseudonymise_source(
                  that integer before this tool runs: "1", 1.0, true, "01"
                  and "+1" are file 1, and "1_0" is file 10.
         use_project_pseudonyms: Read the mapping from the project's own
-                 pseudonyms.json instead (QualCoder's import-time list).
+                 pseudonyms.json instead (the project's names list).
                  Give this or `mapping`, not both. The original names in
                  that file are the researcher's reverse key and you did not supply
                  them, so on this path no diagnostic and no refusal

@@ -571,7 +571,20 @@ CHANGED_0143 = {
     "create_project": (1915, 1505, "3f93233739c71562"),
     "import_text_file": (4022, 2994, "f51bac7ab0c34434"),
 }
-WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143}
+# The descriptions v0.15.0 changes, as it serves them, on top of 0.14.3's
+# words. Not presuming QualCoder, piece 1 (the seven inaccurate texts,
+# tests/test_v0150_qualcoder_texts_1.py): the project's pseudonyms.json
+# is "its names list, applied at import", not QualCoder's import-time
+# list, in get_current_project, read_pseudonym_list and
+# pseudonymise_source's use_project_pseudonyms; get_current_project
+# also has one line rewrapped so that it is no longer than before.
+# Later v0.15.0 pieces add their lines here.
+CHANGED_0150 = {
+    "get_current_project": (1920, 1570, "da157f879c430be0"),
+    "pseudonymise_source": (17349, 12714, "33924dcbc2ab2389"),
+    "read_pseudonym_list": (1041, 859, "b465e6e0d9fce6ea"),
+}
+WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to

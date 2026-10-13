@@ -5,11 +5,12 @@
 `analyze_for_coding` analysed nothing: it starts a coding session, and
 is now `start_coding_session`. `analyze_file_with_coding` returns a
 file's text with its codings, and is now `read_file_with_codings`. The
-earlier names are still listed, each with one sentence, and run the very
-same function, with the same arguments, annotations and answers, until
-the release on method (planned as v0.15.2) removes them. Exegete's own
-backups are now listed with the kind `exegete` (it was `mcp`), and its
-texts say "Exegete's backups" where they said "MCP backups".
+earlier names are still listed, each with a short description, and run
+the very same function, with the same arguments, annotations and
+answers, until a later release (planned as v0.15.2) removes them.
+Exegete's own backups are now listed with the kind `exegete` (it was
+`mcp`), and its texts say "Exegete's backups" where they said "MCP
+backups".
 
 What this file pins: the registry in both tool sets; the earlier names
 answering as the new ones do, through the host's path; no text Exegete
@@ -377,6 +378,26 @@ def _session_answers(registered):
     texts["search_files"] = _call("search_files", pattern="quiet",
                                   search_content=True)
     texts["read_brief"] = _call("read_brief")
+    # Three answers name a renamed tool only in a state the loop above
+    # does not reach (fix round 1): a comparison with the project's AI
+    # coder, whose coding was applied above; a session whose scope cannot
+    # be read (a damaged or hand-made file); and the summary of a project
+    # with a PDF source that has no text layer (the walk's fixture adds
+    # one).
+    texts["compare_coders, one coder the AI"] = _call(
+        "compare_coders", coder_a="TestCoder",
+        coder_b=server._ai_names_for_project()[0])
+    unreadable = json.loads(_call(
+        "start_coding_session", file_ids=[1],
+        instruction="test"))["coding_session_id"]
+    path = (Path(server.session_manager.storage_dir)
+            / f"session_{unreadable}.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["scope"] = "all"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    texts["record_suggestions, a scope that cannot be read"] = _call(
+        "record_suggestions", coding_session_id=unreadable,
+        suggestions=[good])
     return texts
 
 
@@ -420,10 +441,35 @@ def _served(mode):
             for where, text in texts.items()}
 
 
+@pytest.fixture
+def walked_project(long_file):
+    """The long file, and a PDF source with no text layer (file 61), so
+    that the summary names it."""
+    _sql(server._current_project_folder(),
+         "INSERT INTO source (id, name, fulltext, mediapath, owner, date) "
+         "VALUES (61, 'scan.pdf', ?, '/docs/scan.pdf', 'TestCoder', "
+         "'2026-10-01')", ("\n\n",))
+    return long_file
+
+
+# Where each answer reached only in a particular state names the tool,
+# word for word: these, with the earlier name put back, are what the walk
+# must find (fix round 1).
+REACHED_IN_A_STATE = {
+    "compare_coders, one coder the AI": (
+        "the assistant is told to read each file with "
+        "read_file_with_codings before suggesting"),
+    "get_project_summary": "read_file_with_codings says more for each.",
+    "record_suggestions, a scope that cannot be read": (
+        "cannot be read, so nothing is recorded into it; start a new "
+        "session (start_coding_session)"),
+}
+
+
 class TestNoEarlierNameServed:
 
     @pytest.mark.parametrize("mode", ["full", "core"])
-    def test_every_served_text(self, long_file, mode):
+    def test_every_served_text(self, walked_project, mode):
         texts = _served(mode)
         found = {where: EARLIER.findall(text)
                  for where, text in texts.items() if EARLIER.search(text)}
@@ -440,6 +486,13 @@ class TestNoEarlierNameServed:
                       "explain_ai_coding_tools(analyze_for_coding)",
                       f"resource {server.names.RESOURCE_SCHEME}://files/60"):
             assert where in named, where
+        # and the answers given only in a particular state (compare_coders
+        # is not in `core`)
+        for where, words in REACHED_IN_A_STATE.items():
+            if mode == "core" and where.startswith("compare_coders"):
+                assert where not in named, where
+                continue
+            assert words in texts[where], where
 
     def test_the_notice_and_the_topic_keep_the_earlier_name(self):
         """The deprecated help topic is an argument value: it keeps its
@@ -584,14 +637,22 @@ class TestExegetesBackups:
 DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
              "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md", "CONTRIBUTING.md")
 
+# The other direction of a host's remembered choice (fix round 1): a tool
+# blocked under its earlier name is not blocked under its new one.
+BLOCKED = (
+    "Likewise, a choice to block or switch off an earlier name does not "
+    "carry over to its new name: if you blocked one, you may want to block "
+    "the new name too.")
+
 EARLIER_NAMES_SECTION = (
     "## Earlier names\n\nTwo tools were renamed in 0.15.0. Their earlier "
     "names are still listed, and do exactly what the new ones do, until "
-    "the release on method (planned as v0.15.2) removes them: "
+    "a later release (planned as v0.15.2) removes them: "
     "`analyze_for_coding` is now `start_coding_session`, and "
     "`analyze_file_with_coding` is now `read_file_with_codings`. If your "
     "host remembers a choice to run one of the earlier names without "
-    "asking, it may ask again for the new one.")
+    "asking, it may ask again for the new one. "
+    + BLOCKED)
 
 
 def _read(name):
@@ -681,11 +742,77 @@ class TestTheDocuments:
         for words in ("`analyze_for_coding` is now `start_coding_session`",
                       "`analyze_file_with_coding` is now "
                       "`read_file_with_codings`",
-                      "until the release on method (planned as v0.15.2) "
+                      "each with a short description,",
+                      "until a later release (planned as v0.15.2) "
                       "removes them",
                       "Listing them adds 1,231 characters to every request",
-                      "may ask again for the new one",
+                      "may ask again for the new one. " + BLOCKED,
                       "the kind `exegete` (it was `mcp`)",
                       "an assistant or a script that looked for the kind "
                       "`mcp` now sees `exegete`"):
             assert words in section, words
+        # the roadmap's name for a release, and "one sentence" for a
+        # description of two (fix round 1)
+        assert "release on method" not in section
+        assert "one-sentence" not in section
+
+    def test_the_releases_other_entries_agree(self):
+        """The CHANGELOG's notes for this release give one count for each
+        tool set and name neither earlier name outside the renames' own
+        section (fix round 1)."""
+        text = _read("CHANGELOG.md")
+        entry = _flat(text[text.index("## [Unreleased]"):
+                           text.index("## [0.14.3")])
+        start = entry.index(
+            "### Changed: two tools renamed, and Exegete's backups")
+        end = entry.index("###", start + 5)
+        others = entry[:start] + entry[end:]
+        assert not EARLIER.search(others), EARLIER.findall(others)
+        assert ("`select_project`'s warning, `get_current_project`'s note "
+                "and `start_coding_session`'s request and banner say the "
+                "same.") in others
+        sets = others[others.index("### Changed: one tool set called full"):]
+        sets = sets[:sets.index("###", 5)]
+        assert ("78 tools (80 with the earlier names of the two tools "
+                "renamed below), creating a project") in sets
+        assert ("`core` keeps its 23 tools (25 with the two earlier names "
+                "below), without creating a project.") in sets
+        assert "`core` is unchanged" not in sets
+        measured = others[others.index("### Measured"):]
+        assert ("their earlier names, listed with a short description "
+                "each, add 1,231 characters") in measured
+        assert "one sentence" not in measured
+
+    def test_privacy_says_the_earlier_names_do_the_same(self):
+        """PRIVACY names tools by their new names only (the test above);
+        it says once that what it says of each holds under the earlier
+        name, and its list of the tools that look at the process list
+        counts the earlier one (fix round 1)."""
+        flat = _flat(_read("PRIVACY.md"))
+        assert ("Two tools were renamed in 0.15.0, and their earlier names "
+                "are still listed until a later release (planned as "
+                "v0.15.2) removes them (TOOLS.md, \"Earlier names\"). What "
+                "this document says of either tool holds under both its "
+                "names.") in flat
+        assert flat.index("Two tools were renamed in 0.15.0") < \
+            flat.index("## How your data flows")
+        listing = flat[flat.index("**Process listing.**"):]
+        assert ("(today: select_project, get_current_project, "
+                "start_coding_session, also under its earlier name, and the "
+                "restore_backup and import_documents previews, each the "
+                "call without a preview_token)") in listing[:400]
+
+    def test_a_coding_session_by_one_name(self):
+        """The tool starts a coding session: the documents call it that,
+        beside its new name, not an "analysis session" (fix round 1)."""
+        for name in DOCUMENTS:
+            assert "analysis session" not in _read(name).lower(), name
+        assert "- Start a coding session (`start_coding_session`)" in \
+            _read("TOOLS.md")
+        assert ("| `start_coding_session(file_ids, code_names, "
+                "instruction)` | Start a coding session |") in \
+            _read("AI_CODING_GUIDE.md")
+        workflow = _read("AI_CODING_WORKFLOW.md")
+        assert "### Step 2: Start a Coding Session" in workflow
+        assert ("2. Starts a new coding session with unique ID "
+                "(`start_coding_session`),") in workflow

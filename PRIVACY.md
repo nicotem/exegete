@@ -6,6 +6,11 @@ sober: this tool makes the data flow explicit precisely so you can make
 an informed decision, which many AI tools do not. It is not legal
 advice.
 
+Two tools were renamed in 0.15.0, and their earlier names are still
+listed until a later release (planned as v0.15.2) removes them
+(TOOLS.md, "Earlier names"). What this document says of either tool
+holds under both its names.
+
 ## How your data flows
 
 **Exegete itself runs entirely on your machine.** It is a local
@@ -1124,8 +1129,9 @@ Two further rules touch files on your disk:
 - **Process listing.** To warn when a QualCoder 4.0 window appears to
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
-  get_current_project, start_coding_session, and the restore_backup and
-  import_documents previews, each the call without a preview_token)
+  get_current_project, start_coding_session, also under its earlier
+  name, and the restore_backup and import_documents previews, each the
+  call without a preview_token)
   also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for

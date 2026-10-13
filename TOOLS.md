@@ -480,7 +480,7 @@ Claude is told to:
   (`get_coding_session_info` shows it)
 
 Claude will:
-- Create an analysis session (`start_coding_session`)
+- Start a coding session (`start_coding_session`)
 - Examine the files
 - Record its suggestions into the session (`record_suggestions`; every
   suggestion is verified against the file text before it is stored)
@@ -1089,11 +1089,14 @@ gates a narrower set (see its own entry).
 ## Earlier names
 
 Two tools were renamed in 0.15.0. Their earlier names are still listed,
-and do exactly what the new ones do, until the release on method
-(planned as v0.15.2) removes them: `analyze_for_coding` is now
+and do exactly what the new ones do, until a later release (planned as
+v0.15.2) removes them: `analyze_for_coding` is now
 `start_coding_session`, and `analyze_file_with_coding` is now
 `read_file_with_codings`. If your host remembers a choice to run one of
 the earlier names without asking, it may ask again for the new one.
+Likewise, a choice to block or switch off an earlier name does not
+carry over to its new name: if you blocked one, you may want to block
+the new name too.
 
 ## Available Prompts
 

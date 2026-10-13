@@ -386,12 +386,15 @@ class TestThePublishedSchemaBudget:
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
     # v0.15.0: `full` and `lifecycle` became one set, `full`, which
-    # measures what `lifecycle` measured at 0.14.3, to the character (the
-    # same 78 descriptions, none marked, in another order).
-    FULL_MEASURED = 204_244          # 78 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 67_225           # 23 tools, same environment
-    FULL_MEASURED_310 = 214_248      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 70_617
+    # starts from what `lifecycle` measured at 0.14.3 (the same 78
+    # descriptions, none marked, in another order); the names list's new
+    # wording in three descriptions (not presuming QualCoder, piece 1)
+    # then took 19 characters off it, 23 on 3.11, and 2 off `core`, 6 on
+    # 3.11.
+    FULL_MEASURED = 204_225          # 78 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 67_223           # 23 tools, same environment
+    FULL_MEASURED_310 = 214_225      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 70_611
 
     # Why two per cent, away from the reference environment.
     #
@@ -418,8 +421,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "204,244"
-    CORE_CHARS = "67,225"
+    FULL_CHARS = "204,225"
+    CORE_CHARS = "67,223"
     FULL_ROUNDED = "204,000"
     CORE_ROUNDED = "67,000"
     FULL_TOKENS = "51k"
@@ -464,8 +467,10 @@ class TestThePublishedSchemaBudget:
         alone, and 0.14.2's figure is history (`_v0142_entry`). From the
         release on, the current entry is 0.14.3's, under an Unreleased
         heading that says nothing yet. v0.15.0 moves it again (`full` and
-        `lifecycle` become one set, `full`, of 78 tools), so the current
-        entry is the Unreleased one, and 0.14.3's figure is history
+        `lifecycle` become one set, `full`, of 78 tools, and the wording
+        of the names list changes in three descriptions, the first of
+        the pieces that stop presuming QualCoder), so the current entry
+        is the Unreleased one alone, and 0.14.3's figure is history
         (`_v0143_entry`).
         """
         text = cls._read("CHANGELOG.md")
@@ -474,8 +479,9 @@ class TestThePublishedSchemaBudget:
     @classmethod
     def _v0143_entry(cls):
         """The 0.14.3 entry, whose figure is history and stays put
-        (v0.15.0's one tool set moves the figure, so the current entry
-        is the Unreleased one, above the 0.14.3 heading)."""
+        (v0.15.0's one tool set and three reworded descriptions move the
+        figure, so the current entry is the Unreleased one, above the
+        0.14.3 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.14.3"):text.index("## [0.14.2")]
 
@@ -609,16 +615,20 @@ class TestThePublishedSchemaBudget:
         assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
         # The environment, by path: this repository holds two, at
         # different interpreters, and a version alone does not say which
-        # was used. v0.15.0's figures were taken in separate environments
-        # installed from the lock, and the entry says so.
+        # was used. v0.15.0's figures are taken in separate environments
+        # installed from the lock, and the entry says so, with the check
+        # that they give 0.14.3's figures exactly for 0.14.3's tree.
         flat = " ".join(entry.split())
         assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a "
                 "separate environment installed from the repository's lock "
                 "file, not the repository's own `venv/`") in flat
-        assert "on Python 3.11.13 (likewise a separate environment)" in flat
+        assert "for 0.14.3's tree it gives exactly 0.14.3's figures" in flat
+        assert ("Python 3.11.13 (likewise a separate environment, which "
+                "also gives exactly 0.14.3's figures for its tree)") in flat
         assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
-        # 0.14.3's, as history (the review of 12 October 2026 found it
-        # naming `venv/` instead)
+        # 0.14.3's own figures, as history: taken the same way, and
+        # checked against the repository's environments (the review of
+        # 12 October 2026 found it naming `venv/` instead).
         v0143 = " ".join(self._v0143_entry().split())
         assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a "
                 "separate environment, not the repository's own `venv/`"
@@ -627,6 +637,7 @@ class TestThePublishedSchemaBudget:
         assert ("Python 3.11.13 (likewise a separate environment, which "
                 "gives exactly the figures measured in the `.venv/`)"
                 ) in v0143
+        assert "mcp 1.30.0 in the repository's own `venv/`" not in v0143
 
     def test_each_entry_carries_one_measurement_of_its_own(self):
         """The 0.12 entry used to state two, a batch apart, both in the
@@ -638,6 +649,7 @@ class TestThePublishedSchemaBudget:
         v0143 = self._v0143_entry()
         assert v0143.count("Serialised tool") == 1
         assert "full = 201,739 characters" in v0143
+        assert self.FULL_CHARS not in v0143
         v0142 = self._v0142_entry()
         assert v0142.count("Serialised tool") == 1
         assert "full = 196,387 characters" in v0142

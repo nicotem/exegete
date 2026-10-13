@@ -72,6 +72,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tools, and a test now checks that. PyMuPDF, EbookLib and lxml are
   unchanged, so PDFs and EPUBs are read as before.
 
+### Changed: texts that were inaccurate about QualCoder
+
+- **A busy database** no longer says that QualCoder may have the project
+  open. QualCoder holds no database lock while a project is merely open,
+  so a busy database means a program is writing to it: the message now
+  names another conversation using Exegete, a sync or backup service,
+  or QualCoder if you use it, and says to wait a moment and try again.
+- **The refusal while a project's lock file is active** names both of
+  its causes: QualCoder 3.8 has the project open, or another
+  conversation using Exegete is writing to it (Exegete writes the same
+  file during each of its own writes), and both ways through: closing
+  the project in QualCoder, or waiting a moment. `select_project`'s
+  warning, `get_current_project`'s note and `analyze_for_coding`'s
+  request and banner say the same. `get_current_project`'s note on a
+  lock file not refreshed for over 30 seconds says that QualCoder 3.8
+  leaves one when it does not close cleanly, and that a write by
+  Exegete leaves one when it is cut short, or shows as one while it
+  runs longer than that. When each is given has not changed.
+- **A missing coder-visibility view** is reported as damage to the
+  project, with a backup made before it as the way back
+  (`list_backups`, `restore_backup`), saying that a restore takes the
+  whole project back to that backup's state; QualCoder 4.0, if you use
+  it, recreates the views when it opens the project.
+- **The names list** (`pseudonyms.json`) is described as the project's
+  own, applied when files are imported, rather than as QualCoder's
+  import-time list: in `get_current_project`'s answer (which also says
+  the researcher can read the file in the project folder) and
+  description, in `read_pseudonym_list`'s description, in
+  `pseudonymise_source`'s `use_project_pseudonyms`, and in PRIVACY.md,
+  which also names the backups the file travels into (Exegete's, and
+  QualCoder's if you use it). The three descriptions are shorter than
+  before.
+- **The warning about a shorter name already in `pseudonyms.json`**,
+  given by `pseudonymise_source`'s preview when a mapping is to be
+  saved, says that Exegete's imports apply the longest name first and
+  are not affected, and that reordering the file is for imports made in
+  QualCoder, in a sentence of its own.
+- **The methods notes and the help** no longer say that QualCoder seeds
+  a new project memo with headings.
+- AI_CODING_WORKFLOW.md quotes the new refusal whole, with its two
+  ways through, and its rule in bold says that every write is refused
+  while the project's lock file is active, rather than while QualCoder
+  3.x has the project open.
+
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the
@@ -97,15 +141,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Measured
 
-- Serialised tool JSON: full = 204,244 characters (about 51.1k tokens
-  at chars/4) over 78 tools, and core = 67,225 (about 16.8k) over 23,
+- Serialised tool JSON: full = 204,225 characters (about 51.1k tokens
+  at chars/4) over 78 tools, and core = 67,223 (about 16.8k) over 23,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
-  the repository's own `venv/`; on Python 3.11.13 (likewise a separate
-  environment), 214,248 and 70,617. `full` measures what 0.14.3's
-  `lifecycle` set measured, to the character, on both interpreters: the
-  same 78 descriptions, none marked, listed in another order. `core` is
-  unchanged.
+  the repository's own `venv/`: for 0.14.3's tree it gives exactly
+  0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
+  which also gives exactly 0.14.3's figures for its tree), 214,225 and
+  70,611. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), two changes
+  moved them. `full` and `lifecycle` became one set of 78 tools, so
+  `full` starts from what `lifecycle` measured: the same 78
+  descriptions, none marked, listed in another order. And three
+  descriptions changed with the names list's wording:
+  `get_current_project`'s by 2 characters fewer, in both sets,
+  `pseudonymise_source`'s by 14 fewer and `read_pseudonym_list`'s by 3
+  fewer, in `full` only (on 3.11, 6 fewer, 14 fewer and 3 fewer). No
+  other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

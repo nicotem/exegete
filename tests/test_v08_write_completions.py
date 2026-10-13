@@ -108,7 +108,7 @@ class TestAddAnnotation:
         lock.write_text(f"gemma\n{time.time()}", encoding="utf-8")
         try:
             out = json.loads(server.add_annotation(1, 0, 10, "note"))
-            assert "open in QualCoder" in out["error"]
+            assert "is in use by another program" in out["error"]
         finally:
             lock.unlink()
 

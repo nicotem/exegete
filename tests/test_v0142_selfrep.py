@@ -810,11 +810,17 @@ class TestNoDescriptionGrew:
         sys.path.insert(0, str(Path(__file__).parent))
         import test_v0142_description_cut as cut
         registered = server.mcp.original_descriptions
+        # A description changed after 0.14.2 (v0.15.0's, in
+        # cut.CHANGED_0150) no longer shows the words 0.14.2 served; for
+        # those, cut.REWORDED_0142 records whether 0.14.2 changed them.
+        later = set(cut.CHANGED_0150)
         reworded = {name for name, (length, solid, digest)
                     in cut.WORDS_0141.items()
-                    if cut._fingerprint(registered[name])[1:]
-                    != (solid, digest)}
+                    if (name in cut.REWORDED_0142 if name in later
+                        else cut._fingerprint(registered[name])[1:]
+                        != (solid, digest))}
         assert len(reworded) == 40, sorted(reworded)
+        assert reworded == set(cut.REWORDED_0142)
         entry = _flat(_changelog_entry())
         assert ("rewritten in 40 of the 74 tools 0.14.1 had, each no longer "
                 "than 0.14.1's, and in `read_brief`") in entry

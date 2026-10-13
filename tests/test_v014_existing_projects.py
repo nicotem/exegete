@@ -893,7 +893,7 @@ class TestBackupsMadeConsistently:
                             lambda *a, **k: (_ for _ in ()).throw(
                                 DatabaseLockedError("locked")))
         out = json.loads(server.set_memo("code", 1, "new", create_backup=True))
-        assert "locked" in out["error"] and "nothing was written" in \
+        assert "database is busy" in out["error"] and "nothing was written" in \
             out["error"]
         assert _rows(folder, "SELECT memo FROM code_name WHERE cid = 1") == \
             [("stress memo",)]

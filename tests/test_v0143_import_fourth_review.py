@@ -69,8 +69,8 @@ def _scratch_is_not_hidden(tmp_path, monkeypatch):
 @pytest.fixture
 def project(setup_server, qualcoder_db_path, monkeypatch):
     # No live scan of the computer's processes: the signs come from the
-    # project folder alone.
-    monkeypatch.setattr(database, "_qualcoder_process_hits", lambda: [])
+    # project folder alone (v0.15.0: a scan that did not run).
+    monkeypatch.setattr(database, "_qualcoder_process_scan", lambda: None)
     return Path(qualcoder_db_path)
 
 

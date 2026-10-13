@@ -1094,6 +1094,18 @@ Two further rules touch files on your disk:
   `ai_data/search.sqlite-wal`, `ai_data/search.sqlite-shm` or
   `ai_data/chat_history.sqlite` exist and how recently they were
   modified; only presence and timestamps are read, never contents.
+  `select_project` and `get_current_project` also give the project's
+  history with QualCoder (`qualcoder_history`, v0.15.0), worked out
+  once when the project is selected and kept in memory for the
+  session: whether the project folder holds `ai_data/`, and in it
+  `chat_history.sqlite` or `search.sqlite`; whether QualCoder's own
+  `_BKUP_` backups sit beside the project (the names in the folder that
+  holds it, as `list_backups` reads them); whether its lock file is a
+  leftover; whether QualCoder's settings folder (`~/.qualcoder`)
+  exists; and whether the process scan found QualCoder. Only presence
+  is read: the settings folder's contents (QualCoder's settings and API
+  keys) are never listed, opened or measured, and the answer holds
+  plain sentences and a yes or no, never a path.
   This is a heuristic: it can miss an open window (an idle 4.0 window
   with no recent AI activity leaves no file trace, so only the process
   scan can see it; on Windows without psutil, a QualCoder run through

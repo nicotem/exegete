@@ -586,7 +586,8 @@ does not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
 desktop extension sets both spellings of these three settings itself,
 always to the same value. The two settings of the check for new
-versions, below, are new and have one spelling only.
+versions and `EXEGETE_CALL_SECONDS`, below, are new and have one
+spelling only.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -694,10 +695,26 @@ versions, below, are new and have one spelling only.
   from "Install Certificates", in its folder in Applications, which is
   worth running once. A network that inspects encrypted connections
   gives the same answer.
+- `EXEGETE_CALL_SECONDS` (0.15.0): how many seconds one call of
+  `import_documents` may take, counted from its start, before it stops
+  between files and leaves the rest for the next call, whose answer
+  says how to go on: a whole number from 30 to 600. Unset, it is 30 in
+  the desktop extension, a figure measured against how long Claude
+  Desktop waits, and 30 installed any other way. A host stops a tool
+  call that runs past its own limit, and a call stopped so loses its
+  answer while Exegete reads on to the end, so a higher figure suits a
+  host known to wait longer, and it is worth keeping well below that
+  host's limit: a call can run past the figure, since the first file a
+  call reads always has its whole 30 seconds, a preview spends up to 5
+  seconds more keeping the texts it read, and a file kept online only
+  by a cloud drive is downloaded whole. Any other value is not used,
+  and the log says so once at start; it never stops the server. The
+  desktop extension's settings do not offer it.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
   was installed. It also makes checking on by default, as the
-  extension's setting is. Do not set it yourself.
+  extension's setting is, and gives an import call the extension's
+  time (`EXEGETE_CALL_SECONDS`, above). Do not set it yourself.
 
 ---
 

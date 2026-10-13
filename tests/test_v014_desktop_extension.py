@@ -818,7 +818,8 @@ class TestTheDocuments:
         # spellings (names.SETTINGS)
         from exegete import names
         read = {new for new, old in names.SETTINGS.values()}
-        # and the two with one spelling only (the check for new versions)
+        # and those with one spelling only (the check for new versions,
+        # the time per import call)
         read |= set(names.NEW_ONLY_SETTINGS.values())
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = _section(text, "## Environment variables the server reads")

@@ -112,7 +112,7 @@ class TestTheWayOn:
         assert "Call again with the same paths, without a token" not in note
 
     def test_with_a_file_ready_the_way_on_is_as_before(self):
-        note = doc_import.not_read_note(2, True, True)
+        note = doc_import.not_read_note(2, True, True, seconds=30)
         assert "Import the files above with the token" in note
         assert "leaving them out" in note
         assert "No file in this call is ready" not in note
@@ -248,7 +248,7 @@ def test_a_word_note_referred_to_twice_leaves_one_marker():
 @pytest.mark.parametrize("left, expected", [(0.5, None), (0.99, None),
                                             (1.0, 1.0), (5.0, 5.0)])
 def test_less_than_a_second_left_starts_no_file(left, expected):
-    budget = doc_import.PREVIEW_SECONDS
+    budget = doc_import.TERMINAL_CALL_SECONDS
     got = doc_import._time_for(30, budget, 0.0, False,
                                lambda: budget - left)
     assert got == (pytest.approx(expected) if expected else None)

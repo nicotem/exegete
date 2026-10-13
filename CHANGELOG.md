@@ -17,8 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the files are in. A kept text is used only when the file is byte for
   byte the one previewed (its size and SHA-256, as the import already
   checked); a file whose kept text cannot be used is read again, as
-  before. So an import usually takes seconds. The time limits are
-  unchanged: a preview still reads for about 30 seconds a call.
+  before. So an import usually takes seconds. The time one call may
+  take is in the next entry.
+
+### Changed: the time for one import call, by the way Exegete runs
+
+- **The time one `import_documents` call may take depends on how
+  Exegete was installed** (the owner's decision of 12 October 2026):
+  about 30 seconds in the Claude Desktop extension and about 30
+  installed any other way, counted from the call's start. The preview
+  reads for that long; the import, which now usually reads nothing
+  again, works within the same time instead of 0.14.3's 45 seconds.
+  One file still has 30 seconds to be read at the preview, and 40 when
+  the import reads it again. A new setting, `EXEGETE_CALL_SECONDS`, a
+  whole number of seconds from 30 to 600, sets the time on any route,
+  for a host known to wait longer; any other value is not used, and
+  the log says so once. INSTALL.md, "Environment variables the server
+  reads", says what to watch for.
 
 ### Changed: the tests on Windows in three parts
 

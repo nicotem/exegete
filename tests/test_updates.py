@@ -329,7 +329,9 @@ class TestTheSetting:
     def test_the_settings_have_one_spelling(self):
         assert names.NEW_ONLY_SETTINGS == {
             "update_check": "EXEGETE_UPDATE_CHECK",
-            "installed_as": "EXEGETE_INSTALLED_AS"}
+            "installed_as": "EXEGETE_INSTALLED_AS",
+            # v0.15.0: the time one import call may take
+            "call_seconds": "EXEGETE_CALL_SECONDS"}
         assert not set(names.NEW_ONLY_SETTINGS.values()) & {
             n for pair in names.SETTINGS.values() for n in pair}
 

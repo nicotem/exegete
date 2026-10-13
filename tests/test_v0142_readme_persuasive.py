@@ -423,7 +423,7 @@ def test_the_example_shows_the_steps_the_software_takes():
     assert positions == sorted(positions)
     # the steps are the server's: the three questions, the two readings,
     # the counts it returns, and the name asked by the first write
-    questions = " ".join(server.analyze_for_coding.__doc__.split())
+    questions = " ".join(server.start_coding_session.__doc__.split())
     for words in ("What to look for", "How long a coded passage should be",
                   "Whether a passage may carry more than one code"):
         assert words in questions, words

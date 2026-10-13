@@ -45,7 +45,7 @@ def _reload():
 def _sid():
     # Every file in the project: a v0.14 session refuses suggestions on
     # files outside it, and these tests add the file they code first
-    return json.loads(server.analyze_for_coding(
+    return json.loads(server.start_coding_session(
         [f["id"] for f in server.get_db().list_files()],
         instruction="test"))["coding_session_id"]
 

@@ -556,11 +556,11 @@ def test_the_fresh_reading_line_waits_for_its_option_and_honesty_kept():
     # the option (tests/test_v0143_reading_without_codes.py pins its
     # words); the short versions never carried it.
     assert "without_codes" in inspect.signature(
-        server.analyze_file_with_coding).parameters
+        server.read_file_with_codings).parameters
     for where, text in served.items():
         flat = " ".join(text.split())
         line = ("When the researcher wants a fresh reading, read the file "
-                "with analyze_file_with_coding(without_codes=true), which "
+                "with read_file_with_codings(without_codes=true), which "
                 "leaves their codings out, and tell them whether you have "
                 "seen any.")
         if where in ("full", "help topic"):

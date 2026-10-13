@@ -183,7 +183,7 @@ class TestTheIntroduction:
             "or through the conversation; sort them into cases": [
                 "import_text_file"],
             "**Code the files you choose, with suggestions you approve**": [
-                "analyze_for_coding", "record_suggestions",
+                "start_coding_session", "record_suggestions",
                 "update_suggestion_status", "apply_codings"],
             # v0.14.2, the README's first round of checks: who proposes
             # the codes, and that they wait for approval
@@ -207,7 +207,7 @@ class TestTheIntroduction:
             # second round: who reads it, so that it is not taken for the
             # reading of a whole file yourself, which is in development
             "a whole transcript with its codings, read by the assistant": [
-                "analyze_file_with_coding"],
+                "read_file_with_codings"],
             # v0.14.3: and by the researcher, on a page (no longer
             # marked provisional once the owner decided the design)
             "or by you on a page in your browser.": [
@@ -510,8 +510,11 @@ class TestCodexAsksBeforeEveryChange:
         adding = [n for n in unasked if n != "read_pseudonym_list"]
         # 0.14.3: open_file_for_reading and import_documents add, so
         # Codex's default mode runs them unasked too, which INSTALL.md
-        # says (allow the import once elsewhere)
-        assert len(adding) == 16
+        # says (allow the import once elsewhere); 0.15.0: and
+        # analyze_for_coding, the earlier name of start_coding_session,
+        # listed with its annotations
+        assert len(adding) == 17
+        assert {"start_coding_session", "analyze_for_coding"} <= set(adding)
         assert "import_documents" in adding
         for name in ("import_text_file", "apply_codings",
                      "create_proposed_codes", "create_code"):
@@ -521,7 +524,7 @@ class TestCodexAsksBeforeEveryChange:
             assert codex_asks(tools[name].annotations, "auto"), name
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("Here that is the 16 tools that only add "
+        assert ("Here that is the 17 tools that only add "
                 "(`import_text_file`, `apply_codings`, "
                 "`create_proposed_codes`, `create_code` and the rest, "
                 "`open_file_for_reading` and `import_documents` among them "
@@ -664,7 +667,7 @@ class TestServedTextsAreHostNeutral:
 
     def test_the_session_start_says_the_assistant(self, setup_server):
         out = asyncio.run(server.mcp.call_tool(
-            "analyze_for_coding", {"file_ids": [1], "instruction": "test"}))
+            "start_coding_session", {"file_ids": [1], "instruction": "test"}))
         blocks = out[0] if isinstance(out, tuple) else out
         text = json.loads("".join(getattr(b, "text", "")
                                   for b in blocks))["instructions"]

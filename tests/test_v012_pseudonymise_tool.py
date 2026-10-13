@@ -6461,7 +6461,7 @@ class TestConcurrencyAndFaults:
 class TestStaleSessions:
 
     def _session(self, project, file_id, status="pending"):
-        # The database file, as analyze_for_coding records it (db.db_path),
+        # The database file, as start_coding_session records it (db.db_path),
         # while the fixture selects the project by its folder, as
         # create_project and select_project do: until v0.14 these tests
         # recorded the folder and so matched a string real sessions

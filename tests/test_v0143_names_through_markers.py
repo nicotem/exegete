@@ -253,7 +253,7 @@ def test_the_import_replaces_a_name_a_marker_falls_inside(project,
         assert "Maria" not in text and "Brown" not in text, name
         assert "neighbour Participant A[" in text, name
     for row in done["files"]:
-        whole = server.analyze_file_with_coding(row["file_id"],
+        whole = server.read_file_with_codings(row["file_id"],
                                                 without_codes=True)
         assert "Maria" not in whole and "Participant A" in whole
 
@@ -282,5 +282,5 @@ def test_after_an_import_with_no_list_only_working_ways_are_named(
     _names_list(project, [("Maria", "Ana Lopes")])
     again = _call(paths=[str(path)])
     assert again["summary"].startswith("0 files ready")
-    assert "Maria said" in server.analyze_file_with_coding(
+    assert "Maria said" in server.read_file_with_codings(
         done["files"][0]["file_id"], without_codes=True)

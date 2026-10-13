@@ -364,7 +364,7 @@ class TestVisibleReads:
 
     def test_analyze_file_excludes_hidden_segments_and_annotations(
             self, visibility_db):
-        out = json.loads(server.analyze_file_with_coding(1))
+        out = json.loads(server.read_file_with_codings(1))
         owners = {s["owner"] for s in out["coded_segments"]}
         assert HIDDEN not in owners
         ann_owners = {a["owner"] for a in out["annotations"]}

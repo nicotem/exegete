@@ -807,7 +807,7 @@ class TestReadPathsStrip:
         (server.list_attribute_types, (), "attr"),
         (server.get_case_attributes, (1,), "attr"),
         (server.get_file_attributes, (1,), "fattr"),
-        (server.analyze_file_with_coding, (1,), "ann"),
+        (server.read_file_with_codings, (1,), "ann"),
     ], ids=lambda v: getattr(v, "__name__", None) or str(v))
     def test_public_part_survives_per_kind(self, private_everywhere, fn,
                                            args, expected):
@@ -828,7 +828,7 @@ class TestReadPathsStrip:
             (server.get_project_summary, (), {}),
             (server.get_coded_segments, (1,), {}),
             (server.search_coded_text, ("stressed",), {}),
-            (server.analyze_file_with_coding, (1,), {}),
+            (server.read_file_with_codings, (1,), {}),
             (server.export_code_report, ("Stress",), {}),
             (server.list_attribute_types, (), {}),
             (server.get_case_attributes, (1,), {}),

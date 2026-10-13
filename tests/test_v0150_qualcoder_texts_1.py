@@ -9,7 +9,7 @@ wrong ones first"; QUALCODER_MENTIONS_AUDIT.md, section 3).
   project open; Exegete writes the same file during each of its own
   writes, so another conversation using Exegete gives the same sign. The
   same claim stood in select_project's warning, get_current_project's
-  lock note, and analyze_for_coding's action and banner.
+  lock note, and start_coding_session's action and banner.
 - A missing coder-visibility view sent the researcher to QualCoder;
   Exegete's own projects have the views, so a missing one is damage,
   and a backup is the way every researcher has. QualCoder 4.0 does
@@ -325,8 +325,8 @@ class TestTheActiveLockFile:
             "lock file is active. Ask the researcher to close it in "
             "QualCoder, or wait a moment, then re-check.")
 
-    def test_analyze_for_coding_asks_with_both_causes(self, locked):
-        answer = json.loads(server.analyze_for_coding([1],
+    def test_start_coding_session_asks_with_both_causes(self, locked):
+        answer = json.loads(server.start_coding_session([1],
                                                       instruction="test"))
         assert answer["action_required"] == (
             in_use("someone") + " Ask the researcher to close the project "

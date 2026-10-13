@@ -308,17 +308,17 @@ class TestUnusablePdfsInReads:
             (5, "no_text_layer")]
 
     def test_analyze_file_withholds_the_stored_file(self, pdf_project):
-        out = json.loads(server.analyze_file_with_coding(4))
+        out = json.loads(server.read_file_with_codings(4))
         assert out["full_text"] == ""
         assert out["statistics"]["text_length"] == 0
         assert "%PDF" not in json.dumps(out)
         assert out["file_info"]["unusable_pdf"]["reason"] == \
             "pdf_file_stored_as_text"
         assert "Restructure" in out["note"] and "OCR" in out["note"]
-        scan = json.loads(server.analyze_file_with_coding(3))
+        scan = json.loads(server.read_file_with_codings(3))
         assert scan["file_info"]["unusable_pdf"]["reason"] == "no_text_layer"
         assert "no text layer" in scan["note"]
-        article = json.loads(server.analyze_file_with_coding(2))
+        article = json.loads(server.read_file_with_codings(2))
         assert article["full_text"] == ARTICLE
         assert "unusable_pdf" not in article["file_info"]
 
@@ -346,11 +346,11 @@ class TestUnusablePdfsInReads:
 
 class TestUnusablePdfsInCodingTools:
 
-    def test_analyze_for_coding_refuses_them_by_name(self, pdf_project):
-        out = json.loads(server.analyze_for_coding([3, 4], instruction="test"))
+    def test_start_coding_session_refuses_them_by_name(self, pdf_project):
+        out = json.loads(server.start_coding_session([3, 4], instruction="test"))
         assert "error" in out
         assert {f["file_id"] for f in out["files_refused"]} == {3, 4}
-        mixed = json.loads(server.analyze_for_coding([2, 4], instruction="test"))
+        mixed = json.loads(server.start_coding_session([2, 4], instruction="test"))
         assert "coding_session_id" in mixed
         assert [f["file_id"] for f in mixed["files_refused"]] == [4]
         assert "scan382.pdf" not in mixed["instructions"]
@@ -358,7 +358,7 @@ class TestUnusablePdfsInCodingTools:
 
     def test_record_suggestions_refuses_them_with_the_way_forward(
             self, pdf_project):
-        sid = json.loads(server.analyze_for_coding([2], instruction="test"))["coding_session_id"]
+        sid = json.loads(server.start_coding_session([2], instruction="test"))["coding_session_id"]
         out = json.loads(server.record_suggestions(sid, [
             {"file_id": 4, "code_name": "Stress", "segment_text": "SAMPLE",
              "reasoning": "r", "reading": "explicit"},
@@ -375,7 +375,7 @@ class TestUnusablePdfsInCodingTools:
         assert out["recorded_count"] == 1
 
     def test_proposal_evidence_refuses_them(self, pdf_project):
-        sid = json.loads(server.analyze_for_coding([2], instruction="test"))["coding_session_id"]
+        sid = json.loads(server.start_coding_session([2], instruction="test"))["coding_session_id"]
         out = json.loads(server.propose_codes(sid, [
             {"name": "Scanned", "memo": "m", "rationale": "r",
              "example_segments": [{"file_id": 4,
@@ -398,7 +398,7 @@ class TestUnusablePdfsInCodingTools:
         edited after the row turned into a stored PDF file (a restore of
         an older backup, say): refused with the way forward."""
         folder = pdf_project
-        sid = json.loads(server.analyze_for_coding([2], instruction="test"))["coding_session_id"]
+        sid = json.loads(server.start_coding_session([2], instruction="test"))["coding_session_id"]
         rec = json.loads(server.record_suggestions(sid, [
             {"file_id": 2, "code_name": "Stress", "segment_text": "Hume",
              "reasoning": "r", "reading": "explicit"}]))
@@ -603,12 +603,12 @@ class TestRegionCodingsDisclosed:
                 av["codings_not_shown"]["audio_video"]) == (0, 1)
 
     def test_a_file_read_counts_its_areas(self, media_project):
-        pdf = json.loads(server.analyze_file_with_coding(2))
+        pdf = json.loads(server.read_file_with_codings(2))
         assert pdf["coded_segments"] == []
         assert pdf["codings_not_shown"]["region"] == 2
-        text = json.loads(server.analyze_file_with_coding(1))
+        text = json.loads(server.read_file_with_codings(1))
         assert "codings_not_shown" not in text
-        audio = json.loads(server.analyze_file_with_coding(6))
+        audio = json.loads(server.read_file_with_codings(6))
         assert audio["codings_not_shown"]["audio_video"] == 1
 
     def test_frequencies_and_the_summary_say_what_they_do_not_count(
@@ -1340,7 +1340,7 @@ class TestTheSmallerFixes:
         assert "unusable_pdf" not in files[9]
         summary = json.loads(server.get_project_summary())
         assert "error" not in summary, summary
-        session = json.loads(server.analyze_for_coding([1, 8], instruction="test"))
+        session = json.loads(server.start_coding_session([1, 8], instruction="test"))
         assert [f["file_id"] for f in session["files_refused"]] == [8]
 
 
@@ -1385,7 +1385,7 @@ class TestTheOtherAdoptions:
 
     def test_a_sessions_project_check(self, configured):
         server.select_project(str(configured))
-        sid = json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
+        sid = json.loads(server.start_coding_session([1], instruction="test"))["coding_session_id"]
         server.db.close()
         server.db = None
         server.current_project_path = None

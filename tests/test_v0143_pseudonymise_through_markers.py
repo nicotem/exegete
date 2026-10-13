@@ -82,7 +82,7 @@ def _execute(preview, **kwargs):
 
 
 def _whole(file_id):
-    return server.analyze_file_with_coding(file_id, without_codes=True)
+    return server.read_file_with_codings(file_id, without_codes=True)
 
 
 class TestTheFormatsReadThisWay:

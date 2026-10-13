@@ -129,7 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   once at each start, never in an answer. `core` is unchanged: 23
   tools, without creating a project. The extension's "Tool set"
   setting now comes as `full` and names the two words, and the bug
-  report offers `full`, `core` and `lifecycle (before 0.15.0)`.
+  report offers `full`, `core` and
+  `lifecycle (the earlier name of full)`.
 - **On the Terminal routes the assistant can now create a project
   without a setting.** New projects go to
   `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
@@ -137,7 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Desktop and Documents) or OneDrive may sync Documents, and a sync
   service can copy a project's database and its journal separately, so
   a folder outside Documents, such as `~/Exegete projects`, is worth
-  considering (INSTALL.md, "What you need").
+  considering (INSTALL.md, "What You'll Need").
 
 ### Measured
 

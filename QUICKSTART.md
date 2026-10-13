@@ -148,8 +148,8 @@ Consider naming a folder outside Documents, such as
 `~/Exegete projects`: add
 `"env": {"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"}`
 after the `"args"` line, with a comma at the end of that line
-(INSTALL.md, "What you need" and "Environment variables the server
-reads").
+(INSTALL.md, "What You'll Need" and "Environment variables the
+server reads").
 
 ### 4. Restart Claude Desktop
 
@@ -215,10 +215,12 @@ If Claude can't connect:
 1. **Check the config file syntax** - make sure JSON is valid (commas, quotes, brackets)
 2. **Verify paths** - make sure all paths are absolute and correct
 3. **Check Python path** - activate venv and run `which python`
-4. **Check .qda project** - make sure the folder exists: `ls -ld /path/to/your/project.qda`
+4. **Check .qda project** - make sure the folder exists: `ls -ld /path/to/your/project.qda` (skip this if you have no project yet)
 5. **Restart Claude** - always restart after config changes
 
 ### Test the Server Manually
+
+Leave out the `export` line if you have no project yet.
 
 ```bash
 cd ~/Documents/exegete

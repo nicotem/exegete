@@ -51,8 +51,8 @@ What stays local, always, unless a sync service copies the folder it is in:
   `~/Documents/Qualcoder MCP Projects/`, left as it was), or in the folder
   `EXEGETE_WORKSPACE` names, which the desktop extension sets
   from its "Folder for projects", by default `~/QualCoder projects/`
-  (each carries the
-  same content as a backup, so the `ai_data/` and symlink rules below
+  (each copy carries
+  the same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
 - Exegete's own folder, `~/.exegete` (before 0.14.1,
   `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
@@ -1122,7 +1122,7 @@ Two further rules touch files on your disk:
   unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
   Documents) or OneDrive may sync Documents, and so copy the project,
   imported originals included, off the computer: consider a folder
-  outside it (INSTALL.md, "What you need").
+  outside it (INSTALL.md, "What You'll Need").
 
 ## Your governance options, from default to fully local (Experimental)
 

@@ -531,8 +531,9 @@ class TestTheDocuments:
                 "`~/Exegete projects`:") in step3
         assert ("`\"env\": {\"EXEGETE_WORKSPACE\": \"/Users/yourname/Exegete "
                 "projects\"}`") in step3
-        assert ("(INSTALL.md, \"What you need\" and \"Environment variables "
-                "the server reads\")") in step3
+        # Fix round 2: INSTALL's heading in its own words
+        assert ("(INSTALL.md, \"What You'll Need\" and \"Environment "
+                "variables the server reads\")") in step3
         step5 = flat[flat.index("### 5. Test It Out"):]
         step5 = step5[:step5.index("## Updating Later")]
         assert ("In Claude Desktop, try these prompts: the first only if "
@@ -564,7 +565,7 @@ class TestTheDocuments:
                 "names another folder. iCloud (Desktop and Documents) or "
                 "OneDrive may sync Documents, and so copy the project, "
                 "imported originals included, off the computer: consider a "
-                "folder outside it (INSTALL.md, \"What you need\").") in item
+                "folder outside it (INSTALL.md, \"What You'll Need\").") in item
 
     def test_the_ai_coding_guide_on_every_route(self):
         flat = _flat("AI_CODING_GUIDE.md")
@@ -582,3 +583,88 @@ class TestTheDocuments:
                 "(Experimental).") in readme
         assert "| Create a project | Yes | Yes (Experimental) |" in readme
         assert "two tool sets, every tool" in readme
+
+    # Fix round 2
+
+    @staticmethod
+    def _install_titles():
+        install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        return [re.sub(r"^#+\s*", "", line).strip()
+                for line in install.splitlines() if line.startswith("#")]
+
+    POINTER = re.compile(r"INSTALL(?:\.md)?(?:'s)?,?\s+"
+                         r"((?:\"[^\"]+\"(?:,?\s+(?:and|or)\s+|,\s+)?)+)")
+
+    def _quoted_titles(self, flat):
+        return [title for found in self.POINTER.finditer(flat)
+                for title in re.findall(r'"([^"]+)"', found.group(1))]
+
+    def test_each_quoted_install_title_is_one_of_its_headings(self):
+        """A pointer to INSTALL names a section by its heading (or the
+        heading's words before its colon), so a reader who searches
+        INSTALL for the words given finds them. Read in every document
+        at the top of the repository and in the CHANGELOG's entry being
+        written (earlier entries are records)."""
+        titles = self._install_titles()
+        changelog = _flat("CHANGELOG.md")
+        unreleased = changelog[changelog.index("## [Unreleased]"):
+                               changelog.index("## [0.14.3")]
+        texts = {name.name: _flat(name.name)
+                 for name in sorted(REPO.glob("*.md"))
+                 if name.name != "CHANGELOG.md"}
+        texts["CHANGELOG.md, [Unreleased]"] = unreleased
+        quoted = {where: self._quoted_titles(text)
+                  for where, text in texts.items()}
+        unknown = [(where, title) for where, found in quoted.items()
+                   for title in found
+                   if title not in titles
+                   and not any(h.startswith(title + ":") for h in titles)]
+        assert unknown == []
+        # the three pointers to the advice on synced folders, by name
+        for where in ("QUICKSTART.md", "PRIVACY.md",
+                      "CHANGELOG.md, [Unreleased]"):
+            assert "What You'll Need" in quoted[where], where
+            assert "What you need" not in quoted[where], where
+
+    def test_the_title_check_sees_a_wrong_title(self):
+        flat = ('see INSTALL.md, "What you need" and "Environment '
+                'variables the server reads"')
+        assert self._quoted_titles(flat) == [
+            "What you need", "Environment variables the server reads"]
+        assert "What you need" not in self._install_titles()
+
+    def test_the_changelog_names_the_bug_reports_option_as_the_form(self):
+        form = (REPO / ".github" / "ISSUE_TEMPLATE" /
+                "bug_report.yml").read_text(encoding="utf-8")
+        block = form[form.index("id: toolset"):]
+        block = block[:block.index("  - type:")]
+        options = re.findall(r"^        - (.+)$", block, re.M)
+        earlier = [o for o in options if o.startswith("lifecycle")]
+        assert earlier == ["lifecycle (the earlier name of full)"]
+        changelog = _flat("CHANGELOG.md")
+        entry = changelog[changelog.index(
+            "### Changed: one tool set called full"):]
+        entry = entry[:entry.index("### Measured")]
+        assert (f"the bug report offers `full`, `core` and "
+                f"`{earlier[0]}`.") in entry
+        assert "lifecycle (before 0.15.0)" not in entry
+
+    def test_privacy_a_new_project_is_not_a_backups_copy(self):
+        flat = _flat("PRIVACY.md")
+        local = flat[flat.index("What stays local, always"):]
+        local = local[:local.index("- Exegete's own folder")]
+        assert ("(each copy carries the same content as a backup, so the "
+                "`ai_data/` and symlink rules below apply to it)") in local
+        assert "(each carries the same content" not in local
+
+    def test_quickstart_troubleshooting_without_a_project(self):
+        flat = _flat("QUICKSTART.md")
+        trouble = flat[flat.index("## Troubleshooting"):]
+        trouble = trouble[:trouble.index("### Common Errors")]
+        assert ("4. **Check .qda project** - make sure the folder exists: "
+                "`ls -ld /path/to/your/project.qda` (skip this if you have "
+                "no project yet)") in trouble
+        manual = trouble[trouble.index("### Test the Server Manually"):]
+        assert manual.index("Leave out the `export` line if you have no "
+                            "project yet.") < manual.index("```bash")
+        assert "export EXEGETE_PROJECT_PATH=" in manual

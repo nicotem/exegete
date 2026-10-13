@@ -1720,9 +1720,10 @@ will ask, and the summary above depends on them:
     beside the project until you remove them; `list_backups` shows them
     and `prune_backups` removes Exegete's own. A project you are
     about to share is not pseudonymised while its backups are beside it.
-  - **`pseudonyms.json`**, if you keep one. It is QualCoder's own
-    import-time list and it is the reverse key in plain text at the
-    project root, so it travels into every backup either tool makes.
+  - **`pseudonyms.json`**, if you keep one. It is the project's names
+    list, applied when files are imported, and it is the reverse key in
+    plain text at the project root, so it travels into every backup of
+    the project (Exegete's, and QualCoder's if you use it).
     Exegete writes it only when asked, in QualCoder's own format,
     and removes or replaces it only by a restore: `restore_backup` rolls
     the whole folder back, this file with it, so restoring a backup taken

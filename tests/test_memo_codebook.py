@@ -142,7 +142,7 @@ class TestSetMemo:
         lk.write_text(f"gemma\n{time.time()}", encoding="utf-8")
         try:
             out = json.loads(server.set_memo("code", 1, "x"))
-            assert "open in QualCoder" in out["error"]
+            assert "is in use by another program" in out["error"]
         finally:
             lk.unlink()
 
@@ -430,6 +430,6 @@ class TestDeleteCategory:
         lk.write_text(f"gemma\n{time.time()}", encoding="utf-8")
         try:
             out = json.loads(H.execute_destructive(server.delete_category, 1))
-            assert "open in QualCoder" in out["error"]
+            assert "is in use by another program" in out["error"]
         finally:
             lk.unlink()

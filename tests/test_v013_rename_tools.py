@@ -237,7 +237,7 @@ class TestRenameCase:
         try:
             for args in ((1, "Case A"), (99, "x"), (1, "New")):
                 out = _case(*args)
-                assert "open in QualCoder (user gui_user)" in out["error"]
+                assert "lock file is active (user gui_user)" in out["error"]
         finally:
             lock.unlink()
         assert _backups(project) == []
@@ -1403,9 +1403,15 @@ class TestTheFiveBehavioursQAFoundUnpinned:
             for args in ((5, "no extension"), (99, "x.txt"), (1, "a/b"),
                          (1, "interview.pdf"), (1, "P01.txt")):
                 out = _file(*args)
-                assert out == {"error": "This project is open in QualCoder "
-                                        "(user gui_user). Close the project "
-                                        "in QualCoder, then retry."}, args
+                # v0.15.0: the lock file is also Exegete's own during
+                # each of its writes, so the refusal names both causes
+                assert out == {"error": (
+                    "This project is in use by another program: its lock "
+                    "file is active (user gui_user), so QualCoder 3.8 has "
+                    "it open, or another conversation using Exegete is "
+                    "writing to it. Ask the researcher to close it in "
+                    "QualCoder, or wait a moment; once get_current_project "
+                    "shows qualcoder_open false, retry.")}, args
         finally:
             lock.unlink()
         assert _backups(project) == []

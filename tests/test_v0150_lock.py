@@ -8,13 +8,16 @@ These tests pin what the refresh of 13 October 2026 brought:
 
 - each library that carried an advisory on 12 October is at or above the
   release that fixed it;
-- PyMuPDF, EbookLib and lxml stay at the releases the import parity
-  record names, so PDFs and EPUBs are read as before;
+- the five reader libraries the import parity record names (PyMuPDF,
+  EbookLib, lxml, striprtf and charset-normalizer) stay at its releases,
+  so PDFs, EPUBs, RTF and plain-text files are read as the record has
+  them;
 - every package comes from PyPI, apart from Exegete itself;
-- starting Exegete and setting up its tools loads neither pyjwt nor
-  cryptography (both come with the `mcp` library), so a scanner's flag on
-  the cryptography releases kept for Intel Macs and Windows on Arm
-  concerns code Exegete does not load at start-up.
+- a real start of Exegete (its `main()`, which sets up its tools,
+  settles the state folder, tidies and runs the stdio loop) loads neither
+  pyjwt nor cryptography (both come with the `mcp` library), so a
+  scanner's flag on the cryptography releases kept for Intel Macs and
+  Windows on Arm concerns code Exegete does not load at start-up.
 """
 
 import json
@@ -58,8 +61,11 @@ FIXED_IN = {
     "pygments": "2.20.0",          # GHSA-5239-wwwm-4pmq (development only)
 }
 
-# The readers the import parity gate compares against QualCoder 4.0.
-PARITY_LIBRARIES = ("pymupdf", "ebooklib", "lxml")
+# The readers the import parity gate compares against QualCoder 4.0: every
+# library the parity record names a version for, so that a later refresh
+# cannot move one of them with every test green.
+PARITY_LIBRARIES = ("pymupdf", "ebooklib", "lxml", "striprtf",
+                    "charset-normalizer")
 
 
 def _lock():
@@ -103,11 +109,15 @@ class TestTheAdvisoriesAreCleared:
                 f"{name} {version} is below {FIXED_IN[name]}"
 
 
-class TestThePDFAndEPUBReadersStay:
+class TestTheReadersStay:
 
     @pytest.mark.parametrize("name", PARITY_LIBRARIES)
     def test_the_release_the_parity_record_names(self, name):
         assert _versions(_lock(), name) == [PARITY[name]]
+
+    def test_every_library_the_record_names_is_guarded(self):
+        """A library the record gains later is guarded as well."""
+        assert set(PARITY) - {"python"} == set(PARITY_LIBRARIES)
 
 
 class TestEveryPackageComesFromPyPI:
@@ -146,29 +156,49 @@ class TestEveryPackageComesFromPyPI:
         assert not_from_pypi({"package": lock["package"][:2]}, "root") == []
 
 
-def _child_env(home):
+def _child_env(home, mode):
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(("QUALCODER", "EXEGETE"))}
     temp = str(home / "tmp")
     env.update({"PYTHONPATH": str(REPO / "src"), "HOME": str(home),
                 "USERPROFILE": str(home), "TMPDIR": temp, "TEMP": temp,
-                "TMP": temp, "PYTHONDONTWRITEBYTECODE": "1"})
+                "TMP": temp, "PYTHONDONTWRITEBYTECODE": "1",
+                # A start tidies the reading folder: under `home` on Linux
+                # and Windows too (on a Mac it is under HOME already)
+                "XDG_CACHE_HOME": str(home / "cache"),
+                "LOCALAPPDATA": str(home / "localappdata"),
+                "EXEGETE_TOOLSET": mode, "EXEGETE_UPDATE_CHECK": "off"})
     return env
 
 
-# Run in a fresh interpreter: what Exegete loads when it starts and sets up
-# a tool set, and whether the two libraries are there to be loaded at all
-# (if they were not, their absence would prove nothing).
-LOADED = """
-import importlib.util, json, sys
+# Run in a fresh interpreter: a real start of Exegete, `main()` as the
+# `exegete` command runs it. It reads the tool set from its setting and
+# sets it up, settles the state folder, tidies the reading folder and the
+# kept texts, sets up the check for new versions (switched off here, so
+# nothing is fetched) and runs the stdio loop, which stops at once on an
+# empty input. What is loaded is read at exit, after all of that, and
+# written to a file rather than printed, since the stdio loop takes over
+# standard output. With it, whether the two libraries are there to be
+# loaded at all (if they were not, their absence would prove nothing).
+STARTED = """
+import atexit, importlib.util, json, sys
+report = sys.argv[1]
+seen = {"returned": False}
+
+def write():
+    seen["installed"] = [n for n in ("jwt", "cryptography")
+                         if importlib.util.find_spec(n) is not None]
+    seen["loaded"] = sorted(m for m in sys.modules
+                            if m.split(".")[0] in ("jwt", "cryptography"))
+    with open(report, "w", encoding="utf-8") as handle:
+        json.dump(seen, handle)
+
+atexit.register(write)
+sys.argv = ["exegete"]
 import exegete.server as server
-server._apply_toolset(sys.argv[1])
-print(json.dumps({
-    "installed": [n for n in ("jwt", "cryptography")
-                  if importlib.util.find_spec(n) is not None],
-    "loaded": sorted(m for m in sys.modules
-                     if m.split(".")[0] in ("jwt", "cryptography")),
-}))
+seen["mode"] = server._resolve_toolset_mode()
+server.main()
+seen["returned"] = True
 """
 
 
@@ -178,14 +208,17 @@ class TestStartingLoadsNeitherLibrary:
     def test_neither_is_loaded(self, tmp_path, mode):
         home = tmp_path / "home"
         (home / "tmp").mkdir(parents=True)
+        report = tmp_path / "loaded.json"
         proc = subprocess.run(
-            [sys.executable, "-B", "-c", LOADED, mode],
+            [sys.executable, "-B", "-c", STARTED, str(report)],
             stdin=subprocess.DEVNULL, capture_output=True, text=True,
-            encoding="utf-8", env=_child_env(home), timeout=120)
+            encoding="utf-8", env=_child_env(home, mode), timeout=120)
         assert proc.returncode == 0, proc.stderr
-        answer = json.loads(proc.stdout.strip().splitlines()[-1])
+        answer = json.loads(report.read_text(encoding="utf-8"))
+        assert answer["mode"] == mode
+        assert answer["returned"], proc.stderr
         assert answer["installed"] == ["jwt", "cryptography"]
-        assert answer["loaded"] == []
+        assert answer["loaded"] == [], proc.stderr
 
     def test_every_mode_is_covered(self):
         assert set(server._VALID_TOOLSET_MODES) >= {"full", "core",

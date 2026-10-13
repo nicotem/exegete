@@ -702,14 +702,16 @@ spelling only.
   the desktop extension, a figure measured against how long Claude
   Desktop waits, and 30 installed any other way. A host stops a tool
   call that runs past its own limit, and a call stopped so loses its
-  answer while Exegete reads on to the end, so a higher figure suits a
-  host known to wait longer, and it is worth keeping well below that
-  host's limit: a call can run past the figure, since the first file a
-  call reads always has its whole 30 seconds, a preview spends up to 5
-  seconds more keeping the texts it read, and a file kept online only
-  by a cloud drive is downloaded whole. Any other value is not used,
-  and the log says so once at start; it never stops the server. The
-  desktop extension's settings do not offer it.
+  answer while Exegete reads on to the end; until a call has finished,
+  Exegete answers no other call, from any chat. So a higher figure
+  suits a host known to wait longer, and it is worth keeping well
+  below that host's limit: a call can run past the figure, since the
+  first file a call reads always has its whole time (30 seconds at the
+  preview, 40 when the import reads a file again), a preview spends up
+  to 5 seconds more keeping the texts it read, and a file kept online
+  only by a cloud drive is downloaded whole. Any other value is not
+  used, and the log says so once at start; it never stops the server.
+  The desktop extension's settings do not offer it.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
   was installed. It also makes checking on by default, as the

@@ -25,7 +25,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from exegete import doc_import, names, updates  # noqa: E402
+from exegete import doc_import, import_reading, names, updates  # noqa: E402
 
 import test_v0143_import_call_time as timing  # noqa: E402
 from test_v0141_compat import _run_server  # noqa: E402
@@ -243,6 +243,51 @@ class TestInTheCall:
         assert later["files"] == ["P05.txt", "P06.txt"]
         assert "Exegete works for about 60 seconds a call" in later["note"]
 
+    # One file's own limits hold whatever the call's figure (the
+    # design's "must not change"): 30 seconds at the preview and 40 when
+    # the import reads a file again. Under the default figure of 30 the
+    # two bounds coincide, so these run under a higher one.
+
+    @pytest.mark.parametrize("slow", [35, 200])
+    def test_one_file_keeps_its_own_thirty_seconds_at_the_preview(
+            self, project, folder, clock, monkeypatch, slow):
+        """With 600 seconds for the call, a slow file between two short
+        ones is given its own 30 seconds, not what is left of the call,
+        and is refused; the call goes on to the next file."""
+        monkeypatch.setenv(SETTING, "600")
+        timing._files(folder, (5, 5), (slow, slow), (5, 5))
+        preview, took = timing._call(clock, paths=[str(folder)])
+        assert [t for _text, t in clock.reads] == [
+            import_reading.READ_TIMEOUT_SECONDS] * 3
+        assert import_reading.READ_TIMEOUT_SECONDS == 30
+        assert took == pytest.approx(5 + 30 + 5)
+        assert preview["summary"] == "2 files ready; 1 refused."
+        (refused,) = preview["refused"]
+        assert refused["file"] == "P02.txt"
+        assert "longer than 30 seconds" in refused["reason"]
+        assert "not_read_this_time" not in preview
+
+    @pytest.mark.usefixtures("keeping_off")
+    @pytest.mark.parametrize("figure, slow", [("120", 45), ("600", 200)])
+    def test_one_file_keeps_its_own_forty_seconds_at_the_import(
+            self, project, folder, clock, monkeypatch, figure, slow):
+        """With no kept text, so that the import reads each file again:
+        a file that needs more than its own 40 seconds at the import is
+        given 40, not what is left of the call, and the batch, which
+        goes in together or not at all, does not go in."""
+        monkeypatch.setenv(SETTING, figure)
+        timing._files(folder, (5, 5), (5, slow), (5, 5))
+        preview, _took = timing._call(clock, paths=[str(folder)])
+        assert preview["summary"] == "3 files ready."
+        done, took = timing._call(clock, paths=[str(folder)],
+                                  preview_token=preview["preview_token"])
+        again = [t for _text, t in clock.reads[3:]]
+        assert again == [doc_import.IMPORT_FILE_SECONDS] * 2
+        assert doc_import.IMPORT_FILE_SECONDS == 40
+        assert took == pytest.approx(5 + 40)
+        assert done.get("success") is not True, done
+        assert timing._rows(project) == []
+
 
 # ---------------------------------------------------------------------------
 # 5. The timing build is gone
@@ -296,6 +341,17 @@ def test_install_says_the_figures():
             f"{least} to {most}. Unset, it is {e} in the desktop "
             f"extension, a figure measured against how long Claude "
             f"Desktop waits, and {t} installed any other way.") in install
+    # How far past the figure a call can run, and what waits meanwhile
+    # (fix round 1): the import gives a file read again 40 seconds, and
+    # import_documents runs on the server's one event loop.
+    assert (f"since the first file a call reads always has its whole "
+            f"time ({int(import_reading.READ_TIMEOUT_SECONDS)} seconds at the "
+            f"preview, {doc_import.IMPORT_FILE_SECONDS} when the import "
+            f"reads a file again)") in install
+    assert "always has its whole 30 seconds," not in install
+    assert ("a call stopped so loses its answer while Exegete reads on "
+            "to the end; until a call has finished, Exegete answers no "
+            "other call, from any chat.") in install
     assert ("The desktop extension's settings do not offer it."
             in install)
     assert (f"gives an import call the extension's time (`{SETTING}`, "

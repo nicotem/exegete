@@ -1,0 +1,312 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+"""v0.15.0, not presuming QualCoder, piece 2: what pseudonymisation is
+for, said plainly (the owner's decision of 12 October 2026).
+
+The owner: the pseudonymisation tools are useful for managing what a
+researcher discloses to other people, but for what reaches the AI
+assistant they are not to be trusted blindly, because an assistant that
+meets a problem may reach the files by a route outside Exegete; and if
+one wants to be sure, a safer way is to prepare the files elsewhere,
+before they come to the computer doing the work. So:
+
+- PRIVACY.md has a section of its own, "What pseudonymisation is for",
+  after "Assistants that open files by themselves" (which its example
+  leans on), with an imagined example and the safer way as a
+  suggestion, and "Practical mitigations" points to it;
+- the README's "Where your data goes" says so briefly, with a link;
+- pseudonymise_source's description says so for the assistant, in a
+  paragraph placed after every rule pinned within the first 2,048
+  characters (the owner's decision of the same day: no ceiling on the
+  tool texts; the size is reported in the CHANGELOG).
+
+The guard keeps an earlier draft's words from coming back.
+"""
+
+import asyncio
+import re
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(Path(__file__).parent))
+
+import exegete.server as server  # noqa: E402
+
+TOOL = "pseudonymise_source"
+CUT = 2048
+LONG_DASH = "\u2014"
+
+# An earlier draft's words, which must not come back
+OLD_PHRASES = (
+    "not a way to control what reaches the AI assistant",
+    "it does not control what the assistant reads",
+    "Exegete's names list",
+)
+FIRST_LINE = "Replace names with pseudonyms in a project's stored text."
+
+# The new texts, word for word, white space collapsed
+SECTION = (
+    "## What pseudonymisation is for "
+    "The project's names list (`pseudonyms.json`) replaces participants' "
+    "names as documents are imported, and `pseudonymise_source` replaces "
+    "them in a file already in the project. They are useful for managing "
+    "what you disclose to other people: a colleague or second coder you "
+    "share the project with, a supervisor, a transcriber, or whoever "
+    "receives an export. "
+    "For what reaches the AI assistant, they help, but they should not be "
+    "trusted blindly. Once the names are replaced, what Exegete's tools "
+    "return carries the pseudonyms. But depending on how your assistant is "
+    "set up, an assistant that meets a problem may work round it by a route "
+    "outside Exegete, and what it reads that way goes to its AI provider in "
+    "full (the section above). "
+    "An imagined example. You bring ten interview transcripts into a "
+    "project, meaning to replace the names before any coding starts. One "
+    "file is refused. The assistant, which in your set-up can open files on "
+    "the computer by itself, offers to find out why: it opens the original "
+    "in your Downloads folder and reads its first page, real names "
+    "included. Nothing in Exegete saw that read, and nothing in Exegete "
+    "could have stopped it. "
+    "If an assistant has broad and deep access to the computer, there is "
+    "little Exegete can do about what it reads. So, if you want to be sure "
+    "that participants' real names never reach the assistant, a safer way "
+    "is to replace them before the documents come to the computer where the "
+    "assistant works: prepare pseudonymised copies elsewhere, on another "
+    "computer or before the files are copied to this one, and bring only "
+    "those copies here. Exegete's tools remain useful for a name that was "
+    "missed, and for what you share with others. This is a suggestion to "
+    "weigh with your ethics approval and your data protection officer, not "
+    "a requirement.")
+# The phrases the design names, each looked for on its own as well
+SECTION_PHRASES = (
+    "replaces participants' names as documents are imported",
+    "they help, but they should not be trusted blindly",
+    "Nothing in Exegete saw that read",
+    "a safer way is to replace them before the documents come to the "
+    "computer where the assistant works",
+    "not a requirement",
+)
+MITIGATION = (
+    "The section \"What pseudonymisation is for\", above, says what it is "
+    "for and suggests a safer way to keep names from the assistant.")
+README_SENTENCES = (
+    "Replacing names reduces the risk; it does not make anyone anonymous. "
+    "It helps you manage what you share with other people. For what the "
+    "assistant reads, it should not be trusted blindly: Exegete's tools "
+    "return the pseudonyms, but an assistant that opens files by itself "
+    "can reach the originals outside Exegete. To keep real names from the "
+    "assistant altogether, a safer way is to replace them before the "
+    "documents reach the computer where it works ([PRIVACY.md, \"What "
+    "pseudonymisation is for\"](https://github.com/nicotem/exegete/blob/"
+    "main/PRIVACY.md#what-pseudonymisation-is-for)).")
+PARAGRAPH = (
+    "What it is for: it helps manage what the researcher shares with other "
+    "people (a colleague, a second coder, an export). For what an assistant "
+    "reads, it is not to be trusted blindly: Exegete's answers then carry "
+    "the pseudonyms, but a read by a route outside Exegete reaches the "
+    "original. To keep real names from the assistant altogether, suggest "
+    "replacing them before the documents reach this computer (PRIVACY.md, "
+    "\"What pseudonymisation is for\").")
+DEPRECATION = "Deprecated, removed in v0.15: overlap_policy"
+# The CHANGELOG entry's heading
+ENTRY = "### Changed: what pseudonymisation is for"
+
+
+def _flat(text):
+    return " ".join(text.split())
+
+
+def _doc(name):
+    return (REPO / name).read_text(encoding="utf-8")
+
+
+def without_the_paragraph(description):
+    """The description with this piece's paragraph taken out, exactly as
+    it was before (on 3.10 to 3.12 the paragraph keeps its indentation)."""
+    return re.sub(r"[ ]*What it is for: .*?\"What pseudonymisation is "
+                  r"for\"\)\.\n\n", "", description, count=1, flags=re.S)
+
+
+def served(mode):
+    """The tools as a host is given them in a tool set: name to
+    description."""
+    server._apply_toolset(mode)       # the registry fixture restores it
+    return {t.name: t.description or ""
+            for t in asyncio.run(server.mcp.list_tools())}
+
+
+def sets_serving_the_tool():
+    sets = {}
+    for mode in ("full", "core"):
+        tools = served(mode)
+        if TOOL in tools:
+            sets[mode] = tools[TOOL]
+    return sets
+
+
+def _section(privacy, heading):
+    """A section of PRIVACY.md, from its heading to the next one."""
+    start = privacy.index(f"\n## {heading}")
+    end = privacy.index("\n## ", start + 1)
+    return privacy[start:end]
+
+
+# ---------------------------------------------------------------------------
+# The guard (not counted among the tests of this piece's changes)
+# ---------------------------------------------------------------------------
+
+class TestTheGuard:
+
+    def test_guard_the_earlier_drafts_words_are_in_no_document(self):
+        for name in ("PRIVACY.md", "README.md"):
+            text = _flat(_doc(name))
+            for phrase in OLD_PHRASES:
+                assert phrase not in text, (name, phrase)
+
+    def test_guard_the_earlier_drafts_words_are_in_no_description(self):
+        found = [(mode, name, phrase)
+                 for mode in ("full", "core")
+                 for name, text in served(mode).items()
+                 for phrase in OLD_PHRASES if phrase in _flat(text)]
+        assert not found, found
+
+    def test_guard_the_first_line_stays(self):
+        sets = sets_serving_the_tool()
+        assert set(sets) == {"full"}         # `core` does not serve it
+        for mode, description in sets.items():
+            assert description.splitlines()[0] == FIRST_LINE, mode
+
+
+# ---------------------------------------------------------------------------
+# The new texts
+# ---------------------------------------------------------------------------
+
+class TestPrivacy:
+
+    def test_the_section_is_there_word_for_word_and_in_its_place(self):
+        privacy = _doc("PRIVACY.md")
+        headings = re.findall(r"(?m)^## (.+?)\s*$", privacy)
+        here = headings.index("What pseudonymisation is for")
+        assert headings[here - 1] == \
+            "Assistants that open files by themselves"
+        assert headings[here + 1].startswith("Keeping notes private from "
+                                             "the AI")
+        section = _flat(_section(privacy, "What pseudonymisation is for"))
+        assert section == SECTION
+        for phrase in SECTION_PHRASES:
+            assert phrase in section, phrase
+
+    def test_practical_mitigations_points_to_it(self):
+        privacy = _doc("PRIVACY.md")
+        mitigations = _section(privacy, "Practical mitigations")
+        first = mitigations[mitigations.index("- **Prefer synthetic"):]
+        first = _flat(first[:first.index("\n- ")])
+        assert first.endswith("genuinely anonymised data is the safe path "
+                              "for experimentation. " + MITIGATION)
+
+    def test_no_long_dash_in_the_new_texts(self):
+        privacy = _doc("PRIVACY.md")
+        # each text read where it stands, so that the check fails with it
+        section = _section(privacy, "What pseudonymisation is for")
+        mitigations = _flat(_section(privacy, "Practical mitigations"))
+        mitigation = mitigations[mitigations.index(MITIGATION):][
+            :len(MITIGATION)]
+        readme = _flat(_doc("README.md"))
+        paragraph = readme[readme.index("**Private notes and names.**"):]
+        paragraph = paragraph[:paragraph.index("**What stays on your")]
+        assert "trusted blindly" in paragraph
+        changelog = _flat(_doc("CHANGELOG.md"))
+        entry = changelog[changelog.index(ENTRY):]
+        entry = entry[:entry.index("### ", len(ENTRY))]
+        for label, text in (("PRIVACY section", section),
+                            ("Practical mitigations", mitigation),
+                            ("README", paragraph), ("CHANGELOG", entry),
+                            ("description", PARAGRAPH)):
+            assert LONG_DASH not in text, label
+
+
+class TestReadme:
+
+    def test_where_your_data_goes_says_so_with_a_link(self):
+        readme = _flat(_doc("README.md"))
+        paragraph = readme[readme.index("**Private notes and names.**"):]
+        paragraph = paragraph[:paragraph.index("**What stays on your")]
+        assert paragraph.rstrip().endswith(README_SENTENCES)
+
+    def test_the_links_anchor_is_a_privacy_heading(self):
+        # tests/test_v0141_readme_review.py checks every README link to a
+        # PRIVACY.md anchor by GitHub's slug rule; this is that rule on
+        # the new heading
+        from test_v0141_readme_review import _anchors
+        assert "what-pseudonymisation-is-for" in _anchors("PRIVACY.md")
+        assert ("PRIVACY.md#what-pseudonymisation-is-for)"
+                in _doc("README.md"))
+
+
+class TestTheDescription:
+
+    def test_every_set_serving_the_tool_says_what_it_is_for(self):
+        sets = sets_serving_the_tool()
+        assert sets
+        for mode, description in sets.items():
+            flat = _flat(description)
+            assert PARAGRAPH in flat, mode
+            # past the first 2,048 characters, which do not move
+            assert description.index("What it is for:") > CUT, mode
+            # the last paragraph before "Args:", but for the deprecation
+            # sentence the deprecated option adds there
+            after = flat[flat.index(PARAGRAPH) + len(PARAGRAPH):]
+            assert after.startswith(" " + DEPRECATION), mode
+            after = after[after.index(DEPRECATION):]
+            assert after.index("Args:") == after.index(". ") + 2, mode
+            served_paragraph = description[
+                description.index("What it is for:"):
+                description.index("for\").") + len("for\").")]
+            assert LONG_DASH not in served_paragraph, mode
+
+    def test_guard_nothing_else_in_it_moved(self):
+        """A guard: taken out again, the paragraph leaves the description exactly
+        as piece 1 pinned it: the same words and, on 3.13, the same
+        length, so every rule within the first 2,048 characters is where
+        it was."""
+        from test_v0142_description_cut import _fingerprint
+        server._apply_toolset("full")
+        before = without_the_paragraph(
+            server.mcp.original_descriptions[TOOL])
+        length, solid, digest = _fingerprint(before)
+        assert (solid, digest) == (12705, "b497f4c553410195")
+        if sys.version_info[:2] == (3, 13):
+            assert length == 17339
+
+    def test_its_line_in_changed_0150_is_what_is_served(self):
+        from test_v0142_description_cut import (CHANGED_0150, WORDS,
+                                                _fingerprint)
+        server._apply_toolset("full")
+        length, solid, digest = _fingerprint(
+            server.mcp.original_descriptions[TOOL])
+        assert CHANGED_0150[TOOL][1:] == (solid, digest)
+        assert WORDS[TOOL] == CHANGED_0150[TOOL]
+        if sys.version_info[:2] == (3, 13):
+            assert CHANGED_0150[TOOL][0] == length
+
+
+def test_the_changelog_says_so():
+    changelog = _flat(_doc("CHANGELOG.md"))
+    unreleased = changelog[changelog.index("## [Unreleased]"):
+                           changelog.index("## [0.14.3-alpha]")]
+    entry = unreleased[unreleased.index(ENTRY):]
+    entry = entry[:entry.index("### ", len(ENTRY))]
+    assert ("**PRIVACY.md says what pseudonymisation is for**, in a section "
+            "of its own, \"What pseudonymisation is for\"") in entry
+    assert ("For what reaches the AI assistant they help, but they should "
+            "not be trusted blindly") in entry
+    assert "as an imagined example shows" in entry
+    assert ("it suggests replacing them before the documents come to the "
+            "computer where the assistant works") in entry
+    assert ("**The README** (\"Where your data goes\") **and "
+            "`pseudonymise_source`'s description** say so briefly") in entry
+    assert "what pseudonymisation does has not changed" in entry
+    measured = unreleased[unreleased.index("### Measured"):]
+    assert ("`pseudonymise_source`'s description gained a paragraph on what "
+            "pseudonymisation is for: its entry grew by 457 characters, 485 "
+            "on 3.11, in `full` only") in measured

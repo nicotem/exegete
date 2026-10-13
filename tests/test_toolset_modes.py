@@ -390,10 +390,12 @@ class TestThePublishedSchemaBudget:
     # descriptions, none marked, in another order); the names list's new
     # wording in three descriptions (not presuming QualCoder, piece 1)
     # then took 19 characters off it, 23 on 3.11, and 2 off `core`, 6 on
-    # 3.11.
-    FULL_MEASURED = 204_225          # 78 tools, Python 3.13.5, mcp 1.30.0
+    # 3.11. What pseudonymisation is for (not presuming QualCoder, piece
+    # 2), a paragraph in pseudonymise_source's description, then added
+    # 457 to `full`, 485 on 3.11 (`core` does not serve the tool).
+    FULL_MEASURED = 204_682          # 78 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 67_223           # 23 tools, same environment
-    FULL_MEASURED_310 = 214_225      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 214_710      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 70_611
 
     # Why two per cent, away from the reference environment.
@@ -421,9 +423,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "204,225"
+    FULL_CHARS = "204,682"
     CORE_CHARS = "67,223"
-    FULL_ROUNDED = "204,000"
+    FULL_ROUNDED = "205,000"
     CORE_ROUNDED = "67,000"
     FULL_TOKENS = "51k"
     CORE_TOKENS = "17k"
@@ -706,8 +708,10 @@ class TestThePublishedSchemaBudget:
     # INSTALL.md states rounded to the nearest 500 (v0.13: the one-file
     # signature and the file-text count moved it from about 10,500 to
     # about 11,500 characters without anything saying so, and Brief 1's
-    # fix round to about 12,500).
-    FLAGSHIP_ROUNDED = "19,500"
+    # fix round to about 12,500). v0.15.0: the paragraph on what
+    # pseudonymisation is for took it from 19,377 to 19,834 on 3.13, so
+    # from about 19,500 to about 20,000.
+    FLAGSHIP_ROUNDED = "20,000"
 
     def test_install_quotes_the_flagships_own_share(self):
         install = self._read("INSTALL.md")

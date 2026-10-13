@@ -199,7 +199,13 @@ def _tools(mode="full"):
 # flag that leaves the check off; a reader without QualCoder now chooses
 # any name, and "say so" is for one who does not know theirs. That takes
 # 30 characters, and the limit is raised by that and no more: 35,660.
-README_LIMIT = 35_660
+# v0.15.0's "What pseudonymisation is for" (not presuming QualCoder,
+# piece 2) adds to "Private notes and names" that replacing names
+# helps manage what is shared with other people, that it should not be
+# trusted blindly for what the assistant reads, and the safer way, with
+# a link to PRIVACY.md's section. That takes 512 characters, and the
+# limit is raised by that and no more: 36,172.
+README_LIMIT = 36_172
 
 
 def test_the_readme_stays_short():

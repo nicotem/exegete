@@ -16733,6 +16733,14 @@ def pseudonymise_source(
     search index keeps the previous text until it re-indexes on the next
     open with AI enabled.
 
+    What it is for: it helps manage what the researcher shares with other
+    people (a colleague, a second coder, an export). For what an
+    assistant reads, it is not to be trusted blindly: Exegete's answers
+    then carry the pseudonyms, but a read by a route outside Exegete
+    reaches the original. To keep real names from the assistant
+    altogether, suggest replacing them before the documents reach this
+    computer (PRIVACY.md, "What pseudonymisation is for").
+
     Args:
         mapping: The replacements, as a list of objects:
                  {"original": "Thomas", "pseudonym": "Alex",

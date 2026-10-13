@@ -518,10 +518,12 @@ class TestTheSizes:
     # projects, and the coder name as QualCoder 4.0 labels it);
     # tests/test_v0142_description_cut.py pins their words. v0.15.0
     # rewords the names list in get_current_project, read_pseudonym_list
-    # and pseudonymise_source (not presuming QualCoder, piece 1). Their
-    # entries as 0.14.2 served them are below, so every other tool is
-    # still held to 0.14.2's figure.
-    NOW = {"full": 198_263, "core": 65_138}
+    # and pseudonymise_source (not presuming QualCoder, piece 1), and
+    # pseudonymise_source gains a paragraph on what pseudonymisation is
+    # for (piece 2: 457 characters more in `full`). Their entries as
+    # 0.14.2 served them are below, so every other tool is still held to
+    # 0.14.2's figure.
+    NOW = {"full": 198_720, "core": 65_138}
     CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

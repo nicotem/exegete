@@ -890,10 +890,10 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 78 tools by
 default, and the serialised tool definitions alone measure about
-204,000 characters, roughly 51k tokens (measured for 0.15.0 under
+205,000 characters, roughly 51k tokens (measured for 0.15.0 under
 Python 3.13.5 with mcp 1.30.0, in an environment installed from the
 repository's lock file; `pseudonymise_source`, the 0.12 flagship,
-accounts for about 19,500 characters of that on its own, because a tool
+accounts for about 20,000 characters of that on its own, because a tool
 that rewrites the researcher's text has to say in its own definition
 what it rewrites, what it leaves behind and what the backup then
 holds; the paging, novelty-filter and sampling arguments added in 0.12
@@ -1355,7 +1355,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 204,000 characters with `full`; TOOLS.md says how that
+  (about 205,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

@@ -10143,7 +10143,10 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
         pdfs_with_listed_names=pdfs_with_names,
         file_names_with_listed_names=file_names_with_names,
         files_with_garbled_letters=garbled_letters,
-        max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo)
+        max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo,
+        # The time this call may take, read afresh for each call; its
+        # warning, if any, is logged once at start (main), never here.
+        call_seconds=doc_import.call_seconds()[0])
     return ctx, names_stop
 
 
@@ -10288,8 +10291,8 @@ def import_documents(
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
         memo: a note for every file; at most 10,000 characters
     """
-    # Each call's reading time is counted from here (doc_import's
-    # PREVIEW_SECONDS and IMPORT_SECONDS).
+    # Each call's reading time is counted from here
+    # (doc_import.call_seconds).
     call_started = doc_import.clock()
     error = _import_arguments_error(paths, memo)
     if error is None:
@@ -10314,10 +10317,6 @@ def import_documents(
         import_pdfs_with_listed_names, import_file_names_with_listed_names,
         memo, bool(import_files_with_garbled_letters))
     ctx.call_started = call_started
-    if doc_import.timing_build():
-        # A timing build: in the extension the preview reads far longer
-        # than a host waits (the import's time is unchanged).
-        ctx.preview_seconds = doc_import.TIMING_BUILD_SECONDS
     stops = []
     gate = _write_gate_error()
     if gate is not None:
@@ -10371,7 +10370,6 @@ def _import_documents_preview(paths, ctx, stops, token_args,
                "no file is ready."))
         if page is not None:
             preview["page_to_check"] = page
-        _timing_build_line(preview, ctx)
         return json.dumps(preview, indent=2, ensure_ascii=False)
     try:
         payload = _issue_preview(
@@ -10407,20 +10405,7 @@ def _import_documents_preview(paths, ctx, stops, token_args,
     if page is not None:
         answer["page_to_check"] = page
     answer.update(payload)
-    _timing_build_line(answer, ctx)
     return json.dumps(answer, indent=2, ensure_ascii=False)
-
-
-def _timing_build_line(answer, ctx) -> None:
-    """A timing build, in the extension only: how long the preview took,
-    from the call's start, as the answer's last key."""
-    if not doc_import.timing_build():
-        return
-    seconds = int(doc_import.clock() - ctx.call_started)
-    answer["timing_build"] = (
-        f"A timing build, not a release: this preview took {seconds} "
-        f"second{'s' if seconds != 1 else ''} in Exegete, from the call's "
-        f"start to this answer.")
 
 
 def _import_page_to_check(result, ctx):
@@ -10618,7 +10603,8 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
         # (provisional, 0.14.3): what was done, and how to go on.
         answer["not_imported_this_time"] = {
             "files": [doc_import.item_label(i) for i in later],
-            "note": doc_import.not_imported_note(len(later)),
+            "note": doc_import.not_imported_note(
+                len(later), seconds=int(ctx.call_seconds)),
         }
     if over_the_cap:
         answer["not_taken_this_time"] = doc_import.not_taken_note(
@@ -20533,6 +20519,14 @@ def main(argv: Optional[List[str]] = None, *,
         logger.warning("The check for new versions could not start (%s); "
                        "nothing will be checked in this run.",
                        error_label(error))
+
+    # v0.15.0: the time one import call may take, by the way Exegete was
+    # installed or EXEGETE_CALL_SECONDS; a value not used is said here
+    # once, never per call, and never stops the server.
+    seconds, warning = doc_import.call_seconds()
+    if warning is not None:
+        logger.warning(warning)
+    logger.info("Time for one import call: about %d seconds", seconds)
 
     # Run the server using stdio transport
     mcp.run(transport="stdio")

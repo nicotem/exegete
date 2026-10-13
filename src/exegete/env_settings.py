@@ -5,10 +5,11 @@ Every setting this server reads from its environment is read here and
 nowhere else (tests/test_v0141_compat.py forbids any other environment
 read in the package). Each has a new spelling, starting EXEGETE_, and
 the earlier one, which is still read until v1.0 (names.SETTINGS); the
-two settings of the check for new versions have the new spelling only
-(names.NEW_ONLY_SETTINGS, read by update_check and installed_as). The
-one other read here is not a setting: Windows' own folder, SystemRoot,
-from which the transition check starts PowerShell by its full path.
+settings that never had an earlier spelling have the new one only
+(names.NEW_ONLY_SETTINGS, read by update_check, installed_as and
+call_seconds). The one other read here is not a setting: Windows' own
+folder, SystemRoot, from which the transition check starts PowerShell
+by its full path.
 
 The rule when both spellings are set:
 
@@ -191,6 +192,24 @@ def installed_as(environ: Optional[Mapping[str, str]] = None
     value, or None when it is not set."""
     env = os.environ if environ is None else environ
     return env.get(names.NEW_ONLY_SETTINGS["installed_as"])
+
+
+def installed_as_extension(environ: Optional[Mapping[str, str]] = None
+                           ) -> bool:
+    """Whether this copy runs as the desktop extension, by its own mark
+    (EXEGETE_INSTALLED_AS saying `extension`, spaces and letter case
+    aside), as updates.detect_route and the time per import call read
+    it."""
+    return (installed_as(environ) or "").strip().lower() == "extension"
+
+
+def call_seconds(environ: Optional[Mapping[str, str]] = None
+                 ) -> Optional[str]:
+    """EXEGETE_CALL_SECONDS, which has one spelling only (names.
+    NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
+    doc_import.call_seconds says what each value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["call_seconds"])
 
 
 def windows_system_root() -> str:

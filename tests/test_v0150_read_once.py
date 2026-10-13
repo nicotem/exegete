@@ -762,7 +762,7 @@ class TestRemoval:
         real_load = kept_texts.load
 
         def slow_load(*args):
-            seconds["now"] += doc_import.IMPORT_SECONDS + 1
+            seconds["now"] += doc_import.TERMINAL_CALL_SECONDS + 1
             return real_load(*args)
         monkeypatch.setattr(kept_texts, "load", slow_load)
         done = _import([str(folder)], preview)
@@ -868,7 +868,8 @@ class TestBounds:
 
         def remember(token, result):
             real_remember(token, result)
-            late["by"] = doc_import.PREVIEW_SECONDS + doc_import.KEEP_SECONDS
+            late["by"] = (doc_import.TERMINAL_CALL_SECONDS
+                          + doc_import.KEEP_SECONDS)
         monkeypatch.setattr(doc_import, "remember_outcomes", remember)
         caplog.set_level(logging.WARNING, logger="exegete.doc_import")
         preview = _preview([str(folder)])
@@ -1084,5 +1085,5 @@ def test_the_changelog_says_it():
                  "byte for byte the one previewed (its size and SHA-256",
                  "is read again, as before",
                  "an import usually takes seconds",
-                 "The time limits are unchanged"):
+                 "The time one call may take is in the next entry"):
         assert said in unreleased, said

@@ -246,8 +246,14 @@ class TestTheExtensionSetsBothSpellings:
         # Six for the three settings under both spellings, and two more
         # with one spelling only: the check for new versions
         assert len(env) == 8
+        # A departure, v0.15.0: EXEGETE_CALL_SECONDS, a setting with one
+        # spelling, is kept out of the manifest, since the extension's
+        # time per import call is measured for it, not offered in its
+        # settings (its mark, EXEGETE_INSTALLED_AS, gives it that time)
+        offered = set(names.NEW_ONLY_SETTINGS.values()) - {
+            names.NEW_ONLY_SETTINGS["call_seconds"]}
         assert set(env) - {n for pair in SETTINGS.values() for n in pair} \
-            == set(names.NEW_ONLY_SETTINGS.values())
+            == offered
         for key in ("toolset", "workspace", "workspace_required"):
             new, old = SETTINGS[key]
             assert env[new] == env[old]

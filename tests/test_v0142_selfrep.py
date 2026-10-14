@@ -790,8 +790,12 @@ class TestNoDescriptionGrew:
     # CHANGED_0150): create_project's paragraph on the researcher's coder
     # name, which Exegete's settings may now give, and the setter's
     # refusal of that name, each longer, as the design says
+    # And the coder names, piece 3 (tests/test_v0150_ai_coder_name_setting.py):
+    # create_project's sentence on the AI coder name in the settings, and
+    # export_refi_qda's name for that setting, each longer, as the design
+    # says
     CHANGED_IN_0150 = {"list_available_projects", "create_project",
-                       "set_project_ai_coder_name"}
+                       "set_project_ai_coder_name", "export_refi_qda"}
     # And pseudonymise_source gains a paragraph on what pseudonymisation
     # is for (not presuming QualCoder, piece 2,
     # tests/test_v0150_qualcoder_texts_2.py, which pins it); the rest of

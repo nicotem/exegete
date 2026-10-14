@@ -1856,7 +1856,7 @@ class TestJournal:
             "unset": "No AI coder name is set for this project yet",
             "unreadable": UNREADABLE_MESSAGE,
             "newer_format": NEWER_FORMAT_MESSAGE,
-            "mismatch": ("This host declares the AI coder name "
+            "mismatch": ("The AI coder name in Exegete's settings is "
                          "\"Other Model 9\""),
         }[shape]
         assert expected in ask["message"], ask["message"]
@@ -1875,8 +1875,8 @@ class TestJournal:
         if shape != "unset":
             assert "no ai coder name is set" not in warning[0].lower()
         if shape == "mismatch":
-            assert f"current AI coder name is \"{DEFAULT_AI_CODER_NAME}\"" \
-                in warning[0]
+            assert f"this project's AI coder name is " \
+                f"\"{DEFAULT_AI_CODER_NAME}\"" in warning[0]
         _house_rules(warning + [ask["message"]], ["warning", "ask"])
 
     def test_the_alternative_names_the_folder_this_run_uses(

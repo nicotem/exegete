@@ -145,12 +145,14 @@ What stays local, always, unless a sync service copies the folder it is in:
   `.qda` project folder; until 0.14.0 `qualcoder_mcp.json`, which the
   first change of name after the update carries into `exegete.json` and
   then keeps, marked as moved, with the name it held): the coder name or names you have chosen for
-  this project's AI writes, when each was set, an optional note you
-  typed (for example the host and model version), and the name declared
-  in the host's server configuration at the time. It travels with the
+  this project's AI writes, when each was set, an optional note (one
+  you typed, for example the host and model version, or Exegete's own
+  when the name came from its settings at creation), and the AI coder
+  name in Exegete's settings at the time. It travels with the
   project folder, its backups and its workspace copies, and a restore
   rolls it back with the rest of the folder. It is returned into the
-  conversation by get_current_project, select_project and
+  conversation by create_project when it stores the name,
+  get_current_project, select_project and
   set_project_ai_coder_name, and the current name appears on every write
   result; treat the note like any other project text the model can read.
   QualCoder never reads or writes this file. Deleting it makes the next
@@ -696,11 +698,16 @@ distinguishable from yours, in Exegete's reads and in QualCoder (an
 attribute value it sets on a file or a journal entry included, where
 QualCoder's own edit keeps the row's earlier owner). AI rows are never
 written under a name the model chose by itself: the name is set per project by you,
-and the model can only ask. The first write that needs a name stops and
-asks; your answer is stored with the project and reported back by the
-project reads. The host's `EXEGETE_AI_CODER_NAME` setting declares
-a name, which is offered as a quick pick and checked for conflicts; it
-never attributes a row on its own. A name that belongs to a person (the
+and the model can only ask. You can choose it in advance, in Exegete's
+settings ("AI coder name" in the extension, `EXEGETE_AI_CODER_NAME` on
+other routes): Exegete stores it with each project it creates, without
+asking, and the answer that creates the project says so. The first
+write that needs a name stops and asks, in a project that has none yet,
+with the setting offered first; your answer is stored with the project
+and reported back by the project reads. A project that already has a
+name keeps it: a setting that differs is checked for conflicts, and the
+next write asks you once which to use; the setting never attributes a
+row in such a project on its own. A name that belongs to a person (the
 project's own coder name, or the one in Exegete's settings) is refused, and the `owner` argument of
 `apply_codings` and `import_text_file` can no longer be used to write
 rows under someone else's name.
@@ -1212,8 +1219,15 @@ Two further rules touch files on your disk:
   folder with four empty subfolders and a new `data.qda`, and records
   the new project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
-  selects a project); nothing else: no backup, no `exegete.json`,
-  no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
+  selects a project); nothing else: no backup and no entry in
+  QualCoder's recent-project list. When the AI coder name is filled in
+  Exegete's settings, it is stored with the new project too, in
+  `exegete.json`, beside `qualcoder_mcp.json`, the file of Exegete's
+  earlier name,
+  written already marked as moved and holding no name, so that versions
+  0.12 to 0.14 refuse to write the project rather than ask for a name of
+  their own; the answer says so. Left empty, no
+  `exegete.json` is written. The database holds the researcher's own coder name when
   they give it (and QualCoder's speaker coder), and an "about" line
   naming Exegete and its version. The coder name is asked for, or
   taken from Exegete's own settings when the researcher has filled it

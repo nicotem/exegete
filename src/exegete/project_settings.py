@@ -104,8 +104,10 @@ HISTORY_ECHO = 20
 # (fix round 4).
 SIDECAR_WRITE_MAX_BYTES = SIDECAR_READ_MAX_BYTES - 4096
 
-# The host declaration (v0.11's machine-wide setting, re-purposed by D7)
-# and this server's built-in default.
+# The AI coder name in Exegete's settings (v0.11's machine-wide setting,
+# re-purposed by D7; read by `host_declaration`, a name kept from then),
+# which v0.15.0 gives each project Exegete creates, and this server's
+# built-in default.
 # Read under both spellings (v0.14.1), through env_settings.
 AI_CODER_NAME_ENV = names.SETTINGS["ai_coder_name"][0]
 DEFAULT_AI_CODER_NAME = "AI Coding Assistant"
@@ -1090,14 +1092,16 @@ def _package_version() -> str:
 
 
 def mismatch(env: Optional[str], current: Optional[Dict[str, Any]]) -> bool:
-    """True when this host's declaration conflicts with the project (c2).
+    """True when the AI coder name in Exegete's settings conflicts with
+    the project (c2).
 
-    Rule c2 (ruling 1): a write is refused if and only if this host
-    declares a name AND the declaration is neither the project's current
-    name nor the declaration recorded when that name was set. So an
-    undeclared host never nags, a host whose declaration was acknowledged
-    once never nags again, and a host that declares a different name from
-    the one the project uses asks the user which to use.
+    Rule c2 (ruling 1): a write is refused if and only if the setting is
+    filled in AND it is neither the project's current name nor the
+    setting recorded when that name was set (`host_declaration`, the
+    field's name since v0.12). So an empty setting never nags, a setting
+    acknowledged once in a project never nags again there, and a setting
+    that differs from the name the project uses asks the researcher which
+    to use.
     """
     if env is None:
         return False
@@ -1154,12 +1158,14 @@ def settings_coder_name(environ: Optional[Dict[str, str]] = None
 
 
 def host_declaration(environ: Optional[Dict[str, str]] = None) -> Optional[str]:
-    """This host's declared AI coder name, or None.
+    """The AI coder name in Exegete's settings, or None (the function
+    keeps its v0.12 name, from when the setting was this host's
+    declaration).
 
     Invalid values are treated as absent here: `main()` validates the
     variable at start-up and refuses to start on a bad one, so a bad
     value reaching this function means the server was started another way
-    (a test, an embedded use); a declaration we would refuse to write is
+    (a test, an embedded use); a setting we would refuse to write is
     not one to compare against either. An unfilled placeholder (`${...}`)
     is not set (v0.15.0, setting_not_set).
     """
@@ -1190,16 +1196,16 @@ def ai_coder_names_for_project(
     3. `DEFAULT_AI_CODER_NAME`, always, because every pre-0.12 row this
        server wrote carries it and a name change never re-attributes
        rows;
-    4. this host's declaration, when set and valid, because v0.11 wrote
-       under it machine-wide.
+    4. the AI coder name in Exegete's settings, when set and valid,
+       because v0.11 wrote under it machine-wide.
 
     "AI Agent" enters the set only through those rules, that is, when the
-    researcher chose it for this project or this host declares it; it is
+    researcher chose it for this project or in Exegete's settings; it is
     never included on its own. "MCP Import" is an import label, not a
     coding owner, and is never included.
 
     Never refuses and never asks: reads do not ask, so an unset or
-    unreadable sidecar yields the built-in default (plus the declaration
+    unreadable sidecar yields the built-in default (plus the setting
     when there is one).
     """
     names: List[str] = []
@@ -1228,8 +1234,8 @@ def known_ai_set(project_folder: Any,
     Narrower than `ai_coder_names_for_project`: the migration probe of
     B1.12 asks whether a project already holds AI rows, and the answer
     may only ever name the built-in default, QualCoder 4.0's assistant
-    string and this host's declaration. It never selects distinct owners,
-    so it can never enumerate a human or a hidden coder.
+    string and the AI coder name in Exegete's settings. It never selects
+    distinct owners, so it can never enumerate a human or a hidden coder.
     """
     names: List[str] = [DEFAULT_AI_CODER_NAME, KNOWN_AI_ASSISTANT_OWNER]
     declared = host_declaration(environ)

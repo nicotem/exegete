@@ -242,7 +242,7 @@ class TestConfiguredAttribution:
         assert out["success"] is True
         assert out["ai_coder_name"]["host_declaration"] == "AI Agent"
         assert "Unchanged; the choice was recorded again (acknowledging " \
-            "this host's declaration)." in out["warnings"]
+            "the AI coder name in Exegete's settings)." in out["warnings"]
         out = json.loads(server.create_code("KeptCode", create_backup=False))
         assert out.get("success") is True, out
         assert _row(qualcoder_db_path,
@@ -547,8 +547,9 @@ class TestFormatCharactersAreRefusedAsAClass:
         root = Path(__file__).resolve().parents[1]
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         paragraphs = [" ".join(p.split()) for p in readme.split("\n\n")]
+        # v0.15.0 (the coder names, piece 3): "Exegete", not "the server"
         sentence = [p for p in paragraphs
-                    if "stop the server at startup" in p]
+                    if "stop Exegete at startup" in p]
         assert len(sentence) == 1, sentence
         assert "Unicode category Cf" in sentence[0]
         assert "ZWNJ and ZWJ" in sentence[0]

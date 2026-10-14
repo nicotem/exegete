@@ -559,7 +559,8 @@ class TestThroughTheServer:
         before = path.read_bytes()
         monkeypatch.setenv("EXEGETE_AI_CODER_NAME", "Someone Else")
         out = json.loads(server.create_code("Refused", create_backup=False))
-        assert "This host declares the AI coder name" in out["error"], out
+        assert ("The AI coder name in Exegete's settings is \"Someone "
+                "Else\"") in out["error"], out
         assert path.read_bytes() == before
 
     def test_the_setter_says_it_moved_the_name(self, setup_server,

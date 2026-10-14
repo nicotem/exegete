@@ -308,7 +308,9 @@ def test_a_first_session_names_both_coder_names():
     # (the review of the maintainer's sitting), a reader without QualCoder
     # chooses a name, and "say so" is for one who does not know theirs
     # v0.15.0: unless the reader has filled it in Exegete's settings
-    # (tests/test_v0150_coder_name_settings.py)
+    # (tests/test_v0150_coder_name_settings.py); and the AI coder name
+    # likewise, for a project the assistant made (the coder names, piece
+    # 3, tests/test_v0150_ai_coder_name_setting.py)
     assert ("When it makes the project, the assistant asks for your own "
             "coder name, unless you have filled it in Exegete's settings; "
             "the project keeps it so that your work and the "
@@ -317,7 +319,8 @@ def test_a_first_session_names_both_coder_names():
             "Do not know yours? Say so. Before "
             "its first write, it asks for the AI coder name, kept per "
             "project, under which Exegete writes what is done through the "
-            "conversation.") in names
+            "conversation, unless the project was made while it was filled "
+            "in Exegete's settings.") in names
     assert "Not using QualCoder, or no coder name?" not in names
     assert "no QualCoder yet" not in names
     # the example on the first screen shows the second ask, before the

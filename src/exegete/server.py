@@ -559,8 +559,8 @@ the researcher why; do not look for a way round it.
 - To undo: delete_coding removes one coding; restore_backup returns the
   project to an earlier state.
 - Rows you write carry the project's AI coder name, which the
-  researcher chooses: relay Exegete's question; never choose it
-  yourself.
+  researcher chooses, in Exegete's settings or when Exegete asks: relay
+  Exegete's question; never choose it yourself.
 - Change only what the researcher asked for; propose anything else.
 
 ## 6. Approval
@@ -649,8 +649,8 @@ Each is stated in full by its tool:
   the task needs; when the researcher's choice would change the result;
   before any change they did not ask for; before a coding session;
   before marking anything approved; after a preview, before running the
-  change; when QualCoder may have the project open; and when the AI
-  coder name is needed.
+  change; when QualCoder may have the project open; and when Exegete
+  asks for the AI coder name.
 - Before a long piece of work (many files or calls), say briefly what
   you plan and ask, unless the researcher asked for exactly that. When
   they ask how to go about something, propose a plan and act on it only
@@ -2474,11 +2474,12 @@ def _color_disclosure(requested: Optional[str], stored: Optional[str]) -> Dict[s
 
 
 # P1-2 attribution config, re-purposed by v0.12 (D7): the environment
-# variable is this HOST's declaration of the name it would like to write
-# under, not the attribution itself. The attribution is the PROJECT's
-# setting (project_settings.py), chosen by the researcher, and a
-# declaration that differs from it makes the next write ask rather than
-# re-attribute. The declaration is still validated at start-up, because a
+# variable is the AI coder name in Exegete's settings, not the
+# attribution itself. The attribution is the PROJECT's setting
+# (project_settings.py), chosen by the researcher: v0.15.0 gives the
+# setting to each project create_project makes, and a setting that
+# differs from a project's name makes the next write ask rather than
+# re-attribute. The setting is still validated at start-up, because a
 # name we would refuse to store is a configuration error worth reporting
 # early. "AI Agent" is QualCoder 4.0's own AI owner string
 # (ai_mcp_server.py:85 at 9bddf17); choosing it for a project groups this
@@ -2516,15 +2517,18 @@ def _settings_place(which: str) -> str:
     (v0.15.0): `which` is "coder" (their own), "ai" or "both". On the
     desktop extension, by its own mark, the setting's title in
     Exegete's settings; installed any other way, the variable in the
-    host's configuration."""
+    host's configuration, the AI coder name under the spelling in use:
+    its earlier one when only that is set (read until v1.0), as the
+    once-per-project question named it before v0.15.0."""
     if env_settings.installed_as_extension():
         titles = {"coder": "\"Your coder name\"",
                   "ai": "\"AI coder name\"",
                   "both": "\"Your coder name\" or \"AI coder name\""}
         return (f"{titles[which]} in Exegete's settings (Settings, "
                 f"Extensions, Exegete)")
-    variables = {"coder": CODER_NAME_ENV, "ai": AI_CODER_NAME_ENV,
-                 "both": f"{CODER_NAME_ENV} or {AI_CODER_NAME_ENV}"}
+    ai = env_settings.read("ai_coder_name").name
+    variables = {"coder": CODER_NAME_ENV, "ai": ai,
+                 "both": f"{CODER_NAME_ENV} or {ai}"}
     return f"{variables[which]} in the host's configuration for Exegete"
 
 
@@ -2545,7 +2549,8 @@ def _export_owner_and_source() -> Tuple[str, str]:
     Exports never ask (ruling 6): a REFI-QDA package names one AI User
     and a researcher exporting a project they have not coded through this
     server should not be stopped to choose a name. Precedence: the
-    project's setting, else this host's declaration, else the built-in
+    project's setting, else the AI coder name in Exegete's settings
+    (whose source keeps the value "host_declaration"), else the built-in
     default. Database WRITES do not use this: they go through
     _resolve_write_owner, which asks.
     """
@@ -2589,9 +2594,11 @@ def _ai_user_name_source() -> str:
 # coder lists, visibility toggle and reports. So it is the PROJECT's
 # setting and the human's choice: the first write that needs an owner
 # refuses and asks, the answer is stored beside data.qda, and the
-# environment variable becomes this HOST's declaration, a quick pick and a
-# conflict check, never a silent attribution. Reads never ask. A name
-# change never re-attributes rows written under the old name.
+# environment variable became the AI coder name in Exegete's settings: a
+# quick pick and a conflict check, and, since v0.15.0, the name given to
+# each project create_project makes, the researcher's choice made in
+# advance and said in the answer; never a silent attribution. Reads never
+# ask. A name change never re-attributes rows written under the old name.
 
 _ASK_ACTION = "set_project_ai_coder_name"
 
@@ -2617,8 +2624,9 @@ def _ask_quick_picks(existing: List[str], declared: Optional[str]) -> List[str]:
     """The ranking a small model should follow (D7 3.3, 9.3).
 
     Continuity first (a name this project already holds rows under), then
-    this host's declaration, then the two built-in picks. The PROSE names
-    the picks in D7 3.3's fixed order; this array carries the priority.
+    the AI coder name in Exegete's settings, then the two built-in picks.
+    The PROSE names the picks in D7 3.3's fixed order; this array carries
+    the priority.
     """
     picks: List[str] = []
     for name in list(existing) + ([declared] if declared else []) + \
@@ -2628,15 +2636,30 @@ def _ask_quick_picks(existing: List[str], declared: Optional[str]) -> List[str]:
     return picks
 
 
+def _the_setter_refuses(name: str) -> bool:
+    """Whether set_project_ai_coder_name refuses `name` in any project
+    (v0.15.0): QualCoder's "default", its speaker coder, or the
+    researcher's own coder name in the settings. The ask offers no such
+    name, neither as the AI coder name in Exegete's settings nor as a
+    name the project already holds rows under (rows under any of them
+    are not the AI's)."""
+    return name in ("default", SPEAKER_SYSTEM_CODER) or \
+        name == settings_coder_name()
+
+
 def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
     """The ASK: no name is set, so nothing was written (D7 3.3).
 
     A pure function of the sidecar, the environment and the arguments:
     repeating the refused call returns byte-identical JSON, and nothing
-    is written, backed up, upgraded or consumed on the way here.
+    is written, backed up, upgraded or consumed on the way here. A
+    setting the setter would refuse is not offered (v0.15.0).
     """
     declared = host_declaration()
-    existing = _existing_known_ai_names()
+    if declared is not None and _the_setter_refuses(declared):
+        declared = None
+    existing = [name for name in _existing_known_ai_names()
+                if not _the_setter_refuses(name)]
     text = (
         "No AI coder name is set for this project yet, so nothing was "
         "written. Ask the user which coder name this project's AI codings "
@@ -2649,8 +2672,8 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
         "built-in assistant uses)")
     if declared and declared not in (DEFAULT_AI_CODER_NAME,
                                      KNOWN_AI_ASSISTANT_OWNER):
-        text += (f", \"{declared}\" (declared in this host's server "
-                 f"configuration)")
+        text += (f", \"{declared}\" (the AI coder name in Exegete's "
+                 f"settings)")
     text += "."
     if existing:
         text += (f" This project already holds rows under "
@@ -2672,23 +2695,26 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
 
 
 def _mismatch_refusal(current: str, declared: str) -> Dict[str, Any]:
-    """The MISMATCH: this host declares a different name (D7 3.4, rule c2).
+    """The MISMATCH: the AI coder name in Exegete's settings differs from
+    the project's (D7 3.4, rule c2).
 
-    Only a host that DECLARES a name can conflict, and only until the
-    conflict is answered: setting either name records the declaration, so
-    the question is asked once per host, not once per call.
+    Only a filled-in setting can conflict, and only until the conflict
+    is answered: setting either name records the setting in the project
+    (`host_declaration`), so the question is asked once per project while
+    the setting stays the same, not once per call. v0.15.0: the words
+    name the setting where the researcher changes it (`_settings_place`),
+    never an environment variable on the extension.
     """
     return {
         "error": (
-            f"This host declares the AI coder name \"{declared}\" "
-            f"({env_settings.read('ai_coder_name').name}), but this "
-            f"project's current AI coder "
-            f"name is \"{current}\". Nothing was written. Ask the user "
-            f"which name to use here, then call set_project_ai_coder_name "
-            f"with \"{declared}\" to switch the project to it, or with "
-            f"\"{current}\" to keep it (that records the choice, and this "
-            f"host will not ask again while its declaration stays the "
-            f"same). Earlier rows keep the name they were written under."),
+            f"The AI coder name in Exegete's settings is \"{declared}\", "
+            f"but this project's AI coder name is \"{current}\". Nothing "
+            f"was written. Ask the researcher which name to use here, then "
+            f"call set_project_ai_coder_name with \"{declared}\" to switch "
+            f"the project to it, or with \"{current}\" to keep it (that "
+            f"records the choice, and Exegete will not ask again here while "
+            f"the setting, {_settings_place('ai')}, stays the same). "
+            f"Earlier rows keep the name they were written under."),
         "action_required": _ASK_ACTION,
         "ai_coder_name": current,
         "host_declared_ai_coder_name": declared,
@@ -2742,8 +2768,9 @@ def _resolve_write_owner(
     owner, so it never asks, Appendix A R4).
 
     Order of checks (D7 3.2): an unreadable or newer-format sidecar, then
-    unset, then this host's declaration conflicting with the project's
-    name, then a tool-supplied owner that is not the project's name.
+    unset, then the AI coder name in Exegete's settings conflicting with
+    the project's name, then a tool-supplied owner that is not the
+    project's name.
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -4990,8 +5017,8 @@ def _set_name_warnings(ro, state, name: str,
                 f"\"{variant}\"; QualCoder treats them as two coders.")
     if state.name == name:
         warnings.append(
-            "Unchanged; the choice was recorded again (acknowledging this "
-            "host's declaration)." if declared else
+            "Unchanged; the choice was recorded again (acknowledging the "
+            "AI coder name in Exegete's settings)." if declared else
             "Unchanged; recorded again.")
     return warnings
 
@@ -6510,8 +6537,9 @@ def export_refi_qda(
 
     The categories above the exported codes are included, as non-codable
     parent codes. The one export user is named after the project's AI
-    coder name, else this host's declaration (EXEGETE_AI_CODER_NAME)
-    or the built-in default; the result says which (ai_user_name_source).
+    coder name, else the AI coder name in Exegete's settings
+    (EXEGETE_AI_CODER_NAME) or the built-in default; the result says which
+    (ai_user_name_source).
 
     Args:
         output_path: Where to write the .qdpx file (must end in .qdpx; the
@@ -6683,7 +6711,8 @@ def export_refi_qda(
         "codes_exported": len({s.code_id for s in suggestions}),
         "files_exported": len({s.file_id for s in suggestions}),
         # Where the single AI User's name came from: the project's own AI
-        # coder name, this host's declaration, or the built-in default.
+        # coder name, the AI coder name in Exegete's settings (the value
+        # "host_declaration"), or the built-in default.
         # The export never asks for one (B1.11).
         "ai_user_name_source": _ai_user_name_source(),
         # The note used to say categories were left out, while the file
@@ -12677,10 +12706,12 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "again."
             },
             "ai_coder_name": "Rows Exegete writes carry the PROJECT's AI "
-                             "coder name, which the researcher chooses. The "
-                             "first write that needs it stops and asks: relay "
-                             "the question, and call "
-                             "set_project_ai_coder_name with the user's "
+                             "coder name, which the researcher chooses: in "
+                             "Exegete's settings, which give it to each "
+                             "project Exegete creates, or, in another "
+                             "project, when a write first needs it: that "
+                             "write stops and asks; relay the question, and "
+                             "call set_project_ai_coder_name with the user's "
                              "answer. A model name is a good answer, because "
                              "codings by different models can then be "
                              "compared later with compare_coders. Never pick "
@@ -14852,9 +14883,9 @@ def _ai_names_for_project() -> List[str]:
     """The names this server treats as its own AI work here (H3).
 
     One helper defines this for the whole server: the project's current
-    AI coder name and its history, the built-in default, and this host's
-    declaration. Reads never ask, so an unset project yields the default
-    alone rather than a refusal.
+    AI coder name and its history, the built-in default, and the AI coder
+    name in Exegete's settings. Reads never ask, so an unset project yields
+    the default alone rather than a refusal.
     """
     try:
         return list(ai_coder_names_for_project(_current_project_folder()))
@@ -17904,8 +17935,9 @@ def pseudonymise_source(
             result["execute_with"]["before_executing"] = ask
             # The resolver's own account, not a fixed sentence: four
             # distinct refusals reach here (no name set, the sidecar
-            # unreadable, the sidecar of a newer format, this host's
-            # declaration conflicting with the project's name), and "no
+            # unreadable, the sidecar of a newer format, the AI coder
+            # name in Exegete's settings conflicting with the project's
+            # name), and "no
             # AI coder name is set" was false on three of them (fix
             # round 4, R4). The quick picks are pointed at only where
             # the ask carries any.
@@ -20396,17 +20428,86 @@ def _created_project_material_step() -> str:
             "once (create_code with parent_code_id).")
 
 
+# The AI coder name in Exegete's settings, given to each project
+# create_project makes (v0.15.0, ruling 73, item 6: "a filled-in name is
+# used for new projects without asking"). Stored as the setter stores a
+# name, with the setting recorded as acknowledged (`host_declaration`),
+# so the once-per-project question never fires on it; the answer says
+# so. A project made elsewhere is asked as before, the setting offered
+# first.
+SETTINGS_NOTE = "Taken from Exegete's settings when the project was created."
+AI_SETTING_NOT_STORED_WARNING = (
+    "The AI coder name in Exegete's settings, \"{n}\", was not stored: "
+    "{why}. Ask the researcher for another (set_project_ai_coder_name), "
+    "and suggest changing {place}.")
+AI_SETTING_DEFAULT_REASON = (
+    "QualCoder reserves \"default\" for anyone who has not set a name")
+AI_SETTING_SPEAKER_REASON = "it is QualCoder's speaker coder"
+AI_SETTING_STORE_FAILED_WARNING = (
+    "The AI coder name in Exegete's settings, \"{n}\", was not stored with "
+    "the new project ({kind}); the first change asks for it, with the "
+    "setting offered first.")
+AI_SETTING_STORED_STEP = (
+    "The AI coder name is \"{n}\", from Exegete's settings, stored with "
+    "the project (exegete.json in the project folder) without asking; "
+    "every row Exegete writes here carries it. Tell the researcher. "
+    "Another name can be set for this project with "
+    "set_project_ai_coder_name, on their word.")
+
+
+def _store_ai_setting_at_creation(folder: Path
+                                  ) -> Tuple[Optional[str], Optional[str]]:
+    """Store the AI coder name in Exegete's settings with a project
+    create_project has just written: (the name stored, None), or
+    (None, the warning to add), or (None, None) when the setting is not
+    filled in.
+
+    A new project has no hidden coder and no AI rows, so neither is
+    checked; the setter's other refusals that can apply here are
+    QualCoder's "default" and its speaker coder, each answered with a
+    warning. The setting equal to the researcher's own coder name has
+    already refused the creation (`_coder_name_for_creation`). A file
+    that cannot be written leaves the project created, with a warning;
+    the earlier file's marker, if it cannot be written, is logged and
+    retried by the next write, as for any first naming.
+    """
+    name = host_declaration()
+    if name is None:
+        return None, None
+    if name in ("default", SPEAKER_SYSTEM_CODER):
+        why = (AI_SETTING_DEFAULT_REASON if name == "default"
+               else AI_SETTING_SPEAKER_REASON)
+        return None, AI_SETTING_NOT_STORED_WARNING.format(
+            n=name, why=why, place=_settings_place("ai"))
+    try:
+        store_ai_coder_name(folder, name, note=SETTINGS_NOTE,
+                            host_declaration=name)
+    except SidecarWriteError as error:
+        # The kind only: the message of an unreadable file names its path
+        kind = type(error.__cause__ or error).__name__
+        logger.error("The AI coder name in the settings could not be "
+                     "stored with a created project: %s", kind)
+        return None, AI_SETTING_STORE_FAILED_WARNING.format(n=name,
+                                                            kind=kind)
+    logger.info("The AI coder name in the settings was stored with a "
+                "created project")
+    return name, None
+
+
 def _created_project_next_steps(coder: str,
-                                previous: Optional[str]) -> List[str]:
+                                previous: Optional[str],
+                                ai_name: Optional[str] = None) -> List[str]:
     differ = (f"it must differ from the researcher's own coder name, "
               f"\"{coder}\"." if coder else
               "the researcher's own coder name is not known, so make sure "
               "the name chosen is not theirs.")
+    ai_step = (AI_SETTING_STORED_STEP.format(n=ai_name) if ai_name else
+               ("No AI coder name is set for this project yet. Ask the "
+                "researcher which name the AI's codings and other writes "
+                "should be stored under, and call set_project_ai_coder_name "
+                "before the first write that needs it; " + differ))
     return [
-        ("No AI coder name is set for this project yet. Ask the researcher "
-         "which name the AI's codings and other writes should be stored "
-         "under, and call set_project_ai_coder_name before the first write "
-         "that needs it; " + differ),
+        ai_step,
         _created_project_material_step(),
         ("The project memo is empty, as QualCoder leaves a new project's; "
          "set_memo with target_type 'project' writes it (research topic "
@@ -20533,6 +20634,9 @@ def create_project(name: str, directory: Optional[str] = None,
     pass coder_name_not_known=true instead: the project is then created
     without one, and the result says what that means.
 
+    When the AI coder name is filled in Exegete's settings, the new project
+    stores it too, and the answer says so.
+
     Names: the name becomes a folder, so it may not hold / \\ : < > | ? * or ",
     end in a dot or a space, start with a dot, be a Windows device name such as
     CON, hold "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in
@@ -20638,6 +20742,11 @@ def create_project(name: str, directory: Optional[str] = None,
             _creation_failure_text(error, folder))
     logger.info("Created a new project (schema %s)",
                 new_project.SCHEMA_VERSION)
+    # v0.15.0: the AI coder name in Exegete's settings goes with the new
+    # project, before it is selected
+    ai_name, ai_warning = _store_ai_setting_at_creation(folder)
+    if ai_warning is not None:
+        warnings.append(ai_warning)
 
     previous = current_project_path
     result: Dict[str, Any] = {
@@ -20651,6 +20760,9 @@ def create_project(name: str, directory: Optional[str] = None,
         "coder_name_known": bool(stored_coder),
         # v0.15.0: "settings", "given" or "not_known"
         "coder_name_source": creation_coder.source,
+        # v0.15.0: the AI coder name in Exegete's settings, when stored
+        "ai_coder_name": ({"name": ai_name, "source": "settings"}
+                          if ai_name else None),
         "selected": False,
         "previous_project": previous,
         "projects_folder": _projects_folder(),
@@ -20680,7 +20792,7 @@ def create_project(name: str, directory: Optional[str] = None,
             f"({type(error).__name__}). Select it with select_project "
             f"and the project_path above.")
     result["next_steps"] = _created_project_next_steps(stored_coder,
-                                                       previous)
+                                                       previous, ai_name)
     # The brief's second net (v0.14.2)
     result["brief"] = BRIEF_REMINDER
     result["opening_in_qualcoder"] = {

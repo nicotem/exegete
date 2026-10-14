@@ -297,8 +297,9 @@ Apply the approved codings to the project
 4. Writes each coding's reading (explicit or interpretive) first in its
    memo, then the reasoning
 5. Records the PROJECT's AI coder name as owner, which the researcher
-   chooses the first time a write needs it (`set_project_ai_coder_name`;
-   see "Choosing the AI coder name" in TOOLS.md). Before that choice is
+   chooses in Exegete's settings, for the projects Exegete creates, or
+   the first time a write needs it (`set_project_ai_coder_name`; see
+   "Choosing the AI coder name" in TOOLS.md). Before that choice is
    made the write stops and asks rather than guessing.
 6. Reports success with coding IDs (ctids)
 

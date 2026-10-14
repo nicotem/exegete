@@ -382,7 +382,8 @@ the project keeps it so that your work and the AI's stay apart (QualCoder, if yo
 it). Not using QualCoder? Any name you choose will do. Do not know
 yours? Say so. Before its first write, it asks for the AI coder name,
 kept per project, under which Exegete writes what is done through the
-conversation.
+conversation, unless the project was made while it was filled in
+Exegete's settings.
 
 **A project you already have.** Ask the assistant to copy it into its
 folder for projects and to work on the copy. The original is not

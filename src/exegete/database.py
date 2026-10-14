@@ -10274,10 +10274,13 @@ class QualcoderDatabase:
         ).fetchone()[0]
         carries_memo = self._category_merge_carries_memo(into_category_id)
         if carries_memo:
+            # QualCoder's own category merge (code_tree.py:1413 at
+            # 9bddf17), cited in the answer until v0.15.0 (piece 8, fix
+            # round 1)
             memo_note = (" The source category's memo is carried into the "
-                         "target category's memo under a provenance note "
-                         "(master parity, code_tree.py:1413); a '#####' "
-                         "private section on the target stays private.")
+                         "target category's memo under a provenance note; "
+                         "a '#####' private section on the target stays "
+                         "private.")
         elif into_category_id is None:
             memo_note = (" Merging to the top level removes the source "
                          "category's memo with its row; the mandatory backup "

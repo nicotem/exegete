@@ -12,6 +12,8 @@ QualCoder only about QualCoder itself or for a researcher who uses it:
 1. merge_codes' preview with sub-codes: where the provenance line lands;
 2. merge_codes' preview of the sub-codes that move;
 3. merge_category to the top level: the source memo goes with its row;
+   into another category (fix round 1): the memo carried, without the
+   preview's citation of QualCoder's code;
 4. merge_codes on a project from before sub-codes: the cause, the older
    schema, rather than a comparison;
 5. merge_category on such a project: the same;
@@ -30,8 +32,10 @@ QualCoder only about QualCoder itself or for a researcher who uses it:
     researcher who uses it;
 17. two checks on coder names: the project's coder lists, a coder name;
 18. create_project's next step on the project memo: Exegete's own reason
-    (the brief's rule 11), and QualCoder 4.0's assistant only when the
-    new folder's history with QualCoder is not "none".
+    (where the assistant reads the study's method before judging a
+    request, said in words rather than by a rule's number, fix round 1),
+    and QualCoder 4.0's assistant only when the level for the new folder
+    (piece 6's) is not "none".
 
 Entry 12 (the start-up refusal of an empty AI coder name setting) has no
 text left to change: since the coder name settings of v0.15.0 an empty
@@ -55,6 +59,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
+from exegete import names  # noqa: E402
 from exegete import project_settings as ps  # noqa: E402
 from exegete.database import QualcoderDatabase  # noqa: E402
 from exegete.sessions import SessionManager  # noqa: E402
@@ -63,6 +68,7 @@ from test_v17_support import add_subcode, make_project  # noqa: E402
 
 NEW = ps.SIDECAR_NAME
 OLD = ps.OLD_SIDECAR_NAME
+USES_QUALCODER = names.NEW_ONLY_SETTINGS["uses_qualcoder"]
 EARLIER = ("an older copy of Exegete (then called qualcoder-mcp, versions "
            "0.12 to 0.14)")
 
@@ -94,12 +100,20 @@ OLD_IN_ANSWERS = (
     "in QualCoder's coder lists; keep them short",
     "a QualCoder coder name must be plain single-line text",
     "as QualCoder leaves a new project's",
+    # fix round 1: the merge preview's citation of QualCoder's code, and
+    # the memo step's pointer by number, which leads to another section
+    # in the full brief
+    "(master parity, code_tree.py:1413)",
+    "(the brief, rule 11)",
 )
 
 # The new words, as each answer gives them
 MERGE_LANDS = (". It lands before any private section the target has.")
 SUBCODES_MOVE = ("1 sub-code(s) of 'Stress' move under 'Coping', with "
                  "their own sub-codes; their codings stay theirs.")
+CARRIED = (" The source category's memo is carried into the target "
+           "category's memo under a provenance note; a '#####' private "
+           "section on the target stays private.")
 TOP_LEVEL = (" Merging to the top level removes the source category's "
              "memo with its row; the mandatory backup keeps a copy.")
 OLDER_CODE = ("On this project's older schema (from before sub-codes) the "
@@ -148,7 +162,7 @@ NOT_PLAIN_END = "; a coder name must be plain single-line text."
 MEMO_STEP = (
     "The project memo is empty; set_memo with target_type 'project' writes "
     "it (research topic and questions, methodology, participants). It is "
-    "where you read the study's method (the brief, rule 11).")
+    "where you read the study's method before judging a request.")
 MEMO_QUALCODER = (" QualCoder 4.0's own assistant reads it as the "
                   "project's context too.")
 
@@ -270,6 +284,21 @@ class TestMergeCategory:
             "sub-categories to the target (codings are untouched; they key "
             "on the code, not the category), then deletes the source "
             "category." + TOP_LEVEL)
+
+    def test_into_another_category(self, ladder):
+        """Fix round 1, beside entries 3 and 5: the memo carried, the
+        note without its citation of QualCoder's code."""
+        ladder("v17", _with_child_category)
+        shown = json.loads(server.merge_category(
+            2, into_category="Category A"))["preview"]
+        assert shown["source_memo_carried_to_target"] is True
+        assert shown["note"] == (
+            "Merging a category reparents its codes and direct "
+            "sub-categories to the target (codings are untouched; they key "
+            "on the code, not the category), then deletes the source "
+            "category." + CARRIED)
+        for word in ("parity", "code_tree", "QualCoder"):
+            assert word not in shown["note"], word
 
     def test_on_an_older_schema(self, ladder):
         """Entry 5."""
@@ -564,8 +593,11 @@ class TestTwoChecksOnCoderNames:
 
 class TestCreateProjectsMemoStep:
     """Entry 18, both ways: QualCoder 4.0's assistant is named only when
-    the new folder's history with QualCoder is not "none" (here, its
-    settings folder in the home)."""
+    the level for the new folder (piece 6's) is not "none": QualCoder's
+    settings folder in the home, unless the researcher has said they do
+    not use it, or their answer that they do (fix round 1 pins both, as
+    the CHANGELOG words them). A new folder shows no trace of QualCoder:
+    create_project refuses a name whose backups sit beside it."""
 
     def _memo_step(self, tmp_path):
         work = tmp_path / "work"
@@ -590,6 +622,23 @@ class TestCreateProjectsMemoStep:
         (home / ".qualcoder").mkdir()
         assert self._memo_step(tmp_path) == MEMO_STEP + MEMO_QUALCODER
 
+    def test_with_the_researchers_answer(self, tmp_path, restore_selection,
+                                         monkeypatch):
+        """No settings folder, the answer "yes": the sentence."""
+        home = Path.home()
+        assert tmp_path in home.parents
+        assert not (home / ".qualcoder").exists()
+        monkeypatch.setenv(USES_QUALCODER, "yes")
+        assert self._memo_step(tmp_path) == MEMO_STEP + MEMO_QUALCODER
+
+    def test_the_answer_no_outweighs_the_settings_folder(
+            self, tmp_path, restore_selection, monkeypatch):
+        home = Path.home()
+        assert tmp_path in home.parents
+        (home / ".qualcoder").mkdir()
+        monkeypatch.setenv(USES_QUALCODER, "no")
+        assert self._memo_step(tmp_path) == MEMO_STEP
+
 
 # ===========================================================================
 # The CHANGELOG
@@ -604,15 +653,29 @@ def test_the_changelog_says_so():
                   "Exegete's earlier name is mentioned only where an "
                   "earlier copy's file is found",
                   "On this project's older schema (from before sub-codes)",
-                  "with one approval",
+                  "says that the whole branch is deleted \"with one "
+                  "approval\"",
+                  "merging it into another category says that its memo is "
+                  "carried there under a provenance note, without its "
+                  "citation of QualCoder's code",
                   "would cut it and its codes off from the code tree",
                   "without its citation of QualCoder's code",
                   EARLIER,
-                  "the project keeps them as two coders",
+                  "the warning on two coder names that differ only by "
+                  "letter case now says \"the project keeps them as two "
+                  "coders\"",
                   "in QualCoder only if they use it",
                   "the project's coder lists",
                   "a project keeps copies of its imported documents, and "
                   "any recordings, in its folders",
-                  "only when the new folder shows a history with "
-                  "QualCoder"):
+                  "only when there is a sign of QualCoder on this "
+                  "computer: QualCoder's settings folder (unless the "
+                  "researcher has said in Exegete's settings that they do "
+                  "not use it) or the researcher's answer that they use "
+                  "it."):
         assert words in unreleased, words
+    # fix round 1: the two slips, and the narrower condition, are gone
+    for slip in ("preview of a code with sub-codes deletes the whole",
+                 "are two coders because",
+                 "shows a history with QualCoder"):
+        assert slip not in unreleased, slip

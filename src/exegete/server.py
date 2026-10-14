@@ -20650,13 +20650,15 @@ def _store_ai_setting_at_creation(folder: Path
 
 
 # create_project's next step on the project memo (v0.15.0, not presuming
-# QualCoder, piece 8): Exegete's own reason first (the brief's rule 11);
-# QualCoder 4.0's assistant only when the new folder's history with
-# QualCoder is not "none" (piece 6's level).
+# QualCoder, piece 8): Exegete's own reason first (the short brief's rule
+# 11, the full brief's section 8, "Judging requests", said in words: fix
+# round 1 dropped "(the brief, rule 11)", since the full brief numbers
+# sections and its section 11 is another); QualCoder 4.0's assistant only
+# when the level for the new folder (piece 6's) is not "none".
 CREATED_MEMO_STEP = (
     "The project memo is empty; set_memo with target_type 'project' writes "
     "it (research topic and questions, methodology, participants). It is "
-    "where you read the study's method (the brief, rule 11).")
+    "where you read the study's method before judging a request.")
 CREATED_MEMO_STEP_QUALCODER = (
     " QualCoder 4.0's own assistant reads it as the project's context too.")
 

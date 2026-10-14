@@ -1376,11 +1376,20 @@ class TestTheClassCannotComeBack:
     # new project, the four views QualCoder 4.0 creates, which are what
     # every read of codings and annotations then goes through. The
     # f-string and its fixed tail are both string nodes, so both appear.
+    #
+    # v0.15.0, correcting the researcher's own coder name
+    # (set_project_coder_name): whether ONE name has a row, never its
+    # visibility (the plan of the change and its signed state; who is
+    # hidden comes from `coder_visibility_map` alone, and the preview's
+    # warning from the map as well), and the statement that removes the
+    # old name's row when the new name already has one, a write.
     EXPECTED = {
         "database.py": {
             "SELECT COUNT(DISTINCT name) FROM coder_names "
             "WHERE visibility = 0",
             "SELECT name, visibility FROM coder_names",
+            "SELECT 1 FROM coder_names WHERE name = ? LIMIT 1",
+            "DELETE FROM coder_names WHERE name = ?",
         },
         "new_project.py": {
             "CREATE VIEW \x00_visible AS SELECT t.* FROM \x00 t WHERE NOT "
@@ -1449,8 +1458,9 @@ class TestTheClassCannotComeBack:
     def test_the_sweep_finds_something(self):
         # An empty sweep would make the assertion above pass whatever
         # the source says. Two reads, and the two strings of the new
-        # project's view statement.
-        assert sum(len(v) for v in self._reads().values()) == 4
+        # project's view statement; and since v0.15.0 the correction's
+        # presence read and its removal of a row.
+        assert sum(len(v) for v in self._reads().values()) == 6
 
     def test_the_sweep_would_notice_a_per_name_read(self):
         assert self._reads(

@@ -4227,28 +4227,22 @@ class QualcoderDatabase:
                 found[probe] = row is not None
         return found
 
-    def coder_list_row(self, name: str) -> Optional[Dict[str, Any]]:
-        """The name's row in `coder_names`: None when the project has no
-        such table or the name has no row; otherwise {"visibility": the
-        stored value, or None without the column}. Raises RuntimeError
-        when the table does not answer."""
+    def coder_list_has(self, name: str) -> bool:
+        """Whether the name has a row in `coder_names` (False when the
+        project has no such table). Presence only: who is hidden is read
+        by `coder_visibility_map` alone. Raises RuntimeError when the
+        table does not answer."""
         caps = getattr(self, "capabilities", None)
         if caps is not None and not caps.table_exists("coder_names"):
-            return None
+            return False
         try:
-            columns = {r[1] for r in self.conn.execute(
-                "PRAGMA table_info(coder_names)").fetchall()}
-            pick = ("visibility" if "visibility" in columns
-                    else "NULL AS visibility")
             row = self.conn.execute(
-                f"SELECT {pick} FROM coder_names WHERE name = ? LIMIT 1",
+                "SELECT 1 FROM coder_names WHERE name = ? LIMIT 1",
                 (name,)).fetchone()
         except sqlite3.Error as e:
-            _raise_query_error(e, "coder_list_row",
+            _raise_query_error(e, "coder_list_has",
                                "Could not read this project's coder list")
-        if row is None:
-            return None
-        return {"visibility": row[0]}
+        return row is not None
 
     def coder_list_change(self, old: Optional[str], new: str) -> str:
         """What changing the project's coder name from `old` to `new`
@@ -4261,8 +4255,8 @@ class QualcoderDatabase:
         caps = getattr(self, "capabilities", None)
         if caps is not None and not caps.table_exists("coder_names"):
             return "unchanged"
-        has_old = old is not None and self.coder_list_row(old) is not None
-        has_new = self.coder_list_row(new) is not None
+        has_old = old is not None and self.coder_list_has(old)
+        has_new = self.coder_list_has(new)
         if has_old:
             return "removed_old" if has_new else "renamed"
         return "unchanged" if has_new else "added"
@@ -4292,10 +4286,20 @@ class QualcoderDatabase:
         or the name changed meanwhile, refuses the change."""
         stored = (self.get_project_info() or {}).get("coder_name")
         current = stored or None
+        try:
+            visibility: Any = self.coder_visibility_map()
+        except CoderVisibilityUnreadable:
+            visibility = "unreadable"
+
+        def row(name):
+            if name is None:
+                return None
+            return [self.coder_list_has(name),
+                    visibility.get(name) if isinstance(visibility, dict)
+                    else visibility]
         return {
             "stored": stored,
-            "rows": [None if current is None else self.coder_list_row(
-                current), self.coder_list_row(new)],
+            "rows": [row(current), row(new)],
             "probes": ({} if current is None
                        else self.coder_name_records(current)),
         }
@@ -4304,7 +4308,7 @@ class QualcoderDatabase:
                                   auto_commit: bool = True) -> Dict[str, Any]:
         """Set the project's own coder name to `new` (v0.15.0).
 
-        `UPDATE project SET codername`, what QualCoder's own settings
+        It sets `project.codername`, as QualCoder's own settings
         do; in `coder_names`, when the table exists, the old name's row
         is renamed to the new one, keeping its visibility, or removed
         when the new name already has a row, or, when the old name has

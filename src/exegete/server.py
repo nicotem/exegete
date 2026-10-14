@@ -4580,6 +4580,10 @@ CODER_NAME_GIVEN_NOTE = (
 CODER_NAME_SETTING_NOT_CHANGED_NOTE = (
     "The researcher's own coder name in Exegete's settings is \"{setting}\", "
     "which new projects take; the settings are not changed.")
+# Given only when the project's history with QualCoder shows a sign
+# (`_qualcoder_history`): QualCoder 4.0 asks "keep or switch" when the
+# project's name differs from its "Current coder" (__main__.py:2476-2494
+# at the tag 4.0), and Switch writes the name into its settings file.
 CODER_NAME_QUALCODER_SWITCH_NOTE = (
     "QualCoder compares this name with the one in its own settings when it "
     "opens the project, and asks whether to keep it or switch; Switch "
@@ -4726,6 +4730,11 @@ def set_project_coder_name(name: str,
     if setting is not None and setting != name:
         notes.append(CODER_NAME_SETTING_NOT_CHANGED_NOTE.format(
             setting=setting))
+    # Only where the project or this computer shows QualCoder (its
+    # history, worked out at selection)
+    history = _qualcoder_history()
+    if history is not None and history.level != "none":
+        notes.append(CODER_NAME_QUALCODER_SWITCH_NOTE)
     result["notes"] = notes
     return json.dumps(result, indent=2)
 

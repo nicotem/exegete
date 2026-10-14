@@ -1195,6 +1195,12 @@ Two further rules touch files on your disk:
   settings folder's contents (QualCoder's settings and API keys) are
   never listed, opened or measured, and the answer holds plain sentences
   and a yes or no, never a path or a project's name.
+  `set_project_coder_name` reads the same history after a change it
+  has made, to decide whether its answer says how QualCoder treats the
+  name; when nothing has worked the history out since the project was
+  selected (straight after `create_project` or `restore_backup`, or for
+  a project set in the host's configuration), that reading runs the
+  process scan described above.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
   folder with four empty subfolders and a new `data.qda`, and records

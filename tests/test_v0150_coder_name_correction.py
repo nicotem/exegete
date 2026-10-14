@@ -758,6 +758,33 @@ class TestTheNotesAfterTheChange:
         monkeypatch.setenv("EXEGETE_CODER_NAME", NEW)
         assert len(_change(NEW)["notes"]) == 1
 
+    QUALCODER_NOTE = (
+        "QualCoder compares this name with the one in its own settings when "
+        "it opens the project, and asks whether to keep it or switch; Switch "
+        "changes the name there for every project.")
+
+    @pytest.mark.parametrize("sign", ["project", "computer"])
+    def test_the_qualcoder_note_with_a_sign(self, tmp_path, sign):
+        """A trace on the project (its ai_data folder), or QualCoder's
+        settings folder on this computer: the project's history with
+        QualCoder, worked out when it is selected."""
+        folder = _make(tmp_path)
+        if sign == "project":
+            (folder / "ai_data").mkdir()
+        else:
+            (Path.home() / ".qualcoder").mkdir()
+        assert json.loads(server.select_project(str(folder)))["success"]
+        assert server._qualcoder_history().level == sign
+        notes = _change(NEW)["notes"]
+        assert notes[-1] == self.QUALCODER_NOTE
+
+    def test_no_qualcoder_note_without_a_sign(self, tmp_path):
+        folder = _make(tmp_path)
+        assert json.loads(server.select_project(str(folder)))["success"]
+        assert server._qualcoder_history().level == "none"
+        notes = _change(NEW)["notes"]
+        assert self.QUALCODER_NOTE not in notes and len(notes) == 1
+
 
 # ---------------------------------------------------------------------------
 # The texts that said no tool could do this

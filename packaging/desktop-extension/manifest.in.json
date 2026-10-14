@@ -69,7 +69,7 @@
     "ai_coder_name": {
       "type": "string",
       "title": "AI coder name",
-      "description": "The name you would like Claude's work in a project stored under, so that it stays apart from yours; a model's name lets codings by different models be compared later. When a project has no AI coder name yet, Claude asks you for one the first time it needs it and offers this one first; when a project already has another, Claude asks you once which to use there. Left empty, Claude still asks. It must differ from your coder name. At most 80 characters; a line break or tab, an invisible formatting character (the joiners some scripts need are allowed) or ##### stops the extension from starting.",
+      "description": "The name Claude's work in your projects is stored under, so that it stays apart from yours; a model's name lets codings by different models be compared later. Filled in, Exegete gives it to each project it creates, without asking, and offers it first when another project needs one; left empty, Claude asks the first time a project needs it. A project that already has an AI coder name keeps it, and Claude asks you once whether to switch. It must differ from your coder name. At most 80 characters; a line break or tab, an invisible formatting character (the joiners some scripts need are allowed) or ##### stops the extension from starting.",
       "default": "",
       "required": false
     },

@@ -777,9 +777,10 @@ def no_database_note(path: Path) -> str:
     and iCloud placeholders named when there are any."""
     text = (f"'{path.name}' holds no usable project database: its data.qda "
             f"is missing or empty. It holds more than a project creation "
-            f"leaves, which may be the researcher's own files (QualCoder "
-            f"keeps a project's imported recordings and documents in its "
-            f"folders) or a project a sync service has not downloaded yet, "
+            f"leaves, which may be the researcher's own files (a project "
+            f"keeps copies of its imported documents, and any recordings, "
+            f"in its folders) or a project a sync service has not "
+            f"downloaded yet, "
             f"so check what is in it before removing anything.")
     placeholders = _icloud_placeholders(path)
     if placeholders:

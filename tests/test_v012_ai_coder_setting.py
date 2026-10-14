@@ -748,10 +748,11 @@ class TestSetterValidation:
         codername = server.db.get_project_info()["coder_name"]
         out = json.loads(server.set_project_ai_coder_name(codername))
         assert out["error"] == (
-            f"\"{codername}\" is this project's own coder name, so AI rows "
-            f"would be indistinguishable from the user's in QualCoder's "
-            f"coder lists, visibility toggle, undo and reports. Choose a "
-            f"different name. Nothing was changed.")
+            f"\"{codername}\" is this project's own coder name (the "
+            f"researcher's), so the AI's codings could not be told apart "
+            f"from the researcher's, in Exegete's coder filters and "
+            f"compare_coders as in QualCoder's coder lists and reports. "
+            f"Choose a different name. Nothing was changed.")
 
     def test_the_literal_default_is_refused(self, setup_server):
         out = json.loads(server.set_project_ai_coder_name("default"))

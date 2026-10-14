@@ -225,8 +225,8 @@ class TestNotSet:
         assert project_settings.settings_coder_name(environ) is None
         assert project_settings.settings_coder_name_problem(environ) == (
             "EXEGETE_CODER_NAME contains control characters (newlines, "
-            "tabs or similar); a QualCoder coder name must be plain "
-            "single-line text.")
+            "tabs or similar); a coder name must be plain single-line "
+            "text.")
 
 
 # ---------------------------------------------------------------------------
@@ -304,8 +304,8 @@ class TestStartUp:
         assert self._start(monkeypatch, {CODER: "Ann\nLee"}) == 1
         assert capsys.readouterr().err.splitlines()[-1] == (
             "Error: EXEGETE_CODER_NAME contains control characters "
-            "(newlines, tabs or similar); a QualCoder coder name must be "
-            "plain single-line text. Change \"Your coder name\" in "
+            "(newlines, tabs or similar); a coder name must be plain "
+            "single-line text. Change \"Your coder name\" in "
             "Exegete's settings (Settings, Extensions, Exegete), or leave "
             "it empty to be asked for the name in each new project.")
 

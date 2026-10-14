@@ -139,9 +139,9 @@ _UNREADABLE = (
 
 _NEWER_FORMAT = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) was written by a newer version of Exegete "
-    f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
-    f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
+    "project folder) was written by a newer version of Exegete and this "
+    "one cannot write it safely. "
+    f"Upgrade {names.SERVER_NAME}, or ask the "
     "user to move the file aside; the next write will then ask for the "
     "name again. Nothing was written.")
 
@@ -171,9 +171,9 @@ _UNREADABLE_BESIDE_EARLIER = (
 
 _NEWER_FORMAT_BESIDE_EARLIER = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) was written by a newer version of Exegete "
-    f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
-    f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
+    "project folder) was written by a newer version of Exegete and this "
+    "one cannot write it safely. "
+    f"Upgrade {names.SERVER_NAME}, or ask the "
     "user to move both {file} and {old} aside: {old} beside it is not "
     "marked as moved and still holds \"{held}\", so moving {file} aside "
     "alone would bring that name back without asking. Nothing was "

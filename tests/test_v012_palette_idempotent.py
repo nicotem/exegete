@@ -758,16 +758,17 @@ class TestAmbiguityGuidance:
     def test_case_twin_cases_name_no_tool_this_server_does_not_have(
             self, setup_server, qualcoder_db_path):
         # Cases have a rename tool here since v0.13 (rename_case), and no
-        # merge tool, so the hint names the one and sends the other to
-        # QualCoder rather than inventing a tool.
+        # merge tool, so the hint names the one and says that Exegete does
+        # not merge cases yet rather than inventing a tool (v0.15.0, not
+        # presuming QualCoder, piece 7: it sent the merge to QualCoder).
         for name in ("Case  one", "Case one"):
             _exec(qualcoder_db_path,
                   "INSERT INTO cases (name, memo, owner, date) "
                   "VALUES (?, '', 'gui_user', '2024-01-15')", (name,))
         _reload()
         out = json.loads(server.create_case("case one"))
-        assert ("rename_case takes a case id; cases are merged in "
-                "QualCoder, not here") in out["error"]
+        assert ("rename_case takes a case id; Exegete does not merge "
+                "cases yet") in out["error"]
         assert "merge_case" not in out["error"]
 
     def test_category_resolution_names_the_comparison_it_makes(
@@ -1531,7 +1532,10 @@ class TestSubcodeMoves:
         assert out["created"] is False and out["match"] == "case_insensitive"
         assert out["requested"] == {"name": "sub", "parent_code_id": 2}
         assert out["code"]["parent_code_id"] == 1
-        assert "re-parenting a sub-code is done in QualCoder" in out["message"]
+        # v0.15.0 (not presuming QualCoder, piece 7): what Exegete does
+        # not do yet, rather than sending the researcher to QualCoder
+        assert ("Exegete does not move a sub-code to another parent yet"
+                in out["message"])
 
 
 # ===========================================================================

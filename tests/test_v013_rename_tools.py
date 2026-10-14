@@ -402,8 +402,9 @@ class TestRenameCaseSurface:
             _add_case(project, name)
         _reload()
         out = json.loads(server.create_case("case one"))
-        assert "rename_case takes a case id; cases are merged in " \
-               "QualCoder, not here" in out["error"]
+        # v0.15.0 (not presuming QualCoder, piece 7)
+        assert "rename_case takes a case id; Exegete does not merge " \
+               "cases yet" in out["error"]
 
 
 # ===========================================================================
@@ -662,15 +663,20 @@ class TestRenameFile:
             [{"name": "interview.txt"}]
 
 
-STILL_POSSIBLE = ("QualCoder's own Rename (Manage Files, the name's "
-                  "right-click menu, \"Rename database entry\") can still "
-                  "make this change if it is wanted.")
+# v0.15.0 (not presuming QualCoder, piece 7): why Exegete keeps the
+# ending, and QualCoder's own Rename for a researcher who uses it
+STILL_POSSIBLE = ("Exegete keeps this ending to protect the project's "
+                  "links and exports. If you use QualCoder and the change "
+                  "is wanted all the same, its own Rename can make it "
+                  "(Manage Files, the name's right-click menu, \"Rename "
+                  "database entry\").")
 
 
 class TestTheEndingRule:
     """The owner's ruling of 2026-09-23 (option b), case by case: refuse
     only a change QualCoder acts on, say why and that QualCoder's own
-    Rename can still do it; any other name changes freely."""
+    Rename can still do it, for a researcher who uses it; any other name
+    changes freely."""
 
     @pytest.fixture
     def media(self, project):
@@ -1204,9 +1210,10 @@ class TestARenameBack:
             "'legacy.txt'.")
         assert out["error"].endswith(
             "If it was this entry's own copy under a name it had before, "
-            "restore_backup or QualCoder's own Rename can put that name "
-            "back (restoring an earlier backup undoes everything done after "
-            "it, any pseudonymisation run included); Exegete recognises "
+            "restore_backup can put that name back (restoring an earlier "
+            "backup undoes everything done after it, any pseudonymisation "
+            "run included), or QualCoder's own Rename, if the researcher "
+            "uses it; Exegete recognises "
             "a rename back only from a "
             "backup that shows this entry with that name and, for its "
             "documents copy, the same text.")

@@ -530,9 +530,9 @@ When each is given, what it refuses and its overrides have not changed.
 ### Changed: the names list and pseudonymisation's messages
 
 The import's and pseudonymisation's messages about the names list lead
-with what every researcher can do in Exegete, and name QualCoder only
-for those who use it. When each is given, what it refuses and its
-counts have not changed.
+with what every researcher can do in Exegete, name QualCoder about its
+own imports and dialog, and offer its routes only to those who use it.
+When each is given, what it refuses and its counts have not changed.
 
 - **Importing into a project with no names list**: the preview suggests
   running `pseudonymise_source` on each file once it is in and before
@@ -546,23 +546,33 @@ counts have not changed.
   "the project's names list (pseudonyms.json, a list of {original,
   pseudonym} entries in QualCoder's format)", and of "a file written on
   Windows, by QualCoder or another program"; an import it stops says to
-  correct the list in a text editor, or with the Pseudonyms button in
-  QualCoder, if you use it. A restored backup that brings back a list says
-  that Exegete's `import_documents` applies it unless
-  `apply_project_pseudonyms` is false, and QualCoder on every text or
-  transcript import.
-- **Pseudonymisation's answers**: a run that saved the mapping says that
-  later imports apply the file, Exegete's in one pass, longest name
-  first, and QualCoder's one entry at a time, in file order; saving
-  under a mode that ignores letter case warns that later imports apply
-  the file case-sensitively, "in Exegete as in QualCoder"; a refusal of
-  a name the file already maps says that the file holds one pseudonym
-  per name; the refusal to save into a read-only names list says
-  "Exegete leaves it so"; a PDF is refused because the tool "rewrites text sources only"; and the steps
-  that named QualCoder's Pseudonyms dialog or a check in QualCoder
-  (nothing saved, a save not made, alternative spellings, parts the
-  preview could not read) name the way through in Exegete or by hand
-  first, and the dialog only for a researcher who uses QualCoder.
+  correct the list in a text editor, and, for a list that can be read
+  but not used, adds that the Pseudonyms button in QualCoder, if you use
+  it, can also remove an entry and add it again. A restored backup that
+  brings back a list says that Exegete's `import_documents` applies it
+  unless `apply_project_pseudonyms` is false, and QualCoder on every
+  text or transcript import.
+- **Pseudonymisation's answers**: a run that saved the mapping says
+  which later imports apply the file: Exegete's (`import_documents` by
+  default, `import_text_file` when asked) in one pass, longest name
+  first, so nothing they write is replaced again, and QualCoder's one
+  entry at a time, in file order, where an entry already in the file can
+  pre-empt a longer name, two names that overlap can come out
+  differently and a pseudonym that contains a name is rewritten again.
+  Saving under a mode that ignores letter case warns that later imports
+  apply the file case-sensitively, "in Exegete as in QualCoder"; a
+  refusal of a name the file already maps says that the file holds one
+  pseudonym per name; the refusal to save into a read-only names list
+  says "Exegete leaves it so"; and a PDF is refused because the tool
+  "rewrites text sources only". The steps that named QualCoder's
+  Pseudonyms dialog or a check in QualCoder name the way through in
+  Exegete or by hand first, and the dialog only for a researcher who
+  uses QualCoder: after nothing was saved, pick a file that contains one
+  of the names; after a save that was not made, save the mapping with a
+  run on another file that still contains one of the names, or write it
+  into pseudonyms.json with a text editor; for alternative spellings,
+  edit the file; for parts the preview could not read, check them by
+  hand or treat them as still holding names.
 
 ### Measured
 

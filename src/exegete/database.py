@@ -3636,10 +3636,11 @@ class QualcoderDatabase:
             # Such a value is no sign of a newer QualCoder (a trigger or a
             # damaged project can put it there), so the safer way through,
             # a backup from before, comes before the override (documents
-            # review, round 1).
-            safer = ("" if version is not None else
-                     "If the value was changed by mistake, a backup from "
-                     "before has it (list_backups, restore_backup). ")
+            # review, round 1). restore_backup is marked where a tool set
+            # lacks it.
+            safer = ("" if version is not None else _mark_unregistered(
+                "If the value was changed by mistake, a backup from before "
+                "has it (list_backups, restore_backup). "))
             return (False,
                     said +
                     "Writes are refused to protect the data. " + safer +
@@ -8617,11 +8618,12 @@ class QualcoderDatabase:
         except sqlite3.Error as e:
             _raise_query_error(e, "set_memo", "Failed to set memo")
         if row is None:
-            raise ValueError(
+            # restore_backup is marked where a tool set lacks it
+            raise ValueError(_mark_unregistered(
                 "This project has no project record, so it has no project "
                 "memo, and it is not a usable project in Exegete or in "
                 "QualCoder. Nothing was written; a backup made before the "
-                "record was lost has it (list_backups, restore_backup).")
+                "record was lost has it (list_backups, restore_backup)."))
         stored_memo = merge_public_memo(row["memo"], memo)
         public_memo = extract_ai_memo(stored_memo)
         try:

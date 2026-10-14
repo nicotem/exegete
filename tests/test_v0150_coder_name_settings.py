@@ -128,17 +128,19 @@ CODER_DESCRIPTION = (
     "characters; a line break or tab, an invisible formatting character "
     "(the joiners some scripts need are allowed) or ##### stops the "
     "extension from starting.")
+# The coder names, piece 3: the AI coder name in the settings is given
+# to each project Exegete creates (tests/test_v0150_ai_coder_name_setting.py)
 AI_DESCRIPTION = (
-    "The name you would like Claude's work in a project stored under, so "
-    "that it stays apart from yours; a model's name lets codings by "
-    "different models be compared later. When a project has no AI coder "
-    "name yet, Claude asks you for one the first time it needs it and "
-    "offers this one first; when a project already has another, Claude "
-    "asks you once which to use there. Left empty, Claude still asks. It "
-    "must differ from your coder name. At most 80 characters; a line "
-    "break or tab, an invisible formatting character (the joiners some "
-    "scripts need are allowed) or ##### stops the extension from "
-    "starting.")
+    "The name Claude's work in your projects is stored under, so that it "
+    "stays apart from yours; a model's name lets codings by different "
+    "models be compared later. Filled in, Exegete gives it to each project "
+    "it creates, without asking, and offers it first when another project "
+    "needs one; left empty, Claude asks the first time a project needs it. "
+    "A project that already has an AI coder name keeps it, and Claude asks "
+    "you once whether to switch. It must differ from your coder name. At "
+    "most 80 characters; a line break or tab, an invisible formatting "
+    "character (the joiners some scripts need are allowed) or ##### stops "
+    "the extension from starting.")
 
 
 class TestTheExtensionsSettings:
@@ -540,7 +542,9 @@ class TestTheDescription:
 
     def test_the_coder_name_paragraph(self):
         # v0.15.0, the coder names, piece 2: the sentence on
-        # set_project_coder_name (tests/test_v0150_coder_name_correction.py)
+        # set_project_coder_name (tests/test_v0150_coder_name_correction.py);
+        # piece 3: the paragraph on the AI coder name in the settings
+        # (tests/test_v0150_ai_coder_name_setting.py)
         server._apply_toolset("full")
         d = _flat(server.mcp.original_descriptions["create_project"])
         assert (
@@ -562,7 +566,9 @@ class TestTheDescription:
             "coder_name only with a "
             "name the researcher gave; if they do not know it, pass "
             "coder_name_not_known=true instead: the project is then created "
-            "without one, and the result says what that means. Names:") in d
+            "without one, and the result says what that means. When the AI "
+            "coder name is filled in Exegete's settings, the new project "
+            "stores it too, and the answer says so. Names:") in d
 
 
 # ---------------------------------------------------------------------------
@@ -739,9 +745,10 @@ class TestTheDocuments:
                 "AI's. Filled in, Exegete gives it to each new project it "
                 "makes, without asking, and says so; left empty, Claude asks "
                 "for it each time.") in install
-        assert ("- **AI coder name**: empty by default. It is the name you "
-                "would like Claude's work in a project stored under") \
-            in install
+        # the coder names, piece 3: what the AI setting now does
+        # (tests/test_v0150_ai_coder_name_setting.py)
+        assert ("- **AI coder name**: empty by default. It is the name "
+                "Claude's work in your projects is stored under") in install
         step = install[install.index("- **Your coder name**: empty"):
                        install.index("- **AI coder name**: empty")]
         assert ("Projects that already exist keep their coder name, or "
@@ -870,8 +877,10 @@ class TestTheDocuments:
                           text.index("## [0.14.3")]
         assert "### Added: your coder name and the AI coder name as " \
                "settings" in unreleased
-        assert "### Changed: an empty AI coder name, and the names the " \
-               "setter refuses" in unreleased
+        # the coder names, piece 3, renamed the heading for what the
+        # setting now does
+        assert "### Changed: the AI coder name in the settings, and the " \
+               "names the setter refuses" in unreleased
         flat = _flat(unreleased)
         assert ("**Projects that already exist keep their coder name, or "
                 "their lack of one**: Exegete gives the setting's name only "

@@ -216,7 +216,11 @@ def _tools(mode="full"):
 # name unless they have filled it in Exegete's settings, and the measure
 # went to "207,000" characters. That takes 46 characters, and the limit
 # is raised by that and no more: 36,502.
-README_LIMIT = 36_502
+# The coder names, piece 3: "Two coder names" says the AI coder name is
+# not asked for when the assistant made the project with that name filled
+# in Exegete's settings. That takes 72 characters, and the limit is
+# raised by that and no more: 36,574.
+README_LIMIT = 36_574
 
 
 def test_the_readme_stays_short():

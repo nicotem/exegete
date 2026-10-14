@@ -676,6 +676,36 @@ class TestAfterCreation:
         finally:
             conn.close()
 
+    def test_with_the_ai_coder_name_setting_two_files_more(self,
+                                                          monkeypatch):
+        """v0.15.0 (the coder names, piece 3), the named departure: with
+        the AI coder name filled in Exegete's settings, creation also
+        writes exegete.json, holding that name, and qualcoder_mcp.json,
+        written already marked as moved and holding no name; nothing
+        else. Without the setting, the test above holds (the suite clears
+        it)."""
+        from exegete.names import SETTINGS
+        monkeypatch.setenv(SETTINGS["ai_coder_name"][0], "Qwen 3.8 6bit")
+        answer = create("Two")
+        folder = Path(answer["project_path"])
+        assert sorted(p.name for p in folder.iterdir()) == [
+            "audio", "data.qda", "documents", "exegete.json", "images",
+            "qualcoder_mcp.json", "video"]
+        assert [p.name for p in folder.parent.iterdir()] == ["Two.qda"]
+        stored = json.loads((folder / "exegete.json").read_text(
+            encoding="utf-8"))
+        assert stored["ai_coder_name"]["name"] == "Qwen 3.8 6bit"
+        marker = json.loads((folder / "qualcoder_mcp.json").read_text(
+            encoding="utf-8"))
+        assert marker["moved_to"] == "exegete.json"
+        assert "ai_coder_name" not in marker
+        conn = sqlite3.connect(str(folder / "data.qda"))
+        try:
+            assert conn.execute("SELECT count(*) FROM journal"
+                                ).fetchone()[0] == 0
+        finally:
+            conn.close()
+
 
 # ---------------------------------------------------------------------------
 # Part 6: failures

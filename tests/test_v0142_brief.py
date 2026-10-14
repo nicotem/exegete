@@ -535,10 +535,13 @@ class TestTheSizes:
     # refusals (58 more in both sets). The coder names, piece 2, adds a
     # sentence on set_project_coder_name to create_project's description
     # (148 characters more in `full`); the tool itself is new, left out
-    # here (ADDED_AFTER_0142). Their entries as 0.14.2 served
-    # them are below, so every other tool is still held to 0.14.2's
-    # figure.
-    NOW = {"full": 199_524, "core": 65_353}
+    # here (ADDED_AFTER_0142). The coder names, piece 3, adds a sentence
+    # on the AI coder name in the settings to create_project's
+    # description (115 characters more in `full`) and names that setting
+    # in export_refi_qda's (17 more in `full`). Their entries as 0.14.2
+    # served them are below, so every other tool is still held to
+    # 0.14.2's figure.
+    NOW = {"full": 199_656, "core": 65_353}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -562,7 +565,9 @@ class TestTheSizes:
                           "propose_codes": 3_207,
                           "update_annotation": 2_581,
                           # the coder names, piece 1
-                          "set_project_ai_coder_name": 2_564}
+                          "set_project_ai_coder_name": 2_564,
+                          # the coder names, piece 3
+                          "export_refi_qda": 2_584}
     # Where `core` serves one of them marked (it names a tool `core`
     # lacks), its entry there as 0.14.2 served it
     CHANGED_AFTER_0142_IN_CORE = {"start_coding_session": 6_775,

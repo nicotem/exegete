@@ -620,9 +620,14 @@ CHANGED_0150 = {
     # when it is filled in, and the setter's refusal of that name; piece
     # 2: create_project's sentence on set_project_coder_name, which
     # corrects the name while nothing is recorded under it (2,228 to
-    # 2,374 characters on 3.13)
-    "create_project": (2374, 1885, "2ddbe9a53ffe4922"),
+    # 2,374 characters on 3.13); piece 3: create_project's sentence on
+    # the AI coder name in the settings, which the new project stores
+    # (2,374 to 2,486), and export_refi_qda's name for that setting, no
+    # longer "this host's declaration" (2,089 to 2,105;
+    # tests/test_v0150_ai_coder_name_setting.py pins both)
+    "create_project": (2486, 1975, "3de9483aca76e003"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
+    "export_refi_qda": (2105, 1734, "14ad70dbebf2cc8f"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

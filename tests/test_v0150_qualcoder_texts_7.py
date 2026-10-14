@@ -15,22 +15,29 @@ a researcher who uses it:
 2. a database file linked from outside the project folder: "where a
    project keeps it", not "as QualCoder makes it";
 3. the memo of a project with no project record: not a usable project
-   in Exegete or in QualCoder;
-4. a sub-code in a project from before sub-codes: the sign (QualCoder
-   3.8's schema) and that QualCoder 4.0 migrates it as it opens it;
+   in Exegete or in QualCoder; nothing was written, and a backup made
+   before the record was lost has it;
+4. a sub-code in a project from before sub-codes: the project's older
+   format is the sign, Exegete cannot bring a project up to date yet,
+   the code can be created now at the top level or in a category, and
+   QualCoder 4.0 is named only as a choice (never who saved the project
+   last, which is often Exegete);
 5. writes to a project with a newer schema, the override set: the last
    sentence of the warning, in two forms. The schema value is repeated
    in the warning and in the refusal only in QualCoder's form (`v` and
    up to four digits), as the log already did (DESIGN_lock_2.md, section
-   3, built here because that piece had not merged);
+   3, built here because that piece had not merged); the refusal of a
+   value not in that form names a backup from before as a way through;
 6. a case name that matches several cases: Exegete does not merge cases
    yet;
 7. create_code naming an existing code under another parent: Exegete
    does not yet move an existing code under another code (words true for
    a sub-code and for a top-level code alike);
 8. linking an unusable PDF to a case: QualCoder, if you use it;
-9. the end of every refusal about a file name's ending: why Exegete
-   keeps the ending, and QualCoder's Rename for those who use it;
+9. the end of every refusal about a file name's ending: Exegete leaves
+   a name's ending as it is, and why, in words true for a name gaining,
+   losing or swapping an ending; QualCoder's Rename for those who use
+   it;
 10. a new name that clashes with a file in the documents folder:
     restore_backup first, QualCoder's own Rename if the researcher uses
     it.
@@ -74,12 +81,17 @@ LINKED_DATABASE = (
     "retry.")
 NO_PROJECT_RECORD = (
     "This project has no project record, so it has no project memo, and "
-    "it is not a usable project in Exegete or in QualCoder.")
+    "it is not a usable project in Exegete or in QualCoder. Nothing was "
+    "written; a backup made before the record was lost has it "
+    "(list_backups, restore_backup).")
 SUB_CODES = (
     "Sub-codes need a project with schema v16 or newer (the "
     "code_name.supercid column); this project does not have it. This "
-    "project was last saved by QualCoder 3.8, before sub-codes (schema "
-    "older than v16); QualCoder 4.0 migrates it when it opens it.")
+    "project is in an older format of QualCoder's, from before sub-codes "
+    "(schema older than v16), and Exegete cannot bring a project up to "
+    "date yet. The code can be created now at the top level, or in a "
+    "category with create_code's category; QualCoder 4.0, if you use it, "
+    "brings the project up to date when it opens it.")
 VERIFY_IN_FORM = ("Verify results (in the newer QualCoder that upgraded "
                   "the project, for example) and keep backups.")
 VERIFY_NOT_IN_FORM = " Verify results and keep backups."
@@ -91,9 +103,10 @@ REFUSAL_NOT_IN_FORM = (
     "QualCoder's form (`v` and up to four digits), so it is not repeated "
     "here, and Exegete cannot tell whether the project uses one of the "
     "schemas it is verified against (v14 through v17, up to QualCoder "
-    "4.0). Writes are refused to protect the data. Set "
-    "EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 in the server environment to override "
-    "at your own risk.")
+    "4.0). Writes are refused to protect the data. If the value was "
+    "changed by mistake, a backup from before has it (list_backups, "
+    "restore_backup). Set EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 in the server "
+    "environment to override at your own risk.")
 WARNING_NOT_IN_FORM = (
     "WARNING: this project's database schema value is missing or not in "
     "QualCoder's form (`v` and up to four digits), so it is not repeated "
@@ -105,10 +118,11 @@ CASES = "rename_case takes a case id; Exegete does not merge cases yet"
 PARENT = (" It is not nested under code 2; Exegete does not yet move an "
           "existing code under another code.")
 PDF_LINK = " QualCoder, if you use it, can still link it to the case."
-ENDING = (" Exegete keeps this ending to protect the project's links and "
-          "exports. If you use QualCoder and the change is wanted all the "
-          "same, its own Rename can make it (Manage Files, the name's "
-          "right-click menu, \"Rename database entry\").")
+ENDING = (" Exegete leaves a name's ending as it is, to protect the "
+          "project's links and exports. If you use QualCoder and the "
+          "change is wanted all the same, its own Rename can make it "
+          "(Manage Files, the name's right-click menu, \"Rename database "
+          "entry\").")
 CLASH = (
     " If it was this entry's own copy under a name it had before, "
     "restore_backup can put that name back (restoring an earlier backup "
@@ -129,6 +143,10 @@ OLD_IN_ANSWERS = (
     "QualCoder itself can still link it",
     "can still make this change if it is wanted",
     "restore_backup or QualCoder's own Rename",
+    # documents review, round 1: who saved the project last is not what
+    # the sign shows (Exegete writes to such a project without changing
+    # its schema)
+    "last saved by QualCoder 3.8",
 )
 
 # A schema value that is not in QualCoder's form, holding what a note's
@@ -281,6 +299,24 @@ class TestASubCodeBeforeSubCodes:
         assert out["error"] == SUB_CODES, out
         assert _rows(folder, "SELECT COUNT(*) FROM code_name WHERE "
                              "name = 'Deadlines'") == [(0,)]
+
+    @pytest.mark.parametrize("version", ["v14", "v15"])
+    def test_the_route_it_gives_works_on_that_project(self, opened,
+                                                      version):
+        """Named as a guard: the refusal's way through is true, the code
+        at the top level, or in a category with create_code's category."""
+        folder = opened(version)
+        _select(folder)
+        top = json.loads(server.create_code("Deadlines",
+                                            create_backup=False))
+        assert top.get("success") is True, top
+        within = json.loads(server.create_code(
+            "Workload", category="Category A", create_backup=False))
+        assert within.get("success") is True, within
+        assert _rows(folder, "SELECT name, catid FROM code_name WHERE "
+                             "name IN ('Deadlines', 'Workload') "
+                             "ORDER BY name") == [("Deadlines", None),
+                                                  ("Workload", 1)]
 
 
 # ===========================================================================
@@ -491,13 +527,23 @@ def test_the_changelog_says_so():
                   "researcher uses it",
                   "where a project keeps it",
                   "not a usable project in Exegete or in QualCoder",
-                  "QualCoder 4.0 migrates it when it opens it",
+                  "a backup made before the record was lost has it",
+                  "an older format that Exegete cannot bring up to date "
+                  "yet",
+                  "QualCoder 4.0, if you use it, brings the project up to "
+                  "date when it opens it",
+                  "name QualCoder only about QualCoder itself and its "
+                  "format, where the project shows it, or as a choice for "
+                  "those who use it",
+                  "if the value was changed by mistake, a backup from "
+                  "before has it",
                   VERIFY_IN_FORM,
                   "only when it is in QualCoder's form",
                   "Exegete does not merge cases yet",
                   "Exegete does not yet move an existing code under "
                   "another code",
                   "QualCoder, if you use it, can still link it to the case",
-                  "to protect the project's links and exports",
+                  "Exegete leaves a name's ending as it is, to protect "
+                  "the project's links and exports",
                   "or QualCoder's own Rename, if the researcher uses it"):
         assert words in unreleased, words

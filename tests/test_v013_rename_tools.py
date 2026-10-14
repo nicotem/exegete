@@ -663,13 +663,15 @@ class TestRenameFile:
             [{"name": "interview.txt"}]
 
 
-# v0.15.0 (not presuming QualCoder, piece 7): why Exegete keeps the
-# ending, and QualCoder's own Rename for a researcher who uses it
-STILL_POSSIBLE = ("Exegete keeps this ending to protect the project's "
-                  "links and exports. If you use QualCoder and the change "
-                  "is wanted all the same, its own Rename can make it "
-                  "(Manage Files, the name's right-click menu, \"Rename "
-                  "database entry\").")
+# v0.15.0 (not presuming QualCoder, piece 7): that Exegete leaves a
+# name's ending as it is, and why (words true for a name gaining, losing
+# or swapping an ending), and QualCoder's own Rename for a researcher who
+# uses it
+STILL_POSSIBLE = ("Exegete leaves a name's ending as it is, to protect "
+                  "the project's links and exports. If you use QualCoder "
+                  "and the change is wanted all the same, its own Rename "
+                  "can make it (Manage Files, the name's right-click "
+                  "menu, \"Rename database entry\").")
 
 
 class TestTheEndingRule:

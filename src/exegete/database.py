@@ -2174,13 +2174,15 @@ def documents_clash_message(name: str, entry: Optional[str] = None) -> str:
 
 # The closing clause of every ending refusal (owner ruling of 2026-09-23,
 # dossier question 1, option b): QualCoder's own Rename can still do it.
-# v0.15.0 (not presuming QualCoder, piece 7): it says first why Exegete
-# keeps the ending, and names QualCoder's Rename for those who use it.
+# v0.15.0 (not presuming QualCoder, piece 7): it says first that Exegete
+# leaves a name's ending as it is, and why, in words true for a name that
+# would gain, lose or swap an ending (documents review, round 1), and
+# names QualCoder's Rename for those who use it.
 _ENDING_STILL_POSSIBLE = (
-    " Exegete keeps this ending to protect the project's links and "
-    "exports. If you use QualCoder and the change is wanted all the same, "
-    "its own Rename can make it (Manage Files, the name's right-click "
-    "menu, \"Rename database entry\").")
+    " Exegete leaves a name's ending as it is, to protect the project's "
+    "links and exports. If you use QualCoder and the change is wanted "
+    "all the same, its own Rename can make it (Manage Files, the name's "
+    "right-click menu, \"Rename database entry\").")
 
 
 def file_ending_problem(old: str, new: str, mediapath: Optional[str],
@@ -3631,10 +3633,17 @@ class QualcoderDatabase:
                         f"schemas it is verified against (v14 through "
                         f"v{MAX_VERIFIED_SCHEMA}, up to "
                         f"{VERIFIED_QUALCODER}). ")
+            # Such a value is no sign of a newer QualCoder (a trigger or a
+            # damaged project can put it there), so the safer way through,
+            # a backup from before, comes before the override (documents
+            # review, round 1).
+            safer = ("" if version is not None else
+                     "If the value was changed by mistake, a backup from "
+                     "before has it (list_backups, restore_backup). ")
             return (False,
                     said +
-                    f"Writes are refused to protect the data. Set "
-                    f"{ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
+                    "Writes are refused to protect the data. " + safer +
+                    f"Set {ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
                     f"environment to override at your own risk.",
                     False)
         return (True, None, False)
@@ -7839,12 +7848,21 @@ class QualcoderDatabase:
                     "give parent_code_id or category_id, not both")
             caps = getattr(self, "capabilities", None)
             if caps is None or not caps.has_supercid:
+                # The sign is the project's format, not the program that
+                # saved it last: Exegete writes to such a project without
+                # changing its schema. The route that works now comes
+                # first; QualCoder 4.0 only as a choice (documents review,
+                # round 1).
                 raise ValueError(
                     "Sub-codes need a project with schema v16 or newer "
                     "(the code_name.supercid column); this project does "
-                    "not have it. This project was last saved by QualCoder "
-                    "3.8, before sub-codes (schema older than v16); "
-                    "QualCoder 4.0 migrates it when it opens it.")
+                    "not have it. This project is in an older format of "
+                    "QualCoder's, from before sub-codes (schema older than "
+                    "v16), and Exegete cannot bring a project up to date "
+                    "yet. The code can be created now at the top level, or "
+                    "in a category with create_code's category; QualCoder "
+                    "4.0, if you use it, brings the project up to date "
+                    "when it opens it.")
             parent_code_id = validate_id(parent_code_id, "parent_code_id")
             parent_check = self.conn.execute(
                 "SELECT cid FROM code_name WHERE cid = ?", (parent_code_id,)
@@ -8602,7 +8620,8 @@ class QualcoderDatabase:
             raise ValueError(
                 "This project has no project record, so it has no project "
                 "memo, and it is not a usable project in Exegete or in "
-                "QualCoder.")
+                "QualCoder. Nothing was written; a backup made before the "
+                "record was lost has it (list_backups, restore_backup).")
         stored_memo = merge_public_memo(row["memo"], memo)
         public_memo = extract_ai_memo(stored_memo)
         try:

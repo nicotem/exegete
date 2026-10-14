@@ -3095,6 +3095,12 @@ def memo_has_private_zone(memo: Any) -> bool:
 
 
 PSEUDONYMS_JSON_NAME = "pseudonyms.json"
+# How each of the reader's four refusals opens (v0.15.0): the project's
+# list, in QualCoder's format, whichever program wrote it.
+_NAMES_LIST_UNREADABLE = (
+    f"The project's names list ({PSEUDONYMS_JSON_NAME}, a list of "
+    f"{{original, pseudonym}} entries in QualCoder's format) could not "
+    f"be read")
 # The sidecar is a short list of short strings. A megabyte is orders of
 # magnitude past any real one and stops a mistaken or hostile file being
 # read into memory whole.
@@ -3240,25 +3246,23 @@ def read_project_pseudonyms_with_raw(project_folder: Union[str, Path]
             text = raw.decode(encoding)
         except (UnicodeDecodeError, LookupError):
             raise ValueError(
-                f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-                f"list of {{original, pseudonym}} entries: it is neither "
-                f"UTF-8 nor this machine's default encoding ({encoding}). A "
-                f"file QualCoder wrote on Windows is usually in the Windows "
-                f"default encoding, which this machine cannot read; open it "
-                f"in a text editor and save it as UTF-8.") from None
+                f"{_NAMES_LIST_UNREADABLE}: it is neither UTF-8 nor this "
+                f"machine's default encoding ({encoding}). A file written "
+                f"on Windows, by QualCoder or another program, is usually "
+                f"in the Windows default encoding, which this machine "
+                f"cannot read; open it in a text editor and save it as "
+                f"UTF-8.") from None
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
         # `msg` names the syntax problem and the position; it never
         # carries a value out of the file.
         raise ValueError(
-            f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-            f"list of {{original, pseudonym}} entries: {e.msg} at line "
-            f"{e.lineno}.") from None
+            f"{_NAMES_LIST_UNREADABLE}: {e.msg} at line {e.lineno}."
+        ) from None
     if not isinstance(data, list):
         raise ValueError(
-            f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-            f"list of {{original, pseudonym}} entries: the file holds a "
+            f"{_NAMES_LIST_UNREADABLE}: the file holds a "
             f"{type(data).__name__}, not a list.")
     entries: List[Dict[str, str]] = []
     for index, item in enumerate(data):
@@ -3266,9 +3270,8 @@ def read_project_pseudonyms_with_raw(project_folder: Union[str, Path]
                 item.get("original"), str) or not isinstance(
                 item.get("pseudonym"), str):
             raise ValueError(
-                f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-                f"list of {{original, pseudonym}} entries: entry {index} is "
-                f"not an object with two text values.")
+                f"{_NAMES_LIST_UNREADABLE}: entry {index} is not an object "
+                f"with two text values.")
         entries.append({"original": item["original"],
                         "pseudonym": item["pseudonym"]})
     return entries, encoding, data, mode

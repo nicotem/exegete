@@ -10617,8 +10617,9 @@ def import_text_file(
 # ============================================================================
 
 IMPORT_DOCUMENTS_ADVICE_NAMES = (
-    " Correct the list (in QualCoder, the Pseudonyms button in Manage "
-    "Files), then ask again. "
+    " Correct the list (open pseudonyms.json in the project folder in a "
+    "text editor; in QualCoder, if you use it, the Pseudonyms button in "
+    "Manage Files also edits it), then ask again. "
     "The import applies the list as the text comes in, so it cannot go "
     "ahead with a list it cannot read.")
 
@@ -10813,15 +10814,13 @@ IMPORT_DONE_LINES = {
               "records who brought them in, on your word."),
     # Said after an import into a project with no names list ("none") or
     # an empty one: a list made after the import changes nothing already
-    # stored, so it names only the two ways that do replace the names.
-    "no_list": ("{lead}, so the names in these files came in as written, "
-                "and a list made now does not change them. If these "
-                "documents name participants, replace the names before the "
-                "assistant reads them: run pseudonymise_source on each file "
-                "(with the names given in the call, or with the project's "
-                "names list once it is made), or restore the backup taken "
-                "just before, make the list (in QualCoder for now), and "
-                "import again."),
+    # stored, so it names the way every researcher has that does replace
+    # the names (v0.15.0).
+    "no_list": ("{lead}, so the names in these files came in as written. "
+                "If these documents name participants, replace the names "
+                "before the assistant reads them: run pseudonymise_source on "
+                "each file. A list made now does not change files already "
+                "stored."),
     # Beside it, when the batch held a PDF: pseudonymise_source refuses a
     # PDF, and an import with the list holds one back rather than
     # replacing its names.
@@ -12105,8 +12104,10 @@ def _restore_pseudonyms_json_note(before: Optional[str],
                 f"writes one). {where}")
     if before is None:
         return (f"The backup restored carries a pseudonyms.json that this "
-                f"project did not have before the restore; QualCoder applies "
-                f"it on every later text or transcript import (not a PDF). "
+                f"project did not have before the restore; its names are "
+                f"replaced on later text or transcript imports: by "
+                f"Exegete's import_documents unless apply_project_pseudonyms "
+                f"is false, and by QualCoder on every one (not a PDF). "
                 f"The safety backup {safety_backup.name} holds the project "
                 f"as it was, without one.")
     return (f"The backup restored carries a pseudonyms.json that differs "
@@ -15673,7 +15674,7 @@ _PSEUDONYMISE_INELIGIBLE = {
         + LIST_FILES_HINT.replace("{", "{{").replace("}", "}}")),
     "pdf_source": (
         "file {file_id} is a PDF source; this tool rewrites text sources "
-        "only, as QualCoder's own editor does."),
+        "only."),
     "no_fulltext": (
         "file {file_id} has no stored text (a media file, or an empty "
         "source), so there is nothing to rewrite."),
@@ -15787,8 +15788,14 @@ _SAVE_INSTEAD = (
 # ruling for Brief 2).
 _NOT_SAVED_NO_RUN = (
     " The mapping was not saved, because no run happened. Pick a file that "
-    "contains one of the names and preview again, or enter the mapping in "
-    "QualCoder's Pseudonyms dialog (the button in Manage Files) directly.")
+    "contains one of the names and preview again. (A researcher who uses "
+    "QualCoder can also enter the mapping in its Pseudonyms dialog, under "
+    "Manage Files.)")
+
+
+def _after_a_colon(text: str) -> str:
+    """A sentence set after a colon: its first letter in lower case."""
+    return text[:1].lower() + text[1:]
 
 
 class _SaveRefused(Exception):
@@ -15863,12 +15870,12 @@ def _pseudonyms_json_merge(folder: Path, validated) -> Dict[str, Any]:
     encoding: Optional[str] = None
     existing_mode: Optional[int] = None
     if os.path.lexists(str(path)) and not os.access(str(path), os.W_OK):
-        # A reverse key the researcher made read-only stays so: QualCoder's
-        # own `open(path, "w")` fails on it (Security's ruling, S-1).
+        # A reverse key the researcher made read-only stays so (Security's
+        # ruling, S-1; QualCoder's own `open(path, "w")` fails on it too).
         raise _SaveRefused(
             "pseudonyms_json_read_only",
             f"{PSEUDONYMS_JSON_NAME} in the project folder is read-only for "
-            f"this account, and QualCoder's own write would fail on it too")
+            f"this account, and Exegete leaves it so")
     if os.path.lexists(str(path)):
         try:
             # One read: the entries for the checks and the list exactly as
@@ -15878,7 +15885,11 @@ def _pseudonyms_json_merge(folder: Path, validated) -> Dict[str, Any]:
         except (ValueError, OSError, LookupError, RuntimeError) as e:
             # RuntimeError: pathlib's link loop before Python 3.13, whose
             # text is the path, answered by its kind like an OSError.
-            detail = (str(e).rstrip(".") if isinstance(e, ValueError)
+            # The reader's own refusal follows a colon here, so its first
+            # letter is set in lower case (v0.15.0: it opens "The
+            # project's names list").
+            detail = (_after_a_colon(str(e).rstrip("."))
+                      if isinstance(e, ValueError)
                       and PSEUDONYMS_JSON_NAME in str(e) else
                       f"{PSEUDONYMS_JSON_NAME} could not be read "
                       f"({type(e).__name__})")
@@ -15968,13 +15979,16 @@ def _pseudonyms_json_conflict(merge: Dict[str, Any]) -> Dict[str, Any]:
         "Those entries are already in the file under the same pseudonyms, "
         "so run this file with use_project_pseudonyms=true instead."
         if merge["already_there"] else
-        f"Remove or change the entry and preview again, or edit the file in "
-        f"the dialog; or {_SAVE_INSTEAD}")
+        "Remove or change the entry and preview again; or preview again "
+        "without save_mapping_to_project and execute with "
+        "researcher_keeps_mapping=true. (A researcher who uses QualCoder "
+        "can also change the entry in its Pseudonyms dialog, under Manage "
+        "Files.)")
     return {"error": (
         f"The mapping cannot be saved into this project's pseudonyms.json: "
         f"entry {merge['conflicts']} maps a name the file already maps, and "
-        f"QualCoder's Pseudonyms dialog (the button in Manage Files) refuses "
-        f"a duplicate original as well. Nothing was written. {remedy}"),
+        f"the file holds one pseudonym per name (QualCoder's Pseudonyms "
+        f"dialog refuses a duplicate too). Nothing was written. {remedy}"),
         "reason": "pseudonyms_json_conflict", "nothing_changed": True}
 
 
@@ -16517,8 +16531,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"so it does not cover {'it' if len(unreadable) == 1 else 'them'}"
             f", and a name there is counted "
             f"nowhere in residue. Preview again; if the same parts still "
-            f"cannot be read, check them in QualCoder before sharing the "
-            f"project.")
+            f"cannot be read, check them by hand before sharing the project "
+            f"(in QualCoder, if the researcher uses it).")
     if memo_block is not None:
         # v0.13, Brief 2, 5.6: what the note rewrite does that the
         # researcher must hear before approving it, each only when its
@@ -16680,9 +16694,9 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             preview.get("case_mode") not in (None, "exact"):
         warnings.append(
             f"Warning: this run replaces the names in any letter case "
-            f"(case_mode {preview.get('case_mode')}), and QualCoder's text "
-            f"and transcript imports (not PDFs) apply pseudonyms.json "
-            f"case-sensitively: "
+            f"(case_mode {preview.get('case_mode')}), and later imports "
+            f"apply pseudonyms.json case-sensitively, in Exegete as in "
+            f"QualCoder: "
             f"the next one replaces only the spellings saved, so a THOMAS or "
             f"a thomas in a new transcript stays as it is. Add each "
             f"spelling you expect as a variant, or check the next import by "
@@ -16695,8 +16709,9 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         note_rows = (memo_block or {}).get("totals", {}).get("rows", 0)
         no_save = (" The mapping would not be saved either, because no run "
                    "would happen. Pick a file that contains one of the names "
-                   "and preview again, or enter the mapping in QualCoder's "
-                   "Pseudonyms dialog (the button in Manage Files) directly."
+                   "and preview again. (A researcher who uses QualCoder can "
+                   "also enter the mapping in its Pseudonyms dialog, under "
+                   "Manage Files.)"
                    if retention.get("required") and retention.get("chosen")
                    in ("save_requested", "both") else "")
         if memo_block is None:
@@ -16770,11 +16785,10 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
     if save and saved:
         note += (f" On this run it was saved into the project's own "
                  f"pseudonyms.json ({merge['would_write']} entries added), "
-                 f"which QualCoder applies on every later text or transcript "
-                 f"import (not a PDF) and which travels "
-                 f"into every later backup; store that file securely once "
-                 f"the import work is done, as QualCoder's own guidance "
-                 f"says.")
+                 f"which later imports apply (Exegete's when asked to, "
+                 f"QualCoder's text and transcript imports always) and which "
+                 f"travels into every later backup; store that file securely "
+                 f"once the import work is done.")
     elif save:
         note += (f" On this run the save into the project's own "
                  f"pseudonyms.json was requested, but the file could not be "
@@ -16782,22 +16796,24 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
                  f"({result.get('mapping_not_saved_because')}); nothing else "
                  f"was lost: the rewrite stands, the backup holds the real "
                  f"names, and the journal entry and the run record say the "
-                 f"save was requested, not made. Enter the mapping in "
-                 f"QualCoder's Pseudonyms dialog (the button in Manage Files) "
-                 f"now.")
+                 f"save was requested, not made. Make sure the researcher "
+                 f"keeps the mapping now: save it again with a later run, "
+                 f"or, if they use QualCoder, enter it in its Pseudonyms "
+                 f"dialog (the button in Manage Files).")
     else:
         note += (" On this run the call attested that the researcher keeps "
                  "their own record; make sure that is true now, because "
                  "nothing else can say later who each pseudonym was.")
     notes = [note]
     if save and saved:
-        # Brief 2 fix round 1, QA-B2-1: what QualCoder does with the file,
-        # said as it is. The ruling's "exactly as this run did" was not.
+        # Brief 2 fix round 1, QA-B2-1: what later imports do with the
+        # file, said as it is. The ruling's "exactly as this run did" was
+        # not. v0.15.0: Exegete's imports first, then QualCoder's.
         notes.append(
-            "QualCoder applies pseudonyms.json on every later text or "
-            "transcript import (not a PDF) one entry at a time, in file "
-            "order and case-sensitively (its survey import and text-file "
-            "replacement match differently). The new entries were written "
+            "Later imports apply pseudonyms.json: Exegete's (when asked) in "
+            "one pass, longest name first, case-sensitively; QualCoder's "
+            "text and transcript imports one entry at a time, in file "
+            "order, case-sensitively. The new entries were written "
             "longest name first, so a shorter name inside a longer one does "
             "not pre-empt it; an entry already in the file can still (see "
             "the warnings), "
@@ -16811,9 +16827,9 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
             f"The mapping had alternative spellings; each was written to "
             f"pseudonyms.json as its own entry with the same pseudonym "
             f"({merge['variants_as_separate_entries']} such entr(ies)). "
-            f"QualCoder's Pseudonyms dialog (the button in Manage Files) will "
-            f"not add a second entry with a pseudonym already in use, so "
-            f"change those entries in the file rather than in the dialog.")
+            f"To change those entries later, edit the file: QualCoder's "
+            f"Pseudonyms dialog, if the researcher uses it, will not add a "
+            f"second entry with a pseudonym already in use.")
     if save and saved and merge["duplicate_pseudonyms"]:
         notes.append(
             f"{len(merge['duplicate_pseudonyms'])} entr(ies) of the mapping "

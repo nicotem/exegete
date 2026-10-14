@@ -2124,8 +2124,8 @@ def _category_name(db_, category_id: Optional[int]) -> Optional[str]:
 _AMBIGUITY_ID_TOOLS = {
     "code": "rename_code and merge_codes take a code id",
     "category": "rename_category and merge_category take a category id",
-    "case": "rename_case takes a case id; cases are merged in QualCoder, "
-            "not here",
+    "case": "rename_case takes a case id; Exegete does not merge cases "
+            "yet",
 }
 
 
@@ -2302,8 +2302,11 @@ def _existing_code_result(rows, name: str, *, has_supercid: bool,
     elif (has_supercid and parent_code_id is not None
             and parent_code_id != row.get("parent_code_id")):
         requested["parent_code_id"] = parent_code_id
+        # Reached for a sub-code of another code and for a top-level
+        # code alike, so the words name neither.
         message += (f" It is not nested under code {parent_code_id}; "
-                    f"re-parenting a sub-code is done in QualCoder.")
+                    f"Exegete does not yet move an existing code under "
+                    f"another code.")
     disclosure = _color_disclosure(color_requested, color_target)
     if color_target is not None and color_target != row.get("color"):
         requested["color"] = color_requested
@@ -18988,10 +18991,11 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
             message = documents_clash_message(candidate, clash)
             if not mediapath:
                 message += (" If it was this entry's own copy under a name "
-                            "it had before, restore_backup or QualCoder's "
-                            "own Rename can put that name back (restoring "
-                            "an earlier backup undoes everything done after "
-                            "it, any pseudonymisation run included); "
+                            "it had before, restore_backup can put that "
+                            "name back (restoring an earlier backup undoes "
+                            "everything done after it, any pseudonymisation "
+                            "run included), or QualCoder's own Rename, if "
+                            "the researcher uses it; "
                             "Exegete recognises a rename back only from a "
                             "backup that shows this entry with that name "
                             "and, for its documents copy, the same text.")

@@ -301,6 +301,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`set_project_ai_coder_name` refuses the researcher's own coder name
   in Exegete's settings**, as it refuses the project's own.
 
+### Added: "Do you also use QualCoder on this computer?"
+
+- **A setting in the extension, "Do you also use QualCoder on this
+  computer?"** (the owner's decision of 12 October 2026), answered yes,
+  no or not sure; not sure is the default. Installed any other way, it
+  is `EXEGETE_USES_QUALCODER`, new, with one spelling. Any other word
+  is read as not sure, and the log says so once at start, never the
+  word itself.
+- **It decides which notes about QualCoder are relevant**, with what
+  Exegete finds when a project is selected: with yes, the notes that
+  matter only if you also open your projects in QualCoder are relevant;
+  with no, they are not, unless the project shows signs that QualCoder
+  has opened it or QualCoder is running when the project is selected;
+  with not sure, what Exegete finds decides, as before. `select_project`
+  and `get_current_project` give the answer as `setting` in
+  `qualcoder_history`, so the assistant knows it; the field is now
+  given whenever the answer is yes or no.
+- **It never changes the refusal or the warnings**: whatever the
+  answer, Exegete still refuses to write while QualCoder 3.8's lock
+  file is active, and still warns when it sees signs that QualCoder 4.0
+  may have the project open, since an answer can be out of date and a
+  write into a project open in QualCoder can lose work.
+
 ### Measured
 
 - Serialised tool JSON: full = 206,569 characters (about 51.6k tokens

@@ -678,7 +678,7 @@ have one spelling only.
   exactly as there. The value is trimmed and follows the rules for
   `EXEGETE_AI_CODER_NAME`, below (at most 80 characters, single-line
   plain text, no invisible formatting character, no `#####`); an
-  invalid value stops the server at start-up with "Error:
+  invalid value stops Exegete at start-up with "Error:
   EXEGETE_CODER_NAME ..." on stderr, naming the setting, never its
   value, and saying where to change it, or to leave it empty to be
   asked for the name in each new project. The desktop extension sets it

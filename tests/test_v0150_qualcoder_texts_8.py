@@ -516,6 +516,18 @@ class TestTheResearchersOwnName:
         assert out["error"] == f"\"{codername}\" {OWN_NAME}"
         assert ps.read_sidecar(qualcoder_db_path).name == before
 
+    def test_in_the_core_tool_set(self, setup_server):
+        """Entry 14: core does not register compare_coders, so the
+        refusal marks it, as every text core can reach does."""
+        assert "compare_coders" not in server.CORE_TOOLSET
+        assert "set_project_ai_coder_name" in server.CORE_TOOLSET
+        server._apply_toolset("core")
+        codername = server.db.get_project_info()["coder_name"]
+        out = json.loads(server.set_project_ai_coder_name(codername))
+        assert ("in Exegete's coder filters and compare_coders"
+                + server.NOT_IN_THIS_TOOL_SET + " as in QualCoder's coder "
+                "lists and reports.") in out["error"]
+
 
 class TestTheVisibilityTableNotAnswering:
 

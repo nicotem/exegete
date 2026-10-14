@@ -4551,7 +4551,7 @@ def set_project_ai_coder_name(name: str, note: str = "",
     ro = get_db()
     codername = (ro.get_project_info() or {}).get("coder_name")
     if codername and name == codername:
-        return json.dumps({"error": (
+        return json.dumps({"error": _mark_unregistered(
             f"\"{name}\" is this project's own coder name (the "
             f"researcher's), so the AI's codings could not be told apart "
             f"from the researcher's, in Exegete's coder filters and "

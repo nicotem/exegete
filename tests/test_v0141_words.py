@@ -99,9 +99,11 @@ def _served_texts():
     return texts
 
 
-# Where a served text may name the old name, and why.
+# Where a served text may name the old name, and why. (v0.15.0, not
+# presuming QualCoder, piece 8: "formerly qualcoder-mcp" left the last
+# served text that had it, the message on a settings file from a newer
+# version, so its entry went with it: a newer version is Exegete.)
 SERVED_LEDGER = [
-    (r"formerly qualcoder-mcp", "the earlier name, named as such"),
     (r"~/\.qualcoder_mcp, its earlier name", "the state folder's earlier "
      "name, which the guards still refuse"),
     (r"qualcoder-mcp is now called Exegete", "the old name's note"),

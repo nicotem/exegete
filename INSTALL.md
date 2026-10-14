@@ -30,7 +30,7 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    with its usual warning to install only extensions whose developer you
    trust; click Install, and Install again when Claude says it needs to
    fetch a few dependencies. The first install takes a minute or two.
-4. **Look at its three settings** (Settings, Extensions, Exegete).
+4. **Look at its settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
    - **Tool set**: `full` (the default) gives every tool, creating a
      new project included (recommended); `core` a smaller set for local
@@ -51,6 +51,23 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      `~/QualCoder projects`, the earlier default: it keeps working. To
      use the new folder, change the setting; the projects already in
      the earlier folder stay there and are still found.
+   - **Your coder name**: empty by default. It is the name your own
+     codings carry in a project, kept apart from the AI's. Filled in,
+     Exegete gives it to each new project it makes, without asking, and
+     says so; left empty, Claude asks for it each time. A project that
+     already has a coder name keeps it. It must differ from the AI coder
+     name. If you also use QualCoder, give the name in its settings
+     ("Current coder"), exactly as there. At most 80 characters; a line
+     break, an invisible character or `#####` stops the extension from
+     starting.
+   - **AI coder name**: empty by default. It is the name you would like
+     Claude's work in a project stored under, so that it stays apart
+     from yours; a model's name lets codings by different models be
+     compared later. When a project has no AI coder name yet, Claude
+     asks you for one the first time it needs it and offers this one
+     first; when a project already has another, Claude asks you once
+     which to use there. Left empty, Claude still asks. It must differ
+     from your coder name, and the same limits apply.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
      small file from its website on GitHub to see whether a newer
@@ -594,10 +611,11 @@ spellings with different values (after the usual tidying: spaces, the
 tool set's letter case and a leading `~` do not count), the server
 does not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
-desktop extension sets both spellings of these three settings itself,
-always to the same value. The two settings of the check for new
-versions and `EXEGETE_CALL_SECONDS`, below, are new and have one
-spelling only.
+desktop extension sets both spellings of these four settings itself
+(the tool set, the two for the workspace and the AI coder name), always
+to the same value. The two settings of the check for new versions,
+`EXEGETE_CALL_SECONDS` and `EXEGETE_CODER_NAME`, below, are new and
+have one spelling only.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -645,6 +663,26 @@ spelling only.
   of falling back to `~/Documents/Exegete projects`. The desktop
   extension sets it, so an emptied "Folder for projects" never sends
   projects into a synced Documents folder.
+- `EXEGETE_CODER_NAME` (0.15.0): your own coder name, the name your
+  own codings carry in a project, kept apart from the AI's. Set, it is
+  given by `create_project` to each project it makes, without asking,
+  and the answer says the name came from the settings
+  (`coder_name_source`); unset or blank, the assistant asks for it at
+  each new project. It never changes the coder name of a project that
+  already has one, and selecting a project that records another name,
+  or none, says so (`coder_name_notes`). It must differ from the AI
+  coder name: with `EXEGETE_AI_CODER_NAME` the same, `create_project`
+  makes no project until one of them is changed, and
+  `set_project_ai_coder_name` refuses it as an AI coder name. If you
+  also use QualCoder, give the name in its settings ("Current coder"),
+  exactly as there. The value is trimmed and follows the rules for
+  `EXEGETE_AI_CODER_NAME`, below (at most 80 characters, single-line
+  plain text, no invisible formatting character, no `#####`); an
+  invalid value stops the server at start-up with "Error:
+  EXEGETE_CODER_NAME ..." on stderr, naming the setting, never its
+  value, and saying where to change it, or to leave it empty to be
+  asked for the name in each new project. The desktop extension sets it
+  from its "Your coder name" setting.
 - `EXEGETE_AI_CODER_NAME`: this HOST's DECLARATION of the AI
   coder name it would like to write under. Since v0.12 the name that
   rows actually carry is the PROJECT's setting, which the researcher
@@ -656,8 +694,9 @@ spelling only.
   (`"Qwen 3.8 6bit"`), or `AI Agent` to propose the exact name
   QualCoder 4.0's built-in assistant writes under, which groups
   Exegete's work with the assistant's under one coder in QualCoder's
-  per-coder visibility toggle, undo and reports. The value is trimmed
-  and must be non-empty, at most 80 characters, single-line plain text
+  per-coder visibility toggle, undo and reports. Empty or unset, no
+  name is offered first. The value is trimmed
+  and must be at most 80 characters, single-line plain text
   (no control characters, no line or paragraph separators, and no
   invisible formatting character of Unicode category Cf, which covers
   every bidirectional control and every zero-width character; ZWNJ and
@@ -665,9 +704,11 @@ spelling only.
   exceptions) and must not contain `#####`,
   the QualCoder 4.0 private-memo marker. An invalid value stops the
   server at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
-  stderr. Do not declare your own coder name: AI rows would then be
+  stderr. It must differ from your own coder name (EXEGETE_CODER_NAME,
+  and each project's): AI rows would otherwise be
   indistinguishable from yours, in Exegete's reads and in QualCoder,
-  and the setter refuses that name anyway.
+  and the setter refuses that name anyway. The desktop extension sets
+  it, under both spellings, from its "AI coder name" setting.
 
   ```json
   "env": {
@@ -900,7 +941,7 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 80 tools by
 default, and the serialised tool definitions alone measure about
-206,000 characters, roughly 52k tokens (measured for 0.15.0 under
+207,000 characters, roughly 52k tokens (measured for 0.15.0 under
 Python 3.13.5 with mcp 1.30.0, in an environment installed from the
 repository's lock file; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 20,000 characters of that on its own, because a tool
@@ -1369,7 +1410,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 206,000 characters with `full`; TOOLS.md says how that
+  (about 207,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

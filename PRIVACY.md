@@ -1169,10 +1169,13 @@ Two further rules touch files on your disk:
   selects a project); nothing else: no backup, no `exegete.json`,
   no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
   they give it (and QualCoder's speaker coder), and an "about" line
-  naming Exegete and its version. The coder name is asked for,
-  never read: Exegete does not open QualCoder's settings file
+  naming Exegete and its version. The coder name is asked for, or
+  taken from Exegete's own settings when you have filled it in there,
+  never read from QualCoder's: Exegete does not open QualCoder's settings file
   (`~/.qualcoder/config.ini`, which holds API keys in plain text), and a
-  test pins that. To refuse a name already in use, it lists the target
+  test pins that. Both coder name settings, yours and the AI's, reach
+  Exegete from the app that starts it, as its other settings do (the
+  extension's settings, or the host's configuration). To refuse a name already in use, it lists the target
   folder's entries and opens an existing project's database read-only;
   the log line says only that a project was created, with no name or
   path. A new project is made in the folder the researcher names, or

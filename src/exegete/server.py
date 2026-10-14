@@ -10616,10 +10616,22 @@ def import_text_file(
 # DOCUMENT IMPORT (0.14.3): import_documents
 # ============================================================================
 
+# A list the reader reads and the engine refuses: QualCoder's Pseudonyms
+# dialog can open it, and removes and adds entries but does not edit them
+# (`pseudonyms.py:67-113`, `:127-140`).
 IMPORT_DOCUMENTS_ADVICE_NAMES = (
     " Correct the list (open pseudonyms.json in the project folder in a "
     "text editor; in QualCoder, if you use it, the Pseudonyms button in "
-    "Manage Files also edits it), then ask again. "
+    "Manage Files can also remove an entry and add it again), then ask "
+    "again. "
+    "The import applies the list as the text comes in, so it cannot go "
+    "ahead with a list it cannot read.")
+# A list the reader cannot read: the dialog loads the file with json.load
+# and catches only a missing file (`pseudonyms.py:115-124`), so it cannot
+# open such a list either, and only the text editor is named.
+IMPORT_DOCUMENTS_ADVICE_UNREADABLE = (
+    " Correct the list (open pseudonyms.json in the project folder in a "
+    "text editor), then ask again. "
     "The import applies the list as the text comes in, so it cannot go "
     "ahead with a list it cannot read.")
 
@@ -10666,7 +10678,9 @@ def _import_names_list(apply: bool, folder: Path):
         return "none", 0, None, None, None, None
     except (ValueError, OSError, RuntimeError) as e:
         return ("unusable", 0, None, None,
-                _pseudonyms_json_error(e, IMPORT_DOCUMENTS_ADVICE_NAMES),
+                _pseudonyms_json_error(
+                    e, IMPORT_DOCUMENTS_ADVICE_NAMES if entries is not None
+                    else IMPORT_DOCUMENTS_ADVICE_UNREADABLE),
                 _unusable_names_check(entries))
     return ("entries", len(validated.entries), pseudo.Compiled(validated),
             pseudo.canonical_mapping(validated), None, None)
@@ -15982,8 +15996,8 @@ def _pseudonyms_json_conflict(merge: Dict[str, Any]) -> Dict[str, Any]:
         "Remove or change the entry and preview again; or preview again "
         "without save_mapping_to_project and execute with "
         "researcher_keeps_mapping=true. (A researcher who uses QualCoder "
-        "can also change the entry in its Pseudonyms dialog, under Manage "
-        "Files.)")
+        "can also remove the file's entry in its Pseudonyms dialog, under "
+        "Manage Files.)")
     return {"error": (
         f"The mapping cannot be saved into this project's pseudonyms.json: "
         f"entry {merge['conflicts']} maps a name the file already maps, and "
@@ -16531,8 +16545,9 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"so it does not cover {'it' if len(unreadable) == 1 else 'them'}"
             f", and a name there is counted "
             f"nowhere in residue. Preview again; if the same parts still "
-            f"cannot be read, check them by hand before sharing the project "
-            f"(in QualCoder, if the researcher uses it).")
+            f"cannot be read, check them by hand (in QualCoder, if the "
+            f"researcher uses it) before sharing the project, or treat them "
+            f"as still holding names.")
     if memo_block is not None:
         # v0.13, Brief 2, 5.6: what the note rewrite does that the
         # researcher must hear before approving it, each only when its
@@ -16785,8 +16800,9 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
     if save and saved:
         note += (f" On this run it was saved into the project's own "
                  f"pseudonyms.json ({merge['would_write']} entries added), "
-                 f"which later imports apply (Exegete's when asked to, "
-                 f"QualCoder's text and transcript imports always) and which "
+                 f"which later imports apply (Exegete's import_documents "
+                 f"by default, import_text_file when asked; QualCoder's text "
+                 f"and transcript imports always) and which "
                  f"travels into every later backup; store that file securely "
                  f"once the import work is done.")
     elif save:
@@ -16797,9 +16813,11 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
                  f"was lost: the rewrite stands, the backup holds the real "
                  f"names, and the journal entry and the run record say the "
                  f"save was requested, not made. Make sure the researcher "
-                 f"keeps the mapping now: save it again with a later run, "
-                 f"or, if they use QualCoder, enter it in its Pseudonyms "
-                 f"dialog (the button in Manage Files).")
+                 f"keeps the mapping now: save it with a run on another "
+                 f"file that still contains one of the names, or write it "
+                 f"into pseudonyms.json in the project folder with a text "
+                 f"editor; or, if they use QualCoder, enter it in its "
+                 f"Pseudonyms dialog (the button in Manage Files).")
     else:
         note += (" On this run the call attested that the researcher keeps "
                  "their own record; make sure that is true now, because "
@@ -16808,20 +16826,22 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
     if save and saved:
         # Brief 2 fix round 1, QA-B2-1: what later imports do with the
         # file, said as it is. The ruling's "exactly as this run did" was
-        # not. v0.15.0: Exegete's imports first, then QualCoder's.
+        # not. v0.15.0: Exegete's imports first, then QualCoder's; what
+        # file order can do is said of QualCoder's imports alone.
         notes.append(
-            "Later imports apply pseudonyms.json: Exegete's (when asked) in "
-            "one pass, longest name first, case-sensitively; QualCoder's "
-            "text and transcript imports one entry at a time, in file "
-            "order, case-sensitively. The new entries were written "
-            "longest name first, so a shorter name inside a longer one does "
-            "not pre-empt it; an entry already in the file can still (see "
-            "the warnings), "
-            "two names that overlap without either containing the other "
-            "(Mary Ann and Ann Lee, in Mary Ann Lee) can still come out "
-            "differently, a pseudonym that contains a name from the mapping "
-            "is rewritten again, and under an insensitive case mode only the "
-            "spellings saved are replaced.")
+            "Later imports apply pseudonyms.json case-sensitively: "
+            "Exegete's (import_documents by default, import_text_file when "
+            "asked) in one pass, longest name first, so nothing they write "
+            "is replaced again; QualCoder's text and transcript imports one "
+            "entry at a time, in file order. For QualCoder's imports, the "
+            "new entries were written longest name first, so a shorter name "
+            "inside a longer one does not pre-empt it; there an entry "
+            "already in the file still can (see the warnings), two names "
+            "that overlap without either containing the other (Mary Ann and "
+            "Ann Lee, in Mary Ann Lee) can come out differently from this "
+            "run, and a pseudonym that contains a name from the mapping is "
+            "rewritten again. In Exegete as in QualCoder, under an "
+            "insensitive case mode only the spellings saved are replaced.")
     if save and saved and merge["variants_as_separate_entries"]:
         notes.append(
             f"The mapping had alternative spellings; each was written to "

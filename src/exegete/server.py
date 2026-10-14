@@ -4560,16 +4560,37 @@ CODER_NAME_UNCHECKED_REFUSAL = (
 CODER_NAME_LIST_UNREADABLE_REFUSAL = (
     "Nothing was changed: this project's coder list did not answer, so "
     "what the change would do to it could not be checked.")
-# exegete.json unreadable: the project's AI coder name and its history
-# are not known, so a name AI work is stored under could pass for the
-# researcher's (reads fall back to the built-in default, as they must)
+# exegete.json unreadable, or its list of earlier names dropped by the
+# read: the project's AI coder names are not all known, so a name AI work
+# is stored under could pass for the researcher's (reads fall back to the
+# built-in default, and keep the current name, as they must). The way out
+# says what setting the AI coder name again costs: the names only the
+# damaged file held are no longer checked (fix round 2).
 CODER_NAME_AI_UNCHECKED_REFUSAL = (
     "Nothing was changed: this project's AI coder name file ({file} in the "
-    "project folder) could not be read, so whether \"{name}\" is a name AI "
-    "work is stored under could not be checked. Repairing the file, or "
-    "setting the project's AI coder name again with "
-    "set_project_ai_coder_name (which puts the damaged file aside and "
-    "writes a new one), lets the check be made.")
+    "project folder) {damage}, so whether \"{name}\" is a name AI work is "
+    "stored under could not be checked. {way_out}")
+_REWRITE_COST = (
+    "; the names only the damaged file held are then no longer checked, "
+    "and this tool's preview warns instead when work is recorded under "
+    "\"{name}\".")
+CODER_NAME_AI_FILE_DAMAGE = {
+    "unreadable": (
+        "could not be read",
+        "Repairing the file lets the check be made. Setting the project's "
+        "AI coder name again with set_project_ai_coder_name puts the "
+        "damaged file aside and writes a new one" + _REWRITE_COST),
+    "list": (
+        "holds a list of earlier AI coder names that could not be read",
+        "Repairing that list lets the check be made. Setting the project's "
+        f"AI coder name again with set_project_ai_coder_name writes a new "
+        f"{SIDECAR_NAME} without it" + _REWRITE_COST),
+    # set_project_ai_coder_name does not write a newer version's file
+    "newer": (
+        f"was written by a newer version of {names.SERVER_NAME} and holds a "
+        f"list of earlier AI coder names that this version could not read",
+        f"Upgrading {names.SERVER_NAME} lets the check be made."),
+}
 CODER_NAME_NEW_HAS_WORK_WARNING = (
     "Work is already recorded under \"{new}\" in this project; if that is "
     "another person's coder name, or an AI coder name this project used "
@@ -4620,6 +4641,24 @@ CODER_NAME_QUALCODER_SWITCH_NOTE = (
     "\"{new}\"; Switch keeps \"{new}\" and makes it the name in QualCoder's "
     "settings for every project. Setting \"Current coder\" to \"{new}\" in "
     "QualCoder first avoids the question.")
+
+
+def _ai_names_unchecked_refusal(sidecar, name: str) -> Optional[str]:
+    """The refusal when the project's AI coder names are not all known
+    (its AI coder name file unreadable, or its list of earlier names
+    dropped by the read), or None when they are."""
+    if sidecar.status == SIDECAR_UNREADABLE:
+        kind = "unreadable"
+    elif not sidecar.history_dropped:
+        return None
+    elif sidecar.status == SIDECAR_NEWER_FORMAT:
+        kind = "newer"
+    else:
+        kind = "list"
+    damage, way_out = CODER_NAME_AI_FILE_DAMAGE[kind]
+    return CODER_NAME_AI_UNCHECKED_REFUSAL.format(
+        file=sidecar.path.name, damage=damage, name=name,
+        way_out=way_out.format(name=name))
 
 
 def _coder_name_change_refusal(db_, current: Optional[str]
@@ -4735,10 +4774,11 @@ def set_project_coder_name(name: str,
                            "message": CODER_NAME_UNCHANGED.format(
                                name=name)}, indent=2)
     # The AI names above are complete only when exegete.json can be read
-    sidecar = read_sidecar(_current_project_folder())
-    if sidecar.status == SIDECAR_UNREADABLE:
-        return json.dumps({"error": CODER_NAME_AI_UNCHECKED_REFUSAL.format(
-            file=sidecar.path.name, name=name)})
+    # in full, its list of earlier names included
+    refusal = _ai_names_unchecked_refusal(
+        read_sidecar(_current_project_folder()), name)
+    if refusal is not None:
+        return json.dumps({"error": refusal})
     refusal = _coder_name_change_refusal(ro, current)
     if refusal is not None:
         return json.dumps({"error": refusal})

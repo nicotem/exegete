@@ -423,19 +423,26 @@ class SidecarState:
     A "newer_format" file whose current entry validates still reports its
     name, because reading it is safe; writing it is not. `earlier_marked`
     is True for a marked earlier file read with no exegete.json beside
-    it: "unset", with the names it holds in `history`.
+    it: "unset", with the names it holds in `history`. `history_dropped`
+    is True when the file holds a list of earlier names that the read
+    dropped (not a list, or an entry that fails validation): `history`
+    is then empty, and the project's earlier AI coder names are not
+    known (v0.15.0).
     """
 
-    __slots__ = ("status", "entry", "history", "path", "earlier_marked")
+    __slots__ = ("status", "entry", "history", "path", "earlier_marked",
+                 "history_dropped")
 
     def __init__(self, status: str, entry: Optional[Dict[str, Any]] = None,
                  history: Optional[List[Dict[str, Any]]] = None,
-                 path: Optional[Path] = None, earlier_marked: bool = False):
+                 path: Optional[Path] = None, earlier_marked: bool = False,
+                 history_dropped: bool = False):
         self.status = status
         self.entry = entry
         self.history = list(history or [])
         self.path = path
         self.earlier_marked = earlier_marked
+        self.history_dropped = history_dropped
 
     @property
     def name(self) -> Optional[str]:
@@ -539,10 +546,15 @@ def read_sidecar(project_folder: Any) -> SidecarState:
         # the researcher cares about.
         return SidecarState(SIDECAR_UNREADABLE, path=path)
     # A malformed history never costs the current name: it is
-    # informational, and the next set rebuilds it (B1.3).
-    history = _validated_history(data.get("ai_coder_name_history"))
+    # informational, and the next set rebuilds it (B1.3). That it was
+    # dropped is said, though: a check that needs every earlier name
+    # (set_project_coder_name) cannot be made without it (v0.15.0).
+    raw_history = data.get("ai_coder_name_history")
+    history = _validated_history(raw_history)
+    dropped = raw_history not in (None, []) and not history
     if version > newest:
-        return SidecarState(SIDECAR_NEWER_FORMAT, entry, history, path)
+        return SidecarState(SIDECAR_NEWER_FORMAT, entry, history, path,
+                            history_dropped=dropped)
     if path.name == OLD_SIDECAR_NAME and _is_marked(data):
         # A marked earlier file alone: exegete.json, which held every
         # name since the move, was removed or lost. The name here is the
@@ -552,10 +564,13 @@ def read_sidecar(project_folder: Any) -> SidecarState:
         # the history, so rows under them still count as this project's
         # AI work, and the next set carries them into exegete.json.
         return SidecarState(SIDECAR_UNSET, None, _held_entries(entry, history),
-                            path, earlier_marked=True)
+                            path, earlier_marked=True,
+                            history_dropped=dropped)
     if entry is None:
-        return SidecarState(SIDECAR_UNSET, None, history, path)
-    return SidecarState(SIDECAR_SET, entry, history, path)
+        return SidecarState(SIDECAR_UNSET, None, history, path,
+                            history_dropped=dropped)
+    return SidecarState(SIDECAR_SET, entry, history, path,
+                        history_dropped=dropped)
 
 
 def _validated_history(raw: Any) -> List[Dict[str, Any]]:

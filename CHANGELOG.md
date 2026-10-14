@@ -304,11 +304,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   attribute or file-list view saved by QualCoder carries the name. The
   refusal names the kinds of record that carry it, never how many; the
   change is refused too while the project's AI coder name file or its
-  coder list cannot be read. The name is the researcher's own,
-  never a name AI work is stored under (this project's AI coder name or
-  an earlier one, Exegete's built-in default, the AI coder name in the
-  settings, or "AI Agent"). In the project's list of coders the old
-  name's row takes the new name, keeping whether it is hidden; the
+  coder list cannot be read. The name is the researcher's own, never a
+  name AI work is stored under (this project's AI coder name or an
+  earlier one its AI coder name file lists, Exegete's built-in default,
+  the AI coder name in the settings, or "AI Agent"). In the project's
+  list of coders the old name's row takes the new name, keeping whether
+  it is hidden; the
   preview warns when the new name would be hidden there or already
   carries work. The question `create_project` asks now says the name
   can be corrected while nothing is recorded under it, and the warnings

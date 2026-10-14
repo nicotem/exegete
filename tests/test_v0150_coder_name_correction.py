@@ -15,8 +15,9 @@ with the preview's token, after a backup. What this file pins:
 - owners and the merge-note probe are exact (letter case, `%` and
   `_`); a table the project lacks is not probed;
 - a table that does not answer refuses, and so do a coder list that does
-  not answer and an AI coder name file that cannot be read; a change
-  after the preview, and a token for another name, refuse;
+  not answer and an AI coder name file that cannot be read, or whose list
+  of earlier names cannot; a change after the preview, and a token for
+  another name, refuse;
 - the names refused before any preview: AI names, the speaker coder,
   an invalid name; the same name is answered as unchanged;
 - a project with no name gets one with no probe run, and the AI coder
@@ -580,10 +581,12 @@ class TestTheNamesRefused:
                 f"Nothing was changed: this project's AI coder name file "
                 f"(exegete.json in the project folder) could not be read, "
                 f"so whether \"{name}\" is a name AI work is stored under "
-                f"could not be checked. Repairing the file, or setting the "
-                f"project's AI coder name again with "
-                f"set_project_ai_coder_name (which puts the damaged file "
-                f"aside and writes a new one), lets the check be made.")
+                f"could not be checked. Repairing the file lets the check "
+                f"be made. Setting the project's AI coder name again with "
+                f"set_project_ai_coder_name puts the damaged file aside and "
+                f"writes a new one; the names only the damaged file held "
+                f"are then no longer checked, and this tool's preview warns "
+                f"instead when work is recorded under \"{name}\".")
         # the same name is still answered as unchanged
         assert _call(OLD)["unchanged"] is True
         # set again, the damaged file goes aside with the history it held:
@@ -598,6 +601,84 @@ class TestTheNamesRefused:
             "if that is another person's coder name, or an AI coder name "
             "this project used before, choose another."]
         assert _change(NEW)["success"] is True
+
+    def test_a_damaged_list_of_earlier_ai_coder_names_refuses(self,
+                                                              tmp_path):
+        """exegete.json readable, but one entry of its list of earlier AI
+        coder names fails validation: the read keeps the current name and
+        drops the whole list, so an earlier AI name would pass for the
+        researcher's (fix round 2). Refused with the file's refusal; set
+        again, the list goes, and an earlier name is only warned about."""
+        from exegete import project_settings
+        folder = _make(tmp_path)
+        for name in ("Model One", "Model Two"):
+            assert json.loads(server.set_project_ai_coder_name(name))[
+                "success"] is True
+        assert not project_settings.read_sidecar(folder).history_dropped
+        _sql(folder, ("INSERT INTO code_text (owner) VALUES (?)",
+                      ("Model One",)))
+        path = folder / "exegete.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["ai_coder_name_history"].insert(0, {"name": "Ann #####"})
+        path.write_text(json.dumps(data), encoding="utf-8")
+        state = project_settings.read_sidecar(folder)
+        assert (state.status, state.name, state.history,
+                state.history_dropped) == ("project", "Model Two", [], True)
+        # the current name is still read, and refused as the AI's
+        assert _refused_unchanged(folder, "Model Two") == _ai_refusal(
+            "Model Two")
+        for name in ("Model One", NEW):
+            assert _refused_unchanged(folder, name) == (
+                f"Nothing was changed: this project's AI coder name file "
+                f"(exegete.json in the project folder) holds a list of "
+                f"earlier AI coder names that could not be read, so whether "
+                f"\"{name}\" is a name AI work is stored under could not be "
+                f"checked. Repairing that list lets the check be made. "
+                f"Setting the project's AI coder name again with "
+                f"set_project_ai_coder_name writes a new exegete.json "
+                f"without it; the names only the damaged file held are then "
+                f"no longer checked, and this tool's preview warns instead "
+                f"when work is recorded under \"{name}\".")
+        assert _call(OLD)["unchanged"] is True
+        # a list that is not a list is dropped too; an empty one, or none,
+        # is not
+        for value, dropped in (("Model One", True), ([], False),
+                               (None, False)):
+            data["ai_coder_name_history"] = value
+            path.write_text(json.dumps(data), encoding="utf-8")
+            assert project_settings.read_sidecar(
+                folder).history_dropped is dropped
+        data["ai_coder_name_history"] = [{"name": "Ann #####"}]
+        path.write_text(json.dumps(data), encoding="utf-8")
+        # set again: written without the list, an earlier name is warned of
+        assert json.loads(server.set_project_ai_coder_name("Model Three"))[
+            "success"] is True
+        assert not project_settings.read_sidecar(folder).history_dropped
+        assert _preview("Model One")["warnings"] == [
+            "Work is already recorded under \"Model One\" in this project; "
+            "if that is another person's coder name, or an AI coder name "
+            "this project used before, choose another."]
+        assert _change(NEW)["success"] is True
+
+    def test_a_newer_files_damaged_list_refuses(self, tmp_path):
+        """A file a newer version wrote, its list of earlier names one this
+        version cannot read: refused, and the way out is the upgrade, since
+        set_project_ai_coder_name does not write such a file."""
+        folder = _make(tmp_path)
+        assert json.loads(server.set_project_ai_coder_name("Model One"))[
+            "success"] is True
+        path = folder / "exegete.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["format_version"] = 2
+        data["ai_coder_name_history"].insert(0, {"name": "Ann #####"})
+        path.write_text(json.dumps(data), encoding="utf-8")
+        assert _refused_unchanged(folder, NEW) == (
+            f"Nothing was changed: this project's AI coder name file "
+            f"(exegete.json in the project folder) was written by a newer "
+            f"version of Exegete and holds a list of earlier AI coder names "
+            f"that this version could not read, so whether \"{NEW}\" is a "
+            f"name AI work is stored under could not be checked. Upgrading "
+            f"Exegete lets the check be made.")
 
     def test_the_speaker_coder(self, tmp_path):
         folder = _make(tmp_path)
@@ -1063,6 +1144,10 @@ class TestTheTool:
             in unreleased
         assert ("the change is refused too while the project's AI coder name "
                 "file or its coder list cannot be read.") in unreleased
+        # fix round 2: the earlier names are the ones the file lists
+        assert ("(this project's AI coder name or an earlier one its AI "
+                "coder name file lists, Exegete's built-in default,") \
+            in unreleased
         # fix round 1: the sentence no longer reads backwards
         assert ("The question create_project asks now says the name can be "
                 "corrected while nothing is recorded under it, and the "

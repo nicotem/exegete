@@ -21,7 +21,8 @@ import inspect
 import unicodedata
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any, Sequence, Tuple, Callable
+from typing import (Optional, List, Dict, Any, NamedTuple, Sequence, Tuple,
+                    Callable)
 
 import anyio
 from mcp.server.fastmcp import FastMCP
@@ -141,6 +142,7 @@ from .preview_tokens import (
 )
 from .project_settings import (
     AI_CODER_NAME_ENV,
+    CODER_NAME_ENV,
     DEFAULT_AI_CODER_NAME,
     EARLIER_MARKED,
     EARLIER_NOT_MARKED,
@@ -169,6 +171,9 @@ from .project_settings import (
     quoted_names,
     read_sidecar,
     removing_alone_warning,
+    setting_not_set,
+    settings_coder_name,
+    settings_coder_name_problem,
     settle_earlier_file,
     sidecar_path,
     store_ai_coder_name,
@@ -2437,10 +2442,11 @@ MAX_AI_CODER_NAME_LENGTH = MAX_CODER_NAME_LENGTH
 def _ai_coder_name() -> str:
     """The configured coder name for rows this server writes.
 
-    Reads EXEGETE_AI_CODER_NAME; unset means the default. A set
-    value goes through validate_coder_name, the rule set shared with the
-    tool-supplied owner arguments (non-empty after trimming, at most 80
-    characters, no control, line-separator or bidirectional formatting
+    Reads EXEGETE_AI_CODER_NAME; not set (unset, blank, or an unfilled
+    placeholder `${...}`, v0.15.0: setting_not_set) means the default. A
+    set value goes through validate_coder_name, the rule set shared with
+    the tool-supplied owner arguments (non-empty after trimming, at most
+    80 characters, no control, line-separator or bidirectional formatting
     characters, no '#####' marker), and an invalid one raises, so main()
     refuses to start rather than writing rows under a broken name.
 
@@ -2449,15 +2455,37 @@ def _ai_coder_name() -> str:
     """
     reading = env_settings.read("ai_coder_name")
     raw = reading.value
-    if raw is None:
+    if setting_not_set(raw):
         return DEFAULT_AI_CODER_NAME
-    if not raw.strip():
-        raise ValueError(
-            f"{reading.name} is set but empty. Set it to the coder "
-            f"name Exegete should write under (for example "
-            f"\"{DEFAULT_AI_CODER_NAME}\" or QualCoder 4.0's \"AI Agent\"), "
-            f"or unset it to use the default.")
     return validate_coder_name(raw, reading.name)
+
+
+def _settings_place(which: str) -> str:
+    """Where the researcher changes a coder name setting, in words
+    (v0.15.0): `which` is "coder" (their own), "ai" or "both". On the
+    desktop extension, by its own mark, the setting's title in
+    Exegete's settings; installed any other way, the variable in the
+    host's configuration."""
+    if env_settings.installed_as_extension():
+        titles = {"coder": "\"Your coder name\"",
+                  "ai": "\"AI coder name\"",
+                  "both": "\"Your coder name\" or \"AI coder name\""}
+        return (f"{titles[which]} in Exegete's settings (Settings, "
+                f"Extensions, Exegete)")
+    variables = {"coder": CODER_NAME_ENV, "ai": AI_CODER_NAME_ENV,
+                 "both": f"{CODER_NAME_ENV} or {AI_CODER_NAME_ENV}"}
+    return f"{variables[which]} in the host's configuration for Exegete"
+
+
+# The start-up refusals of an invalid coder name setting (v0.15.0), each
+# after the validator's message, which names the setting and never the
+# value.
+CODER_NAME_SETTING_INVALID_END = (
+    " Change {place}, or leave it empty to be asked for the name in each "
+    "new project.")
+AI_CODER_NAME_SETTING_INVALID_END = (
+    " Change {place}, or leave it empty to be asked in each project that "
+    "needs one.")
 
 
 def _export_owner_and_source() -> Tuple[str, str]:
@@ -2701,6 +2729,45 @@ def _ai_coder_name_change_warning(session, owner: str) -> Optional[str]:
                 f"coder name was '{recorded}'; they are being written "
                 f"under '{owner}'.")
     return None
+
+
+# What a project's selection says when the researcher's own coder name in
+# Exegete's settings is filled in and the project, or the AI coder name
+# setting, says otherwise (v0.15.0). The settings' name appears in no
+# other field of a read.
+CODER_NAME_DIFFERS_NOTE = (
+    "This project's own coder name is \"{c}\"; the researcher's own coder "
+    "name in Exegete's settings is \"{s}\", which only projects Exegete "
+    "creates take. A project's own coder name is never changed without "
+    "the researcher's word.")
+CODER_NAME_NONE_RECORDED_NOTE = (
+    "This project records no coder name for the researcher, so the check "
+    "that keeps the AI's codings apart from theirs is off; the "
+    "researcher's own coder name in Exegete's settings is \"{s}\", which "
+    "only projects Exegete creates take.")
+CODER_NAME_SETTINGS_EQUAL_NOTE = (
+    "The researcher's own coder name and the AI coder name in Exegete's "
+    "settings are both \"{s}\"; they must differ, so a new project is "
+    "refused until one is changed ({place}).")
+
+
+def _coder_name_notes(project_info: Optional[Dict[str, Any]]) -> List[str]:
+    """The notes select_project and get_current_project give under
+    `coder_name_notes`, each only when it applies, and none when the
+    researcher's own coder name in Exegete's settings is not filled in."""
+    setting = settings_coder_name()
+    if setting is None:
+        return []
+    notes = []
+    coder = (project_info or {}).get("coder_name")
+    if not coder:
+        notes.append(CODER_NAME_NONE_RECORDED_NOTE.format(s=setting))
+    elif coder != setting:
+        notes.append(CODER_NAME_DIFFERS_NOTE.format(c=coder, s=setting))
+    if setting == host_declaration():
+        notes.append(CODER_NAME_SETTINGS_EQUAL_NOTE.format(
+            s=setting, place=_settings_place("both")))
+    return notes
 
 
 def _ai_coder_name_report() -> Dict[str, Any]:
@@ -4080,6 +4147,11 @@ def _select_project(project_path: str) -> Dict[str, Any]:
     # A session that starts with a selection learns the AI coder name
     # state at once, rather than discovering it at the first write.
     result.update(_ai_coder_name_report())
+    # v0.15.0: and what the researcher's own coder name in the settings
+    # means for this project, when a note applies
+    notes = _coder_name_notes(project_info)
+    if notes:
+        result["coder_name_notes"] = notes
     # The brief's second net (v0.14.2)
     result["brief"] = BRIEF_REMINDER
 
@@ -4234,8 +4306,9 @@ def set_project_ai_coder_name(name: str, note: str = "",
     with a binary unique index, so "AI Agent" and "ai agent" are two
     coders there (code, category and case NAMES follow the opposite rule,
     which is QualCoder 4.0 parity for those). Refused if the name is the
-    project's own coder name, QualCoder's literal default coder name
-    "default", or QualCoder's speaker coder "\U0001F4CC Speaker coding";
+    project's own coder name or the researcher's own coder name in
+    Exegete's settings, QualCoder's literal default coder name "default", or
+    QualCoder's speaker coder "\U0001F4CC Speaker coding";
     refused without allow_hidden_coder=true if the name belongs
     to a coder currently hidden in QualCoder. When the project's own
     coder name is not known (a project created before the researcher gave
@@ -4296,6 +4369,13 @@ def set_project_ai_coder_name(name: str, note: str = "",
             f"would be indistinguishable from the user's in QualCoder's "
             f"coder lists, visibility toggle, undo and reports. Choose a "
             f"different name. Nothing was changed.")})
+    if name == settings_coder_name():
+        # v0.15.0: the name the researcher gave as their own in Exegete's
+        # settings, which new projects take
+        return json.dumps({"error": (
+            f"\"{name}\" is the researcher's own coder name in Exegete's "
+            f"settings, so AI rows under it could not be told apart from "
+            f"theirs. Choose a different name. Nothing was changed.")})
     if name == "default":
         return json.dumps({"error": (
             "\"default\" is QualCoder's own default coder name for any "
@@ -4695,6 +4775,11 @@ def get_current_project() -> str:
         }
         # The project's AI coder name, reported and never asked for (D7 4.4)
         result.update(_ai_coder_name_report())
+        # v0.15.0: the researcher's own coder name in the settings, when a
+        # note applies
+        notes = _coder_name_notes(project_info)
+        if notes:
+            result["coder_name_notes"] = notes
         # The brief's second net (v0.14.2)
         result["brief"] = BRIEF_REMINDER
         # The project's own pseudonyms.json (v0.13, Brief 2, ruling 14b):
@@ -19774,42 +19859,115 @@ CODER_NAME_NOT_KNOWN_WARNING = (
     "the AI coder name chosen is not theirs.")
 
 
-def _coder_name_for_creation(coder_name: Any, not_known: Any
-                             ) -> Tuple[Optional[str], Optional[str]]:
-    """(the coder name to store, None) or (None, what to tell the model).
+# The researcher's own coder name in Exegete's settings, at creation
+# (v0.15.0, ruling 73, item 6): the sentence that follows the question
+# when the setting is empty, the notes when the setting is not what the
+# project records, and the refusals. Each refusal ends "Nothing was
+# created."
+CODER_NAME_ASK_SPARED = (
+    " To be spared this question in later projects, the researcher can "
+    "fill in {place}.")
+CODER_NAME_GIVEN_DIFFERS_NOTE = (
+    "The researcher's own coder name in Exegete's settings is \"{s}\"; "
+    "this project records \"{given}\", the name given for it.")
+CODER_NAME_NOT_KNOWN_SETTING_NOTE = (
+    "The researcher's own coder name in Exegete's settings is \"{s}\"; it "
+    "was not used, because coder_name_not_known=true was passed, so this "
+    "project records none.")
+CODER_NAME_SETTINGS_EQUAL_REFUSAL = (
+    "The researcher's own coder name and the AI coder name in Exegete's "
+    "settings are both \"{name}\". They must differ: AI codings stored "
+    "under the researcher's own name could not be told apart from "
+    "theirs. Change one of them ({place}). Nothing was created.")
+CODER_NAME_GIVEN_IS_AI_REFUSAL = (
+    "The coder name given for the researcher, \"{name}\", is also the AI "
+    "coder name in Exegete's settings. They must differ: AI codings "
+    "stored under the researcher's own name could not be told apart from "
+    "theirs. Change {place}, or call again with another coder_name, as "
+    "the researcher gives it. Nothing was created.")
+CODER_NAME_SETTING_IS_SPEAKER_REFUSAL = (
+    "Exegete's settings give \"{speaker}\" as the researcher's own coder "
+    "name, but that is QualCoder's speaker coder, which every project "
+    "lists; it is not a person's coder name. Change {place}, or call "
+    "again with the researcher's own coder name as coder_name. Nothing "
+    "was created.")
 
-    Missing: ask (never read QualCoder's settings file, which holds API
-    keys in plain text, and never guess). An explicit "not known" is
-    stored as '' (never NULL: QualCoder's Switch answer fails on a NULL
-    name). A given name is validated as every coder name this server
-    writes is; QualCoder's speaker coder is refused, "default" (QualCoder's
-    own name for anyone who never set one) is accepted.
+
+class _CreationCoderName(NamedTuple):
+    """The researcher's coder name for a new project: the name to store
+    ('' for "not known") and where it came from ("settings", "given" or
+    "not_known"), with a note when the settings hold another; or, when
+    nothing may be created yet, what to tell the model."""
+    name: Optional[str]
+    problem: Optional[str]
+    source: Optional[str] = None
+    note: Optional[str] = None
+
+
+def _coder_name_for_creation(coder_name: Any, not_known: Any
+                             ) -> _CreationCoderName:
+    """The coder name to store, or what to tell the model.
+
+    Missing: the researcher's own coder name in Exegete's settings when
+    it is filled in (v0.15.0), used without asking; otherwise ask (never
+    read QualCoder's settings file, which holds API keys in plain text,
+    and never guess). An explicit "not known" is stored as '' (never
+    NULL: QualCoder's Switch answer fails on a NULL name). A given name
+    is validated as every coder name this server writes is; QualCoder's
+    speaker coder is refused, "default" (QualCoder's own name for anyone
+    who never set one) is accepted. Two settings that hold one name
+    refuse every creation, whatever the arguments, and a given name
+    equal to the AI coder name in the settings is refused: AI codings
+    under the researcher's own name could not be told apart.
     """
+    setting = settings_coder_name()
+    ai_setting = host_declaration()
+    if setting is not None and setting == ai_setting:
+        return _CreationCoderName(None, CODER_NAME_SETTINGS_EQUAL_REFUSAL.format(
+            name=setting, place=_settings_place("both")))
     if not isinstance(not_known, bool):
-        return None, "coder_name_not_known must be true or false."
+        return _CreationCoderName(
+            None, "coder_name_not_known must be true or false.")
     if coder_name is None:
-        return ("", None) if not_known else (None, CODER_NAME_ASK)
+        if not_known:
+            note = (CODER_NAME_NOT_KNOWN_SETTING_NOTE.format(s=setting)
+                    if setting is not None else None)
+            return _CreationCoderName("", None, "not_known", note)
+        if setting is None:
+            return _CreationCoderName(None, CODER_NAME_ASK)
+        if setting == SPEAKER_SYSTEM_CODER:
+            return _CreationCoderName(
+                None, CODER_NAME_SETTING_IS_SPEAKER_REFUSAL.format(
+                    speaker=SPEAKER_SYSTEM_CODER,
+                    place=_settings_place("coder")))
+        return _CreationCoderName(setting, None, "settings")
     if not isinstance(coder_name, str):
-        return None, "coder_name must be the coder name, given as text."
+        return _CreationCoderName(
+            None, "coder_name must be the coder name, given as text.")
     if not coder_name.strip():
-        return None, (
+        return _CreationCoderName(None, (
             "coder_name is empty. Give the researcher's own coder name "
             "exactly as they give it, or, when they do not know it, leave "
-            "coder_name out and pass coder_name_not_known=true.")
+            "coder_name out and pass coder_name_not_known=true."))
     if not_known:
-        return None, (
+        return _CreationCoderName(None, (
             "Give coder_name or coder_name_not_known=true, not both: the "
-            "flag says the researcher does not know their coder name.")
+            "flag says the researcher does not know their coder name."))
     try:
         name = validate_coder_name(coder_name, "coder_name")
     except ValueError as error:
-        return None, str(error)
+        return _CreationCoderName(None, str(error))
     if name == SPEAKER_SYSTEM_CODER:
-        return None, (
+        return _CreationCoderName(None, (
             f"\"{SPEAKER_SYSTEM_CODER}\" is QualCoder's speaker coder, which "
             f"every project lists; it is not a person's coder name. Ask the "
-            f"researcher for their own coder name.")
-    return name, None
+            f"researcher for their own coder name."))
+    if ai_setting is not None and name == ai_setting:
+        return _CreationCoderName(None, CODER_NAME_GIVEN_IS_AI_REFUSAL.format(
+            name=name, place=_settings_place("ai")))
+    note = (CODER_NAME_GIVEN_DIFFERS_NOTE.format(s=setting, given=name)
+            if setting is not None and setting != name else None)
+    return _CreationCoderName(name, None, "given", note)
 
 
 # What each QualCoder build does with a created project, in the create
@@ -19981,15 +20139,19 @@ def create_project(name: str, directory: Optional[str] = None,
     be imported at once. Nothing existing is ever changed: a name already in
     use is refused, never replaced or given a "_1".
 
-    THE RESEARCHER'S CODER NAME: ask the researcher what name their own codings
-    should carry; if they use QualCoder, the name in its settings
-    ("Current coder"), exactly as there; if not, any name they choose. It is
-    their own name, not the AI's, and must never be guessed or taken from
-    anywhere else: a wrong name makes QualCoder ask them to keep or switch
-    names when they open the project. If they do not know it, pass
-    coder_name_not_known=true instead; the project is then created, and the
-    result says what that means. With neither, nothing is created and the
-    answer asks for it.
+    THE RESEARCHER'S CODER NAME: do not ask for it before the first call.
+    Leave coder_name out: when the researcher has filled in their coder name
+    in Exegete's settings, it is used without asking and the answer says so
+    (coder_name_source); otherwise nothing is created and the answer gives
+    the question to ask: what name their own codings should carry; if they
+    use QualCoder, the name in its settings ("Current coder"), exactly as
+    there; if not, any name they choose. It is their own name, not the AI's:
+    take it only from the researcher or from Exegete's settings, and never
+    guess it, since a wrong name makes QualCoder, if they use it, ask them to
+    keep or switch names when they open the project. Pass coder_name only
+    with a name the researcher gave; if they do not know it, pass
+    coder_name_not_known=true instead: the project is then created without
+    one, and the result says what that means.
 
     Names: the name becomes a folder, so it may not hold / \\ : < > | ? * or ",
     end in a dot or a space, start with a dot, be a Windows device name such as
@@ -20014,18 +20176,27 @@ def create_project(name: str, directory: Optional[str] = None,
     # The coder name is settled first but ASKED FOR LAST (the study's
     # check): every other refusal comes first, with the coder-name
     # question in the same answer, so the researcher is asked once.
-    stored_coder, coder_problem = _coder_name_for_creation(
-        coder_name, coder_name_not_known)
+    # v0.15.0: the researcher's own coder name in Exegete's settings, when
+    # filled in, is used without asking.
+    creation_coder = _coder_name_for_creation(coder_name,
+                                              coder_name_not_known)
+    stored_coder, coder_problem = creation_coder.name, creation_coder.problem
+    asking = coder_problem == CODER_NAME_ASK
+    if asking:
+        # The question as it stands, then where the researcher can fill
+        # in the name to be spared it in later projects
+        coder_problem += CODER_NAME_ASK_SPARED.format(
+            place=_settings_place("coder"))
     refusal = _create_project_place_refusal(name, directory)
     if isinstance(refusal, str):
         if coder_problem is not None:
             refusal += f" Before calling again, also: {coder_problem}"
         extra = ({"action_required": "ask_researcher_coder_name"}
-                 if coder_problem == CODER_NAME_ASK else {})
+                 if asking else {})
         return _create_project_refusal(refusal, **extra)
     stem, parent, is_default, folder = refusal
     if coder_problem is not None:
-        if coder_problem != CODER_NAME_ASK:
+        if not asking:
             return _create_project_refusal(coder_problem)
         # The place checks passed, so the path is known: projects_folder
         # is the folder that is set, and `directory` may name another
@@ -20098,11 +20269,15 @@ def create_project(name: str, directory: Optional[str] = None,
         "about": about,
         "coder_name": stored_coder or None,
         "coder_name_known": bool(stored_coder),
+        # v0.15.0: "settings", "given" or "not_known"
+        "coder_name_source": creation_coder.source,
         "selected": False,
         "previous_project": previous,
         "projects_folder": _projects_folder(),
         "warnings": warnings,
     }
+    if creation_coder.note is not None:
+        result["coder_name_note"] = creation_coder.note
     note = _earlier_workspace_note(is_default)
     if note:
         result["earlier_projects"] = note
@@ -20541,10 +20716,22 @@ def main(argv: Optional[List[str]] = None, *,
 
     # P1-2: validate the configured AI coder name up front. Refusing to
     # start beats writing rows under a broken or unintended owner string.
+    # v0.15.0: an empty one means not set, and the researcher's own coder
+    # name in the settings is checked beside it; equal names, the speaker
+    # coder and "default" do not stop the start: they are refused where
+    # used, so the message reaches the conversation.
     try:
         _ai_coder_name()
     except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        end = AI_CODER_NAME_SETTING_INVALID_END.format(
+            place=_settings_place("ai"))
+        print(f"Error: {e}{end}", file=sys.stderr)
+        sys.exit(1)
+    coder_problem = settings_coder_name_problem()
+    if coder_problem is not None:
+        end = CODER_NAME_SETTING_INVALID_END.format(
+            place=_settings_place("coder"))
+        print(f"Error: {coder_problem}{end}", file=sys.stderr)
         sys.exit(1)
 
     # v0.14: a workspace set by the host (the desktop extension's folder

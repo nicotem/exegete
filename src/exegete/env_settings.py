@@ -6,8 +6,8 @@ nowhere else (tests/test_v0141_compat.py forbids any other environment
 read in the package). Each has a new spelling, starting EXEGETE_, and
 the earlier one, which is still read until v1.0 (names.SETTINGS); the
 settings that never had an earlier spelling have the new one only
-(names.NEW_ONLY_SETTINGS, read by update_check, installed_as and
-call_seconds). The one other read here is not a setting: Windows' own
+(names.NEW_ONLY_SETTINGS, read by update_check, installed_as,
+call_seconds and coder_name, the researcher's own coder name). The one other read here is not a setting: Windows' own
 folder, SystemRoot, from which the transition check starts PowerShell
 by its full path.
 
@@ -124,8 +124,8 @@ def read(key: str, environ: Optional[Mapping[str, str]] = None) -> Reading:
     if not _blank(new_raw):
         return Reading(new_raw, new, False, False)
     # Neither says anything: a blank one is still handed on as it is, so
-    # a read that treats a blank value in its own way (a blank coder name
-    # stops the server) goes on doing so.
+    # a read that treats a blank value in its own way goes on doing so (a
+    # blank AI coder name means not set, v0.15.0: project_settings).
     if new_raw is not None:
         return Reading(new_raw, new, False, False)
     if old_raw is not None:
@@ -211,6 +211,16 @@ def call_seconds(environ: Optional[Mapping[str, str]] = None
     doc_import.call_seconds says what each value means."""
     env = os.environ if environ is None else environ
     return env.get(names.NEW_ONLY_SETTINGS["call_seconds"])
+
+
+def coder_name(environ: Optional[Mapping[str, str]] = None
+               ) -> Optional[str]:
+    """EXEGETE_CODER_NAME, the researcher's own coder name, which has one
+    spelling only (names.NEW_ONLY_SETTINGS): its raw value, or None when
+    it is not set. project_settings.settings_coder_name says what each
+    value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["coder_name"])
 
 
 def windows_system_root() -> str:

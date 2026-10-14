@@ -86,6 +86,19 @@ OLD_IN_ANSWERS = (
     "check them in QualCoder before sharing the project",
 )
 
+# Fix round 1: the piece's own words the gate's review corrected, each
+# from a single literal part on the branch before the round.
+OLD_IN_ROUND_1 = (
+    "Exegete's when asked to",
+    "Exegete's (when asked)",
+    "Later imports apply pseudonyms.json: Exegete's",
+    "an entry already in the file can still",
+    "save it again with a later run",
+    "can also change the entry in its Pseudonyms dialog",
+    "check them by hand before sharing the project",
+    "Manage Files also edits it",
+)
+
 # A name no answer may carry: it is in every list the tests write.
 SENTINEL = "Zebedee"
 OPENS = ("The project's names list (pseudonyms.json, a list of {original, "
@@ -95,7 +108,12 @@ WINDOWS = ("A file written on Windows, by QualCoder or another program, is "
            "cannot read; open it in a text editor and save it as UTF-8.")
 CORRECT = (" Correct the list (open pseudonyms.json in the project folder "
            "in a text editor; in QualCoder, if you use it, the Pseudonyms "
-           "button in Manage Files also edits it), then ask again. ")
+           "button in Manage Files can also remove an entry and add it "
+           "again), then ask again. ")
+# Fix round 1: a list the reader cannot read, which QualCoder's dialog
+# cannot open either, is corrected in a text editor alone.
+CORRECT_UNREADABLE = (" Correct the list (open pseudonyms.json in the "
+                      "project folder in a text editor), then ask again. ")
 PREVIEW_NO_LIST = (
     "This project has no names list. If these documents name participants "
     "or places, run pseudonymise_source on each file once it is in and "
@@ -127,6 +145,12 @@ class TestTheGuard:
         assert any("this tool rewrites text sources only." in t
                    for t in texts)
         found = [(phrase, t[:120]) for phrase in OLD_IN_ANSWERS
+                 for t in texts if _flat(phrase) in t]
+        assert not found, found
+
+    def test_no_phrase_corrected_in_fix_round_1_is_in_an_answer(self):
+        texts = answer_texts()
+        found = [(phrase, t[:120]) for phrase in OLD_IN_ROUND_1
                  for t in texts if _flat(phrase) in t]
         assert not found, found
 
@@ -252,11 +276,13 @@ class TestAListThatCannotBeRead:
         stops = [s for s in preview.get("stops_the_import", [])
                  if "names list" in s]
         assert stops == [
-            OPENS + tail + CORRECT + "The import applies the list as the "
-            "text comes in, so it cannot go ahead with a list it cannot "
-            "read."], preview
-        _before_qualcoder(stops[0][stops[0].index(CORRECT):],
-                          "in a text editor")
+            OPENS + tail + CORRECT_UNREADABLE + "The import applies the "
+            "list as the text comes in, so it cannot go ahead with a list "
+            "it cannot read."], preview
+        # Fix round 1: QualCoder's dialog cannot open such a list, so it
+        # is not offered.
+        assert "QualCoder" not in stops[0][stops[0].index(
+            CORRECT_UNREADABLE):]
 
     @pytest.mark.parametrize("way", sorted(UNREADABLE))
     def test_get_current_project_in_each_way(self, importing, monkeypatch,
@@ -357,20 +383,29 @@ MAPPING_NOTE = (
     "backup is the other half and holds the real names. Exegete does not "
     "keep the mapping unless asked. On this run it was saved into the "
     "project's own pseudonyms.json (3 entries added), which later imports "
-    "apply (Exegete's when asked to, QualCoder's text and transcript "
-    "imports always) and which travels into every later backup; store "
-    "that file securely once the import work is done.")
+    "apply (Exegete's import_documents by default, import_text_file when "
+    "asked; QualCoder's text and transcript imports always) and which "
+    "travels into every later backup; store that file securely once the "
+    "import work is done.")
+# Fix round 1: what file order can do is said of QualCoder's imports
+# alone; Exegete's apply the list in one pass.
 ORDER_NOTE = (
-    "Later imports apply pseudonyms.json: Exegete's (when asked) in one "
-    "pass, longest name first, case-sensitively; QualCoder's text and "
-    "transcript imports one entry at a time, in file order, "
-    "case-sensitively. The new entries were written longest name first, "
-    "so a shorter name inside a longer one does not pre-empt it; an entry "
-    "already in the file can still (see the warnings), two names that "
-    "overlap without either containing the other (Mary Ann and Ann Lee, in "
-    "Mary Ann Lee) can still come out differently, a pseudonym that "
-    "contains a name from the mapping is rewritten again, and under an "
-    "insensitive case mode only the spellings saved are replaced.")
+    "Later imports apply pseudonyms.json case-sensitively: Exegete's "
+    "(import_documents by default, import_text_file when asked) in one "
+    "pass, longest name first, so nothing they write is replaced again; "
+    "QualCoder's text and transcript imports one entry at a time, in file "
+    "order. For QualCoder's imports, the new entries were written longest "
+    "name first, so a shorter name inside a longer one does not pre-empt "
+    "it; there an entry already in the file still can (see the warnings), "
+    "two names that overlap without either containing the other (Mary Ann "
+    "and Ann Lee, in Mary Ann Lee) can come out differently from this run, "
+    "and a pseudonym that contains a name from the mapping is rewritten "
+    "again. In Exegete as in QualCoder, under an insensitive case mode "
+    "only the spellings saved are replaced.")
+# What only QualCoder's file-order imports do, each said after "For
+# QualCoder's imports" and before the sentence on both programs.
+QUALCODER_ONLY = ("pre-empt", "still can", "come out differently",
+                  "rewritten again")
 VARIANTS_NOTE = (
     "The mapping had alternative spellings; each was written to "
     "pseudonyms.json as its own entry with the same pseudonym (1 such "
@@ -389,9 +424,10 @@ NO_RUN_ANSWER = (
     "Manage Files.)")
 NOT_MADE = (
     "save was requested, not made. Make sure the researcher keeps the "
-    "mapping now: save it again with a later run, or, if they use "
-    "QualCoder, enter it in its Pseudonyms dialog (the button in Manage "
-    "Files).")
+    "mapping now: save it with a run on another file that still contains "
+    "one of the names, or write it into pseudonyms.json in the project "
+    "folder with a text editor; or, if they use QualCoder, enter it in its "
+    "Pseudonyms dialog (the button in Manage Files).")
 CONFLICT = (
     "The mapping cannot be saved into this project's pseudonyms.json: entry "
     "[1] maps a name the file already maps, and the file holds one "
@@ -399,8 +435,8 @@ CONFLICT = (
     "too). Nothing was written. Remove or change the entry and preview "
     "again; or preview again without save_mapping_to_project and execute "
     "with researcher_keeps_mapping=true. (A researcher who uses QualCoder "
-    "can also change the entry in its Pseudonyms dialog, under Manage "
-    "Files.)")
+    "can also remove the file's entry in its Pseudonyms dialog, under "
+    "Manage Files.)")
 CONFLICT_WARNING_KEEPS = (
     "and QualCoder's Pseudonyms dialog (the button in Manage Files) refuses "
     "a duplicate original as well (see mapping_retention.if_saved."
@@ -415,8 +451,9 @@ CASE_WARNING = (
 UNREADABLE_PART = (
     "Warning: this report could not read source.fulltext, so it does not "
     "cover it, and a name there is counted nowhere in residue. Preview "
-    "again; if the same parts still cannot be read, check them by hand "
-    "before sharing the project (in QualCoder, if the researcher uses it).")
+    "again; if the same parts still cannot be read, check them by hand (in "
+    "QualCoder, if the researcher uses it) before sharing the project, or "
+    "treat them as still holding names.")
 
 
 class TestARunThatSavedTheMapping:
@@ -428,7 +465,8 @@ class TestARunThatSavedTheMapping:
         notes = [n for n in result["notes"] if n.startswith("The mapping you")]
         assert notes == [MAPPING_NOTE]
         _before_qualcoder(notes[0][notes[0].index("which later"):],
-                          "Exegete's when asked to")
+                          "Exegete's import_documents by default, "
+                          "import_text_file when asked")
 
     def test_the_order_leads_with_exegetes_imports(self, project):
         """Entry 7."""
@@ -436,9 +474,28 @@ class TestARunThatSavedTheMapping:
         notes = [n for n in result["notes"]
                  if n.startswith("Later imports apply")]
         assert notes == [ORDER_NOTE]
-        _before_qualcoder(notes[0], "Exegete's (when asked) in one pass")
+        _before_qualcoder(notes[0], "in one pass, longest name first, so "
+                          "nothing they write is replaced again")
         assert not any(n.startswith("QualCoder applies")
                        for n in result["notes"])
+
+    def test_what_file_order_can_do_is_said_of_qualcoders_imports(
+            self, project):
+        """Fix round 1: each clause true of QualCoder's file-order imports
+        alone follows "For QualCoder's imports", and the sentence on
+        letter case, true of both, follows them."""
+        _, result = _save_run()
+        note = [n for n in result["notes"]
+                if n.startswith("Later imports apply")][0]
+        scope = note.index("For QualCoder's imports, ")
+        both = note.index("In Exegete as in QualCoder, under an insensitive "
+                          "case mode")
+        for clause in QUALCODER_ONLY:
+            assert clause in note, clause
+            assert scope < note.index(clause) < both, clause
+        exegetes = note[:note.index("; QualCoder's text and transcript")]
+        assert "Exegete's (import_documents by default" in exegetes
+        assert "nothing they write is replaced again" in exegetes
 
     def test_alternative_spellings_are_changed_in_the_file(self, project):
         """Entry 11."""
@@ -446,6 +503,41 @@ class TestARunThatSavedTheMapping:
         notes = [n for n in result["notes"] if n.startswith("The mapping had")]
         assert notes == [VARIANTS_NOTE]
         _before_qualcoder(notes[0], "edit the file")
+
+
+class TestWhatTheOrderNoteSaysOfExegetesImports:
+    """Named as a guard, not counted (fix round 1): what the order note
+    says of Exegete's imports holds for import_documents, with a list
+    whose file order would garble each name in QualCoder's imports."""
+
+    def test_one_pass_longest_name_first(self, importing, tmp_path):
+        (importing / "pseudonyms.json").write_text(json.dumps([
+            {"original": "Ann", "pseudonym": "Zoe"},
+            {"original": "Ann Lee", "pseudonym": "Kim"},
+            {"original": "Thomas", "pseudonym": "Alex"},
+            {"original": "Peter", "pseudonym": "Thomas Pat"},
+            {"original": "Mary Ann", "pseudonym": "Sam"}]),
+            encoding="utf-8")
+        path = tmp_path / "P02.txt"
+        path.write_bytes(b"Mary Ann and Ann came. Peter met Thomas. "
+                         b"Mary Ann Lee left.\n")
+        preview = _import(paths=[str(path)])
+        assert "preview_token" in preview, preview
+        done = _import(paths=[str(path)],
+                       preview_token=preview["preview_token"])
+        assert done.get("success") is not False, done
+        con = sqlite3.connect(str(importing / "data.qda"))
+        try:
+            stored = con.execute(
+                "SELECT fulltext FROM source ORDER BY id DESC "
+                "LIMIT 1").fetchone()[0]
+        finally:
+            con.close()
+        # Ann, listed first, does not pre-empt Mary Ann; the pseudonym
+        # holding a name is not rewritten again; and Mary Ann Lee comes
+        # out as one leftmost, longest match.
+        assert stored.startswith("Sam and Zoe came. Thomas Pat met Alex. "
+                                 "Sam Lee left."), stored
 
 
 class TestThePreviewAndItsRefusals:
@@ -494,7 +586,8 @@ class TestThePreviewAndItsRefusals:
         assert result["mapping_saved"] is False, result
         note = [n for n in result["notes"] if n.startswith("The mapping")][0]
         assert note.endswith(NOT_MADE)
-        _before_qualcoder(NOT_MADE, "save it again with a later run")
+        _before_qualcoder(NOT_MADE, "save it with a run on another file")
+        _before_qualcoder(NOT_MADE, "with a text editor")
 
     def test_a_name_the_list_already_maps(self, project):
         """Entry 12: the refusal; the preview's warning keeps its
@@ -508,6 +601,7 @@ class TestThePreviewAndItsRefusals:
         assert refused["error"] == CONFLICT
         remedy = CONFLICT[CONFLICT.index("Nothing was written."):]
         _before_qualcoder(remedy, "Remove or change the entry")
+        assert "can also remove the file's entry in its Pseudonyms" in remedy
         assert backups(project) == []
 
     @POSIX_ONLY
@@ -550,6 +644,7 @@ class TestThePreviewAndItsRefusals:
                  if w.startswith("Warning: this report could not read ")]
         assert found == [UNREADABLE_PART]
         _before_qualcoder(found[0], "check them by hand")
+        assert found[0].endswith("or treat them as still holding names.")
 
     def test_a_list_that_cannot_be_read_after_a_colon(self, project,
                                                       monkeypatch):
@@ -621,15 +716,29 @@ def test_the_changelog_says_what_changed():
     assert heading in unreleased
     section = unreleased.split(heading, 1)[1].split("### ", 1)[0]
     for phrase in (
-            "lead with what every researcher can do in Exegete, and name "
-            "QualCoder only for those who use it",
+            "lead with what every researcher can do in Exegete, name "
+            "QualCoder about its own imports and dialog, and offer its "
+            "routes only to those who use it",
             "Importing into a project with no names list",
             "QualCoder, if you use it, can also make the list before "
             "importing",
             "a file written on Windows, by QualCoder or another program",
-            "Exegete's in one pass, longest name first",
+            "in one pass, longest name first, so nothing they write is "
+            "replaced again",
+            "where an entry already in the file can pre-empt a longer name",
+            "that still contains one of the names, or write it into "
+            "pseudonyms.json with a text editor",
             "\"in Exegete as in QualCoder\"",
             "\"Exegete leaves it so\"",
             "\"rewrites text sources only\""):
         assert _flat(phrase) in section, phrase
     assert "—" not in section
+
+
+def test_the_changelog_section_wraps_at_72():
+    """Fix round 1: the section's lines wrap as the file's do."""
+    text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    heading = "### Changed: the names list and pseudonymisation's messages"
+    section = text.split(heading, 1)[1].split("\n### ", 1)[0]
+    long_lines = [line for line in section.splitlines() if len(line) > 72]
+    assert not long_lines, long_lines

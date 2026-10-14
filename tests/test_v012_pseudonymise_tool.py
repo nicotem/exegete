@@ -4537,9 +4537,10 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "the backup is the other half and holds the real names. "
             "Exegete does not keep the mapping unless asked. On this run it "
             "was saved into the project's own pseudonyms.json (3 entries "
-            "added), which later imports apply (Exegete's when asked to, "
-            "QualCoder's text and transcript imports always) and which "
-            "travels into every later backup; "
+            "added), which later imports apply (Exegete's import_documents "
+            "by default, import_text_file when asked; QualCoder's text and "
+            "transcript imports always) and which travels into every later "
+            "backup; "
             "store that file securely once the import work is done."]
         variants = [n for n in notes if n.startswith("The mapping had")]
         assert variants == [
@@ -4556,19 +4557,22 @@ class TestSavingTheMappingIntoPseudonymsJson:
         # Fix round 2: where QualCoder applies it (B2P-N1), and names that
         # overlap without nesting (Q-5); the merge with main: not a PDF,
         # which QualCoder's text import skips (Q2-1). v0.15.0: Exegete's
-        # imports first, then QualCoder's text and transcript imports.
+        # imports first, then QualCoder's text and transcript imports;
+        # what file order can do is said of QualCoder's alone.
         assert applying == [
-            "Later imports apply pseudonyms.json: Exegete's (when asked) in "
-            "one pass, longest name first, case-sensitively; QualCoder's "
-            "text and transcript imports one entry at a time, in file "
-            "order, case-sensitively. The new entries were written longest name "
-            "first, so a shorter name inside a longer one does not pre-empt "
-            "it; an entry already in the file can still (see the warnings), "
-            "two names that overlap without either containing the other "
-            "(Mary Ann and Ann Lee, in Mary Ann Lee) can still come out "
-            "differently, a pseudonym that contains a name from the mapping "
-            "is rewritten again, and under an insensitive case mode only the "
-            "spellings saved are replaced."]
+            "Later imports apply pseudonyms.json case-sensitively: "
+            "Exegete's (import_documents by default, import_text_file when "
+            "asked) in one pass, longest name first, so nothing they write "
+            "is replaced again; QualCoder's text and transcript imports one "
+            "entry at a time, in file order. For QualCoder's imports, the "
+            "new entries were written longest name first, so a shorter name "
+            "inside a longer one does not pre-empt it; there an entry "
+            "already in the file still can (see the warnings), two names "
+            "that overlap without either containing the other (Mary Ann and "
+            "Ann Lee, in Mary Ann Lee) can come out differently from this "
+            "run, and a pseudonym that contains a name from the mapping is "
+            "rewritten again. In Exegete as in QualCoder, under an "
+            "insensitive case mode only the spellings saved are replaced."]
         _house_rules(notes)
 
     # Security's ruling of 2026-09-24 (S-1, S-3), which supersedes the
@@ -4836,8 +4840,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "and preview again; or preview again without "
             "save_mapping_to_project and execute with "
             "researcher_keeps_mapping=true. (A researcher who uses QualCoder "
-            "can also change the entry in its Pseudonyms dialog, under "
-            "Manage Files.)")
+            "can also remove the file's entry in its Pseudonyms dialog, "
+            "under Manage Files.)")
         # The file's own value is never quoted.
         assert "Zelda" not in json.dumps(out) + json.dumps(refused)
         assert backups(project) == []
@@ -5067,8 +5071,10 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "rewrite stands, the backup holds the real names, and the "
             "journal entry and the run record say the save was requested, "
             "not made. Make sure the researcher keeps the mapping now: save "
-            "it again with a later run, or, if they use QualCoder, enter it "
-            "in its Pseudonyms dialog (the button in Manage Files).")
+            "it with a run on another file that still contains one of the "
+            "names, or write it into pseudonyms.json in the project folder "
+            "with a text editor; or, if they use QualCoder, enter it in its "
+            "Pseudonyms dialog (the button in Manage Files).")
         record = json.loads(Path(result["manifest_path"]).read_text(
             encoding="utf-8"))
         assert record["mapping_retention"]["choice"] == "save_requested"

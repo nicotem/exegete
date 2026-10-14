@@ -388,11 +388,12 @@ class TestRenameCaseSurface:
     def test_the_descriptions_carry_both_qualcoder_paragraphs(
             self, tool, window):
         flat = " ".join(tool.__doc__.split())
+        # v0.15.0 (not presuming QualCoder, piece 5): the write tools'
+        # paragraph is one sentence, from these words
+        first = "Refused while the project's lock file is active"
         standard = " ".join(server.rename_code.__doc__.split()).split(
-            "Refused while QualCoder has the project open")[1].split(
-            "Args:")[0]
-        assert ("Refused while QualCoder has the project open"
-                + standard) in flat
+            first)[1].split("Args:")[0]
+        assert (first + standard) in flat
         assert " ".join(server._RENAME_QC40_PARAGRAPH.format(
             window=window).split()) in flat
 

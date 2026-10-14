@@ -36,6 +36,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).parent))
+from test_v0150_qualcoder_texts_5 import (  # noqa: E402
+    LOCK_PARAGRAPH_BEFORE, put_back_the_lock_paragraph)
+
 REPO = Path(__file__).resolve().parent.parent
 
 RENAMED = {"analyze_for_coding": "start_coding_session",
@@ -115,38 +119,6 @@ def _put_back(text):
 # and update_annotation among others. The paragraph as it stood before,
 # as Python 3.13 serves it, is put back too, so that what the rename
 # changed is still checked to be the names alone.
-LOCK_SENTENCE = (
-    "Refused while the project's lock file is active (QualCoder 3.8 has "
-    "the project open, or another conversation using Exegete is writing "
-    "to it) or another program is writing to the database; for QualCoder "
-    "4.0, get_current_project shows any signs of an open window, and when "
-    "there are some, ask the researcher before writing.")
-_LOCK_PARAGRAPH_REST = (
-    "get_current_project (qualcoder_open must be false), then retry. The "
-    "lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds "
-    "no longer use a lock file, so 4.0 detection is best-effort heuristics "
-    "(qualcoder_gui_signals in get_current_project); never write while any "
-    "QualCoder window has this project open.")
-LOCK_PARAGRAPH_BEFORE = {
-    "delete_coding": (
-        "Refused while QualCoder has the project open (its heartbeat "
-        "lock): ask the user to close the project in QualCoder, re-check "
-        "with " + _LOCK_PARAGRAPH_REST),
-    "update_annotation": (
-        "Refused while QualCoder has the project open (heartbeat lock): "
-        "ask\nthe user to close the project in QualCoder, re-check with\n"
-        + _LOCK_PARAGRAPH_REST),
-}
-
-
-def _put_back_the_lock_paragraph(name, text):
-    if name not in LOCK_PARAGRAPH_BEFORE:
-        return text
-    words = r"\s+".join(map(re.escape, LOCK_SENTENCE.split()))
-    found = re.search(words, text)
-    assert found, name
-    return (text[:found.start()] + LOCK_PARAGRAPH_BEFORE[name]
-            + text[found.end():])
 
 
 class TestTheRegistry:
@@ -202,7 +174,9 @@ class TestTheRegistry:
             # explain_ai_coding_tools' notice names the deprecated topic
             assert not EARLIER.search(_flat(text).replace(
                 _flat(server.DEPRECATED_HELP_TOPICS), "")), name
-            text = _put_back(_put_back_the_lock_paragraph(name, text))
+            if name in LOCK_PARAGRAPH_BEFORE:
+                text = put_back_the_lock_paragraph(name, text)
+            text = _put_back(text)
             dropped = name == "explain_ai_coding_tools"
             if dropped:
                 # the words only: the line's indentation is the

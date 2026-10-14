@@ -1569,6 +1569,16 @@ def _install_project(new_db: QualcoderDatabase, project_path: str) -> None:
                 new_db.read_only)
 
 
+def _uses_qualcoder_answer() -> str:
+    """The researcher's answer to "Do you also use QualCoder on this
+    computer?" (EXEGETE_USES_QUALCODER) as a project's history with
+    QualCoder weighs it: yes, no or not sure. One reading for the
+    selected project's history and create_project's (v0.15.0)."""
+    answer, _recognised = qualcoder_history.read_setting(
+        env_settings.uses_qualcoder())
+    return answer
+
+
 def _qualcoder_history() -> Optional[qualcoder_history.History]:
     """The selected project's history with QualCoder (v0.15.0): the
     traces of QualCoder it shows, and whether QualCoder is installed or
@@ -1596,11 +1606,9 @@ def _qualcoder_history() -> Optional[qualcoder_history.History]:
     kept = _qualcoder_history_cache
     if kept is not None and kept[0] == key:
         return kept[1]
-    setting, _recognised = qualcoder_history.read_setting(
-        env_settings.uses_qualcoder())
     history = qualcoder_history.work_out(Path(key).parent,
                                          scan_processes=True,
-                                         setting=setting)
+                                         setting=_uses_qualcoder_answer())
     _qualcoder_history_cache = (key, history)
     return history
 
@@ -20913,10 +20921,9 @@ def create_project(name: str, directory: Optional[str] = None,
     # selection succeeded; without the process scan (create_project never
     # runs it), and not kept as the session's history, which the next
     # text that consults it works out as for any selection.
-    setting, _recognised = qualcoder_history.read_setting(
-        env_settings.uses_qualcoder())
     creation_level = qualcoder_history.work_out(
-        folder, scan_processes=False, setting=setting).level
+        folder, scan_processes=False,
+        setting=_uses_qualcoder_answer()).level
     result["next_steps"] = _created_project_next_steps(stored_coder,
                                                        previous, ai_name)
     # The brief's second net (v0.14.2)

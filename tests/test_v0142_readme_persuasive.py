@@ -211,7 +211,12 @@ def _tools(mode="full"):
 # (PRIVACY.md says what is not), and "the computer where the assistant
 # works". That takes 284 characters, and the limit is raised by that
 # and no more: 36,456.
-README_LIMIT = 36_456
+# v0.15.0's two coder names as settings (the coder names, piece 1):
+# "Two coder names" says the assistant asks for the reader's own coder
+# name unless they have filled it in Exegete's settings, and the measure
+# went to "207,000" characters. That takes 46 characters, and the limit
+# is raised by that and no more: 36,502.
+README_LIMIT = 36_502
 
 
 def test_the_readme_stays_short():

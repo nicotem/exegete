@@ -119,6 +119,13 @@ class TestTheCoderNameQuestion:
         assert "If they do not know it, call again with " \
                "coder_name_not_known=true instead." in text
         assert "never be guessed" in text
+        # v0.15.0: the question as it stands, then where the researcher
+        # can fill in the name to be spared it in later projects
+        # (tests/test_v0150_coder_name_settings.py)
+        assert text.startswith(
+            server.CODER_NAME_ASK + " To be spared this question in later "
+            "projects, the researcher can fill in EXEGETE_CODER_NAME in "
+            "the host's configuration for Exegete."), text
 
     def test_the_flag_still_creates_the_project(self, projects_folder):
         answer = json.loads(server.create_project(
@@ -128,11 +135,14 @@ class TestTheCoderNameQuestion:
 
     def test_the_description_asks_the_same_question(self):
         d = _flat(_descriptions()["create_project"])
-        assert ("THE RESEARCHER'S CODER NAME: ask the researcher what name "
-                "their own codings should carry; if they use QualCoder, the "
+        # v0.15.0: the question is the one the answer gives, when the
+        # researcher's own coder name is not in Exegete's settings
+        # (tests/test_v0150_coder_name_settings.py pins the paragraph)
+        assert ("the answer gives the question to ask: what name their own "
+                "codings should carry; if they use QualCoder, the "
                 'name in its settings ("Current coder"), exactly as there; '
                 "if not, any name they choose.") in d
-        assert "If they do not know it, pass coder_name_not_known=true" in d
+        assert "if they do not know it, pass coder_name_not_known=true" in d
         assert "do not use QualCoder" not in d
 
     def test_no_served_text_names_the_old_label(self):

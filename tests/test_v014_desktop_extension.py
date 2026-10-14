@@ -173,9 +173,11 @@ class TestTheToolsAreTheServers:
 
 class TestTheSettings:
 
-    def test_three_settings_and_nothing_secret(self):
+    def test_five_settings_and_nothing_secret(self):
         config = TEMPLATE["user_config"]
-        assert set(config) == {"toolset", "projects_folder", "update_check"}
+        # v0.15.0: the two coder names joined the first three
+        assert set(config) == {"toolset", "projects_folder", "coder_name",
+                               "ai_coder_name", "update_check"}
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
@@ -230,25 +232,33 @@ class TestTheSettings:
 
     def test_each_setting_reaches_a_variable_the_server_reads(self):
         """v0.14.1: each of the three under both spellings, always the
-        same value, until v1.0 (tests/test_v0141_compat.py says why)."""
+        same value, until v1.0 (tests/test_v0141_compat.py says why);
+        v0.15.0: the AI coder name the same way, the fourth."""
         from exegete import names
         env = TEMPLATE["server"]["mcp_config"]["env"]
         expected = {}
         for key, value in (("toolset", "${user_config.toolset}"),
                            ("workspace", "${user_config.projects_folder}"),
-                           ("workspace_required", "1")):
+                           ("workspace_required", "1"),
+                           ("ai_coder_name", "${user_config.ai_coder_name}")):
             for name in names.SETTINGS[key]:
                 expected[name] = value
         # The check for new versions (the owner's ruling of 5 October
         # 2026): the box, and the extension's own mark, each with one
-        # spelling only
+        # spelling only; and the researcher's own coder name (v0.15.0)
         expected[names.NEW_ONLY_SETTINGS["update_check"]] = \
             "${user_config.update_check}"
         expected[names.NEW_ONLY_SETTINGS["installed_as"]] = "extension"
+        expected[names.NEW_ONLY_SETTINGS["coder_name"]] = \
+            "${user_config.coder_name}"
         assert env == expected
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
         assert 'env_settings.read("toolset")' in source
+        assert 'env_settings.read("ai_coder_name")' in source
+        settings_source = (REPO / "src" / "exegete" /
+                           "project_settings.py").read_text(encoding="utf-8")
+        assert "env_settings.coder_name(environ)" in settings_source
         assert database.WORKSPACE_ENV == "EXEGETE_WORKSPACE"
         assert database.WORKSPACE_REQUIRED_ENV == "EXEGETE_WORKSPACE_REQUIRED"
 

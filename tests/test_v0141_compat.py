@@ -85,8 +85,9 @@ class TestTheReader:
         new, old = SETTINGS["ai_coder_name"]
         assert env_settings.read("ai_coder_name", {new: " ", old: "Ann"}) \
             == ("Ann", old, True, False)
-        # neither says anything: a blank is still handed on, so a blank
-        # coder name still stops the server as before
+        # neither says anything: a blank is still handed on, so the read
+        # that uses it decides what a blank means (v0.15.0: a blank AI
+        # coder name means not set, tests/test_v0150_coder_name_settings.py)
         assert env_settings.read("ai_coder_name", {old: ""}) \
             == ("", old, False, False)
 
@@ -244,8 +245,10 @@ class TestTheExtensionSetsBothSpellings:
     def test_the_six_entries_and_their_equality(self):
         env = self.TEMPLATE["server"]["mcp_config"]["env"]
         # Six for the three settings under both spellings, and two more
-        # with one spelling only: the check for new versions
-        assert len(env) == 8
+        # with one spelling only: the check for new versions; v0.15.0:
+        # three more, the AI coder name under both spellings and the
+        # researcher's own coder name, with one
+        assert len(env) == 11
         # A departure, v0.15.0: EXEGETE_CALL_SECONDS, a setting with one
         # spelling, is kept out of the manifest, since the extension's
         # time per import call is measured for it, not offered in its
@@ -254,10 +257,13 @@ class TestTheExtensionSetsBothSpellings:
             names.NEW_ONLY_SETTINGS["call_seconds"]}
         assert set(env) - {n for pair in SETTINGS.values() for n in pair} \
             == offered
-        for key in ("toolset", "workspace", "workspace_required"):
+        for key in ("toolset", "workspace", "workspace_required",
+                    "ai_coder_name"):
             new, old = SETTINGS[key]
             assert env[new] == env[old]
         assert env[SETTINGS["toolset"][0]] == "${user_config.toolset}"
+        assert env[SETTINGS["ai_coder_name"][0]] == \
+            "${user_config.ai_coder_name}"
 
     def test_it_starts_over_stray_old_values(self, tmp_path):
         import smoke_desktop_extension as smoke

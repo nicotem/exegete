@@ -481,8 +481,9 @@ class TestTheDocuments:
         # and with the extension's folder for projects (the renames,
         # piece 2) to 204,951
         # and the two tools renamed (the renames, piece 3), their
-        # earlier names listed: 80 tools, 206,194
-        assert (rounded, tokens) == ("206,000", "52k")
+        # earlier names listed: 80 tools, 206,194; and the two coder
+        # names as settings (the coder names, piece 1), 206,569
+        assert (rounded, tokens) == ("207,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"(Experimental) and two renamed tools' earlier names "

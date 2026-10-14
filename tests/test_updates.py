@@ -331,7 +331,9 @@ class TestTheSetting:
             "update_check": "EXEGETE_UPDATE_CHECK",
             "installed_as": "EXEGETE_INSTALLED_AS",
             # v0.15.0: the time one import call may take
-            "call_seconds": "EXEGETE_CALL_SECONDS"}
+            "call_seconds": "EXEGETE_CALL_SECONDS",
+            # and the researcher's own coder name
+            "coder_name": "EXEGETE_CODER_NAME"}
         assert not set(names.NEW_ONLY_SETTINGS.values()) & {
             n for pair in names.SETTINGS.values() for n in pair}
 

@@ -142,16 +142,20 @@ class History(NamedTuple):
         return "none"
 
 
-def read_setting(raw: Optional[str]) -> Tuple[str, bool]:
+def read_setting(raw: Any) -> Tuple[str, bool]:
     """The answer to "Do you also use QualCoder on this computer?" from
     the raw value of EXEGETE_USES_QUALCODER (env_settings.uses_qualcoder),
     and whether it was recognised. The value is stripped, put in lower
     case and its inner runs of white space made one space: "yes", "no"
     or "not sure". Unset, empty, or a placeholder the app left unfilled
-    (`${...}`) is "not sure", recognised; any other word is "not sure",
-    not recognised (server.main logs SETTING_NOT_RECOGNISED once)."""
+    (`${...}`) is "not sure", recognised; any other word, and any value
+    that is not text (a caller's number, bytes or list), is "not sure",
+    not recognised (server.main logs SETTING_NOT_RECOGNISED once). It
+    never raises."""
     if raw is None:
         return NOT_SURE, True
+    if not isinstance(raw, str):
+        return NOT_SURE, False
     word = " ".join(raw.split()).lower()
     if not word or word.startswith("${"):
         return NOT_SURE, True
@@ -229,13 +233,13 @@ def _running(scan_processes: bool) -> Optional[bool]:
 
 def work_out(project_folder: PathLike, *, scan_processes: bool,
              home: Optional[PathLike] = None,
-             setting: Optional[str] = NOT_SURE) -> History:
+             setting: Any = NOT_SURE) -> History:
     """The project's history with QualCoder, from the five checks above,
     in their order, with `setting`, the researcher's answer. `setting` is
     read again with read_setting, so that the history keeps one of the
     three answers whatever a caller passes (the raw value as well): any
-    other value is "not sure", and is never kept or returned. It never
-    raises. With `scan_processes` False no scan is called and `running`
+    other value, text or not, is "not sure", and is never kept or
+    returned. It never raises. With `scan_processes` False no scan is called and `running`
     is None."""
     signs = []
     if ai_data_found(project_folder):

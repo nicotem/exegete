@@ -601,9 +601,10 @@ class TestFixRoundOneTheDocuments:
                 "typed there is read as not sure and never given), and "
                 "with a yes or a no it is given even when nothing was "
                 "found, so that answer enters the conversation") in bullet
-        assert ("the answer holds plain sentences, a yes or no and one of "
-                "those three answers, never a path or a project's name") \
-            in bullet
+        # Fix round 2 reworded the closing clause (TestFixRoundTwoTheWords)
+        assert ("the field holds plain sentences, a true or false and one "
+                "of those three answers (yes, no or not sure), never a path "
+                "or a project's name") in bullet
 
     def test_the_comment_says_when_the_field_is_left_out(self):
         source = (REPO / "src" / "exegete" / "server.py").read_text(
@@ -677,3 +678,62 @@ class TestFixRoundOneOnlyTheThreeAnswers:
             field = qualcoder_history.report(history)
             assert field["setting"] == "not sure"
             assert SENTINEL not in json.dumps(field)
+
+
+# =============================================================================
+# Fix round 2: the module never raises on a setting that is not text; the
+# privacy clause and the developers' map say what the field holds and what
+# decides
+# =============================================================================
+
+NOT_TEXT = [123, 1.5, True, b"yes", ["yes"], {"yes": 1}, object()]
+
+
+class TestFixRoundTwoAValueThatIsNotText:
+    """A caller that hands the module something other than text (a number,
+    bytes, a list) gets "not sure", as for any other word, and no error:
+    work_out's docstring says it never raises."""
+
+    @pytest.mark.parametrize("raw", NOT_TEXT,
+                             ids=lambda raw: type(raw).__name__)
+    def test_read_setting_reads_it_as_not_sure_not_recognised(self, raw):
+        assert read_setting(raw) == ("not sure", False)
+
+    @pytest.mark.parametrize("raw", NOT_TEXT,
+                             ids=lambda raw: type(raw).__name__)
+    def test_work_out_does_not_raise(self, tmp_path, monkeypatch, raw):
+        _scan_gives(monkeypatch, SAW_NONE)
+        for installed, level in ((False, "none"), (True, "computer")):
+            base = tmp_path / str(installed)
+            base.mkdir()
+            folder, home = _built(base, False, installed)
+            history = work_out(folder, scan_processes=True, home=home,
+                               setting=raw)
+            assert history.setting == "not sure"
+            assert history.level == level
+            field = qualcoder_history.report(history)
+            if installed:
+                assert field["setting"] == "not sure"
+            else:
+                assert field is None
+
+
+class TestFixRoundTwoTheWords:
+
+    def test_privacy_says_the_field_holds_a_true_or_false(self):
+        privacy = (REPO / "PRIVACY.md").read_text(encoding="utf-8")
+        start = privacy.index("**Process listing.**")
+        bullet = _flat(privacy[start:privacy.find("\n- **", start)])
+        assert ("and the field holds plain sentences, a true or false and "
+                "one of those three answers (yes, no or not sure), never a "
+                "path or a project's name.") in bullet
+        assert "a yes or no and one of those three answers" not in bullet
+        assert "the answer holds plain sentences" not in bullet
+
+    def test_the_developers_map_names_the_answer(self):
+        claude = _flat((REPO / "CLAUDE.md").read_text(encoding="utf-8"))
+        assert ("`qualcoder_history.py`: a project's history with QualCoder "
+                "(the traces, and the researcher's answer to \"Do you also "
+                "use QualCoder on this computer?\", that decide whether a "
+                "text's notes about QualCoder apply), worked out once per "
+                "selection.") in claude

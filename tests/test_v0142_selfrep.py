@@ -254,8 +254,10 @@ class TestWhatWasDecided:
     def test_the_opening_text_says_what_exegete_is(self):
         short = _flat(server.BRIEF_SHORT)
         assert short.startswith(OPENING + " ")
-        assert len(server.BRIEF_SHORT) < 2000
-        assert len(server.BRIEF_SHORT.encode("utf-8")) < 2000
+        # within the 2,048 that Claude Code keeps (under 2,000 until
+        # v0.15.0's rule 9, not presuming QualCoder, piece 5)
+        assert len(server.BRIEF_SHORT) <= 2048
+        assert len(server.BRIEF_SHORT.encode("utf-8")) <= 2048
         # The suggesting is the assistant's; the approving the
         # researcher's; Exegete only records it
         assert ("which you do only on the researcher's word: Exegete "

@@ -982,7 +982,7 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 81 tools by
 default, and the serialised tool definitions alone measure about
-208,000 characters, roughly 52k tokens (measured for 0.15.0 under
+205,000 characters, roughly 51k tokens (measured for 0.15.0 under
 Python 3.13.5 with mcp 1.30.0, in an environment installed from the
 repository's lock file; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 20,000 characters of that on its own, because a tool
@@ -998,14 +998,14 @@ That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
 (in the config of Step 5) to register only the 25-tool supervised
-coding set, measured at about 69,000 characters, roughly 17k tokens.
+coding set, measured at about 68,000 characters, roughly 17k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
 17k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
 (that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
-or 64k if you must run the full surface (its schema alone is about 52k
+or 64k if you must run the full surface (its schema alone is about 51k
 tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
@@ -1451,7 +1451,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 208,000 characters with `full`; TOOLS.md says how that
+  (about 205,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

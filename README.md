@@ -522,8 +522,8 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 81: all, creating a project (Experimental) and two renamed tools' earlier names included | about 208,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
-| `core` | 25: the coding loop and its safety tools | about 69,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
+| `full` | 81: all, creating a project (Experimental) and two renamed tools' earlier names included | about 205,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:

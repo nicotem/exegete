@@ -475,7 +475,8 @@ def test_initialize_carries_methodology_instructions():
         "Exegete is a qualitative analysis application for working with "
         "the researcher on their project, in QualCoder's format.")
     assert "call read_brief once" in instructions
-    assert len(instructions) < 2000
+    # within Claude Code's cut (v0.15.0's rule 9 took it past 2,000)
+    assert len(instructions) <= 2048
     assert "\u2014" not in instructions
 
 

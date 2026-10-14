@@ -486,8 +486,9 @@ class TestTheDocuments:
         # tool that corrects the researcher's own coder name (the coder
         # names, piece 2): 81 tools, 208,247; and the AI coder name in
         # the settings given to each new project (the coder names, piece
-        # 3): 208,379
-        assert (rounded, tokens) == ("208,000", "52k")
+        # 3): 208,379; and the write tools' sentence (not presuming
+        # QualCoder, piece 5): 205,077
+        assert (rounded, tokens) == ("205,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"(Experimental) and two renamed tools' earlier names "

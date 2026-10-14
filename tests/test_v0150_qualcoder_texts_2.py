@@ -487,9 +487,13 @@ class TestTheDescription:
         length, so every rule within the first 2,048 characters is where
         it was."""
         from test_v0142_description_cut import _fingerprint
+        # not presuming QualCoder, piece 5, made the write tools' closing
+        # paragraph one sentence; it is put back as it was, so that this
+        # still compares with piece 1's pin
+        from test_v0150_qualcoder_texts_5 import put_back_the_lock_paragraph
         server._apply_toolset("full")
-        before = without_the_paragraph(
-            server.mcp.original_descriptions[TOOL])
+        before = without_the_paragraph(put_back_the_lock_paragraph(
+            TOOL, server.mcp.original_descriptions[TOOL]))
         length, solid, digest = _fingerprint(before)
         assert (solid, digest) == (12705, "b497f4c553410195")
         if sys.version_info[:2] == (3, 13):

@@ -39,8 +39,9 @@ of a project from the conversation. It runs as an MCP server.
   state folder. `transition.py`: tidying up after the rename.
 - `path_identity.py`: containment checks by folder identity.
   `qualcoder_history.py`: a project's history with QualCoder (the
-  traces that decide whether a text's notes about QualCoder apply),
-  worked out once per selection.
+  traces, and the researcher's answer to "Do you also use QualCoder on
+  this computer?", that decide whether a text's notes about QualCoder
+  apply), worked out once per selection.
 - `doc_import.py`, `doc_readers.py`, `import_reading.py` and their
   neighbours (`import_*.py`, `garbled_text.py`, `kept_texts.py`, the
   text a preview read, kept for its import): bringing documents in

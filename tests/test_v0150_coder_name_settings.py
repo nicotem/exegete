@@ -154,9 +154,11 @@ class TestTheExtensionsSettings:
                           "required": False}
 
     def test_they_come_after_the_folder(self):
+        # v0.15.0: "Do you also use QualCoder on this computer?" follows
+        # them, in the long description's order
         assert list(TEMPLATE["user_config"]) == [
             "toolset", "projects_folder", "coder_name", "ai_coder_name",
-            "update_check"]
+            "uses_qualcoder", "update_check"]
 
     def test_the_variables_they_set(self):
         env = TEMPLATE["server"]["mcp_config"]["env"]
@@ -169,7 +171,8 @@ class TestTheExtensionsSettings:
         assert TEMPLATE["long_description"].endswith(
             "The settings choose the tool set (every tool, or a smaller set "
             "for local models), the folder where new projects and working "
-            "copies are kept, your coder name and the AI coder name, and "
+            "copies are kept, your coder name and the AI coder name, "
+            "whether you also use QualCoder on this computer, and "
             "whether Exegete tells you when a new version is out.")
 
 
@@ -755,10 +758,13 @@ class TestTheDocuments:
                 "settings itself (the tool set, the two for the workspace "
                 "and the AI coder name), always to the same value.") \
             in install
-        assert ("Four settings are new and have one spelling only: the two "
+        # v0.15.0: and "Do you also use QualCoder on this computer?"
+        assert ("Five settings are new and have one spelling only: the two "
                 "of the check for new versions (`EXEGETE_UPDATE_CHECK` and "
-                "`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS` and "
-                "`EXEGETE_CODER_NAME`, all below.") in install
+                "`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS`, "
+                "`EXEGETE_CODER_NAME` and `EXEGETE_USES_QUALCODER`, all "
+                "below.") in install
+        assert "Four settings are new" not in install
         assert "The two settings of the check for new versions," \
             not in install
         # "Exegete", not "the server", in the passages this piece edits

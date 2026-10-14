@@ -1573,9 +1573,11 @@ def _qualcoder_history() -> Optional[qualcoder_history.History]:
 
     Worked out once, at the first consult after the project was
     installed (select_project consults it at once), with the process
-    scan, and kept for the session, in memory only. None, with nothing
-    worked out or kept, when no project is selected or its path does
-    not validate; a caller treats None as the level "none".
+    scan and the researcher's answer to "Do you also use QualCoder on
+    this computer?" (EXEGETE_USES_QUALCODER), and kept for the session,
+    in memory only. None, with nothing worked out or kept, when no
+    project is selected or its path does not validate; a caller treats
+    None as the level "none".
     """
     global _qualcoder_history_cache
     if current_project_path is None:
@@ -1589,8 +1591,11 @@ def _qualcoder_history() -> Optional[qualcoder_history.History]:
     kept = _qualcoder_history_cache
     if kept is not None and kept[0] == key:
         return kept[1]
+    setting, _recognised = qualcoder_history.read_setting(
+        env_settings.uses_qualcoder())
     history = qualcoder_history.work_out(Path(key).parent,
-                                         scan_processes=True)
+                                         scan_processes=True,
+                                         setting=setting)
     _qualcoder_history_cache = (key, history)
     return history
 
@@ -5192,7 +5197,9 @@ def get_current_project() -> str:
                 "project is reopened there."
             )
         # The project's history with QualCoder, as worked out at its
-        # selection (v0.15.0); left out when nothing was found
+        # selection (v0.15.0); left out when nothing was found and the
+        # answer to "Do you also use QualCoder on this computer?" is not
+        # sure (qualcoder_history.report)
         history_field = qualcoder_history.report(_qualcoder_history())
         if history_field is not None:
             result["qualcoder_history"] = history_field
@@ -21075,6 +21082,13 @@ def main(argv: Optional[List[str]] = None, *,
     if (toolset_reading.value or "").strip().lower() in \
             names.OLD_TOOLSET_NAMES:
         logger.warning(LIFECYCLE_NOTE.format(setting=toolset_reading.name))
+    # v0.15.0: "Do you also use QualCoder on this computer?" (ruling 73,
+    # item 8); a word that is not yes, no or not sure is read as not
+    # sure, said here once, never its value, and never stops Exegete
+    _answer, recognised = qualcoder_history.read_setting(
+        env_settings.uses_qualcoder())
+    if not recognised:
+        logger.warning(qualcoder_history.SETTING_NOT_RECOGNISED)
 
     # Check for optional pre-configured project (Option B: Fixed Project)
     # EXPERIMENTAL: reduced tool surface for local-model hosts. Fail

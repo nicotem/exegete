@@ -608,9 +608,11 @@ class TestTheField:
                                   tmp_path, make, on_computer):
         for answer in self._select(qualcoder_db_path, tmp_path, make):
             field = answer["qualcoder_history"]
+            # v0.15.0, piece 4: and the setting, at its default
             assert field == {"signs_on_this_project": [AI_DATA_SIGN],
                              "qualcoder_on_this_computer": on_computer,
-                             "note": REPORT_NOTE}
+                             "note": REPORT_NOTE,
+                             "setting": "not sure"}
             assert SENTINEL not in json.dumps(field)
             assert str(tmp_path) not in json.dumps(field)
 

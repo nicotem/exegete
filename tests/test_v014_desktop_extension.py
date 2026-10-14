@@ -173,11 +173,13 @@ class TestTheToolsAreTheServers:
 
 class TestTheSettings:
 
-    def test_five_settings_and_nothing_secret(self):
+    def test_six_settings_and_nothing_secret(self):
         config = TEMPLATE["user_config"]
-        # v0.15.0: the two coder names joined the first three
+        # v0.15.0: the two coder names joined the first three, and "Do
+        # you also use QualCoder on this computer?"
         assert set(config) == {"toolset", "projects_folder", "coder_name",
-                               "ai_coder_name", "update_check"}
+                               "ai_coder_name", "uses_qualcoder",
+                               "update_check"}
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
@@ -251,6 +253,9 @@ class TestTheSettings:
         expected[names.NEW_ONLY_SETTINGS["installed_as"]] = "extension"
         expected[names.NEW_ONLY_SETTINGS["coder_name"]] = \
             "${user_config.coder_name}"
+        # and "Do you also use QualCoder on this computer?" (v0.15.0)
+        expected[names.NEW_ONLY_SETTINGS["uses_qualcoder"]] = \
+            "${user_config.uses_qualcoder}"
         assert env == expected
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
@@ -259,6 +264,7 @@ class TestTheSettings:
         settings_source = (REPO / "src" / "exegete" /
                            "project_settings.py").read_text(encoding="utf-8")
         assert "env_settings.coder_name(environ)" in settings_source
+        assert source.count("env_settings.uses_qualcoder()") == 2
         assert database.WORKSPACE_ENV == "EXEGETE_WORKSPACE"
         assert database.WORKSPACE_REQUIRED_ENV == "EXEGETE_WORKSPACE_REQUIRED"
 

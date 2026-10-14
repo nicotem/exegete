@@ -39,6 +39,16 @@ No sign holds a path or a project's name, and nothing is logged with
 either: a check that fails is left out and the kind of its error logged
 at debug level. Nothing is written. Each check is a public function, so
 later texts reuse it rather than repeat it.
+
+The researcher's answer to "Do you also use QualCoder on this computer?"
+(EXEGETE_USES_QUALCODER, ruling 73, item 8: yes, no or not sure, the
+default) weighs in `History.level` after the signs. A sign on the
+project, or a QualCoder running at the selection, decides whatever the
+answer; "no" outweighs only QualCoder's settings folder, which says that
+QualCoder is installed, not that it is used; "yes" gives the level
+"computer" when nothing is found. It never reaches the live check: the
+refusal while QualCoder 3.8's lock file is active and the warnings on
+signs of a QualCoder 4.0 window never consult this module.
 """
 
 import glob
@@ -46,12 +56,22 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Union
 
-from . import database
+from . import database, names
 from .database import error_label
 
 logger = logging.getLogger(__name__)
 
+# The answers to "Do you also use QualCoder on this computer?"
+YES = "yes"
+NO = "no"
 NOT_SURE = "not sure"
+ANSWERS = (YES, NO, NOT_SURE)
+
+# Logged once at start (server.main) for a value that is none of the
+# three; the value itself is never logged or returned.
+SETTING_NOT_RECOGNISED = (
+    f"{names.NEW_ONLY_SETTINGS['uses_qualcoder']} is not yes, no or not "
+    f"sure; it is read as not sure.")
 
 AI_DATA_SIGN = (
     "an ai_data folder, which QualCoder 3.8.2 and 4.0 make when they "
@@ -69,11 +89,15 @@ STALE_LOCK_SIGN = (
 
 REPORT_NOTE = (
     "What Exegete found when the project was selected; it decides which "
-    "notes about QualCoder its answers carry. Whether QualCoder has the "
-    "project open now is a separate, live check: select_project's "
-    "warning, and get_current_project's qualcoder_open and "
-    "qualcoder_gui_signals. A false qualcoder_on_this_computer means "
-    "only that no sign of QualCoder was found on this computer.")
+    "notes about QualCoder its answers carry. The field's setting is the "
+    "researcher's answer in Exegete's settings to \"Do you also use "
+    "QualCoder on this computer?\" (not sure unless they changed it); it "
+    "weighs only when the project shows no sign of QualCoder and "
+    "QualCoder is not running. Whether QualCoder has the project open now "
+    "is a separate, live check: select_project's warning, and "
+    "get_current_project's qualcoder_open and qualcoder_gui_signals. A "
+    "false qualcoder_on_this_computer means only that no sign of QualCoder "
+    "was found on this computer.")
 
 PathLike = Union[str, Path]
 
@@ -88,8 +112,8 @@ class History(NamedTuple):
     (`ProcessScan.found_none`); None when it was not asked for, could not
     run, saw program names only, or found a line that may be a QualCoder
     it could not read. `setting`: the researcher's answer to "Do you
-    also use QualCoder on this computer?" ("not sure" until that setting
-    exists).
+    also use QualCoder on this computer?", "yes", "no" or "not sure"
+    (read_setting).
     """
     signs: Tuple[str, ...]
     installed: bool
@@ -98,14 +122,46 @@ class History(NamedTuple):
 
     @property
     def level(self) -> str:
-        """"project" when the project shows a trace; otherwise
-        "computer" when QualCoder is installed or running here;
-        otherwise "none"."""
+        """"project" when the project shows a trace, whatever the
+        setting; otherwise "computer" when QualCoder is running here,
+        whatever the setting; otherwise, by the setting: "computer" for
+        "yes", "none" for "no", and for "not sure" "computer" when
+        QualCoder's settings folder is there, "none" when it is not.
+        "No" outweighs the settings folder alone, which says that
+        QualCoder is installed, not that it is used."""
         if self.signs:
             return "project"
-        if self.installed is True or self.running is True:
+        if self.running is True:
+            return "computer"
+        if self.setting == YES:
+            return "computer"
+        if self.setting == NO:
+            return "none"
+        if self.installed is True:
             return "computer"
         return "none"
+
+
+def read_setting(raw: Any) -> Tuple[str, bool]:
+    """The answer to "Do you also use QualCoder on this computer?" from
+    the raw value of EXEGETE_USES_QUALCODER (env_settings.uses_qualcoder),
+    and whether it was recognised. The value is stripped, put in lower
+    case and its inner runs of white space made one space: "yes", "no"
+    or "not sure". Unset, empty, or a placeholder the app left unfilled
+    (`${...}`) is "not sure", recognised; any other word, and any value
+    that is not text (a caller's number, bytes or list), is "not sure",
+    not recognised (server.main logs SETTING_NOT_RECOGNISED once). It
+    never raises."""
+    if raw is None:
+        return NOT_SURE, True
+    if not isinstance(raw, str):
+        return NOT_SURE, False
+    word = " ".join(raw.split()).lower()
+    if not word or word.startswith("${"):
+        return NOT_SURE, True
+    if word in ANSWERS:
+        return word, True
+    return NOT_SURE, False
 
 
 def _checked(check: Callable[[], Any]) -> bool:
@@ -177,10 +233,14 @@ def _running(scan_processes: bool) -> Optional[bool]:
 
 def work_out(project_folder: PathLike, *, scan_processes: bool,
              home: Optional[PathLike] = None,
-             setting: str = NOT_SURE) -> History:
+             setting: Any = NOT_SURE) -> History:
     """The project's history with QualCoder, from the five checks above,
-    in their order. It never raises. With `scan_processes` False no scan
-    is called and `running` is None."""
+    in their order, with `setting`, the researcher's answer. `setting` is
+    read again with read_setting, so that the history keeps one of the
+    three answers whatever a caller passes (the raw value as well): any
+    other value, text or not, is "not sure", and is never kept or
+    returned. It never raises. With `scan_processes` False no scan is called and `running`
+    is None."""
     signs = []
     if ai_data_found(project_folder):
         signs.append(AI_DATA_SIGN)
@@ -193,17 +253,25 @@ def work_out(project_folder: PathLike, *, scan_processes: bool,
     if stale_lock_found(project_folder):
         signs.append(STALE_LOCK_SIGN)
     return History(tuple(signs), settings_folder_present(home),
-                   _running(scan_processes), setting)
+                   _running(scan_processes), read_setting(setting)[0])
 
 
 def report(history: Optional[History]) -> Optional[Dict[str, Any]]:
     """The answer field `qualcoder_history`, or None (the field left
-    out) when the level is "none" or there is no history."""
-    if history is None or history.level == "none":
+    out) when there is no history, or when the level is "none" and the
+    setting "not sure". `setting` is the researcher's answer, so that the
+    assistant knows it and does not ask again; only one of the three
+    answers is ever given (a History made with any other value gives
+    "not sure")."""
+    if history is None:
+        return None
+    setting = history.setting if history.setting in ANSWERS else NOT_SURE
+    if history.level == "none" and setting == NOT_SURE:
         return None
     return {
         "signs_on_this_project": list(history.signs),
         "qualcoder_on_this_computer": (history.installed is True
                                        or history.running is True),
         "note": REPORT_NOTE,
+        "setting": setting,
     }

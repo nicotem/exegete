@@ -7,7 +7,8 @@ read in the package). Each has a new spelling, starting EXEGETE_, and
 the earlier one, which is still read until v1.0 (names.SETTINGS); the
 settings that never had an earlier spelling have the new one only
 (names.NEW_ONLY_SETTINGS, read by update_check, installed_as,
-call_seconds and coder_name, the researcher's own coder name). The one other read here is not a setting: Windows' own
+call_seconds, coder_name, the researcher's own coder name, and
+uses_qualcoder). The one other read here is not a setting: Windows' own
 folder, SystemRoot, from which the transition check starts PowerShell
 by its full path.
 
@@ -221,6 +222,16 @@ def coder_name(environ: Optional[Mapping[str, str]] = None
     value means."""
     env = os.environ if environ is None else environ
     return env.get(names.NEW_ONLY_SETTINGS["coder_name"])
+
+
+def uses_qualcoder(environ: Optional[Mapping[str, str]] = None
+                   ) -> Optional[str]:
+    """EXEGETE_USES_QUALCODER, the answer to "Do you also use QualCoder on
+    this computer?", which has one spelling only (names.
+    NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
+    qualcoder_history.read_setting says what each value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["uses_qualcoder"])
 
 
 def windows_system_root() -> str:

@@ -69,6 +69,17 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      first; when a project already has another, Claude asks you once
      which to use there. Left empty, Claude still asks. It must differ
      from your coder name, and the same limits apply.
+   - **Do you also use QualCoder on this computer?**: not sure unless
+     you change it. Type yes, no or not sure. With yes, Exegete adds
+     some notes that matter only if you also open your projects in
+     QualCoder (whether an open QualCoder window shows Exegete's
+     changes, for example); with no, it leaves those out, unless a
+     project shows signs that QualCoder may have opened it or QualCoder
+     is running when a project is selected; with not sure, it decides
+     from what it finds on each project and on this computer. Whatever
+     you answer, Exegete still refuses to write while QualCoder 3.8 has
+     a project open, and still warns when it sees signs that QualCoder
+     4.0 may have one open.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
      small file from its website on GitHub to see whether a newer
@@ -614,10 +625,10 @@ not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
 desktop extension sets both spellings of these four settings itself
 (the tool set, the two for the workspace and the AI coder name), always
-to the same value. Four settings are new and have one spelling only:
+to the same value. Five settings are new and have one spelling only:
 the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
-`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS` and
-`EXEGETE_CODER_NAME`, all below.
+`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS`, `EXEGETE_CODER_NAME`
+and `EXEGETE_USES_QUALCODER`, all below.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -724,6 +735,23 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   declare the model the host runs, and every project coded from that
   host proposes that name first, so codings by different models can be
   told apart and compared later.
+
+- `EXEGETE_USES_QUALCODER` (0.15.0): your answer to "Do you also use
+  QualCoder on this computer?": `yes`, `no` or `not sure`, in any
+  letter case. Unset or blank, it is `not sure`, the default, as in the
+  desktop extension. With `yes`, Exegete adds some notes that matter
+  only if you also open your projects in QualCoder; with `no`, it
+  leaves those out, unless a project shows signs that QualCoder may
+  have opened it or QualCoder is running when a project is selected;
+  with `not sure`, it decides from what it finds on each project and on
+  this computer. Any other value is read as `not sure`, and the log
+  says so once at start, never the value; it never stops Exegete.
+  Whatever it says, Exegete still refuses to write while QualCoder 3.8
+  has a project open, and still warns when it sees signs that QualCoder
+  4.0 may have one open: an answer can be out of date (a colleague's
+  project, QualCoder installed later), and a write into a project open
+  in QualCoder can lose work. The desktop extension sets it from its
+  setting "Do you also use QualCoder on this computer?".
 
 - `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release

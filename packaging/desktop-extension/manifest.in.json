@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "display_name": "Exegete",
   "description": "A qualitative analysis application you use in conversation with Claude, compatible with QualCoder: create projects, read, search and code your qualitative data, edit the codebook, write memos and export, in project files on this computer.",
-  "long_description": "Exegete (formerly qualcoder-mcp) is a qualitative analysis application you use in conversation with Claude, compatible with QualCoder. With Claude, you start projects, bring in documents and transcripts, read them with their codings, search, code them with suggestions you approve, edit the codebook, write memos, and export your codebook, coding and counts. Your projects are folders on this computer in QualCoder's format, so you can work on them in either program, one at a time. QualCoder is free software for qualitative analysis, of the same kind as NVivo, ATLAS.ti and MAXQDA; Exegete is an independent project, not part of QualCoder and not made by its developers.\n\nEvery write is preceded by a backup of the project unless the call asks for none. Exegete runs on this computer and adds no telemetry of its own, but what its tools return enters the conversation and is sent to Anthropic like any other chat content: read PRIVACY.md before you use research data (https://github.com/nicotem/exegete/blob/main/PRIVACY.md). Once a week at most, and when you ask, it fetches a small file from its website, which GitHub hosts, to see whether a newer version exists; nothing from your projects is sent, and the setting \"Tell me when a new version is out\" switches it off.\n\nThe settings choose the tool set (every tool, or a smaller set for local models), the folder where new projects and working copies are kept, your coder name and the AI coder name, and whether Exegete tells you when a new version is out.",
+  "long_description": "Exegete (formerly qualcoder-mcp) is a qualitative analysis application you use in conversation with Claude, compatible with QualCoder. With Claude, you start projects, bring in documents and transcripts, read them with their codings, search, code them with suggestions you approve, edit the codebook, write memos, and export your codebook, coding and counts. Your projects are folders on this computer in QualCoder's format, so you can work on them in either program, one at a time. QualCoder is free software for qualitative analysis, of the same kind as NVivo, ATLAS.ti and MAXQDA; Exegete is an independent project, not part of QualCoder and not made by its developers.\n\nEvery write is preceded by a backup of the project unless the call asks for none. Exegete runs on this computer and adds no telemetry of its own, but what its tools return enters the conversation and is sent to Anthropic like any other chat content: read PRIVACY.md before you use research data (https://github.com/nicotem/exegete/blob/main/PRIVACY.md). Once a week at most, and when you ask, it fetches a small file from its website, which GitHub hosts, to see whether a newer version exists; nothing from your projects is sent, and the setting \"Tell me when a new version is out\" switches it off.\n\nThe settings choose the tool set (every tool, or a smaller set for local models), the folder where new projects and working copies are kept, your coder name and the AI coder name, whether you also use QualCoder on this computer, and whether Exegete tells you when a new version is out.",
   "documentation": "https://github.com/nicotem/exegete/blob/main/INSTALL.md",
   "server": {
     "type": "uv",
@@ -28,6 +28,7 @@
         "EXEGETE_AI_CODER_NAME": "${user_config.ai_coder_name}",
         "QUALCODER_MCP_AI_CODER_NAME": "${user_config.ai_coder_name}",
         "EXEGETE_CODER_NAME": "${user_config.coder_name}",
+        "EXEGETE_USES_QUALCODER": "${user_config.uses_qualcoder}",
         "EXEGETE_UPDATE_CHECK": "${user_config.update_check}",
         "EXEGETE_INSTALLED_AS": "extension"
       }
@@ -70,6 +71,13 @@
       "title": "AI coder name",
       "description": "The name you would like Claude's work in a project stored under, so that it stays apart from yours; a model's name lets codings by different models be compared later. When a project has no AI coder name yet, Claude asks you for one the first time it needs it and offers this one first; when a project already has another, Claude asks you once which to use there. Left empty, Claude still asks. It must differ from your coder name. At most 80 characters; a line break or tab, an invisible formatting character (the joiners some scripts need are allowed) or ##### stops the extension from starting.",
       "default": "",
+      "required": false
+    },
+    "uses_qualcoder": {
+      "type": "string",
+      "title": "Do you also use QualCoder on this computer?",
+      "description": "Type yes, no or not sure. With yes, Exegete gives the notes that matter only if you also open your projects in QualCoder (whether an open QualCoder window shows Exegete's changes, the backups QualCoder 3.8 may keep elsewhere, what a later import in QualCoder does); with no, it leaves them out, unless a project shows signs that QualCoder has opened it or QualCoder is running when a project is selected; with not sure, it decides from what it finds on each project and on this computer. Whatever you answer, Exegete still refuses to write while QualCoder 3.8 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open: an answer can be out of date (a colleague's project, QualCoder installed later), and a write into a project open in QualCoder can lose work. Any other word is read as not sure.",
+      "default": "not sure",
       "required": false
     },
     "update_check": {

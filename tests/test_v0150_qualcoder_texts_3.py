@@ -771,13 +771,59 @@ SPACED_LINES = (
     "Python.app/Contents/MacOS/Python /Users/x/My Apps/env/bin/qualcoder",
     "/home/x/Research Tools/QualCoder-master/env/bin/python "
     "src/qualcoder/__main__.py",
+    # fix round 2: QualCoder's own Linux downloads, its program, and a
+    # Python running qualcoder.py, each in a folder whose path holds a
+    # space
+    "/home/x/Research Tools/QualCoder-4.0-beta-linux-executable",
+    "/media/x/My Passport/QualCoder_3_8_2_ubuntu",
+    "/home/u/My Apps/QualCoder/QualCoder",
+    "/opt/My Tools/qualcoder",
+    "/home/x/My Apps/env/bin/python3 /home/x/QualCoder/qualcoder.py",
+    "/Users/x/My Apps/env/bin/python3 qualcoder.py",
+    "python3 /home/x/Research Tools/QualCoder/qualcoder.py",
+    "/usr/bin/python3 -X utf8 "
+    "/home/x/Research Tools/QualCoder/qualcoder-script.py",
+    "C:\\Users\\x\\My Apps\\env\\Scripts\\python.exe "
+    "C:\\Users\\x\\My Apps\\QualCoder\\qualcoder.py",
 )
-SPACED_IDS = ["python -m", "app bundle and script", "its __main__.py"]
+SPACED_IDS = ["python -m", "app bundle and script", "its __main__.py",
+              "the 4.0 Linux download", "the 3.8.2 Linux download",
+              "a QualCoder program", "a qualcoder program",
+              "python in the folder, qualcoder.py",
+              "python in the folder, qualcoder.py beside it",
+              "qualcoder.py in the folder",
+              "an option, then qualcoder-script.py in the folder",
+              "a Windows path, as psutil's words joined"]
+
+# Lines that only name QualCoder, or are Exegete's own: no possible miss
+# (fix round 2 joins words again; these must stay out)
+NOT_QUALCODER_LINES = (
+    "/Users/x/My Apps/exegete/.venv/bin/python -m exegete",
+    "/Users/x/My Apps/env/bin/qualcoder-mcp",
+    "/Users/x/My Apps/env/bin/python -m qualcoder_mcp",
+    "/Users/x/My Apps/qualcoder_mcp/venv/bin/python "
+    "/Users/x/My Apps/qualcoder_mcp/src/qualcoder_mcp/__main__.py",
+    "tail -f /x/mcp-server-qualcoder.log",
+    "/usr/bin/tail -f /x/mcp-server-qualcoder.log",
+    "/usr/bin/tail -f /x/My Logs/mcp-server-qualcoder.log",
+    "/usr/bin/vim /x/qualcoder/notes.txt",
+    "/usr/bin/vim qualcoder.py",
+    "/usr/bin/nano qualcoder notes.txt",
+    "/usr/bin/python3 /x/tool.py /data/qualcoder.py",
+    "/usr/bin/python3 -m pytest tests/test_qualcoder.py",
+    "/usr/bin/python3 -c import qualcoder",
+    "/usr/bin/python3 -X utf8 foo qualcoder.py",
+    "grep -rn qualcoder /x",
+    "/usr/bin/zip -r out/qualcoder.zip notes",
+    "/Applications/Visual Studio Code.app/Contents/MacOS/Electron "
+    "/Users/x/Applications/QualCoder",
+)
 
 
 def _without_the_space(line):
-    return line.replace("My Apps", "MyApps").replace("Research Tools",
-                                                     "ResearchTools")
+    for spaced in ("My Apps", "Research Tools", "My Passport", "My Tools"):
+        line = line.replace(spaced, spaced.replace(" ", ""))
+    return line
 
 
 class TestTrustedNone:
@@ -823,6 +869,28 @@ class TestAPathWithASpace:
         scan = database._scan_from_listing(listing, own, False)
         assert scan == SAW_NONE and scan.found_none is True
 
+    @pytest.mark.parametrize("line", NOT_QUALCODER_LINES)
+    def test_a_line_that_only_names_qualcoder_stays_out(self, line):
+        """A guard: joining words again (fix round 2) never makes a
+        program that only names QualCoder, or Exegete itself, a
+        possible miss."""
+        own = os.getpid()
+        scan = database._scan_from_listing(f"  {own + 1} {line}\n", own,
+                                           False)
+        assert scan == SAW_NONE
+
+    def test_words_are_joined_up_to_a_bound(self):
+        """A long command line is joined again over its first words
+        only."""
+        assert database._MAY_BE_QUALCODER_WORDS == 32
+        words = ["/home/x/A"] + ["b"] * 29 + ["c/QualCoder-4.0-beta-"
+                                             "linux-executable"]
+        assert database._possible_miss([" ".join(words)])
+        longer = words[:1] + ["b"] * 31 + words[-1:]
+        assert not database._possible_miss([" ".join(longer)])
+        assert database._filter_qualcoder_processes(
+            ["/home/x/A" + "".join(words[1:])]) != []
+
     @pytest.mark.real_process_scan
     @pytest.mark.skipif(os.name == "nt", reason="ps is the listing off "
                         "Windows; tasklist sees names only anyway")
@@ -850,7 +918,11 @@ class TestAPathWithASpace:
          "Python.app/Contents/MacOS/Python",
          "/Users/x/My Apps/env/bin/qualcoder"],
         ["/home/x/Research Tools/QualCoder-master/env/bin/python",
-         "src/qualcoder/__main__.py"]], ids=SPACED_IDS)
+         "src/qualcoder/__main__.py"],
+        ["/home/x/Research Tools/QualCoder-4.0-beta-linux-executable"],
+        ["python3", "/home/x/Research Tools/QualCoder/qualcoder.py"]],
+        ids=SPACED_IDS[:3] + ["the 4.0 Linux download",
+                              "qualcoder.py in the folder"])
     def test_psutil_reads_the_program_from_its_first_word(
             self, monkeypatch, cmdline):
         _not_in_a_sandbox(monkeypatch)
@@ -924,7 +996,50 @@ class TestASandboxOfItsOwn:
     def test_no_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr(database, "_OWN_PROCESS_LIST_MARKERS",
                             (str(tmp_path / "absent"),))
-        assert database._sees_only_its_own_processes("linux") is False
+        assert database._sees_only_its_own_processes(
+            "linux", release="6.8.0-1021-azure", environ={}) is False
+
+    @pytest.mark.parametrize("release", [
+        "5.15.167.4-microsoft-standard-WSL2", "4.4.0-22621-Microsoft"])
+    def test_wsl_by_its_kernel(self, tmp_path, monkeypatch, release):
+        """Inside WSL, `ps` lists none of Windows' programs (fix round
+        2)."""
+        monkeypatch.setattr(database, "_OWN_PROCESS_LIST_MARKERS",
+                            (str(tmp_path / "absent"),))
+        assert database._sees_only_its_own_processes(
+            "linux", release=release, environ={}) is True
+        assert database._sees_only_its_own_processes(
+            "darwin", release=release, environ={}) is False
+        assert database._sees_only_its_own_processes(
+            "win32", release=release, environ={}) is False
+
+    def test_wsl_by_its_variable(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(database, "_OWN_PROCESS_LIST_MARKERS",
+                            (str(tmp_path / "absent"),))
+        assert database._sees_only_its_own_processes(
+            "linux", release="6.8.0-1021-azure",
+            environ={"WSL_DISTRO_NAME": "Ubuntu"}) is True
+
+    @pytest.mark.parametrize("release, variable, inside", [
+        ("5.15.167.4-microsoft-standard-WSL2", None, True),
+        ("6.8.0-1021-azure", "Ubuntu", True),
+        ("6.8.0-1021-azure", None, False)])
+    def test_wsl_read_from_this_computer(self, tmp_path, monkeypatch,
+                                         release, variable, inside):
+        """Without arguments, the kernel's release name and the
+        variable are read from this computer."""
+        monkeypatch.setattr(database, "_OWN_PROCESS_LIST_MARKERS",
+                            (str(tmp_path / "absent"),))
+
+        class _Uname:
+            pass
+        _Uname.release = release
+        monkeypatch.setattr(os, "uname", lambda: _Uname, raising=False)
+        if variable is None:
+            monkeypatch.delenv("WSL_DISTRO_NAME", raising=False)
+        else:
+            monkeypatch.setenv("WSL_DISTRO_NAME", variable)
+        assert database._sees_only_its_own_processes("linux") is inside
 
     @pytest.mark.real_process_scan
     def test_the_scan_counts_as_names_only(self, tmp_path, monkeypatch):
@@ -970,6 +1085,14 @@ class TestTheWordsAfterReview:
         start = privacy.index("**Process listing.**")
         return _collapsed(privacy[start:privacy.find("\n- **", start)])
 
+    def test_the_note_points_to_answers_that_carry_the_check(self):
+        """select_project's answer has no qualcoder_open (fix round 2)."""
+        assert ("Whether QualCoder has the project open now is a "
+                "separate, live check: select_project's warning, and "
+                "get_current_project's qualcoder_open and "
+                "qualcoder_gui_signals.") in REPORT_NOTE
+        assert "now is qualcoder_open" not in REPORT_NOTE
+
     def test_the_note_says_how_to_read_false(self):
         assert REPORT_NOTE.endswith(
             "A false qualcoder_on_this_computer means only that no sign "
@@ -977,10 +1100,54 @@ class TestTheWordsAfterReview:
 
     def test_privacy_names_what_the_scan_can_miss(self):
         bullet = self._privacy_bullet()
-        assert ("without psutil, a QualCoder started from a folder whose "
-                "path holds a space is not counted as running") in bullet
+        assert ("without psutil, a QualCoder run through Python, or one of "
+                "QualCoder's Linux downloads, from a folder whose path "
+                "holds a space is not counted as running") in bullet
         assert "a Flatpak app's or a container's" in bullet
-        assert "when a Python withheld its command line" in bullet
+        assert ("when a running Python program's command line could not "
+                "be read") in bullet
+        assert "withheld" not in bullet
+
+    def test_privacy_names_wsl_and_another_computer(self):
+        """Fix round 2: Exegete inside WSL, and QualCoder open on another
+        computer."""
+        bullet = self._privacy_bullet()
+        assert ("with Exegete inside WSL (Windows Subsystem for Linux), a "
+                "QualCoder running on Windows is not seen") in bullet
+        assert ("a QualCoder open on another computer, on a project in a "
+                "synced or shared folder, is not seen") in bullet
+        assert ("It is still given when a program may be a QualCoder the "
+                "scan could not read (one run through Python, or one of "
+                "QualCoder's Linux downloads, from a folder whose path "
+                "holds a space)") in bullet
+        assert "in such a sandbox, and inside WSL." in bullet
+
+    def test_the_changelog_keeps_the_sandbox_apart(self):
+        """The sandbox is not among the cases of a QualCoder started
+        from Python, and the words are a researcher's."""
+        changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        section = _collapsed(_section(
+            changelog, "### Changed: a project's history with QualCoder"))
+        assert ("cannot see a QualCoder started from Python (Windows "
+                "without psutil, which lists program names only; a running "
+                "Python program whose command line could not be read), "
+                "runs in a Linux sandbox whose process list holds only its "
+                "own programs (a Flatpak app, a container) or inside "
+                "WSL") in section
+        assert "withholds" not in section
+        assert ("one run through Python, or one of QualCoder's Linux "
+                "downloads, from a folder whose path holds a space") \
+            in section
+        assert ("a QualCoder open on another computer, on a project in a "
+                "synced or shared folder, is not seen") in section
+
+    def test_tools_says_nothing_that_may_be_one(self):
+        tools = _collapsed("\n".join(
+            row[2:] if row.startswith("> ") else row
+            for row in (REPO / "TOOLS.md").read_text(
+                encoding="utf-8").splitlines()))
+        assert ("could read programs' command lines and found no "
+                "QualCoder and nothing that may be one") in tools
 
     def test_privacy_says_what_only_presence_means(self):
         bullet = self._privacy_bullet()

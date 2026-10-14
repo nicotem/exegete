@@ -70,9 +70,10 @@ STALE_LOCK_SIGN = (
 REPORT_NOTE = (
     "What Exegete found when the project was selected; it decides which "
     "notes about QualCoder its answers carry. Whether QualCoder has the "
-    "project open now is qualcoder_open and qualcoder_gui_signals. A "
-    "false qualcoder_on_this_computer means only that no sign of "
-    "QualCoder was found on this computer.")
+    "project open now is a separate, live check: select_project's "
+    "warning, and get_current_project's qualcoder_open and "
+    "qualcoder_gui_signals. A false qualcoder_on_this_computer means "
+    "only that no sign of QualCoder was found on this computer.")
 
 PathLike = Union[str, Path]
 

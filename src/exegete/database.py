@@ -702,9 +702,10 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
 #   (qualcoder_history.py). Where the scan was not asked for, could not
 #   run, saw program names only (Windows' tasklist, which cannot see a
 #   QualCoder run from Python; psutil when a Python's command line was
-#   withheld; a Linux sandbox with a process list of its own), found a
-#   line that may be a QualCoder it could not read (a path holding a
-#   space), or found a QualCoder, the sign is given as before.
+#   withheld; a Linux sandbox with a process list of its own, or WSL,
+#   which lists none of Windows' programs), found a line that may be a
+#   QualCoder it could not read (a path holding a space), or found a
+#   QualCoder, the sign is given as before.
 # - A best-effort local process scan for a running QualCoder
 #   (platform-guarded, optional, cached; never a hard dependency and
 #   never allowed to crash or block, including on Windows CI runners).
@@ -853,15 +854,89 @@ def _filter_qualcoder_processes(lines) -> List[str]:
 # whether a scan that found no QualCoder is trusted to say that none is
 # running, never to give the process sign. `ps` gives a command
 # line as one string, and the rule above takes its first word as the
-# program, so a Python or a `qualcoder` script in a folder whose path
-# holds a space ("/Users/x/My Apps/env/bin/python3 -m qualcoder") is not
-# recognised. With Exegete's own names taken out, a line that holds
-# `-m qualcoder` (or `-mqualcoder`), or a word ending in
+# program, so a QualCoder in a folder whose path holds a space is not
+# recognised: a Python ("/Users/x/My Apps/env/bin/python3 -m qualcoder"),
+# its `qualcoder` script, or one of QualCoder's Linux downloads
+# ("/home/x/Research Tools/QualCoder-4.0-beta-linux-executable"). With
+# Exegete's own names taken out, a line may be such a QualCoder when it
+# holds `-m qualcoder` (or `-mqualcoder`) or a word ending in
 # `qualcoder/__main__.py`, `/bin/qualcoder` or `\Scripts\qualcoder`
-# (`.exe` aside), may be such a QualCoder.
+# (`.exe` aside), or when the rule above says yes once the words that a
+# space may have split are joined again (fix round 2): the program's,
+# when the line begins with a path, and a Python's script's. A word that
+# begins another one (an option, or a path of its own: `-`, `/`, `~` or
+# a drive such as `C:\`) is never joined to the word before it, and a
+# program is joined only up to a word that holds a slash (a space in a
+# folder's name, not in the program's own), so `tail -f
+# .../mcp-server-qualcoder.log` and `vim /x/qualcoder/notes.txt` stay
+# out. A line that does not hold "qualcoder" is not read further.
 _MAY_BE_QUALCODER_MODULE = re.compile(r"-m\s*qualcoder")
 _MAY_BE_QUALCODER_ENDINGS = ("qualcoder/__main__.py", "/bin/qualcoder",
                              "/scripts/qualcoder")
+# At most this many words of a line are joined again: a bound on the
+# work for a long command line.
+_MAY_BE_QUALCODER_WORDS = 32
+_BEGINS_A_PATH = re.compile(r"^(?:[/~]|[a-z]:[\\/])", re.IGNORECASE)
+
+
+def _begins_another_word(word: str) -> bool:
+    """Whether a word cannot be the rest of a path that a space split:
+    an option, or a path of its own."""
+    return word.startswith("-") or bool(_BEGINS_A_PATH.match(word))
+
+
+def _python_script_index(arguments: List[str]) -> Optional[int]:
+    """Where a Python's script is among its arguments, found as
+    `_program_is_qualcoder` finds it; None when there is none (`-m`,
+    `-c`, or options only)."""
+    index = 0
+    while index < len(arguments):
+        token = arguments[index]
+        if token == "-c" or token.startswith("-m"):
+            return None
+        if token in _PYTHON_OPTIONS_WITH_A_VALUE:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return index
+    return None
+
+
+def _qualcoder_once_joined(words: List[str]) -> bool:
+    """Whether the rule above says yes once the words that a space may
+    have split are joined again (see above)."""
+    words = words[:_MAY_BE_QUALCODER_WORDS]
+    if not words:
+        return False
+    programs = [1]
+    if _BEGINS_A_PATH.match(words[0]):
+        end = 1
+        while end < len(words) and not _begins_another_word(words[end]):
+            end += 1
+            if "/" in words[end - 1].replace("\\", "/"):
+                programs.append(end)
+    for end in programs:
+        program, arguments = " ".join(words[:end]), words[end:]
+        if _program_is_qualcoder(program, arguments):
+            return True
+        if not _is_a_python(_program_name(program)):
+            continue
+        # a Python's script, in a folder whose path holds a space
+        script = _python_script_index(arguments)
+        if script is None:
+            continue
+        stop = script + 1
+        while (stop < len(arguments)
+               and not _begins_another_word(arguments[stop])):
+            stop += 1
+            joined = (arguments[:script]
+                      + [" ".join(arguments[script:stop])]
+                      + arguments[stop:])
+            if _program_is_qualcoder(program, joined):
+                return True
+    return False
 
 
 def _may_be_qualcoder(line: str) -> bool:
@@ -871,6 +946,8 @@ def _may_be_qualcoder(line: str) -> bool:
         text = line.casefold().replace("\\", "/")
         for own in _OWN_NAMES:
             text = text.replace(own, "")
+        if "qualcoder" not in text:
+            return False
         if _MAY_BE_QUALCODER_MODULE.search(text):
             return True
         for word in text.split():
@@ -879,9 +956,9 @@ def _may_be_qualcoder(line: str) -> bool:
                 word = word[:-4]
             if word.endswith(_MAY_BE_QUALCODER_ENDINGS):
                 return True
+        return _qualcoder_once_joined(line.split())
     except Exception:
         return False
-    return False
 
 
 def _possible_miss(lines) -> bool:
@@ -923,9 +1000,9 @@ class ProcessScan(NamedTuple):
     QualCoder started with `py -m qualcoder`, as QualCoder's README
     starts it on Windows, shows as py.exe or python.exe and is never
     seen), for psutil when a process named like a Python gave no command
-    line, and on Linux in a sandbox with a process list of its own
-    (`_sees_only_its_own_processes`). `possible_miss`: a line that is
-    not a hit may still be a QualCoder by the looser reading
+    line, and on Linux in a sandbox with a process list of its own or
+    inside WSL (`_sees_only_its_own_processes`). `possible_miss`: a line
+    that is not a hit may still be a QualCoder by the looser reading
     (`_may_be_qualcoder`), such as one run from a folder whose path
     holds a space.
     """
@@ -963,14 +1040,35 @@ _OWN_PROCESS_LIST_MARKERS = ("/.flatpak-info", "/.dockerenv",
                              "/run/.containerenv")
 
 
-def _sees_only_its_own_processes(platform: Optional[str] = None) -> bool:
-    """On Linux, whether one of the files above is there. Never
-    raises."""
+def _inside_wsl(release: Optional[str] = None,
+                environ: Optional[Dict[str, str]] = None) -> bool:
+    """Whether this Linux runs inside WSL (Windows Subsystem for Linux),
+    whose `ps` lists WSL's own programs and none of Windows', so a
+    QualCoder running on Windows is never in the listing (fix round 2):
+    the kernel's release name holds "microsoft" in WSL 1 and 2, and WSL
+    sets WSL_DISTRO_NAME (read through env_settings, or from `environ`
+    when one is given). No file is read."""
+    if release is None:
+        release = os.uname().release
+    if environ is None:
+        named = env_settings.wsl_distribution()
+    else:
+        named = bool(environ.get("WSL_DISTRO_NAME"))
+    return "microsoft" in release.casefold() or named
+
+
+def _sees_only_its_own_processes(platform: Optional[str] = None,
+                                 release: Optional[str] = None,
+                                 environ: Optional[Dict[str, str]] = None
+                                 ) -> bool:
+    """On Linux, whether one of the files above is there, or this is
+    WSL (`_inside_wsl`). Never raises."""
     try:
         if not (platform or sys.platform).startswith("linux"):
             return False
-        return any(os.path.exists(marker)
-                   for marker in _OWN_PROCESS_LIST_MARKERS)
+        return (any(os.path.exists(marker)
+                    for marker in _OWN_PROCESS_LIST_MARKERS)
+                or _inside_wsl(release, environ))
     except Exception:
         return False
 
@@ -1024,8 +1122,8 @@ def _qualcoder_process_scan() -> Optional[ProcessScan]:
     with an error or prints nothing, or psutil listing no process
     (v0.15.0: until then a failed scan answered "no hits", which a
     caller could not tell from a scan that saw every process and found
-    none). On Linux in a sandbox with a process list of its own it
-    counts as names only. The answer, None included, is kept for
+    none). On Linux in a sandbox with a process list of its own, or
+    inside WSL, it counts as names only. The answer, None included, is kept for
     _PROCESS_SCAN_CACHE_SECONDS. It never raises.
     """
     now = time.monotonic()

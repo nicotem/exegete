@@ -90,7 +90,7 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > chat-history file changed recently (QualCoder 3.8.2 and 4.0 both create
 > it on a project's first open and change it when the chat is used; since
 > v0.15.0 not counted when the process scan could read programs' command
-> lines and found no QualCoder),
+> lines and found no QualCoder and nothing that may be one),
 > and a best-effort process scan that reports only how many running processes
 > look like QualCoder, never their names or command lines). The file-based signals are traces of recent
 > activity, never proof of an open window (an idle 4.0 window with no recent AI

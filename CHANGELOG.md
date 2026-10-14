@@ -165,11 +165,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `qualcoder_gui_signals`; the file still counts as a trace in
   `qualcoder_history`. Where that check could not run, cannot see a
   QualCoder started from Python (Windows without psutil, which lists
-  program names only; a Python that withholds its command line; a Linux
-  sandbox, such as a Flatpak app or a container, whose process list
-  holds only its own programs), or finds a program that may be a
-  QualCoder it cannot read (one started from a folder whose path holds
-  a space), the sign is given as before.
+  program names only; a running Python program whose command line could
+  not be read), runs in a Linux sandbox whose process list holds only
+  its own programs (a Flatpak app, a container) or inside WSL (Windows
+  Subsystem for Linux), which lists none of Windows' programs, or finds
+  a program that may be a QualCoder it cannot read (one run through
+  Python, or one of QualCoder's Linux downloads, from a folder whose
+  path holds a space), the sign is given as before. That check sees
+  only this computer: a QualCoder open on another computer, on a
+  project in a synced or shared folder, is not seen, and when the check
+  here finds no QualCoder the chat history's recent change no longer
+  shows it either.
 
 ### Changed: one tool set called full
 

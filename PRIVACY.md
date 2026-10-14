@@ -1150,18 +1150,25 @@ Two further rules touch files on your disk:
   This is a heuristic: it can miss an open window (an idle 4.0 window
   with no recent AI activity leaves no file trace, so only the process
   scan can see it; on Windows without psutil, a QualCoder run through
-  `python.exe` is not seen; without psutil, a QualCoder started from a
-  folder whose path holds a space is not counted as running; and in a
-  Linux sandbox whose process list holds only its own programs, such as
-  a Flatpak app's or a container's, a QualCoder outside it is not seen),
-  and a recently modified chat history file means a first open of the
-  project by either QualCoder build, or its AI chat used; a later open
-  leaves the file as it is. Since v0.15.0 that file's recent change is
-  not given as a sign when the process scan could read programs' command
-  lines and found no QualCoder (it then says nothing about an open
-  window). It is still given when a program may be a QualCoder the scan
-  could not read (one started from a folder whose path holds a space),
-  when a Python withheld its command line, and in such a sandbox.
+  `python.exe` is not seen; without psutil, a QualCoder run through
+  Python, or one of QualCoder's Linux downloads, from a folder whose
+  path holds a space is not counted as running; in a Linux sandbox whose
+  process list holds only its own programs, such as a Flatpak app's or a
+  container's, a QualCoder outside it is not seen, and with Exegete
+  inside WSL (Windows Subsystem for Linux), a QualCoder running on
+  Windows is not seen; and a QualCoder open on another computer, on a
+  project in a synced or shared folder, is not seen, and since v0.15.0
+  the chat history's recent change no longer shows it when the scan
+  here finds no QualCoder), and a recently modified chat history file
+  means a first open of the project by either QualCoder build, or its AI
+  chat used; a later open leaves the file as it is. Since v0.15.0 that
+  file's recent change is not given as a sign when the process scan
+  could read programs' command lines and found no QualCoder (it then
+  says nothing about an open window). It is still given when a program
+  may be a QualCoder the scan could not read (one run through Python, or
+  one of QualCoder's Linux downloads, from a folder whose path holds a
+  space), when a running Python program's command line could not be
+  read, in such a sandbox, and inside WSL.
   `create_project` runs no process scan for the project it has just
   made. `select_project` and `get_current_project` also give the
   project's history with QualCoder (`qualcoder_history`, v0.15.0),

@@ -500,12 +500,17 @@ class TestTheThreeRefusals:
             monkeypatch.setenv(CODER, own)
         monkeypatch.setenv(AI_OLD, "Qwen 3")
         answer = _create("Study", tmp_path, coder_name="Qwen 3 ")
+        # The Terminal place names the spelling in use, here the earlier
+        # one (the coder names, piece 3, fix round 1); the extension names
+        # its own setting
+        place = (places["ai"] if route == "extension" else
+                 f"{AI_OLD} in the host's configuration for Exegete")
         assert _refused(answer) == (
             "The coder name given for the researcher, \"Qwen 3\", is also "
             "the AI coder name in Exegete's settings. They must differ: AI "
             "codings stored under the researcher's own name could not be "
             "told apart from theirs. Ask the researcher to change "
-            f"{places['ai']}, or call again with another coder_name, as the "
+            f"{place}, or call again with another coder_name, as the "
             "researcher gives it. Nothing was created.")
         _nothing_made(tmp_path)
 

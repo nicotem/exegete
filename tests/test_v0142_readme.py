@@ -319,7 +319,7 @@ def test_a_first_session_names_both_coder_names():
             "Do not know yours? Say so. Before "
             "its first write, it asks for the AI coder name, kept per "
             "project, under which Exegete writes what is done through the "
-            "conversation, unless it made the project with that name filled "
+            "conversation, unless the project was made while it was filled "
             "in Exegete's settings.") in names
     assert "Not using QualCoder, or no coder name?" not in names
     assert "no QualCoder yet" not in names

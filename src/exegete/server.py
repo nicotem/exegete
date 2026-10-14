@@ -2517,15 +2517,18 @@ def _settings_place(which: str) -> str:
     (v0.15.0): `which` is "coder" (their own), "ai" or "both". On the
     desktop extension, by its own mark, the setting's title in
     Exegete's settings; installed any other way, the variable in the
-    host's configuration."""
+    host's configuration, the AI coder name under the spelling in use:
+    its earlier one when only that is set (read until v1.0), as the
+    once-per-project question named it before v0.15.0."""
     if env_settings.installed_as_extension():
         titles = {"coder": "\"Your coder name\"",
                   "ai": "\"AI coder name\"",
                   "both": "\"Your coder name\" or \"AI coder name\""}
         return (f"{titles[which]} in Exegete's settings (Settings, "
                 f"Extensions, Exegete)")
-    variables = {"coder": CODER_NAME_ENV, "ai": AI_CODER_NAME_ENV,
-                 "both": f"{CODER_NAME_ENV} or {AI_CODER_NAME_ENV}"}
+    ai = env_settings.read("ai_coder_name").name
+    variables = {"coder": CODER_NAME_ENV, "ai": ai,
+                 "both": f"{CODER_NAME_ENV} or {ai}"}
     return f"{variables[which]} in the host's configuration for Exegete"
 
 
@@ -2633,15 +2636,30 @@ def _ask_quick_picks(existing: List[str], declared: Optional[str]) -> List[str]:
     return picks
 
 
+def _the_setter_refuses(name: str) -> bool:
+    """Whether set_project_ai_coder_name refuses `name` in any project
+    (v0.15.0): QualCoder's "default", its speaker coder, or the
+    researcher's own coder name in the settings. The ask offers no such
+    name, neither as the AI coder name in Exegete's settings nor as a
+    name the project already holds rows under (rows under any of them
+    are not the AI's)."""
+    return name in ("default", SPEAKER_SYSTEM_CODER) or \
+        name == settings_coder_name()
+
+
 def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
     """The ASK: no name is set, so nothing was written (D7 3.3).
 
     A pure function of the sidecar, the environment and the arguments:
     repeating the refused call returns byte-identical JSON, and nothing
-    is written, backed up, upgraded or consumed on the way here.
+    is written, backed up, upgraded or consumed on the way here. A
+    setting the setter would refuse is not offered (v0.15.0).
     """
     declared = host_declaration()
-    existing = _existing_known_ai_names()
+    if declared is not None and _the_setter_refuses(declared):
+        declared = None
+    existing = [name for name in _existing_known_ai_names()
+                if not _the_setter_refuses(name)]
     text = (
         "No AI coder name is set for this project yet, so nothing was "
         "written. Ask the user which coder name this project's AI codings "
@@ -20432,7 +20450,7 @@ AI_SETTING_STORE_FAILED_WARNING = (
 AI_SETTING_STORED_STEP = (
     "The AI coder name is \"{n}\", from Exegete's settings, stored with "
     "the project (exegete.json in the project folder) without asking; "
-    "every change Exegete makes here carries it. Tell the researcher. "
+    "every row Exegete writes here carries it. Tell the researcher. "
     "Another name can be set for this project with "
     "set_project_ai_coder_name, on their word.")
 

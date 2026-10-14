@@ -708,13 +708,16 @@ and `EXEGETE_USES_QUALCODER`, all below.
   one at the first write that needs it, with this name offered first.
   A project that already has another AI coder name keeps it: the next
   write asks once which to use there, rather than re-attributing
-  anything. Until 0.14.3 it was only offered as the first quick pick.
+  anything. Up to 0.14.3 it was offered first and checked against a
+  project's own AI coder name, but never stored by itself.
   Give the model this host runs (`"Qwen 3.8 6bit"`), or `AI Agent` for
   the exact name QualCoder 4.0's built-in assistant writes under, which
   groups Exegete's work with the assistant's under one coder in
   QualCoder's per-coder visibility toggle, undo and reports. `default`
   and QualCoder's speaker coder are never stored as an AI coder name:
-  a new project is then made without one, and its answer says why.
+  a new project is then made without one, and its answer says why; nor
+  are they, or your own coder name, offered when a project is asked
+  for one.
   Empty or unset, no name is offered first. The value is
   trimmed and must be at most 80 characters, single-line plain text
   (no control characters, no line or paragraph separators, and no

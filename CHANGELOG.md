@@ -325,13 +325,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the new project's AI coder name, and its answer says so
   (`ai_coder_name`, and the first of its next steps); the new project's
   folder then also holds `exegete.json`, and `qualcoder_mcp.json`
-  written already marked as moved. Until 0.14.3 the setting was only
-  offered first when a project was asked for its name. A project that
+  written already marked as moved, so that copies of Exegete from
+  before its rename (0.12 to 0.14) refuse to write the project. Up to
+  0.14.3 the setting was offered first and checked against a project's
+  own AI coder name, but never stored by itself. A project that
   already has an AI coder name keeps it, and when the setting differs
   the next write asks once which to use there; a project made another
   way, without one, is asked at its first write, with the setting
   offered first. `default` and QualCoder's speaker coder are not
   stored: the project is made without an AI coder name, with a warning.
+  A setting the setter would refuse (these two, or the researcher's own
+  coder name in the settings) is not offered when a project is asked
+  for its AI coder name.
   The texts that called the setting this host's declaration now call it
   the AI coder name in Exegete's settings, and the brief and the help
   on the AI coder name say that the researcher chooses it there or when
@@ -376,7 +381,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
   which also gives exactly 0.14.3's figures for its tree), 218,527 and
   72,065. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), seven changes
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), eight changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three

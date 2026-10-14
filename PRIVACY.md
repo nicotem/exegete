@@ -145,12 +145,14 @@ What stays local, always, unless a sync service copies the folder it is in:
   `.qda` project folder; until 0.14.0 `qualcoder_mcp.json`, which the
   first change of name after the update carries into `exegete.json` and
   then keeps, marked as moved, with the name it held): the coder name or names you have chosen for
-  this project's AI writes, when each was set, an optional note you
-  typed (for example the host and model version), and the name declared
-  in the host's server configuration at the time. It travels with the
+  this project's AI writes, when each was set, an optional note (one
+  you typed, for example the host and model version, or Exegete's own
+  when the name came from its settings at creation), and the AI coder
+  name in Exegete's settings at the time. It travels with the
   project folder, its backups and its workspace copies, and a restore
   rolls it back with the rest of the folder. It is returned into the
-  conversation by get_current_project, select_project and
+  conversation by create_project when it stores the name,
+  get_current_project, select_project and
   set_project_ai_coder_name, and the current name appears on every write
   result; treat the note like any other project text the model can read.
   QualCoder never reads or writes this file. Deleting it makes the next
@@ -1220,7 +1222,8 @@ Two further rules touch files on your disk:
   selects a project); nothing else: no backup and no entry in
   QualCoder's recent-project list. When the AI coder name is filled in
   Exegete's settings, it is stored with the new project too, in
-  `exegete.json`, beside `qualcoder_mcp.json`, the earlier name's file,
+  `exegete.json`, beside `qualcoder_mcp.json`, the file of Exegete's
+  earlier name,
   written already marked as moved and holding no name, so that versions
   0.12 to 0.14 refuse to write the project rather than ask for a name of
   their own; the answer says so. Left empty, no

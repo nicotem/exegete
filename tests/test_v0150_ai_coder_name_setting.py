@@ -126,7 +126,7 @@ ASK_STEP = (
 STORED_STEP = (
     "The AI coder name is \"Qwen 3.8 6bit\", from Exegete's settings, "
     "stored with the project (exegete.json in the project folder) without "
-    "asking; every change Exegete makes here carries it. Tell the "
+    "asking; every row Exegete writes here carries it. Tell the "
     "researcher. Another name can be set for this project with "
     "set_project_ai_coder_name, on their word.")
 
@@ -457,6 +457,137 @@ class TestWithoutTheSetting:
 
 
 # ---------------------------------------------------------------------------
+# Fix round 1: a setting the setter refuses is not offered, and the words
+# name the spelling of the setting in use
+# ---------------------------------------------------------------------------
+
+CODER = names.NEW_ONLY_SETTINGS["coder_name"]
+# The ask as it stands without the clause on the setting
+ASK_WITHOUT_SETTING = ASK_WITH_SETTING.replace(
+    ", \"Qwen 3.8 6bit\" (the AI coder name in Exegete's settings)", "")
+TERMINAL_OLD = f"{AI_OLD} in the host's configuration for Exegete"
+
+
+class TestARefusedSettingIsNotOffered:
+    """A setting set_project_ai_coder_name refuses in any project
+    (QualCoder's "default", its speaker coder, the researcher's own coder
+    name in the settings) is left out of the ask's words and quick picks:
+    creation has just warned "Ask the researcher for another"."""
+
+    def test_the_ask_without_the_clause_is_the_ask(self):
+        assert ASK_WITHOUT_SETTING != ASK_WITH_SETTING
+        assert "Exegete's settings" not in ASK_WITHOUT_SETTING
+
+    @pytest.mark.parametrize("refused", ["default", SPEAKER, "Ann Lee"])
+    def test_the_ask_leaves_it_out(self, setup_server_unset, monkeypatch,
+                                   refused):
+        monkeypatch.setenv(AI, refused)
+        if refused == "Ann Lee":
+            monkeypatch.setenv(CODER, "Ann Lee")
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out["error"] == ASK_WITHOUT_SETTING
+        assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME,
+                                      server.KNOWN_AI_ASSISTANT_OWNER]
+        # the import's preview gives the same ask
+        assert server._import_owner_stop() == ASK_WITHOUT_SETTING
+        # and the setter does refuse it
+        refused_answer = json.loads(server.set_project_ai_coder_name(refused))
+        assert refused_answer["error"].endswith("Nothing was changed.")
+        assert not read_sidecar(Path(setup_server_unset.current_project_path)
+                                ).is_set
+
+    @pytest.mark.parametrize("refused", ["default", SPEAKER, "Ann Lee"])
+    def test_rows_under_it_are_not_offered_as_the_ais(
+            self, setup_server_unset, qualcoder_db_path, monkeypatch,
+            refused):
+        """Rows under such a name are a person's, or QualCoder's speaker
+        codings: the ask does not propose continuing them as the AI's."""
+        con = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
+        con.execute("INSERT INTO code_name (cid,name,memo,catid,owner,date,"
+                    "color) VALUES (90,'Theirs','',NULL,?,'2024-01-15',"
+                    "'#FF0000')", (refused,))
+        con.commit()
+        con.close()
+        server.db.close()
+        server.db = server.QualcoderDatabase(qualcoder_db_path)
+        monkeypatch.setenv(AI, refused)
+        if refused == "Ann Lee":
+            monkeypatch.setenv(CODER, "Ann Lee")
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out["error"] == ASK_WITHOUT_SETTING
+        assert out["existing_ai_coder_names_in_project"] == []
+        assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME,
+                                      server.KNOWN_AI_ASSISTANT_OWNER]
+
+    @pytest.mark.parametrize("reserved", ["default", SPEAKER])
+    def test_after_creation_the_first_change_does_not_offer_it(
+            self, tmp_path, monkeypatch, reserved):
+        monkeypatch.setenv(AI, reserved)
+        answer = _create("Reserved", tmp_path)
+        assert answer["ai_coder_name"] is None
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out["error"] == ASK_WITHOUT_SETTING
+        assert reserved not in out["quick_picks"]
+
+    def test_the_researchers_own_setting_alone_is_offered(
+            self, setup_server_unset, monkeypatch):
+        """Guard: the researcher's own setting keeps the AI setting out
+        only when the two are the same name."""
+        monkeypatch.setenv(CODER, "Ann Lee")
+        monkeypatch.setenv(AI, SETTING)
+        out = json.loads(server.create_code("Asked", create_backup=False))
+        assert out["error"] == ASK_WITH_SETTING
+        assert out["quick_picks"][0] == SETTING
+
+
+class TestTheSpellingInUse:
+    """Installed any other way than as the extension, the words name the
+    AI coder name's variable as it is set: the earlier spelling when only
+    that is set (read until v1.0), as the once-per-project question named
+    it before v0.15.0; the new one otherwise."""
+
+    @pytest.mark.parametrize("given,named", [
+        ({AI: "Model B"}, AI),
+        ({AI_OLD: "Model B"}, AI_OLD),
+        ({AI: "Model B", AI_OLD: "Model B"}, AI),
+        ({}, AI),
+    ])
+    def test_the_place(self, monkeypatch, given, named):
+        _route(monkeypatch, "terminal")
+        for name, value in given.items():
+            monkeypatch.setenv(name, value)
+        assert server._settings_place("ai") == (
+            f"{named} in the host's configuration for Exegete")
+        assert server._settings_place("both") == (
+            f"EXEGETE_CODER_NAME or {named} in the host's configuration "
+            f"for Exegete")
+        assert server._settings_place("coder") == (
+            "EXEGETE_CODER_NAME in the host's configuration for Exegete")
+        # the extension names its own setting, whatever the spelling
+        _route(monkeypatch, "extension")
+        assert server._settings_place("ai") == PLACES["extension"]
+
+    def test_the_once_per_project_question(self, setup_server_unset,
+                                           monkeypatch):
+        _route(monkeypatch, "terminal")
+        server.set_project_ai_coder_name("Model A")
+        monkeypatch.setenv(AI_OLD, "Model B")
+        out = json.loads(server.create_code("Blocked", create_backup=False))
+        assert out["error"] == _mismatch("Model B", "Model A", TERMINAL_OLD)
+
+    def test_the_warning_for_a_reserved_name(self, tmp_path, monkeypatch):
+        _route(monkeypatch, "terminal")
+        monkeypatch.setenv(AI_OLD, "default")
+        answer = _create("Reserved", tmp_path)
+        assert _ai_warnings(answer) == [
+            "The AI coder name in Exegete's settings, \"default\", was not "
+            "stored: QualCoder reserves \"default\" for anyone who has not "
+            "set a name. Ask the researcher for another "
+            f"(set_project_ai_coder_name), and suggest changing "
+            f"{TERMINAL_OLD}."]
+
+
+# ---------------------------------------------------------------------------
 # The documents
 # ---------------------------------------------------------------------------
 
@@ -480,8 +611,14 @@ class TestTheDocuments:
                 "TOOLS.md). Set, it is given by `create_project` to each "
                 "project it makes, without asking, and the answer says so "
                 "(`ai_coder_name`, with the source `settings`)") in text
-        assert ("Until 0.14.3 it was only offered as the first quick "
-                "pick.") in text
+        assert ("Up to 0.14.3 it was offered first and checked against a "
+                "project's own AI coder name, but never stored by itself.") \
+            in text
+        assert "it was only offered as the first quick pick" not in text
+        assert ("`default` and QualCoder's speaker coder are never stored as "
+                "an AI coder name: a new project is then made without one, "
+                "and its answer says why; nor are they, or your own coder "
+                "name, offered when a project is asked for one.") in text
         assert ("give the model the host runs, and every project Exegete "
                 "creates from that host takes that name, and any other "
                 "project without one is offered it first") in text
@@ -506,7 +643,12 @@ class TestTheDocuments:
                 "so (`ai_coder_name`, and the first of the next steps), so "
                 "the project folder then also holds `exegete.json` and the "
                 "earlier file `qualcoder_mcp.json`, written already marked "
-                "as moved") in text
+                "as moved so that copies of Exegete from before its rename "
+                "(0.12 to 0.14) refuse to write the project; QualCoder reads "
+                "neither;") in text
+        assert "Left empty, each project is asked." in text
+        assert ("with the note \"Taken from Exegete's settings when the "
+                "project was created.\" A project made another way") in text
         assert "DECLARATION by this host" not in text
 
     def test_privacy(self):
@@ -518,15 +660,26 @@ class TestTheDocuments:
                 "project says so.") in text
         assert ("When the AI coder name is filled in Exegete's settings, it "
                 "is stored with the new project too, in `exegete.json`, "
-                "beside `qualcoder_mcp.json`") in text
+                "beside `qualcoder_mcp.json`, the file of Exegete's earlier "
+                "name,") in text
+        assert "Left empty, no `exegete.json` is written." in text
+        # what exegete.json holds, as the list of what Exegete keeps says
+        assert ("an optional note (one you typed, for example the host and "
+                "model version, or Exegete's own when the name came from its "
+                "settings at creation), and the AI coder name in Exegete's "
+                "settings at the time.") in text
+        assert ("It is returned into the conversation by create_project when "
+                "it stores the name, get_current_project, select_project and "
+                "set_project_ai_coder_name") in text
+        assert "declared in the host's server configuration" not in text
         assert "nothing else: no backup, no `exegete.json`" not in text
         assert "setting declares a name" not in text
 
     def test_readme_and_the_guides(self):
         assert ("Before its first write, it asks for the AI coder name, kept "
                 "per project, under which Exegete writes what is done "
-                "through the conversation, unless it made the project with "
-                "that name filled in Exegete's settings.") in _doc("README.md")
+                "through the conversation, unless the project was made while "
+                "it was filled in Exegete's settings.") in _doc("README.md")
         guide = _doc("AI_CODING_GUIDE.md")
         assert ("which you choose: in Exegete's settings (\"AI coder name\" "
                 "in the extension, `EXEGETE_AI_CODER_NAME` on other routes), "
@@ -548,7 +701,16 @@ class TestTheDocuments:
         assert ("A project that already has an AI coder name keeps it, and "
                 "when the setting differs the next write asks once which to "
                 "use there") in unreleased
+        assert ("written already marked as moved, so that copies of Exegete "
+                "from before its rename (0.12 to 0.14) refuse to write the "
+                "project. Up to 0.14.3 the setting was offered first and "
+                "checked against a project's own AI coder name, but never "
+                "stored by itself.") in unreleased
+        assert ("A setting the setter would refuse (these two, or the "
+                "researcher's own coder name in the settings) is not offered "
+                "when a project is asked for its AI coder name.") in unreleased
         assert "**Empty means ask**" in unreleased
+        assert ("on 3.13), eight changes moved them.") in unreleased
         assert ("And the AI coder name in the settings is given to each new "
                 "project: `create_project`'s sentence on it grew its entry "
                 "by 115 characters, 123 on 3.11, and `export_refi_qda`'s "

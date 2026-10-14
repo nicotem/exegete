@@ -478,6 +478,48 @@ not changed.
   `restore_backup` first, "or QualCoder's own Rename, if the researcher
   uses it".
 
+### Changed: the codebook, searching and coder names
+
+The codebook's previews, the searches and the messages on coder names
+say what Exegete does, without measuring it against QualCoder; Exegete's
+earlier name is mentioned only where an earlier copy's file is found.
+When each is given, what it refuses and its overrides have not changed.
+
+- **The codebook**: `merge_codes`' preview says where the source code's
+  provenance line lands, and that its sub-codes move with their own
+  sub-codes, without comparing either with QualCoder 4.0; on a project
+  from before sub-codes, the merge previews of codes and categories give
+  the cause of a memo deleted with its row ("On this project's older
+  schema (from before sub-codes)"); merging a category to the top level
+  says that its memo goes with its row and the backup keeps a copy;
+  `delete_code`'s preview of a code with sub-codes deletes the whole
+  branch "with one approval"; and a category move that would make a
+  cycle is refused because it "would cut it and its codes off from the
+  code tree".
+- **Searching**: the rule by which a search leaves out codings already
+  made is stated without its citation of QualCoder's code.
+- **Exegete's earlier name**: a settings file written by a newer version
+  is one "written by a newer version of Exegete", without "(Exegete,
+  formerly qualcoder-mcp)"; and the messages on the earlier settings
+  file speak of "an older copy of Exegete (then called qualcoder-mcp,
+  versions 0.12 to 0.14)".
+- **Coder names**: two names that differ only by letter case are two
+  coders because "the project keeps them as two coders"; the AI coder
+  name that is the researcher's own is refused because the AI's codings
+  could not be told apart from the researcher's, "in Exegete's coder
+  filters and compare_coders as in QualCoder's coder lists and reports";
+  when the coder-visibility table does not answer, the researcher is
+  asked to check the coder's visibility in QualCoder only if they use
+  it; and the checks on every coder name speak of "the project's coder
+  lists" and "a coder name".
+- **New projects**: a folder with no usable database may hold the
+  researcher's own files because "a project keeps copies of its imported
+  documents, and any recordings, in its folders"; and `create_project`'s
+  next step on the project memo says that the memo is where the
+  assistant reads the study's method, and adds that QualCoder 4.0's own
+  assistant reads it too only when the new folder shows a history with
+  QualCoder.
+
 ### Measured
 
 - Serialised tool JSON: full = 205,077 characters (about 51.3k tokens

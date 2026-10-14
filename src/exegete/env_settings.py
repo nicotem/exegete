@@ -260,3 +260,10 @@ def linux_display() -> bool:
     """Whether a Linux desktop session is reachable: DISPLAY (X11) or
     WAYLAND_DISPLAY is set."""
     return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def wsl_distribution() -> bool:
+    """Whether WSL (Windows Subsystem for Linux) names the distribution
+    this process runs in: WSL_DISTRO_NAME is set. Inside WSL the list of
+    running programs holds none of Windows' (v0.15.0)."""
+    return bool(os.environ.get("WSL_DISTRO_NAME"))

@@ -169,6 +169,24 @@ def _no_time_machine_request(_sandbox_patch):
     kept_texts._warned.clear()
 
 
+@pytest.fixture(autouse=True)
+def _no_process_scan(request, _sandbox_patch):
+    """v0.15.0: no test sees a QualCoder that happens to run on the
+    developer's computer, nor a scan that saw every process and found
+    none (which leaves out the chat history's sign): the process scan
+    answers None, "the scan did not run", and its cache is empty at the
+    start and the end of every test. The selected project's history with
+    QualCoder starts not worked out. A test marked `real_process_scan`
+    runs the real scan, with whatever it replaces itself."""
+    _database._process_scan_cache.update(at=None, scan=None)
+    _sandbox_patch.setattr(server, "_qualcoder_history_cache", None)
+    if request.node.get_closest_marker("real_process_scan") is None:
+        _sandbox_patch.setattr(_database, "_qualcoder_process_scan",
+                               lambda: None)
+    yield
+    _database._process_scan_cache.update(at=None, scan=None)
+
+
 @pytest.fixture
 def keeping_off(monkeypatch):
     """v0.15.0: the preview keeps no text and the import reads every file

@@ -110,6 +110,7 @@ dev = [
 markers = [
     "giant: large 10k+ coding / 500k-char build; opt-in via TRACK6_GIANT=1",
     "slow: the rename's offline upgrade tests; run when RENAME_TEST_WHEELHOUSE names a folder of wheels (CI's rename-upgrade job)",
+    "real_process_scan: the test runs the real process scan; every other test sees a scan that did not run (tests/conftest.py)",
 ]
 # The per-test limit (v0.14): when one test, setup and teardown included,
 # has run for ten minutes, pytest writes every thread's stack to the

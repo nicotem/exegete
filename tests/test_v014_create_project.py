@@ -544,9 +544,10 @@ class TestAfterCreation:
 
         def hits():
             calls.append(1)
-            return ["/usr/bin/python3 -m qualcoder"]
+            return database.ProcessScan(("/usr/bin/python3 -m qualcoder",),
+                                        True)
 
-        monkeypatch.setattr(database, "_qualcoder_process_hits", hits)
+        monkeypatch.setattr(database, "_qualcoder_process_scan", hits)
         answer = create("Quiet")
         assert calls == []
         assert answer["qualcoder_gui_signals"] == []
@@ -879,8 +880,10 @@ class TestRoundTrip:
         name, import, a category, a code in it and a sub-code under it,
         suggest, approve and apply two codings, read them back; the
         project is still 4.0's format in everything QualCoder reads."""
-        monkeypatch.setattr(database, "_qualcoder_process_hits",
-                            lambda: ["/usr/bin/python3 -m qualcoder"])
+        monkeypatch.setattr(
+            database, "_qualcoder_process_scan",
+            lambda: database.ProcessScan(("/usr/bin/python3 -m qualcoder",),
+                                         True))
         made = create("Round trip", coder_name="carol")
         assert made["selected"] and "APPEARS" not in json.dumps(made)
         folder = Path(made["project_path"])

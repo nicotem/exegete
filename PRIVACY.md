@@ -1156,11 +1156,45 @@ Two further rules touch files on your disk:
   This is a heuristic: it can miss an open window (an idle 4.0 window
   with no recent AI activity leaves no file trace, so only the process
   scan can see it; on Windows without psutil, a QualCoder run through
-  `python.exe` is not seen), and a recently modified chat history file
-  means a first open of the project by either QualCoder build, or its
-  AI chat used; a later open leaves the file as it is.
+  `python.exe` is not seen; without psutil, a QualCoder run through
+  Python, or one of QualCoder's Linux downloads, from a folder whose
+  path holds a space is not counted as running; in a Linux sandbox whose
+  process list holds only its own programs, such as a Flatpak app's or a
+  container's, a QualCoder outside it is not seen, and with Exegete
+  inside WSL (Windows Subsystem for Linux), a QualCoder running on
+  Windows is not seen; and a QualCoder open on another computer, on a
+  project in a synced or shared folder, is not seen, and since v0.15.0
+  the chat history's recent change no longer shows it when the scan
+  here finds no QualCoder), and a recently modified chat history file
+  means a first open of the project by either QualCoder build, or its AI
+  chat used; a later open leaves the file as it is. Since v0.15.0 that
+  file's recent change is not given as a sign when the process scan
+  could read programs' command lines and found no QualCoder (it then
+  says nothing about an open window). It is still given when a program
+  may be a QualCoder the scan could not read (one run through Python, or
+  one of QualCoder's Linux downloads, from a folder whose path holds a
+  space), when a running Python program's command line could not be
+  read, in such a sandbox, and inside WSL. Without psutil, a few such
+  paths are still read as no QualCoder, and the sign is then left out:
+  a folder whose name holds a word that begins with a hyphen or a tilde
+  (`Apps -old`, `Apps ~old`), a program started by a path relative to
+  the current folder that does not begin with `./` or `../`, a space in
+  the program's own file name, and a path of more than 32 words.
   `create_project` runs no process scan for the project it has just
-  made.
+  made. `select_project` and `get_current_project` also give the
+  project's history with QualCoder (`qualcoder_history`, v0.15.0),
+  worked out once when the project is selected and kept in memory for
+  the session, never on disk: whether the project folder holds
+  `ai_data/`, and in it `chat_history.sqlite` or `search.sqlite`;
+  whether QualCoder's own `_BKUP_` backups sit beside the project (the
+  names, in the folder that holds it, that begin with the project's
+  name, as `list_backups` reads them); whether its lock file is a
+  leftover; whether QualCoder's settings folder (`~/.qualcoder`)
+  exists; and whether the process scan found QualCoder. For the settings
+  folder and the files in `ai_data`, only presence is checked: the
+  settings folder's contents (QualCoder's settings and API keys) are
+  never listed, opened or measured, and the answer holds plain sentences
+  and a yes or no, never a path or a project's name.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
   folder with four empty subfolders and a new `data.qda`, and records

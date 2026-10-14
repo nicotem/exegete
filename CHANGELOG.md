@@ -139,6 +139,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to ask the researcher. The description grows by that paragraph (see
   "Measured"); what pseudonymisation does has not changed.
 
+### Changed: a project's history with QualCoder
+
+- **What Exegete finds of QualCoder is worked out once, when a project
+  is selected** (the owner's decision of 12 October 2026), and kept in
+  memory for the session: whether the project shows traces of QualCoder
+  (an `ai_data` folder, which QualCoder 3.8.2 and 4.0 make when they
+  first open a project and Exegete never makes; the AI chat history or
+  search index in it; QualCoder's own `_BKUP_` backups beside the
+  project; a lock file left over, by QualCoder 3.8 or by an interrupted
+  write of Exegete's), and whether QualCoder is installed
+  (its settings folder, `~/.qualcoder`, looked for but never read) or
+  running on this computer. `select_project` and `get_current_project`
+  give it as `qualcoder_history` when there is something to say. Later
+  changes use it to decide which notes about QualCoder an answer
+  carries. Whether QualCoder has the project open now is checked as
+  before, at every write and every `get_current_project`.
+- **A recently changed chat history is no longer read as a sign that
+  QualCoder has the project open when no QualCoder is running** (from
+  the maintainer's sitting of 11 October, where `select_project` said
+  that the project appeared to be open in QualCoder a minute after
+  QualCoder had closed). When the check of running programs could read
+  programs' command lines and found no QualCoder, the change says
+  nothing about an open window and is left out of
+  `qualcoder_gui_signals`; the file still counts as a trace in
+  `qualcoder_history`. Where that check could not run, cannot see a
+  QualCoder started from Python (Windows without psutil, which lists
+  program names only; a running Python program whose command line could
+  not be read), runs in a Linux sandbox whose process list holds only
+  its own programs (a Flatpak app, a container) or inside WSL (Windows
+  Subsystem for Linux), which lists none of Windows' programs, or finds
+  a program that may be a QualCoder it cannot read (one run through
+  Python, or one of QualCoder's Linux downloads, from a folder whose
+  path holds a space), the sign is given as before. Without psutil, a
+  few such paths are still read as no QualCoder, and the sign is then
+  left out: a folder whose name holds a word that begins with a hyphen
+  or a tilde (`Apps -old`, `Apps ~old`), a program started by a path
+  relative to the current folder that does not begin with `./` or
+  `../`, a space in the program's own file name, and a path of more
+  than 32 words. That check sees only this computer: a QualCoder open
+  on another computer, on a project in a synced or shared folder, is
+  not seen, and when the check here finds no QualCoder the chat
+  history's recent change no longer shows it either.
+
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the

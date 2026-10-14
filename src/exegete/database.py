@@ -1348,6 +1348,20 @@ def _version_for_log(version: Any) -> str:
     return "(a value not in QualCoder's form, withheld)"
 
 
+def _version_for_answer(version: Any) -> Optional[str]:
+    """A project's `databaseversion` as an answer may repeat it: the value
+    when it has `_version_for_log`'s shape (`v` and one to four digits),
+    otherwise None (NULL, empty or anything else). The field is the
+    project's own text, and a trigger or a damaged project can put a
+    note's private part or a participant's name in it, so a refusal or a
+    warning repeats it only in QualCoder's form, as the log does
+    (DESIGN_lock_2.md, section 3; built with not presuming QualCoder,
+    piece 7, v0.15.0)."""
+    if isinstance(version, str) and re.fullmatch(r"v\d{1,4}", version):
+        return version
+    return None
+
+
 def error_label(error: BaseException) -> str:
     """Any error as a log line may carry it: its kind and a short name,
     never its message (v0.14, one rule for every log line).
@@ -1625,8 +1639,8 @@ def unusable_pdf_link_refusal(name: Any, problem: str) -> str:
     return (f"File '{name}' is a PDF with no usable text ({problem}), so "
             f"it is not linked to a case here: a case link covers a "
             f"file's text, and this file has none Exegete can use. "
-            f"{PDF_PROBLEM_MESSAGES[problem]} QualCoder itself can still "
-            f"link it to the case.")
+            f"{PDF_PROBLEM_MESSAGES[problem]} QualCoder, if you use it, "
+            f"can still link it to the case.")
 
 
 def validate_qda_path(db_path: str) -> Path:
@@ -2160,10 +2174,13 @@ def documents_clash_message(name: str, entry: Optional[str] = None) -> str:
 
 # The closing clause of every ending refusal (owner ruling of 2026-09-23,
 # dossier question 1, option b): QualCoder's own Rename can still do it.
+# v0.15.0 (not presuming QualCoder, piece 7): it says first why Exegete
+# keeps the ending, and names QualCoder's Rename for those who use it.
 _ENDING_STILL_POSSIBLE = (
-    " QualCoder's own Rename (Manage Files, the name's right-click menu, "
-    "\"Rename database entry\") can still make this change if it is "
-    "wanted.")
+    " Exegete keeps this ending to protect the project's links and "
+    "exports. If you use QualCoder and the change is wanted all the same, "
+    "its own Rename can make it (Manage Files, the name's right-click "
+    "menu, \"Rename database entry\").")
 
 
 def file_ending_problem(old: str, new: str, mediapath: Optional[str],
@@ -2606,7 +2623,8 @@ BACKUP_WITHOUT_DATABASE_MESSAGE = (
     "This project's data.qda is a link to a file outside the project "
     "folder (or to nothing), so a backup or copy of the project would not "
     "hold its database; nothing was written or copied. Put the database "
-    "file itself in the project folder, as QualCoder makes it, and retry.")
+    "file itself in the project folder, where a project keeps it, and "
+    "retry.")
 
 
 def _side_file_is_live(path: str) -> bool:
@@ -3594,14 +3612,27 @@ class QualcoderDatabase:
                     "QualCoder 3.8 or newer to migrate it, then retry.",
                     False)
         if self._unknown_future_schema():
-            version = self.db_version or "unknown"
             if env_settings.value("allow_unknown_schema") == "1":
                 return (True, self._unknown_schema_warning(), True)
+            # The value is repeated only in QualCoder's form; any other
+            # value is the project's own text (_version_for_answer).
+            version = _version_for_answer(self.db_version)
+            if version is not None:
+                said = (f"This project reports database schema "
+                        f"'{version}', newer than the schemas Exegete is "
+                        f"verified against (v14 through "
+                        f"v{MAX_VERIFIED_SCHEMA}, up to "
+                        f"{VERIFIED_QUALCODER}). ")
+            else:
+                said = (f"This project's database schema value is missing "
+                        f"or not in QualCoder's form (`v` and up to four "
+                        f"digits), so it is not repeated here, and Exegete "
+                        f"cannot tell whether the project uses one of the "
+                        f"schemas it is verified against (v14 through "
+                        f"v{MAX_VERIFIED_SCHEMA}, up to "
+                        f"{VERIFIED_QUALCODER}). ")
             return (False,
-                    f"This project reports database schema '{version}', "
-                    f"newer than the schemas Exegete is verified "
-                    f"against (v14 through v{MAX_VERIFIED_SCHEMA}, up to "
-                    f"{VERIFIED_QUALCODER}). "
+                    said +
                     f"Writes are refused to protect the data. Set "
                     f"{ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
                     f"environment to override at your own risk.",
@@ -3609,13 +3640,25 @@ class QualcoderDatabase:
         return (True, None, False)
 
     def _unknown_schema_warning(self) -> str:
-        return (f"WARNING: this project reports database schema "
-                f"'{self.db_version or 'unknown'}', newer than the verified "
-                f"ceiling (v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); "
-                f"writes proceeded only because "
-                f"{env_settings.read('allow_unknown_schema').name}=1 is "
-                f"set. Verify results in "
-                f"QualCoder and keep backups.")
+        variable = env_settings.read('allow_unknown_schema').name
+        version = _version_for_answer(self.db_version)
+        if version is not None:
+            # A schema newer than v17 is a sign: only a newer QualCoder
+            # writes one (not presuming QualCoder, piece 7).
+            return (f"WARNING: this project reports database schema "
+                    f"'{version}', newer than the verified ceiling "
+                    f"(v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); "
+                    f"writes proceeded only because {variable}=1 is set. "
+                    f"Verify results (in the newer QualCoder that upgraded "
+                    f"the project, for example) and keep backups.")
+        # A value not in QualCoder's form is no sign of a newer QualCoder.
+        return (f"WARNING: this project's database schema value is missing "
+                f"or not in QualCoder's form (`v` and up to four digits), "
+                f"so it is not repeated here, and Exegete cannot tell "
+                f"whether the project is within the verified ceiling "
+                f"(v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); writes "
+                f"proceeded only because {variable}=1 is set. Verify "
+                f"results and keep backups.")
 
     def schema_write_warning(self):
         """The override warning when writing to an unknown-future schema,
@@ -3738,12 +3781,12 @@ class QualcoderDatabase:
         if current != fingerprint:
             raise ValueError(
                 f"The text of file id {file_id} changed while this write "
-                f"was being prepared (another program, possibly an open "
-                f"QualCoder window, edited it). Nothing was written: "
-                f"re-read the file and retry. Note that QualCoder 4.0 "
-                f"builds write no lock file, so the lock gate cannot see "
-                f"them; check qualcoder_gui_signals in "
-                f"get_current_project and confirm with the user.")
+                f"was being prepared: another program edited it (another "
+                f"conversation using Exegete, or QualCoder if the "
+                f"researcher uses it). Nothing was written: re-read the "
+                f"file and retry. If get_current_project's "
+                f"qualcoder_gui_signals lists signs of a QualCoder window, "
+                f"ask the researcher to close it first.")
 
     def _hierarchy_maps(self):
         """(codes, cats) lookup maps for path/chain building.
@@ -7799,8 +7842,9 @@ class QualcoderDatabase:
                 raise ValueError(
                     "Sub-codes need a project with schema v16 or newer "
                     "(the code_name.supercid column); this project does "
-                    "not have it. Open the project in a QualCoder version "
-                    "that supports sub-codes to migrate it first.")
+                    "not have it. This project was last saved by QualCoder "
+                    "3.8, before sub-codes (schema older than v16); "
+                    "QualCoder 4.0 migrates it when it opens it.")
             parent_code_id = validate_id(parent_code_id, "parent_code_id")
             parent_check = self.conn.execute(
                 "SELECT cid FROM code_name WHERE cid = ?", (parent_code_id,)
@@ -8557,7 +8601,8 @@ class QualcoderDatabase:
         if row is None:
             raise ValueError(
                 "This project has no project record, so it has no project "
-                "memo; QualCoder itself will not open it.")
+                "memo, and it is not a usable project in Exegete or in "
+                "QualCoder.")
         stored_memo = merge_public_memo(row["memo"], memo)
         public_memo = extract_ai_memo(stored_memo)
         try:

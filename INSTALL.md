@@ -628,7 +628,7 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 80 tools, every tool,
+- `EXEGETE_TOOLSET`: `full` (default) registers 81 tools, every tool,
   creating a project (Experimental) included, so that a study can be
   started from the conversation (TOOLS.md, "Starting a project from
   the conversation"); two of them are the earlier names of two renamed
@@ -943,9 +943,9 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 80 tools by
+**Step 3. Use the core toolset.** Exegete offers 81 tools by
 default, and the serialised tool definitions alone measure about
-207,000 characters, roughly 52k tokens (measured for 0.15.0 under
+208,000 characters, roughly 52k tokens (measured for 0.15.0 under
 Python 3.13.5 with mcp 1.30.0, in an environment installed from the
 repository's lock file; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 20,000 characters of that on its own, because a tool
@@ -1414,7 +1414,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 207,000 characters with `full`; TOOLS.md says how that
+  (about 208,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

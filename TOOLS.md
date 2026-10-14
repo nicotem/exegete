@@ -287,13 +287,14 @@ default on every route; the `core` set for local models leaves it out.
   should carry: if you use QualCoder, the name in its settings, exactly
   as there (Project menu, Settings, "Current coder"; on a Mac it may be
   under the QualCoder menu instead); if not, any name you choose.
-  Exegete cannot change it once the project is made (QualCoder's
-  settings can), so give it as you want it to stay. It
-  asks after every other check, so you are asked once. If you do not
-  know it, say so: the project is created, and the check that keeps the
-  AI's codings apart from yours stays off until a name is recorded,
-  which today happens when QualCoder first opens the project. Exegete never reads QualCoder's settings file,
-  which holds API keys.
+  It can be corrected later with `set_project_coder_name` only while
+  nothing is recorded under it, so give it as you want it to stay. The
+  question comes after every other check, so you are asked once. If you
+  do not know it, say so: the project is created, and the check that
+  keeps the AI's codings apart from yours stays off until a name is
+  recorded: `set_project_coder_name` gives it one, and QualCoder, if you
+  use it, records it when it first opens the project. Exegete never
+  reads QualCoder's settings file, which holds API keys.
 - **Names.** A name already used in that folder is refused, never given
   a "_1", and so is one that differs from it only in letter case or
   accents (a project copied to macOS or Windows would otherwise merge
@@ -910,7 +911,7 @@ no longer listed, until v1.0.
 
 Claude can use these tools to analyse your data. The full toolset
 (`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
-extension and when you configure the server yourself) registers 80
+extension and when you configure the server yourself) registers 81
 tools, two of them the earlier names of two renamed tools (see "Earlier
 names" below); the argument lists below name every argument each tool
 declares, and each tool's own description says what each one does.
@@ -938,7 +939,7 @@ declares, and each tool's own description says what each one does.
 > loudly at startup. Measured for 0.15.0 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 207,000 characters for `full`, roughly 52k
+> definitions run to about 208,000 characters for `full`, roughly 52k
 > tokens at four characters per token, and about 69,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -953,6 +954,7 @@ declares, and each tool's own description says what each one does.
 - `get_current_project()` - Show which project is open, whether QualCoder 3.x has it open (its lock file, `qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `qualcoder_history` gives the traces of QualCoder found when the project was selected, when there are any; `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name; `coder_name_notes` as `select_project` gives them
 - `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (not in `core`): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in Exegete's workspace or an existing folder, then selects it. Takes the researcher's own coder name from Exegete's settings when it is filled in, and otherwise asks for it (or an explicit "not known") after every other check; the answer that creates the project says where the name came from (`coder_name_source`, with `coder_name_note` when the settings hold another name); refuses a coder name equal to the AI coder name in the settings, and every creation while the two settings hold one name; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
 - `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `exegete.json`); refuses the researcher's own coder name (the project's, or the one in Exegete's settings), QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
+- `set_project_coder_name(name, preview_token)` - **Writes to the database** (not in `core`): correct the researcher's own coder name in this project, or give one to a project that has none, while nothing is recorded under the current one: no coding, annotation, case, memo, journal entry, code, category, file or attribute carries it. This is the researcher's own name, not the AI's (that is `set_project_ai_coder_name`). "Recorded under it" means the name is the owner of any row in the tables QualCoder gathers coder names from (codings, annotations, cases and their links, journal entries, codes, categories, files, attributes and their types, and the file lists QualCoder saves per coder; a memo goes with its row), or is named in the note a merge leaves in a code's or category's memo; otherwise the change is refused, saying which kinds of record carry the name, never how many. A preview first, then the change with the preview's token, after a backup; in the coder list, the old name's row takes the new name, keeping whether it is hidden
 - `read_pseudonym_list()` - **Sends real names to the AI provider**: returns the entries of the project's own `pseudonyms.json` (the researcher's reverse key), for use only when the researcher asks to see or check the list; each call writes one log line with the count and no name. In the full tool set (so in the Claude Desktop extension by default), not in core. QualCoder's Pseudonyms dialog (the button in Manage Files) shows the same list without sending it anywhere. **Deprecated, removed in v0.15** (its answer says so)
 
 **Keeping Exegete up to date:**
@@ -1164,7 +1166,7 @@ For AI-assisted coding with direct database writes:
 - 🔒 Last-used project pointer: `~/.exegete/mru_project.json` (one
   project path and a timestamp, echoed only into the "no project selected"
   error as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md))
-- 🔒 Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the seven preview tools; never shown in a result, an error or the log)
+- 🔒 Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the nine preview tools; never shown in a result, an error or the log)
 
 ## Example requests
 

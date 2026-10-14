@@ -317,11 +317,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one, name `set_project_coder_name`. The tool is in `full`, not in
   `core`.
 
-### Changed: an empty AI coder name, and the names the setter refuses
+### Changed: the AI coder name in the settings, and the names the setter refuses
 
-- **An empty `EXEGETE_AI_CODER_NAME` no longer stops Exegete**: empty,
-  blank or a placeholder the app left unfilled means not set, as unset
-  does, so the extension starts with its "AI coder name" left empty.
+- **The AI coder name in Exegete's settings is given to each new
+  project without asking.** With "AI coder name"
+  (`EXEGETE_AI_CODER_NAME`) filled in, `create_project` stores it as
+  the new project's AI coder name, and its answer says so
+  (`ai_coder_name`, and the first of its next steps); the new project's
+  folder then also holds `exegete.json`, and `qualcoder_mcp.json`
+  written already marked as moved. Until 0.14.3 the setting was only
+  offered first when a project was asked for its name. A project that
+  already has an AI coder name keeps it, and when the setting differs
+  the next write asks once which to use there; a project made another
+  way, without one, is asked at its first write, with the setting
+  offered first. `default` and QualCoder's speaker coder are not
+  stored: the project is made without an AI coder name, with a warning.
+  The texts that called the setting this host's declaration now call it
+  the AI coder name in Exegete's settings, and the brief and the help
+  on the AI coder name say that the researcher chooses it there or when
+  Exegete asks (the full brief is now about 12,500 characters).
+- **Empty means ask**: empty, blank or a placeholder the app left
+  unfilled means not set, as unset does, so the extension starts with
+  its "AI coder name" left empty, and each project is asked for one.
 - **`set_project_ai_coder_name` refuses the researcher's own coder name
   in Exegete's settings**, as it refuses the project's own.
 
@@ -351,13 +368,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Measured
 
-- Serialised tool JSON: full = 208,247 characters (about 52.1k tokens
+- Serialised tool JSON: full = 208,379 characters (about 52.1k tokens
   at chars/4) over 81 tools, and core = 68,669 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 218,383 and
+  which also gives exactly 0.14.3's figures for its tree), 218,527 and
   72,065. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the opt-in lifecycle set's 204,244 over 78, on 3.13), seven changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
@@ -386,8 +403,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in both sets. And the researcher's own coder name can be corrected:
   `set_project_coder_name`'s entry, with its separator, adds 1,530
   characters to `full`, 1,602 on 3.11, and `create_project`'s sentence
-  on it grew its entry by 148, 156 on 3.11; `core` serves neither. No
-  other tool's entry changed.
+  on it grew its entry by 148, 156 on 3.11; `core` serves neither. And
+  the AI coder name in the settings is given to each new project:
+  `create_project`'s sentence on it grew its entry by 115 characters,
+  123 on 3.11, and `export_refi_qda`'s name for the setting, no longer
+  "this host's declaration", by 17, 21 on 3.11; `core` serves neither.
+  No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

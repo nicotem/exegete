@@ -236,12 +236,15 @@ decide like any suggestion. The codebook tools (`create_code`,
 `create_category`, `merge_codes`, `delete_code`, ...) edit it directly.
 
 **Which coder name do AI codings carry?** The PROJECT's AI coder name,
-which you choose the first time a write needs it: the write stops and
-asks, and your answer is stored with the project
-(`set_project_ai_coder_name`; `AI Coding Assistant` is the built-in
-quick pick, and `EXEGETE_AI_CODER_NAME` in the host's
-configuration only declares a name to offer first). See "Choosing the
-AI coder name" in TOOLS.md. AI work stays distinguishable from yours,
+which you choose: in Exegete's settings ("AI coder name" in the
+extension, `EXEGETE_AI_CODER_NAME` on other routes), which give it to
+each project Exegete creates, without asking, and say so; or, in a
+project that has none, the first time a write needs it: the write stops
+and asks, with the setting offered first, and your answer is stored
+with the project (`set_project_ai_coder_name`; `AI Coding Assistant` is
+the built-in quick pick). A project that already has another AI coder
+name keeps it, and the next write asks you once whether to switch. See
+"Choosing the AI coder name" in TOOLS.md. AI work stays distinguishable from yours,
 in Exegete's reads and in QualCoder, and rows written under an earlier
 name keep it.
 

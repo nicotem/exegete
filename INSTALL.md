@@ -61,14 +61,15 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      characters; a line break or tab, an invisible formatting character
      (the joiners some scripts need are allowed) or `#####` stops the
      extension from starting.
-   - **AI coder name**: empty by default. It is the name you would like
-     Claude's work in a project stored under, so that it stays apart
-     from yours; a model's name lets codings by different models be
-     compared later. When a project has no AI coder name yet, Claude
-     asks you for one the first time it needs it and offers this one
-     first; when a project already has another, Claude asks you once
-     which to use there. Left empty, Claude still asks. It must differ
-     from your coder name, and the same limits apply.
+   - **AI coder name**: empty by default. It is the name Claude's work
+     in your projects is stored under, so that it stays apart from
+     yours; a model's name lets codings by different models be compared
+     later. Filled in, Exegete gives it to each project it creates,
+     without asking, and says so, and offers it first when another
+     project needs one; left empty, Claude asks the first time a project
+     needs it. A project that already has an AI coder name keeps it,
+     and Claude asks you once whether to switch. It must differ from
+     your coder name, and the same limits apply.
    - **Do you also use QualCoder on this computer?**: not sure unless
      you change it. Type yes, no or not sure. With yes, Exegete adds
      some notes that matter only if you also open your projects in
@@ -698,20 +699,24 @@ and `EXEGETE_USES_QUALCODER`, all below.
   value, and saying where to change it, or to leave it empty to be
   asked for the name in each new project. The desktop extension sets it
   from its "Your coder name" setting.
-- `EXEGETE_AI_CODER_NAME`: this HOST's DECLARATION of the AI
-  coder name it would like to write under. Since v0.12 the name that
-  rows actually carry is the PROJECT's setting, which the researcher
-  chooses through `set_project_ai_coder_name` the first time a write
-  needs it (see "Choosing the AI coder name" in TOOLS.md); the declaration
-  is offered as the first quick pick in that question, and if it differs
-  from a name the project already has, the next write asks which to use
-  rather than re-attributing anything. Declare the model this host runs
-  (`"Qwen 3.8 6bit"`), or `AI Agent` to propose the exact name
-  QualCoder 4.0's built-in assistant writes under, which groups
-  Exegete's work with the assistant's under one coder in QualCoder's
-  per-coder visibility toggle, undo and reports. Empty or unset, no
-  name is offered first. The value is trimmed
-  and must be at most 80 characters, single-line plain text
+- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's settings.
+  The name that rows actually carry is each PROJECT's own (see
+  "Choosing the AI coder name" in TOOLS.md). Set, it is given by
+  `create_project` to each project it makes, without asking, and the
+  answer says so (`ai_coder_name`, with the source `settings`); a
+  project made another way that has no AI coder name yet is asked for
+  one at the first write that needs it, with this name offered first.
+  A project that already has another AI coder name keeps it: the next
+  write asks once which to use there, rather than re-attributing
+  anything. Until 0.14.3 it was only offered as the first quick pick.
+  Give the model this host runs (`"Qwen 3.8 6bit"`), or `AI Agent` for
+  the exact name QualCoder 4.0's built-in assistant writes under, which
+  groups Exegete's work with the assistant's under one coder in
+  QualCoder's per-coder visibility toggle, undo and reports. `default`
+  and QualCoder's speaker coder are never stored as an AI coder name:
+  a new project is then made without one, and its answer says why.
+  Empty or unset, no name is offered first. The value is
+  trimmed and must be at most 80 characters, single-line plain text
   (no control characters, no line or paragraph separators, and no
   invisible formatting character of Unicode category Cf, which covers
   every bidirectional control and every zero-width character; ZWNJ and
@@ -732,9 +737,10 @@ and `EXEGETE_USES_QUALCODER`, all below.
   ```
 
   A local-model host (LM Studio, for example) is the case this is for:
-  declare the model the host runs, and every project coded from that
-  host proposes that name first, so codings by different models can be
-  told apart and compared later.
+  give the model the host runs, and every project Exegete creates from
+  that host takes that name, and any other project without one is
+  offered it first, so codings by different models can be told apart
+  and compared later.
 
 - `EXEGETE_USES_QUALCODER` (0.15.0): your answer to "Do you also use
   QualCoder on this computer?": `yes`, `no` or `not sure`, in any

@@ -276,9 +276,9 @@ class TestTheReviewsOfTheSittingWording:
         # v0.15.0: set_project_coder_name corrects the name while nothing
         # is recorded under it (tests/test_v0150_coder_name_correction.py)
         text = json.loads(server.create_project("Study"))["error"]
-        assert ("It can be corrected later with set_project_coder_name "
-                "only while nothing is recorded under it, so ask for the "
-                "name as they want it to stay.") in text
+        assert ("The name can be corrected later with "
+                "set_project_coder_name only while nothing is recorded under "
+                "it, so ask for the name as they want it to stay.") in text
         assert "Exegete cannot change it" not in text
         assert server.CODER_NAME_ASK.endswith(
             "If they do not know it, call again with "
@@ -301,8 +301,8 @@ class TestTheReviewsOfTheSittingWording:
     def test_tools_md_says_the_same(self):
         tools = _flat(_repo_text("TOOLS.md"))
         # v0.15.0, as the question says it
-        assert ("It can be corrected later with `set_project_coder_name` "
-                "only while nothing is recorded under it, so give it as you "
-                "want it to stay.") in tools
+        assert ("The name can be corrected later with "
+                "`set_project_coder_name` only while nothing is recorded "
+                "under it, so give it as you want it to stay.") in tools
         assert ("when `create_project` asks for the coder name, it also "
                 "gives the full path the project will be made as") in tools

@@ -620,8 +620,8 @@ CHANGED_0150 = {
     # when it is filled in, and the setter's refusal of that name; piece
     # 2: create_project's sentence on set_project_coder_name, which
     # corrects the name while nothing is recorded under it (2,228 to
-    # 2,368 characters on 3.13)
-    "create_project": (2368, 1880, "eab3e10cc050ca6c"),
+    # 2,374 characters on 3.13)
+    "create_project": (2374, 1885, "2ddbe9a53ffe4922"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}

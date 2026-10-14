@@ -12,9 +12,11 @@ with the preview's token, after a backup. What this file pins:
   name, keeps the coder list right and takes a backup first;
 - "recorded under it": each of the fourteen owner tables and the merge
   notes refuse, naming the kind, never a count, changing nothing;
-- the merge-note probe is exact (letter case, `%` and `_`);
-- a table that does not answer refuses; a change after the preview,
-  and a token for another name, refuse;
+- owners and the merge-note probe are exact (letter case, `%` and
+  `_`); a table the project lacks is not probed;
+- a table that does not answer refuses, and so do a coder list that does
+  not answer and an AI coder name file that cannot be read; a change
+  after the preview, and a token for another name, refuse;
 - the names refused before any preview: AI names, the speaker coder,
   an invalid name; the same name is answered as unchanged;
 - a project with no name gets one with no probe run, and the AI coder
@@ -312,6 +314,18 @@ class TestRecordedUnderTheName:
         error = _refused_unchanged(folder, NEW, token)
         assert error == _recorded_refusal(OLD, ["codings"])
 
+    @pytest.mark.parametrize("owner", ["nt", "Nt", "nT"])
+    def test_an_owner_in_other_letter_case_does_not_refuse(self, tmp_path,
+                                                           owner):
+        """Owners are compared exactly, as the design says: rows under
+        "nt" are not rows under "NT" (fix round 1)."""
+        folder = _make(tmp_path)
+        _sql(folder, ("INSERT INTO journal (name, owner) VALUES ('J', ?)",
+                      (owner,)),
+             ("INSERT INTO code_text (owner) VALUES (?)", (owner,)))
+        assert _change(NEW)["success"] is True
+        assert _stored(folder)[0] == NEW
+
     @pytest.mark.parametrize("memo", [
         "[Merged from code: Old, Coder: nt, Merger date: 2026-10-01]",
         "[Merged from code: Old, Coder: Nt, Merger date: 2026-10-01]",
@@ -391,6 +405,34 @@ class TestWhatCannotBeChecked:
         error = _refused_unchanged(folder, NEW)
         assert "could not be checked" in error
 
+    @pytest.mark.parametrize("tables", [("files_filter",),
+                                        ("manage_files_display",
+                                         "files_filter")])
+    def test_a_table_the_project_lacks_is_not_probed(self, tmp_path,
+                                                      tables):
+        """Older schemas lack the file-list views QualCoder saves; such a
+        project still has its name corrected (fix round 1)."""
+        folder = _make(tmp_path)
+        _sql(folder, *[f"DROP TABLE {table}" for table in tables])
+        assert json.loads(server.select_project(str(folder)))["success"]
+        for table in tables:
+            assert not server.get_db().capabilities.table_exists(table)
+        answer = _preview(NEW)
+        assert answer["preview"]["recorded_under_current_name"] == []
+        assert _call(NEW, answer["preview_token"])["success"] is True
+        assert _stored(folder)[0] == NEW
+
+    def test_a_coder_list_that_does_not_answer_refuses(self, tmp_path):
+        """The coder list itself damaged, as SQLite reports it: the
+        refusal in the tool's own words, not a bare error (fix round 1)."""
+        folder = _make(tmp_path)
+        _sql(folder, "DROP TABLE coder_names",
+             "CREATE TABLE coder_names (coder text)")
+        error = _refused_unchanged(folder, NEW)
+        assert error == (
+            "Nothing was changed: this project's coder list did not answer, "
+            "so what the change would do to it could not be checked.")
+
     def test_the_new_names_probe_failing_only_warns(self, tmp_path,
                                                     monkeypatch):
         """With no current name, no probe of it runs; the new name's own
@@ -403,8 +445,8 @@ class TestWhatCannotBeChecked:
         assert answer["warnings"] == [
             f"Whether work is already recorded under \"{NEW}\" in this "
             f"project could not be checked (a table of the project did not "
-            f"answer); if that is another person's coder name, choose "
-            f"another."]
+            f"answer); if that is another person's coder name, or an AI "
+            f"coder name this project used before, choose another."]
         assert _stored(folder)[0] == ""
 
 
@@ -522,6 +564,41 @@ class TestTheNamesRefused:
         assert _refused_unchanged(folder, "Host Model") == _ai_refusal(
             "Host Model")
 
+    def test_a_damaged_ai_coder_name_file_refuses(self, tmp_path):
+        """With exegete.json unreadable, the project's AI coder name and
+        its history are not known, so no name is taken as the researcher's
+        (fix round 1): the AI's own name would otherwise pass, and the
+        tool could not undo it once work is under it."""
+        folder = _make(tmp_path)
+        assert json.loads(server.set_project_ai_coder_name("Model One"))[
+            "success"] is True
+        _sql(folder, ("INSERT INTO code_text (owner) VALUES (?)",
+                      ("Model One",)))
+        (folder / "exegete.json").write_text("not json", encoding="utf-8")
+        for name in ("Model One", NEW):
+            assert _refused_unchanged(folder, name) == (
+                f"Nothing was changed: this project's AI coder name file "
+                f"(exegete.json in the project folder) could not be read, "
+                f"so whether \"{name}\" is a name AI work is stored under "
+                f"could not be checked. Repairing the file, or setting the "
+                f"project's AI coder name again with "
+                f"set_project_ai_coder_name (which puts the damaged file "
+                f"aside and writes a new one), lets the check be made.")
+        # the same name is still answered as unchanged
+        assert _call(OLD)["unchanged"] is True
+        # set again, the damaged file goes aside with the history it held:
+        # an earlier AI name is then only warned about
+        assert json.loads(server.set_project_ai_coder_name("Model Two"))[
+            "success"] is True
+        assert _refused_unchanged(folder, "Model Two") == _ai_refusal(
+            "Model Two")
+        answer = _preview("Model One")
+        assert answer["warnings"] == [
+            "Work is already recorded under \"Model One\" in this project; "
+            "if that is another person's coder name, or an AI coder name "
+            "this project used before, choose another."]
+        assert _change(NEW)["success"] is True
+
     def test_the_speaker_coder(self, tmp_path):
         folder = _make(tmp_path)
         speaker = server.SPEAKER_SYSTEM_CODER
@@ -609,6 +686,25 @@ class TestGivingAName:
 # The preview's warnings, never refusals
 # ---------------------------------------------------------------------------
 
+WORK_UNDER_NEW = (
+    f"Work is already recorded under \"{NEW}\" in this project; if that is "
+    f"another person's coder name, or an AI coder name this project used "
+    f"before, choose another.")
+# The new name's own entry hidden, or the current name's, which the change
+# renames keeping its visibility (fix round 1: the warning no longer says
+# the new name is marked hidden when no entry of it exists, and no longer
+# says it would be hidden in QualCoder, which shows its current coder)
+HIDDEN = {
+    "new": (f"\"{NEW}\" is marked hidden in this project's coder list, so "
+            f"the researcher's own codings would be hidden in Exegete's "
+            f"default reads."),
+    "old": (f"\"{NEW}\" would be hidden in this project's coder list after "
+            f"the change, because the entry it takes over is marked hidden, "
+            f"so the researcher's own codings would be hidden in Exegete's "
+            f"default reads."),
+}
+
+
 class TestThePreviewsWarnings:
 
     def test_work_recorded_under_the_new_name(self, tmp_path):
@@ -616,9 +712,7 @@ class TestThePreviewsWarnings:
         _sql(folder, ("INSERT INTO cases (name, owner) VALUES ('P1', ?)",
                       (NEW,)))
         answer = _preview(NEW)
-        assert answer["warnings"] == [
-            f"Work is already recorded under \"{NEW}\" in this project; if "
-            f"that is another person's coder name, choose another."]
+        assert answer["warnings"] == [WORK_UNDER_NEW]
         assert _call(NEW, answer["preview_token"])["success"] is True
 
     @pytest.mark.parametrize("where", ["new", "old"])
@@ -636,11 +730,12 @@ class TestThePreviewsWarnings:
             _sql(folder, ("UPDATE coder_names SET visibility = 0 WHERE "
                           "name = ?", (OLD,)))
         answer = _preview(NEW)
-        hidden = (f"\"{NEW}\" is marked hidden in this project's coder list, "
-                  f"so the researcher's own codings would be hidden in "
-                  f"Exegete's default reads, and in QualCoder if they use "
-                  f"it.")
-        assert hidden in answer["warnings"]
+        assert answer["preview"]["coder_list"] == (
+            "removed_old" if where == "new" else "renamed")
+        assert HIDDEN[where] in answer["warnings"]
+        assert HIDDEN["old" if where == "new" else "new"] not in \
+            answer["warnings"]
+        assert "QualCoder" not in " ".join(answer["warnings"])
         assert answer["preview"]["new_name_hidden"] is True
         text = json.dumps(answer)
         assert not any(ch.isdigit() for ch in " ".join(answer["warnings"]))
@@ -758,10 +853,18 @@ class TestTheNotesAfterTheChange:
         monkeypatch.setenv("EXEGETE_CODER_NAME", NEW)
         assert len(_change(NEW)["notes"]) == 1
 
+    # Fix round 1: what Keep does too. QualCoder 4.0 asks Keep (its
+    # default) or Switch when the project's name differs from its "Current
+    # coder", then writes its "Current coder" into the project whichever
+    # was chosen (__main__.py:2475-2496 and 2869-2871 at the tag 4.0)
     QUALCODER_NOTE = (
-        "QualCoder compares this name with the one in its own settings when "
-        "it opens the project, and asks whether to keep it or switch; Switch "
-        "changes the name there for every project.")
+        f"Each time QualCoder opens this project, it writes the coder name "
+        f"in its own settings (\"Current coder\") into the project. When "
+        f"that name differs from \"{NEW}\", it first asks whether to keep "
+        f"its own name or switch: Keep, its default, puts its own name back "
+        f"in place of \"{NEW}\"; Switch keeps \"{NEW}\" and makes it the "
+        f"name in QualCoder's settings for every project. Setting \"Current "
+        f"coder\" to \"{NEW}\" in QualCoder first avoids the question.")
 
     @pytest.mark.parametrize("sign", ["project", "computer"])
     def test_the_qualcoder_note_with_a_sign(self, tmp_path, sign):
@@ -784,15 +887,16 @@ class TestTheNotesAfterTheChange:
         assert server._qualcoder_history().level == "none"
         notes = _change(NEW)["notes"]
         assert self.QUALCODER_NOTE not in notes and len(notes) == 1
+        assert not any("QualCoder" in note for note in notes)
 
 
 # ---------------------------------------------------------------------------
 # The texts that said no tool could do this
 # ---------------------------------------------------------------------------
 
-SENTENCE = ("It can be corrected later with set_project_coder_name only "
-            "while nothing is recorded under it, so ask for the name as they "
-            "want it to stay.")
+SENTENCE = ("The name can be corrected later with set_project_coder_name "
+            "only while nothing is recorded under it, so ask for the name as "
+            "they want it to stay.")
 NOT_KNOWN = (
     "The researcher's own coder name is not known, so the check that keeps "
     "the AI's codings apart from the researcher's own is off. It comes on "
@@ -849,7 +953,7 @@ class TestTheTexts:
         notes = json.loads(server.get_current_project())["coder_name_notes"]
         assert notes[0].endswith(
             "Exegete gives it only to the projects it creates from now on. "
-            "set_project_coder_name gives it one.")
+            "set_project_coder_name can give this project one.")
 
     def test_core_marks_the_tool_it_lacks(self, tmp_path, monkeypatch):
         """In `core`, which has no set_project_coder_name, each text a
@@ -864,7 +968,7 @@ class TestTheTexts:
                                           "recorded under it.")
         _sql(folder, "UPDATE project SET codername = ''")
         notes = json.loads(server.get_current_project())["coder_name_notes"]
-        assert notes[0].endswith(MARKED + " gives it one.")
+        assert notes[0].endswith(MARKED + " can give this project one.")
         warned = json.loads(server.set_project_ai_coder_name("AI-Test"))
         assert UNKNOWN.replace("set_project_coder_name", MARKED) in \
             warned["warnings"]
@@ -880,7 +984,8 @@ DESCRIPTION = (
     "Correct the researcher's own coder name in this project, or give one "
     "to a project that has none, while nothing is recorded under the "
     "current one: no coding, annotation, case, memo, journal entry, code, "
-    "category, file or attribute carries it. This is the researcher's own "
+    "category, file, attribute or file-list view saved by QualCoder carries "
+    "it. This is the researcher's own "
     "name, not the AI's (that is set_project_ai_coder_name). Ask the "
     "researcher for the name, exactly as they want it; never guess it. Two "
     "steps: call without preview_token for a preview, which changes "
@@ -925,12 +1030,20 @@ class TestTheTool:
                 "own coder name in this project, or give one to a project "
                 "that has none, while nothing is recorded under the current "
                 "one: no coding, annotation, case, memo, journal entry, code, "
-                "category, file or attribute carries it. This is the "
+                "category, file, attribute or file-list view saved by "
+                "QualCoder carries it. This is the "
                 "researcher's own name, not the AI's (that is "
                 "`set_project_ai_coder_name`).") in tools
-        assert ("It can be corrected later with `set_project_coder_name` "
-                "only while nothing is recorded under it, so give it as you "
-                "want it to stay.") in tools
+        assert ("The name can be corrected later with "
+                "`set_project_coder_name` only while nothing is recorded "
+                "under it, so give it as you want it to stay.") in tools
+        # one name for the kind in the description, the refusal, TOOLS.md
+        # and the CHANGELOG
+        assert ("attributes and their types, and the file-list views saved "
+                "by QualCoder; a memo goes with its row)") in tools
+        assert "file lists QualCoder saves" not in tools
+        assert ("It is refused too while the project's AI coder name file "
+                "or its coder list cannot be read.") in tools
         assert "Exegete cannot change it" not in tools
         assert "registers 81 tools" in tools
 
@@ -945,8 +1058,19 @@ class TestTheTool:
             "while nothing is recorded under the current name: a preview, "
             "then the change with the preview's token, after a backup. "
             "Refused, with the reason, once any coding, annotation, case, "
-            "memo, journal entry, code, category, file or attribute carries "
-            "the name.") in unreleased
+            "memo, journal entry, code, category, file, attribute or "
+            "file-list view saved by QualCoder carries the name.") \
+            in unreleased
+        assert ("the change is refused too while the project's AI coder name "
+                "file or its coder list cannot be read.") in unreleased
+        # fix round 1: the sentence no longer reads backwards
+        assert ("The question create_project asks now says the name can be "
+                "corrected while nothing is recorded under it, and the "
+                "warnings and selection notes about a project without a "
+                "name, or with another one, name set_project_coder_name.") \
+            in unreleased
+        assert "now say so" not in unreleased[:unreleased.index(
+            "### Measured")]
 
     def test_the_counts(self):
         assert len(server.STANDARD_TOOL_NAMES) == 81

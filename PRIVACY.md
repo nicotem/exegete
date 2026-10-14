@@ -1217,9 +1217,11 @@ Two further rules touch files on your disk:
   the researcher's and the AI's, reach Exegete from the app that starts
   it, as its other settings do (the extension's settings, or the host's
   configuration). A coder name in the settings still enters the
-  conversation: `create_project`'s answers give it, and so do the notes
-  a selection gives when they apply (`coder_name_notes`), for instance
-  when the project records another name or none. A coder name that is
+  conversation: `create_project`'s answers give it, so do the notes a
+  selection gives when they apply (`coder_name_notes`), for instance
+  when the project records another name or none, and so does
+  `set_project_coder_name`'s answer after a change when the setting
+  holds another name. A coder name that is
   not the researcher's real name works as well, for a researcher who
   would rather the AI provider did not see it. To refuse a name already
   in use, `create_project` lists the target folder's entries and opens

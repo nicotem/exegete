@@ -1393,18 +1393,20 @@ def error_text(error: BaseException) -> str:
     return error_label(error)
 
 
-def _raise_query_error(e: sqlite3.Error, where: str, message: str) -> None:
+def _raise_query_error(e: sqlite3.Error, where: str, message: str,
+                       error_type: type = RuntimeError) -> None:
     """Convert a sqlite3 error from a query into a typed, sanitised error.
 
     Locked databases get a distinct, actionable error; everything else is
     logged by its kind and SQLite's name for it, never its message (v0.14:
     a trigger or a note that is not UTF-8 can make the message a note),
-    and re-raised as a generic sanitised RuntimeError.
+    and re-raised as a generic sanitised RuntimeError, or as `error_type`
+    (a RuntimeError of its own) for a caller that must tell it apart.
     """
     if isinstance(e, sqlite3.OperationalError) and _is_locked_error(e):
         raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
     logger.error("Database error in %s: %s", where, sqlite_error_label(e))
-    raise RuntimeError(message) from None
+    raise error_type(message) from None
 
 # Workspace configuration. Users should work in this folder to keep
 # MCP-modified projects separate from originals.
@@ -2335,6 +2337,13 @@ class CoderNameRecordsUnreadable(RuntimeError):
     Not "not found": the correction of a coder name is refused on it,
     because a change made on a guess could change whose work the record
     shows (v0.15.0)."""
+
+
+class CoderListUnreadable(RuntimeError):
+    """The project's coder list (`coder_names`) did not answer whether a
+    name has a row, so what correcting the coder name would do to it is
+    not known (v0.15.0). A RuntimeError, with the message every other
+    reader of the list gives, for callers that know no more."""
 
 
 def coder_name_record_kinds(found: Dict[str, bool]) -> List[str]:
@@ -4230,8 +4239,9 @@ class QualcoderDatabase:
     def coder_list_has(self, name: str) -> bool:
         """Whether the name has a row in `coder_names` (False when the
         project has no such table). Presence only: who is hidden is read
-        by `coder_visibility_map` alone. Raises RuntimeError when the
-        table does not answer."""
+        by `coder_visibility_map` alone. Raises CoderListUnreadable when
+        the table does not answer (DatabaseLockedError when it is
+        locked)."""
         caps = getattr(self, "capabilities", None)
         if caps is not None and not caps.table_exists("coder_names"):
             return False
@@ -4241,7 +4251,8 @@ class QualcoderDatabase:
                 (name,)).fetchone()
         except sqlite3.Error as e:
             _raise_query_error(e, "coder_list_has",
-                               "Could not read this project's coder list")
+                               "Could not read this project's coder list",
+                               error_type=CoderListUnreadable)
         return row is not None
 
     def coder_list_change(self, old: Optional[str], new: str) -> str:

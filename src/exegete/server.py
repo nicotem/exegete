@@ -40,6 +40,7 @@ from .database import (
     pseudonyms_json_fingerprint,
     CoderVisibilityUnreadable,
     coder_is_hidden,
+    CoderListUnreadable,
     CoderNameRecordsUnreadable,
     coder_name_record_kinds,
     DatabaseLockedError,
@@ -2791,8 +2792,8 @@ CODER_NAME_NONE_RECORDED_NOTE = (
     "of the AI coder name against the project's own coder name is off; "
     "the researcher's own coder name in Exegete's settings, \"{s}\", is "
     "still refused as the AI coder name, and Exegete gives it only to the "
-    "projects it creates from now on. set_project_coder_name gives it "
-    "one.")
+    "projects it creates from now on. set_project_coder_name can give this "
+    "project one.")
 # A project whose AI coder name was set to that name before the setting
 # was filled in keeps it (it is never changed silently, ruling 73, item
 # 6); the selection says so.
@@ -4556,17 +4557,41 @@ CODER_NAME_UNCHECKED_REFUSAL = (
     "Nothing was changed: whether work is recorded under \"{old}\" could "
     "not be checked (a table of the project did not answer), so the name "
     "stays.")
+CODER_NAME_LIST_UNREADABLE_REFUSAL = (
+    "Nothing was changed: this project's coder list did not answer, so "
+    "what the change would do to it could not be checked.")
+# exegete.json unreadable: the project's AI coder name and its history
+# are not known, so a name AI work is stored under could pass for the
+# researcher's (reads fall back to the built-in default, as they must)
+CODER_NAME_AI_UNCHECKED_REFUSAL = (
+    "Nothing was changed: this project's AI coder name file ({file} in the "
+    "project folder) could not be read, so whether \"{name}\" is a name AI "
+    "work is stored under could not be checked. Repairing the file, or "
+    "setting the project's AI coder name again with "
+    "set_project_ai_coder_name (which puts the damaged file aside and "
+    "writes a new one), lets the check be made.")
 CODER_NAME_NEW_HAS_WORK_WARNING = (
     "Work is already recorded under \"{new}\" in this project; if that is "
-    "another person's coder name, choose another.")
+    "another person's coder name, or an AI coder name this project used "
+    "before, choose another.")
 CODER_NAME_NEW_WORK_UNCHECKED_WARNING = (
     "Whether work is already recorded under \"{new}\" in this project could "
     "not be checked (a table of the project did not answer); if that is "
-    "another person's coder name, choose another.")
+    "another person's coder name, or an AI coder name this project used "
+    "before, choose another.")
+# The new name hidden after the change: by its own entry in the coder
+# list, or by the current name's, which it takes over (renamed, keeping
+# its visibility). Each names only the name the assistant passed, with no
+# count. No word on QualCoder: it makes its own current coder visible
+# whenever it opens a project (app.py, update_coder_names, 1605-1613 at
+# the tag 4.0), so "hidden there too" would not be true.
 CODER_NAME_NEW_HIDDEN_WARNING = (
     "\"{new}\" is marked hidden in this project's coder list, so the "
-    "researcher's own codings would be hidden in Exegete's default reads, "
-    "and in QualCoder if they use it.")
+    "researcher's own codings would be hidden in Exegete's default reads.")
+CODER_NAME_TAKES_HIDDEN_WARNING = (
+    "\"{new}\" would be hidden in this project's coder list after the "
+    "change, because the entry it takes over is marked hidden, so the "
+    "researcher's own codings would be hidden in Exegete's default reads.")
 CODER_NAME_HIDDEN_UNCHECKED_END = (
     ", so whether the new name is hidden could not be checked.")
 CODER_NAME_CORRECTED_NOTE = (
@@ -4581,13 +4606,20 @@ CODER_NAME_SETTING_NOT_CHANGED_NOTE = (
     "The researcher's own coder name in Exegete's settings is \"{setting}\", "
     "which new projects take; the settings are not changed.")
 # Given only when the project's history with QualCoder shows a sign
-# (`_qualcoder_history`): QualCoder 4.0 asks "keep or switch" when the
-# project's name differs from its "Current coder" (__main__.py:2476-2494
-# at the tag 4.0), and Switch writes the name into its settings file.
+# (`_qualcoder_history`). QualCoder 4.0, on opening a project whose name
+# differs from its "Current coder", asks Keep (its default), Switch or
+# Cancel (__main__.py:2475-2496 at the tag 4.0); only Switch writes the
+# project's name into its settings. Then, whichever was chosen, it writes
+# its "Current coder" into the project (__main__.py:2869-2871), so Keep
+# puts its own name back in place of the corrected one.
 CODER_NAME_QUALCODER_SWITCH_NOTE = (
-    "QualCoder compares this name with the one in its own settings when it "
-    "opens the project, and asks whether to keep it or switch; Switch "
-    "changes the name there for every project.")
+    "Each time QualCoder opens this project, it writes the coder name in "
+    "its own settings (\"Current coder\") into the project. When that name "
+    "differs from \"{new}\", it first asks whether to keep its own name or "
+    "switch: Keep, its default, puts its own name back in place of "
+    "\"{new}\"; Switch keeps \"{new}\" and makes it the name in QualCoder's "
+    "settings for every project. Setting \"Current coder\" to \"{new}\" in "
+    "QualCoder first avoids the question.")
 
 
 def _coder_name_change_refusal(db_, current: Optional[str]
@@ -4622,6 +4654,8 @@ def _coder_name_change_preview(db_, name: str) -> Dict[str, Any]:
     except CoderNameRecordsUnreadable:
         raise RuntimeError(CODER_NAME_UNCHECKED_REFUSAL.format(
             old=(db_.get_project_info() or {}).get("coder_name"))) from None
+    except CoderListUnreadable:
+        raise RuntimeError(CODER_NAME_LIST_UNREADABLE_REFUSAL) from None
     preview["work_recorded_under_new_name"] = work
     visibility = _visibility_map(db_)
     if visibility is _VISIBILITY_UNREADABLE:
@@ -4648,7 +4682,11 @@ def _coder_name_change_warnings(preview: Dict[str, Any]) -> List[str]:
         warnings.append(VISIBILITY_UNREADABLE_SUFFIX
                         + CODER_NAME_HIDDEN_UNCHECKED_END)
     elif hidden:
-        warnings.append(CODER_NAME_NEW_HIDDEN_WARNING.format(new=new))
+        # the entry hidden is the current name's when the change renames
+        # it, so the warning says the new name takes it over
+        warnings.append((CODER_NAME_TAKES_HIDDEN_WARNING
+                         if preview["coder_list"] == "renamed"
+                         else CODER_NAME_NEW_HIDDEN_WARNING).format(new=new))
     return warnings
 
 
@@ -4658,17 +4696,18 @@ def set_project_coder_name(name: str,
                            preview_token: Optional[str] = None) -> str:
     """Correct the researcher's own coder name in this project, or give one to
     a project that has none, while nothing is recorded under the current one:
-    no coding, annotation, case, memo, journal entry, code, category, file or
-    attribute carries it. This is the researcher's own name, not the AI's (that
-    is set_project_ai_coder_name). Ask the researcher for the name, exactly as
-    they want it; never guess it. Two steps: call without preview_token for a
-    preview, which changes nothing; show it to the researcher, and only if they
-    agree, call again with the same name and preview_token=<the token>. A
-    backup of the project is made first. Refused, with the reason, when work is
-    recorded under the current name, because changing it then would change
-    whose work the record shows. Refused while QualCoder 3.8 has the project
-    open (its lock file); QualCoder 4.0 leaves no such sign, so if the
-    researcher uses QualCoder, ask them to close the project there first.
+    no coding, annotation, case, memo, journal entry, code, category, file,
+    attribute or file-list view saved by QualCoder carries it. This is the
+    researcher's own name, not the AI's (that is set_project_ai_coder_name).
+    Ask the researcher for the name, exactly as they want it; never guess it.
+    Two steps: call without preview_token for a preview, which changes nothing;
+    show it to the researcher, and only if they agree, call again with the same
+    name and preview_token=<the token>. A backup of the project is made first.
+    Refused, with the reason, when work is recorded under the current name,
+    because changing it then would change whose work the record shows. Refused
+    while QualCoder 3.8 has the project open (its lock file); QualCoder 4.0
+    leaves no such sign, so if the researcher uses QualCoder, ask them to close
+    the project there first.
 
     Args:
         name: the researcher's own coder name, as they give it
@@ -4695,6 +4734,11 @@ def set_project_coder_name(name: str,
                            "coder_name": name,
                            "message": CODER_NAME_UNCHANGED.format(
                                name=name)}, indent=2)
+    # The AI names above are complete only when exegete.json can be read
+    sidecar = read_sidecar(_current_project_folder())
+    if sidecar.status == SIDECAR_UNREADABLE:
+        return json.dumps({"error": CODER_NAME_AI_UNCHECKED_REFUSAL.format(
+            file=sidecar.path.name, name=name)})
     refusal = _coder_name_change_refusal(ro, current)
     if refusal is not None:
         return json.dumps({"error": refusal})
@@ -4734,7 +4778,7 @@ def set_project_coder_name(name: str,
     # history, worked out at selection)
     history = _qualcoder_history()
     if history is not None and history.level != "none":
-        notes.append(CODER_NAME_QUALCODER_SWITCH_NOTE)
+        notes.append(CODER_NAME_QUALCODER_SWITCH_NOTE.format(new=name))
     result["notes"] = notes
     return json.dumps(result, indent=2)
 
@@ -20132,9 +20176,9 @@ CODER_NAME_ASK = (
     "use QualCoder, the name in its settings (\"Current coder\"), exactly "
     "as there; if not, any name they choose. Call again with it as "
     "coder_name. It is the researcher's own name for their codings, not "
-    "the AI's, and must never be guessed. It can be corrected later with "
-    "set_project_coder_name only while nothing is recorded under it, so "
-    "ask for the name as they want it to stay. If they do not know it, "
+    "the AI's, and must never be guessed. The name can be corrected later "
+    "with set_project_coder_name only while nothing is recorded under it, "
+    "so ask for the name as they want it to stay. If they do not know it, "
     "call again with coder_name_not_known=true instead.")
 CODER_NAME_NOT_KNOWN_WARNING = (
     "The researcher's own coder name is not known, so the check that "
@@ -20435,12 +20479,12 @@ def create_project(name: str, directory: Optional[str] = None,
     there; if not, any name they choose. It is their own name, not the AI's:
     take it only from the researcher or from Exegete's settings, and never
     guess it, since a wrong name makes QualCoder, if they use it, ask them to
-    keep or switch names when they open the project. It can be corrected
-    later with set_project_coder_name only while nothing is recorded under
-    it, so ask for the name as they want it to stay. Pass coder_name only
-    with a name the researcher gave; if they do not know it, pass
-    coder_name_not_known=true instead: the project is then created without
-    one, and the result says what that means.
+    keep or switch names when they open the project. The name can be
+    corrected later with set_project_coder_name only while nothing is
+    recorded under it, so ask for the name as they want it to stay. Pass
+    coder_name only with a name the researcher gave; if they do not know it,
+    pass coder_name_not_known=true instead: the project is then created
+    without one, and the result says what that means.
 
     Names: the name becomes a folder, so it may not hold / \\ : < > | ? * or ",
     end in a dot or a space, start with a dot, be a Windows device name such as

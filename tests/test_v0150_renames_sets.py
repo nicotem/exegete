@@ -484,7 +484,7 @@ class TestTheDocuments:
         # earlier names listed: 80 tools, 206,194; and the two coder
         # names as settings (the coder names, piece 1), 206,569; and the
         # tool that corrects the researcher's own coder name (the coder
-        # names, piece 2): 81 tools, 208,205
+        # names, piece 2): 81 tools, 208,247
         assert (rounded, tokens) == ("208,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "

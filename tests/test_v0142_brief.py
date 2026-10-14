@@ -534,11 +534,11 @@ class TestTheSizes:
     # (317 characters more in `full`) and set_project_ai_coder_name's
     # refusals (58 more in both sets). The coder names, piece 2, adds a
     # sentence on set_project_coder_name to create_project's description
-    # (142 characters more in `full`); the tool itself is new, left out
+    # (148 characters more in `full`); the tool itself is new, left out
     # here (ADDED_AFTER_0142). Their entries as 0.14.2 served
     # them are below, so every other tool is still held to 0.14.2's
     # figure.
-    NOW = {"full": 199_518, "core": 65_353}
+    NOW = {"full": 199_524, "core": 65_353}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

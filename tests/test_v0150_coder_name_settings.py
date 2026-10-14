@@ -552,9 +552,10 @@ class TestTheDescription:
             "own name, not the AI's: take it only from the researcher or "
             "from Exegete's settings, and never guess it, since a wrong name "
             "makes QualCoder, if they use it, ask them to keep or switch "
-            "names when they open the project. It can be corrected later "
-            "with set_project_coder_name only while nothing is recorded "
-            "under it, so ask for the name as they want it to stay. Pass "
+            "names when they open the project. The name can be corrected "
+            "later with set_project_coder_name only while nothing is "
+            "recorded under it, so ask for the name as they want it to "
+            "stay. Pass "
             "coder_name only with a "
             "name the researcher gave; if they do not know it, pass "
             "coder_name_not_known=true instead: the project is then created "
@@ -626,8 +627,8 @@ NONE_RECORDED = (
     "of the AI coder name against the project's own coder name is off; the "
     "researcher's own coder name in Exegete's settings, \"Ann Lee\", is "
     "still refused as the AI coder name, and Exegete gives it only to the "
-    "projects it creates from now on. set_project_coder_name gives it "
-    "one.")
+    "projects it creates from now on. set_project_coder_name can give this "
+    "project one.")
 AI_IS_SETTING = (
     "This project's AI coder name is \"Ann Lee\", which is also the "
     "researcher's own coder name in Exegete's settings, so AI codings "
@@ -833,11 +834,15 @@ class TestTheDocuments:
         assert ("To refuse a name already in use, `create_project` lists "
                 "the target folder's entries") in item
         # the name in the settings still reaches the conversation
+        # and set_project_coder_name's answer (v0.15.0, coder names,
+        # piece 2, fix round 1)
         assert ("A coder name in the settings still enters the "
-                "conversation: `create_project`'s answers give it, and so do "
+                "conversation: `create_project`'s answers give it, so do "
                 "the notes a selection gives when they apply "
                 "(`coder_name_notes`), for instance when the project records "
-                "another name or none. A coder name that is not the "
+                "another name or none, and so does `set_project_coder_name`'s "
+                "answer after a change when the setting holds another name. "
+                "A coder name that is not the "
                 "researcher's real name works as well, for a researcher who "
                 "would rather the AI provider did not see it.") in item
         assert ("A name that belongs to a person (the project's own coder "

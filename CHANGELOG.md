@@ -349,17 +349,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   may have the project open, since an answer can be out of date and a
   write into a project open in QualCoder can lose work.
 
+### Changed: when a write is refused, and what a failure says
+
+- **The write tools' descriptions say once when a write is refused**:
+  while the project's lock file is active (QualCoder 3.8 has the
+  project open, or another conversation using Exegete is writing to
+  it) or another program is writing to the database. For QualCoder 4.0,
+  which writes no lock file, they point to the signs of an open window
+  that `get_current_project` shows, and ask the assistant to check with
+  the researcher before writing when there are some, instead of telling
+  it never to write while any QualCoder window has the project open.
+  The same sentence closes 26 write tools' descriptions and opens
+  `apply_codings`' safety guarantees; `restore_backup`'s list and the
+  help's overview say the same. Each of these 28 descriptions is
+  shorter than before. The refusal itself, and when it is given, have
+  not changed.
+- **The opening text's rule 9 follows what a tool says**: "When a tool
+  says another program, such as QualCoder, may have the project open,
+  do not write: ask the researcher to close it there." The full brief's
+  section on when to ask says the same. Exegete's opening text is now
+  2,034 characters, within the 2,048 that Claude Code keeps, and the
+  full brief about 12,500.
+- **`create_project`'s question for the coder name** offers
+  `coder_name_not_known=true` to a researcher who would rather not give
+  a name, as well as to one who does not know it.
+- **Failure messages give the route every researcher has**, and name
+  QualCoder only as "QualCoder, if you use it": a project database that
+  will not open when `select_project` finds no sign of an open window, a
+  database error in any other tool, a project set in the host's
+  configuration that will not open, and a write that failed (rolled
+  back, not rolled back cleanly, or refused by the database). A write
+  the database refused now says to check that the project still opens
+  (`select_project`, then `get_project_summary`) rather than to open it
+  in QualCoder.
+
 ### Measured
 
-- Serialised tool JSON: full = 208,247 characters (about 52.1k tokens
-  at chars/4) over 81 tools, and core = 68,669 (about 17.2k) over 25,
+- Serialised tool JSON: full = 204,945 characters (about 51.2k tokens
+  at chars/4) over 81 tools, and core = 68,175 (about 17.0k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 218,383 and
-  72,065. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), seven changes
+  which also gives exactly 0.14.3's figures for its tree), 215,301 and
+  71,595. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), eight changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -386,8 +420,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in both sets. And the researcher's own coder name can be corrected:
   `set_project_coder_name`'s entry, with its separator, adds 1,530
   characters to `full`, 1,602 on 3.11, and `create_project`'s sentence
-  on it grew its entry by 148, 156 on 3.11; `core` serves neither. No
-  other tool's entry changed.
+  on it grew its entry by 148, 156 on 3.11; `core` serves neither. And
+  the write tools' sentence replaced a longer paragraph in 28
+  descriptions: 3,302 characters fewer in `full` and 494 fewer in
+  `core`, whose `apply_codings`, `create_code`, `delete_coding` and
+  `set_memo` carry it (3,082 and 470 on 3.11). No other tool's entry
+  changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

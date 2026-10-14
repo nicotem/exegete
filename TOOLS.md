@@ -736,11 +736,11 @@ still gives that tool's own rules.
 Hosts differ in what they pass on to the assistant, so the brief
 reaches it four ways:
 
-- a short version, under 2,000 characters, as Exegete's opening
+- a short version, under 2,048 characters, as Exegete's opening
   text, which Claude Code shows at the start of a session;
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
-  project: it returns the full brief (about 12,400 characters), or in
+  project: it returns the full brief (about 12,500 characters), or in
   the `core` set the short version;
 - the same full brief as the help topic `explain_ai_coding_tools('brief')`
   and the resource `exegete://guidance/brief`;
@@ -942,8 +942,8 @@ declares, and each tool's own description says what each one does.
 > loudly at startup. Measured for 0.15.0 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 208,000 characters for `full`, roughly 52k
-> tokens at four characters per token, and about 69,000 characters for
+> definitions run to about 205,000 characters for `full`, roughly 51k
+> tokens at four characters per token, and about 68,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the

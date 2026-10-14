@@ -1190,11 +1190,18 @@ Two further rules touch files on your disk:
   names, in the folder that holds it, that begin with the project's
   name, as `list_backups` reads them); whether its lock file is a
   leftover; whether QualCoder's settings folder (`~/.qualcoder`)
-  exists; and whether the process scan found QualCoder. For the settings
-  folder and the files in `ai_data`, only presence is checked: the
-  settings folder's contents (QualCoder's settings and API keys) are
-  never listed, opened or measured, and the answer holds plain sentences
-  and a yes or no, never a path or a project's name.
+  exists; and whether the process scan found QualCoder. The field also
+  gives, as `setting`, the researcher's answer to "Do you also use
+  QualCoder on this computer?" in Exegete's settings (yes, no or not
+  sure; any other word typed there is read as not sure and never
+  given), and with a yes or a no it is given even when nothing was
+  found, so that answer enters the conversation, as a coder name in the
+  settings does. For
+  the settings folder and the files in `ai_data`, only presence is
+  checked: the settings folder's contents (QualCoder's settings and API
+  keys) are never listed, opened or measured, and the answer holds
+  plain sentences, a yes or no and one of those three answers, never a
+  path or a project's name.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
   folder with four empty subfolders and a new `data.qda`, and records

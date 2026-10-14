@@ -46,14 +46,18 @@ from exegete.qualcoder_history import (AI_DATA_SIGN,  # noqa: E402
 
 SETTING = "EXEGETE_USES_QUALCODER"
 TITLE = "Do you also use QualCoder on this computer?"
-# The design's words, whole
+# The design's words, whole, as fix round 1 narrowed them: "some notes",
+# and only the examples the level will decide (pieces 11's open window and
+# QualCoder 3.8's other backups; piece 12 gives its later-import note
+# whatever the level); "may have opened it", since a leftover lock can be
+# Exegete's own
 DESCRIPTION = (
-    "Type yes, no or not sure. With yes, Exegete gives the notes that "
-    "matter only if you also open your projects in QualCoder (whether an "
-    "open QualCoder window shows Exegete's changes, the backups QualCoder "
-    "3.8 may keep elsewhere, what a later import in QualCoder does); with "
-    "no, it leaves them out, unless a project shows signs that QualCoder "
-    "has opened it or QualCoder is running when a project is selected; "
+    "Type yes, no or not sure. With yes, Exegete adds some notes that "
+    "matter only if you also open your projects in QualCoder (such as "
+    "whether an open QualCoder window shows Exegete's changes, or the "
+    "backups QualCoder 3.8 may keep elsewhere); with no, it leaves those "
+    "out, unless a project shows signs that QualCoder may have opened it "
+    "or QualCoder is running when a project is selected; "
     "with not sure, it decides from what it finds on each project and on "
     "this computer. Whatever you answer, Exegete still refuses to write "
     "while QualCoder 3.8 has a project open, and still warns when it sees "
@@ -461,12 +465,13 @@ class TestTheDocuments:
         install = _doc("INSTALL.md")
         assert ("- **Do you also use QualCoder on this computer?**: not sure "
                 "unless you change it. Type yes, no or not sure. With yes, "
-                "Exegete gives the notes that matter only if you also open "
+                "Exegete adds some notes that matter only if you also open "
                 "your projects in QualCoder") in install
-        assert ("with no, it leaves them out, unless a project shows signs "
-                "that QualCoder has opened it or QualCoder is running when a "
-                "project is selected; with not sure, it decides from what it "
-                "finds on each project and on this computer.") in install
+        assert ("with no, it leaves those out, unless a project shows signs "
+                "that QualCoder may have opened it or QualCoder is running "
+                "when a project is selected; with not sure, it decides from "
+                "what it finds on each project and on this computer.") \
+            in install
         # between the AI coder name and the check for new versions, as in
         # the extension
         assert install.index("- **AI coder name**: empty") < \
@@ -499,3 +504,176 @@ class TestTheDocuments:
         assert ("**It never changes the refusal or the warnings**: whatever "
                 "the answer, Exegete still refuses to write while QualCoder "
                 "3.8's lock file is active") in unreleased
+
+
+# =============================================================================
+# FIX ROUND 1
+# =============================================================================
+
+def _install_bullet():
+    install = _doc("INSTALL.md")
+    start = install.index("- **Do you also use QualCoder on this computer?**")
+    return install[start:install.index("- **Tell me when a new version",
+                                       start)]
+
+
+def _install_entry():
+    install = _doc("INSTALL.md")
+    start = install.index("- `EXEGETE_USES_QUALCODER` (0.15.0)")
+    return install[start:install.index("- `", start + 3)]
+
+
+def _changelog_section():
+    changelog = _doc("CHANGELOG.md")
+    start = changelog.index(
+        "### Added: \"Do you also use QualCoder on this computer?\"")
+    return changelog[start:changelog.index("### ", start + 4)]
+
+
+class TestFixRoundOneTheTextsClaimWhatTheLevelDecides:
+    """The setting's texts promise only notes that the level will decide:
+    "some notes", and no example of a note given whatever the answer
+    (piece 12 gives its note on a later import after every rename)."""
+
+    def _texts(self):
+        return (_flat(TEMPLATE["user_config"]["uses_qualcoder"]
+                      ["description"]),
+                _install_bullet(), _install_entry(), _changelog_section())
+
+    def test_no_example_the_level_does_not_decide(self):
+        for text in self._texts():
+            assert "what a later import in QualCoder does" not in text
+            assert "later import" not in text
+
+    def test_some_notes_not_the_notes(self):
+        for text in self._texts():
+            assert "the notes that matter only if" not in text
+            assert "leaves them out" not in text
+            assert "some notes that matter only if you also open your " \
+                   "projects in QualCoder" in text
+
+    def test_signs_that_qualcoder_may_have_opened_it(self):
+        """A leftover lock, one of the signs, can be left by an
+        interrupted write by Exegete itself."""
+        for text in self._texts():
+            assert "QualCoder has opened it" not in text
+            assert "signs that QualCoder may have opened it" in text
+
+
+class TestFixRoundOneTheDocuments:
+
+    def test_install_bullet_says_what_the_answer_never_changes(self):
+        assert ("Whatever you answer, Exegete still refuses to write while "
+                "QualCoder 3.8 has a project open, and still warns when it "
+                "sees signs that QualCoder 4.0 may have one open.") \
+            in _install_bullet()
+
+    def test_the_changelog_says_the_default_not_as_before(self):
+        section = _changelog_section()
+        assert "with not sure, the default, what Exegete finds decides." \
+            in section
+        assert "as before" not in section
+
+    def test_tools_says_when_the_field_is_given(self):
+        tools = (REPO / "TOOLS.md").read_text(encoding="utf-8")
+        for tool, words in (
+                ("select_project(project_path)",
+                 "`qualcoder_history` when the project or this computer "
+                 "shows a trace of QualCoder, or when the answer to \"Do "
+                 "you also use QualCoder on this computer?\" in Exegete's "
+                 "settings is yes or no, with that answer as its "
+                 "`setting`"),
+                ("get_current_project()",
+                 "when there are any or when the answer to \"Do you also "
+                 "use QualCoder on this computer?\" is yes or no, with "
+                 "that answer as `setting`")):
+            line = next(row for row in tools.splitlines()
+                        if row.startswith(f"- `{tool}`"))
+            assert words in line, tool
+
+    def test_privacy_says_the_answer_enters_the_conversation(self):
+        privacy = (REPO / "PRIVACY.md").read_text(encoding="utf-8")
+        start = privacy.index("**Process listing.**")
+        bullet = _flat(privacy[start:privacy.find("\n- **", start)])
+        assert ("The field also gives, as `setting`, the researcher's "
+                "answer to \"Do you also use QualCoder on this computer?\" "
+                "in Exegete's settings (yes, no or not sure; any other word "
+                "typed there is read as not sure and never given), and "
+                "with a yes or a no it is given even when nothing was "
+                "found, so that answer enters the conversation") in bullet
+        assert ("the answer holds plain sentences, a yes or no and one of "
+                "those three answers, never a path or a project's name") \
+            in bullet
+
+    def test_the_comment_says_when_the_field_is_left_out(self):
+        source = (REPO / "src" / "exegete" / "server.py").read_text(
+            encoding="utf-8")
+        comments = " ".join(line.strip().lstrip("#").strip()
+                            for line in source.splitlines()
+                            if line.strip().startswith("#"))
+        assert ("left out when nothing was found and the answer to \"Do "
+                "you also use QualCoder on this computer?\" is not sure "
+                "(qualcoder_history.report)") in comments
+
+
+class TestFixRoundOneTheNoteSaysWhatSettingIs:
+
+    def test_the_note_names_the_answer(self):
+        assert ("The field's setting is the researcher's answer in "
+                "Exegete's settings to \"Do you also use QualCoder on this "
+                "computer?\" (not sure unless they changed it); it weighs "
+                "only when the project shows no sign of QualCoder and "
+                "QualCoder is not running.") in REPORT_NOTE
+
+    def test_the_note_reaches_the_answers(
+            self, setup_server, qualcoder_db_path, monkeypatch):
+        monkeypatch.setenv(SETTING, "no")
+        _scan_gives(monkeypatch, SAW_NONE)
+        for answer in _both(qualcoder_db_path):
+            assert "The field's setting is the researcher's answer" in \
+                answer["qualcoder_history"]["note"]
+
+
+class TestFixRoundOneOnlyTheThreeAnswers:
+    """Whatever a caller hands the module, the history keeps, and the field
+    gives, only yes, no or not sure: a typed word is never returned."""
+
+    def test_work_out_keeps_only_an_answer(self, tmp_path, monkeypatch):
+        _scan_gives(monkeypatch, SAW_NONE)
+        for installed in (False, True):
+            base = tmp_path / str(installed)
+            base.mkdir()
+            folder, home = _built(base, False, installed)
+            history = work_out(folder, scan_processes=True, home=home,
+                               setting=SENTINEL)
+            assert history.setting == "not sure"
+            field = qualcoder_history.report(history)
+            if installed:
+                assert field["setting"] == "not sure"
+            else:
+                assert field is None
+            assert SENTINEL not in json.dumps(field)
+
+    @pytest.mark.parametrize("raw, answer, level", [
+        (" YES ", "yes", "computer"), ("No", "no", "none"),
+        ("Not  Sure", "not sure", "none"), (None, "not sure", "none"),
+        ("", "not sure", "none")])
+    def test_work_out_reads_a_raw_value(self, tmp_path, monkeypatch, raw,
+                                        answer, level):
+        _scan_gives(monkeypatch, SAW_NONE)
+        folder, home = _built(tmp_path, False, False)
+        history = work_out(folder, scan_processes=True, home=home,
+                           setting=raw)
+        assert history.setting == answer
+        assert history.level == level
+
+    def test_report_gives_only_an_answer(self):
+        History = qualcoder_history.History
+        assert qualcoder_history.report(
+            History((), False, None, SENTINEL)) is None
+        for history in (History((), True, None, SENTINEL),
+                        History((AI_DATA_SIGN,), False, None, SENTINEL),
+                        History((), False, True, "Yes")):
+            field = qualcoder_history.report(history)
+            assert field["setting"] == "not sure"
+            assert SENTINEL not in json.dumps(field)

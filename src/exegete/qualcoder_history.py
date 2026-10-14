@@ -89,11 +89,15 @@ STALE_LOCK_SIGN = (
 
 REPORT_NOTE = (
     "What Exegete found when the project was selected; it decides which "
-    "notes about QualCoder its answers carry. Whether QualCoder has the "
-    "project open now is a separate, live check: select_project's "
-    "warning, and get_current_project's qualcoder_open and "
-    "qualcoder_gui_signals. A false qualcoder_on_this_computer means "
-    "only that no sign of QualCoder was found on this computer.")
+    "notes about QualCoder its answers carry. The field's setting is the "
+    "researcher's answer in Exegete's settings to \"Do you also use "
+    "QualCoder on this computer?\" (not sure unless they changed it); it "
+    "weighs only when the project shows no sign of QualCoder and "
+    "QualCoder is not running. Whether QualCoder has the project open now "
+    "is a separate, live check: select_project's warning, and "
+    "get_current_project's qualcoder_open and qualcoder_gui_signals. A "
+    "false qualcoder_on_this_computer means only that no sign of QualCoder "
+    "was found on this computer.")
 
 PathLike = Union[str, Path]
 
@@ -225,11 +229,14 @@ def _running(scan_processes: bool) -> Optional[bool]:
 
 def work_out(project_folder: PathLike, *, scan_processes: bool,
              home: Optional[PathLike] = None,
-             setting: str = NOT_SURE) -> History:
+             setting: Optional[str] = NOT_SURE) -> History:
     """The project's history with QualCoder, from the five checks above,
-    in their order, with `setting`, the answer read_setting gives. It
-    never raises. With `scan_processes` False no scan is called and
-    `running` is None."""
+    in their order, with `setting`, the researcher's answer. `setting` is
+    read again with read_setting, so that the history keeps one of the
+    three answers whatever a caller passes (the raw value as well): any
+    other value is "not sure", and is never kept or returned. It never
+    raises. With `scan_processes` False no scan is called and `running`
+    is None."""
     signs = []
     if ai_data_found(project_folder):
         signs.append(AI_DATA_SIGN)
@@ -242,22 +249,25 @@ def work_out(project_folder: PathLike, *, scan_processes: bool,
     if stale_lock_found(project_folder):
         signs.append(STALE_LOCK_SIGN)
     return History(tuple(signs), settings_folder_present(home),
-                   _running(scan_processes), setting)
+                   _running(scan_processes), read_setting(setting)[0])
 
 
 def report(history: Optional[History]) -> Optional[Dict[str, Any]]:
     """The answer field `qualcoder_history`, or None (the field left
     out) when there is no history, or when the level is "none" and the
     setting "not sure". `setting` is the researcher's answer, so that the
-    assistant knows it and does not ask again."""
+    assistant knows it and does not ask again; only one of the three
+    answers is ever given (a History made with any other value gives
+    "not sure")."""
     if history is None:
         return None
-    if history.level == "none" and history.setting == NOT_SURE:
+    setting = history.setting if history.setting in ANSWERS else NOT_SURE
+    if history.level == "none" and setting == NOT_SURE:
         return None
     return {
         "signs_on_this_project": list(history.signs),
         "qualcoder_on_this_computer": (history.installed is True
                                        or history.running is True),
         "note": REPORT_NOTE,
-        "setting": history.setting,
+        "setting": setting,
     }

@@ -70,13 +70,16 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      which to use there. Left empty, Claude still asks. It must differ
      from your coder name, and the same limits apply.
    - **Do you also use QualCoder on this computer?**: not sure unless
-     you change it. Type yes, no or not sure. With yes, Exegete gives
-     the notes that matter only if you also open your projects in
+     you change it. Type yes, no or not sure. With yes, Exegete adds
+     some notes that matter only if you also open your projects in
      QualCoder (whether an open QualCoder window shows Exegete's
-     changes, for example); with no, it leaves them out, unless a
-     project shows signs that QualCoder has opened it or QualCoder is
-     running when a project is selected; with not sure, it decides from
-     what it finds on each project and on this computer.
+     changes, for example); with no, it leaves those out, unless a
+     project shows signs that QualCoder may have opened it or QualCoder
+     is running when a project is selected; with not sure, it decides
+     from what it finds on each project and on this computer. Whatever
+     you answer, Exegete still refuses to write while QualCoder 3.8 has
+     a project open, and still warns when it sees signs that QualCoder
+     4.0 may have one open.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
      small file from its website on GitHub to see whether a newer
@@ -736,18 +739,18 @@ and `EXEGETE_USES_QUALCODER`, all below.
 - `EXEGETE_USES_QUALCODER` (0.15.0): your answer to "Do you also use
   QualCoder on this computer?": `yes`, `no` or `not sure`, in any
   letter case. Unset or blank, it is `not sure`, the default, as in the
-  desktop extension. With `yes`, Exegete gives the notes that matter
+  desktop extension. With `yes`, Exegete adds some notes that matter
   only if you also open your projects in QualCoder; with `no`, it
-  leaves them out, unless a project shows signs that QualCoder has
-  opened it or QualCoder is running when a project is selected; with
-  `not sure`, it decides from what it finds on each project and on this
-  computer. Any other value is read as `not sure`, and the log says so
-  once at start, never the value; it never stops Exegete. Whatever it
-  says, Exegete still refuses to write while QualCoder 3.8 has a project
-  open, and still warns when it sees signs that QualCoder 4.0 may have
-  one open: an answer can be out of date (a colleague's project,
-  QualCoder installed later), and a write into a project open in
-  QualCoder can lose work. The desktop extension sets it from its
+  leaves those out, unless a project shows signs that QualCoder may
+  have opened it or QualCoder is running when a project is selected;
+  with `not sure`, it decides from what it finds on each project and on
+  this computer. Any other value is read as `not sure`, and the log
+  says so once at start, never the value; it never stops Exegete.
+  Whatever it says, Exegete still refuses to write while QualCoder 3.8
+  has a project open, and still warns when it sees signs that QualCoder
+  4.0 may have one open: an answer can be out of date (a colleague's
+  project, QualCoder installed later), and a write into a project open
+  in QualCoder can lose work. The desktop extension sets it from its
   setting "Do you also use QualCoder on this computer?".
 
 - `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a

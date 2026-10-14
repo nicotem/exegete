@@ -309,15 +309,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is `EXEGETE_USES_QUALCODER`, new, with one spelling. Any other word
   is read as not sure, and the log says so once at start, never the
   word itself.
-- **It decides which notes about QualCoder are relevant**, with what
-  Exegete finds when a project is selected: with yes, the notes that
-  matter only if you also open your projects in QualCoder are relevant;
-  with no, they are not, unless the project shows signs that QualCoder
-  has opened it or QualCoder is running when the project is selected;
-  with not sure, what Exegete finds decides, as before. `select_project`
-  and `get_current_project` give the answer as `setting` in
-  `qualcoder_history`, so the assistant knows it; the field is now
-  given whenever the answer is yes or no.
+- **It decides whether some notes about QualCoder are relevant**, with
+  what Exegete finds when a project is selected: with yes, some notes
+  that matter only if you also open your projects in QualCoder are
+  relevant (such as whether an open QualCoder window shows Exegete's
+  changes); with no, those are not, unless the project shows signs that
+  QualCoder may have opened it or QualCoder is running when the project
+  is selected; with not sure, the default, what Exegete finds decides.
+  `select_project` and `get_current_project` give the answer as
+  `setting` in `qualcoder_history`, so the assistant knows it; the
+  field is now given whenever the answer is yes or no.
 - **It never changes the refusal or the warnings**: whatever the
   answer, Exegete still refuses to write while QualCoder 3.8's lock
   file is active, and still warns when it sees signs that QualCoder 4.0

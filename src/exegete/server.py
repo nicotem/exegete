@@ -4894,7 +4894,9 @@ def get_current_project() -> str:
                 "project is reopened there."
             )
         # The project's history with QualCoder, as worked out at its
-        # selection (v0.15.0); left out when nothing was found
+        # selection (v0.15.0); left out when nothing was found and the
+        # answer to "Do you also use QualCoder on this computer?" is not
+        # sure (qualcoder_history.report)
         history_field = qualcoder_history.report(_qualcoder_history())
         if history_field is not None:
             result["qualcoder_history"] = history_field

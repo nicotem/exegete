@@ -570,6 +570,10 @@ class TestAfterCreation:
                    for step in second["next_steps"])
 
     def test_what_each_build_does_on_first_open(self):
+        # v0.15.0 (not presuming QualCoder, piece 6): the account is
+        # given whole when this computer shows QualCoder (its settings
+        # folder in the scratch home)
+        (Path.home() / ".qualcoder").mkdir(exist_ok=True)
         known = create("Known")
         opening = known["opening_in_qualcoder"]
         assert "without a message and without changing its format" in \
@@ -582,7 +586,10 @@ class TestAfterCreation:
                       "labels, arrows and memo notes on graphs",
                       "goes back under its parent code",
                       "become ordinary codes with no category",
-                      "Work on this project in QualCoder 4.0"):
+                      # fix round 1 of piece 6: 4.0 suggested, not
+                      # prescribed
+                      "If the researcher opens it in QualCoder, suggest "
+                      "4.0, which avoids these changes."):
             assert words in opening["3.8.2"]
         unknown = json.loads(server.create_project(
             "Unknown", coder_name_not_known=True))

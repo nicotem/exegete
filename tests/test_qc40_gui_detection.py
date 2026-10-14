@@ -355,9 +355,13 @@ class TestLadderWiring:
         import shutil
         dest = tmp_path / "clean.qda"
         shutil.copytree(qualcoder_db_path, dest)
+        # v0.15.0 (not presuming QualCoder, piece 6): the note comes only
+        # when the project or this computer shows QualCoder has been
+        # used; an ai_data folder shows the project has been opened in it
+        (dest / "ai_data").mkdir()
         out = json.loads(server.select_project(str(dest)))
         assert out["qualcoder_gui_signals"] == []
-        assert "best-effort" in out["warning"]
+        assert "QualCoder 4.0 leaves no lock file" in out["warning"]
 
     def test_get_current_project_reports_signals(self, setup_server,
                                                  qualcoder_db_path,

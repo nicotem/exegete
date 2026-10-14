@@ -407,6 +407,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   messages say where its backups sit and that one can be copied back by
   hand, since no tool can list or restore them then.
 
+### Changed: selecting or creating a project says more about QualCoder only where there is a sign of it
+
+- **`select_project`, when it finds no sign of an open QualCoder
+  window**, mentions QualCoder only when the project or this computer
+  shows a sign of QualCoder, or the researcher said in Exegete's
+  settings that they use it (with the answer no, QualCoder's settings
+  folder alone does not count), and says which: the project has been
+  opened in QualCoder before; a lock file was left in the project by a
+  program that did not close it cleanly, as QualCoder 3.8 does and an
+  interrupted write by Exegete can; the researcher has said they use
+  QualCoder on this computer; or QualCoder is on this computer, though
+  nothing shows it has opened the project. Each adds that QualCoder 4.0
+  leaves no lock file, so Exegete cannot tell whether QualCoder has the
+  project open, and the researcher is asked to close it there, if it is
+  open there, before any write: in the first three cases the assistant
+  asks once in the conversation whether it is (after a leftover lock
+  file, only if the researcher uses QualCoder); in the last, the
+  researcher is asked only if they may have it open there. Otherwise it
+  gives no warning about QualCoder; before, it always named the limits
+  of seeing a QualCoder 4.0 window. The refusal while QualCoder 3.8's
+  lock file is active, and the warning when there are signs of an open
+  QualCoder 4.0 window, have not changed.
+- **`create_project` explains how QualCoder 4.0 and 3.8.2 open the new
+  project only then too**, and otherwise says in one line that
+  QualCoder 4.0 can open it too, if the researcher uses it. Its account
+  of 3.8.2 now ends "If the researcher opens it in QualCoder, suggest
+  4.0, which avoids these changes." rather than "Work on this project in
+  QualCoder 4.0." It never looks at the programs running on the
+  computer for this.
+
 ### Measured
 
 - Serialised tool JSON: full = 205,077 characters (about 51.3k tokens
@@ -452,8 +482,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   And the write tools' sentence replaced a longer paragraph in 28
   descriptions: 3,302 characters fewer in `full` and 494 fewer in
   `core`, whose `apply_codings`, `create_code`, `delete_coding` and
-  `set_memo` carry it (3,082 and 470 on 3.11). No other tool's entry
-  changed.
+  `set_memo` carry it (3,082 and 470 on 3.11). And `select_project`'s
+  sentence on when its warning comes changed its words, not its length.
+  No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

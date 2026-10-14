@@ -197,12 +197,17 @@ class TestT17DocsPosture:
         import shutil
         dest = tmp_path / "warn.qda"
         shutil.copytree(qualcoder_db_path, dest)
+        # v0.15.0 (not presuming QualCoder, piece 6): with no signals the
+        # limitation is named only when the project or this computer
+        # shows QualCoder has been used; an ai_data folder shows the
+        # project has been opened in it
+        (dest / "ai_data").mkdir()
         out = json.loads(server.select_project(str(dest)))
         warning = out.get("warning", "")
         # With no heuristic signals the limitation is named; with
         # signals the appears-open warning replaces it. Either way the
         # heuristic posture and 4.0 are named, never certainty.
-        assert ("best-effort" in warning
+        assert ("leaves no lock file" in warning
                 or "APPEARS to be open" in warning)
         assert "4.0" in warning
         assert "qualcoder_gui_signals" in out

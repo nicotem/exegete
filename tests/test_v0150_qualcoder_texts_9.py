@@ -607,3 +607,29 @@ class TestNoNameFromTheList:
         out, result = _save_run()
         assert result["mapping_saved"] is True, result
         assert SENTINEL not in json.dumps(out) + json.dumps(result)
+
+
+# ---------------------------------------------------------------------------
+# The CHANGELOG
+# ---------------------------------------------------------------------------
+
+def test_the_changelog_says_what_changed():
+    text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased = _flat(text.split("## [Unreleased]", 1)[1].split(
+        "\n## [", 1)[0])
+    heading = "### Changed: the names list and pseudonymisation's messages"
+    assert heading in unreleased
+    section = unreleased.split(heading, 1)[1].split("### ", 1)[0]
+    for phrase in (
+            "lead with what every researcher can do in Exegete, and name "
+            "QualCoder only for those who use it",
+            "Importing into a project with no names list",
+            "QualCoder, if you use it, can also make the list before "
+            "importing",
+            "a file written on Windows, by QualCoder or another program",
+            "Exegete's in one pass, longest name first",
+            "\"in Exegete as in QualCoder\"",
+            "\"Exegete leaves it so\"",
+            "\"rewrites text sources only\""):
+        assert _flat(phrase) in section, phrase
+    assert "—" not in section

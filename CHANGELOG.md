@@ -437,6 +437,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   QualCoder 4.0." It never looks at the programs running on the
   computer for this.
 
+### Changed: refusals about the database and the format, and about what Exegete does not do yet
+
+Refusals and warnings about the database and the format, and about
+features Exegete lacks, say what Exegete does and does not do yet, and
+name QualCoder only where the project shows it or as a choice for those
+who use it. When each is given, what it refuses and its override have
+not changed.
+
+- **The database and the format**: a file's text that changed while a
+  write was being prepared was edited by another program ("another
+  conversation using Exegete, or QualCoder if the researcher uses it"),
+  and the assistant asks the researcher to close a QualCoder window
+  only if `get_current_project` shows signs of one; a database file
+  linked from outside the project folder belongs in the project folder,
+  "where a project keeps it"; a project with no project record is not a
+  usable project in Exegete or in QualCoder; a project from before
+  sub-codes was last saved by QualCoder 3.8, and QualCoder 4.0 migrates
+  it when it opens it; and the warning on writes to a project with a
+  newer schema, allowed by the override, ends "Verify results (in the
+  newer QualCoder that upgraded the project, for example) and keep
+  backups."
+- **The project's schema value**: the refusal of a schema newer than
+  Exegete is verified against, and its warning when overridden, repeat
+  the value only when it is in QualCoder's form (`v` and up to four
+  digits), as the log already did, since the field is the project's own
+  text. Any other value is not repeated: the refusal and the warning
+  then say that Exegete cannot tell whether the project's schema is one
+  it is verified against, instead of calling it newer, and the warning
+  ends "Verify results and keep backups."
+- **Where Exegete lacks a feature**, the refusal says so instead of
+  sending the researcher to QualCoder: "Exegete does not merge cases
+  yet"; "Exegete does not move a sub-code to another parent yet"; a PDF
+  with no usable text is not linked to a case, and "QualCoder, if you
+  use it, can still link it to the case"; a refusal about a file name's
+  ending says that Exegete keeps the ending to protect the project's
+  links and exports, and that QualCoder's own Rename can make the change
+  for a researcher who uses it; and a new name that clashes with a file
+  in the documents folder names `restore_backup` first, "or QualCoder's
+  own Rename, if the researcher uses it".
+
 ### Measured
 
 - Serialised tool JSON: full = 205,077 characters (about 51.3k tokens

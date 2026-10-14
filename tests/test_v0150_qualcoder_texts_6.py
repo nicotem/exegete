@@ -14,9 +14,19 @@ and 3.2, "on a sign").
   project, and ended "Work on this project in QualCoder 4.0." It now
   does so only when the new folder or this computer shows QualCoder has
   been used, or the researcher said they use it, ending "If the
-  researcher opens it in QualCoder, use 4.0."; otherwise one line says
-  that QualCoder 4.0 can open it too. The level is worked out on the
-  new folder without the process scan, which create_project never runs.
+  researcher opens it in QualCoder, suggest 4.0, which avoids these
+  changes."; otherwise one line says that QualCoder 4.0 can open it too.
+  The level is worked out on the new folder without the process scan,
+  which create_project never runs.
+
+Fix round 1: the warning for a project that has been opened in QualCoder
+asks the researcher once, as the one for "yes" does; a lock file left in
+the project, when it is the only sign, is named for what it is (QualCoder
+3.8 leaves one; so can an interrupted write by Exegete) rather than said
+to show that QualCoder opened the project; the warning for QualCoder on
+this computer says that Exegete cannot tell; the description's sentence
+names the setting "yes"; and 3.8.2's last sentence suggests 4.0 rather
+than prescribing it.
 
 The scratch home is the one tests/conftest.py makes inside the test's
 own folder; QualCoder's settings folder is made in it where a case asks.
@@ -25,6 +35,7 @@ own folder; QualCoder's settings folder is made in it where a case asks.
 import json
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -49,8 +60,18 @@ A_HIT = ProcessScan(("/usr/bin/python3 -m qualcoder",), True)
 
 PROJECT = (
     "This project has been opened in QualCoder before. QualCoder 4.0 "
-    "leaves no lock file, so if the researcher has it open there now, ask "
-    "them to close it before any write.")
+    "leaves no lock file, so ask the researcher once in this conversation "
+    "whether QualCoder has it open now, and if it has, to close it there "
+    "before any write.")
+# fix round 1: the level "project" when a leftover lock file is its only
+# sign, which an interrupted write by Exegete can leave as well
+LEFTOVER_LOCK = (
+    "A lock file was left in this project by a program that did not close "
+    "it cleanly (QualCoder 3.8 leaves one; so can an interrupted write by "
+    "Exegete). QualCoder 4.0 leaves no lock file, so if the researcher "
+    "uses QualCoder, ask them once in this conversation whether it has "
+    "this project open now, and if it has, to close it there before any "
+    "write.")
 SAID_YES = (
     "The researcher has said they use QualCoder on this computer. "
     "QualCoder 4.0 leaves no lock file, so ask them once in this "
@@ -58,25 +79,33 @@ SAID_YES = (
     "close it there before any write.")
 COMPUTER = (
     "QualCoder is on this computer, though nothing shows it has opened "
-    "this project. QualCoder 4.0 leaves no lock file, so if the researcher "
-    "has this project open in it now, ask them to close it there before "
-    "any write.")
-# The design's sentence, but for its comma, which it said was shorter
-# and is one character longer: without the comma the description keeps
-# its length exactly (2,415 characters on 3.13, 2,579 on 3.11)
+    "this project. QualCoder 4.0 leaves no lock file, so Exegete cannot "
+    "tell whether it has this project open; if the researcher may have it "
+    "open there, ask them to close it before any write.")
+NEW_TEXTS = (PROJECT, LEFTOVER_LOCK, SAID_YES, COMPUTER)
+# fix round 1: the sentence names the setting "yes" too, keeps the
+# design's comma, and keeps the description's length exactly (2,415
+# characters on 3.13, 2,579 on 3.11)
 DESCRIPTION_SENTENCE = (
-    "When none are present a warning comes only if the project or this "
-    "computer shows QualCoder has been used.")
+    "When none are present, it warns only if this project or computer "
+    "shows QualCoder or the setting says yes.")
 # its length before, on 3.13 and on 3.10 to 3.12, which keep a
 # docstring's indentation alike
 DESCRIPTION_BEFORE = (2415, 2579)
-NEW_LAST_SENTENCE = "If the researcher opens it in QualCoder, use 4.0."
+NEW_LAST_SENTENCE = ("If the researcher opens it in QualCoder, suggest "
+                     "4.0, which avoids these changes.")
 ONE_LINE = ("The project is in QualCoder's format, so QualCoder 4.0 can "
             "open it too, if the researcher uses it.")
 
 OLD_IN_ANSWERS = ("Lock-gate limitation",
-                  "Work on this project in QualCoder 4.0.")
-OLD_IN_DESCRIPTIONS = ("names the limitation instead",)
+                  "Work on this project in QualCoder 4.0.",
+                  # the build's words, before fix round 1
+                  "so if the researcher has it open there now",
+                  "so if the researcher has this project open in it now",
+                  "If the researcher opens it in QualCoder, use 4.0.")
+OLD_IN_DESCRIPTIONS = ("names the limitation instead",
+                       "a warning comes only if the project or this "
+                       "computer shows QualCoder has been used")
 
 
 @pytest.fixture
@@ -123,7 +152,8 @@ class TestTheGuard:
 
     def test_no_old_phrase_is_in_an_answer(self):
         texts = answer_texts()
-        assert any(_flat(PROJECT) in t for t in texts)
+        for new in NEW_TEXTS:
+            assert any(_flat(new) in t for t in texts), new[:60]
         found = [(phrase, t[:120]) for phrase in OLD_IN_ANSWERS
                  for t in texts if phrase in t]
         assert not found, found
@@ -131,7 +161,7 @@ class TestTheGuard:
     def test_no_old_phrase_is_in_a_description(self):
         found = [(phrase, name)
                  for name, text in served_descriptions().items()
-                 for phrase in OLD_IN_DESCRIPTIONS if phrase in text]
+                 for phrase in OLD_IN_DESCRIPTIONS if phrase in _flat(text)]
         assert not found, found
 
 
@@ -208,7 +238,7 @@ class TestSelectProjectsWarning:
             "This database does not identify itself as a QualCoder "
             "project")
         assert " | " not in out["warning"]
-        for text in (PROJECT, SAID_YES, COMPUTER):
+        for text in NEW_TEXTS:
             assert text not in out["warning"]
 
     def test_the_description_says_when_a_warning_comes(self):
@@ -220,6 +250,53 @@ class TestSelectProjectsWarning:
             0 if sys.version_info[:2] >= (3, 13) else 1]
         assert len(text) <= before
         assert CHANGED_0150["select_project"][1:] == _fingerprint(text)[1:]
+
+
+# fix round 1: a lock file left in the project, alone or beside another
+# sign (None, "ai_data" or "backup"), under the setting; the warning
+# expected
+LOCK_CASES = [
+    (None, None, LEFTOVER_LOCK),
+    (None, "not sure", LEFTOVER_LOCK),
+    (None, "no", LEFTOVER_LOCK),
+    (None, "yes", LEFTOVER_LOCK),
+    ("ai_data", "no", PROJECT),
+    ("backup", "not sure", PROJECT),
+]
+LOCK_IDS = ["alone, setting unset", "alone, not sure", "alone, said no",
+            "alone, said yes", "beside ai_data, said no",
+            "beside a backup, not sure"]
+
+
+class TestALeftoverLockFile:
+    """Fix round 1: a lock file left in the project by a program that did
+    not close it cleanly is the level "project", but when it is the only
+    sign the warning says what it is, not that QualCoder has opened the
+    project, since an interrupted write by Exegete leaves the same file."""
+
+    @pytest.mark.parametrize("other_sign, setting, expected", LOCK_CASES,
+                             ids=LOCK_IDS)
+    def test_named_for_what_it_is(self, tmp_path, home, monkeypatch,
+                                  restore_selection, other_sign, setting,
+                                  expected):
+        folder = Path(_create("Interrupted", tmp_path / "work")
+                      ["project_path"])
+        (folder / database.QUALCODER_LOCK_FILENAME).write_text(
+            f"someone\n{time.time() - 3600}\n", encoding="utf-8")
+        assert database.qualcoder_lock_state(folder)[0] == "stale"
+        if other_sign == "ai_data":
+            (folder / "ai_data").mkdir()
+        elif other_sign == "backup":
+            (folder.parent / f"{folder.stem}_BKUP_x.qda").mkdir()
+        if setting is not None:
+            monkeypatch.setenv(SETTING, setting)
+        out = json.loads(server.select_project(str(folder)))
+        assert out["success"] is True, out
+        assert out["qualcoder_gui_signals"] == []
+        assert out["warning"] == expected
+        history = out["qualcoder_history"]
+        assert qualcoder_history.STALE_LOCK_SIGN in history[
+            "signs_on_this_project"]
 
 
 class TestSelectProjectsGuards:
@@ -240,7 +317,7 @@ class TestSelectProjectsGuards:
             monkeypatch.setenv(SETTING, setting)
         out = json.loads(server.select_project(str(folder)))
         assert "APPEARS to be open" in out["warning"]
-        for text in (PROJECT, SAID_YES, COMPUTER):
+        for text in NEW_TEXTS:
             assert text not in out["warning"]
 
     @pytest.mark.parametrize("setting", [None, "yes", "no"])
@@ -376,15 +453,23 @@ def test_the_changelog_says_so():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
     unreleased = _flat(text[text.index("## [Unreleased]"):
                             text.index("## [0.14.3")])
-    heading = ("### Changed: selecting or creating a project mentions "
-               "QualCoder only where it is used")
+    heading = ("### Changed: selecting or creating a project says more "
+               "about QualCoder only where there is a sign of it")
     assert heading in unreleased
     entry = unreleased[unreleased.index(heading):]
     entry = entry[:entry.index("### ", len(heading))]
     for words in ("`select_project`, when it finds no sign of an open "
                   "QualCoder window", "gives no warning about QualCoder",
                   "says in one line that QualCoder 4.0 can open it too, if "
-                  "the researcher uses it", f'"{NEW_LAST_SENTENCE}"'):
+                  "the researcher uses it", f'"{NEW_LAST_SENTENCE}"',
+                  # fix round 1: the request to close the project is as
+                  # conditional as the texts, the leftover lock file is
+                  # named, and the answer "no" weighs as the code has it
+                  "if it is open there, before any write",
+                  "a lock file was left in the project by a program that "
+                  "did not close it cleanly",
+                  "QualCoder's settings folder alone does not count"):
         assert words in entry, words
+    assert "mentions QualCoder only where it is used" not in unreleased
     assert ("`select_project`'s sentence on when its warning comes changed "
             "its words, not its length.") in unreleased

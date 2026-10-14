@@ -586,7 +586,10 @@ class TestAfterCreation:
                       "labels, arrows and memo notes on graphs",
                       "goes back under its parent code",
                       "become ordinary codes with no category",
-                      "If the researcher opens it in QualCoder, use 4.0."):
+                      # fix round 1 of piece 6: 4.0 suggested, not
+                      # prescribed
+                      "If the researcher opens it in QualCoder, suggest "
+                      "4.0, which avoids these changes."):
             assert words in opening["3.8.2"]
         unknown = json.loads(server.create_project(
             "Unknown", coder_name_not_known=True))

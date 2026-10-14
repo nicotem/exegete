@@ -4170,8 +4170,8 @@ def select_project(project_path: str) -> str:
     the chat is used), and a guarded local process scan. When
     any are present the warning says the project APPEARS to be open in
     QualCoder; confirm with the user before any write rather than treating
-    it as certain. When none are present a warning comes only if the
-    project or this computer shows QualCoder has been used. An open 4.0 window
+    it as certain. When none are present, it warns only if this project
+    or computer shows QualCoder or the setting says yes. An open 4.0 window
     will not display external changes until the project is reopened there.
     If the database cannot be opened, the error says whether project-scoped
     evidence suggests an open QualCoder window (a mid-write 4.0 window can
@@ -4255,11 +4255,28 @@ def select_project(project_path: str) -> str:
 # piece 6): it comes only when the project or this computer shows that
 # QualCoder has been used, or the researcher said they use it (the
 # project's history with QualCoder, `History.level`, and the setting),
-# and says which. At the level "none" there is none.
+# and says which. At the level "none" there is none. Fix round 1: the
+# assistant cannot know whether QualCoder has the project open, so the
+# "project" text asks once, as the one for "yes" does, and the
+# "computer" text says that Exegete cannot tell.
 NO_SIGN_WARNING_PROJECT = (
     "This project has been opened in QualCoder before. QualCoder 4.0 "
-    "leaves no lock file, so if the researcher has it open there now, ask "
-    "them to close it before any write.")
+    "leaves no lock file, so ask the researcher once in this conversation "
+    "whether QualCoder has it open now, and if it has, to close it there "
+    "before any write.")
+# Fix round 1: the level "project" when a leftover lock file is its only
+# sign. Exegete writes the same lock file during each of its own writes,
+# so an interrupted write leaves one as QualCoder 3.8 does; the text says
+# what the file is (qualcoder_history.STALE_LOCK_SIGN's words), not that
+# QualCoder has opened the project, and asks only if the researcher uses
+# QualCoder.
+NO_SIGN_WARNING_LEFTOVER_LOCK = (
+    "A lock file was left in this project by a program that did not close "
+    "it cleanly (QualCoder 3.8 leaves one; so can an interrupted write by "
+    "Exegete). QualCoder 4.0 leaves no lock file, so if the researcher "
+    "uses QualCoder, ask them once in this conversation whether it has "
+    "this project open now, and if it has, to close it there before any "
+    "write.")
 NO_SIGN_WARNING_SAID_YES = (
     "The researcher has said they use QualCoder on this computer. "
     "QualCoder 4.0 leaves no lock file, so ask them once in this "
@@ -4267,18 +4284,21 @@ NO_SIGN_WARNING_SAID_YES = (
     "close it there before any write.")
 NO_SIGN_WARNING_COMPUTER = (
     "QualCoder is on this computer, though nothing shows it has opened "
-    "this project. QualCoder 4.0 leaves no lock file, so if the researcher "
-    "has this project open in it now, ask them to close it there before "
-    "any write.")
+    "this project. QualCoder 4.0 leaves no lock file, so Exegete cannot "
+    "tell whether it has this project open; if the researcher may have it "
+    "open there, ask them to close it before any write.")
 
 
 def _no_sign_warning(
         history: Optional[qualcoder_history.History]) -> Optional[str]:
     """select_project's warning when no lock file is active and no sign
     of an open window is found, by the project's history with QualCoder
-    (None, no history, is the level "none"); None when none is due."""
+    (None, no history, is the level "none"); None when none is due. At
+    the level "project", a leftover lock file alone has its own text."""
     level = history.level if history is not None else "none"
     if level == "project":
+        if history.signs == (qualcoder_history.STALE_LOCK_SIGN,):
+            return NO_SIGN_WARNING_LEFTOVER_LOCK
         return NO_SIGN_WARNING_PROJECT
     if level == "computer":
         if history.setting == qualcoder_history.YES:
@@ -20511,7 +20531,8 @@ OPENING_IN_QUALCODER_382 = (
     "back under its parent code; the sub-codes of a code deleted in 3.8.2 "
     "become ordinary codes with no category; and a graph saved after "
     "another was deleted can show the deleted graph's memo notes. If the "
-    "researcher opens it in QualCoder, use 4.0.")
+    "researcher opens it in QualCoder, suggest 4.0, which avoids these "
+    "changes.")
 # v0.15.0 (not presuming QualCoder, piece 6): the whole account when the
 # new project's folder and this computer show no sign that QualCoder has
 # been used and the researcher has not said they use it

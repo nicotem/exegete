@@ -407,10 +407,15 @@ class TestThePublishedSchemaBudget:
     # The two tools renamed (the renames, piece 3), their earlier
     # names listed with one sentence each, added 1,243 to `full` and
     # 1,245 to `core` (1,239 and 1,245 on 3.11).
-    FULL_MEASURED = 206_194          # 80 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_611           # 25 tools, same environment
-    FULL_MEASURED_310 = 216_230      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 72_003
+    # The two coder names as settings (the coder names, piece 1):
+    # create_project's paragraph on the researcher's coder name added
+    # 317 to `full`, 333 on 3.11 (`core` does not serve the tool), and
+    # the setter's refusal of the settings' name 58 to both sets, 62 on
+    # 3.11.
+    FULL_MEASURED = 206_569          # 80 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_669           # 25 tools, same environment
+    FULL_MEASURED_310 = 216_625      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 72_065
 
     # Why two per cent, away from the reference environment.
     #
@@ -437,9 +442,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "206,194"
-    CORE_CHARS = "68,611"
-    FULL_ROUNDED = "206,000"
+    FULL_CHARS = "206,569"
+    CORE_CHARS = "68,669"
+    FULL_ROUNDED = "207,000"
     CORE_ROUNDED = "69,000"
     FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"

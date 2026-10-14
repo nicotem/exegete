@@ -109,6 +109,10 @@ SIDECAR_WRITE_MAX_BYTES = SIDECAR_READ_MAX_BYTES - 4096
 # Read under both spellings (v0.14.1), through env_settings.
 AI_CODER_NAME_ENV = names.SETTINGS["ai_coder_name"][0]
 DEFAULT_AI_CODER_NAME = "AI Coding Assistant"
+# The researcher's own coder name in Exegete's settings (v0.15.0, ruling
+# 73, item 6), which create_project gives each project it makes, without
+# asking, when it is filled in. One spelling only.
+CODER_NAME_ENV = names.NEW_ONLY_SETTINGS["coder_name"]
 # QualCoder 4.0's built-in assistant's owner string, re-exported from
 # database.py (one definition, H3). Rows under it that this project has
 # not adopted are another coder's work; `known_ai_assistant` is a
@@ -1091,6 +1095,49 @@ def mismatch(env: Optional[str], current: Optional[Dict[str, Any]]) -> bool:
     return True
 
 
+def setting_not_set(raw: Optional[str]) -> bool:
+    """Whether a coder name setting's raw value means "not set" (v0.15.0,
+    one rule for both coder name settings): missing, blank after
+    stripping, or starting `${` after stripping, an unfilled placeholder
+    such as the desktop extension's app may pass for a setting left
+    empty (updates.read_setting reads its own setting the same way).
+    Anything else is a value, checked by validate_coder_name."""
+    return raw is None or not raw.strip() or raw.strip().startswith("${")
+
+
+def settings_coder_name_problem(environ: Optional[Dict[str, str]] = None
+                                ) -> Optional[str]:
+    """Why EXEGETE_CODER_NAME cannot be used, in the validator's words,
+    which name the setting and never the value; None when it is not set
+    or valid. `main()` stops Exegete at start-up on it."""
+    raw = env_settings.coder_name(environ)
+    if setting_not_set(raw):
+        return None
+    try:
+        validate_coder_name(raw, CODER_NAME_ENV)
+    except ValueError as error:
+        return str(error)
+    return None
+
+
+def settings_coder_name(environ: Optional[Dict[str, str]] = None
+                        ) -> Optional[str]:
+    """The researcher's own coder name in Exegete's settings
+    (EXEGETE_CODER_NAME, stripped), or None when it is not set.
+
+    An invalid value reads as not set, as host_declaration's does:
+    `main()` refuses to start on one, so a bad value reaching this
+    function means Exegete was started another way (a test, an embedded
+    use)."""
+    raw = env_settings.coder_name(environ)
+    if setting_not_set(raw):
+        return None
+    try:
+        return validate_coder_name(raw, CODER_NAME_ENV)
+    except ValueError:
+        return None
+
+
 def host_declaration(environ: Optional[Dict[str, str]] = None) -> Optional[str]:
     """This host's declared AI coder name, or None.
 
@@ -1098,11 +1145,12 @@ def host_declaration(environ: Optional[Dict[str, str]] = None) -> Optional[str]:
     variable at start-up and refuses to start on a bad one, so a bad
     value reaching this function means the server was started another way
     (a test, an embedded use); a declaration we would refuse to write is
-    not one to compare against either.
+    not one to compare against either. An unfilled placeholder (`${...}`)
+    is not set (v0.15.0, setting_not_set).
     """
     reading = env_settings.read("ai_coder_name", environ)
     raw = reading.value
-    if raw is None:
+    if raw is None or raw.strip().startswith("${"):
         return None
     try:
         return validate_coder_name(raw, reading.name)

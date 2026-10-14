@@ -148,7 +148,7 @@ def _isolate_home(tmp_path, _sandbox_patch):
         for name in spellings:
             _sandbox_patch.delenv(name, raising=False)
     # And the settings with one spelling only (the update check, the
-    # time per import call)
+    # time per import call, the researcher's own coder name)
     for name in _names.NEW_ONLY_SETTINGS.values():
         _sandbox_patch.delenv(name, raising=False)
     assert Path.home().resolve() == home.resolve()

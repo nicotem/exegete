@@ -377,8 +377,8 @@ QualCoder (Project, Open Project), to see your coding in the text.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).
 
 **Two coder names.** When it makes the project, the assistant asks for
-your own coder name, which the project keeps so that your work and the
-AI's stay apart (QualCoder, if you use it, records your coding under
+your own coder name, unless you have filled it in Exegete's settings;
+the project keeps it so that your work and the AI's stay apart (QualCoder, if you use it, records your coding under
 it). Not using QualCoder? Any name you choose will do. Do not know
 yours? Say so. Before its first write, it asks for the AI coder name,
 kept per project, under which Exegete writes what is done through the
@@ -521,7 +521,7 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 80: all, creating a project (Experimental) and two renamed tools' earlier names included | about 206,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `full` | 80: all, creating a project (Experimental) and two renamed tools' earlier names included | about 207,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 25: the coding loop and its safety tools | about 69,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every

@@ -54,11 +54,12 @@ class TestAiCoderNameConfig:
         monkeypatch.setenv(AI_CODER_NAME_ENV, "  AI Agent  ")
         assert _ai_coder_name() == "AI Agent"
 
-    def test_empty_value_refused(self, monkeypatch):
-        monkeypatch.setenv(AI_CODER_NAME_ENV, "   ")
-        with pytest.raises(ValueError) as e:
-            _ai_coder_name()
-        assert AI_CODER_NAME_ENV in str(e.value)
+    def test_empty_value_means_not_set(self, monkeypatch):
+        # v0.15.0: the extension passes an empty "AI coder name" setting
+        # as an empty value, which means not set, as unset does
+        for empty in ("", "   "):
+            monkeypatch.setenv(AI_CODER_NAME_ENV, empty)
+            assert _ai_coder_name() == DEFAULT_AI_CODER_NAME
 
     def test_overlong_value_refused(self, monkeypatch):
         monkeypatch.setenv(AI_CODER_NAME_ENV,

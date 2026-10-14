@@ -221,17 +221,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   removed before; but an assistant or a script that looked for the kind
   `mcp` now sees `exegete`.
 
+### Added: your coder name and the AI coder name as settings
+
+- **Two settings in the extension, "Your coder name" and "AI coder
+  name"** (the owner's decision of 12 October 2026), both empty by
+  default. Installed any other way, they are `EXEGETE_CODER_NAME`, new,
+  with one spelling, and `EXEGETE_AI_CODER_NAME`, which the extension
+  now sets under both its spellings.
+- **Your coder name is given to each new project without asking.** With
+  it filled in, `create_project` makes the project without the
+  question, and its answer says that the name came from the settings
+  (`coder_name_source`). Left empty, the assistant asks as before, and
+  the question says where the name can be filled in. A name given for
+  one project is used, with a note when it is not the one in the
+  settings.
+- **Projects that already exist keep their coder name, or their lack
+  of one**: Exegete gives the setting's name only to the projects it
+  creates from now on. Selecting a project that records another name,
+  or none, says so (`coder_name_notes`), and so does selecting one
+  whose AI coder name is the name in the settings.
+- **Equal names are refused in the conversation**: with the two
+  settings the same, `create_project` makes no project until one is
+  changed; a coder name given for the researcher that is the AI coder
+  name in the settings is refused, and so is QualCoder's speaker coder
+  as the researcher's setting. An invalid value of either setting (over
+  80 characters, a line break or tab, an invisible formatting character
+  other than the joiners some scripts need, or `#####`) stops Exegete
+  at start-up, naming the setting, never its value, and saying
+  where to change it.
+
+### Changed: an empty AI coder name, and the names the setter refuses
+
+- **An empty `EXEGETE_AI_CODER_NAME` no longer stops Exegete**: empty,
+  blank or a placeholder the app left unfilled means not set, as unset
+  does, so the extension starts with its "AI coder name" left empty.
+- **`set_project_ai_coder_name` refuses the researcher's own coder name
+  in Exegete's settings**, as it refuses the project's own.
+
 ### Measured
 
-- Serialised tool JSON: full = 206,194 characters (about 51.5k tokens
-  at chars/4) over 80 tools, and core = 68,611 (about 17.2k) over 25,
+- Serialised tool JSON: full = 206,569 characters (about 51.6k tokens
+  at chars/4) over 80 tools, and core = 68,669 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 216,230 and
-  72,003. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), five changes
+  which also gives exactly 0.14.3's figures for its tree), 216,625 and
+  72,065. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), six changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -251,7 +288,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that name the two tools, with "Exegete's backups" in `list_backups`
   and `prune_backups` and the example dropped from
   `explain_ai_coding_tools`, 12 more in `full` and 14 in `core` (8 and
-  14 on 3.11). No other tool's entry changed.
+  14 on 3.11). And the researcher's own coder name became a setting:
+  `create_project`'s paragraph on it grew its entry by 317 characters,
+  333 on 3.11, in `full` only, and `set_project_ai_coder_name`'s
+  refusal of the name in the settings grew its entry by 58, 62 on 3.11,
+  in both sets. No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

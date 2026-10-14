@@ -307,8 +307,11 @@ def test_a_first_session_names_both_coder_names():
     # without assuming that the reader uses QualCoder at all; since 0.14.3
     # (the review of the maintainer's sitting), a reader without QualCoder
     # chooses a name, and "say so" is for one who does not know theirs
+    # v0.15.0: unless the reader has filled it in Exegete's settings
+    # (tests/test_v0150_coder_name_settings.py)
     assert ("When it makes the project, the assistant asks for your own "
-            "coder name, which the project keeps so that your work and the "
+            "coder name, unless you have filled it in Exegete's settings; "
+            "the project keeps it so that your work and the "
             "AI's stay apart (QualCoder, if you use it, records your coding "
             "under it). Not using QualCoder? Any name you choose will do. "
             "Do not know yours? Say so. Before "

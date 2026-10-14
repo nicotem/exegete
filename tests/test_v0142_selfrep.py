@@ -785,7 +785,13 @@ class TestNoDescriptionGrew:
     # folder for projects and its earlier default among its places
     # (tests/test_v0150_renames_folder.py; its words pinned in
     # tests/test_v0142_description_cut.py, CHANGED_0150)
-    CHANGED_IN_0150 = {"list_available_projects"}
+    # And the coder names, piece 1 (tests/test_v0150_coder_name_settings.py;
+    # their words pinned in tests/test_v0142_description_cut.py,
+    # CHANGED_0150): create_project's paragraph on the researcher's coder
+    # name, which Exegete's settings may now give, and the setter's
+    # refusal of that name, each longer, as the design says
+    CHANGED_IN_0150 = {"list_available_projects", "create_project",
+                       "set_project_ai_coder_name"}
     # And pseudonymise_source gains a paragraph on what pseudonymisation
     # is for (not presuming QualCoder, piece 2,
     # tests/test_v0150_qualcoder_texts_2.py, which pins it); the rest of

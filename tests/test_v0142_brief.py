@@ -529,10 +529,13 @@ class TestTheSizes:
     # them under their earlier names, which are now listed apart and left
     # out here, as tools added after 0.14.2), and so changes the entries
     # of the tools whose descriptions name them, and of list_backups and
-    # prune_backups ("Exegete's backups"). Their entries as 0.14.2 served
+    # prune_backups ("Exegete's backups"). The coder names, piece 1,
+    # lengthens create_project's paragraph on the researcher's coder name
+    # (317 characters more in `full`) and set_project_ai_coder_name's
+    # refusals (58 more in both sets). Their entries as 0.14.2 served
     # them are below, so every other tool is still held to 0.14.2's
     # figure.
-    NOW = {"full": 199_001, "core": 65_295}
+    NOW = {"full": 199_376, "core": 65_353}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -554,7 +557,9 @@ class TestTheSizes:
                           "prune_backups": 3_542,
                           "explain_ai_coding_tools": 981,
                           "propose_codes": 3_207,
-                          "update_annotation": 2_581}
+                          "update_annotation": 2_581,
+                          # the coder names, piece 1
+                          "set_project_ai_coder_name": 2_564}
     # Where `core` serves one of them marked (it names a tool `core`
     # lacks), its entry there as 0.14.2 served it
     CHANGED_AFTER_0142_IN_CORE = {"start_coding_session": 6_775,

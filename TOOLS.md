@@ -190,8 +190,8 @@ It offers that name as the first quick pick, which is the convenient
 way to say "this host runs this model". It never writes a row by
 itself: if it differs from the project's current name, the next write
 asks which of the two to use rather than re-attributing anything, and
-answering either way settles it for that host. Invalid values (empty,
-longer than 80 characters, containing control or line-separator
+answering either way settles it for that host. Invalid values (longer
+than 80 characters, containing control or line-separator
 characters, containing any invisible formatting character (Unicode
 category Cf: every bidirectional control, every zero-width character;
 the two exceptions are ZWNJ and ZWJ, which spell words in Persian and
@@ -202,16 +202,20 @@ identically to yours in QualCoder's coder list, its visibility toggle
 and its reports, and telling AI rows from yours is what the setting is
 for.
 
-The name cannot be your own coder name (the project's codername,
-which QualCoder also uses) or QualCoder's literal `default`: AI rows would then be
+When it is set, the name cannot be your own coder name (the project's
+codername, which QualCoder also uses, or the one in Exegete's settings)
+or QualCoder's literal `default`: AI rows would then be
 indistinguishable from a person's in QualCoder's coder lists,
 visibility toggle, undo and reports, and mixed rows cannot be told
-apart again later. Both are refused, and so is QualCoder's speaker
+apart again later. All three are refused, and so is QualCoder's speaker
 coder ("📌 Speaker coding"), under which QualCoder stores its speaker
 codings. A name that a QualCoder
 visibility setting hides is refused too, unless you pass
 `allow_hidden_coder=true`, because rows written under it would be
-invisible in QualCoder and in Exegete's default reads.
+invisible in QualCoder and in Exegete's default reads. A project whose
+AI coder name was set before you filled in the same name as your own in
+Exegete's settings keeps it, since it is never changed silently, and
+selecting the project says so (`coder_name_notes`).
 
 Coder names are compared exactly, after trimming spaces, and never
 case-insensitively: QualCoder stores them in a column with a binary
@@ -274,7 +278,10 @@ default on every route; the `core` set for local models leaves it out.
   where Documents has been moved (to OneDrive, say), the workspace may
   not be where QualCoder's Open dialog starts; the result gives the full
   path.
-- **Your coder name.** The assistant asks what name your own codings
+- **Your coder name.** Exegete takes it from its settings when you
+  have filled it in there ("Your coder name" in the extension,
+  `EXEGETE_CODER_NAME` otherwise), and the answer says so; otherwise the
+  assistant asks what name your own codings
   should carry: if you use QualCoder, the name in its settings, exactly
   as there (Project menu, Settings, "Current coder"; on a Mac it may be
   under the QualCoder menu instead); if not, any name you choose.
@@ -929,7 +936,7 @@ declares, and each tool's own description says what each one does.
 > loudly at startup. Measured for 0.15.0 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 206,000 characters for `full`, roughly 52k
+> definitions run to about 207,000 characters for `full`, roughly 52k
 > tokens at four characters per token, and about 69,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -940,10 +947,10 @@ declares, and each tool's own description says what each one does.
 **Project Management:**
 - `read_brief()` - The assistant's brief (provisional): how Exegete expects the assistant to work with you. Its description asks the assistant to call it once at the start of every conversation about a project; it returns the full brief, or in the `core` set the short version, and reads nothing from the project. In every tool set (see "What the assistant is told" above)
 - `list_available_projects(search_directories)` - Discover projects (folders ending in .qda) on your system
-- `select_project(project_path)` - Open/switch to a different project (reports `qualcoder_gui_signals` and remembers the selection for the recovery hint)
-- `get_current_project()` - Show which project is open, whether QualCoder 3.x has it open (its lock file, `qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name
-- `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (not in `core`): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in Exegete's workspace or an existing folder, then selects it. Asks for the researcher's own coder name (or an explicit "not known") after every other check; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
-- `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `exegete.json`); refuses the researcher's own coder name, QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
+- `select_project(project_path)` - Open/switch to a different project (reports `qualcoder_gui_signals`, and `coder_name_notes` when a note on the researcher's own coder name in Exegete's settings applies, and remembers the selection for the recovery hint)
+- `get_current_project()` - Show which project is open, whether QualCoder 3.x has it open (its lock file, `qualcoder_open`), and the 4.0 heuristics (`qualcoder_gui_signals`); `pseudonyms_json` says whether the project's own `pseudonyms.json` is present and how many entries it has, never a name; `coder_name_notes` as `select_project` gives them
+- `create_project(name, directory, coder_name, coder_name_not_known)` - **Creates a folder and a database** (not in `core`): a new, empty project in QualCoder 4.0's format, exactly as 4.0's own New Project makes it, in Exegete's workspace or an existing folder, then selects it. Takes the researcher's own coder name from Exegete's settings when it is filled in, and otherwise asks for it (or an explicit "not known") after every other check; the answer that creates the project says where the name came from (`coder_name_source`, with `coder_name_note` when the settings hold another name); refuses a coder name equal to the AI coder name in the settings, and every creation while the two settings hold one name; refuses a name already used there in any letter case, names QualCoder cannot open or Windows cannot store, and names whose backups sit beside it; never replaces or deletes anything
+- `set_project_ai_coder_name(name, note, allow_hidden_coder)` - Set the coder name this project's AI writes are stored under (stored beside the project in `exegete.json`); refuses the researcher's own coder name (the project's, or the one in Exegete's settings), QualCoder's `default` and its speaker coder, and warns when the researcher's name is not known yet
 - `read_pseudonym_list()` - **Sends real names to the AI provider**: returns the entries of the project's own `pseudonyms.json` (the researcher's reverse key), for use only when the researcher asks to see or check the list; each call writes one log line with the count and no name. In the full tool set (so in the Claude Desktop extension by default), not in core. QualCoder's Pseudonyms dialog (the button in Manage Files) shows the same list without sending it anywhere. **Deprecated, removed in v0.15** (its answer says so)
 
 **Keeping Exegete up to date:**

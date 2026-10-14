@@ -615,6 +615,11 @@ CHANGED_0150 = {
     "start_coding_session": (6096, 4954, "6f9dd3d79152da08"),
     "update_annotation": (2052, 1709, "32e8e8c22ca88105"),
     "update_suggestion_status": (1537, 1263, "f885b390be42a9ab"),
+    # the coder names, piece 1: create_project's paragraph on the
+    # researcher's coder name, which now comes from Exegete's settings
+    # when it is filled in, and the setter's refusal of that name
+    "create_project": (2228, 1765, "0e74a6870500e5cc"),
+    "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

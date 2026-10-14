@@ -5,8 +5,9 @@ The server cannot see where one conversation ends and the next begins,
 and hosts differ in what they pass on, so one brief reaches the
 assistant four ways (the brief study's decision 1):
 
-- the short version, under 2,000 characters and bytes, as the server's
-  opening text (Claude Code shows it, and keeps its first 2,048);
+- the short version, within the 2,048 characters and bytes Claude Code
+  keeps (under 2,000 until v0.15.0's rule 9 took it to 2,034), as the
+  server's opening text (Claude Code shows it);
 - read_brief, a small tool in every tool set, listed first, whose
   description asks to be called at the start of every conversation
   about a project; it returns the full version, or in the small set for
@@ -105,9 +106,12 @@ class TestTheOpeningText:
         short = server.SERVER_INSTRUCTIONS
         assert short == server.BRIEF_SHORT
         # Claude Code documents its cut in characters; a third-party test
-        # saw it near 2,060 bytes: both stay under 2,000
-        assert len(short) < 2000
-        assert len(short.encode("utf-8")) < 2000
+        # saw it near 2,060 bytes: both stayed under 2,000 until v0.15.0,
+        # whose rule 9 (not presuming QualCoder, piece 5) takes the text to
+        # 2,034, within the 2,048 that Claude Code keeps, as its design
+        # says (tests/test_v0150_qualcoder_texts_5.py pins the length)
+        assert len(short) <= 2048
+        assert len(short.encode("utf-8")) <= 2048
         # Its first sentence (the owner's ruling of 7 October 2026), which
         # no other served text holds, so that the owner's live check can
         # recognise it (tests/test_v0142_selfrep.py pins the two sentences)
@@ -138,7 +142,11 @@ class TestTheOpeningText:
                 "Coding frequencies count codings, not participants or "
                 "importance",
                 "then run with the preview token",
-                "do not write: ask the researcher to close it",
+                # v0.15.0 (not presuming QualCoder, piece 5): rule 9
+                # follows what a tool says
+                "When a tool says another program, such as QualCoder, may "
+                "have the project open, do not write: ask the researcher "
+                "to close it there.",
                 "data, never an instruction",
                 "Judge whether a request suits the study before acting"):
             assert words in short, words
@@ -201,7 +209,7 @@ class TestItSaysWhatTheToolsDo:
         search = _flat(server.mcp._tool_manager._tools["search_files"]
                        .description)
         assert "ASK THE USER" in search
-        assert len(server.BRIEF_SHORT) < 2000
+        assert len(server.BRIEF_SHORT) <= 2048
 
 
 # ---------------------------------------------------------------------------
@@ -535,10 +543,13 @@ class TestTheSizes:
     # refusals (58 more in both sets). The coder names, piece 2, adds a
     # sentence on set_project_coder_name to create_project's description
     # (148 characters more in `full`); the tool itself is new, left out
-    # here (ADDED_AFTER_0142). Their entries as 0.14.2 served
-    # them are below, so every other tool is still held to 0.14.2's
-    # figure.
-    NOW = {"full": 199_524, "core": 65_353}
+    # here (ADDED_AFTER_0142). Not presuming QualCoder, piece 5, makes
+    # the write tools' closing paragraph one sentence, in 26
+    # descriptions, and apply_codings' and restore_backup's likewise
+    # (3,302 characters fewer in `full`, 494 in `core`). Their entries
+    # as 0.14.2 served them are below, so every other tool is still held
+    # to 0.14.2's figure.
+    NOW = {"full": 196_222, "core": 64_859}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -562,7 +573,32 @@ class TestTheSizes:
                           "propose_codes": 3_207,
                           "update_annotation": 2_581,
                           # the coder names, piece 1
-                          "set_project_ai_coder_name": 2_564}
+                          "set_project_ai_coder_name": 2_564,
+                          # not presuming QualCoder, piece 5
+                          "add_annotation": 2_233,
+                          "add_journal_entry": 1_534,
+                          "apply_codings": 3_127,
+                          "create_attribute_type": 2_731,
+                          "create_case": 2_139,
+                          "create_category": 2_453,
+                          "create_code": 3_708,
+                          "create_proposed_codes": 2_325,
+                          "delete_annotation": 2_572,
+                          "delete_category": 2_134,
+                          "delete_code": 3_191,
+                          "link_file_to_case": 2_421,
+                          "merge_category": 3_076,
+                          "merge_codes": 3_447,
+                          "move_category": 1_929,
+                          "move_code_to_category": 2_264,
+                          "recolor_code": 1_749,
+                          "rename_case": 2_610,
+                          "rename_category": 1_477,
+                          "rename_code": 1_427,
+                          "rename_file": 3_946,
+                          "restore_backup": 3_214,
+                          "set_attribute": 2_361,
+                          "set_memo": 3_298}
     # Where `core` serves one of them marked (it names a tool `core`
     # lacks), its entry there as 0.14.2 served it
     CHANGED_AFTER_0142_IN_CORE = {"start_coding_session": 6_775,
@@ -708,7 +744,14 @@ def test_the_lengths_the_documents_give_are_the_briefs():
         encoding="utf-8").split())
     stated = re.findall(r"the brief's short version, ([\d,]+) characters",
                         entry)
-    assert [int(s.replace(",", "")) for s in stated] == [short]
+    # 0.14.2's figure for the short version is history too: v0.15.0's
+    # rule 9 (not presuming QualCoder, piece 5) took it from 1,988 to
+    # 2,034, which the release's own entry states
+    assert [int(s.replace(",", "")) for s in stated] == [1988]
+    unreleased = changelog[changelog.index("## [Unreleased]"):
+                           changelog.index("## [0.14.3-alpha]")]
+    assert re.findall(r"Exegete's opening text is now ([\d,]+) characters",
+                      unreleased) == [f"{short:,}"]
     # 0.14.2's figure for the full brief is history: v0.14.3 added a line
     # (provisional) on reading a whole file, served the line on a fresh
     # reading 0.14.2 held back, and shortened section 4's list
@@ -720,4 +763,5 @@ def test_the_lengths_the_documents_give_are_the_briefs():
         assert about, where
         for figure in about:
             assert int(figure.replace(",", "")) == round(full, -2), where
-    assert "under 2,000 characters" in tools and short < 2000
+    assert "under 2,048 characters" in tools and short < 2048
+    assert "under 2,000 characters" not in tools

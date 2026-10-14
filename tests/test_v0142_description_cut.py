@@ -59,9 +59,11 @@ CUT = 2048
 # paragraph, or "." for the end of the sentence)
 RULES = {
     # Shared by many tools
+    # v0.15.0 (not presuming QualCoder, piece 5): one sentence, which
+    # names both causes of the lock file and the signs of a 4.0 window
     "qualcoder_open_refusal": (
-        "safety", "Refused while QualCoder has the project open",
-        "never write while any QualCoder window has this project open."),
+        "safety", "Refused while the project's lock file is active",
+        "ask the researcher before writing."),
     "private_note_marker": (
         "refusal", "Text containing '#####', QualCoder's private-note "
         "marker, is refused", None),
@@ -127,9 +129,10 @@ RULES = {
     # Writes, destructive tools and QualCoder being open
     "qualcoder_open_stop": ("safety", "QUALCODER OPEN: if the result has",
                             None),
-    "apply_refused_while_open": (
-        "safety", "Writes are refused while QualCoder has the project open",
-        "then retry."),
+    # apply_codings' own wording of the refusal ("Writes are refused
+    # while QualCoder has the project open ... then retry.") became, in
+    # v0.15.0 (not presuming QualCoder, piece 5), the write tools'
+    # sentence: qualcoder_open_refusal, whose carriers now include it
     "apply_other_project_refused": (
         "refusal", "The session must belong to the CURRENTLY OPEN project",
         "is refused."),
@@ -178,7 +181,8 @@ RULES = {
 # Which tools carry each rule, in the full set (every tool)
 CARRIERS = {
     "qualcoder_open_refusal": {
-        "add_annotation", "add_journal_entry", "create_attribute_type",
+        "add_annotation", "add_journal_entry", "apply_codings",
+        "create_attribute_type",
         "create_case", "create_category", "create_code",
         "create_proposed_codes", "delete_annotation", "delete_category",
         "delete_code", "delete_coding", "import_text_file",
@@ -222,7 +226,6 @@ CARRIERS = {
     "ask_for_the_coder_name": {"set_project_ai_coder_name"},
     "researchers_coder_name": {"create_project"},
     "qualcoder_open_stop": {"start_coding_session"},
-    "apply_refused_while_open": {"apply_codings"},
     "apply_other_project_refused": {"apply_codings"},
     "relay_open_warning": {"select_project"},
     "where_the_next_write_lands": {"select_project"},
@@ -271,7 +274,8 @@ LEFT_PAST_THE_CUT = {
         "record_suggestions, where a pairing is recorded, carries its "
         "own rule on pairings within its cut",
     ("pseudonymise_source", "qualcoder_open_refusal"):
-        "the lock gate refuses the write under QualCoder 3.x; the rule "
+        "the lock gate refuses the write while the lock file is active; "
+        "the rule "
         "for 4.0 is in select_project and get_current_project, whose "
         "answers report the open state; a backup is always taken first",
     ("pseudonymise_source", "names_left_unrewritten"):
@@ -599,11 +603,9 @@ CHANGED_0143 = {
 CHANGED_0150 = {
     "get_current_project": (1920, 1570, "da157f879c430be0"),
     "list_available_projects": (904, 716, "0117f9141c0b48ea"),
-    "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f"),
     "read_pseudonym_list": (1037, 856, "637792f4e7f7de38"),
     # the renames, piece 3
     "compare_coders": (3004, 2458, "d2d2e9480ae8fbae"),
-    "delete_coding": (2992, 2420, "11210044336ce58c"),
     "edit_suggestion": (3389, 2721, "8b47aab19f6e5052"),
     "explain_ai_coding_tools": (633, 515, "4bce34c0ba922adc"),
     "list_backups": (2168, 1823, "79414633203c51eb"),
@@ -613,7 +615,6 @@ CHANGED_0150 = {
     "review_suggestions": (1327, 1093, "7175c61a45e95f8e"),
     "search_files": (4800, 3794, "60efa551cbfa9147"),
     "start_coding_session": (6096, 4954, "6f9dd3d79152da08"),
-    "update_annotation": (2052, 1709, "32e8e8c22ca88105"),
     "update_suggestion_status": (1537, 1263, "f885b390be42a9ab"),
     # the coder names, piece 1: create_project's paragraph on the
     # researcher's coder name, which now comes from Exegete's settings
@@ -623,6 +624,40 @@ CHANGED_0150 = {
     # 2,374 characters on 3.13)
     "create_project": (2374, 1885, "2ddbe9a53ffe4922"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
+    # not presuming QualCoder, piece 5: the write tools' closing
+    # paragraph in 26 descriptions, apply_codings' lock sentence and
+    # first safety guarantee, and restore_backup's item 4, each now
+    # one sentence naming both causes of the lock file and the signs
+    # of a QualCoder 4.0 window; every one is shorter than before
+    # (tests/test_v0150_qualcoder_texts_5.py)
+    "add_annotation": (1576, 1295, "30fa6ba96b8fc4f3"),
+    "add_journal_entry": (1016, 832, "1b25da385b143c6b"),
+    "apply_codings": (2494, 2029, "e2e2c8a5331f5703"),
+    "create_attribute_type": (2000, 1602, "17ffe331bebf249e"),
+    "create_case": (1588, 1330, "3f4c1103d70864f8"),
+    "create_category": (1780, 1424, "cd1a4abde9502311"),
+    "create_code": (2824, 2302, "fadda64984f15768"),
+    "create_proposed_codes": (1808, 1495, "29ca47a65f2356cb"),
+    "delete_annotation": (1865, 1489, "05bf0b03dff8918f"),
+    "delete_category": (1619, 1331, "9eb6c6a6a9058d7a"),
+    "delete_code": (2519, 2059, "e550e2042c4e0873"),
+    "delete_coding": (2867, 2307, "be5e2d1ea0338a1e"),
+    "import_text_file": (3897, 2881, "5465cbd940de55a3"),
+    "link_file_to_case": (1721, 1321, "3f77ab2b8289b508"),
+    "merge_category": (2423, 1967, "38623bf46a7b6e6f"),
+    "merge_codes": (2748, 2285, "4ce3a749f3c106ca"),
+    "move_category": (1339, 1040, "4ad846b358aa58fd"),
+    "move_code_to_category": (1676, 1338, "c8c5eb5b28da0027"),
+    "pseudonymise_source": (17789, 13072, "1020363808bc374d"),
+    "recolor_code": (1234, 1029, "71044e04657e3df6"),
+    "rename_case": (2076, 1712, "61ef53bce7266c93"),
+    "rename_category": (939, 776, "498212de941bf07d"),
+    "rename_code": (909, 746, "f53e3d4db9605ebb"),
+    "rename_file": (3383, 2806, "6f4764b247ea0d83"),
+    "restore_backup": (2730, 2247, "87717bbc6793a0e9"),
+    "set_attribute": (1646, 1344, "927d82ca1d9ffcac"),
+    "set_memo": (2551, 2048, "9e62726bc0ecece1"),
+    "update_annotation": (1931, 1599, "be5fbd103294206a"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 
@@ -687,7 +722,9 @@ class TestTheDescriptionsKeepTheirWords:
             "delete_code": ("Two-step by design.", "SUB-CODES"),
             "delete_coding": ("Two guards", "A backup is created first"),
             "edit_suggestion": ("READING AND CODE", "Edits are not"),
-            "merge_category": ("Refused while QualCoder",
+            # v0.15.0: the refusal's paragraph is one sentence now (not
+            # presuming QualCoder, piece 5), in the same place
+            "merge_category": ("Refused while the project's lock file",
                                "Source category memo"),
             "merge_codes": ("Two-step by design.",
                             "The codebook changes too"),
@@ -696,7 +733,7 @@ class TestTheDescriptionsKeepTheirWords:
                                     "One file per call"),
             "record_suggestions": ("Text containing '#####'",
                                    "Every suggestion is validated"),
-            "rename_file": ("Refused while QualCoder",
+            "rename_file": ("Refused while the project's lock file",
                             "Refused, each with its reason"),
             "select_project": ("QualCoder 4.0 detection",
                                "Use this tool to change"),

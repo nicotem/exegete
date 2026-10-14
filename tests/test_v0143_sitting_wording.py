@@ -116,8 +116,10 @@ class TestTheCoderNameQuestion:
         # A researcher without QualCoder chooses a name; the flag is for
         # one who does not know it
         assert "do not use QualCoder" not in text
-        assert "If they do not know it, call again with " \
-               "coder_name_not_known=true instead." in text
+        # v0.15.0 (not presuming QualCoder, piece 5): or would rather
+        # not give one
+        assert "If they do not know it or would rather not give one, " \
+               "call again with coder_name_not_known=true instead." in text
         assert "never be guessed" in text
         # v0.15.0: the question as it stands, then where the researcher
         # can fill in the name to be spared it in later projects
@@ -281,8 +283,8 @@ class TestTheReviewsOfTheSittingWording:
                 "it, so ask for the name as they want it to stay.") in text
         assert "Exegete cannot change it" not in text
         assert server.CODER_NAME_ASK.endswith(
-            "If they do not know it, call again with "
-            "coder_name_not_known=true instead.")
+            "If they do not know it or would rather not give one, call "
+            "again with coder_name_not_known=true instead.")
 
     def test_import_text_files_rule_names_one_place(self):
         d = _flat(_descriptions()["import_text_file"])

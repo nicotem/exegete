@@ -75,7 +75,7 @@ class TestTheSet:
 
     def test_full_at_import_holds_create_project_in_its_place(self):
         names_ = _names()
-        assert len(names_) == EXPECTED_FULL == 80   # the two earlier names (0.15.0) after check_for_updates
+        assert len(names_) == EXPECTED_FULL == 81   # the two earlier names (0.15.0) after check_for_updates, and set_project_coder_name (0.15.0)
         assert names_[0] == "read_brief"
         at = names_.index("create_project")
         assert names_[at - 1] == "export_case_code_matrix_csv"
@@ -194,7 +194,7 @@ class TestTheNote:
         notes = self._lines(caplog, f"{NEW} is set to lifecycle")
         assert notes == [NOTE.format(setting=NEW)]
         assert not self._lines(caplog, f"{OLD} is the earlier")
-        assert "Toolset mode: full (80 tools registered)" in \
+        assert "Toolset mode: full (81 tools registered)" in \
             [r.getMessage() for r in caplog.records]
         assert len(stub_run) == 1
 
@@ -316,7 +316,7 @@ class TestOverStandardInput:
                         return tools, before, made, after
 
         tools, before, made, after = asyncio.run(drive())
-        assert len(tools) == 80 and "create_project" in tools
+        assert len(tools) == 81 and "create_project" in tools
         if with_project:
             assert Path(before["current_project"]).resolve() == \
                 project.resolve()
@@ -332,7 +332,7 @@ class TestOverStandardInput:
             assert "is set to lifecycle" not in stderr
         else:
             assert NOTE.format(setting=variable) in stderr
-        assert "Toolset mode: full (80 tools registered)" in stderr
+        assert "Toolset mode: full (81 tools registered)" in stderr
 
 
 # ---------------------------------------------------------------------------
@@ -358,10 +358,10 @@ class TestTheExtension:
         assert "the `full` tool set (the widest: `core` is a subset of " \
                "`full`)" in doc
 
-    def test_the_built_manifest_lists_80_tools(self):
+    def test_the_built_manifest_lists_81_tools(self):
         manifest, _ = build.bundle(build.TreeSource(REPO))
         listed = [t["name"] for t in manifest["tools"]]
-        assert len(listed) == 80
+        assert len(listed) == 81
         assert listed == _names()
 
     def test_the_bug_report(self):
@@ -482,8 +482,10 @@ class TestTheDocuments:
         # piece 2) to 204,951
         # and the two tools renamed (the renames, piece 3), their
         # earlier names listed: 80 tools, 206,194; and the two coder
-        # names as settings (the coder names, piece 1), 206,569
-        assert (rounded, tokens) == ("207,000", "52k")
+        # names as settings (the coder names, piece 1), 206,569; and the
+        # tool that corrects the researcher's own coder name (the coder
+        # names, piece 2): 81 tools, 208,205
+        assert (rounded, tokens) == ("208,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"(Experimental) and two renamed tools' earlier names "

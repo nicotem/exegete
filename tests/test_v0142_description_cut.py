@@ -617,8 +617,11 @@ CHANGED_0150 = {
     "update_suggestion_status": (1537, 1263, "f885b390be42a9ab"),
     # the coder names, piece 1: create_project's paragraph on the
     # researcher's coder name, which now comes from Exegete's settings
-    # when it is filled in, and the setter's refusal of that name
-    "create_project": (2228, 1765, "0e74a6870500e5cc"),
+    # when it is filled in, and the setter's refusal of that name; piece
+    # 2: create_project's sentence on set_project_coder_name, which
+    # corrects the name while nothing is recorded under it (2,228 to
+    # 2,368 characters on 3.13)
+    "create_project": (2368, 1880, "eab3e10cc050ca6c"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
@@ -636,6 +639,10 @@ NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
 # and in v0.15.0: the earlier names of the two tools renamed then, whose
 # one-sentence description tests/test_v0150_renames_tools.py pins
 EARLIER_NAMES_0150 = {"analyze_for_coding", "analyze_file_with_coding"}
+# and the tool that corrects the researcher's own coder name (the coder
+# names, piece 2), whose description
+# tests/test_v0150_coder_name_correction.py pins word for word
+NEW_IN_0150 = {"set_project_coder_name"}
 
 
 def _fingerprint(description):
@@ -650,7 +657,7 @@ class TestTheDescriptionsKeepTheirWords:
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         assert set(registered) == (set(WORDS) | NEW_IN_0142 | NEW_IN_0143
-                                   | EARLIER_NAMES_0150)
+                                   | EARLIER_NAMES_0150 | NEW_IN_0150)
         exact = sys.version_info[:2] == (3, 13)
         changed = []
         for name, (length, solid, digest) in sorted(WORDS.items()):

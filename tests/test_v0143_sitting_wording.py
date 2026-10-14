@@ -273,10 +273,13 @@ class TestTheReviewsOfTheSittingWording:
         assert "will be made as" not in answer["error"]
 
     def test_the_question_warns_the_name_stays(self):
+        # v0.15.0: set_project_coder_name corrects the name while nothing
+        # is recorded under it (tests/test_v0150_coder_name_correction.py)
         text = json.loads(server.create_project("Study"))["error"]
-        assert ("Exegete cannot change it once the project is made "
-                "(QualCoder's settings can), so ask for the name as they "
-                "want it to stay.") in text
+        assert ("It can be corrected later with set_project_coder_name "
+                "only while nothing is recorded under it, so ask for the "
+                "name as they want it to stay.") in text
+        assert "Exegete cannot change it" not in text
         assert server.CODER_NAME_ASK.endswith(
             "If they do not know it, call again with "
             "coder_name_not_known=true instead.")
@@ -297,8 +300,9 @@ class TestTheReviewsOfTheSittingWording:
 
     def test_tools_md_says_the_same(self):
         tools = _flat(_repo_text("TOOLS.md"))
-        assert ("Exegete cannot change it once the project is made "
-                "(QualCoder's settings can), so give it as you want it to "
-                "stay.") in tools
+        # v0.15.0, as the question says it
+        assert ("It can be corrected later with `set_project_coder_name` "
+                "only while nothing is recorded under it, so give it as you "
+                "want it to stay.") in tools
         assert ("when `create_project` asks for the coder name, it also "
                 "gives the full path the project will be made as") in tools

@@ -532,10 +532,13 @@ class TestTheSizes:
     # prune_backups ("Exegete's backups"). The coder names, piece 1,
     # lengthens create_project's paragraph on the researcher's coder name
     # (317 characters more in `full`) and set_project_ai_coder_name's
-    # refusals (58 more in both sets). Their entries as 0.14.2 served
+    # refusals (58 more in both sets). The coder names, piece 2, adds a
+    # sentence on set_project_coder_name to create_project's description
+    # (142 characters more in `full`); the tool itself is new, left out
+    # here (ADDED_AFTER_0142). Their entries as 0.14.2 served
     # them are below, so every other tool is still held to 0.14.2's
     # figure.
-    NOW = {"full": 199_376, "core": 65_353}
+    NOW = {"full": 199_518, "core": 65_353}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -606,9 +609,11 @@ class TestTheSizes:
 
 # Tools added after 0.14.2, left out of its growth figure.
 # 0.15.0: and the earlier names of the two tools renamed then, listed
-# after the last tool
+# after the last tool, and set_project_coder_name (the coder names,
+# piece 2)
 ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading",
-                    "analyze_for_coding", "analyze_file_with_coding")
+                    "analyze_for_coding", "analyze_file_with_coding",
+                    "set_project_coder_name")
 
 
 # ---------------------------------------------------------------------------

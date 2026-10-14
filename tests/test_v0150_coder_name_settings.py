@@ -536,6 +536,8 @@ def _flat(text):
 class TestTheDescription:
 
     def test_the_coder_name_paragraph(self):
+        # v0.15.0, the coder names, piece 2: the sentence on
+        # set_project_coder_name (tests/test_v0150_coder_name_correction.py)
         server._apply_toolset("full")
         d = _flat(server.mcp.original_descriptions["create_project"])
         assert (
@@ -550,7 +552,10 @@ class TestTheDescription:
             "own name, not the AI's: take it only from the researcher or "
             "from Exegete's settings, and never guess it, since a wrong name "
             "makes QualCoder, if they use it, ask them to keep or switch "
-            "names when they open the project. Pass coder_name only with a "
+            "names when they open the project. It can be corrected later "
+            "with set_project_coder_name only while nothing is recorded "
+            "under it, so ask for the name as they want it to stay. Pass "
+            "coder_name only with a "
             "name the researcher gave; if they do not know it, pass "
             "coder_name_not_known=true instead: the project is then created "
             "without one, and the result says what that means. Names:") in d
@@ -607,17 +612,22 @@ def _notes_of_both(path):
     return selected.get("coder_name_notes"), current.get("coder_name_notes")
 
 
+# v0.15.0, the coder names, piece 2: the first two end with what
+# set_project_coder_name does (tests/test_v0150_coder_name_correction.py)
 DIFFERS = (
     "This project's own coder name is \"Bea Kim\"; the researcher's own "
     "coder name in Exegete's settings is \"Ann Lee\", which Exegete gives "
     "only to the projects it creates from now on. A project's own coder "
-    "name is never changed without the researcher's word.")
+    "name is never changed without the researcher's word. "
+    "set_project_coder_name corrects it while nothing is recorded under "
+    "it.")
 NONE_RECORDED = (
     "This project records no coder name for the researcher, so the check "
     "of the AI coder name against the project's own coder name is off; the "
     "researcher's own coder name in Exegete's settings, \"Ann Lee\", is "
     "still refused as the AI coder name, and Exegete gives it only to the "
-    "projects it creates from now on.")
+    "projects it creates from now on. set_project_coder_name gives it "
+    "one.")
 AI_IS_SETTING = (
     "This project's AI coder name is \"Ann Lee\", which is also the "
     "researcher's own coder name in Exegete's settings, so AI codings "

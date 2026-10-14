@@ -145,7 +145,7 @@ def test_the_documents_count_the_tools_the_server_registers():
     before, so a tool added without them would have left both stale."""
     import asyncio
     count = len(asyncio.run(server.mcp.list_tools()))
-    assert count == 80                 # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0)
+    assert count == 81                 # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0), set_project_coder_name (0.15.0)
     # v0.15.0: one set, `full`, the default everywhere
     assert f"(`EXEGETE_TOOLSET=full`, the default everywhere: in the " \
            f"Claude Desktop extension and when you configure the server " \

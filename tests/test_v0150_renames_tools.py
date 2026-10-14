@@ -118,7 +118,7 @@ class TestTheRegistry:
         for old in RENAMED:
             assert not hasattr(server, old), old
 
-    @pytest.mark.parametrize("mode, count", [("full", 80), ("core", 25)])
+    @pytest.mark.parametrize("mode, count", [("full", 81), ("core", 25)])
     def test_each_earlier_name_beside_its_new_one(self, mode, count):
         tools = _listed(mode)
         assert len(tools) == count
@@ -694,21 +694,21 @@ class TestTheDocuments:
 
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
-        assert ("registers 80 tools, two of them the earlier names of two "
+        assert ("registers 81 tools, two of them the earlier names of two "
                 "renamed tools (see \"Earlier names\" below)") in tools
         assert ("only the 25-tool supervised coding set is registered: "
                 "read_brief,") in tools.replace("> ", "")
         assert ("copy_project_to_workspace, delete_coding, list_backups, and "
                 "the two earlier names below.") in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
-        assert "`full` (default) registers 80 tools, every tool," in install
+        assert "`full` (default) registers 81 tools, every tool," in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
         assert "`core` registers the 25-tool supervised coding set" in install
-        assert "Exegete offers 80 tools by default" in install
+        assert "Exegete offers 81 tools by default" in install
         assert "register only the 25-tool supervised coding set" in install
         readme = _read("README.md")
-        assert ("| `full` | 80: all, creating a project (Experimental) and "
+        assert ("| `full` | 81: all, creating a project (Experimental) and "
                 "two renamed tools' earlier names included |") in readme
         assert "| `core` | 25: the coding loop and its safety tools |" \
             in readme

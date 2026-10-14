@@ -44,6 +44,9 @@ EXPECTED_TOOLS = {
     # v0.12 B1: the project's AI coder name, asked for once and stored
     # beside data.qda
     "set_project_ai_coder_name",
+    # v0.15.0: the researcher's own coder name, corrected while nothing
+    # is recorded under it
+    "set_project_coder_name",
     # read/analysis (15)
     "search_coded_text", "get_coded_segments", "search_files",
     "get_coding_frequencies", "search_memos", "export_code_report",
@@ -124,7 +127,7 @@ class TestToolSurfaceRegistration:
         tools = asyncio.run(server.mcp.list_tools())
         names = {t.name for t in tools}
         assert names == EXPECTED_TOOLS
-        assert len(names) == 80          # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), and the two earlier names (0.15.0)
+        assert len(names) == 81          # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0), and set_project_coder_name (0.15.0)
 
 
 class TestEndToEndLoop:

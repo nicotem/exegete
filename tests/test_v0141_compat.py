@@ -278,7 +278,7 @@ class TestTheExtensionSetsBothSpellings:
         proc = _run_server(home, {**stray, **config["env"]})
         assert proc.returncode == 0, proc.stderr
         # v0.15.0: the extension's default is `full`, every tool
-        assert "Toolset mode: full (80 tools registered)" in proc.stderr
+        assert "Toolset mode: full (81 tools registered)" in proc.stderr
         assert "earlier spelling" not in proc.stderr
 
 

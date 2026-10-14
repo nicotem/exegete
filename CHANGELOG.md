@@ -235,16 +235,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the question says where the name can be filled in. A name given for
   one project is used, with a note when it is not the one in the
   settings.
-- **A project's own coder name is never changed by the setting**, which
-  only projects Exegete creates take; selecting a project that records
-  another name, or none, says so (`coder_name_notes`).
+- **Projects that already exist keep their coder name, or their lack
+  of one**: Exegete gives the setting's name only to the projects it
+  creates from now on. Selecting a project that records another name,
+  or none, says so (`coder_name_notes`), and so does selecting one
+  whose AI coder name is the name in the settings.
 - **Equal names are refused in the conversation**: with the two
   settings the same, `create_project` makes no project until one is
   changed; a coder name given for the researcher that is the AI coder
   name in the settings is refused, and so is QualCoder's speaker coder
   as the researcher's setting. An invalid value of either setting (over
-  80 characters, a line break, an invisible character or `#####`) stops
-  Exegete at start-up, naming the setting, never its value, and saying
+  80 characters, a line break or tab, an invisible formatting character
+  other than the joiners some scripts need, or `#####`) stops Exegete
+  at start-up, naming the setting, never its value, and saying
   where to change it.
 
 ### Changed: an empty AI coder name, and the names the setter refuses

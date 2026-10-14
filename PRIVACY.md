@@ -701,7 +701,7 @@ asks; your answer is stored with the project and reported back by the
 project reads. The host's `EXEGETE_AI_CODER_NAME` setting declares
 a name, which is offered as a quick pick and checked for conflicts; it
 never attributes a row on its own. A name that belongs to a person (the
-project's own coder name) is refused, and the `owner` argument of
+project's own coder name, or the one in Exegete's settings) is refused, and the `owner` argument of
 `apply_codings` and `import_text_file` can no longer be used to write
 rows under someone else's name.
 
@@ -1170,16 +1170,22 @@ Two further rules touch files on your disk:
   no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
   they give it (and QualCoder's speaker coder), and an "about" line
   naming Exegete and its version. The coder name is asked for, or
-  taken from Exegete's own settings when you have filled it in there,
-  never read from QualCoder's: Exegete does not open QualCoder's settings file
-  (`~/.qualcoder/config.ini`, which holds API keys in plain text), and a
-  test pins that. Both coder name settings, yours and the AI's, reach
-  Exegete from the app that starts it, as its other settings do (the
-  extension's settings, or the host's configuration). To refuse a name already in use, it lists the target
-  folder's entries and opens an existing project's database read-only;
-  the log line says only that a project was created, with no name or
-  path. A new project is made in the folder the researcher names, or
-  else in the folder for projects: the extension's "Folder for
+  taken from Exegete's own settings when the researcher has filled it
+  in there, never read from QualCoder's: Exegete does not open
+  QualCoder's settings file (`~/.qualcoder/config.ini`, which holds API
+  keys in plain text), and a test pins that. Both coder name settings,
+  the researcher's and the AI's, reach Exegete from the app that starts
+  it, as its other settings do (the extension's settings, or the host's
+  configuration). A coder name in the settings still enters the
+  conversation: `create_project`'s answers give it, and so do the notes
+  a selection gives when they apply (`coder_name_notes`), for instance
+  when the project records another name or none. A coder name that is
+  not the researcher's real name works as well, for a researcher who
+  would rather the AI provider did not see it. To refuse a name already
+  in use, `create_project` lists the target folder's entries and opens
+  an existing project's database read-only; the log line says only
+  that a project was created, with no name or path. A new project is
+  made in the folder the researcher names, or else in the folder for projects: the extension's "Folder for
   projects"; on every other route `~/Documents/Exegete projects`,
   unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
   Documents) or OneDrive may sync Documents, and so copy the project,

@@ -54,12 +54,13 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    - **Your coder name**: empty by default. It is the name your own
      codings carry in a project, kept apart from the AI's. Filled in,
      Exegete gives it to each new project it makes, without asking, and
-     says so; left empty, Claude asks for it each time. A project that
-     already has a coder name keeps it. It must differ from the AI coder
-     name. If you also use QualCoder, give the name in its settings
-     ("Current coder"), exactly as there. At most 80 characters; a line
-     break, an invisible character or `#####` stops the extension from
-     starting.
+     says so; left empty, Claude asks for it each time. Projects that
+     already exist keep their coder name, or their lack of one. It must
+     differ from the AI coder name. If you also use QualCoder, give the
+     name in its settings ("Current coder"), exactly as there. At most 80
+     characters; a line break or tab, an invisible formatting character
+     (the joiners some scripts need are allowed) or `#####` stops the
+     extension from starting.
    - **AI coder name**: empty by default. It is the name you would like
      Claude's work in a project stored under, so that it stays apart
      from yours; a model's name lets codings by different models be
@@ -604,18 +605,19 @@ variable is optional.
 started `QUALCODER_MCP_` (and the first was `QUALCODER_PROJECT_PATH`):
 `QUALCODER_MCP_TOOLSET`, `QUALCODER_MCP_WORKSPACE`,
 `QUALCODER_MCP_WORKSPACE_REQUIRED`, `QUALCODER_MCP_AI_CODER_NAME`,
-`QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`. The
-server still reads them until v1.0, and its log says once per start
+`QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`.
+Exegete still reads them until v1.0, and its log says once per start
 which new spelling to use instead. If a setting is given under both
 spellings with different values (after the usual tidying: spaces, the
-tool set's letter case and a leading `~` do not count), the server
-does not start, and says which two disagree; if either spelling of
+tool set's letter case and a leading `~` do not count), Exegete does
+not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
 desktop extension sets both spellings of these four settings itself
 (the tool set, the two for the workspace and the AI coder name), always
-to the same value. The two settings of the check for new versions,
-`EXEGETE_CALL_SECONDS` and `EXEGETE_CODER_NAME`, below, are new and
-have one spelling only.
+to the same value. Four settings are new and have one spelling only:
+the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
+`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS` and
+`EXEGETE_CODER_NAME`, all below.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -668,9 +670,11 @@ have one spelling only.
   given by `create_project` to each project it makes, without asking,
   and the answer says the name came from the settings
   (`coder_name_source`); unset or blank, the assistant asks for it at
-  each new project. It never changes the coder name of a project that
-  already has one, and selecting a project that records another name,
-  or none, says so (`coder_name_notes`). It must differ from the AI
+  each new project. Projects that already exist keep their coder name,
+  or their lack of one: Exegete gives it only to the projects it
+  creates from now on, and selecting a project that records another
+  name, or none, or whose AI coder name is this one, says so
+  (`coder_name_notes`). It must differ from the AI
   coder name: with `EXEGETE_AI_CODER_NAME` the same, `create_project`
   makes no project until one of them is changed, and
   `set_project_ai_coder_name` refuses it as an AI coder name. If you
@@ -702,9 +706,9 @@ have one spelling only.
   every bidirectional control and every zero-width character; ZWNJ and
   ZWJ, which spell words in Persian and Indic scripts, are the two
   exceptions) and must not contain `#####`,
-  the QualCoder 4.0 private-memo marker. An invalid value stops the
-  server at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
-  stderr. It must differ from your own coder name (EXEGETE_CODER_NAME,
+  the QualCoder 4.0 private-memo marker. An invalid value stops
+  Exegete at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
+  stderr. It must differ from your own coder name (`EXEGETE_CODER_NAME`,
   and each project's): AI rows would otherwise be
   indistinguishable from yours, in Exegete's reads and in QualCoder,
   and the setter refuses that name anyway. The desktop extension sets

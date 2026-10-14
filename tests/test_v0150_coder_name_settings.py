@@ -121,12 +121,13 @@ def _nothing_made(tmp_path):
 CODER_DESCRIPTION = (
     "The name your own codings carry in a project, kept apart from the "
     "AI's. Filled in, Exegete gives it to each project it creates, without "
-    "asking; left empty, Claude asks for it each time. A project that "
-    "already has a coder name keeps it. It must differ from the AI coder "
-    "name. If you also use QualCoder, give the name in its settings "
-    "(Current coder), exactly as there. At most 80 characters; a line "
-    "break, an invisible character or ##### stops the extension from "
-    "starting.")
+    "asking; left empty, Claude asks for it each time. Projects that "
+    "already exist keep their coder name, or their lack of one. It must "
+    "differ from the AI coder name. If you also use QualCoder, give the "
+    "name in its settings (Current coder), exactly as there. At most 80 "
+    "characters; a line break or tab, an invisible formatting character "
+    "(the joiners some scripts need are allowed) or ##### stops the "
+    "extension from starting.")
 AI_DESCRIPTION = (
     "The name you would like Claude's work in a project stored under, so "
     "that it stays apart from yours; a model's name lets codings by "
@@ -135,7 +136,8 @@ AI_DESCRIPTION = (
     "offers this one first; when a project already has another, Claude "
     "asks you once which to use there. Left empty, Claude still asks. It "
     "must differ from your coder name. At most 80 characters; a line "
-    "break, an invisible character or ##### stops the extension from "
+    "break or tab, an invisible formatting character (the joiners some "
+    "scripts need are allowed) or ##### stops the extension from "
     "starting.")
 
 
@@ -479,8 +481,8 @@ class TestTheThreeRefusals:
             "The researcher's own coder name and the AI coder name in "
             "Exegete's settings are both \"Ann Lee\". They must differ: AI "
             "codings stored under the researcher's own name could not be "
-            "told apart from theirs. Change one of them "
-            f"({places['both']}). Nothing was created.")
+            "told apart from theirs. Ask the researcher to change one of "
+            f"them ({places['both']}). Nothing was created.")
         assert "action_required" not in answer
         _nothing_made(tmp_path)
 
@@ -497,9 +499,9 @@ class TestTheThreeRefusals:
             "The coder name given for the researcher, \"Qwen 3\", is also "
             "the AI coder name in Exegete's settings. They must differ: AI "
             "codings stored under the researcher's own name could not be "
-            f"told apart from theirs. Change {places['ai']}, or call again "
-            "with another coder_name, as the researcher gives it. Nothing "
-            "was created.")
+            "told apart from theirs. Ask the researcher to change "
+            f"{places['ai']}, or call again with another coder_name, as the "
+            "researcher gives it. Nothing was created.")
         _nothing_made(tmp_path)
 
     @pytest.mark.parametrize("route", ROUTES)
@@ -512,9 +514,9 @@ class TestTheThreeRefusals:
             f"Exegete's settings give \"{server.SPEAKER_SYSTEM_CODER}\" as "
             "the researcher's own coder name, but that is QualCoder's "
             "speaker coder, which every project lists; it is not a person's "
-            f"coder name. Change {places['coder']}, or call again with the "
-            "researcher's own coder name as coder_name. Nothing was "
-            "created.")
+            "coder name. Ask the researcher to change "
+            f"{places['coder']}, or call again with the researcher's own "
+            "coder name as coder_name. Nothing was created.")
         _nothing_made(tmp_path)
 
     def test_a_refusal_rides_beside_a_place_refusal(self, monkeypatch,
@@ -607,14 +609,21 @@ def _notes_of_both(path):
 
 DIFFERS = (
     "This project's own coder name is \"Bea Kim\"; the researcher's own "
-    "coder name in Exegete's settings is \"Ann Lee\", which only projects "
-    "Exegete creates take. A project's own coder name is never changed "
-    "without the researcher's word.")
+    "coder name in Exegete's settings is \"Ann Lee\", which Exegete gives "
+    "only to the projects it creates from now on. A project's own coder "
+    "name is never changed without the researcher's word.")
 NONE_RECORDED = (
     "This project records no coder name for the researcher, so the check "
-    "that keeps the AI's codings apart from theirs is off; the researcher's "
-    "own coder name in Exegete's settings is \"Ann Lee\", which only "
-    "projects Exegete creates take.")
+    "of the AI coder name against the project's own coder name is off; the "
+    "researcher's own coder name in Exegete's settings, \"Ann Lee\", is "
+    "still refused as the AI coder name, and Exegete gives it only to the "
+    "projects it creates from now on.")
+AI_IS_SETTING = (
+    "This project's AI coder name is \"Ann Lee\", which is also the "
+    "researcher's own coder name in Exegete's settings, so AI codings "
+    "stored under it could not be told apart from theirs. Ask the "
+    "researcher whether to change it with set_project_ai_coder_name; it "
+    "is never changed without their word.")
 
 
 class TestTheSelectionNotes:
@@ -665,6 +674,36 @@ class TestTheSelectionNotes:
         monkeypatch.setenv(AI, "Bea Kim")
         assert _notes_of_both(path) == (None, None)
 
+    def test_an_ai_coder_name_that_is_the_setting(self, monkeypatch,
+                                                  tmp_path):
+        """A project whose AI coder name was set to the name the
+        researcher later fills in as their own keeps it, and the selection
+        says so; nothing is changed by saying it."""
+        path = _create("Study", tmp_path, coder_name="Bea Kim")["project_path"]
+        assert json.loads(server.set_project_ai_coder_name(
+            "Ann Lee"))["success"] is True
+        sidecar = Path(path) / "exegete.json"
+        before = sidecar.read_bytes()
+        assert _notes_of_both(path) == (None, None)
+        monkeypatch.setenv(CODER, "Ann Lee")
+        assert _notes_of_both(path) == ([DIFFERS, AI_IS_SETTING],
+                                        [DIFFERS, AI_IS_SETTING])
+        assert sidecar.read_bytes() == before
+        # another name in the settings: no such note
+        monkeypatch.setenv(CODER, "Cy Ode")
+        selected, current = _notes_of_both(path)
+        assert not any("AI coder name is" in n for n in selected + current)
+
+    def test_and_in_a_project_that_records_none(self, monkeypatch,
+                                                tmp_path):
+        path = _create("Study", tmp_path,
+                       coder_name_not_known=True)["project_path"]
+        assert json.loads(server.set_project_ai_coder_name(
+            "Ann Lee"))["success"] is True
+        monkeypatch.setenv(CODER, "Ann Lee")
+        assert _notes_of_both(path) == ([NONE_RECORDED, AI_IS_SETTING],
+                                        [NONE_RECORDED, AI_IS_SETTING])
+
 
 # ---------------------------------------------------------------------------
 # The documents
@@ -689,6 +728,15 @@ class TestTheDocuments:
         assert ("- **AI coder name**: empty by default. It is the name you "
                 "would like Claude's work in a project stored under") \
             in install
+        step = install[install.index("- **Your coder name**: empty"):
+                       install.index("- **AI coder name**: empty")]
+        assert ("Projects that already exist keep their coder name, or "
+                "their lack of one.") in step
+        assert ("At most 80 characters; a line break or tab, an invisible "
+                "formatting character (the joiners some scripts need are "
+                "allowed) or `#####` stops the extension from starting.") \
+            in step
+        assert "already has a coder name keeps it" not in install
 
     def test_install_the_variables(self):
         install = _doc("INSTALL.md")
@@ -696,20 +744,36 @@ class TestTheDocuments:
                 "settings itself (the tool set, the two for the workspace "
                 "and the AI coder name), always to the same value.") \
             in install
-        assert ("The two settings of the check for new versions, "
-                "`EXEGETE_CALL_SECONDS` and `EXEGETE_CODER_NAME`, below, are "
-                "new and have one spelling only.") in install
+        assert ("Four settings are new and have one spelling only: the two "
+                "of the check for new versions (`EXEGETE_UPDATE_CHECK` and "
+                "`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS` and "
+                "`EXEGETE_CODER_NAME`, all below.") in install
+        assert "The two settings of the check for new versions," \
+            not in install
+        # "Exegete", not "the server", in the passages this piece edits
+        assert ("Exegete still reads them until v1.0, and its log says once "
+                "per start") in install
+        assert "Exegete does not start, and says which two disagree" \
+            in install
+        assert "The server still reads them" not in install
+        assert "the server does not start, and says which" not in install
         assert ("- `EXEGETE_CODER_NAME` (0.15.0): your own coder name, the "
                 "name your own codings carry in a project, kept apart from "
                 "the AI's. Set, it is given by `create_project` to each "
                 "project it makes, without asking") in install
-        assert "It never changes the coder name of a project that already " \
-               "has one" in install
+        assert ("Projects that already exist keep their coder name, or "
+                "their lack of one: Exegete gives it only to the projects it "
+                "creates from now on, and selecting a project that records "
+                "another name, or none, or whose AI coder name is this one, "
+                "says so (`coder_name_notes`).") in install
+        assert "It never changes the coder name of a project" not in install
         # the AI coder name's entry
         assert "must be non-empty" not in install
         assert "Empty or unset, no name is offered first." in install
-        assert ("It must differ from your own coder name "
-                "(EXEGETE_CODER_NAME, and each project's)") in install
+        assert ("An invalid value stops Exegete at start-up with \"Error: "
+                "EXEGETE_AI_CODER_NAME ...\" on stderr. It must differ from "
+                "your own coder name (`EXEGETE_CODER_NAME`, and each "
+                "project's)") in install
         assert "Do not declare your own coder name" not in install
 
     def test_tools(self):
@@ -717,8 +781,22 @@ class TestTheDocuments:
         assert ("Takes the researcher's own coder name from Exegete's "
                 "settings when it is filled in, and otherwise asks for it "
                 "(or an explicit \"not known\") after every other check; "
-                "refuses a name equal to the AI coder name in the "
-                "settings;") in tools
+                "the answer that creates the project says where the name "
+                "came from (`coder_name_source`, with `coder_name_note` when "
+                "the settings hold another name); refuses a coder name equal "
+                "to the AI coder name in the settings, and every creation "
+                "while the two settings hold one name;") in tools
+        assert ("and `coder_name_notes` when a note on the researcher's own "
+                "coder name in Exegete's settings applies") in tools
+        assert "`coder_name_notes` as `select_project` gives them" in tools
+        assert ("When it is set, the name cannot be your own coder name") \
+            in tools
+        assert ("apart again later. All three are refused, and so is "
+                "QualCoder's speaker coder") in tools
+        assert ("A project whose AI coder name was set before you filled in "
+                "the same name as your own in Exegete's settings keeps it, "
+                "since it is never changed silently, and selecting the "
+                "project says so (`coder_name_notes`).") in tools
         assert ("- **Your coder name.** Exegete takes it from its settings "
                 "when you have filled it in there") in tools
         assert ("refuses the researcher's own coder name (the project's, or "
@@ -731,11 +809,39 @@ class TestTheDocuments:
         assert ("the assistant asks for your own coder name, unless you have "
                 "filled it in Exegete's settings;") in _doc("README.md")
         privacy = _doc("PRIVACY.md")
+        item = privacy[privacy.index("- **Creating a project** "
+                                     "(`create_project`"):]
+        item = item[:item.index("## Your governance options")]
         assert ("The coder name is asked for, or taken from Exegete's own "
-                "settings when you have filled it in there, never read from "
-                "QualCoder's:") in privacy
-        assert ("Both coder name settings, yours and the AI's, reach Exegete "
-                "from the app that starts it") in privacy
+                "settings when the researcher has filled it in there, never "
+                "read from QualCoder's:") in item
+        assert ("Both coder name settings, the researcher's and the AI's, "
+                "reach Exegete from the app that starts it") in item
+        # one person through the passage, and "it" no longer ambiguous
+        assert "you have filled it in" not in item
+        assert "yours and the AI's" not in item
+        assert ("To refuse a name already in use, `create_project` lists "
+                "the target folder's entries") in item
+        # the name in the settings still reaches the conversation
+        assert ("A coder name in the settings still enters the "
+                "conversation: `create_project`'s answers give it, and so do "
+                "the notes a selection gives when they apply "
+                "(`coder_name_notes`), for instance when the project records "
+                "another name or none. A coder name that is not the "
+                "researcher's real name works as well, for a researcher who "
+                "would rather the AI provider did not see it.") in item
+        assert ("A name that belongs to a person (the project's own coder "
+                "name, or the one in Exegete's settings) is refused") \
+            in privacy
+
+    def test_quickstart(self):
+        assert ("Exegete asks the assistant to check your coder name with "
+                "you first (the name your own codings will carry) and to say "
+                "where the project will be made, unless your coder name is "
+                "already set (`EXEGETE_CODER_NAME` in the `env` section "
+                "above, or \"Your coder name\" in the extension's settings): "
+                "then the project is made with that name at once, and the "
+                "answer says where.") in _doc("QUICKSTART.md")
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -745,3 +851,13 @@ class TestTheDocuments:
                "settings" in unreleased
         assert "### Changed: an empty AI coder name, and the names the " \
                "setter refuses" in unreleased
+        flat = _flat(unreleased)
+        assert ("**Projects that already exist keep their coder name, or "
+                "their lack of one**: Exegete gives the setting's name only "
+                "to the projects it creates from now on.") in flat
+        assert ("and so does selecting one whose AI coder name is the name "
+                "in the settings.") in flat
+        assert ("(over 80 characters, a line break or tab, an invisible "
+                "formatting character other than the joiners some scripts "
+                "need, or `#####`)") in flat
+        assert "which only projects Exegete creates take" not in flat

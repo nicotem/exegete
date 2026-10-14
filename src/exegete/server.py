@@ -2737,14 +2737,24 @@ def _ai_coder_name_change_warning(session, owner: str) -> Optional[str]:
 # other field of a read.
 CODER_NAME_DIFFERS_NOTE = (
     "This project's own coder name is \"{c}\"; the researcher's own coder "
-    "name in Exegete's settings is \"{s}\", which only projects Exegete "
-    "creates take. A project's own coder name is never changed without "
-    "the researcher's word.")
+    "name in Exegete's settings is \"{s}\", which Exegete gives only to "
+    "the projects it creates from now on. A project's own coder name is "
+    "never changed without the researcher's word.")
 CODER_NAME_NONE_RECORDED_NOTE = (
     "This project records no coder name for the researcher, so the check "
-    "that keeps the AI's codings apart from theirs is off; the "
-    "researcher's own coder name in Exegete's settings is \"{s}\", which "
-    "only projects Exegete creates take.")
+    "of the AI coder name against the project's own coder name is off; "
+    "the researcher's own coder name in Exegete's settings, \"{s}\", is "
+    "still refused as the AI coder name, and Exegete gives it only to the "
+    "projects it creates from now on.")
+# A project whose AI coder name was set to that name before the setting
+# was filled in keeps it (it is never changed silently, ruling 73, item
+# 6); the selection says so.
+CODER_NAME_AI_IS_SETTING_NOTE = (
+    "This project's AI coder name is \"{s}\", which is also the "
+    "researcher's own coder name in Exegete's settings, so AI codings "
+    "stored under it could not be told apart from theirs. Ask the "
+    "researcher whether to change it with set_project_ai_coder_name; it "
+    "is never changed without their word.")
 CODER_NAME_SETTINGS_EQUAL_NOTE = (
     "The researcher's own coder name and the AI coder name in Exegete's "
     "settings are both \"{s}\"; they must differ, so a new project is "
@@ -2764,6 +2774,9 @@ def _coder_name_notes(project_info: Optional[Dict[str, Any]]) -> List[str]:
         notes.append(CODER_NAME_NONE_RECORDED_NOTE.format(s=setting))
     elif coder != setting:
         notes.append(CODER_NAME_DIFFERS_NOTE.format(c=coder, s=setting))
+    state = read_sidecar(_current_project_folder())
+    if state.is_set and state.name == setting:
+        notes.append(CODER_NAME_AI_IS_SETTING_NOTE.format(s=setting))
     if setting == host_declaration():
         notes.append(CODER_NAME_SETTINGS_EQUAL_NOTE.format(
             s=setting, place=_settings_place("both")))
@@ -19878,19 +19891,20 @@ CODER_NAME_SETTINGS_EQUAL_REFUSAL = (
     "The researcher's own coder name and the AI coder name in Exegete's "
     "settings are both \"{name}\". They must differ: AI codings stored "
     "under the researcher's own name could not be told apart from "
-    "theirs. Change one of them ({place}). Nothing was created.")
+    "theirs. Ask the researcher to change one of them ({place}). Nothing "
+    "was created.")
 CODER_NAME_GIVEN_IS_AI_REFUSAL = (
     "The coder name given for the researcher, \"{name}\", is also the AI "
     "coder name in Exegete's settings. They must differ: AI codings "
     "stored under the researcher's own name could not be told apart from "
-    "theirs. Change {place}, or call again with another coder_name, as "
-    "the researcher gives it. Nothing was created.")
+    "theirs. Ask the researcher to change {place}, or call again with "
+    "another coder_name, as the researcher gives it. Nothing was created.")
 CODER_NAME_SETTING_IS_SPEAKER_REFUSAL = (
     "Exegete's settings give \"{speaker}\" as the researcher's own coder "
     "name, but that is QualCoder's speaker coder, which every project "
-    "lists; it is not a person's coder name. Change {place}, or call "
-    "again with the researcher's own coder name as coder_name. Nothing "
-    "was created.")
+    "lists; it is not a person's coder name. Ask the researcher to change "
+    "{place}, or call again with the researcher's own coder name as "
+    "coder_name. Nothing was created.")
 
 
 class _CreationCoderName(NamedTuple):

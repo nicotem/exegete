@@ -1576,7 +1576,8 @@ class TestAnUnreadablePartIsSaid:
             "Warning: this report could not read source.fulltext, so it "
             "does not cover it, and a name there is counted nowhere in "
             "residue. Preview again; if the same parts still cannot be "
-            "read, check them in QualCoder before sharing the project.")
+            "read, check them by hand before sharing the project (in "
+            "QualCoder, if the researcher uses it).")
 
     def test_a_missing_note_table_is_warned_about(self, project):
         con = sqlite3.connect(str(project / "data.qda"))
@@ -2129,8 +2130,8 @@ class TestTwoUnreadablePartsAreNamed:
             "Warning: this report could not read code_av.memo, "
             "code_image.memo, so it does not cover them, and a name there is "
             "counted nowhere in residue. Preview again; if the same parts "
-            "still cannot be read, check them in QualCoder before sharing "
-            "the project."]
+            "still cannot be read, check them by hand before sharing the "
+            "project (in QualCoder, if the researcher uses it)."]
 
 
 class TestTheMatchBudgetCountsTheFoldedPass:

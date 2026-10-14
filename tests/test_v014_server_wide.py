@@ -382,7 +382,7 @@ class TestPseudonymsFileAdvice:
                                  "content": "Thomas said yes.",
                                  "apply_project_pseudonyms": True}))
         error = json.loads(text_of(result))["error"]
-        assert "could not be parsed" in error
+        assert "could not be read" in error
         assert "import without apply_project_pseudonyms" in error
         assert "pseudonymise_source on the new file" in error
         assert "give the mapping in the call instead" not in error
@@ -395,7 +395,7 @@ class TestPseudonymsFileAdvice:
             "pseudonymise_source", {"file_id": 1,
                                     "use_project_pseudonyms": True}))
         error = json.loads(text_of(result))["error"]
-        assert "could not be parsed" in error
+        assert "could not be read" in error
         assert "give the mapping in the call instead" in error
 
 

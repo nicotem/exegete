@@ -4537,33 +4537,31 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "the backup is the other half and holds the real names. "
             "Exegete does not keep the mapping unless asked. On this run it "
             "was saved into the project's own pseudonyms.json (3 entries "
-            "added), which QualCoder applies on every later text or "
-            "transcript import (not a PDF) and which travels into every "
-            "later backup; "
-            "store that file securely once the import work is done, as "
-            "QualCoder's own guidance says."]
+            "added), which later imports apply (Exegete's when asked to, "
+            "QualCoder's text and transcript imports always) and which "
+            "travels into every later backup; "
+            "store that file securely once the import work is done."]
         variants = [n for n in notes if n.startswith("The mapping had")]
         assert variants == [
             "The mapping had alternative spellings; each was written to "
             "pseudonyms.json as its own entry with the same pseudonym (1 "
-            "such entr(ies)). QualCoder's Pseudonyms dialog (the button in "
-            "Manage Files) will not add a second entry with a pseudonym "
-            "already in use, so change those entries in the file rather than "
-            "in the dialog."]
+            "such entr(ies)). To change those entries later, edit the file: "
+            "QualCoder's Pseudonyms dialog, if the researcher uses it, will "
+            "not add a second entry with a pseudonym already in use."]
         # Fix round 1, QA-B2-1: the claim that QualCoder applies such a
         # file "exactly as this run did" is gone, and what it does is said.
         assert not any("exactly as this run did" in n for n in notes)
         applying = [n for n in notes if n.startswith(
-            "QualCoder applies pseudonyms.json")]
+            "Later imports apply pseudonyms.json")]
         # Fix round 2: where QualCoder applies it (B2P-N1), and names that
         # overlap without nesting (Q-5); the merge with main: not a PDF,
-        # which QualCoder's text import skips (Q2-1).
+        # which QualCoder's text import skips (Q2-1). v0.15.0: Exegete's
+        # imports first, then QualCoder's text and transcript imports.
         assert applying == [
-            "QualCoder applies pseudonyms.json on every later text or "
-            "transcript import (not a PDF) one entry at a time, in file "
-            "order and "
-            "case-sensitively (its survey import and text-file replacement "
-            "match differently). The new entries were written longest name "
+            "Later imports apply pseudonyms.json: Exegete's (when asked) in "
+            "one pass, longest name first, case-sensitively; QualCoder's "
+            "text and transcript imports one entry at a time, in file "
+            "order, case-sensitively. The new entries were written longest name "
             "first, so a shorter name inside a longer one does not pre-empt "
             "it; an entry already in the file can still (see the warnings), "
             "two names that overlap without either containing the other "
@@ -4718,7 +4716,7 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert refused["error"].startswith(
             "The mapping cannot be saved into this project's pseudonyms.json: "
             "pseudonyms.json in the project folder is read-only for this "
-            "account, and QualCoder's own write would fail on it too.")
+            "account, and Exegete leaves it so.")
         assert refused["nothing_changed"] is True
         assert backups(project) == []
         assert _written(project) == before
@@ -4832,12 +4830,14 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert refused["nothing_changed"] is True
         assert refused["error"] == (
             "The mapping cannot be saved into this project's pseudonyms.json: "
-            "entry [1] maps a name the file already maps, and QualCoder's "
-            "Pseudonyms dialog (the button in Manage Files) refuses a "
-            "duplicate original as well. Nothing was written. Remove or "
-            "change the entry and preview again, or edit the file in the "
-            "dialog; or preview again without save_mapping_to_project and "
-            "execute with researcher_keeps_mapping=true instead.")
+            "entry [1] maps a name the file already maps, and the file holds "
+            "one pseudonym per name (QualCoder's Pseudonyms dialog refuses a "
+            "duplicate too). Nothing was written. Remove or change the entry "
+            "and preview again; or preview again without "
+            "save_mapping_to_project and execute with "
+            "researcher_keeps_mapping=true. (A researcher who uses QualCoder "
+            "can also change the entry in its Pseudonyms dialog, under "
+            "Manage Files.)")
         # The file's own value is never quoted.
         assert "Zelda" not in json.dumps(out) + json.dumps(refused)
         assert backups(project) == []
@@ -4914,7 +4914,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert refused["reason"] == "pseudonyms_json_unreadable"
         assert refused["error"].startswith(
             "The mapping cannot be saved into this project's pseudonyms.json: "
-            "pseudonyms.json could not be parsed as QualCoder's list")
+            "the project's names list (pseudonyms.json, a list of "
+            "{original, pseudonym} entries in QualCoder's format) could not "
+            "be read")
         assert refused["error"].endswith(
             "Nothing was written. Fix the file and preview again, or preview "
             "again without save_mapping_to_project and execute with "
@@ -4923,7 +4925,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert backups(project) == []
         assert any(w.startswith("Warning: saving this mapping into "
                                 "pseudonyms.json would be refused: "
-                                "pseudonyms.json could not be parsed")
+                                "the project's names list (pseudonyms.json, "
+                                "a list of {original, pseudonym} entries in "
+                                "QualCoder's format) could not be read")
                    for w in out["warnings"])
 
     @POSIX_ONLY
@@ -5062,8 +5066,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "the run committed (PermissionError); nothing else was lost: the "
             "rewrite stands, the backup holds the real names, and the "
             "journal entry and the run record say the save was requested, "
-            "not made. Enter the mapping in QualCoder's Pseudonyms dialog "
-            "(the button in Manage Files) now.")
+            "not made. Make sure the researcher keeps the mapping now: save "
+            "it again with a later run, or, if they use QualCoder, enter it "
+            "in its Pseudonyms dialog (the button in Manage Files).")
         record = json.loads(Path(result["manifest_path"]).read_text(
             encoding="utf-8"))
         assert record["mapping_retention"]["choice"] == "save_requested"
@@ -5099,8 +5104,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
                          file_id=4)
         tail = (" The mapping would not be saved either, because no run "
                 "would happen. Pick a file that contains one of the names and "
-                "preview again, or enter the mapping in QualCoder's "
-                "Pseudonyms dialog (the button in Manage Files) directly.")
+                "preview again. (A researcher who uses QualCoder can also "
+                "enter the mapping in its Pseudonyms dialog, under Manage "
+                "Files.)")
         assert any(w.endswith("would rewrite nothing." + tail)
                    for w in out["warnings"]), out["warnings"]
         answered = execute_strictly(out)
@@ -5108,8 +5114,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert answered["message"].endswith(
             "no backup was taken. The mapping was not saved, because no run "
             "happened. Pick a file that contains one of the names and "
-            "preview again, or enter the mapping in QualCoder's Pseudonyms "
-            "dialog (the button in Manage Files) directly.")
+            "preview again. (A researcher who uses QualCoder can also enter "
+            "the mapping in its Pseudonyms dialog, under Manage Files.)")
         assert not (project / "pseudonyms.json").exists()
         assert backups(project) == []
         _house_rules([answered["message"]])
@@ -5177,8 +5183,10 @@ class TestTheMappingAcrossARestore:
         assert _written(project) == saved
         assert again["pseudonyms_json_note"].startswith(
             "The backup restored carries a pseudonyms.json that this project "
-            "did not have before the restore; QualCoder applies it on every "
-            "later text or transcript import (not a PDF).")
+            "did not have before the restore; its names are replaced on "
+            "later text or transcript imports: by Exegete's import_documents "
+            "unless apply_project_pseudonyms is false, and by QualCoder on "
+            "every one (not a PDF).")
 
     def test_a_restore_that_changes_the_file_says_so(self, project):
         _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"}])
@@ -5494,9 +5502,9 @@ class TestQualCoderAppliesTheSavedFileAsThisRunDid:
                    if "apply pseudonyms.json case-sensitively" in w]
         assert warning == [
             "Warning: this run replaces the names in any letter case "
-            "(case_mode insensitive), and QualCoder's text and transcript "
-            "imports (not PDFs) apply pseudonyms.json case-sensitively: the "
-            "next one "
+            "(case_mode insensitive), and later imports apply "
+            "pseudonyms.json case-sensitively, in Exegete as in QualCoder: "
+            "the next one "
             "replaces only the "
             "spellings saved, so a THOMAS or a thomas in a new transcript "
             "stays as it is. Add each spelling you expect as a variant, or "
@@ -5623,9 +5631,9 @@ class TestTheInspectionRoutes:
         (project / "pseudonyms.json").write_text(
             '{"Thomas": "Alex"}', encoding="utf-8")
         expected = {"present": True, "entries": None, "error": (
-            "pseudonyms.json could not be parsed as QualCoder's list of "
-            "{original, pseudonym} entries: the file holds a dict, not a "
-            "list.")}
+            "The project's names list (pseudonyms.json, a list of "
+            "{original, pseudonym} entries in QualCoder's format) could not "
+            "be read: the file holds a dict, not a list.")}
         assert self._report()["pseudonyms_json"] == expected
         assert self._list() == {"pseudonyms_json": expected}
 
@@ -7604,7 +7612,7 @@ class TestProjectPseudonyms:
         (project / "pseudonyms.json").write_text(
             '[{"original": "Thomas",', encoding="utf-8")
         out = preview_of(mapping=None, use_project_pseudonyms=True)
-        assert "could not be parsed" in out["error"]
+        assert "could not be read" in out["error"]
         assert "Thomas" not in out["error"]
 
     def test_a_list_of_strings_is_refused(self, project):

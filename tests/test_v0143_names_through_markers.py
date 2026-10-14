@@ -270,13 +270,12 @@ def test_after_an_import_with_no_list_only_working_ways_are_named(
     said = " ".join(done["for_the_researcher"])
     lead = {"none": "This project has no names list",
             "empty": "This project's names list is empty"}[state]
-    assert (lead + ", so the names in these files came in as written, and "
-            "a list made now does not change them. If these documents name "
-            "participants, replace the names before the assistant reads "
-            "them: run pseudonymise_source on each file (with the names "
-            "given in the call, or with the project's names list once it "
-            "is made), or restore the backup taken just before, make the "
-            "list (in QualCoder for now), and import again.") in said
+    # v0.15.0: the way every researcher has
+    assert (lead + ", so the names in these files came in as written. If "
+            "these documents name participants, replace the names before "
+            "the assistant reads them: run pseudonymise_source on each "
+            "file. A list made now does not change files already "
+            "stored.") in said
     assert "or make the list in QualCoder's Pseudonyms dialog." not in said
     # The finding's own steps: a list made now changes nothing stored.
     _names_list(project, [("Maria", "Ana Lopes")])

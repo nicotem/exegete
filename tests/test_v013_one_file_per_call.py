@@ -198,8 +198,7 @@ class TestTheTransportCoercesTheNewSwitches:
 # audio file whose fulltext is NULL, and there is no file 999.
 REFUSALS = [
     (2, "pdf_source",
-     "file 2 is a PDF source; this tool rewrites text sources only, as "
-     "QualCoder's own editor does."),
+     "file 2 is a PDF source; this tool rewrites text sources only."),
     (3, "no_fulltext",
      "file 3 has no stored text (a media file, or an empty source), so "
      "there is nothing to rewrite."),

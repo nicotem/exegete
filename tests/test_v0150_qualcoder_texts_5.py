@@ -95,16 +95,23 @@ NOT_KNOWN = (
     "opens the project. Until then, make sure the AI coder name chosen is "
     "not theirs.")
 
+# Fix round 1: while the database will not open, no tool reaches the
+# backups, so the texts for that case say where they sit and that one
+# can be copied back by hand, as CONFIGURED below already did
+BY_HAND = (
+    "the project's backups, if any, sit beside the project folder under "
+    "its name with _backup_ or _BKUP_, and one can be copied back by hand "
+    "while no program has the project open.")
 DAMAGED = (
     "The project database appears to be damaged or unreadable. If another "
-    "program has it open, close it there and retry; otherwise restore a "
-    "backup (backups sit beside the project folder under its name with "
-    "_backup_ or _BKUP_).")
+    "program has it open, close it there and retry. Otherwise, while it "
+    "will not open, no tool here can restore it: " + BY_HAND)
 DB_UNAVAILABLE = (
     "Database error: the project file may be locked or corrupted. If "
     "another program has the project open (QualCoder, if you use it), "
     "close it there and retry; otherwise consider restoring a backup (see "
-    "list_backups).")
+    "list_backups). While the database will not open, list_backups cannot "
+    "read it either: " + BY_HAND)
 CONFIGURED = (
     "The project set in the host's configuration could not be opened: it "
     "was not found, is not a project folder (.qda), or its database will "
@@ -121,12 +128,13 @@ UNCERTAIN = (
     "Database error: the write did not complete, and the transaction could "
     "not be rolled back cleanly, so the project may be part-written. Close "
     "any other program that has the project open (QualCoder, if you use "
-    "it), select the project again (select_project), and if it will not "
-    "open, restore a backup (see list_backups).")
+    "it) and select the project again (select_project). If it will not "
+    "open, no tool here can restore it: " + BY_HAND)
 REFUSED_LAST = (
     "If it happens again, check that the project still opens "
-    "(select_project, then get_project_summary), and restore a backup (see "
-    "list_backups) only if it will not open.")
+    "(select_project, then get_project_summary), and restore a backup only "
+    "if it will not open. While it will not open, no tool here can restore "
+    "it: " + BY_HAND)
 
 # The 26 descriptions that end with the sentence, and their length
 # before this piece on Python 3.13 (tests/test_v0142_description_cut.py's
@@ -497,3 +505,111 @@ class TestTheFailureMessages:
         assert ("The database refused the write (sqlite3.IntegrityError)"
                 in out["error"]), out
         assert out["error"].endswith(" " + REFUSED_LAST), out
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1 (the reviews of 14 October 2026)
+# ---------------------------------------------------------------------------
+
+def _comment_above(source, line):
+    """The comment lines directly above `line` in `source`, joined."""
+    above = source[:source.index("\n" + line + "\n")].splitlines()
+    lines = []
+    for each in reversed(above):
+        if not each.startswith("#"):
+            break
+        lines.insert(0, each.lstrip("#").strip())
+    return " ".join(lines)
+
+
+def _unreleased():
+    changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    start = changelog.index("## [Unreleased]")
+    return _flat(changelog[start:changelog.index("\n## [", start + 1)])
+
+
+class TestFixRound1:
+    """While the database will not open, list_backups answers the
+    database error itself, and restore_backup works on the selected
+    project only; a text that sent the assistant to them for a backup
+    led back to itself. Each such text now says where the backups sit
+    and that one can be copied back by hand. The comment on the opening
+    text's length and TOOLS.md's account of the coder name question
+    follow this piece's changes."""
+
+    def test_list_backups_cannot_read_a_database_that_will_not_open(
+            self, setup_server, qualcoder_db_path):
+        """Why the way by hand is needed: with the selected project's
+        data.qda damaged, list_backups and get_current_project give the
+        same answer, which keeps list_backups for a database that opens
+        and gives the way by hand for one that does not."""
+        _garble(qualcoder_db_path)
+        for call in (server.list_backups, server.get_current_project):
+            out = json.loads(call())
+            assert out["error"] == DB_UNAVAILABLE, out
+        assert server.DB_UNAVAILABLE_ERROR.endswith(" " + BY_HAND)
+        assert "consider restoring a backup (see list_backups)." in \
+            server.DB_UNAVAILABLE_ERROR
+
+    def test_a_write_not_rolled_back_cleanly_gives_the_way_by_hand(
+            self, fi_env, write_faults):
+        session = make_approved_session(fi_env)
+        write_faults(
+            commit_exc=sqlite3.OperationalError("Injected: disk I/O error"),
+            rollback_exc=sqlite3.OperationalError("Injected: no rollback"))
+        out = json.loads(server.apply_codings(session.session_id,
+                                              create_backup=False))
+        assert out["error"].endswith(" " + BY_HAND), out
+        assert "list_backups" not in out["error"]
+
+    def test_a_write_the_database_refused_gives_the_way_by_hand(
+            self, fi_env, monkeypatch):
+        def refuse(self, *args, **kwargs):
+            raise sqlite3.IntegrityError(
+                "UNIQUE constraint failed: code_name.name")
+
+        monkeypatch.setattr(QualcoderDatabase, "add_code", refuse)
+        out = json.loads(server.create_code("Refused again"))
+        assert out["error"].endswith(" " + BY_HAND), out
+        assert "only if it will not open" in out["error"]
+        assert "list_backups" not in out["error"]
+
+    def test_a_project_that_will_not_open_is_not_restored_here(
+            self, setup_server, tmp_path):
+        """select_project keeps the earlier project selected after the
+        failure, so restore_backup would work on that one: the answer
+        says no tool here can restore the damaged one, and how to."""
+        project = tmp_path / "damaged.qda"
+        project.mkdir()
+        _garble(project)
+        out = json.loads(server.select_project(str(project)))
+        assert out["success"] is False
+        assert out["selected_project"], out
+        assert out["error"].startswith(DAMAGED + " "), out["error"]
+        assert "no tool here can restore it: " + BY_HAND in out["error"]
+        assert "otherwise restore a backup" not in out["error"]
+
+    def test_the_changelog_says_so(self):
+        assert ("While the project database will not open, these messages "
+                "say where its backups sit and that one can be copied back "
+                "by hand, since no tool can list or restore them then."
+                ) in _unreleased()
+
+    def test_the_comment_on_the_opening_text_gives_its_length(self):
+        source = (REPO / "src" / "exegete" / "server.py").read_text(
+            encoding="utf-8")
+        comment = _comment_above(source, "SERVER_INSTRUCTIONS = BRIEF_SHORT")
+        found = re.search(r"within those ([\d,]+) characters and bytes "
+                          r"\(([\d,]+) in v0\.15\.0\)", comment)
+        assert found, comment
+        bound, now = (int(n.replace(",", "")) for n in found.groups())
+        text = server.SERVER_INSTRUCTIONS
+        assert bound == CUT
+        assert now == len(text) == len(text.encode("utf-8")) <= bound
+        assert "under 2,000" not in comment
+
+    def test_tools_md_offers_the_answer_to_one_who_would_rather_not(self):
+        tools = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
+        assert ("If you do not know it, or would rather not give one, say "
+                "so: the project is created") in tools
+        assert "If you do not know it, say so" not in tools

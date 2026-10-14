@@ -381,7 +381,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   back, not rolled back cleanly, or refused by the database). A write
   the database refused now says to check that the project still opens
   (`select_project`, then `get_project_summary`) rather than to open it
-  in QualCoder.
+  in QualCoder. While the project database will not open, these
+  messages say where its backups sit and that one can be copied back by
+  hand, since no tool can list or restore them then.
 
 ### Measured
 

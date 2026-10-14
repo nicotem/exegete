@@ -683,7 +683,8 @@ Each is stated in full by its tool:
 # The MCP initialize handshake carries an `instructions` string that hosts
 # may show the model (best effort; host behaviour varies: Claude Code shows
 # it and keeps its first 2,048 characters). From v0.14.2 it is the brief's
-# short version, under 2,000 characters and bytes.
+# short version, within those 2,048 characters and bytes (2,034 in
+# v0.15.0).
 SERVER_INSTRUCTIONS = BRIEF_SHORT
 
 
@@ -1226,7 +1227,10 @@ DB_UNAVAILABLE_ERROR = (
     "Database error: the project file may be locked or corrupted. If "
     "another program has the project open (QualCoder, if you use it), "
     "close it there and retry; otherwise consider restoring a backup (see "
-    "list_backups)."
+    "list_backups). While the database will not open, list_backups cannot "
+    "read it either: the project's backups, if any, sit beside the project "
+    "folder under its name with _backup_ or _BKUP_, and one can be copied "
+    "back by hand while no program has the project open."
 )
 
 
@@ -2991,9 +2995,11 @@ WRITE_FAILED_UNCERTAIN = (
     "Database error: the write did not complete, and the transaction "
     "could not be rolled back cleanly, so the project may be "
     "part-written. Close any other program that has the project open "
-    "(QualCoder, if you use it), select the project again "
-    "(select_project), and if it will not open, restore a backup (see "
-    "list_backups).")
+    "(QualCoder, if you use it) and select the project again "
+    "(select_project). If it will not open, no tool here can restore it: "
+    "the project's backups, if any, sit beside the project folder under "
+    "its name with _backup_ or _BKUP_, and one can be copied back by hand "
+    "while no program has the project open.")
 
 # The retry advice above is for a fault that waiting can cure: the
 # database was locked or busy, the disk was full, an I/O error. The
@@ -3009,7 +3015,11 @@ WRITE_FAILED_REFUSED = (
     "is not a lock or a full disk, so waiting and retrying will not cure "
     "it. Nothing here needs restoring. If it happens again, check that "
     "the project still opens (select_project, then get_project_summary), "
-    "and restore a backup (see list_backups) only if it will not open.")
+    "and restore a backup only if it will not open. While it will not "
+    "open, no tool here can restore it: the project's backups, if any, sit "
+    "beside the project folder under its name with _backup_ or _BKUP_, and "
+    "one can be copied back by hand while no program has the project "
+    "open.")
 
 # Which of the two texts a fault gets is decided on the exception class
 # and then on its message text. That is a HEURISTIC: SQLite's messages
@@ -4080,9 +4090,11 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
         "success": False,
         "error": "The project database appears to be damaged or unreadable. "
                  "If another program has it open, close it there and "
-                 "retry; otherwise restore a backup (backups sit beside "
-                 "the project folder under its name with _backup_ or "
-                 "_BKUP_)."
+                 "retry. Otherwise, while it will not open, no tool here "
+                 "can restore it: the project's backups, if any, sit "
+                 "beside the project folder under its name with _backup_ "
+                 "or _BKUP_, and one can be copied back by hand while no "
+                 "program has the project open."
     }
     try:
         folder = Path(project_path)

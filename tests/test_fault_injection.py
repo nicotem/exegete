@@ -1417,7 +1417,14 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
             "Database error: the write did not complete, and the "
             "transaction could not be rolled back cleanly")
         assert "the project may be part-written" in out["error"]
-        assert "restore a backup (see list_backups)" in out["error"]
+        # v0.15.0 (not presuming QualCoder, piece 5, fix round 1): the
+        # backup is restored by hand if the project will not open, since
+        # list_backups and restore_backup cannot read it then; the
+        # envelope still names the backup taken before the write
+        assert ("If it will not open, no tool here can restore it: the "
+                "project's backups, if any, sit beside the project folder"
+                ) in out["error"]
+        assert "one can be copied back by hand" in out["error"]
         assert Path(out["backup_path"]).is_dir()
 
     def test_the_rollback_helper_answers_for_what_it_did(self, fi_env):

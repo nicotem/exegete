@@ -293,7 +293,8 @@ default on every route; the `core` set for local models leaves it out.
   The name can be corrected later with `set_project_coder_name` only
   while nothing is recorded under it, so give it as you want it to stay. The
   question comes after every other check, so you are asked once. If you
-  do not know it, say so: the project is created, and the check that
+  do not know it, or would rather not give one, say so: the project is
+  created, and the check that
   keeps the AI's codings apart from yours stays off until a name is
   recorded: `set_project_coder_name` gives it one, and QualCoder, if you
   use it, records it when it first opens the project. Exegete never

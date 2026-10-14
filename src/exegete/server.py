@@ -4162,8 +4162,8 @@ def select_project(project_path: str) -> str:
     the chat is used), and a guarded local process scan. When
     any are present the warning says the project APPEARS to be open in
     QualCoder; confirm with the user before any write rather than treating
-    it as certain. When none are present the warning names the limitation
-    instead (an idle 4.0 window leaves no file trace). An open 4.0 window
+    it as certain. When none are present a warning comes only if the
+    project or this computer shows QualCoder has been used. An open 4.0 window
     will not display external changes until the project is reopened there.
     If the database cannot be opened, the error says whether project-scoped
     evidence suggests an open QualCoder window (a mid-write 4.0 window can
@@ -4242,6 +4242,43 @@ def select_project(project_path: str) -> str:
     return _ai_json(answer, indent=2)
 
 
+# select_project's warning when no lock file is active and no sign of an
+# open QualCoder 4.0 window is found (v0.15.0, not presuming QualCoder,
+# piece 6): it comes only when the project or this computer shows that
+# QualCoder has been used, or the researcher said they use it (the
+# project's history with QualCoder, `History.level`, and the setting),
+# and says which. At the level "none" there is none.
+NO_SIGN_WARNING_PROJECT = (
+    "This project has been opened in QualCoder before. QualCoder 4.0 "
+    "leaves no lock file, so if the researcher has it open there now, ask "
+    "them to close it before any write.")
+NO_SIGN_WARNING_SAID_YES = (
+    "The researcher has said they use QualCoder on this computer. "
+    "QualCoder 4.0 leaves no lock file, so ask them once in this "
+    "conversation whether it has this project open, and if it has, to "
+    "close it there before any write.")
+NO_SIGN_WARNING_COMPUTER = (
+    "QualCoder is on this computer, though nothing shows it has opened "
+    "this project. QualCoder 4.0 leaves no lock file, so if the researcher "
+    "has this project open in it now, ask them to close it there before "
+    "any write.")
+
+
+def _no_sign_warning(
+        history: Optional[qualcoder_history.History]) -> Optional[str]:
+    """select_project's warning when no lock file is active and no sign
+    of an open window is found, by the project's history with QualCoder
+    (None, no history, is the level "none"); None when none is due."""
+    level = history.level if history is not None else "none"
+    if level == "project":
+        return NO_SIGN_WARNING_PROJECT
+    if level == "computer":
+        if history.setting == qualcoder_history.YES:
+            return NO_SIGN_WARNING_SAID_YES
+        return NO_SIGN_WARNING_COMPUTER
+    return None
+
+
 def _select_project(project_path: str) -> Dict[str, Any]:
     """select_project's work: the new project is opened and read before it
     replaces the selection, so any failure up to that point leaves the
@@ -4255,7 +4292,8 @@ def _select_project(project_path: str) -> Dict[str, Any]:
         raise
     _install_project(new_db, project_path)
     # Worked out now, once for this selection (v0.15.0)
-    history_field = qualcoder_history.report(_qualcoder_history())
+    history = _qualcoder_history()
+    history_field = qualcoder_history.report(history)
     name = project_display_name(project_path)
     result = {
         "success": True,
@@ -4312,15 +4350,9 @@ def _select_project(project_path: str) -> Dict[str, Any]:
                 "is reopened there."
             )
         else:
-            warnings.append(
-                "Lock-gate limitation: QualCoder 4.0 builds write no "
-                "lock file, so 4.0 detection is best-effort (no "
-                "open-GUI signals right now; an idle 4.0 window with "
-                "no recent AI activity leaves no file trace, so only "
-                "the process scan could see it). Confirm with the "
-                "user that no QualCoder window has this project open "
-                "before writing."
-            )
+            no_sign = _no_sign_warning(history)
+            if no_sign is not None:
+                warnings.append(no_sign)
 
     # QualCoder's own open check requires "QualCoder" in project.about
     # and refuses otherwise ("This is not a QualCoder database") —
@@ -20470,8 +20502,14 @@ OPENING_IN_QUALCODER_382 = (
     "the next time 4.0 opens it: a sub-code moved into a category goes "
     "back under its parent code; the sub-codes of a code deleted in 3.8.2 "
     "become ordinary codes with no category; and a graph saved after "
-    "another was deleted can show the deleted graph's memo notes. Work on "
-    "this project in QualCoder 4.0.")
+    "another was deleted can show the deleted graph's memo notes. If the "
+    "researcher opens it in QualCoder, use 4.0.")
+# v0.15.0 (not presuming QualCoder, piece 6): the whole account when the
+# new project's folder and this computer show no sign that QualCoder has
+# been used and the researcher has not said they use it
+OPENING_IN_QUALCODER_IF_USED = (
+    "The project is in QualCoder's format, so QualCoder 4.0 can open it "
+    "too, if the researcher uses it.")
 
 
 def _opening_in_qualcoder_40(folder: Path, coder: str) -> str:
@@ -20869,14 +20907,28 @@ def create_project(name: str, directory: Optional[str] = None,
             f"The project was created but could not be selected "
             f"({type(error).__name__}). Select it with select_project "
             f"and the project_path above.")
+    # v0.15.0 (not presuming QualCoder, piece 6): the new folder's history
+    # with QualCoder decides how much of opening it in QualCoder is said.
+    # Worked out here, on the folder, so that it holds whether or not the
+    # selection succeeded; without the process scan (create_project never
+    # runs it), and not kept as the session's history, which the next
+    # text that consults it works out as for any selection.
+    setting, _recognised = qualcoder_history.read_setting(
+        env_settings.uses_qualcoder())
+    creation_level = qualcoder_history.work_out(
+        folder, scan_processes=False, setting=setting).level
     result["next_steps"] = _created_project_next_steps(stored_coder,
                                                        previous, ai_name)
     # The brief's second net (v0.14.2)
     result["brief"] = BRIEF_REMINDER
-    result["opening_in_qualcoder"] = {
-        "4.0": _opening_in_qualcoder_40(folder, stored_coder),
-        "3.8.2": OPENING_IN_QUALCODER_382,
-    }
+    if creation_level == "none":
+        result["opening_in_qualcoder"] = {
+            "4.0": OPENING_IN_QUALCODER_IF_USED}
+    else:
+        result["opening_in_qualcoder"] = {
+            "4.0": _opening_in_qualcoder_40(folder, stored_coder),
+            "3.8.2": OPENING_IN_QUALCODER_382,
+        }
     return json.dumps(result, indent=2)
 
 

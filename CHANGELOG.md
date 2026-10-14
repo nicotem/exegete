@@ -293,6 +293,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at start-up, naming the setting, never its value, and saying
   where to change it.
 
+### Added: correcting your own coder name in a project
+
+- **Your own coder name in a project can be corrected.**
+  `set_project_coder_name` corrects the researcher's own coder name in a
+  project, or gives one to a project made without it, while nothing is
+  recorded under the current name: a preview, then the change with the
+  preview's token, after a backup. Refused, with the reason, once any
+  coding, annotation, case, memo, journal entry, code, category, file,
+  attribute or file-list view saved by QualCoder carries the name. The
+  refusal names the kinds of record that carry it, never how many; the
+  change is refused too while the project's AI coder name file or its
+  coder list cannot be read. The name is the researcher's own, never a
+  name AI work is stored under (this project's AI coder name or an
+  earlier one its AI coder name file lists, Exegete's built-in default,
+  the AI coder name in the settings, or "AI Agent"). In the project's
+  list of coders the old name's row takes the new name, keeping whether
+  it is hidden; the
+  preview warns when the new name would be hidden there or already
+  carries work. The question `create_project` asks now says the name
+  can be corrected while nothing is recorded under it, and the warnings
+  and selection notes about a project without a name, or with another
+  one, name `set_project_coder_name`. The tool is in `full`, not in
+  `core`.
+
 ### Changed: an empty AI coder name, and the names the setter refuses
 
 - **An empty `EXEGETE_AI_CODER_NAME` no longer stops Exegete**: empty,
@@ -303,15 +327,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Measured
 
-- Serialised tool JSON: full = 206,569 characters (about 51.6k tokens
-  at chars/4) over 80 tools, and core = 68,669 (about 17.2k) over 25,
+- Serialised tool JSON: full = 208,247 characters (about 52.1k tokens
+  at chars/4) over 81 tools, and core = 68,669 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 216,625 and
+  which also gives exactly 0.14.3's figures for its tree), 218,383 and
   72,065. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), six changes
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), seven changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -335,7 +359,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `create_project`'s paragraph on it grew its entry by 317 characters,
   333 on 3.11, in `full` only, and `set_project_ai_coder_name`'s
   refusal of the name in the settings grew its entry by 58, 62 on 3.11,
-  in both sets. No other tool's entry changed.
+  in both sets. And the researcher's own coder name can be corrected:
+  `set_project_coder_name`'s entry, with its separator, adds 1,530
+  characters to `full`, 1,602 on 3.11, and `create_project`'s sentence
+  on it grew its entry by 148, 156 on 3.11; `core` serves neither. No
+  other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12
 

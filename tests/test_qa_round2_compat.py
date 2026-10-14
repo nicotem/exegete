@@ -191,8 +191,11 @@ class TestWriteRowContracts:
         """W14: the MCP never writes project/coder_names, apart from the
         project memo (v0.14: the lead's ruling gives set_memo the project
         memo as a target, written with QualCoder's own `update project
-        set memo=?`). create_project writes both tables into a NEW
-        project, in new_project.py, never here."""
+        set memo=?`) and, since v0.15.0, the researcher's own coder name
+        when set_project_coder_name corrects it (`codername`, and the
+        name's row in coder_names; tests/test_v0150_coder_name_correction.py).
+        create_project writes both tables into a NEW project, in
+        new_project.py, never here."""
         before = _sql(qualcoder_db_path, "SELECT * FROM project")
         _apply_one()
         json.loads(server.import_text_file("w14.txt", "x", create_backup=False))
@@ -206,10 +209,17 @@ class TestWriteRowContracts:
         src = (SRC_DIR / "database.py").read_text(encoding="utf-8")
         updates = re.findall(r"UPDATE\s+(\w+)\s+SET\s+([^\n]+)", src)
         updated_tables = {t for t, _ in updates}
-        project_updates = [cols for t, cols in updates if t == "project"]
-        assert len(project_updates) == 1, project_updates
-        assert re.match(r'memo = \?"', project_updates[0]), project_updates
-        assert "coder_names" not in updated_tables
+        project_updates = sorted(cols for t, cols in updates
+                                 if t == "project")
+        assert len(project_updates) == 2, project_updates
+        assert re.match(r'codername = \?"', project_updates[0]), \
+            project_updates
+        assert re.match(r'memo = \?"', project_updates[1]), project_updates
+        # the correction renames the old name's row, and nothing else
+        names_updates = [cols for t, cols in updates if t == "coder_names"]
+        assert names_updates == ['name = ? WHERE name = ?",'], names_updates
+        assert updated_tables & {"project", "coder_names"} == {
+            "project", "coder_names"}
 
 
 # =============================================================================

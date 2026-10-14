@@ -408,7 +408,10 @@ class TestTheCoderName:
         assert answer["coder_name"] is None
         assert answer["coder_name_known"] is False
         assert server.CODER_NAME_NOT_KNOWN_WARNING in answer["warnings"]
-        assert ("QualCoder records it when it first opens the project"
+        # v0.15.0: set_project_coder_name gives it one; QualCoder, if
+        # they use it, still records it when it first opens the project
+        assert ("set_project_coder_name gives it one, and QualCoder, if "
+                "they use it, records it when it first opens the project"
                 in server.CODER_NAME_NOT_KNOWN_WARNING)
         assert _stored_coder(answer) == ("", [server.SPEAKER_SYSTEM_CODER])
 

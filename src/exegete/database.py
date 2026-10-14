@@ -1393,18 +1393,20 @@ def error_text(error: BaseException) -> str:
     return error_label(error)
 
 
-def _raise_query_error(e: sqlite3.Error, where: str, message: str) -> None:
+def _raise_query_error(e: sqlite3.Error, where: str, message: str,
+                       error_type: type = RuntimeError) -> None:
     """Convert a sqlite3 error from a query into a typed, sanitised error.
 
     Locked databases get a distinct, actionable error; everything else is
     logged by its kind and SQLite's name for it, never its message (v0.14:
     a trigger or a note that is not UTF-8 can make the message a note),
-    and re-raised as a generic sanitised RuntimeError.
+    and re-raised as a generic sanitised RuntimeError, or as `error_type`
+    (a RuntimeError of its own) for a caller that must tell it apart.
     """
     if isinstance(e, sqlite3.OperationalError) and _is_locked_error(e):
         raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
     logger.error("Database error in %s: %s", where, sqlite_error_label(e))
-    raise RuntimeError(message) from None
+    raise error_type(message) from None
 
 # Workspace configuration. Users should work in this folder to keep
 # MCP-modified projects separate from originals.
@@ -2306,6 +2308,49 @@ HARVEST_OWNER_TABLES = (
     "case_text", "attribute", "attribute_type", "source", "annotation",
     "journal", "manage_files_display", "files_filter",
 )
+
+# What "recorded under a coder name" covers when the researcher's own
+# coder name is corrected (v0.15.0, set_project_coder_name): each kind an
+# answer names, in this order, and the probes that find it. The owner
+# columns are the harvest list above, every one of them; a memo is
+# covered by its row's owner, except the note a merge leaves in the
+# surviving code's or category's memo ("Coder: {name}," in merge_codes
+# and merge_category), which `table.memo` probes find exactly.
+CODER_NAME_RECORD_KINDS = (
+    ("codings", ("code_text", "code_image", "code_av")),
+    ("annotations", ("annotation",)),
+    ("cases or case links", ("cases", "case_text")),
+    ("journal entries", ("journal",)),
+    ("codes or categories", ("code_name", "code_cat")),
+    ("files", ("source",)),
+    ("attributes", ("attribute", "attribute_type")),
+    ("file-list views saved by QualCoder",
+     ("manage_files_display", "files_filter")),
+    ("merge notes in memos that name it", ("code_name.memo",
+                                           "code_cat.memo")),
+)
+
+
+class CoderNameRecordsUnreadable(RuntimeError):
+    """A table did not answer whether work is recorded under a coder name.
+
+    Not "not found": the correction of a coder name is refused on it,
+    because a change made on a guess could change whose work the record
+    shows (v0.15.0)."""
+
+
+class CoderListUnreadable(RuntimeError):
+    """The project's coder list (`coder_names`) did not answer whether a
+    name has a row, so what correcting the coder name would do to it is
+    not known (v0.15.0). A RuntimeError, with the message every other
+    reader of the list gives, for callers that know no more."""
+
+
+def coder_name_record_kinds(found: Dict[str, bool]) -> List[str]:
+    """The kinds of record `coder_name_records` found, in the answer's
+    order, each named once and never counted."""
+    return [kind for kind, probes in CODER_NAME_RECORD_KINDS
+            if any(found.get(probe) for probe in probes)]
 
 # A note recorded beside a project's AI coder name (v0.12, D7 1.2): the
 # host and model version a researcher wants to remember about a choice.
@@ -4154,6 +4199,170 @@ class QualcoderDatabase:
             answer[name] = found
         return answer
 
+    def coder_name_records(self, name: str) -> Dict[str, bool]:
+        """Whether work is recorded under this one coder name, probe by
+        probe (CODER_NAME_RECORD_KINDS), for the correction of the
+        researcher's own coder name (v0.15.0).
+
+        Each probe is a restricted EXISTS for the name given, never a
+        list of owners, so nothing here can enumerate a coder, hidden or
+        not. Owners are compared exactly; a merge note is found with
+        `instr`, which is exact too, where `LIKE` would ignore letter
+        case and read `%` and `_` as wildcards, and a NULL memo matches
+        nothing. A table the schema lacks is not probed (False); a table
+        that does not answer raises CoderNameRecordsUnreadable, unlike
+        `known_owner_presence`, which reads such a table as "not found".
+        """
+        caps = getattr(self, "capabilities", None)
+        found: Dict[str, bool] = {}
+        for _, probes in CODER_NAME_RECORD_KINDS:
+            for probe in probes:
+                table, _, column = probe.partition(".")
+                if caps is not None and not caps.table_exists(table):
+                    found[probe] = False
+                    continue
+                if column:
+                    sql = (f"SELECT 1 FROM {table} WHERE instr({column}, "
+                           f"'Coder: ' || ? || ',') > 0 LIMIT 1")
+                else:
+                    sql = f"SELECT 1 FROM {table} WHERE owner = ? LIMIT 1"
+                try:
+                    row = self.conn.execute(sql, (name,)).fetchone()
+                except sqlite3.Error as e:
+                    logger.error("Database error in coder_name_records: %s",
+                                 sqlite_error_label(e))
+                    raise CoderNameRecordsUnreadable(
+                        "a table of the project did not answer") from None
+                found[probe] = row is not None
+        return found
+
+    def coder_list_has(self, name: str) -> bool:
+        """Whether the name has a row in `coder_names` (False when the
+        project has no such table). Presence only: who is hidden is read
+        by `coder_visibility_map` alone. Raises CoderListUnreadable when
+        the table does not answer (DatabaseLockedError when it is
+        locked)."""
+        caps = getattr(self, "capabilities", None)
+        if caps is not None and not caps.table_exists("coder_names"):
+            return False
+        try:
+            row = self.conn.execute(
+                "SELECT 1 FROM coder_names WHERE name = ? LIMIT 1",
+                (name,)).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "coder_list_has",
+                               "Could not read this project's coder list",
+                               error_type=CoderListUnreadable)
+        return row is not None
+
+    def coder_list_change(self, old: Optional[str], new: str) -> str:
+        """What changing the project's coder name from `old` to `new`
+        does to `coder_names`: "renamed" (the old name's row takes the
+        new name, keeping its visibility), "removed_old" (the new name
+        already has a row, so the old one goes), "added" (the old name
+        has none, so the new name's row is added, visible) or
+        "unchanged" (the new name already has a row and the old none, or
+        the project has no coder list). Read-only."""
+        caps = getattr(self, "capabilities", None)
+        if caps is not None and not caps.table_exists("coder_names"):
+            return "unchanged"
+        has_old = old is not None and self.coder_list_has(old)
+        has_new = self.coder_list_has(new)
+        if has_old:
+            return "removed_old" if has_new else "renamed"
+        return "unchanged" if has_new else "added"
+
+    def preview_coder_name_change(self, new: str) -> Dict[str, Any]:
+        """What set_project_coder_name would do (read-only): the current
+        name (None for '' or NULL), the new one, what the change does to
+        `project` and `coder_names`, and the kinds of record that carry
+        the current name. No probe runs when there is no current name.
+        Raises CoderNameRecordsUnreadable when a table does not answer."""
+        current = (self.get_project_info() or {}).get("coder_name") or None
+        kinds = (coder_name_record_kinds(self.coder_name_records(current))
+                 if current is not None else [])
+        return {
+            "current_coder_name": current,
+            "new_coder_name": new,
+            "project_coder_name": {"from": current, "to": new},
+            "coder_list": self.coder_list_change(current, new),
+            "recorded_under_current_name": kinds,
+        }
+
+    def fingerprint_coder_name_change(self, new: str) -> Dict[str, Any]:
+        """The state a correction's token signs beside its preview: the
+        current name as stored, both names' rows in `coder_names`
+        (present, visibility), and a yes or no for each probe of the
+        current name, so that work recorded under it after the preview,
+        or the name changed meanwhile, refuses the change."""
+        stored = (self.get_project_info() or {}).get("coder_name")
+        current = stored or None
+        try:
+            visibility: Any = self.coder_visibility_map()
+        except CoderVisibilityUnreadable:
+            visibility = "unreadable"
+
+        def row(name):
+            if name is None:
+                return None
+            return [self.coder_list_has(name),
+                    visibility.get(name) if isinstance(visibility, dict)
+                    else visibility]
+        return {
+            "stored": stored,
+            "rows": [row(current), row(new)],
+            "probes": ({} if current is None
+                       else self.coder_name_records(current)),
+        }
+
+    def change_project_coder_name(self, old: Optional[str], new: str,
+                                  auto_commit: bool = True) -> Dict[str, Any]:
+        """Set the project's own coder name to `new` (v0.15.0).
+
+        It sets `project.codername`, as QualCoder's own settings
+        do; in `coder_names`, when the table exists, the old name's row
+        is renamed to the new one, keeping its visibility, or removed
+        when the new name already has a row, or, when the old name has
+        none, the new name's row is added with visibility 1, as
+        create_project adds it (without the visibility column, the name
+        alone). Nothing else changes. The caller has checked that nothing
+        is recorded under `old`.
+        """
+        self._require_write_access()
+        try:
+            change = self.coder_list_change(old, new)
+            self.conn.execute("UPDATE project SET codername = ?", (new,))
+            if change == "renamed":
+                self.conn.execute(
+                    "UPDATE coder_names SET name = ? WHERE name = ?",
+                    (new, old))
+            elif change == "removed_old":
+                self.conn.execute("DELETE FROM coder_names WHERE name = ?",
+                                  (old,))
+            elif change == "added":
+                columns = {r[1] for r in self.conn.execute(
+                    "PRAGMA table_info(coder_names)").fetchall()}
+                if "visibility" in columns:
+                    self.conn.execute(
+                        "INSERT OR IGNORE INTO coder_names (name, "
+                        "visibility) VALUES (?, 1)", (new,))
+                else:
+                    self.conn.execute(
+                        "INSERT OR IGNORE INTO coder_names (name) "
+                        "VALUES (?)", (new,))
+            if auto_commit:
+                self.conn.commit()
+        except sqlite3.Error as e:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            _raise_query_error(e, "change_project_coder_name",
+                               "Failed to change the project's coder name")
+        logger.info("Changed the project's own coder name (coder list: %s)",
+                    change)
+        return {"coder_list": change}
+
     def owner_case_variant(self, name: str) -> Optional[str]:
         """An existing owner that differs from `name` by letter case only.
 
@@ -4275,9 +4484,11 @@ class QualcoderDatabase:
         turn published a hidden coder when the table was damaged. It has
         been removed rather than documented, and
         `tests/test_qc40_visibility.py` pins that no second reader comes
-        back. Read-only either way: this server never inserts into
-        `coder_names`; QualCoder enrols names through its own harvest
-        the next time it opens the project (app.py:1480-1494).
+        back. Read-only either way: Exegete writes `coder_names` only
+        when it creates a project and when the researcher's own coder
+        name is corrected (set_project_coder_name, v0.15.0); QualCoder
+        enrols the other names through its own harvest the next time it
+        opens the project (app.py:1480-1494).
 
         The declaration is re-read here rather than taken from the
         connect-time probe; `_visibility_is_declared_now` says why.

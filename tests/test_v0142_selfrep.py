@@ -809,12 +809,17 @@ class TestNoDescriptionGrew:
                        "prune_backups", "record_suggestions",
                        "review_suggestions", "update_suggestion_status"}
     EARLIER_NAMES_0150 = {"analyze_for_coding", "analyze_file_with_coding"}
+    # and the coder names, piece 2: a new tool that corrects the
+    # researcher's own coder name (tests/test_v0150_coder_name_correction.py
+    # pins its description), whose sentence in create_project's
+    # description is counted with piece 1's change above
+    NEW_IN_0150 = {"set_project_coder_name"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         assert set(registered) == set(BEFORE) | {"check_for_updates"} | \
-            self.NEW_IN_0143 | self.EARLIER_NAMES_0150
+            self.NEW_IN_0143 | self.EARLIER_NAMES_0150 | self.NEW_IN_0150
         exact = sys.version_info[:2] == (3, 13)
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
         grew = []

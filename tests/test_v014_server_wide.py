@@ -124,6 +124,8 @@ EXPECTED_HINTS = {
     "delete_category": C, "delete_coding": C, "delete_annotation": C,
     # the same name again adds an entry to the name's history
     "set_project_ai_coder_name": C,
+    # v0.15.0: renames or removes the old name's row in the coder list
+    "set_project_coder_name": C,
     "set_attribute": C, "update_annotation": C,
     "pseudonymise_source": C, "restore_backup": C, "prune_backups": C,
     # the earlier names of the two tools renamed in 0.15.0, with the new
@@ -185,7 +187,9 @@ class TestToolAnnotations:
         assert sorted(gated) == sorted([
             "delete_category", "delete_code", "import_documents",
             "merge_category", "merge_codes", "prune_backups",
-            "pseudonymise_source", "restore_backup"])
+            "pseudonymise_source", "restore_backup",
+            # v0.15.0: correcting the researcher's own coder name
+            "set_project_coder_name"])
         for name in gated:
             if name == "import_documents":
                 # 0.14.3: a preview first for the researcher's approval of
@@ -906,6 +910,9 @@ async def call_every_tool(client, root, lock_check=False):
     await run("delete_category", {"category_id": 2})
     await run("merge_category", {"from_category_id": 2,
                                  "into_category": "Feelings"})
+    # v0.15.0: nothing is recorded under the researcher's own coder name
+    # in this project yet, so a correction is previewed
+    await run("set_project_coder_name", {"name": "Researcher R."})
     await run("pseudonymise_source", {
         "mapping": [{"original": "Maria", "pseudonym": "Joan"}],
         "file_id": 1, "researcher_keeps_mapping": True})

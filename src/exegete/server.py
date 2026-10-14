@@ -2923,7 +2923,8 @@ def _ai_coder_name_report() -> Dict[str, Any]:
             "file": OLD_SIDECAR_NAME, "name_it_holds": unmarked.held_name,
             "hint": (
                 f"{OLD_SIDECAR_NAME} in the project folder is not marked as "
-                f"moved, so a copy of qualcoder-mcp 0.12 to 0.14 "
+                f"moved, so an older copy of Exegete (then called "
+                f"qualcoder-mcp, versions 0.12 to 0.14) "
                 f"{_older_copy_would(unmarked.held_name)}. The next write "
                 f"here tries to mark it; if this stays, ask the user to "
                 f"unlock the file or make it writable, or to remove it if "
@@ -4551,10 +4552,11 @@ def set_project_ai_coder_name(name: str, note: str = "",
     codername = (ro.get_project_info() or {}).get("coder_name")
     if codername and name == codername:
         return json.dumps({"error": (
-            f"\"{name}\" is this project's own coder name, so AI rows "
-            f"would be indistinguishable from the user's in QualCoder's "
-            f"coder lists, visibility toggle, undo and reports. Choose a "
-            f"different name. Nothing was changed.")})
+            f"\"{name}\" is this project's own coder name (the "
+            f"researcher's), so the AI's codings could not be told apart "
+            f"from the researcher's, in Exegete's coder filters and "
+            f"compare_coders as in QualCoder's coder lists and reports. "
+            f"Choose a different name. Nothing was changed.")})
     if name == settings_coder_name():
         # v0.15.0: the name the researcher gave as their own in Exegete's
         # settings, which new projects take
@@ -4585,10 +4587,10 @@ def set_project_ai_coder_name(name: str, note: str = "",
             # set to a hidden coder's without anyone being told.
             return json.dumps({"error": (
                 f"{VISIBILITY_UNREADABLE_SUFFIX}, so whether this name "
-                f"belongs to a coder hidden in QualCoder cannot be "
-                f"decided. Pass allow_hidden_coder=true to store it "
-                f"anyway, or ask the user to check the coder's visibility "
-                f"in QualCoder. Nothing was changed.")})
+                f"belongs to a hidden coder cannot be decided. Pass "
+                f"allow_hidden_coder=true to store it anyway, or, if the "
+                f"researcher uses QualCoder, ask them to check the coder's "
+                f"visibility there. Nothing was changed.")})
         if coder_is_hidden(visibility or {}, name):
             return json.dumps({"error": (
                 f"\"{name}\" is a coder currently hidden in QualCoder; rows "
@@ -4966,24 +4968,26 @@ def _earlier_file_warnings(state, earlier, moving: bool,
                 f"where they are kept from now on.")
         if earlier.status == EARLIER_MARKED:
             text += (f" {OLD_SIDECAR_NAME} stays in the project folder, "
-                     f"marked so that qualcoder-mcp 0.12 to 0.14 refuse to "
-                     f"write it rather than use an outdated name.")
+                     f"marked so that an older copy of Exegete (then "
+                     f"called qualcoder-mcp, versions 0.12 to 0.14) refuses "
+                     f"to write it rather than use an outdated name.")
         notes.append(text)
     if earlier.names_added:
         one = len(earlier.names_added) == 1
         quoted = ", ".join(f"\"{n}\"" for n in earlier.names_added)
         notes.append(
             f"{OLD_SIDECAR_NAME} in the project folder held {quoted}, "
-            f"stored by an older copy of Exegete (qualcoder-mcp 0.12 "
-            f"to 0.14) beside {SIDECAR_NAME}; "
+            f"stored by an older copy of Exegete (then called "
+            f"qualcoder-mcp, versions 0.12 to 0.14) beside {SIDECAR_NAME}; "
             f"{'that name was' if one else 'those names were'} added to "
             f"this project's history, so rows under "
             f"{'it' if one else 'them'} count as this project's AI work.")
     if not moving and earlier.status == EARLIER_MARKED:
         notes.append(
-            f"{OLD_SIDECAR_NAME} in the project folder, which qualcoder-mcp "
-            f"0.12 to 0.14 could still write, is now marked as moved, so "
-            f"they refuse to write it rather than use an outdated name.")
+            f"{OLD_SIDECAR_NAME} in the project folder, which an older copy "
+            f"of Exegete (then called qualcoder-mcp, versions 0.12 to 0.14) "
+            f"could still write, is now marked as moved, so such a copy "
+            f"refuses to write it rather than use an outdated name.")
     if earlier.status == EARLIER_NOT_MARKED:
         result["earlier_file_not_marked"] = str(earlier.path)
         notes.append(_earlier_file_not_marked_warning(earlier))
@@ -4997,8 +5001,9 @@ def _earlier_file_not_marked_warning(earlier) -> str:
     return (
         f"{OLD_SIDECAR_NAME} in the project folder could not be marked as "
         f"moved{reason}: it may be locked, read-only or held by a sync "
-        f"program. Until it is marked, a copy of qualcoder-mcp 0.12 to "
-        f"0.14 (another host, or another computer sharing this project) "
+        f"program. Until it is marked, an older copy of Exegete (then "
+        f"called qualcoder-mcp, versions 0.12 to 0.14), in another host or "
+        f"on another computer sharing this project, "
         f"{_older_copy_would(earlier.held_name)}. Tell the user, and ask "
         f"them to unlock the file or make it writable, or to remove it if "
         f"no such copy uses this project; every write here tries to mark "
@@ -5091,12 +5096,12 @@ def _set_name_warnings(ro, state, name: str,
                 or coder_is_hidden(visibility or {}, variant)):
             warnings.append(
                 f"\"{name}\" differs only by letter case from a coder name "
-                f"already used in this project; QualCoder treats them as "
+                f"already used in this project; the project keeps them as "
                 f"two coders.")
         else:
             warnings.append(
                 f"\"{name}\" differs only by letter case from "
-                f"\"{variant}\"; QualCoder treats them as two coders.")
+                f"\"{variant}\"; the project keeps them as two coders.")
     if state.name == name:
         warnings.append(
             "Unchanged; the choice was recorded again (acknowledging the "
@@ -5676,8 +5681,9 @@ def _novelty_block(db_, code_ids: List[int], coder: Optional[str],
             "A candidate is excluded when it overlaps a coding of one of "
             "these codes in the same file. Spans are half-open, so a "
             "candidate that starts exactly where an excluded coding ends "
-            "is NOT excluded (QualCoder's own rule, "
-            "ai_mcp_server.py:5245-5257 at 9bddf17)."),
+            "is NOT excluded."),
+        # QualCoder's own rule (ai_mcp_server.py:5245-5257 at 9bddf17),
+        # cited in the answer until v0.15.0
     }
     if applies_to:
         block["applies_to"] = applies_to
@@ -20643,9 +20649,22 @@ def _store_ai_setting_at_creation(folder: Path
     return name, None
 
 
+# create_project's next step on the project memo (v0.15.0, not presuming
+# QualCoder, piece 8): Exegete's own reason first (the brief's rule 11);
+# QualCoder 4.0's assistant only when the new folder's history with
+# QualCoder is not "none" (piece 6's level).
+CREATED_MEMO_STEP = (
+    "The project memo is empty; set_memo with target_type 'project' writes "
+    "it (research topic and questions, methodology, participants). It is "
+    "where you read the study's method (the brief, rule 11).")
+CREATED_MEMO_STEP_QUALCODER = (
+    " QualCoder 4.0's own assistant reads it as the project's context too.")
+
+
 def _created_project_next_steps(coder: str,
                                 previous: Optional[str],
-                                ai_name: Optional[str] = None) -> List[str]:
+                                ai_name: Optional[str] = None,
+                                qualcoder_level: str = "none") -> List[str]:
     differ = (f"it must differ from the researcher's own coder name, "
               f"\"{coder}\"." if coder else
               "the researcher's own coder name is not known, so make sure "
@@ -20658,10 +20677,8 @@ def _created_project_next_steps(coder: str,
     return [
         ai_step,
         _created_project_material_step(),
-        ("The project memo is empty, as QualCoder leaves a new project's; "
-         "set_memo with target_type 'project' writes it (research topic "
-         "and questions, methodology, participants), and QualCoder 4.0's "
-         "own assistant reads it as the project's context."),
+        CREATED_MEMO_STEP + (CREATED_MEMO_STEP_QUALCODER
+                             if qualcoder_level != "none" else ""),
     ] + ([("The new project is selected, so every tool now works on it; "
            "select_project with previous_project goes back to the one "
            "selected before.")] if previous else [])
@@ -20949,8 +20966,8 @@ def create_project(name: str, directory: Optional[str] = None,
     creation_level = qualcoder_history.work_out(
         folder, scan_processes=False,
         setting=_uses_qualcoder_answer()).level
-    result["next_steps"] = _created_project_next_steps(stored_coder,
-                                                       previous, ai_name)
+    result["next_steps"] = _created_project_next_steps(
+        stored_coder, previous, ai_name, qualcoder_level=creation_level)
     # The brief's second net (v0.14.2)
     result["brief"] = BRIEF_REMINDER
     if creation_level == "none":

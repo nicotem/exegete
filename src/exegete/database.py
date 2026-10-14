@@ -2300,12 +2300,12 @@ def validate_coder_name(value: Any, param_name: str = "owner") -> str:
         raise ValueError(
             f"{param_name} is {len(name)} characters long; the maximum is "
             f"{MAX_CODER_NAME_LENGTH}. Coder names appear in every coding "
-            f"row and in QualCoder's coder lists; keep them short.")
+            f"row and in the project's coder lists; keep them short.")
     forbidden = _forbidden_coder_name_char(name)
     if forbidden is not None:
         raise ValueError(
-            f"{param_name} contains {forbidden}; a QualCoder coder name "
-            f"must be plain single-line text.")
+            f"{param_name} contains {forbidden}; a coder name must be "
+            f"plain single-line text.")
     if PERSONAL_NOTE_MARK in name:
         raise ValueError(
             f"{param_name} contains '{PERSONAL_NOTE_MARK}', which QualCoder "
@@ -9507,8 +9507,8 @@ class QualcoderDatabase:
             if self.would_create_category_cycle(category_id, new_supercatid):
                 raise ValueError(
                     "That move would make the category its own ancestor "
-                    "(a cycle), which would hide it and its codes from "
-                    "QualCoder's tree; refusing."
+                    "(a cycle), which would cut it and its codes off from "
+                    "the code tree; refusing."
                 )
             self.conn.execute(
                 "UPDATE code_cat SET supercatid = ? WHERE catid = ?",
@@ -9631,7 +9631,7 @@ class QualcoderDatabase:
                      "private)" if has_memo else
                      " (the source code has no memo to carry)")
             note += (". It lands before any private section the target "
-                     "has, as QualCoder 4.0's own merge records it.")
+                     "has.")
             subcodes = [
                 {"id": r[0], "name": r[1]} for r in self.conn.execute(
                     "SELECT cid, name FROM code_name WHERE supercid = ? "
@@ -9640,15 +9640,15 @@ class QualcoderDatabase:
             if subcodes:
                 out["subcodes_note"] = (
                     f"{len(subcodes)} sub-code(s) of '{src['name']}' move "
-                    f"under '{dest['name']}', with their own sub-codes, "
-                    f"as in QualCoder 4.0; their codings stay theirs.")
+                    f"under '{dest['name']}', with their own sub-codes; "
+                    f"their codings stay theirs.")
             graphs = self._code_graph_preview([from_code_id])
             if graphs is not None:
                 out["saved_graph_rows_removed"] = graphs
         elif has_memo:
-            note = ("The source code's memo is deleted with its row, as "
-                    "QualCoder 3.8.2's merge does on this project's "
-                    "schema; the backup made first keeps a copy. Copy "
+            note = ("On this project's older schema (from before "
+                    "sub-codes) the source code's memo is deleted with its "
+                    "row; the backup made first keeps a copy. Copy "
                     "anything you need from it before the merge.")
         else:
             note = "The source code has no memo; nothing is carried."
@@ -9815,9 +9815,9 @@ class QualcoderDatabase:
             preview["subcodes"] = sorted(r[0] for r in names)
             preview["note"] = (
                 f"{len(branch) - 1} sub-code(s) hang under this code. "
-                f"Deleting deletes the whole branch and all its codings, "
-                f"exactly as QualCoder's own delete, which asks once; "
-                f"execute_with carries cascade=true, so approving this "
+                f"Deleting deletes the whole branch and all its codings "
+                f"with one approval: execute_with carries cascade=true, so "
+                f"approving this "
                 f"preview approves the branch. Move the sub-codes first if "
                 f"they are needed.")
         return preview
@@ -10280,13 +10280,12 @@ class QualcoderDatabase:
                          "private section on the target stays private.")
         elif into_category_id is None:
             memo_note = (" Merging to the top level removes the source "
-                         "category's memo with its row (as QualCoder does); "
-                         "the mandatory backup keeps a copy.")
-        else:
-            memo_note = (" On this project's schema (pre-sub-code, matching "
-                         "QualCoder 3.8.2 exactly) the source category's "
-                         "memo is removed with its row; the mandatory backup "
+                         "category's memo with its row; the mandatory backup "
                          "keeps a copy.")
+        else:
+            memo_note = (" On this project's older schema (from before "
+                         "sub-codes) the source category's memo is removed "
+                         "with its row; the mandatory backup keeps a copy.")
         preview = {
             "from_category": {"id": from_category_id, "name": src_cat["name"]},
             "into_category": target_desc,

@@ -26,7 +26,8 @@ a researcher who uses it:
 6. a case name that matches several cases: Exegete does not merge cases
    yet;
 7. create_code naming an existing code under another parent: Exegete
-   does not move a sub-code to another parent yet;
+   does not yet move an existing code under another code (words true for
+   a sub-code and for a top-level code alike);
 8. linking an unusable PDF to a case: QualCoder, if you use it;
 9. the end of every refusal about a file name's ending: why Exegete
    keeps the ending, and QualCoder's Rename for those who use it;
@@ -101,8 +102,8 @@ WARNING_NOT_IN_FORM = (
     "EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 is set. Verify results and keep "
     "backups.")
 CASES = "rename_case takes a case id; Exegete does not merge cases yet"
-PARENT = (" It is not nested under code 2; Exegete does not move a "
-          "sub-code to another parent yet.")
+PARENT = (" It is not nested under code 2; Exegete does not yet move an "
+          "existing code under another code.")
 PDF_LINK = " QualCoder, if you use it, can still link it to the case."
 ENDING = (" Exegete keeps this ending to protect the project's links and "
           "exports. If you use QualCoder and the change is wanted all the "
@@ -401,18 +402,29 @@ class TestCasesNotMerged:
         assert len(out["candidates"]) == 2
 
 
-class TestASubCodeNotMoved:
+class TestAnExistingCodeNotMoved:
+    """The same words whether the existing code is a sub-code of another
+    code or a top-level code: neither is called what it is not (fix
+    round 1, the top-level case)."""
 
-    def test_create_code_says_exegete_does_not_move_it_yet(self, opened):
+    @pytest.mark.parametrize("asked, existing, cid, parent", [
+        ("sub", "Sub", 3, 1),            # a sub-code of code 1
+        ("STRESS", "Stress", 1, None),   # a top-level code, in a category
+    ], ids=["a sub-code", "a top-level code"])
+    def test_create_code_says_exegete_does_not_move_it_yet(
+            self, opened, asked, existing, cid, parent):
         folder = opened("v16")
         add_subcode(folder, 3, "Sub", supercid=1)
         _select(folder)
-        out = json.loads(server.create_code("sub", parent_code_id=2))
+        out = json.loads(server.create_code(asked, parent_code_id=2))
         assert out["created"] is False, out
-        assert out["requested"] == {"name": "sub", "parent_code_id": 2}
-        assert PARENT in out["message"]
-        assert _rows(folder, "SELECT supercid FROM code_name WHERE cid = 3") \
-            == [(1,)]
+        assert out["requested"] == {"name": asked, "parent_code_id": 2}
+        assert out["message"] == (
+            f"A code named '{existing}' already exists (id {cid}); nothing "
+            f"was created. Use id {cid}." + PARENT), out
+        assert "sub-code" not in out["message"]
+        assert _rows(folder, "SELECT supercid FROM code_name WHERE cid = ?",
+                     (cid,)) == [(parent,)]
 
 
 class TestAnUnusablePdfNotLinked:
@@ -483,7 +495,8 @@ def test_the_changelog_says_so():
                   VERIFY_IN_FORM,
                   "only when it is in QualCoder's form",
                   "Exegete does not merge cases yet",
-                  "Exegete does not move a sub-code to another parent yet",
+                  "Exegete does not yet move an existing code under "
+                  "another code",
                   "QualCoder, if you use it, can still link it to the case",
                   "to protect the project's links and exports",
                   "or QualCoder's own Rename, if the researcher uses it"):

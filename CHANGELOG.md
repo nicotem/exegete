@@ -468,14 +468,15 @@ not changed.
   ends "Verify results and keep backups."
 - **Where Exegete lacks a feature**, the refusal says so instead of
   sending the researcher to QualCoder: "Exegete does not merge cases
-  yet"; "Exegete does not move a sub-code to another parent yet"; a PDF
-  with no usable text is not linked to a case, and "QualCoder, if you
-  use it, can still link it to the case"; a refusal about a file name's
-  ending says that Exegete keeps the ending to protect the project's
-  links and exports, and that QualCoder's own Rename can make the change
-  for a researcher who uses it; and a new name that clashes with a file
-  in the documents folder names `restore_backup` first, "or QualCoder's
-  own Rename, if the researcher uses it".
+  yet"; "Exegete does not yet move an existing code under another
+  code"; a PDF with no usable text is not linked to a case, and
+  "QualCoder, if you use it, can still link it to the case"; a refusal
+  about a file name's ending says that Exegete keeps the ending to
+  protect the project's links and exports, and that QualCoder's own
+  Rename can make the change for a researcher who uses it; and a new
+  name that clashes with a file in the documents folder names
+  `restore_backup` first, "or QualCoder's own Rename, if the researcher
+  uses it".
 
 ### Measured
 

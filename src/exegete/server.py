@@ -2302,9 +2302,11 @@ def _existing_code_result(rows, name: str, *, has_supercid: bool,
     elif (has_supercid and parent_code_id is not None
             and parent_code_id != row.get("parent_code_id")):
         requested["parent_code_id"] = parent_code_id
+        # Reached for a sub-code of another code and for a top-level
+        # code alike, so the words name neither.
         message += (f" It is not nested under code {parent_code_id}; "
-                    f"Exegete does not move a sub-code to another parent "
-                    f"yet.")
+                    f"Exegete does not yet move an existing code under "
+                    f"another code.")
     disclosure = _color_disclosure(color_requested, color_target)
     if color_target is not None and color_target != row.get("color"):
         requested["color"] = color_requested

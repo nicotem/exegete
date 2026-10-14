@@ -1534,8 +1534,8 @@ class TestSubcodeMoves:
         assert out["code"]["parent_code_id"] == 1
         # v0.15.0 (not presuming QualCoder, piece 7): what Exegete does
         # not do yet, rather than sending the researcher to QualCoder
-        assert ("Exegete does not move a sub-code to another parent yet"
-                in out["message"])
+        assert ("Exegete does not yet move an existing code under another "
+                "code" in out["message"])
 
 
 # ===========================================================================

@@ -785,6 +785,17 @@ SPACED_LINES = (
     "/home/x/Research Tools/QualCoder/qualcoder-script.py",
     "C:\\Users\\x\\My Apps\\env\\Scripts\\python.exe "
     "C:\\Users\\x\\My Apps\\QualCoder\\qualcoder.py",
+    # fix round 3: a folder named with a hyphen between spaces ("Apps -
+    # Linux", a synced "OneDrive - University"), and a program started
+    # by a path relative to the current folder
+    "/home/x/Linux - Apps/QualCoder-4.0-beta-linux-executable",
+    "/home/x/Software - Linux/QualCoder_3_8_2_ubuntu",
+    "/home/x/Apps -- Linux/QualCoder-4.0-beta-linux-executable",
+    "/usr/bin/python3 /home/x/OneDrive - University/QualCoder/qualcoder.py",
+    "/home/x/OneDrive - University/env/bin/python3 "
+    "/home/x/OneDrive - University/QualCoder/qualcoder.py",
+    "./Research Tools/QualCoder-4.0-beta-linux-executable",
+    "../My Apps/QualCoder_3_8_2_ubuntu",
 )
 SPACED_IDS = ["python -m", "app bundle and script", "its __main__.py",
               "the 4.0 Linux download", "the 3.8.2 Linux download",
@@ -793,7 +804,26 @@ SPACED_IDS = ["python -m", "app bundle and script", "its __main__.py",
               "python in the folder, qualcoder.py beside it",
               "qualcoder.py in the folder",
               "an option, then qualcoder-script.py in the folder",
-              "a Windows path, as psutil's words joined"]
+              "a Windows path, as psutil's words joined",
+              "the 4.0 Linux download, a hyphen in the folder",
+              "the 3.8.2 Linux download, a hyphen in the folder",
+              "the 4.0 Linux download, two hyphens in the folder",
+              "qualcoder.py, a hyphen in the folder",
+              "python and qualcoder.py, a hyphen in each folder",
+              "the 4.0 Linux download, from ./",
+              "the 3.8.2 Linux download, from ../"]
+
+# What PRIVACY and the CHANGELOG name as still missed without psutil
+# (fix round 3): a folder name with a word that begins with a hyphen or a
+# tilde, a program started by a relative path that does not begin with
+# ./ or ../, a space in the program's own name. If the reading comes to
+# see one of these, the documents change with it.
+STILL_MISSED_LINES = (
+    "/home/x/Apps -old/QualCoder-4.0-beta-linux-executable",
+    "/home/x/Apps ~old/QualCoder-4.0-beta-linux-executable",
+    "Research Tools/QualCoder-4.0-beta-linux-executable",
+    "/opt/tools/My QualCoder",
+)
 
 # Lines that only name QualCoder, or are Exegete's own: no possible miss
 # (fix round 2 joins words again; these must stay out)
@@ -817,11 +847,20 @@ NOT_QUALCODER_LINES = (
     "/usr/bin/zip -r out/qualcoder.zip notes",
     "/Applications/Visual Studio Code.app/Contents/MacOS/Electron "
     "/Users/x/Applications/QualCoder",
+    # fix round 3: a hyphen alone is joined, and ./ and ../ begin a path
+    "/usr/bin/cat - /x/qualcoder/notes.txt",
+    "/usr/bin/python3 /x/tool.py - /data/qualcoder.py",
+    "/usr/bin/tail -f - /x/mcp-server-qualcoder.log",
+    "/Users/x/Apps - Linux/env/bin/python -m qualcoder_mcp",
+    "./scripts/backup.sh /x/qualcoder/notes.txt",
+    "../env/bin/python3 -m pytest tests/test_qualcoder.py",
 )
 
 
 def _without_the_space(line):
-    for spaced in ("My Apps", "Research Tools", "My Passport", "My Tools"):
+    for spaced in ("My Apps", "Research Tools", "My Passport", "My Tools",
+                   "Linux - Apps", "Software - Linux", "Apps -- Linux",
+                   "OneDrive - University"):
         line = line.replace(spaced, spaced.replace(" ", ""))
     return line
 
@@ -873,6 +912,16 @@ class TestAPathWithASpace:
     def test_a_line_that_only_names_qualcoder_stays_out(self, line):
         """A guard: joining words again (fix round 2) never makes a
         program that only names QualCoder, or Exegete itself, a
+        possible miss."""
+        own = os.getpid()
+        scan = database._scan_from_listing(f"  {own + 1} {line}\n", own,
+                                           False)
+        assert scan == SAW_NONE
+
+    @pytest.mark.parametrize("line", STILL_MISSED_LINES)
+    def test_what_the_documents_name_as_still_missed(self, line):
+        """The forms PRIVACY and the CHANGELOG name as still read as no
+        QualCoder without psutil (fix round 3) are so: no hit, no
         possible miss."""
         own = os.getpid()
         scan = database._scan_from_listing(f"  {own + 1} {line}\n", own,
@@ -1140,6 +1189,24 @@ class TestTheWordsAfterReview:
             in section
         assert ("a QualCoder open on another computer, on a project in a "
                 "synced or shared folder, is not seen") in section
+
+    def test_both_documents_name_what_is_still_missed(self):
+        """Fix round 3: the promise that the chat sign is still given for
+        a QualCoder in a spaced folder names the forms that still lose
+        it (see STILL_MISSED_LINES)."""
+        still_missed = (
+            "Without psutil, a few such paths are still read as no "
+            "QualCoder, and the sign is then left out: a folder whose name "
+            "holds a word that begins with a hyphen or a tilde (`Apps "
+            "-old`, `Apps ~old`), a program started by a path relative to "
+            "the current folder that does not begin with `./` or `../`, a "
+            "space in the program's own file name, and a path of more than "
+            "32 words.")
+        changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        section = _collapsed(_section(
+            changelog, "### Changed: a project's history with QualCoder"))
+        assert still_missed in self._privacy_bullet()
+        assert still_missed in section
 
     def test_tools_says_nothing_that_may_be_one(self):
         tools = _collapsed("\n".join(

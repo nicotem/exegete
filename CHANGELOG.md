@@ -171,11 +171,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Subsystem for Linux), which lists none of Windows' programs, or finds
   a program that may be a QualCoder it cannot read (one run through
   Python, or one of QualCoder's Linux downloads, from a folder whose
-  path holds a space), the sign is given as before. That check sees
-  only this computer: a QualCoder open on another computer, on a
-  project in a synced or shared folder, is not seen, and when the check
-  here finds no QualCoder the chat history's recent change no longer
-  shows it either.
+  path holds a space), the sign is given as before. Without psutil, a
+  few such paths are still read as no QualCoder, and the sign is then
+  left out: a folder whose name holds a word that begins with a hyphen
+  or a tilde (`Apps -old`, `Apps ~old`), a program started by a path
+  relative to the current folder that does not begin with `./` or
+  `../`, a space in the program's own file name, and a path of more
+  than 32 words. That check sees only this computer: a QualCoder open
+  on another computer, on a project in a synced or shared folder, is
+  not seen, and when the check here finds no QualCoder the chat
+  history's recent change no longer shows it either.
 
 ### Changed: one tool set called full
 

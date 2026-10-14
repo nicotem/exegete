@@ -1168,7 +1168,12 @@ Two further rules touch files on your disk:
   may be a QualCoder the scan could not read (one run through Python, or
   one of QualCoder's Linux downloads, from a folder whose path holds a
   space), when a running Python program's command line could not be
-  read, in such a sandbox, and inside WSL.
+  read, in such a sandbox, and inside WSL. Without psutil, a few such
+  paths are still read as no QualCoder, and the sign is then left out:
+  a folder whose name holds a word that begins with a hyphen or a tilde
+  (`Apps -old`, `Apps ~old`), a program started by a path relative to
+  the current folder that does not begin with `./` or `../`, a space in
+  the program's own file name, and a path of more than 32 words.
   `create_project` runs no process scan for the project it has just
   made. `select_project` and `get_current_project` also give the
   project's history with QualCoder (`qualcoder_history`, v0.15.0),

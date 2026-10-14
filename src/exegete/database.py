@@ -863,26 +863,36 @@ def _filter_qualcoder_processes(lines) -> List[str]:
 # `qualcoder/__main__.py`, `/bin/qualcoder` or `\Scripts\qualcoder`
 # (`.exe` aside), or when the rule above says yes once the words that a
 # space may have split are joined again (fix round 2): the program's,
-# when the line begins with a path, and a Python's script's. A word that
-# begins another one (an option, or a path of its own: `-`, `/`, `~` or
-# a drive such as `C:\`) is never joined to the word before it, and a
-# program is joined only up to a word that holds a slash (a space in a
-# folder's name, not in the program's own), so `tail -f
+# when the line begins with a path (`/`, `~`, `./`, `../` or a drive such
+# as `C:\`), and a Python's script's. A word that begins another one (an
+# option, or a path of its own) is never joined to the word before it,
+# and a program is joined only up to a word that holds a slash (a space
+# in a folder's name, not in the program's own), so `tail -f
 # .../mcp-server-qualcoder.log` and `vim /x/qualcoder/notes.txt` stay
-# out. A line that does not hold "qualcoder" is not read further.
+# out. A word made only of hyphens is no option there: it is part of a
+# folder's name such as "Apps - Linux" or "OneDrive - University" (fix
+# round 3, as are `./` and `../`). Still read as no QualCoder: a folder
+# name with a word that begins with a hyphen or a tilde ("Apps -old",
+# "Apps ~old"), a program started by a relative path that does not begin
+# with `./` or `../` (a bare first word may be an editor's name, as in
+# `less .qualcoder/QualCoder.log`), and a space in the program's own
+# name. A line that does not hold "qualcoder" is not read further.
 _MAY_BE_QUALCODER_MODULE = re.compile(r"-m\s*qualcoder")
 _MAY_BE_QUALCODER_ENDINGS = ("qualcoder/__main__.py", "/bin/qualcoder",
                              "/scripts/qualcoder")
 # At most this many words of a line are joined again: a bound on the
 # work for a long command line.
 _MAY_BE_QUALCODER_WORDS = 32
-_BEGINS_A_PATH = re.compile(r"^(?:[/~]|[a-z]:[\\/])", re.IGNORECASE)
+_BEGINS_A_PATH = re.compile(r"^(?:[/~]|\.\.?/|[a-z]:[\\/])",
+                            re.IGNORECASE)
 
 
 def _begins_another_word(word: str) -> bool:
     """Whether a word cannot be the rest of a path that a space split:
-    an option, or a path of its own."""
-    return word.startswith("-") or bool(_BEGINS_A_PATH.match(word))
+    an option, or a path of its own. A word made only of hyphens is
+    neither (fix round 3)."""
+    return ((word.startswith("-") and word.strip("-") != "")
+            or bool(_BEGINS_A_PATH.match(word)))
 
 
 def _python_script_index(arguments: List[str]) -> Optional[int]:

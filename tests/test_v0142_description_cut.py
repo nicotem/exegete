@@ -663,6 +663,12 @@ CHANGED_0150 = {
     "set_attribute": (1646, 1344, "927d82ca1d9ffcac"),
     "set_memo": (2551, 2048, "9e62726bc0ecece1"),
     "update_annotation": (1931, 1599, "be5fbd103294206a"),
+    # not presuming QualCoder, piece 6: select_project's sentence on the
+    # warning when no sign of an open window is found, which now comes
+    # only when the project or this computer shows QualCoder has been
+    # used; the same length as before
+    # (tests/test_v0150_qualcoder_texts_6.py)
+    "select_project": (2415, 1996, "1caefe67600596a1"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

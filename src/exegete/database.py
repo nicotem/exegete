@@ -10806,6 +10806,47 @@ class QualcoderDatabase:
             return [mediapath[len('/docs/'):]]
         return []
 
+    # The saved places QualCoder keeps by text, which a rename does not
+    # reach, each with its tables in QualCoder 4.0's schema (the names
+    # new_project.TABLES carries, with its citation). v0.15.0, not
+    # presuming QualCoder, piece 11.
+    SAVED_PLACES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+        ("saved_graphs", ("graph",)),
+        ("saved_displays_and_filters",
+         ("manage_files_display", "files_filter")),
+        ("saved_queries", ("stored_sql",)),
+    )
+
+    def saved_places_in_use(self) -> Dict[str, bool]:
+        """Whether each saved place holds a row (v0.15.0): saved_graphs
+        (`graph`), saved_displays_and_filters (`manage_files_display` or
+        `files_filter`) and saved_queries (`stored_sql`).
+
+        One `SELECT 1 ... LIMIT 1` per table the probed schema has, the
+        names from SAVED_PLACES alone: no column of any row is read and
+        nothing is written. A table this schema lacks says False; a read
+        that fails says True, so a text that names the place keeps it
+        (saying more is the safe direction)."""
+        found: Dict[str, bool] = {}
+        for key, tables in self.SAVED_PLACES:
+            in_use = False
+            for table in tables:
+                if not self.capabilities.table_exists(table):
+                    continue
+                try:
+                    row = self.conn.execute(
+                        f'SELECT 1 FROM "{table}" LIMIT 1').fetchone()
+                except sqlite3.Error as e:
+                    logger.debug("A saved place could not be read: %s",
+                                 sqlite_error_label(e))
+                    in_use = True
+                    break
+                if row is not None:
+                    in_use = True
+                    break
+            found[key] = in_use
+        return found
+
     def old_name_left_in(self, kind: str, row_id: int, old_name: str,
                          mediapath: Optional[str] = None) -> Dict[str, Any]:
         """Where the old name of a renamed case or file still shows, among
@@ -12631,6 +12672,27 @@ class QualcoderDatabase:
         # normalisation and no separator flexibility, so a researcher
         # sent there gets a narrower answer than this block's and is
         # told so (cross-check, both corrections).
+        # v0.15.0, not presuming QualCoder, piece 11: each clause about
+        # QualCoder or a saved place only on its sign, a hidden coder
+        # (hidden_coder_count) or a saved place that holds a row
+        # (saved_places_in_use, read once per preview); the rest always.
+        hidden_coders = (
+            "; it leaves out the coding notes and annotations of a coder "
+            "hidden in QualCoder, which are read there"
+            if self.hidden_coder_count() > 0 else "")
+        places = self.saved_places_in_use()
+        unreached = [
+            "the stored copy and stored path of an imported file (the copy "
+            "in the project folder keeps the name it was imported under "
+            "and, for a document, the original text)"]
+        unreached += [words for key, words in (
+            ("saved_graphs", "saved graph labels"),
+            ("saved_displays_and_filters", "saved table displays and "
+                                           "filters"),
+            ("saved_queries", "QualCoder's saved SQL queries"))
+            if places[key]]
+        listed = (unreached[0] if len(unreached) == 1 else
+                  ", ".join(unreached[:-1]) + ", or " + unreached[-1])
         residue["scope_note"] = (
             "file_id chooses which file is rewritten. The notes and the "
             "report always cover the whole project. This block covers the "
@@ -12640,22 +12702,22 @@ class QualcoderDatabase:
             "file_text. Each count is two readings, wide and whole-word. "
             "To find the notes a count points at, search_memos searches "
             "the public part of all twelve fields and names each result's "
-            "kind; it leaves out the coding notes and annotations of a "
-            "coder hidden in QualCoder, which are read there. "
+            f"kind{hidden_coders}. "
             "search_files reads narrower than this block does (a plain "
             "substring, no normalisation), so a name it does not find may "
             "still be counted here. The labels include case and file "
             "names, which rename_case and rename_file change. A rename "
-            "does not reach, and this block does not read, the stored "
-            "copy and stored path of an imported file (the copy in the "
-            "project folder keeps the name it was imported under and, for "
-            "a document, the original text), saved graph labels, saved "
-            "table displays and filters, or QualCoder's saved SQL "
-            "queries.")
-        residue["ai_data_note"] = (
-            "QualCoder 4.0's ai_data folder (chat history and the search "
-            "index) is never read or written by Exegete and is not "
-            "scanned; it may still hold the previous text.")
+            "does not reach, and this block does not read, "
+            f"{listed}.")
+        # Only when the project holds the folder (piece 11), by the
+        # history's own check; imported here, as that module imports
+        # this one
+        from . import qualcoder_history
+        if qualcoder_history.ai_data_found(folder):
+            residue["ai_data_note"] = (
+                "QualCoder 4.0's ai_data folder (chat history and the "
+                "search index) is never read or written by Exegete and is "
+                "not scanned; it may still hold the previous text.")
         if memo_plan is not None:
             residue["after_rewrite_note"] = self.PSEUDONYMISE_AFTER_REWRITE_NOTE
         try:
@@ -13046,9 +13108,12 @@ class QualcoderDatabase:
             "journal_entries_from_earlier_runs_note":
                 self.PSEUDONYMISE_MEMO_EARLIER_RUNS_NOTE,
             "memos_of_hidden_coders": totals["of_hidden_coders"],
-            "memos_of_hidden_coders_note":
-                self.PSEUDONYMISE_MEMO_HIDDEN_NOTE,
         }
+        # The note only when the count is above 0 (v0.15.0, not
+        # presuming QualCoder, piece 11); the count itself always.
+        if totals["of_hidden_coders"] > 0:
+            block["memos_of_hidden_coders_note"] = \
+                self.PSEUDONYMISE_MEMO_HIDDEN_NOTE
         if memo_plan["unreadable"]:
             block["unreadable"] = list(memo_plan["unreadable"])
         return block

@@ -178,10 +178,12 @@ reason.
 
 Quick picks if you have no preference: `AI Coding Assistant`
 (Exegete's built-in default, and what every project coded with v0.11 and
-earlier already holds) and `AI Agent`, the exact name QualCoder 4.0's
-built-in assistant writes under, which groups Exegete's work and
-the built-in assistant's under one coder in QualCoder's per-coder
-visibility toggle, undo and reports.
+earlier already holds), or a name of your own. When the project shows
+that QualCoder's AI may have been used (it already holds rows under
+`AI Agent`, or has an `ai_data` folder), the picks also include
+`AI Agent`, the exact name QualCoder 4.0's built-in assistant writes
+under, which groups Exegete's work and the built-in assistant's under
+one coder in QualCoder's per-coder visibility toggle, undo and reports.
 
 You can also choose it in advance, in Exegete's settings: the desktop
 extension's "AI coder name", or `EXEGETE_AI_CODER_NAME` in Exegete's
@@ -655,7 +657,7 @@ Native first, as on any computer:
    overlapping coding shown, a list of the codes with a tick box that
    hides each one, a "text only" switch, and the annotations and the
    public part of memos as numbered notes at the end. The private part of memos (from `#####`) is left
-   out, and the page says so. It is written after QualCoder's own HTML
+   out, and the page says so. Its layout follows QualCoder's own HTML
    export of a coded file. Converted with pandoc (from a pandoc server,
    if you use one, file to file) it becomes a Word file with one comment
    per coding, named after its code.

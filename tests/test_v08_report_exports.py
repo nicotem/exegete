@@ -358,7 +358,7 @@ class TestE3CaseCodeMatrix:
             str(tmp_path / "matrix.csv")))
         assert "CONTAINMENT" in out["counting_rule"]
         # v0.15.0, piece 12: the rule first, QualCoder's table compared
-        assert "which counts by file linkage, the numbers will differ." \
+        assert "which counts by file linkage, the numbers can differ." \
             in out["counting_rule"]
 
 

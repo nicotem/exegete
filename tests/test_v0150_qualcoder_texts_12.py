@@ -85,8 +85,12 @@ CASE_NOTES = (
     "private parts)")
 CASE_FILES = ("in the names of files named after the case (their ids are "
               "in old_name_left_in.file_ids, and rename_file renames them)")
-CASE_BACKUPS = ("in every backup, including the one just taken "
-                "(list_backups lists them; prune_backups removes Exegete's")
+# Fix round 1: "including the one just taken" only when the rename took
+# a backup; the tests below rename with create_backup=False unless they
+# say otherwise
+TAKEN = ", including the one just taken"
+CASE_BACKUPS = ("in every backup (list_backups lists them; prune_backups "
+                "removes Exegete's")
 QUALCODER_BACKUPS = (", and QualCoder's own _BKUP_ copies only the "
                      "researcher can remove")
 SAVED_QUERIES = ("in any of QualCoder's saved SQL queries that name it "
@@ -119,8 +123,8 @@ FILE_FIRST = (
     "Only the file's name in the project changed (as with QualCoder's "
     "\"Rename database entry\"): nothing on disk was renamed, and the "
     "stored path, date, notes, codings and case links are kept.")
-FILE_BACKUPS = (" Every backup, including the one just taken, keeps the "
-                "old name, and so do Exegete's coding-session files")
+FILE_BACKUPS = (" Every backup keeps the old name, and so do Exegete's "
+                "coding-session files")
 FILE_QUERIES = (" and any of QualCoder's saved SQL queries that name it "
                 "(not read here)")
 FILE_RECORDS = (
@@ -163,10 +167,10 @@ CODEBOOK_RULE = ("text, image and audio/video codings, all coders, no "
                  "filters, codings on deleted files included (the same "
                  "count as QualCoder's Codebook)")
 FREQUENCIES_RULE = (
-    "one count per coding row over code_text + code_image + code_av, per "
-    "coder; category rows are recursive subtree totals; codings on deleted "
-    "files included (the same count as QualCoder's Code Frequencies "
-    "report)")
+    "one count per coding, text, image and audio/video, per coder; a "
+    "category's row is the total of everything under it; codings on "
+    "deleted files included (the same count as QualCoder's Code "
+    "Frequencies report)")
 DIVERGENCE = ("get_coding_frequencies (the conversational tool) counts "
               "text codings on existing files only; its numbers can be "
               "lower than this export, which counts every coding of every "
@@ -175,7 +179,7 @@ SAFE_CELLS = ("formulas sanitised for spreadsheet safety: cells starting "
               "with = + - @ tab or CR are prefixed with ' (so those cells "
               "differ from what QualCoder's own export writes)")
 COMPARED = ("If compared with QualCoder's comparison table, which counts "
-            "by file linkage, the numbers will differ.")
+            "by file linkage, the numbers can differ.")
 SEGMENTS_RULE = (
     "CONTAINMENT: a coding belongs to a case iff its span lies fully "
     "inside one of the case's text spans on the same file (the same rule "
@@ -210,7 +214,8 @@ ASK_HEAD = (
     "models can then be compared later. Quick picks: \"AI Coding "
     "Assistant\" (Exegete's built-in default)")
 AI_AGENT = (", \"AI Agent\" (if the researcher also uses QualCoder 4.0's "
-            "own assistant, it puts both under one coder)")
+            "own assistant, this name puts both assistants' codings under "
+            "one coder)")
 THEIR_OWN = (", or a name the researcher chooses (the model's name, for "
              "example)")
 ASK_TAIL = (" The name can be changed at any time with the same tool; "
@@ -424,6 +429,29 @@ class TestTheSentenceOnQualCodersImports:
         monkeypatch.setattr(server, "_qualcoder_history_cache", None)
         assert server._qualcoder_history().level == "computer"
         assert _file()["note"].endswith(FILE_LATER + " " + HEURISTIC + LIMIT)
+
+
+class TestTheBackupJustTaken:
+    """Fix round 1: both notes say "including the one just taken" only
+    when the rename took a backup (create_backup, True by default)."""
+
+    def test_rename_case_with_a_backup(self, project):
+        out = json.loads(server.rename_case(1, "P01"))
+        assert out["backup_path"]
+        assert out["note"] == CASE_NONE.replace(
+            "in every backup (", "in every backup" + TAKEN + " (")
+
+    def test_rename_file_with_a_backup(self, project):
+        out = json.loads(server.rename_file(1, "P01.txt"))
+        assert out["backup_path"]
+        assert out["note"] == FILE_NONE.replace(
+            " Every backup keeps", " Every backup" + TAKEN + ", keeps")
+
+    def test_without_a_backup(self, project):
+        case, file = _case(), _file()
+        assert "backup_path" not in case and "backup_path" not in file
+        assert "just taken" not in case["note"]
+        assert "just taken" not in file["note"]
 
 
 # ---------------------------------------------------------------------------
@@ -654,6 +682,25 @@ class TestTheQuickPicks:
         assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME,
                                       "AI Agent"]
 
+    @pytest.mark.parametrize("sign", ["setting yes", "settings folder"])
+    def test_a_history_with_qualcoder_is_not_its_sign(self, unset, home,
+                                                       monkeypatch, sign):
+        """Fix round 1: the project's history with QualCoder at a level
+        other than "none", with no ai_data folder and no rows under
+        "AI Agent": not offered, and the researcher's own choice ends
+        the picks."""
+        if sign == "settings folder":
+            (home / ".qualcoder").mkdir()
+        else:
+            monkeypatch.setenv(SETTING, "yes")
+        monkeypatch.setattr(server, "_qualcoder_history_cache", None)
+        assert server._qualcoder_history().level != "none"
+        assert not (unset / "ai_data").exists()
+        out = _asked()
+        assert out["error"].endswith(THEIR_OWN + "." + ASK_TAIL)
+        assert out["error"] == ASK_HEAD + THEIR_OWN + "." + ASK_TAIL
+        assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME]
+
     def test_not_a_file_of_that_name(self, unset):
         (unset / "ai_data").write_bytes(b"not a folder")
         assert _asked()["quick_picks"] == [server.DEFAULT_AI_CODER_NAME]
@@ -700,8 +747,77 @@ class TestTheHouseRules:
     def test_the_new_texts(self):
         from test_v012_pseudonymise_tool import _house_rules
         _house_rules([CASE_ALL, CASE_NONE, FILE_NONE + FILE_QUERIES
-                      + FILE_LATER, SEARCH_INDEX, DOCS_COPY, MEDIA_COPY,
+                      + FILE_LATER, CASE_NONE.replace(
+                          "in every backup (",
+                          "in every backup" + TAKEN + " ("),
+                      FILE_NONE.replace(" Every backup keeps",
+                                        " Every backup" + TAKEN + ", keeps"),
+                      SEARCH_INDEX, DOCS_COPY, MEDIA_COPY,
                       FOUND_BY_NAME, CODEBOOK_RULE, FREQUENCIES_RULE,
                       DIVERGENCE, SAFE_CELLS, SEGMENTS_RULE, MATRIX_RULE,
                       FOOTER, HIDDEN_APPLIED, HIDDEN_BYPASSED,
                       ASK_HEAD + AI_AGENT + THEIR_OWN + ASK_TAIL])
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1: the documents say what the answers now say
+# ---------------------------------------------------------------------------
+
+def _doc(name):
+    return _flat((REPO / name).read_text(encoding="utf-8"))
+
+
+def _changelog_section():
+    """This piece's CHANGELOG section, flattened."""
+    text = _doc("CHANGELOG.md")
+    start = text.index("### Changed: renames, exports, the reading copy "
+                       "and coder names, without presuming QualCoder")
+    return text[start:text.index("### ", start + 4)]
+
+
+class TestTheDocuments:
+
+    def test_privacy_names_the_ai_chat_history(self):
+        flat = _doc("PRIVACY.md")
+        assert ("QualCoder's search index and QualCoder's AI chat history "
+                "keep the old name too") in flat
+        assert "QualCoder 4.0's AI chat keep" not in flat
+
+    def test_tools_on_the_reading_copy(self):
+        flat = _doc("TOOLS.md")
+        assert ("The private part of memos (from `#####`) is left out, and "
+                "the page says so. Its layout follows QualCoder's own HTML "
+                "export of a coded file.") in flat
+        assert "It is written after QualCoder's own HTML export" not in flat
+
+    def test_tools_offers_ai_agent_on_its_sign(self):
+        flat = _doc("TOOLS.md")
+        assert (
+            "Quick picks if you have no preference: `AI Coding Assistant` "
+            "(Exegete's built-in default, and what every project coded "
+            "with v0.11 and earlier already holds), or a name of your own. "
+            "When the project shows that QualCoder's AI may have been used "
+            "(it already holds rows under `AI Agent`, or has an `ai_data` "
+            "folder), the picks also include `AI Agent`, the exact name "
+            "QualCoder 4.0's built-in assistant writes under") in flat
+        assert "already holds) and `AI Agent`" not in flat
+
+    def test_the_changelog_keeps_the_two_notes_apart(self):
+        section = _changelog_section()
+        assert (
+            "each note says always where the old name stays in Exegete "
+            "(for a case: notes, journal entries, file text, attribute "
+            "values, files named after it and every backup; for a file: "
+            "every backup, Exegete's coding-session files and "
+            "pseudonymisation records)") in section
+        assert (
+            "after a case rename, the note names QualCoder's own `_BKUP_` "
+            "backups only when one is beside the project, and its AI chat "
+            "history only when the project holds it") in section
+
+    def test_the_changelog_quotes_the_answers(self):
+        section = _changelog_section()
+        for text in (FREQUENCIES_RULE, COMPARED,
+                     AI_AGENT[len(", \"AI Agent\" ("):-1]):
+            assert text in section, text
+        assert "will differ" not in section

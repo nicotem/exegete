@@ -187,14 +187,18 @@ def test_every_rename_text_keeps_the_house_rules():
         ("a.txt", "a", None, ["a"]), ("a.pdf", "a", "/docs/a.pdf", []),
         ("a", "a.transcribed", None, []), ("a.mp3", "a", "/audio/a.mp3", []),
         ("a.txt", "a.docx", None, []))]
-    # v0.15.0, piece 12: the notes as built, with and without every sign
+    # v0.15.0, piece 12: the notes as built, with and without every sign,
+    # and (its fix round 1) with and without a backup just taken
     import itertools
     for flags in itertools.product((False, True), repeat=4):
         signs = server._RenameSigns(*flags)
         for left_in in ({}, {"saved_graph_labels": 1, "saved_filters": 2,
                              "saved_table_displays": 1}):
-            texts += [server._rename_case_note(left_in, signs),
-                      server._rename_file_note(left_in, signs)]
+            for taken in (False, True):
+                texts += [server._rename_case_note(left_in, signs,
+                                                   backup_taken=taken),
+                          server._rename_file_note(left_in, signs,
+                                                   backup_taken=taken)]
     assert all(isinstance(t, str) and t for t in texts)
     _house_rules(texts)
 

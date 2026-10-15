@@ -2034,7 +2034,7 @@ will ask, and the summary above depends on them:
     graph labels, table displays and filters for the case or file it
     renamed; the saved SQL queries nothing in Exegete reads. Every
     backup, Exegete's session files, QualCoder's search index and
-    QualCoder 4.0's AI chat keep the old name too, and
+    QualCoder's AI chat history keep the old name too, and
     so do Exegete's pseudonymisation journal entries and run records,
     which keep a file's name as it was at the run unless that name
     carried a name from the mapping (they then name the file by its id),

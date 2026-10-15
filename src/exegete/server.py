@@ -2709,7 +2709,8 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
         "built-in default)")
     if offer_ai_agent:
         text += (", \"AI Agent\" (if the researcher also uses QualCoder "
-                 "4.0's own assistant, it puts both under one coder)")
+                 "4.0's own assistant, this name puts both assistants' "
+                 "codings under one coder)")
     if declared and declared not in (
             [DEFAULT_AI_CODER_NAME]
             + ([KNOWN_AI_ASSISTANT_OWNER] if offer_ai_agent else [])):
@@ -18777,13 +18778,15 @@ RENAME_CASE_NOTE = (
     "date, notes, file links and attributes are kept.")
 
 
-def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
+def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
+                      backup_taken: bool = True) -> str:
     """rename_case's note (v0.15.0, piece 12): the places in Exegete
     always; each of QualCoder's places only on its sign (its count in
     old_name_left_in, a saved query, a QualCoder backup beside the
     project, the AI chat history); what QualCoder's imports and Merge
     Projects can bring back when the project's history with QualCoder is
-    not "none"."""
+    not "none". "Including the one just taken" only when the rename took
+    a backup (`backup_taken`, its create_backup; fix round 1)."""
     places = [
         "in notes, journal entries, file text and attribute values (the "
         "pseudonymisation preview counts those, notes and journal entries "
@@ -18800,8 +18803,9 @@ def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
         "in the names of files named after the case (their ids are in "
         "old_name_left_in.file_ids, and rename_file renames them)")
     places.append(
-        "in every backup, including the one just taken (list_backups lists "
-        "them; prune_backups removes Exegete's"
+        "in every backup"
+        + (", including the one just taken" if backup_taken else "")
+        + " (list_backups lists them; prune_backups removes Exegete's"
         + (", and QualCoder's own _BKUP_ copies only the researcher can "
            "remove" if signs.qualcoder_backups else "") + ")")
     if signs.chat_history:
@@ -18909,7 +18913,8 @@ def rename_case(case_id: int, new_name: str,
                 **renamed,
                 "old_name_left_in": left_in,
                 "note": _rename_case_note(left_in, _rename_signs(
-                    wdb, project_folder, qualcoder_seen))}
+                    wdb, project_folder, qualcoder_seen),
+                    backup_taken=bool(create_backup))}
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="the case was not renamed")
@@ -18924,13 +18929,17 @@ RENAME_FILE_NOTE = (
     "stored path, date, notes, codings and case links are kept.")
 
 
-def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
+def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns,
+                      backup_taken: bool = True) -> str:
     """rename_file's note (v0.15.0, piece 12): Exegete's places always;
     QualCoder's saved SQL queries when one is saved; what QualCoder's
     Merge Projects can bring back when the project's history with
-    QualCoder is not "none"."""
-    note = (RENAME_FILE_NOTE + " Every backup, "
-            "including the one just taken, keeps the old name, and so do "
+    QualCoder is not "none". "Including the one just taken" only when
+    the rename took a backup (`backup_taken`, its create_backup; fix
+    round 1)."""
+    note = (RENAME_FILE_NOTE + " Every backup"
+            + (", including the one just taken," if backup_taken else "")
+            + " keeps the old name, and so do "
             "Exegete's coding-session files"
             + (" and any of QualCoder's saved SQL queries that name it "
                "(not read here)" if signs.saved_queries else "")
@@ -19439,7 +19448,8 @@ def rename_file(file_id: int, new_name: str,
                 "old_name_left_in": left_in,
                 **index,
                 "note": _rename_file_note(left_in, _rename_signs(
-                    wdb, project_folder, qualcoder_seen))}
+                    wdb, project_folder, qualcoder_seen),
+                    backup_taken=bool(create_backup))}
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="the file was not renamed")
@@ -20311,7 +20321,7 @@ def export_coded_segments_report(
             "fully inside one of the case's text spans on the same file "
             "(the same rule as QualCoder's coding report). If compared "
             "with QualCoder's comparison table, which counts by file "
-            "linkage, the numbers will differ. Whole-file links made in "
+            "linkage, the numbers can differ. Whole-file links made in "
             "QualCoder end at len-1 or len depending on the dialog, which "
             "can exclude a coding touching the file end."
         )
@@ -20487,9 +20497,9 @@ def export_frequencies_csv(output_path: str,
         "categories": len(cats),
         **coder_keys,
         "sanitization": _sanitization_note(sanitize_formulas),
-        "counting_rule": "one count per coding row over code_text + "
-                         "code_image + code_av, per coder; category rows "
-                         "are recursive subtree totals; codings on deleted "
+        "counting_rule": "one count per coding, text, image and "
+                         "audio/video, per coder; a category's row is the "
+                         "total of everything under it; codings on deleted "
                          "files included (the same count as QualCoder's "
                          "Code Frequencies report)",
         "divergence_note": "get_coding_frequencies (the conversational "
@@ -20560,7 +20570,7 @@ def export_case_code_matrix_csv(output_path: str,
                          "the same file (text codings on existing files; "
                          "the same rule as QualCoder's coding report). If "
                          "compared with QualCoder's comparison table, "
-                         "which counts by file linkage, the numbers will "
+                         "which counts by file linkage, the numbers can "
                          "differ.",
     }, indent=2)
 

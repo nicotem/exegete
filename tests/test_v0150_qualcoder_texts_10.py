@@ -33,6 +33,16 @@ uses it:
 Named as guards, and not counted with the tests of the new words: the
 old phrases gone (the guard of every piece), and the import's departure
 lines the audit keeps.
+
+Fix round 1 (GATE_texts-10_QA_R1.md and GATE_texts-10_DOCS_R1.md, the
+minor findings): the reason line's second sentence is plainer; the line
+after a departure says "stores", which fits the preview; the pseudonym
+refusal gives first the reason that holds for everyone; the summary
+names QualCoder 3.8.2 and 4.0 only when a listed PDF has that reason;
+the six short position warnings give emoji as the example, and
+pseudonymise_source's answer says "codings made in QualCoder" for
+"GUI-created codings"; the CHANGELOG's opening says what changed. The
+round's old phrases are guarded as the piece's are.
 """
 
 import json
@@ -93,6 +103,18 @@ OLD_IN_ANSWERS = (
     "long books and reports come in through QualCoder",
 )
 
+# Fix round 1's old texts, each from a single literal part on the branch
+# before the round
+OLD_IN_ROUND_1 = (
+    "is read alike by both too",
+    "it reads the text Exegete stored.",
+    "would misplace positions in the rewritten file",
+    "Choose a pseudonym in the Basic Multilingual Plane",
+    "GUI-created codings in that file",
+    "characters beyond U+FFFF; if the project",
+    "characters beyond U+FFFF, which QualCoder's editor",
+)
+
 # The position warning's two forms (entry 1)
 LONG = ("Windows line breaks or characters beyond U+FFFF (such as emoji), "
         "which QualCoder's editor counts differently (its manual notes that "
@@ -104,38 +126,43 @@ READ = "This file contains " + LONG
 RECORD = ("File(s) ['emoji.txt'] contain " + LONG
           + " Relay this to the user before proceeding to approval.")
 EDIT = ("File 'emoji.txt' contains Windows line breaks or characters "
-        "beyond U+FFFF; if the project is opened in QualCoder, codings on "
-        "it may show shifted in its editor. Relay this to the user.")
+        "beyond U+FFFF (such as emoji); if the project is opened in "
+        "QualCoder, codings on it may show shifted in its editor. Relay "
+        "this to the user.")
 APPLY = ("position_safety_warning: file(s) ['emoji.txt'] contain Windows "
-         "line breaks or characters beyond U+FFFF; if the project is opened "
-         "in QualCoder, these codings may show shifted or unhighlighted in "
-         "its editor (reports and exports are unaffected). Relay this to "
-         "the user.")
+         "line breaks or characters beyond U+FFFF (such as emoji); if the "
+         "project is opened in QualCoder, these codings may show shifted or "
+         "unhighlighted in its editor (reports and exports are unaffected). "
+         "Relay this to the user.")
 EVIDENCE = ("Evidence file(s) ['emoji.txt'] contain Windows line breaks or "
-            "characters beyond U+FFFF; if the project is opened in "
-            "QualCoder, codings on them may show shifted in its editor. "
-            "Relay this to the user.")
+            "characters beyond U+FFFF (such as emoji); if the project is "
+            "opened in QualCoder, codings on them may show shifted in its "
+            "editor. Relay this to the user.")
 ANNOTATE = ("File 'emoji.txt' contains Windows line breaks or characters "
-            "beyond U+FFFF; if the project is opened in QualCoder, this "
-            "annotation's span may show shifted in its editor. Relay this "
-            "to the user.")
+            "beyond U+FFFF (such as emoji); if the project is opened in "
+            "QualCoder, this annotation's span may show shifted in its "
+            "editor. Relay this to the user.")
 PSEUDO_PREVIEW = (
     "Warning: file(s) [1] contain Windows line breaks or characters beyond "
-    "U+FFFF, which QualCoder's editor counts differently from Exegete; if "
-    "the project is opened in QualCoder, codings there may already show "
-    "shifted. This run does not make that worse and does not fix it.")
+    "U+FFFF (such as emoji), which QualCoder's editor counts differently "
+    "from Exegete; if the project is opened in QualCoder, codings there "
+    "may already show shifted. This run does not make that worse and does "
+    "not fix it.")
 PSEUDO_ANSWER = (
     "File(s) [1] contain Windows line breaks or characters beyond U+FFFF "
     "(such as emoji), which QualCoder's editor counts differently from "
     "Exegete; if the project is opened in QualCoder, codings there may "
     "already show shifted. That was already true before this run and is "
-    "not made worse by it; GUI-created codings in that file may not align "
-    "with the slices Exegete reports.")
+    "not made worse by it; any codings made in QualCoder in that file may "
+    "not line up with the passages Exegete reports.")
+# The reason that holds for every researcher comes first (fix round 1)
 PSEUDONYM_REFUSED = (
     "contains characters beyond U+FFFF (emoji or similar) or a carriage "
-    "return; if the project is opened in QualCoder, its editor would "
-    "misplace positions in the rewritten file. Choose a pseudonym in the "
-    "Basic Multilingual Plane.")
+    "return; Exegete keeps a rewritten file free of them so that every "
+    "program that reads the project's format counts its positions alike "
+    "(if the project is opened in QualCoder, its editor would misplace "
+    "them). Choose a pseudonym without emoji, other rare characters or "
+    "line breaks.")
 
 # PDFs (entries 4 to 9)
 NO_TEXT_LAYER = (
@@ -153,11 +180,8 @@ SCANNED_ON_IMPORT = (
 SUMMARY_NOTE = (
     "These PDF sources have no usable text, so they are not searched and "
     "cannot be coded as text here: no_text_layer is a PDF with no text "
-    "layer (OCR it outside Exegete and import the result); "
-    "pdf_file_stored_as_text is a PDF that QualCoder 3.8.2 stored as the "
-    "file itself, recognised by a heuristic; QualCoder 4.0's 'Restructure' "
-    "in its PDF view can repair it. read_file_with_codings says more for "
-    "each.")
+    "layer (OCR it outside Exegete and import the result){clause}. "
+    "read_file_with_codings says more for each.")
 AFTER_A_PDF = (
     "If this project is opened in QualCoder 4.0: it checks a PDF's stored "
     "text against its own reading of the PDF, which can differ with "
@@ -181,9 +205,9 @@ EMOJI_ON_IMPORT = (
     "in QualCoder, it shows codings after the first of them shifted.")
 WHY_ALIKE = (
     "Exegete reads the file as QualCoder does, so if the same file is also "
-    "imported in QualCoder, both copies hold the same text. A file changed "
-    "as a warning here suggests (its \"Way round\") is read alike by both "
-    "too.")
+    "imported in QualCoder, both copies hold the same text. If you change "
+    "the file as a warning here suggests (its \"Way round\"), both "
+    "programs read the changed file alike too.")
 NOT_UTF8 = ("Saved as UTF-8, its letters read rightly here, and in QualCoder "
             "too if you use it.")
 WHY_SUBTITLES = (
@@ -201,7 +225,7 @@ AFTER_DEPARTURE = (
     "So QualCoder's own import of this file would store other text: if the "
     "same file is also imported in QualCoder, codings made on one copy will "
     "not line up on the other. If this project is opened in QualCoder, it "
-    "reads the text Exegete stored.")
+    "reads the text Exegete stores.")
 RAW_UTF8_RTF = (
     "and RTF's rule reads each such byte as a letter of its own (\"Ã©\" for "
     "\"é\"); QualCoder, if you use it, reads it the same way. A name "
@@ -226,6 +250,12 @@ class TestTheGuard:
         texts = answer_texts()
         assert any("beyond U+FFFF" in t for t in texts)
         found = [(phrase, t[:120]) for phrase in OLD_IN_ANSWERS
+                 for t in texts if _flat(phrase) in t]
+        assert not found, found
+
+    def test_no_old_phrase_of_fix_round_1_is_in_an_answer(self):
+        texts = answer_texts()
+        found = [(phrase, t[:120]) for phrase in OLD_IN_ROUND_1
                  for t in texts if _flat(phrase) in t]
         assert not found, found
 
@@ -377,9 +407,10 @@ class TestPdfsInAProject:
         assert stored["unusable_pdf"]["message"] == NO_TEXT_LAYER
 
     def test_the_summarys_note(self, pdf_project):
-        """Entry 6."""
+        """Entry 6: a listed file has that reason, so the clause is said."""
         summary = json.loads(server.get_project_summary())
-        assert summary["unusable_pdfs_note"] == SUMMARY_NOTE
+        assert summary["unusable_pdfs_note"] == SUMMARY_NOTE.format(
+            clause=STORED_CLAUSE)
 
     def test_a_search_that_skipped_a_pdf_stored_as_the_file(self,
                                                              pdf_project):
@@ -391,9 +422,8 @@ class TestPdfsInAProject:
             n=3, clause=STORED_CLAUSE)
 
 
-def test_a_search_that_skipped_only_scanned_pdfs_says_nothing_of_qualcoder(
-        opened):
-    """Entry 9: a search that skipped only scanned PDFs."""
+def _only_a_scanned_pdf(opened):
+    """A project whose only unusable PDF is a scanned one, selected."""
     folder = opened("v17")
     con = sqlite3.connect(str(folder / "data.qda"))
     try:
@@ -405,10 +435,29 @@ def test_a_search_that_skipped_only_scanned_pdfs_says_nothing_of_qualcoder(
     finally:
         con.close()
     assert json.loads(server.select_project(str(folder))).get("success")
+
+
+def test_a_search_that_skipped_only_scanned_pdfs_says_nothing_of_qualcoder(
+        opened):
+    """Entry 9: a search that skipped only scanned PDFs."""
+    _only_a_scanned_pdf(opened)
     out = json.loads(server.search_files("obj", search_filename=False,
                                          search_content=True))
     note = out["performance_info"]["unusable_pdf_note"]
     assert note == SEARCH_NOTE.format(n=1, clause="")
+    assert "QualCoder" not in note
+
+
+def test_a_summary_with_only_scanned_pdfs_says_nothing_of_qualcoder(opened):
+    """Entry 6, fix round 1: the summary names QualCoder 3.8.2 and 4.0
+    only when a listed PDF was stored as the file itself, as search_files
+    does."""
+    _only_a_scanned_pdf(opened)
+    summary = json.loads(server.get_project_summary())
+    assert [u["reason"] for u in summary["unusable_pdfs"]] == [
+        "no_text_layer"]
+    note = summary["unusable_pdfs_note"]
+    assert note == SUMMARY_NOTE.format(clause="")
     assert "QualCoder" not in note
 
 
@@ -590,16 +639,22 @@ def test_the_changelog_says_what_changed():
     assert HEADING in unreleased
     section = unreleased.split(HEADING, 1)[1].split("### ", 1)[0]
     for phrase in (
-            "say what happens in Exegete, and what happens in QualCoder "
-            "only if the project is opened there or for a researcher who "
-            "uses it",
+            "The messages below now say what happens in Exegete, and what "
+            "happens in QualCoder only if the project is opened there or "
+            "for a researcher who uses it",
+            "The lines that name where an import departs from QualCoder's "
+            "own still say what QualCoder's import would do",
+            "gives emoji as the example of characters beyond U+FFFF",
+            "now for a reason that holds for every researcher: Exegete "
+            "keeps a rewritten file free of them \"so that every program "
+            "that reads the project's format counts its positions alike\"",
             "\"if the project is opened in QualCoder\", codings may show "
             "shifted there",
             "it calls `\\r\\n` \"Windows line breaks\"",
             "QualCoder, if you use it, can code areas of its pages",
             "\"QualCoder 4.0's 'Restructure' in its PDF view can repair "
-            "it\", and `search_files` says so only when a PDF it skipped is "
-            "one",
+            "it\", and `search_files` and `get_project_summary` say so only "
+            "when a PDF they list is one",
             "\"If this project is opened in QualCoder 4.0\"",
             "\"if the same file is also imported in QualCoder, both copies "
             "hold the same text\"",

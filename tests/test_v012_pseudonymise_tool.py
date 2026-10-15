@@ -7933,8 +7933,8 @@ class TestResultShape:
             assert result["success"] is True
             assert "position_safety_warning" in result
             # One file per call: said in the singular (fix round 1, QA-9).
-            assert "GUI-created codings in that file may not align" in \
-                result["position_safety_warning"]
+            assert "codings made in QualCoder in that file may not line " \
+                "up" in result["position_safety_warning"]
             assert "those files" not in result["position_safety_warning"]
         finally:
             server.db.close()

@@ -8733,7 +8733,7 @@ class TestTheDocumentsTellTheTruth:
         "backup.",
         "The names themselves reach the conversation only through a tool "
         "of their own, `read_pseudonym_list` (in the full tool set, the "
-        "default, and not in core; deprecated, and removed in v0.15), "
+        "default, and not in core; deprecated, and removed in v0.15.1), "
         "whose description says "
         "first that it sends the real names to the AI provider",
         "each is an audit record of which rows a run changed and where the "

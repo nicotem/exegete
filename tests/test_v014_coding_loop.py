@@ -1855,14 +1855,20 @@ class TestFixRound2WhatGoesInV015:
     def _described(tool, sentence):
         description = server.mcp._tool_manager._tools[tool].description
         assert sentence in description, tool
-        assert sentence.startswith("Deprecated, removed in v0.15: ")
+        # ruling 70 moved the removals to v0.15.1 (the whole-branch
+        # review of v0.15.0, round 1)
+        assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
         self._described("read_pseudonym_list",
                         server.DEPRECATED_PSEUDONYM_LIST)
         present = jcall("read_pseudonym_list")
         assert present["deprecated"] == server.DEPRECATED_PSEUDONYM_LIST
-        assert "Pseudonyms dialog (the button in Manage Files)" in \
+        # the file itself first, then QualCoder's dialog (the whole-branch
+        # review of v0.15.0, round 1)
+        assert "the list stays in pseudonyms.json in the project folder" \
+            in present["deprecated"]
+        assert "Pseudonyms dialog (Manage Files) also shows it" in \
             present["deprecated"]
         server.current_project_path = None
         server.db = None

@@ -144,8 +144,10 @@ class SchemaCapabilities:
         }
 
 # Columns this server reads or writes that older QualCoder schemas lack.
-# If any are missing, the project must be opened and saved in QualCoder 3.8
-# (which migrates the schema) before this server can use it.
+# If any are missing, the project must first be opened once in QualCoder 3.8
+# or newer, which adds both columns and commits as it opens (3.8.2's
+# `__main__.py` 2765 to 2772 and 2812 to 2822; 4.0's, tag `4.0`, 2530 to
+# 2531 and 2577 to 2578): no save is needed, and Exegete does not migrate.
 # code_text.important: added in schema v3; project.codername: added in v5
 # and selected unconditionally by get_project_info.
 REQUIRED_COLUMNS = {
@@ -547,6 +549,26 @@ NO_PROJECT_ROW_MESSAGE = (
     "QualCoder will open it. If it was left by a project creation that did not "
     "finish, it may be deleted by hand; otherwise restore it from a "
     "backup.")
+
+
+# The way through for a project from a QualCoder older than 3.8, which
+# Exegete cannot bring up to date (v0.15.0, DESIGN_lock_2.md, section 2).
+# The refusals name QualCoder because the project's schema shows that
+# QualCoder made it, and only QualCoder 3.8 or newer can bring it up to
+# date; the route for a researcher without QualCoder comes with it, and so
+# does its cost: QualCoder writes the coder name set in it into every
+# project it opens (3.8.2 `__main__.py` 3028 to 3029 and 1250 to 1256; 4.0,
+# tag `4.0`, `__main__.py` 2870 to 2871 and `app.py` 1607 to 1613).
+OLDER_QUALCODER_ROUTE = (
+    "QualCoder 3.8 or newer, if you use it, brings such a project up to "
+    "date the first time it opens it, with no need to save: open the "
+    "project there once, close it, then try again. If you do not use "
+    "QualCoder, someone who does and is allowed to see this project's data "
+    "(whoever shared it with you, for example) can do this and send you "
+    "the updated copy. As it opens a project, QualCoder writes the coder "
+    "name set in it into the project, as its current coder and in its list "
+    "of coders, so that person's name is added to your project unless they "
+    "first set their coder name in QualCoder to yours.")
 
 
 class DatabaseOpenError(ValueError):
@@ -1360,6 +1382,26 @@ def _version_for_answer(version: Any) -> Optional[str]:
     if isinstance(version, str) and re.fullmatch(r"v\d{1,4}", version):
         return version
     return None
+
+
+# What the answers that describe a project give for a schema value that is
+# not in QualCoder's form (ruling 77, 14 October 2026).
+VERSION_NOT_IN_FORM = "not in QualCoder's form"
+
+
+def version_for_details(version: Any) -> Optional[str]:
+    """A project's `databaseversion` as the answers that describe the
+    project report it (`select_project`, `get_current_project`,
+    `get_project_summary` and the project's information resource): the
+    value when `_version_for_answer` lets an answer repeat it, None when
+    the field is NULL (there is nothing to repeat), and otherwise the fixed
+    phrase `VERSION_NOT_IN_FORM`. The field is the project's own text, so
+    these answers take the same care as the log and the refusals (ruling
+    77); nothing Exegete decides depends on the value."""
+    if version is None:
+        return None
+    said = _version_for_answer(version)
+    return said if said is not None else VERSION_NOT_IN_FORM
 
 
 def error_label(error: BaseException) -> str:
@@ -3613,8 +3655,10 @@ class QualcoderDatabase:
         caps = getattr(self, "capabilities", None)
         if caps is None or not caps.has_coder_names:
             return (False,
-                    "This project uses a pre-v14 schema; open it once in "
-                    "QualCoder 3.8 or newer to migrate it, then retry.",
+                    "This project uses a pre-v14 schema, from a QualCoder "
+                    "older than 3.8: Exegete reads it but does not write "
+                    "to it, and cannot bring it up to date itself. "
+                    + OLDER_QUALCODER_ROUTE,
                     False)
         if self._unknown_future_schema():
             if env_settings.value("allow_unknown_schema") == "1":
@@ -3687,7 +3731,7 @@ class QualcoderDatabase:
         Older QualCoder schemas (pre-3.8 / pre-v14) lack columns such as
         code_text.important, which every coding read and write here uses.
         Rather than crashing mid-operation (or half-working), refuse the
-        connection with instructions to upgrade the project in QualCoder.
+        connection, saying how such a project is brought up to date.
 
         Raises:
             UnsupportedSchemaError: If any required column is missing
@@ -3698,13 +3742,20 @@ class QualcoderDatabase:
                 existing = {row[1] for row in cursor.fetchall()}
                 missing = [c for c in columns if c not in existing]
                 if missing:
-                    version = self.db_version or "unknown"
+                    # The value only in QualCoder's form: the field is the
+                    # project's own text (_version_for_answer).
+                    version = _version_for_answer(self.db_version)
+                    schema = (
+                        f"database schema {version}" if version is not None
+                        else "its database schema value is missing or not "
+                             "in QualCoder's form, so it is not repeated "
+                             "here")
                     raise UnsupportedSchemaError(
-                        f"This project was created with an older QualCoder "
-                        f"(database schema {version}; missing column(s) "
-                        f"{', '.join(table + '.' + c for c in missing)}). "
-                        f"Open and save the project in QualCoder 3.8 to "
-                        f"upgrade it, then try again."
+                        f"This project was made with a QualCoder older than "
+                        f"3.8 ({schema}; missing column(s) "
+                        f"{', '.join(table + '.' + c for c in missing)}), "
+                        f"and Exegete cannot read it as it is or bring it up "
+                        f"to date itself. " + OLDER_QUALCODER_ROUTE
                     )
         except sqlite3.OperationalError as e:
             if _is_locked_error(e):
@@ -3725,7 +3776,9 @@ class QualcoderDatabase:
         row = cursor.fetchone()
         if row:
             return {
-                "database_version": row["databaseversion"],
+                # In QualCoder's form only (ruling 77)
+                "database_version": version_for_details(
+                    row["databaseversion"]),
                 "date": row["date"],
                 "memo": row["memo"],
                 "about": row["about"],

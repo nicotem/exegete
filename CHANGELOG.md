@@ -746,8 +746,9 @@ for the four labels stays in NOTICE.
   brief's section on judging requests and the methods notes; the help
   topic `methodology_vocabulary` speaks of "a four-way vocabulary".
 - **The methods notes** (`exegete://guidance/methods`) list their
-  literature under "Method literature", as "some published approaches
-  to prompting in qualitative analysis", rather than as the sources
+  literature under "Method literature", as "some approaches to
+  prompting in qualitative analysis, two of them published", rather
+  than as the sources
   QualCoder 4.0's prompts cite, and no longer describe QualCoder's
   prompt library, or how its assistant applies the four decisions and
   is given the project memo. The resource's description, the brief and
@@ -758,17 +759,21 @@ for the four labels stays in NOTICE.
   "is the converter's reading of that document, which can differ from
   how Exegete or QualCoder would read the original".
 - **The brief says when to mention QualCoder**: when the researcher says
-  they use it, when a tool's answer shows a sign of it or the answer to
-  "Do you also use QualCoder on this computer?" is yes, or when they
-  ask about it; otherwise the assistant says what Exegete does and what
-  it does not do yet. The full brief is now about 12,700 characters;
-  the opening text has not changed.
+  they use it or asks about it, when the answer to "Do you also use
+  QualCoder on this computer?" is yes, or when a tool's answer brings it
+  up (a sign on the project in `qualcoder_history`, a lock file the
+  answer ascribes to QualCoder, signs of a window). QualCoder merely
+  installed is not a sign once that answer is no. Otherwise the
+  assistant says what Exegete does and what it does not do yet. The
+  full brief is now about 12,900 characters; the opening text has not
+  changed.
 - **The help's overview points to the topic on Exegete's earlier name**
   (`moving_from_qualcoder_mcp`) only on a computer where that name was
   used: where the state folder it kept, `~/.qualcoder_mcp`, or the link
-  Exegete's move left in its place, is present. Exegete checks only
-  that the name is there, and lists and reads nothing inside it. The
-  topic itself is still given by name.
+  Exegete's move left in its place, is present, whether the overview is
+  asked for with no topic or as `overview`. Exegete checks only that
+  the name is there, and lists and reads nothing inside it. The topic
+  itself is still given by name.
 
 ### Measured
 
@@ -819,7 +824,8 @@ for the four labels stays in NOTICE.
   sentence on when its warning comes changed its words, not its length.
   And the four outcomes' sentence, in the text `start_coding_session`'s
   description shares, lost its attribution to QualCoder 4.0's
-  assistant: 55 characters fewer in both sets, on both interpreters.
+  assistant: 55 characters fewer in both sets (the line break it lost
+  counts as two there), on both interpreters.
   No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12

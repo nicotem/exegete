@@ -218,8 +218,9 @@ class TestMethodsResource:
         assert "Friese, S. (2024)" in body
         # v0.15.0 (not presuming QualCoder, piece 13): the literature is
         # introduced by what it is, not by QualCoder's prompt library
-        assert ("## Method literature\n\nSome published approaches to "
-                "prompting in qualitative analysis") in body
+        # (and, from its fix round 1, not every entry called published)
+        assert ("## Method literature\n\nSome approaches to prompting in "
+                "qualitative analysis, two of them\npublished") in body
         assert "prompt library" not in body
         assert body.startswith("# Methods notes")
 

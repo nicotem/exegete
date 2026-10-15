@@ -534,11 +534,12 @@ the researcher why; do not look for a way round it.
   project.
 - Some researchers also use QualCoder, by choice or for what Exegete
   does not do yet, among them images, audio, video and graphs.
-- Mention QualCoder when the researcher says they use it, when a tool's
-  answer shows a sign of it (a sign in qualcoder_history, the lock file,
-  signs of a window) or qualcoder_history's setting is yes, or when they
-  ask about it; otherwise say what Exegete does and what it does not do
-  yet.
+- Mention QualCoder when the researcher says they use it, when they ask
+  about it, when qualcoder_history's setting is yes, or when a tool's
+  answer brings it up (signs_on_this_project in qualcoder_history, a
+  lock file the answer ascribes to QualCoder, signs of a window);
+  QualCoder merely installed is not a sign once the setting is no.
+  Otherwise say what Exegete does and what it does not do yet.
 - Only one program should change a project at a time. Exegete refuses
   to write while QualCoder 3.8.2 has the project open; for QualCoder
   4.0 it can only see signs, so when a tool says the project may be
@@ -3871,9 +3872,9 @@ not try to infer it.
 
 ## Method literature
 
-Some published approaches to prompting in qualitative analysis, for
-researchers who want to bring a method into a start_coding_session
-instruction or into the project memo:
+Some approaches to prompting in qualitative analysis, two of them
+published, for researchers who want to bring a method into a
+start_coding_session instruction or into the project memo:
 
 - Friese, S. (2024). Prompting for Themes.
   https://community.qeludra.com/posts/prompts-for-qualitative-research-prompting-for-themes
@@ -13303,9 +13304,10 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         # 0.14.3: import_documents' description points here
         return json.dumps(_converted_documents_help(), indent=2)
 
-    if tool_name is None:
+    if tool_name is None or tool_name == "overview":
         # Return overview; the pointer to the topic on the earlier name
-        # only where that name was used (v0.15.0)
+        # only where that name was used (v0.15.0), whether the overview
+        # is asked for with no topic or by its name (fix round 1)
         overview = dict(tool_help["overview"])
         if not _used_the_earlier_name():
             del overview["moving_from_qualcoder_mcp"]

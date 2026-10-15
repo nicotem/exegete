@@ -11,17 +11,25 @@ QUALCODER_MENTIONS_AUDIT.md, sections 3.5 and 4.3).
    what the literature is, not where it was found, each no longer than
    before.
 3. The methods notes: the paragraph on the decision starts with it; the
-   literature is "Method literature", introduced as published approaches
-   to prompting; "Common ground across these:"; the memo's clause about
-   QualCoder's assistant goes.
+   literature is "Method literature", introduced as approaches to
+   prompting, two of them published (fix round 1: the third entry is not
+   a publication); "Common ground across these:"; the memo's clause
+   about QualCoder's assistant goes.
 4. to 6. The help topics methodology_vocabulary, methods_notes and
    converted_documents.
 7. The help overview points to the topic on the earlier name only where
    that name left a trace: ~/.qualcoder_mcp, a folder or a link, even one
    that leads nowhere (state_folder.old_path(), not the guards'
    preview_tokens.old_state_home(), which in a run whose move failed
-   names ~/.exegete).
-8. The full brief's section 4 says when to mention QualCoder.
+   names ~/.exegete); asked for with no topic or as "overview" (fix
+   round 1).
+8. The full brief's section 4 says when to mention QualCoder, naming the
+   key in qualcoder_history that holds the signs, and that QualCoder
+   merely installed is not a sign once the setting is no (fix round 1).
+
+Fix round 1 also holds the documents: PRIVACY.md on what the overview
+checks, the CHANGELOG's words and figures for this piece, and the AI
+coding guide's paragraph on the methods notes wrapped as the file is.
 
 Named as guards, and not counted with the tests of the new words: the
 old phrases gone (TestTheGuard), NOTICE's credit, the help topic on the
@@ -35,6 +43,8 @@ own folder.
 
 import asyncio
 import json
+import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -47,6 +57,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
 from exegete import preview_tokens, state_folder  # noqa: E402
+from exegete import qualcoder_history  # noqa: E402
 from test_v0150_qualcoder_texts_1 import (  # noqa: E402
     _flat, answer_texts, served_descriptions)
 from test_v0142_description_cut import (  # noqa: E402
@@ -78,11 +89,18 @@ OLD_PHRASES = (
 FOUR_OUTCOMES = ("ask and suggest recording it there. Four outcomes: "
                  "- allow: sound as stated; proceed.")
 SECTION_4_BULLET = (
-    "- Mention QualCoder when the researcher says they use it, when a "
-    "tool's answer shows a sign of it (a sign in qualcoder_history, the "
-    "lock file, signs of a window) or qualcoder_history's setting is yes, "
-    "or when they ask about it; otherwise say what Exegete does and what "
-    "it does not do yet.")
+    "- Mention QualCoder when the researcher says they use it, when they "
+    "ask about it, when qualcoder_history's setting is yes, or when a "
+    "tool's answer brings it up (signs_on_this_project in "
+    "qualcoder_history, a lock file the answer ascribes to QualCoder, "
+    "signs of a window); QualCoder merely installed is not a sign once the "
+    "setting is no. Otherwise say what Exegete does and what it does not "
+    "do yet.")
+# The bullet as built, before fix round 1: "a sign in qualcoder_history"
+# could be read as qualcoder_on_this_computer, and "the lock file" as
+# QualCoder's whatever the answer said
+OLD_SECTION_4_WORDS = ("a sign in qualcoder_history, the lock file",
+                       "shows a sign of it")
 SECTION_4_AROUND = (
     "among them images, audio, video and graphs. " + SECTION_4_BULLET
     + " - Only one program should change a project at a time.")
@@ -103,10 +121,10 @@ DECISION = (
     "code proposals the safety mechanism is the researcher's approval of "
     "each item, which you relay:")
 LITERATURE = (
-    "## Method literature Some published approaches to prompting in "
-    "qualitative analysis, for researchers who want to bring a method into "
-    "a start_coding_session instruction or into the project memo: "
-    "- Friese, S. (2024). Prompting for Themes.")
+    "## Method literature Some approaches to prompting in qualitative "
+    "analysis, two of them published, for researchers who want to bring a "
+    "method into a start_coding_session instruction or into the project "
+    "memo: - Friese, S. (2024). Prompting for Themes.")
 COMMON_GROUND = ("Common ground across these: base the analysis firmly on "
                  "the empirical data,")
 MEMO = ("start_coding_session's answer carries the project memo's public "
@@ -252,6 +270,30 @@ class TestTheBrief:
         assert SECTION_4_AROUND in section
         assert section.count("Mention QualCoder") == 1
 
+    def test_section_4_names_the_signs_as_exegete_reads_them(self):
+        """Fix round 1. The bullet names the key that holds the signs on
+        the project, and says that QualCoder merely installed is not a
+        sign once the setting is no: with the answer no and only
+        QualCoder's settings folder found, Exegete's level is "none" (its
+        answers carry no notes about QualCoder), while the field still
+        gives qualcoder_on_this_computer as true."""
+        server._apply_toolset("full")
+        section = _section(_call("read_brief"), 4)
+        for words in OLD_SECTION_4_WORDS:
+            assert words not in section, words
+        installed_only = qualcoder_history.History(
+            signs=(), installed=True, running=None,
+            setting=qualcoder_history.NO)
+        assert installed_only.level == "none"
+        field = qualcoder_history.report(installed_only)
+        assert field["signs_on_this_project"] == []
+        assert field["qualcoder_on_this_computer"] is True
+        assert field["setting"] == "no"
+        assert "(signs_on_this_project in qualcoder_history," in section
+        assert ("QualCoder merely installed is not a sign once the setting "
+                "is no.") in section
+        assert "qualcoder_history's setting is yes" in section
+
     def test_section_14_names_what_the_literature_is(self):
         server._apply_toolset("full")
         section = _section(_call("read_brief"), 14)
@@ -300,6 +342,20 @@ class TestTheMethodsNotes:
                 "- A Socratic, question-driven brainstorming mode (loosely "
                 "based on OpenAI's Socratic Tutor example)"):
             assert citation in listed, citation
+
+    def test_the_introduction_says_which_are_published(self):
+        """Fix round 1: the third entry, a Socratic mode loosely based on
+        an example of OpenAI's, is not a publication, so the introduction
+        no longer calls every entry published; two of the three carry a
+        citation."""
+        notes = _flat(server.METHODS_GUIDANCE)
+        listed = notes[notes.index("## Method literature"):
+                       notes.index("Common ground across these:")]
+        assert "published approaches" not in notes
+        assert "two of them published" in listed
+        entries = listed.split(" - ")[1:]
+        assert len(entries) == 3
+        assert sum("(2024)." in entry for entry in entries) == 2
 
     @pytest.mark.parametrize("mode", TOOL_SETS)
     def test_the_description_names_what_the_literature_is(self, mode):
@@ -364,6 +420,24 @@ class TestThePointerToTheEarlierName:
         shutil.rmtree(new)
         assert state_folder.is_link(old) and not old.exists()
         assert _overview()["moving_from_qualcoder_mcp"] == POINTER
+
+    def test_none_in_the_overview_asked_for_by_name(self):
+        """Fix round 1: explain_ai_coding_tools('overview') is the same
+        overview, so it carries the pointer on the same trace only."""
+        assert not os.path.lexists(state_folder.old_path())
+        overview = json.loads(_call("explain_ai_coding_tools",
+                                    tool_name="overview"))
+        assert overview["title"] == "AI-assisted coding in Exegete"
+        assert "idempotent_writes" in overview
+        assert "moving_from_qualcoder_mcp" not in overview
+        assert "qualcoder-mcp" not in json.dumps(overview)
+
+    def test_given_in_the_overview_asked_for_by_name(self):
+        state_folder.old_path().mkdir()
+        by_name = json.loads(_call("explain_ai_coding_tools",
+                                   tool_name="overview"))
+        assert by_name["moving_from_qualcoder_mcp"] == POINTER
+        assert by_name == _overview()
 
     def test_in_the_order_it_had(self):
         state_folder.old_path().mkdir()
@@ -435,3 +509,54 @@ class TestThePutBack:
         assert got[1:] == (BEFORE_SOLID, BEFORE_DIGEST)
         if sys.version_info[:2] == (3, 13):
             assert got[0] == BEFORE_LENGTH_313
+
+
+# ---------------------------------------------------------------------------
+# The documents (fix round 1)
+# ---------------------------------------------------------------------------
+
+class TestTheDocuments:
+
+    @staticmethod
+    def _changelog():
+        """This piece's section of the CHANGELOG, and the Measured section
+        after it, each with white space collapsed."""
+        text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        start = text.index("### Changed: the brief, the help and the methods "
+                           "notes, without presuming QualCoder")
+        measured = text.index("### Measured", start)
+        end = text.index("## [0.14.3-alpha]", measured)
+        return _flat(text[start:measured]), _flat(text[measured:end])
+
+    def test_privacy_says_what_the_overview_checks(self):
+        privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
+        assert ("The help's overview (`explain_ai_coding_tools()`) checks "
+                "only whether `~/.qualcoder_mcp` is there, as a folder or a "
+                "link, to point the assistant to the topic on the earlier "
+                "name; nothing inside it is listed or read.") in privacy
+
+    def test_the_changelog_gives_the_words_and_figures(self):
+        section, measured = self._changelog()
+        assert ('"some approaches to prompting in qualitative analysis, two '
+                'of them published"') in section
+        assert ("QualCoder merely installed is not a sign once that answer "
+                "is no.") in section
+        assert ("whether the overview is asked for with no topic or as "
+                "`overview`") in section
+        assert re.findall(r"The full brief is now about ([\d,]+) characters",
+                          section) == [f"{round(len(server.BRIEF_FULL), -2):,}"]
+        assert ("the four outcomes' sentence, in the text "
+                "`start_coding_session`'s description shares, lost its "
+                "attribution to QualCoder 4.0's assistant: 55 characters "
+                "fewer in both sets (the line break it lost counts as two "
+                "there), on both interpreters.") in measured
+
+    def test_the_guides_paragraph_on_the_methods_notes_is_wrapped(self):
+        """The paragraph the piece reworded keeps the file's width."""
+        guide = (REPO / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")
+        start = guide.index("Exegete's analysis tools carry an evidence "
+                            "discipline")
+        paragraph = guide[start:guide.index("\n\n", start)]
+        assert paragraph.endswith(
+            "None of this replaces your approval of each suggestion.")
+        assert max(len(line) for line in paragraph.splitlines()) <= 72

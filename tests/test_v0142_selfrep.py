@@ -517,13 +517,13 @@ class TestExegeteNotTheServer:
 
 
 class TestTheMethodLiteratureSaysWhatItIs:
-    """The methods notes list some published approaches to prompting in
-    qualitative analysis, for researchers who want to bring in a method;
-    Exegete's rules are not drawn from them (the sweep's truth check found
-    four texts saying that the notes "rest on" them). Until v0.15.0 the
-    texts named the list by where it was found, "the method literature
-    QualCoder's prompts cite"; not presuming QualCoder, piece 13, names it
-    by what it is (tests/test_v0150_qualcoder_texts_13.py)."""
+    """The methods notes list some approaches to prompting in qualitative
+    analysis, two of them published, for researchers who want to bring in
+    a method; Exegete's rules are not drawn from them (the sweep's truth
+    check found four texts saying that the notes "rest on" them). Until
+    v0.15.0 the texts named the list by where it was found, "the method
+    literature QualCoder's prompts cite"; not presuming QualCoder, piece
+    13, names it by what it is (tests/test_v0150_qualcoder_texts_13.py)."""
 
     OLD = "QualCoder's prompts cite"
     FOR_WHOM = ", for researchers who want to bring in a method"
@@ -544,9 +544,9 @@ class TestTheMethodLiteratureSaysWhatItIs:
                 assert self.OLD not in flat, (mode, where)
                 assert "rest on" not in flat, (mode, where)
         notes = _flat(server.METHODS_GUIDANCE)
-        assert ("## Method literature Some published approaches to "
-                "prompting in qualitative analysis, for researchers who want "
-                "to bring a method into") in notes
+        assert ("## Method literature Some approaches to prompting in "
+                "qualitative analysis, two of them published, for "
+                "researchers who want to bring a method into") in notes
         assert self.OLD not in notes
 
     def test_the_documents_say_the_same(self):

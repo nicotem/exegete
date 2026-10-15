@@ -10625,7 +10625,7 @@ IMPORT_DOCUMENTS_ADVICE_NAMES = (
     "Manage Files can also remove an entry and add it again), then ask "
     "again. "
     "The import applies the list as the text comes in, so it cannot go "
-    "ahead with a list it cannot read.")
+    "ahead with a list it cannot use.")
 # A list the reader cannot read: the dialog loads the file with json.load
 # and catches only a missing file (`pseudonyms.py:115-124`), so it cannot
 # open such a list either, and only the text editor is named.
@@ -15997,7 +15997,9 @@ def _pseudonyms_json_conflict(merge: Dict[str, Any]) -> Dict[str, Any]:
         "without save_mapping_to_project and execute with "
         "researcher_keeps_mapping=true. (A researcher who uses QualCoder "
         "can also remove the file's entry in its Pseudonyms dialog, under "
-        "Manage Files.)")
+        "Manage Files. Files already rewritten or imported with that entry "
+        "keep its pseudonym, so one person can end up with two; keep a "
+        "note of the entry first.)")
     return {"error": (
         f"The mapping cannot be saved into this project's pseudonyms.json: "
         f"entry {merge['conflicts']} maps a name the file already maps, and "
@@ -16816,7 +16818,8 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
                  f"keeps the mapping now: save it with a run on another "
                  f"file that still contains one of the names, or write it "
                  f"into pseudonyms.json in the project folder with a text "
-                 f"editor; or, if they use QualCoder, enter it in its "
+                 f"editor, as a list of {{original, pseudonym}} entries; "
+                 f"or, if they use QualCoder, enter it in its "
                  f"Pseudonyms dialog (the button in Manage Files).")
     else:
         note += (" On this run the call attested that the researcher keeps "

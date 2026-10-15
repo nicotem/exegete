@@ -1217,7 +1217,9 @@ Two further rules touch files on your disk:
   after a run, read the same history to decide whether their notes
   speak of QualCoder (the further backups QualCoder 3.8.0 to 3.8.2 may
   keep, a QualCoder window that will not refresh), and in the same
-  cases that reading runs the process scan too.
+  cases that reading runs the process scan too. So do `rename_case` and
+  `rename_file`, before a rename, to decide whether their note says what
+  QualCoder's imports and Merge Projects can bring back.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
   folder with four empty subfolders and a new `data.qda`, and records

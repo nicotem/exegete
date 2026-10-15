@@ -93,10 +93,10 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > lines and found no QualCoder and nothing that may be one),
 > and a best-effort process scan that reports only how many running processes
 > look like QualCoder, never their names or command lines). The scan also
-> runs when `set_project_coder_name` (after a change), `list_backups` or
-> `pseudonymise_source` (after a run) reads the project's history with
-> QualCoder and nothing has worked it out since the project was
-> selected. The file-based signals are traces of recent
+> runs when `set_project_coder_name` (after a change), `list_backups`,
+> `pseudonymise_source` (after a run), `rename_case` or `rename_file`
+> reads the project's history with QualCoder and nothing has worked it
+> out since the project was selected. The file-based signals are traces of recent
 > activity, never proof of an open window (an idle 4.0 window with no recent AI
 > activity leaves no file trace at all), so heuristics can miss an open window:
 > do not run Exegete writes while any QualCoder window has the same

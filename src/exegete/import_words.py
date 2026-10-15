@@ -444,9 +444,9 @@ HELD_BACK = {
 # Said once for a file whose text a warning changes: why the import does
 # not mend what QualCoder's way of reading does, and why the ways round
 # are chosen as they are.
-WHY_AS_QUALCODER = (SAME_READING + " A file changed as a warning here "
-                    "suggests (its \"Way round\") is read alike by both "
-                    "too.")
+WHY_AS_QUALCODER = (SAME_READING + " If you change the file as a warning "
+                    "here suggests (its \"Way round\"), both programs "
+                    "read the changed file alike too.")
 # Said instead when Exegete's reading of the file departs from
 # QualCoder's (the departures' lines say how).
 WHY_DEPARTED = ("Where QualCoder's own import would lose or garble this "
@@ -565,7 +565,7 @@ WARNINGS = {
         "So QualCoder's own import of this file would store other text: "
         "if the same file is also imported in QualCoder, codings made on "
         "one copy will not line up on the other. If this project is opened "
-        "in QualCoder, it reads the text Exegete stored."),
+        "in QualCoder, it reads the text Exegete stores."),
     "pdf_scanned": ("changes",
         "This PDF is pictures of pages, with no words Exegete can read or "
         "code. Way round: run text recognition (OCR) on it in another "

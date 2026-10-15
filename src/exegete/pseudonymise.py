@@ -446,9 +446,11 @@ def _check_pseudonym(value: Any, entry_index: int,
         raise MappingError(
             f"mapping entry {entry_index}: {shown} contains "
             f"characters beyond U+FFFF (emoji or similar) or a carriage "
-            f"return; if the project is opened in QualCoder, its editor "
-            f"would misplace positions in the rewritten file. Choose a "
-            f"pseudonym in the Basic Multilingual Plane.")
+            f"return; Exegete keeps a rewritten file free of them so that "
+            f"every program that reads the project's format counts its "
+            f"positions alike (if the project is opened in QualCoder, its "
+            f"editor would misplace them). Choose a pseudonym without "
+            f"emoji, other rare characters or line breaks.")
     return value
 
 

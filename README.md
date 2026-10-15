@@ -389,7 +389,9 @@ Exegete's settings.
 folder for projects and to work on the copy. The original is not
 touched, though an assistant that opens files by itself, such as
 Codex, can read it from the path you give. A project from before
-QualCoder 3.8 must first be opened once in 3.8 or newer.
+QualCoder 3.8 must first be opened once in 3.8 or newer; without
+QualCoder, someone who has it and may see the project's data can do
+this and send you the updated copy.
 
 **One program at a time.** Before the assistant changes a project,
 close that project in QualCoder. With QualCoder 3.8.2, an open project

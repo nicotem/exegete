@@ -131,14 +131,17 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 
 A project from a QualCoder older than 3.8 is refused until QualCoder
 3.8 or newer has opened it once, which brings it up to date with no
-need to save; Exegete cannot do this itself (it cannot read the oldest
-formats at all, and reads the others without writing to them). Close
-the project in QualCoder again before Exegete changes it. Without
-QualCoder, someone who has it and is allowed to see the project's data
-can do this and send you the updated copy. QualCoder writes the coder
-name set in it into every project it opens, as the current coder and
-in the list of coders, so that person's name is added to the project
-unless they first set their coder name in QualCoder to yours.
+need to save, and it is selected again in Exegete; Exegete cannot bring
+it up to date itself (it cannot read the oldest formats at all, and
+reads the others without writing to them). Whoever opens it closes it
+again before Exegete changes it. Without QualCoder, someone who has it
+and is allowed to see the project's data can do this and send you the
+updated copy. QualCoder writes the coder name set in it into every
+project it opens, as the current coder and in the list of coders, so
+that person's name is added to the project unless they first set their
+coder name in QualCoder to yours (and back afterwards). Once you have
+the copy, `set_project_coder_name` (not in `core`) can put your name in
+place of theirs while nothing is recorded under their name.
 
 Sub-codes (a code nested under another code, schema v16 and newer) are
 supported: creating them, moving a code with its sub-codes, merging

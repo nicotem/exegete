@@ -196,8 +196,10 @@ a session. None of this replaces your approval of each suggestion.
   read-only afterwards
 - Writes require a project schema from v14 (QualCoder 3.8.x) through
   v17; older projects are refused (until QualCoder 3.8 or newer has
-  opened them once, which brings them up to date with no save; Exegete
-  cannot), and schemas newer than v17 refuse writes until
+  opened them once, which brings them up to date with no save, and they
+  are selected again; Exegete cannot, but someone with QualCoder who may
+  see the data can do it and send the updated copy), and schemas newer
+  than v17 refuse writes until
   Exegete has been verified against them
 - Writes are refused while QualCoder 3.x has the project
   open (its lock file), and Exegete holds the project lock itself

@@ -465,20 +465,26 @@ given, what it refuses and its override have not changed.
   QualCoder that upgraded the project, for example) and keep backups."
 - **The project's schema value** is the project's own text, so Exegete
   repeats it only when it is in QualCoder's form (`v` and up to four
-  digits), as the log already did, everywhere it gives it: the refusal
-  of a schema newer than Exegete is verified against, and its warning
-  when overridden; the refusal of a project from a QualCoder older than
-  3.8 that lacks columns Exegete needs; and the project details that
-  `select_project`, `get_current_project` and `get_project_summary`
-  give, as does the project's information resource. Any other value is
-  not repeated. The project details then give "not in QualCoder's form"
-  in its place (where the field holds no value, they show none, as
-  before), and the refusal of an older project says that the value is
-  missing or not in QualCoder's form. The refusal of a newer schema and
-  its warning say that Exegete cannot tell whether the project's schema
-  is one it is verified against, instead of calling it newer; the
-  refusal adds that if the value was changed by mistake, a backup from
-  before has it, and the warning ends "Verify results and keep backups."
+  digits, 0 to 9), as the log already did, everywhere it gives it: the
+  refusal of a schema newer than Exegete is verified against, and its
+  warning when overridden; the refusal of a project from a QualCoder
+  older than 3.8 that lacks columns Exegete needs; and the project
+  details given by `select_project`, `get_current_project`,
+  `get_project_summary` and the project's information resource. Any
+  other value is not repeated. The project details then give "not in
+  QualCoder's form" in its place (where the field is missing, they show
+  none, as before), and the refusal of an older project says that the
+  value is missing or not in QualCoder's form. The refusal of a newer
+  schema and its warning say that Exegete cannot tell whether the
+  project's schema is one it is verified against, instead of calling it
+  newer; the refusal adds that if the value was changed by mistake, a
+  backup from before has it, and the warning ends "Verify results and
+  keep backups." The check that decides whether writes are refused now
+  reads the value the same way: `v17` followed by a line break, or
+  written with another script's digits, is no longer taken for a schema
+  Exegete is verified against, and a value that is not text, or too long
+  to read as a number, no longer gives an internal error; each is
+  refused as a value Exegete cannot tell, with the override as before.
 - **Where Exegete lacks a feature**, the refusal says so instead of
   sending the researcher to QualCoder: "Exegete does not merge cases
   yet"; "Exegete does not yet move an existing code under another
@@ -743,12 +749,18 @@ QualCoder (the process scan), as PRIVACY.md describes.
 - **The refusal of a project from a QualCoder older than 3.8** no
   longer asks for it to be opened and saved in QualCoder 3.8: QualCoder
   3.8 or newer brings such a project up to date as it opens it, with no
-  save. It now says that Exegete cannot do this itself; what to do
-  without QualCoder (someone who has it and is allowed to see the
-  project's data can do it and send the updated copy); and that
-  QualCoder writes that person's coder name into the project as it
-  opens it. The refusal to write to a project with a schema before v14
-  says the same. TOOLS.md and AI_CODING_GUIDE.md follow.
+  save, and the project is then selected again in Exegete. It now says
+  that Exegete cannot do this itself; what to do without QualCoder
+  (someone who has it and is allowed to see the project's data can do
+  it and send the updated copy); and that QualCoder writes that
+  person's coder name into the project as it opens it, unless they set
+  theirs to the researcher's first (and back afterwards), and that
+  `set_project_coder_name` can then put the researcher's name in its
+  place while nothing is recorded under it. It says the project
+  "appears to have been made" with such a QualCoder, since a damaged
+  copy can lack the same columns. The refusal to write to a project
+  with a schema before v14 says the same. TOOLS.md, AI_CODING_GUIDE.md
+  and the README follow.
 
 ### Measured
 

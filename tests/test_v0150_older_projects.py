@@ -53,19 +53,26 @@ from test_v17_support import make_project  # noqa: E402
 ROUTE = (
     "QualCoder 3.8 or newer, if you use it, brings such a project up to "
     "date the first time it opens it, with no need to save: open the "
-    "project there once, close it, then try again. If you do not use "
-    "QualCoder, someone who does and is allowed to see this project's data "
-    "(whoever shared it with you, for example) can do this and send you "
-    "the updated copy. As it opens a project, QualCoder writes the coder "
-    "name set in it into the project, as its current coder and in its list "
-    "of coders, so that person's name is added to your project unless they "
-    "first set their coder name in QualCoder to yours.")
+    "project there once, close it, then select it again in Exegete. If "
+    "you do not use QualCoder, someone who does and is allowed to see "
+    "this project's data (whoever shared it with you, for example) can do "
+    "this and send you the updated copy. As it opens a project, QualCoder "
+    "writes the coder name set in it into the project, as its current "
+    "coder and in its list of coders, so that person's name is added to "
+    "your project unless they first set their coder name in QualCoder to "
+    "yours (and back afterwards). Once you have the copy, "
+    "set_project_coder_name can put your name in place of theirs while "
+    "nothing is recorded under their name.")
+# The tool the route names, marked where the tool set lacks it (`core`)
+TOOL = "set_project_coder_name"
+MARKED = TOOL + " (not available in this tool set)"
 
 
 def missing_columns(schema, columns="code_text.important"):
-    return (f"This project was made with a QualCoder older than 3.8 "
-            f"({schema}; missing column(s) {columns}), and Exegete cannot "
-            f"read it as it is or bring it up to date itself. " + ROUTE)
+    return (f"This project appears to have been made with a QualCoder "
+            f"older than 3.8 ({schema}; missing column(s) {columns}), and "
+            f"Exegete cannot read it as it is or bring it up to date "
+            f"itself. " + ROUTE)
 
 
 NOT_REPEATED = ("its database schema value is missing or not in "
@@ -149,6 +156,42 @@ class TestTheRoute:
     def test_the_constant_word_for_word(self):
         assert database.OLDER_QUALCODER_ROUTE == ROUTE
 
+    def test_selecting_again_lets_the_writes_through(self, opened):
+        """Named as a guard: what the route says to do works. Whether a
+        project can be written is worked out as it is selected, so a
+        project brought up to date while selected is refused until it is
+        selected again, as the route now says (gate review, round 1)."""
+        folder = opened("v13")
+        assert _select(folder).get("success") is True
+        # What QualCoder 3.8 does as it opens such a project: coder_names
+        # (the v14 marker) and the schema value
+        _execute(folder,
+                 ("CREATE TABLE coder_names (name TEXT UNIQUE NOT NULL)", ()),
+                 ("INSERT INTO coder_names (name) VALUES ('V17Test')", ()),
+                 ("UPDATE project SET databaseversion = 'v14'", ()))
+        refused = json.loads(server.set_memo("code", 1, "x",
+                                             create_backup=False))
+        assert refused["error"] == PRE_V14
+        assert _select(folder).get("success") is True
+        written = json.loads(server.set_memo("code", 1, "x",
+                                             create_backup=False))
+        assert written.get("success") is True, written
+
+    def test_core_marks_the_tool_in_both_refusals(self, opened):
+        """The route names set_project_coder_name, which `core` lacks:
+        both refusals mark it there, and only there."""
+        server._apply_toolset("core")
+        missing = _without(opened, "code_text.important", "v2")
+        out = _select(missing)
+        assert out["error"] == (
+            missing_columns("database schema v2").replace(TOOL, MARKED)
+            + " No project is selected.")
+        folder = opened("v13")
+        _select(folder)
+        supported, reason, _ = server.get_db().write_support()
+        assert supported is False
+        assert reason == PRE_V14.replace(TOOL, MARKED)
+
 
 class TestTheMissingColumnsRefusal:
 
@@ -214,7 +257,12 @@ class TestThePreV14WriteRefusal:
         _select(folder)
         supported, reason, _ = server.get_db().write_support()
         assert supported is False and reason.endswith(" " + ROUTE)
-        assert missing_columns("database schema v2").endswith(" " + ROUTE)
+        # The missing-columns refusal as Exegete gives it (gate review,
+        # round 1: the test's own helper proved nothing)
+        missing = _without(opened, "code_text.important", "v2")
+        with pytest.raises(UnsupportedSchemaError) as raised:
+            QualcoderDatabase(str(missing))
+        assert str(raised.value).endswith(" " + ROUTE)
 
 
 class TestTheSourceSaysSo:
@@ -295,6 +343,90 @@ class TestTheProjectDetails:
 
 
 # ===========================================================================
+# The value read one way: the digits 0 to 9 only, and the write gate as the
+# answers (gate review, security, round 1)
+# ===========================================================================
+
+# QualCoder writes `v` and the digits 0 to 9; these are 17 and 123 in
+# Arabic-Indic digits, which Python's `\d` and `int()` also take
+OTHER_DIGITS_17 = "v\u0661\u0667"
+OTHER_DIGITS_123 = "v\u0661\u0662\u0663"
+WITHHELD = "(a value not in QualCoder's form, withheld)"
+CANNOT_TELL = (
+    "This project's database schema value is missing or not in "
+    "QualCoder's form (`v` and up to four digits), so it is not repeated "
+    "here, and Exegete cannot tell whether the project uses one of the "
+    "schemas it is verified against")
+# Values the write gate read otherwise than the answers: one it took for
+# v17, one it could not match (not text) and one too long for int()
+GATE_VALUES = {
+    "a line break after v17": "v17\n",
+    "not text": b"v17",
+    "five thousand digits": "v" + "1" * 5000,
+    "another script's digits": OTHER_DIGITS_17,
+}
+
+
+def _memo_of_code_1(folder):
+    conn = sqlite3.connect(str(Path(folder) / "data.qda"))
+    try:
+        return conn.execute(
+            "SELECT memo FROM code_name WHERE cid = 1").fetchone()[0]
+    finally:
+        conn.close()
+
+
+class TestTheValueReadOneWay:
+
+    @pytest.mark.parametrize("value", [OTHER_DIGITS_17, OTHER_DIGITS_123])
+    def test_only_the_digits_0_to_9_are_in_form(self, value):
+        assert database._version_for_answer(value) is None
+        assert database._version_for_log(value) == WITHHELD
+        assert database.version_for_details(value) == NOT_IN_FORM
+
+    @pytest.mark.parametrize("value", [OTHER_DIGITS_17, OTHER_DIGITS_123])
+    def test_another_scripts_digits_are_not_repeated(self, opened, value):
+        values, answers = _described(_with_version(opened, value))
+        assert values == dict.fromkeys(values, NOT_IN_FORM)
+        refused = json.loads(server.set_memo("code", 1, "refused write",
+                                             create_backup=False))
+        assert CANNOT_TELL in refused["error"], refused
+        for text in answers + [refused["error"]]:
+            assert value not in text
+
+    @pytest.mark.parametrize("value", list(GATE_VALUES.values()),
+                             ids=list(GATE_VALUES))
+    def test_the_write_gate_reads_the_value_as_the_answers_do(
+            self, opened, value):
+        folder = opened("v17")
+        _execute(folder, ("UPDATE project SET databaseversion = ?", (value,)))
+        selected = _select(folder)
+        assert selected.get("success") is True, selected
+        assert selected["project_info"]["database_version"] == NOT_IN_FORM
+        refused = json.loads(server.set_memo("code", 1, "refused write",
+                                             create_backup=False))
+        assert CANNOT_TELL in refused["error"], refused
+        assert _memo_of_code_1(folder) != "refused write"
+        for tool in (server.get_current_project, server.get_project_summary):
+            answer = json.loads(tool())
+            assert "error" not in answer, answer
+            schema = answer["schema"]
+            assert schema["databaseversion"] == NOT_IN_FORM
+            assert schema["write_support"] is False
+            assert CANNOT_TELL in schema["reason"]
+
+    def test_the_override_still_lets_such_a_value_through(
+            self, opened, monkeypatch):
+        """Named as a guard: the override works as before."""
+        _with_version(opened, "v17\n")
+        monkeypatch.setenv(OVERRIDE, "1")
+        out = json.loads(server.set_memo("code", 1, "override write",
+                                         create_backup=False))
+        assert out.get("success") is True, out
+        assert "cannot tell" in out["schema_warning"]
+
+
+# ===========================================================================
 # 4. The documents
 # ===========================================================================
 
@@ -308,15 +440,18 @@ def _flat(name):
 TOOLS_SAYS = (
     "A project from a QualCoder older than 3.8 is refused until QualCoder "
     "3.8 or newer has opened it once, which brings it up to date with no "
-    "need to save; Exegete cannot do this itself (it cannot read the "
-    "oldest formats at all, and reads the others without writing to "
-    "them). Close the project in QualCoder again before Exegete changes "
-    "it. Without QualCoder, someone who has it and is allowed to see the "
-    "project's data can do this and send you the updated copy. QualCoder "
-    "writes the coder name set in it into every project it opens, as the "
-    "current coder and in the list of coders, so that person's name is "
-    "added to the project unless they first set their coder name in "
-    "QualCoder to yours.")
+    "need to save, and it is selected again in Exegete; Exegete cannot "
+    "bring it up to date itself (it cannot read the oldest formats at "
+    "all, and reads the others without writing to them). Whoever opens it "
+    "closes it again before Exegete changes it. Without QualCoder, "
+    "someone who has it and is allowed to see the project's data can do "
+    "this and send you the updated copy. QualCoder writes the coder name "
+    "set in it into every project it opens, as the current coder and in "
+    "the list of coders, so that person's name is added to the project "
+    "unless they first set their coder name in QualCoder to yours (and "
+    "back afterwards). Once you have the copy, `set_project_coder_name` "
+    "(not in `core`) can put your name in place of theirs while nothing "
+    "is recorded under their name.")
 
 
 class TestTheDocuments:
@@ -325,13 +460,25 @@ class TestTheDocuments:
         tools = _flat("TOOLS.md")
         assert TOOLS_SAYS in tools
         assert "which updates it as it opens" not in tools
+        assert "Close the project in QualCoder again" not in tools
 
     def test_the_coding_guide(self):
         guide = _flat("AI_CODING_GUIDE.md")
         assert ("older projects are refused (until QualCoder 3.8 or newer "
                 "has opened them once, which brings them up to date with "
-                "no save; Exegete cannot)") in guide
+                "no save, and they are selected again; Exegete cannot, but "
+                "someone with QualCoder who may see the data can do it and "
+                "send the updated copy)") in guide
         assert "open and save them in QualCoder 3.8" not in guide
+
+    def test_the_readme(self):
+        """QualCoder is not the only way through (gate review, documents,
+        round 1)."""
+        readme = _flat("README.md")
+        assert ("A project from before QualCoder 3.8 must first be opened "
+                "once in 3.8 or newer; without QualCoder, someone who has "
+                "it and may see the project's data can do this and send "
+                "you the updated copy.") in readme
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -349,7 +496,14 @@ class TestTheDocuments:
                 "QualCoder writes that person's coder name into the "
                 "project as it opens it",
                 "The refusal to write to a project with a schema before "
-                "v14 says the same"):
+                "v14 says the same",
+                "the project is then selected again in Exegete",
+                "unless they set theirs to the researcher's first (and "
+                "back afterwards), and that `set_project_coder_name` can "
+                "then put the researcher's name in its place while nothing "
+                "is recorded under it",
+                "\"appears to have been made\"",
+                "TOOLS.md, AI_CODING_GUIDE.md and the README follow"):
             assert words in older, words
         value = _flat_text(unreleased.split(
             "- **The project's schema value**")[1].split("\n- **")[0])
@@ -357,14 +511,20 @@ class TestTheDocuments:
                 "only when it is in QualCoder's form",
                 "the refusal of a project from a QualCoder older than 3.8 "
                 "that lacks columns Exegete needs",
-                "the project details that `select_project`, "
-                "`get_current_project` and `get_project_summary` give, as "
-                "does the project's information resource",
+                "the project details given by `select_project`, "
+                "`get_current_project`, `get_project_summary` and the "
+                "project's information resource",
                 "The project details then give \"not in QualCoder's "
-                "form\" in its place",
+                "form\" in its place (where the field is missing, they "
+                "show none, as before)",
+                "(`v` and up to four digits, 0 to 9)",
+                "The check that decides whether writes are refused now "
+                "reads the value the same way",
                 "the refusal of an older project says that the value is "
                 "missing or not in QualCoder's form"):
             assert words in value, words
+        assert "give, as does the project's information resource" not in value
+        assert "where the field holds no value" not in value
 
 
 def _flat_text(text):

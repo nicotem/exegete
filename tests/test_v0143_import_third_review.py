@@ -399,8 +399,8 @@ class TestTheTexts:
 
     def test_qualcoder_is_offered_only_if_the_researcher_uses_it(self):
         assert import_words.FILE_REFUSALS["too_long"].endswith(
-            "For now, long books and reports come in through QualCoder, "
-            "if you use it.")
+            "For now, split it into parts and import each; QualCoder, if "
+            "you use it, imports it whole.")
         ctx = doc_import.Context(project_folder=Path("."), source_names={},
                                  documents_listing=[], refused_places=())
         # 0.14.3's second review: the list cannot be made in Exegete

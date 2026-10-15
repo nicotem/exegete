@@ -1584,10 +1584,10 @@ PDF_PROBLEM_MESSAGES = {
     PDF_NO_TEXT_LAYER: (
         "This PDF has no text layer (a scanned PDF, or pages that are "
         "images): no text was stored for it, so there is nothing "
-        "here to read, search or code as text. QualCoder can code it only "
-        "by drawing regions in its PDF view. To code its words, run OCR "
+        "here to read, search or code as text. To code its words, run OCR "
         "on the PDF outside Exegete (it bundles none) and "
-        "import the result as a text file."),
+        "import the result as a text file. (QualCoder, if you use it, can "
+        "code it only by drawing areas in its PDF view.)"),
     PDF_STORED_AS_TEXT: (
         "QualCoder 3.8.2 appears to have stored this PDF file itself as "
         "its text (recognised by a heuristic: the PDF header near the "
@@ -6655,15 +6655,23 @@ class QualcoderDatabase:
                 if unusable_pdfs:
                     performance_info["unusable_pdfs_not_searched"] = \
                         unusable_pdfs
+                    # The clause on a PDF stored as the file itself, which
+                    # names QualCoder, only when a listed file has that
+                    # reason: the reason is the sign
+                    stored_as_text = ""
+                    if any(u.get("reason") == PDF_STORED_AS_TEXT
+                           for u in unusable_pdfs):
+                        stored_as_text = (
+                            f"; {PDF_STORED_AS_TEXT} is a PDF that QualCoder "
+                            f"3.8.2 stored as the file itself, recognised by "
+                            f"a heuristic; QualCoder 4.0's 'Restructure' in "
+                            f"its PDF view can repair it")
                     performance_info["unusable_pdf_note"] = (
                         f"{len(unusable_pdfs)} PDF source(s) were not "
                         f"content-searched, so finding nothing in them "
                         f"means nothing: {PDF_NO_TEXT_LAYER} is a PDF with "
                         f"no text layer (OCR it outside Exegete and "
-                        f"import the result); {PDF_STORED_AS_TEXT} is a "
-                        f"PDF that QualCoder 3.8.2 stored as the file "
-                        f"itself, recognised by a heuristic (repair it "
-                        f"with 'Restructure' in QualCoder 4.0's PDF view). "
+                        f"import the result){stored_as_text}. "
                         f"A search of any PDF covers its text layer only.")
 
             logger.info(f"File search found {len(results)} matches (searched {files_searched} files)")

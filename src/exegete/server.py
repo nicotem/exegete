@@ -59,6 +59,7 @@ from .database import (
     _detect_file_type as detect_file_type,
     unusable_pdf_block,
     unusable_pdf_link_refusal,
+    PDF_STORED_AS_TEXT,
     validate_id,
     validate_limit,
     MAX_LIMIT,
@@ -6884,14 +6885,22 @@ def get_project_summary() -> str:
                 for f in files if f.get("unusable_pdf")]
     if unusable:
         summary["unusable_pdfs"] = unusable
+        # The clause on a PDF stored as the file itself, which names
+        # QualCoder, only when a listed file has that reason, as in
+        # search_files: the reason is the sign
+        stored_as_text = ""
+        if any(u["reason"] == PDF_STORED_AS_TEXT for u in unusable):
+            stored_as_text = (
+                f"; {PDF_STORED_AS_TEXT} is a PDF that QualCoder 3.8.2 "
+                f"stored as the file itself, recognised by a heuristic; "
+                f"QualCoder 4.0's 'Restructure' in its PDF view can "
+                f"repair it")
         summary["unusable_pdfs_note"] = (
             "These PDF sources have no usable text, so they are not "
             "searched and cannot be coded as text here: no_text_layer is "
             "a PDF with no text layer (OCR it outside Exegete and "
-            "import the result); pdf_file_stored_as_text is a PDF that "
-            "QualCoder 3.8.2 stored as the file itself, recognised by a "
-            "heuristic (repair it with 'Restructure' in QualCoder 4.0's "
-            "PDF view). read_file_with_codings says more for each.")
+            "import the result)" + stored_as_text + ". "
+            "read_file_with_codings says more for each.")
 
     not_counted = _not_shown_block(get_db().non_text_coding_counts(),
                                    "counts", "in this project")
@@ -7009,13 +7018,13 @@ def read_file_with_codings(file_id: int, start: int = 0,
     full_text = result.get("full_text") or ""
     if full_text and not db_position_safe(full_text):
         result["position_safety_warning"] = (
-            "This file contains \r\n sequences or characters beyond U+FFFF "
-            "(e.g. emoji), so QualCoder's GUI uses a different position "
-            "system for it (QualCoder's manual notes that an emoji may "
-            "take more than one position in its editor). GUI-created codings "
-            "here may not align with the text slices shown by Exegete, "
-            "and codings written here may render shifted or unhighlighted "
-            "in the QualCoder editor. Reports and exports are unaffected."
+            "This file contains Windows line breaks or characters beyond "
+            "U+FFFF (such as emoji), which QualCoder's editor counts "
+            "differently (its manual notes that an emoji may take more than "
+            "one position). If the project is opened in QualCoder, codings "
+            "written here may show shifted or unhighlighted there, and "
+            "codings made there may not match the text shown here. Reports "
+            "and exports are unaffected."
         )
     if without_codes:
         _leave_out_codes(result)
@@ -9262,13 +9271,13 @@ def record_suggestions(
             f"suggestion explicit or interpretive and keeps no score.")
     if unsafe_files:
         result["position_safety_warning"] = (
-            f"File(s) {sorted(unsafe_files.values())} contain \r\n sequences "
-            f"or characters beyond U+FFFF (e.g. emoji). QualCoder's GUI uses "
-            f"a different position system for such files (QualCoder's "
-            f"manual notes that an emoji may take more than one position in "
-            f"its editor), so codings on them may render shifted or "
-            f"unhighlighted in the QualCoder editor, and GUI-created codings "
-            f"there may not verify. Reports and exports are unaffected. "
+            f"File(s) {sorted(unsafe_files.values())} contain Windows line "
+            f"breaks or characters beyond U+FFFF (such as emoji), which "
+            f"QualCoder's editor counts differently (its manual notes that "
+            f"an emoji may take more than one position). If the project is "
+            f"opened in QualCoder, codings written here may show shifted or "
+            f"unhighlighted there, and codings made there may not match the "
+            f"text shown here. Reports and exports are unaffected. "
             f"Relay this to the user before proceeding to approval."
         )
     return json.dumps(result, indent=2)
@@ -9705,9 +9714,10 @@ def edit_suggestion(
                 f"to change it.")
         if not db_position_safe(fulltext):
             result["position_safety_warning"] = (
-                f"File '{sugg.file_name}' contains \r\n or characters "
-                f"beyond U+FFFF; codings on it may render shifted in "
-                f"QualCoder's editor. Relay this to the user."
+                f"File '{sugg.file_name}' contains Windows line breaks or "
+                f"characters beyond U+FFFF (such as emoji); if the project "
+                f"is opened in QualCoder, codings on it may show shifted in "
+                f"its editor. Relay this to the user."
             )
     if new_code is not None and new_code["id"] != sugg.code_id:
         changes["code"] = {"from": sugg.code_name, "to": new_code["name"]}
@@ -10260,9 +10270,10 @@ def apply_codings(
 
     if unsafe_written:
         output.append(
-            f"position_safety_warning: file(s) {unsafe_written} contain \\r\\n "
-            f"or characters beyond U+FFFF, so these codings may render "
-            f"shifted or unhighlighted in QualCoder's editor (reports and "
+            f"position_safety_warning: file(s) {unsafe_written} contain "
+            f"Windows line breaks or characters beyond U+FFFF (such as "
+            f"emoji); if the project is opened in QualCoder, these codings "
+            f"may show shifted or unhighlighted in its editor (reports and "
             f"exports are unaffected). Relay this to the user.\n"
         )
 
@@ -10855,13 +10866,14 @@ IMPORT_DONE_LINES = {
                         "the project's copy of the original keeps it."),
     "prune": ("The project's backups now take about {size} MB; "
               "prune_backups removes old ones."),
-    "pdf_release": ("QualCoder 4.0 checks a PDF's stored text against its "
-                    "own reading of the PDF, which can differ with another "
-                    "release of the PDF library (PyMuPDF; this import used "
-                    "{version}). If QualCoder reports a text mismatch and "
-                    "offers to restructure, which rewrites the text and "
-                    "moves codings by searching for their passages, take a "
-                    "backup and check the codings before you accept."),
+    "pdf_release": ("If this project is opened in QualCoder 4.0: it "
+                    "checks a PDF's stored text against its own reading of "
+                    "the PDF, which can differ with another release of the "
+                    "PDF library (PyMuPDF; this import used {version}). If "
+                    "it reports a text mismatch and offers to restructure, "
+                    "which rewrites the text and moves codings by searching "
+                    "for their passages, take a backup and check the "
+                    "codings before accepting."),
 }
 PRUNE_MENTION_MB = 500
 # QualCoder 4.0 writes no lock file, so the signs that it may have the
@@ -13444,8 +13456,10 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     if unsafe_files:
         result["position_safety_warning"] = (
             f"Evidence file(s) {sorted(unsafe_files.values())} contain "
-            f"\\r\\n or characters beyond U+FFFF; codings on them may render "
-            f"shifted in QualCoder's editor. Relay this to the user."
+            f"Windows line breaks or characters beyond U+FFFF (such as "
+            f"emoji); if the project is opened in QualCoder, codings on "
+            f"them may show shifted in its editor. Relay this to the "
+            f"user."
         )
     return json.dumps(result, indent=2)
 
@@ -13746,8 +13760,10 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
     if unsafe_files:
         result["position_safety_warning"] = (
             f"Evidence file(s) {sorted(unsafe_files.values())} contain "
-            f"\\r\\n or characters beyond U+FFFF; codings on them may "
-            f"render shifted in QualCoder's editor. Relay this to the user."
+            f"Windows line breaks or characters beyond U+FFFF (such as "
+            f"emoji); if the project is opened in QualCoder, codings on "
+            f"them may show shifted in its editor. Relay this to the "
+            f"user."
         )
     return json.dumps(result, indent=2)
 
@@ -16484,10 +16500,11 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
               if not item.get("position_safe", True)]
     if unsafe:
         warnings.append(
-            f"Warning: file(s) {unsafe} contain \\r\\n sequences or "
-            f"characters beyond U+FFFF, so QualCoder's GUI already counts "
-            f"positions in them differently from Exegete. This run does not "
-            f"make that worse and does not fix it.")
+            f"Warning: file(s) {unsafe} contain Windows line breaks or "
+            f"characters beyond U+FFFF (such as emoji), which QualCoder's "
+            f"editor counts differently from Exegete; if the project is "
+            f"opened in QualCoder, codings there may already show shifted. "
+            f"This run does not make that worse and does not fix it.")
     residue = preview.get("residue") or {}
     # Every field count the residue block carries, the twelve notes and
     # every label key from the one table that defines them, so a field
@@ -18024,14 +18041,14 @@ def pseudonymise_source(
                                "totals": memos["totals"]}
         if unsafe:
             result["position_safety_warning"] = (
-                f"File(s) {unsafe} contain \\r\\n sequences or characters "
-                f"beyond U+FFFF (e.g. emoji), so QualCoder's GUI uses a "
-                f"different position system for them (QualCoder's manual "
-                f"notes that an emoji may take more than one position in "
-                f"its editor). "
+                f"File(s) {unsafe} contain Windows line breaks or characters "
+                f"beyond U+FFFF (such as emoji), which QualCoder's editor "
+                f"counts differently from Exegete; if the project is opened "
+                f"in QualCoder, codings there may already show shifted. "
                 f"That was already true before this run and is not "
-                f"made worse by it; GUI-created codings in that file may "
-                f"not align with the slices Exegete reports.")
+                f"made worse by it; any codings made in QualCoder in that "
+                f"file may not line up with the passages Exegete "
+                f"reports.")
         return result
 
     result = None
@@ -18339,9 +18356,10 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
         fulltext = (wdb.get_file_content(file_id) or {}).get("content") or ""
         if fulltext and not db_position_safe(fulltext):
             result["position_safety_warning"] = (
-                f"File '{created['file_name']}' contains \\r\\n or characters "
-                f"beyond U+FFFF, so this annotation's span may render shifted "
-                f"in QualCoder's editor. Relay this to the user."
+                f"File '{created['file_name']}' contains Windows line breaks "
+                f"or characters beyond U+FFFF (such as emoji); if the "
+                f"project is opened in QualCoder, this annotation's span "
+                f"may show shifted in its editor. Relay this to the user."
             )
         return result
 

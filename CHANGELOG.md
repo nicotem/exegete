@@ -577,6 +577,50 @@ When each is given, what it refuses and its counts have not changed.
   parts the preview could not read, check them by hand or treat them as
   still holding names.
 
+### Changed: messages about emoji, PDFs and imported documents
+
+The messages below now say what happens in Exegete, and what happens
+in QualCoder only if the project is opened there or for a researcher
+who uses it. The lines that name where an import departs from
+QualCoder's own still say what QualCoder's import would do. When each
+message is given, what it refuses, and what an import reads and stores
+have not changed.
+
+- **Emoji and Windows line breaks**: the position warning
+  (`position_safety_warning`), given when such a file is read,
+  suggested, edited, proposed, coded or annotated, and by
+  `pseudonymise_source`, says that QualCoder's editor counts such files
+  differently and that, "if the project is opened in QualCoder",
+  codings may show shifted there; it calls `\r\n` "Windows line
+  breaks" and gives emoji as the example of characters beyond U+FFFF.
+  The import's note on emoji says the same. A pseudonym that holds such
+  characters is still refused, now for a reason that holds for every
+  researcher: Exegete keeps a rewritten file free of them "so that
+  every program that reads the project's format counts its positions
+  alike"; QualCoder's editor is named only "if the project is opened in
+  QualCoder".
+- **PDFs**: a scanned PDF says first how to code its words (text
+  recognition outside Exegete, then importing the result) and adds
+  that QualCoder, if you use it, can code areas of its pages; the notes
+  on a PDF that QualCoder 3.8.2 stored as the file itself say that
+  "QualCoder 4.0's 'Restructure' in its PDF view can repair it", and
+  `search_files` and `get_project_summary` say so only when a PDF they
+  list is one; the note after importing a PDF opens "If this project is
+  opened in QualCoder 4.0"; and a PDF's notes join the file's memo
+  without "as QualCoder adds them".
+- **Imported documents**: the reason given for a file Exegete reads
+  as QualCoder does now says that "if the same file is also imported
+  in QualCoder, both copies hold the same text"; a file held back for
+  not being UTF-8 reads rightly "here, and in QualCoder too if you use
+  it"; a subtitle file, an RTF file with letters written as UTF-8 and
+  the line after a departure name QualCoder only for what it does with
+  such files, for a researcher who uses it, or if the project is opened
+  there; tracked changes, tables, control characters and a text that
+  is only white space are described without comparing them with
+  QualCoder; and a text over the length limit is met with "For now,
+  split it into parts and import each; QualCoder, if you use it,
+  imports it whole."
+
 ### Measured
 
 - Serialised tool JSON: full = 205,077 characters (about 51.3k tokens

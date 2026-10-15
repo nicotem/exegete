@@ -987,13 +987,15 @@ def held_back_entries(items: Sequence[Item]) -> Tuple[
 
 def names_list_line(ctx: Context) -> str:
     if ctx.names_list == "none":
+        # v0.15.0: the route every researcher has first, and QualCoder's
+        # button only for a researcher who uses it.
         return ("This project has no names list. If these documents name "
-                "participants or places, make the list first (not in "
-                "Exegete yet: in QualCoder, the Pseudonyms button in Manage "
-                "Files); the import then replaces the names as the text "
-                "comes in. Or, once the files are in and before the "
-                "assistant reads them, run pseudonymise_source on each file "
-                "(which can save its names as the project's list).")
+                "participants or places, run pseudonymise_source on each "
+                "file once it is in and before the assistant reads it; it "
+                "can save the names as the project's list, which later "
+                "imports then apply as the text comes in. QualCoder, if you "
+                "use it, can also make the list before importing (the "
+                "Pseudonyms button in Manage Files).")
     if ctx.names_list == "empty":
         return ("This project's names list is empty, so no names are "
                 "replaced.")

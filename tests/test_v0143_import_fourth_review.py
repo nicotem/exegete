@@ -313,11 +313,13 @@ class TestTheNamesListLines:
                                  documents_listing=[], refused_places=[],
                                  names_list="none")
         line = doc_import.names_list_line(ctx)
-        assert ("make the list first (not in Exegete yet: in QualCoder, "
-                "the Pseudonyms button in Manage Files)") in line
-        assert ("Or, once the files are in and before the assistant reads "
-                "them, run pseudonymise_source on each file (which can save "
-                "its names as the project's list).") in line
+        # v0.15.0: the way every researcher has first, and QualCoder's
+        # button for a researcher who uses it
+        assert ("run pseudonymise_source on each file once it is in and "
+                "before the assistant reads it; it can save the names as "
+                "the project's list") in line
+        assert ("QualCoder, if you use it, can also make the list before "
+                "importing (the Pseudonyms button in Manage Files).") in line
 
     @pytest.mark.skipif(not fx.optional_part_installed(),
                         reason="needs the optional part")

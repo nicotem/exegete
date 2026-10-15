@@ -1217,7 +1217,9 @@ Two further rules touch files on your disk:
   after a run, read the same history to decide whether their notes
   speak of QualCoder (the further backups QualCoder 3.8.0 to 3.8.2 may
   keep, a QualCoder window that will not refresh), and in the same
-  cases that reading runs the process scan too.
+  cases that reading runs the process scan too. So do `rename_case` and
+  `rename_file`, before a rename, to decide whether their note says what
+  QualCoder's imports and Merge Projects can bring back.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
   folder with four empty subfolders and a new `data.qda`, and records
@@ -2032,7 +2034,7 @@ will ask, and the summary above depends on them:
     graph labels, table displays and filters for the case or file it
     renamed; the saved SQL queries nothing in Exegete reads. Every
     backup, Exegete's session files, QualCoder's search index and
-    QualCoder 4.0's AI chat keep the old name too, and
+    QualCoder's AI chat history keep the old name too, and
     so do Exegete's pseudonymisation journal entries and run records,
     which keep a file's name as it was at the run unless that name
     carried a name from the mapping (they then name the file by its id),

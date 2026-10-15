@@ -187,6 +187,18 @@ def test_every_rename_text_keeps_the_house_rules():
         ("a.txt", "a", None, ["a"]), ("a.pdf", "a", "/docs/a.pdf", []),
         ("a", "a.transcribed", None, []), ("a.mp3", "a", "/audio/a.mp3", []),
         ("a.txt", "a.docx", None, []))]
+    # v0.15.0, piece 12: the notes as built, with and without every sign,
+    # and (its fix round 1) with and without a backup just taken
+    import itertools
+    for flags in itertools.product((False, True), repeat=4):
+        signs = server._RenameSigns(*flags)
+        for left_in in ({}, {"saved_graph_labels": 1, "saved_filters": 2,
+                             "saved_table_displays": 1}):
+            for taken in (False, True):
+                texts += [server._rename_case_note(left_in, signs,
+                                                   backup_taken=taken),
+                          server._rename_file_note(left_in, signs,
+                                                   backup_taken=taken)]
     assert all(isinstance(t, str) and t for t in texts)
     _house_rules(texts)
 
@@ -194,7 +206,9 @@ def test_every_rename_text_keeps_the_house_rules():
 def test_the_records_this_server_keeps_are_named():
     """Fix round 1, S-3: this server's own pseudonymisation journal entry
     and run record keep the file's name as it was at the run."""
-    flat = " ".join(server.RENAME_FILE_NOTE.split())
+    # v0.15.0, piece 12: the note as built with no sign of QualCoder
+    flat = " ".join(server._rename_file_note(
+        {}, server._RenameSigns()).split())
     assert "Exegete's pseudonymisation journal entries and run " \
            "records, which keep the file's name as it was at the run " \
            "unless that name carried a name from the mapping" in flat
@@ -253,8 +267,12 @@ def test_the_fix_round_3_wording():
     assert "once per question, stopping at the first that shows the name" \
         in unreleased
     assert "at most once per call" not in unreleased
-    for note in (server.RENAME_CASE_NOTE, server.RENAME_FILE_NOTE):
+    # v0.15.0, piece 12: when a saved query is there, and only then
+    saved = server._RenameSigns(saved_queries=True)
+    for build in (server._rename_case_note, server._rename_file_note):
+        note = build({}, saved)
         assert "saved SQL queries" in note and "(not read here)" in note
+        assert "saved SQL queries" not in build({}, server._RenameSigns())
 
 
 def test_the_rename_notes_say_what_a_notes_run_leaves():
@@ -262,7 +280,9 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
     old name stays in a note only in its private part, which the
     preview never reads; and a later run with rewrite_memos rewrites
     the public part of the journal entries earlier runs wrote."""
-    case_note = " ".join(server.RENAME_CASE_NOTE.split())
+    # v0.15.0, piece 12: the notes as built with no sign of QualCoder
+    case_note = " ".join(server._rename_case_note(
+        {}, server._RenameSigns()).split())
     assert ("in notes, journal entries, file text and attribute values "
             "(the pseudonymisation preview counts those, notes and journal "
             "entries in their public part; the preview does not read "
@@ -270,7 +290,8 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
     assert "(the pseudonymisation preview counts those);" not in case_note
     tail = ("(they then name the file by its id), though a later run with "
             "{} rewrites the public part of those journal entries.")
-    file_note = " ".join(server.RENAME_FILE_NOTE.split())
+    file_note = " ".join(server._rename_file_note(
+        {}, server._RenameSigns()).split())
     assert tail.format("rewrite_memos") in file_note
     assert tail.format("`rewrite_memos`") in _flat("PRIVACY.md")
 

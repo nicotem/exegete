@@ -576,7 +576,8 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
                 f"</li>" for n, what, body in notes) + "</ol>")
         parts.append("</section>")
     parts.append(f"<footer><p>Written by Exegete {esc(version)} on this "
-                 "computer, after QualCoder's export of a coded file. A copy "
-                 "for reading: changes to it go nowhere.</p></footer>")
+                 "computer (its layout follows QualCoder's export of a "
+                 "coded file). A copy for reading: changes to it go "
+                 "nowhere.</p></footer>")
     parts.append("</body></html>\n")
     return "\n".join(parts), counts

@@ -364,8 +364,8 @@ EXPECTED_ASK = (
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
     "models can then be compared later. Quick picks: \"AI Coding "
-    "Assistant\" (Exegete's built-in default), \"AI Agent\" (the name "
-    "QualCoder 4.0's built-in assistant uses). The name can be changed at "
+    "Assistant\" (Exegete's built-in default), or a name the researcher "
+    "chooses (the model's name, for example). The name can be changed at "
     "any time with the same tool; earlier rows keep the name they were "
     "written under.")
 
@@ -386,8 +386,8 @@ class TestTheAsk:
         assert out["action_required"] == "set_project_ai_coder_name"
         assert out["ai_coder_name"] is None
         assert out["free_text_allowed"] is True
-        assert out["quick_picks"] == [DEFAULT_AI_CODER_NAME,
-                                      KNOWN_AI_ASSISTANT_OWNER]
+        # v0.15.0, piece 12: "AI Agent" only on its sign
+        assert out["quick_picks"] == [DEFAULT_AI_CODER_NAME]
         for table, before in counts_before.items():
             assert _row(qualcoder_db_path,
                         f"SELECT COUNT(*) AS n FROM {table}")["n"] == before, \

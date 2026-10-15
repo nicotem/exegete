@@ -673,6 +673,64 @@ host's configuration, the first `list_backups` or pseudonymisation run
 can be what looks for a running QualCoder (the process scan), as
 PRIVACY.md describes.
 
+### Changed: renames, exports, the reading copy and coder names, without presuming QualCoder
+
+After a rename, Exegete names QualCoder's places only where the project
+has them; exports state their counting rule first, with QualCoder's
+report as the comparison; and the reading copy's footer and the notes on
+hidden coders and on the AI coder name no longer read as if the
+researcher used QualCoder. What a rename writes, `old_name_left_in` and
+its counts, the exports' files and numbers, the reading copy's layout
+and how hidden coders are handled have not changed.
+
+- **`rename_case` and `rename_file`**: each note says always where the
+  old name stays in Exegete (for a case: notes, journal entries, file
+  text, attribute values, files named after it and every backup; for a
+  file: every backup, Exegete's coding-session files and
+  pseudonymisation records), and says the backup "just taken" only when
+  the rename took one. Each names QualCoder's saved graph labels, table
+  displays and filters only when `old_name_left_in` counts them, and its
+  saved SQL queries only when one is saved; after a case rename, the
+  note names QualCoder's own `_BKUP_` backups only when one is beside
+  the project, and its AI chat history only when the project holds it;
+  how saved displays and filters were read is said only when one is
+  counted. The sentence on what QualCoder's imports and Merge Projects
+  can bring back opens "In QualCoder" and comes only when the project
+  or this computer shows QualCoder, or the setting "Do you also use
+  QualCoder on this computer?" says yes. `rename_file`'s note on
+  QualCoder's AI search index comes only when the project holds one,
+  and its notes read "Only the file's name in the project changed (as
+  with QualCoder's "Rename database entry")", "If a file called '...'
+  is later imported in QualCoder, QualCoder overwrites this stored
+  copy", and "If the project is exported from QualCoder, its exports
+  ship that copy".
+- **Exports**: `export_codebook`'s counting rule reads "text, image and
+  audio/video codings, all coders, no filters, codings on deleted files
+  included (the same count as QualCoder's Codebook)", and
+  `export_frequencies_csv`'s "one count per coding, text, image and
+  audio/video, per coder; a category's row is the total of everything
+  under it; codings on deleted files included (the same count as
+  QualCoder's Code Frequencies report)"; the exports by case keep their
+  rule and say "If compared with QualCoder's comparison table, which
+  counts by file linkage, the numbers can differ."; and a CSV export
+  with formulas made safe says "(so those cells differ from what
+  QualCoder's own export writes)".
+- **The reading copy's footer** reads "Written by Exegete ... on this
+  computer (its layout follows QualCoder's export of a coded file)."
+- **Hidden coders**: the note on reads of a project that hides coders
+  says "(a visibility setting made in QualCoder)", without the asides
+  on QualCoder's versions and its own AI.
+- **The AI coder name**: when Exegete asks for it, "AI Agent" is
+  offered only when the project already holds rows under that name or
+  has an `ai_data` folder, as "if the researcher also uses QualCoder
+  4.0's own assistant, this name puts both assistants' codings under
+  one coder"; otherwise the picks are Exegete's default and a name the
+  researcher chooses.
+
+After `create_project` or `restore_backup`, or for a project set in the
+host's configuration, the first rename can be what looks for a running
+QualCoder (the process scan), as PRIVACY.md describes.
+
 ### Measured
 
 - Serialised tool JSON: full = 205,077 characters (about 51.3k tokens

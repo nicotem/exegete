@@ -289,7 +289,10 @@ def _save_filter(project, name, boolean, conditions):
 
 class TestRenameCaseReportsWhereTheOldNameStays:
 
-    def test_each_count_only_when_not_zero(self, project):
+    def test_each_count_only_when_not_zero(self, project, monkeypatch):
+        # v0.15.0, piece 12: the sentence on Merge Projects comes when
+        # the project's history with QualCoder is not "none"
+        monkeypatch.setenv("EXEGETE_USES_QUALCODER", "yes")
         _saved_places(project)
         _exec(project, "INSERT INTO gr_case_text_item (grid, caseid, "
                        "displaytext) VALUES (1, 1, 'CASE A'), "
@@ -303,7 +306,10 @@ class TestRenameCaseReportsWhereTheOldNameStays:
         assert out["old_name_left_in"] == {
             "saved_graph_labels": 2, "saved_table_displays": 1,
             "file_ids": [7, 8]}
-        assert out["note"] == server.RENAME_CASE_NOTE
+        assert out["note"].startswith(server.RENAME_CASE_NOTE + " ")
+        assert "in QualCoder's saved graph labels and table displays " \
+               "(counted in old_name_left_in)" in out["note"]
+        assert out["note"].endswith(server.OLD_NAME_LEFT_IN_NOTE)
         assert "Merge Projects" in out["note"]
 
     def test_missing_tables_are_skipped_and_nothing_found_is_empty(
@@ -809,8 +815,10 @@ class TestWhatKeepsTheOldName:
         assert out["stored_copy"]["kind"] == kind
         assert out["stored_copy"]["stored_name"] == stored
         if kind == "in_project_folder":
-            assert "A later QualCoder import of a file called " \
-                   f"'{stored}' will overwrite" in out["stored_copy"]["note"]
+            # v0.15.0, piece 12: the sentence opens on QualCoder
+            assert f"If a file called '{stored}' is later imported in " \
+                   f"QualCoder, QualCoder overwrites this stored copy" \
+                   in out["stored_copy"]["note"]
             assert ("original text" in out["stored_copy"]["note"]) == \
                 (ext == "docx")
 
@@ -834,7 +842,7 @@ class TestWhatKeepsTheOldName:
             # original text too, and a later import may delete it.
             assert "the original document, whatever has been rewritten " \
                    "here since." in block["note"]
-            assert "may then delete it." in block["note"]
+            assert "(and may then delete it)." in block["note"]
         if kind == "named_after_it":
             # No QualCoder code reads documents/<name>.txt back by the
             # entry's name (QA-3): no "finds it" for this one.
@@ -855,7 +863,10 @@ class TestWhatKeepsTheOldName:
         _reload()
         note = _file(5, f"P01.{ext}", create_backup=False)[
             "stored_copy"]["note"]
-        assert "will overwrite this stored copy" in note
+        # v0.15.0, piece 12: "If a file called ... is later imported in
+        # QualCoder, QualCoder overwrites this stored copy"
+        assert "is later imported in QualCoder, QualCoder overwrites this " \
+               "stored copy" in note
         assert ("may then delete it" in note) is deletes
 
     def test_the_notes_and_the_counts(self, project):
@@ -868,13 +879,18 @@ class TestWhatKeepsTheOldName:
                        ["interview.txt"])])
         _add_file(project, 7, "interview_p1.jpg", mediapath="/images/x.jpg")
         _add_file(project, 8, "interview.txt_summary")
+        # v0.15.0, piece 12: the search index note comes on its sign
+        (project / "ai_data").mkdir()
+        (project / "ai_data" / "search.sqlite").write_bytes(b"")
         _reload()
         out = _file(1, "P01.txt", create_backup=False)
         # A text with no stored file is looked for whole: '.txt' is part
         # of its name, so 'interview_p1.jpg' is not named after it.
         assert out["old_name_left_in"] == {
             "saved_graph_labels": 1, "saved_filters": 1, "file_ids": [8]}
-        assert out["note"] == server.RENAME_FILE_NOTE
+        assert out["note"].startswith(server.RENAME_FILE_NOTE + " ")
+        # a saved filter counted: how filters were read, said
+        assert out["note"].endswith(server.OLD_NAME_LEFT_IN_NOTE)
         assert out["search_index_note"] == \
             server.RENAME_FILE_SEARCH_INDEX_NOTE
         assert "transcript_of" not in out and "linked_transcript" not in out
@@ -1388,8 +1404,14 @@ class TestWhereTheOldNameStaysByWholeWords:
         assert out["old_name_left_in"] == {"file_ids": [6]}
 
     def test_both_notes_call_it_a_heuristic(self):
-        for note in (server.RENAME_CASE_NOTE, server.RENAME_FILE_NOTE):
+        # v0.15.0, piece 12: the notes as built; with a saved display or
+        # filter counted they end with the whole note
+        counted = {"saved_filters": 1}
+        for build in (server._rename_case_note, server._rename_file_note):
+            note = build(counted, server._RenameSigns())
             assert note.endswith(server.OLD_NAME_LEFT_IN_NOTE)
+            assert "old_name_left_in is a heuristic" in build(
+                {}, server._RenameSigns())
         assert server.OLD_NAME_LEFT_IN_NOTE.startswith(
             "old_name_left_in is a heuristic: it looks for the old name as "
             "a whole word, ignoring letter case")

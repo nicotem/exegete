@@ -1851,19 +1851,16 @@ def _coder_visibility_note(coder: Optional[str] = None,
         return {
             "hidden_coder_filter": "bypassed",
             "hidden_coders": hidden,
-            "note": f"This project hides {hidden} coder(s) in QualCoder, "
-                    f"but the explicit coder filter read the full base "
-                    f"data for that coder instead (the same override "
-                    f"QualCoder 4.0's own AI uses).",
+            "note": f"This project hides {hidden} coder(s) (a visibility "
+                    f"setting made in QualCoder), but the explicit coder "
+                    f"filter read that coder's full data instead.",
         }
     return {
         "hidden_coder_filter": "applied",
         "hidden_coders": hidden,
-        "note": f"This project hides {hidden} coder(s) (the "
-                f"coder-visibility capability of QualCoder 3.8.2 and "
-                f"4.0, schema v14 and later: a per-coder visibility "
-                f"setting stored in the project). "
-                f"Results follow the project's visibility setting; tools "
+        "note": f"This project hides {hidden} coder(s) (a visibility "
+                f"setting made in QualCoder and stored in the project). "
+                f"Results follow that setting; tools "
                 f"that take a coder argument (get_coded_segments, for "
                 f"example) read a specific coder's rows from the full "
                 f"data instead.",
@@ -2638,20 +2635,40 @@ def _existing_known_ai_names() -> List[str]:
     return [n for n in names if presence.get(n)]
 
 
-def _ask_quick_picks(existing: List[str], declared: Optional[str]) -> List[str]:
+def _ask_quick_picks(existing: List[str], declared: Optional[str],
+                     offer_ai_agent: bool = True) -> List[str]:
     """The ranking a small model should follow (D7 3.3, 9.3).
 
     Continuity first (a name this project already holds rows under), then
-    the AI coder name in Exegete's settings, then the two built-in picks.
-    The PROSE names the picks in D7 3.3's fixed order; this array carries
-    the priority.
+    the AI coder name in Exegete's settings, then the built-in picks:
+    Exegete's default, and "AI Agent" when `offer_ai_agent`
+    (_offers_ai_agent). The PROSE names the picks in D7 3.3's fixed
+    order; this array carries the priority.
     """
     picks: List[str] = []
+    built_in = [DEFAULT_AI_CODER_NAME] + (
+        [KNOWN_AI_ASSISTANT_OWNER] if offer_ai_agent else [])
     for name in list(existing) + ([declared] if declared else []) + \
-            [DEFAULT_AI_CODER_NAME, KNOWN_AI_ASSISTANT_OWNER]:
+            built_in:
         if name and name not in picks:
             picks.append(name)
     return picks
+
+
+def _offers_ai_agent(existing: List[str]) -> bool:
+    """Whether the ask offers "AI Agent", the name QualCoder 4.0's own
+    assistant writes under (v0.15.0, not presuming QualCoder, piece 12):
+    the project already holds rows under it, or holds an ai_data folder,
+    which QualCoder 3.8.2 and 4.0 make and Exegete never does. A folder
+    that cannot be checked counts as none."""
+    if KNOWN_AI_ASSISTANT_OWNER in existing:
+        return True
+    try:
+        return qualcoder_history.ai_data_found(_current_project_folder())
+    except Exception as e:
+        logger.debug("No ai_data check for the quick picks: %s",
+                     error_label(e))
+        return False
 
 
 def _the_setter_refuses(name: str) -> bool:
@@ -2678,6 +2695,9 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
         declared = None
     existing = [name for name in _existing_known_ai_names()
                 if not _the_setter_refuses(name)]
+    # "AI Agent" only on its sign (v0.15.0, piece 12); otherwise a name
+    # the researcher chooses
+    offer_ai_agent = _offers_ai_agent(existing)
     text = (
         "No AI coder name is set for this project yet, so nothing was "
         "written. Ask the user which coder name this project's AI codings "
@@ -2686,12 +2706,19 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
         "is free text; a model name such as \"Qwen 3.8 6bit\" is a good "
         "choice, because codings by different models can then be compared "
         "later. Quick picks: \"AI Coding Assistant\" (Exegete's "
-        "built-in default), \"AI Agent\" (the name QualCoder 4.0's "
-        "built-in assistant uses)")
-    if declared and declared not in (DEFAULT_AI_CODER_NAME,
-                                     KNOWN_AI_ASSISTANT_OWNER):
+        "built-in default)")
+    if offer_ai_agent:
+        text += (", \"AI Agent\" (if the researcher also uses QualCoder "
+                 "4.0's own assistant, this name puts both assistants' "
+                 "codings under one coder)")
+    if declared and declared not in (
+            [DEFAULT_AI_CODER_NAME]
+            + ([KNOWN_AI_ASSISTANT_OWNER] if offer_ai_agent else [])):
         text += (f", \"{declared}\" (the AI coder name in Exegete's "
                  f"settings)")
+    if not offer_ai_agent:
+        text += (", or a name the researcher chooses (the model's name, "
+                 "for example)")
     text += "."
     if existing:
         text += (f" This project already holds rows under "
@@ -2706,7 +2733,7 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
         "error": text,
         "action_required": _ASK_ACTION,
         "ai_coder_name": None,
-        "quick_picks": _ask_quick_picks(existing, declared),
+        "quick_picks": _ask_quick_picks(existing, declared, offer_ai_agent),
         "existing_ai_coder_names_in_project": existing,
         "free_text_allowed": True,
     }
@@ -18671,35 +18698,125 @@ def create_case(name: str, memo: Optional[str] = None,
 
 
 # How old_name_left_in reads, said in both renames' notes (fix round 1,
-# QA-6): a heuristic, by whole words.
-OLD_NAME_LEFT_IN_NOTE = (
+# QA-6): a heuristic, by whole words. Its clause on saved table displays
+# and filters only when old_name_left_in counts one of them (v0.15.0, not
+# presuming QualCoder, piece 12): only QualCoder makes them.
+_OLD_NAME_LEFT_IN_HEURISTIC = (
     "old_name_left_in is a heuristic: it looks for the old name as a whole "
     "word, ignoring letter case, where letters and digits make up a word "
-    "(so '_', '-', '.' and spaces separate words); in saved table "
+    "(so '_', '-', '.' and spaces separate words)")
+_OLD_NAME_LEFT_IN_SAVED_ROWS = (
+    "; in saved table "
     "displays and filters it reads their names, and the values they "
     "filter on rather than QualCoder's own words such as BOOLEAN_OR or "
     "like, reading a row whole when it is not in QualCoder's exact saved "
-    "shape. It can miss a "
+    "shape")
+_OLD_NAME_LEFT_IN_LIMIT = (
+    ". It can miss a "
     "label written another way or count one that names something else.")
+OLD_NAME_LEFT_IN_NOTE = (_OLD_NAME_LEFT_IN_HEURISTIC
+                         + _OLD_NAME_LEFT_IN_SAVED_ROWS
+                         + _OLD_NAME_LEFT_IN_LIMIT)
 
-# What rename_case's result says stays behind (v0.13, rename dossier 3.2).
+
+def _old_name_left_in_note(left_in: Dict[str, Any]) -> str:
+    """How old_name_left_in reads: OLD_NAME_LEFT_IN_NOTE when it counts
+    saved table displays or filters, otherwise the same note without the
+    clause on how those were read (v0.15.0, piece 12)."""
+    if left_in.get("saved_table_displays") or left_in.get("saved_filters"):
+        return OLD_NAME_LEFT_IN_NOTE
+    return _OLD_NAME_LEFT_IN_HEURISTIC + _OLD_NAME_LEFT_IN_LIMIT
+
+
+class _RenameSigns(NamedTuple):
+    """The signs a rename's note reads (v0.15.0, not presuming QualCoder,
+    piece 12), each for a place of QualCoder's that keeps the old name.
+    `saved_queries`: `stored_sql` holds a row (saved_places_in_use).
+    `qualcoder_backups`: one of QualCoder's own _BKUP_ backups sits beside
+    the project. `chat_history`: the project holds QualCoder's AI chat
+    history, ai_data/chat_history.sqlite, as a file. `qualcoder_seen`:
+    the project's history with QualCoder is at a level other than
+    "none" (QualCoder's imports and Merge Projects leave no sign of their
+    own)."""
+    saved_queries: bool = False
+    qualcoder_backups: bool = False
+    chat_history: bool = False
+    qualcoder_seen: bool = False
+
+
+def _rename_signs(wdb, project_folder: Path,
+                  qualcoder_seen: bool) -> _RenameSigns:
+    """The signs, read as the rename's answer is built: one read of the
+    saved places (no column of any row), and the presence of two kinds
+    of path beside or in the project folder."""
+    return _RenameSigns(
+        saved_queries=wdb.saved_places_in_use()["saved_queries"],
+        qualcoder_backups=qualcoder_history.qualcoder_backup_beside(
+            project_folder),
+        chat_history=qualcoder_history.chat_history_found(project_folder),
+        qualcoder_seen=qualcoder_seen)
+
+
+# QualCoder's saved places that old_name_left_in counts, by its keys, as
+# a rename's note names them
+_SAVED_PLACE_WORDS = (("saved_graph_labels", "graph labels"),
+                      ("saved_table_displays", "table displays"),
+                      ("saved_filters", "filters"))
+
+
+def _words_list(items: List[str]) -> str:
+    """'a', 'a and b', 'a, b and c'."""
+    if len(items) < 2:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+# What rename_case's result says stays behind (v0.13, rename dossier 3.2):
+# the first sentence; _rename_case_note says the rest.
 RENAME_CASE_NOTE = (
     "Only the case's name changed, as in QualCoder's Manage Cases; its "
-    "date, notes, file links and attributes are kept. The old name stays "
-    "in notes, journal entries, file text and attribute values (the "
-    "pseudonymisation preview counts those, notes and journal entries in "
-    "their public part; the preview does not read private parts); in "
-    "QualCoder's saved graph "
-    "labels, table displays and filters (counted in old_name_left_in) "
-    "and its saved SQL queries (not read here); "
-    "in the names of files named after the case (their ids are in "
-    "old_name_left_in.file_ids, and rename_file renames them); in every "
-    "backup, including the one just taken (list_backups lists them; "
-    "prune_backups removes Exegete's, and QualCoder's own _BKUP_ "
-    "copies only the researcher can remove); and in QualCoder 4.0's AI "
-    "chat. A later case spreadsheet import, survey import or Merge "
-    "Projects that still uses the old label creates a case carrying it "
-    "again. " + OLD_NAME_LEFT_IN_NOTE)
+    "date, notes, file links and attributes are kept.")
+
+
+def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
+                      backup_taken: bool = True) -> str:
+    """rename_case's note (v0.15.0, piece 12): the places in Exegete
+    always; each of QualCoder's places only on its sign (its count in
+    old_name_left_in, a saved query, a QualCoder backup beside the
+    project, the AI chat history); what QualCoder's imports and Merge
+    Projects can bring back when the project's history with QualCoder is
+    not "none". "Including the one just taken" only when the rename took
+    a backup (`backup_taken`, its create_backup; fix round 1)."""
+    places = [
+        "in notes, journal entries, file text and attribute values (the "
+        "pseudonymisation preview counts those, notes and journal entries "
+        "in their public part; the preview does not read private parts)"]
+    counted = [words for key, words in _SAVED_PLACE_WORDS
+               if left_in.get(key)]
+    if counted:
+        places.append(f"in QualCoder's saved {_words_list(counted)} "
+                      f"(counted in old_name_left_in)")
+    if signs.saved_queries:
+        places.append("in any of QualCoder's saved SQL queries that name "
+                      "it (not read here)")
+    places.append(
+        "in the names of files named after the case (their ids are in "
+        "old_name_left_in.file_ids, and rename_file renames them)")
+    places.append(
+        "in every backup"
+        + (", including the one just taken" if backup_taken else "")
+        + " (list_backups lists them; prune_backups removes Exegete's"
+        + (", and QualCoder's own _BKUP_ copies only the researcher can "
+           "remove" if signs.qualcoder_backups else "") + ")")
+    if signs.chat_history:
+        places.append("in QualCoder's AI chat history")
+    note = (RENAME_CASE_NOTE + " The old name stays "
+            + "; ".join(places[:-1]) + "; and " + places[-1] + ".")
+    if signs.qualcoder_seen:
+        note += (" In QualCoder, a later case spreadsheet import, survey "
+                 "import or Merge Projects that still uses the old label "
+                 "creates a case carrying it again.")
+    return note + " " + _old_name_left_in_note(left_in)
 
 # The accepted limitation both renames carry (rename dossier 1.6), in
 # their descriptions: QualCoder 4.0 writes no lock file.
@@ -18774,6 +18891,11 @@ def rename_case(case_id: int, new_name: str,
     answer = _precheck(get_db().case_name_rows())
     if answer is not None:
         return json.dumps(answer, indent=2)
+    # What the note says of QualCoder's places (v0.15.0, piece 12): the
+    # project's history with QualCoder, read before the write lock
+    project_folder = _current_project_folder()
+    history = _qualcoder_history()
+    qualcoder_seen = history is not None and history.level != "none"
 
     def _op(wdb):
         # SQLite's write lock first, then the re-check: the write gate is
@@ -18786,32 +18908,55 @@ def rename_case(case_id: int, new_name: str,
                 raise ValueError(answer["error"])
             return answer
         renamed = wdb.rename_case(case_id, new_name, auto_commit=False)
+        left_in = wdb.old_name_left_in("case", case_id, renamed["old_name"])
         return {"success": True, "changed": True, "message": "Renamed case",
                 **renamed,
-                "old_name_left_in": wdb.old_name_left_in(
-                    "case", case_id, renamed["old_name"]),
-                "note": RENAME_CASE_NOTE}
+                "old_name_left_in": left_in,
+                "note": _rename_case_note(left_in, _rename_signs(
+                    wdb, project_folder, qualcoder_seen),
+                    backup_taken=bool(create_backup))}
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="the case was not renamed")
     return json.dumps(result, indent=2)
 
 
-# What rename_file's result says stays behind (v0.13, rename dossier 3.3).
+# What rename_file's result says stays behind (v0.13, rename dossier 3.3):
+# the first sentence; _rename_file_note says the rest.
 RENAME_FILE_NOTE = (
-    "Only the name QualCoder shows changed, exactly as its \"Rename "
-    "database entry\" does: nothing on disk was renamed, and the stored "
-    "path, date, notes, codings and case links are kept. Every backup, "
-    "including the one just taken, keeps the old name, and so do "
-    "Exegete's coding-session files and any of QualCoder's saved SQL "
-    "queries that name it (not read here), and so do Exegete's "
-    "pseudonymisation journal entries and run records, which keep the "
-    "file's name as it was at the run unless that name carried a name "
-    "from the mapping (they then name the file by its id), though a later "
-    "run with rewrite_memos rewrites the public part of those journal "
-    "entries. A Merge "
-    "Projects with a copy of the project that still has the old name "
-    "brings the file in as a second file. " + OLD_NAME_LEFT_IN_NOTE)
+    "Only the file's name in the project changed (as with QualCoder's "
+    "\"Rename database entry\"): nothing on disk was renamed, and the "
+    "stored path, date, notes, codings and case links are kept.")
+
+
+def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns,
+                      backup_taken: bool = True) -> str:
+    """rename_file's note (v0.15.0, piece 12): Exegete's places always;
+    QualCoder's saved SQL queries when one is saved; what QualCoder's
+    Merge Projects can bring back when the project's history with
+    QualCoder is not "none". "Including the one just taken" only when
+    the rename took a backup (`backup_taken`, its create_backup; fix
+    round 1)."""
+    note = (RENAME_FILE_NOTE + " Every backup"
+            + (", including the one just taken," if backup_taken else "")
+            + " keeps the old name, and so do "
+            "Exegete's coding-session files"
+            + (" and any of QualCoder's saved SQL queries that name it "
+               "(not read here)" if signs.saved_queries else "")
+            + ", and so do Exegete's "
+            "pseudonymisation journal entries and run records, which keep "
+            "the file's name as it was at the run unless that name carried "
+            "a name from the mapping (they then name the file by its id), "
+            "though a later run with rewrite_memos rewrites the public part "
+            "of those journal entries.")
+    if signs.qualcoder_seen:
+        note += (" In QualCoder, Merge Projects with a copy of the project "
+                 "that still has the old name brings the file in as a "
+                 "second file.")
+    return note + " " + _old_name_left_in_note(left_in)
+
+
+# Given only when the project holds the index (v0.15.0, piece 12)
 RENAME_FILE_SEARCH_INDEX_NOTE = (
     "QualCoder's AI search index lists the file under its old name until "
     "QualCoder next opens the project with AI enabled.")
@@ -18825,14 +18970,16 @@ def _stored_copy_block(db, mediapath: Optional[str],
     """What keeps the old name on disk, by how the file is stored
     (rename dossier 1.4 and 3.3). Read before the rename; nothing on disk
     is touched."""
-    later_import = ("A later QualCoder import of a file called '{0}' will "
-                    "overwrite this stored copy, and may then delete it.")
+    later_import = ("If a file called '{0}' is later imported in "
+                    "QualCoder, QualCoder overwrites this stored copy (and "
+                    "may then delete it).")
     # Master's image, audio and video import copies over the media folder
     # and never unlinks (manage_files.py:3000-3040); only a document or
     # PDF import removes its copy when it is rejected (:2965-2994), so the
     # deletion clause is for documents only (fix round 1, QA-3).
-    later_media_import = ("A later QualCoder import of a file called '{0}' "
-                          "will overwrite this stored copy.")
+    later_media_import = ("If a file called '{0}' is later imported in "
+                          "QualCoder, QualCoder overwrites this stored "
+                          "copy.")
     if mediapath and mediapath.startswith(_IN_PROJECT_PREFIXES):
         stored = mediapath.split("/", 2)[2]
         note = (f"The stored copy in the project folder and the stored path "
@@ -18840,7 +18987,8 @@ def _stored_copy_block(db, mediapath: Optional[str],
         if mediapath.startswith("/docs/"):
             note += (" The copy also holds the original text, as it was "
                      "imported, whatever has been rewritten here since. "
-                     "QualCoder's exports ship that copy: QualCoder 4.0's "
+                     "If the project is exported from QualCoder, its "
+                     "exports ship that copy: QualCoder 4.0's "
                      "Manage Files export under its stored name, and the "
                      "REFI-QDA export inside the .qdpx. In QualCoder 3.8.2, "
                      "Delete leaves it behind and Export writes nothing "
@@ -18876,11 +19024,11 @@ def _stored_copy_block(db, mediapath: Optional[str],
     if found is not None:
         return {"kind": "found_by_name", "stored_name": found,
                 "note": (f"The project's documents folder holds '{found}', "
-                         f"which QualCoder finds by this entry's name; after "
-                         f"the rename it will no longer find it, and that "
-                         f"file keeps the old name. It holds the text as it "
-                         f"was stored there, the original document, "
-                         f"whatever has been rewritten here since. "
+                         f"which keeps the old name and holds the original "
+                         f"document, whatever has been rewritten here "
+                         f"since. QualCoder finds that file by the entry's "
+                         f"name, so after the rename QualCoder will no "
+                         f"longer find it. "
                          + later_import.format(found))}
     found = held(f"{old}.txt") if listing else None
     if found is not None:
@@ -19268,6 +19416,11 @@ def rename_file(file_id: int, new_name: str,
     answer = _file_rename_precheck(db, file_id, candidate, evidence)
     if answer is not None:
         return json.dumps(answer, indent=2)
+    # What the notes say of QualCoder's places (v0.15.0, piece 12): the
+    # project's history with QualCoder, read before the write lock
+    project_folder = _current_project_folder()
+    history = _qualcoder_history()
+    qualcoder_seen = history is not None and history.level != "none"
 
     def _op(wdb):
         # SQLite's write lock first, then the re-check (as rename_case).
@@ -19282,15 +19435,21 @@ def rename_file(file_id: int, new_name: str,
         stored = _stored_copy_block(wdb, row["mediapath"], row["name"])
         renamed = wdb.rename_file(file_id, candidate, auto_commit=False)
         old = renamed["old_name"]
+        left_in = wdb.old_name_left_in("file", file_id, old,
+                                       mediapath=row["mediapath"])
+        index = ({"search_index_note": RENAME_FILE_SEARCH_INDEX_NOTE}
+                 if qualcoder_history.search_index_found(project_folder)
+                 else {})
         return {"success": True, "changed": True, "message": "Renamed file",
                 **renamed,
                 "file_type": detect_file_type(row["mediapath"] or ""),
                 "stored_copy": stored,
                 **_transcript_blocks(rows, file_id, old, candidate),
-                "old_name_left_in": wdb.old_name_left_in(
-                    "file", file_id, old, mediapath=row["mediapath"]),
-                "search_index_note": RENAME_FILE_SEARCH_INDEX_NOTE,
-                "note": RENAME_FILE_NOTE}
+                "old_name_left_in": left_in,
+                **index,
+                "note": _rename_file_note(left_in, _rename_signs(
+                    wdb, project_folder, qualcoder_seen),
+                    backup_taken=bool(create_backup))}
 
     result = _perform_write(_op, create_backup=create_backup,
                             backup_fail_detail="the file was not renamed")
@@ -19598,9 +19757,8 @@ def _sanitization_note(sanitize: bool, is_csv: bool = True) -> str:
                 "format has no spreadsheet cells")
     if sanitize:
         return ("formulas sanitised for spreadsheet safety: cells starting "
-                "with = + - @ tab or CR are prefixed with ' (this "
-                "deliberately breaks byte-parity with QualCoder's own "
-                "export)")
+                "with = + - @ tab or CR are prefixed with ' (so those cells "
+                "differ from what QualCoder's own export writes)")
     return ("verbatim export; cells starting with = are evaluated by "
             "Excel; pass sanitize_formulas=true to neutralise")
 
@@ -19921,9 +20079,10 @@ def export_codebook(output_path: str, format: str = "csv",
         "format": format,
         "codes": n_codes,
         "categories": n_cats,
-        "counting_rule": "QualCoder Codebook parity: text + image + A/V "
-                         "codings, all coders, no filters, orphaned "
-                         "codings included",
+        "counting_rule": "text, image and audio/video codings, all "
+                         "coders, no filters, codings on deleted files "
+                         "included (the same count as QualCoder's "
+                         "Codebook)",
         "sanitization": _sanitization_note(sanitize_formulas,
                                            is_csv=(format == "csv")),
     }, indent=2)
@@ -20160,10 +20319,11 @@ def export_coded_segments_report(
         result["counting_rule"] = (
             "CONTAINMENT: a coding belongs to a case iff its span lies "
             "fully inside one of the case's text spans on the same file "
-            "(QualCoder coding-report rule). Note QualCoder's comparison "
-            "table uses a different rule (file linkage); whole-file links "
-            "created by different QualCoder dialogs end at len-1 or len, "
-            "which can exclude a coding touching the file end."
+            "(the same rule as QualCoder's coding report). If compared "
+            "with QualCoder's comparison table, which counts by file "
+            "linkage, the numbers can differ. Whole-file links made in "
+            "QualCoder end at len-1 or len depending on the dialog, which "
+            "can exclude a coding touching the file end."
         )
     return json.dumps(result, indent=2)
 
@@ -20337,14 +20497,16 @@ def export_frequencies_csv(output_path: str,
         "categories": len(cats),
         **coder_keys,
         "sanitization": _sanitization_note(sanitize_formulas),
-        "counting_rule": "QualCoder Code Frequencies parity: one count "
-                         "per coding row over code_text + code_image + "
-                         "code_av, per coder; category rows are recursive "
-                         "subtree totals; orphaned codings included",
+        "counting_rule": "one count per coding, text, image and "
+                         "audio/video, per coder; a category's row is the "
+                         "total of everything under it; codings on deleted "
+                         "files included (the same count as QualCoder's "
+                         "Code Frequencies report)",
         "divergence_note": "get_coding_frequencies (the conversational "
                            "tool) counts text codings on existing files "
                            "only; its numbers can be lower than this "
-                           "QualCoder-parity export.",
+                           "export, which counts every coding of every "
+                           "kind.",
     }, indent=2)
 
 
@@ -20405,10 +20567,11 @@ def export_case_code_matrix_csv(output_path: str,
         "sanitization": _sanitization_note(sanitize_formulas),
         "counting_rule": "CONTAINMENT: a coding counts for a case iff "
                          "fully inside one of the case's text spans on "
-                         "the same file (QualCoder coding-report rule; "
-                         "text codings on existing files). QualCoder's "
-                         "comparison table uses file-linkage counting "
-                         "instead; its numbers will differ.",
+                         "the same file (text codings on existing files; "
+                         "the same rule as QualCoder's coding report). If "
+                         "compared with QualCoder's comparison table, "
+                         "which counts by file linkage, the numbers can "
+                         "differ.",
     }, indent=2)
 
 

@@ -556,10 +556,13 @@ class TestTheSizes:
     # both sets). The whole-branch review of v0.15.0, round 1, moves the
     # removals announced for v0.15 to v0.15.1 in every deprecation
     # sentence (two characters each) and leads the names list's with
-    # pseudonyms.json (105 characters more in `full`, 4 in `core`). Their
-    # entries as 0.14.2 served them are below, so every other tool is
-    # still held to 0.14.2's figure.
-    NOW = {"full": 196_404, "core": 64_808}
+    # pseudonyms.json (105 characters more in `full`, 4 in `core`). Its
+    # round 2 rewords the REFI-QDA export's, the journals' and the rename
+    # back's deprecation sentences (195 characters more in `full`) and
+    # gives import_text_file a sentence on what pseudonymisation is for
+    # (164 more in `full`). Their entries as 0.14.2 served them are
+    # below, so every other tool is still held to 0.14.2's figure.
+    NOW = {"full": 196_763, "core": 64_808}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

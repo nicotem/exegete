@@ -678,7 +678,10 @@ EARLIER_NAMES_SECTION = (
     "`analyze_file_with_coding` is now `read_file_with_codings`. If your "
     "host remembers a choice to run one of the earlier names without "
     "asking, it may ask again for the new one. "
-    + BLOCKED)
+    + BLOCKED
+    # the other way round (whole-branch review, round 2)
+    + " Blocking or switching off a new name leaves its earlier name able "
+    "to run the same tool, so you may want to block both.")
 
 
 def _read(name):
@@ -793,6 +796,11 @@ class TestTheDocuments:
             "### Changed: two tools renamed, and Exegete's backups")
         end = entry.index("###", start + 5)
         others = entry[:start] + entry[end:]
+        # the Upgrading part's renames bullet names both, so that it can
+        # be used alone (whole-branch review, round 2)
+        bullet = others.index("- **Two tools renamed.**")
+        others = (others[:bullet]
+                  + others[others.index("- **", bullet + 5):])
         assert not EARLIER.search(others), EARLIER.findall(others)
         assert ("`select_project`'s warning, `get_current_project`'s note "
                 "and `start_coding_session`'s request and banner say the "

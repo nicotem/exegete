@@ -260,9 +260,12 @@ class TestTheEntryIsOneAccount:
                       "**Not in this release.** The removals announced in "
                       "0.14 for v0.15 (TOOLS.md names each) come in v0.15.1"):
             assert words in upgrading, words
-        # the earlier tool names only in the renames' own section
-        for old in server.RENAMED_TOOLS:
-            assert old not in upgrading, old
+        # the earlier tool names in the renames' bullet, so it can be
+        # used alone (whole-branch review, round 2; it kept them out)
+        renames = upgrading[upgrading.index("**Two tools renamed.**"):]
+        renames = renames[:renames.index("- **", 5)]
+        for old, new in server.RENAMED_TOOLS.items():
+            assert f"`{old}` is now `{new}`" in renames, old
 
     def test_the_parts_follow_what_a_researcher_meets(self):
         entry = _unreleased()
@@ -307,8 +310,9 @@ class TestTheEntryIsOneAccount:
         assert "opt-in lifecycle" not in measured
         assert ("the `lifecycle` set's, the extension's default, 204,244 "
                 "over 78") in measured
+        # 1,242 since the second round (tests/test_v0150_wb_fix_r2.py)
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 883 characters more") in measured
+                "`lifecycle` to `full`: 1,242 characters more") in measured
 
 
 # ===========================================================================

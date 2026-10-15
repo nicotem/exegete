@@ -163,9 +163,10 @@ def test_the_documents_count_the_tools_the_server_registers():
     import asyncio
     count = len(asyncio.run(server.mcp.list_tools()))
     assert count == 81                 # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0), set_project_coder_name (0.15.0)
-    # v0.15.0: one set, `full`, the default everywhere
+    # v0.15.0: one set, `full`, the default everywhere ("Exegete", not
+    # "the server", in a line new in 0.15.0: whole-branch review, round 2)
     assert f"(`EXEGETE_TOOLSET=full`, the default everywhere: in the " \
-           f"Claude Desktop extension and when you configure the server " \
+           f"Claude Desktop extension and when you configure Exegete " \
            f"yourself) registers {count} tools" in _flat("TOOLS.md")
     install = _flat("INSTALL.md")
     assert f"`full` (default) registers {count} tools, every tool" in install

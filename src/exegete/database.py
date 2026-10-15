@@ -583,10 +583,13 @@ OLDER_QUALCODER_ROUTE = (
 # A way on that needs no QualCoder at all, after the route in both
 # refusals of an older project (whole-branch review, round 1: the route
 # above runs through someone's QualCoder, and the owner's rule is never
-# to send the researcher to QualCoder as the only way through).
+# to send the researcher to QualCoder as the only way through). It names
+# the two tools, so that where the tool set lacks them (core) the refusal
+# marks them, as it marks set_project_coder_name (round 2).
 NO_QUALCODER_ROUTE = (
-    "Without QualCoder at all, a new project made in Exegete from the "
-    "original documents is a way on, without this project's coding.")
+    "Without QualCoder at all, a new project made with create_project, the "
+    "original documents brought in with import_documents, is a way on, "
+    "without this project's coding.")
 
 
 class DatabaseOpenError(ValueError):

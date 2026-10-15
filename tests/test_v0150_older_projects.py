@@ -64,13 +64,23 @@ ROUTE = (
     "set_project_coder_name can put your name in place of theirs while "
     "nothing is recorded under their name.")
 # The way on without QualCoder at all, after the route in both refusals
-# (whole-branch review, round 1)
+# (whole-branch review, round 1), naming the two tools it takes (round 2)
 NO_QUALCODER = (
-    "Without QualCoder at all, a new project made in Exegete from the "
-    "original documents is a way on, without this project's coding.")
+    "Without QualCoder at all, a new project made with create_project, the "
+    "original documents brought in with import_documents, is a way on, "
+    "without this project's coding.")
 # The tool the route names, marked where the tool set lacks it (`core`)
 TOOL = "set_project_coder_name"
 MARKED = TOOL + " (not available in this tool set)"
+# The tools the way on without QualCoder names, which `core` lacks too
+WAY_ON_TOOLS = ("create_project", "import_documents")
+
+
+def _in_core(text):
+    """`text` as `core` gives it: each tool it lacks marked."""
+    for tool in (TOOL,) + WAY_ON_TOOLS:
+        text = text.replace(tool, tool + " (not available in this tool set)")
+    return text
 
 
 def missing_columns(schema, columns="code_text.important"):
@@ -197,18 +207,23 @@ class TestTheRoute:
 
     def test_core_marks_the_tool_in_both_refusals(self, opened):
         """The route names set_project_coder_name, which `core` lacks:
-        both refusals mark it there, and only there."""
+        both refusals mark it there, and only there. The way on without
+        QualCoder names create_project and import_documents, which `core`
+        lacks too, so they are marked as well (whole-branch review, round
+        2)."""
         server._apply_toolset("core")
         missing = _without(opened, "code_text.important", "v2")
         out = _select(missing)
         assert out["error"] == (
-            missing_columns("database schema v2").replace(TOOL, MARKED)
+            _in_core(missing_columns("database schema v2"))
             + " No project is selected.")
+        for tool in WAY_ON_TOOLS:
+            assert tool + " (not available in this tool set)" in out["error"]
         folder = opened("v13")
         _select(folder)
         supported, reason, _ = server.get_db().write_support()
         assert supported is False
-        assert reason == PRE_V14.replace(TOOL, MARKED)
+        assert reason == _in_core(PRE_V14)
 
 
 class TestTheMissingColumnsRefusal:

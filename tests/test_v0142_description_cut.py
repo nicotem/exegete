@@ -631,7 +631,7 @@ CHANGED_0150 = {
     # tests/test_v0150_ai_coder_name_setting.py pins both)
     "create_project": (2486, 1975, "3de9483aca76e003"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
-    "export_refi_qda": (2107, 1736, "ecd69c6356ce112a"),
+    "export_refi_qda": (2186, 1803, "26fdfe7d1edb6d62"),
     # not presuming QualCoder, piece 5: the write tools' closing
     # paragraph in 26 descriptions, apply_codings' lock sentence and
     # first safety guarantee, and restore_backup's item 4, each now
@@ -641,7 +641,7 @@ CHANGED_0150 = {
     "add_annotation": (1576, 1295, "30fa6ba96b8fc4f3"),
     "add_journal_entry": (1016, 832, "1b25da385b143c6b"),
     "apply_codings": (2496, 2031, "a97a90f226a08cbe"),
-    "create_attribute_type": (2002, 1604, "0bf443341e0272e2"),
+    "create_attribute_type": (2042, 1637, "5dffe7dbcf3380a3"),
     "create_case": (1588, 1330, "3f4c1103d70864f8"),
     "create_category": (1780, 1424, "cd1a4abde9502311"),
     "create_code": (2824, 2302, "fadda64984f15768"),
@@ -650,7 +650,7 @@ CHANGED_0150 = {
     "delete_category": (1619, 1331, "9eb6c6a6a9058d7a"),
     "delete_code": (2521, 2061, "78013b1797b214f5"),
     "delete_coding": (2867, 2307, "be5e2d1ea0338a1e"),
-    "import_text_file": (3901, 2885, "f25306f9966defe8"),
+    "import_text_file": (4059, 3021, "391eee5ed31906cd"),
     "link_file_to_case": (1721, 1321, "3f77ab2b8289b508"),
     "merge_category": (2423, 1967, "38623bf46a7b6e6f"),
     "merge_codes": (2748, 2285, "4ce3a749f3c106ca"),
@@ -661,9 +661,9 @@ CHANGED_0150 = {
     "rename_case": (2076, 1712, "61ef53bce7266c93"),
     "rename_category": (939, 776, "498212de941bf07d"),
     "rename_code": (909, 746, "f53e3d4db9605ebb"),
-    "rename_file": (3385, 2808, "946958d59cfb0083"),
+    "rename_file": (3421, 2838, "b83e356de67a9cdf"),
     "restore_backup": (2730, 2247, "87717bbc6793a0e9"),
-    "set_attribute": (1648, 1346, "8851ca2e41f1a738"),
+    "set_attribute": (1688, 1379, "0b8ef40bcc0986d9"),
     "set_memo": (2551, 2048, "9e62726bc0ecece1"),
     "update_annotation": (1931, 1599, "be5fbd103294206a"),
     # not presuming QualCoder, piece 6: select_project's sentence on the
@@ -684,7 +684,13 @@ CHANGED_0150 = {
     # project folder, which every researcher can read without sending it
     # anywhere, before QualCoder's dialog (77 characters more). The lines
     # above for those already changed in this release moved with them
-    # (tests/test_v0150_wb_fix_r1.py)
+    # (tests/test_v0150_wb_fix_r1.py). Round 2: the REFI-QDA export's,
+    # the journals' and the rename back's deprecation sentences name
+    # QualCoder's feature only for researchers who use it, the gap said
+    # as Exegete's (export_refi_qda, create_attribute_type, set_attribute
+    # and rename_file), and import_text_file says what pseudonymisation
+    # is for (ruling 74); their lines above moved with them
+    # (tests/test_v0150_wb_fix_r2.py)
     "cleanup_old_sessions": (844, 686, "843ad008664c1c1b"),
     "export_code_report": (1563, 1265, "f254265202c3248d"),
     "merge_proposals": (665, 561, "c20e837ad86f296b"),

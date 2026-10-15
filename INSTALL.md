@@ -56,11 +56,11 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      Exegete gives it to each new project it makes, without asking, and
      says so; left empty, Claude asks for it each time. Projects that
      already exist keep their coder name, or their lack of one. It must
-     differ from the AI coder name. If you also use QualCoder, give the
-     name in its settings ("Current coder"), exactly as there. At most 80
-     characters; a line break or tab, an invisible formatting character
-     (the joiners some scripts need are allowed) or `#####` stops the
-     extension from starting.
+     differ from the AI coder name. If you also use QualCoder, use the
+     name its settings show as "Current coder", exactly as written there.
+     At most 80 characters; a line break or tab, an invisible formatting
+     character (the joiners some scripts need are allowed) or `#####`
+     stops the extension from starting.
    - **AI coder name**: empty by default. It is the name Claude's work
      in your projects is stored under, so that it stays apart from
      yours; a model's name lets codings by different models be compared
@@ -79,7 +79,8 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      is running when a project is selected; with not sure, it decides
      from what it finds on each project and on this computer. Notes
      worded "if the project is opened in QualCoder", such as the one on
-     emoji and Windows line breaks, are given with any answer. Whatever
+     emoji and Windows line breaks, are given with any answer, and so is
+     the line saying that a new project is in QualCoder's format. Whatever
      you answer, Exegete still refuses to write while QualCoder 3.8 has
      a project open, and still warns when it sees signs that QualCoder
      4.0 may have one open.
@@ -612,16 +613,23 @@ page on MCP in Claude Code, read on 15 October 2026; before Claude
 Code 2.1.296, 2,048). Exegete puts the rules a model must not miss
 within each description's first 2,048 characters, a few named
 exceptions apart, which reach the model through `read_brief` or the
-tools' answers. Measured for 0.15.0 on Python 3.13, 4 of `full`'s 81
-descriptions are longer than 4,096 characters (`pseudonymise_source`,
-17,791; `start_coding_session`, 6,042; `search_files`, 4,802;
-`record_suggestions`, 4,455), and `pseudonymise_source` is longer than
-16,384, so its last 1,407 characters are cut even through tool search.
+tools' answers. Measured for 0.15.0, the descriptions are longer on
+Python 3.10 to 3.12 than on 3.13, which strips the indentation they are
+written with. On Python 3.13, 4 of `full`'s 81 descriptions are longer
+than 4,096 characters (`pseudonymise_source`, 17,791;
+`start_coding_session`, 6,042; `search_files`, 4,802;
+`record_suggestions`, 4,455); on 3.10 to 3.12, 5 are (the same four, at
+18,919, 6,286, 5,150 and 4,691, and `import_text_file`, 4,295).
+`pseudonymise_source` is longer than 16,384, so its last 1,407
+characters are cut even through tool search on 3.13, and its last
+2,535 on 3.10 to 3.12, its sentence on the lock file among them.
 Claude Code's own setting `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`
 (version 2.1.280 or later) replaces both limits with one figure:
-18000, for example, lets every Exegete description through whole, for
-every server's tools, at the cost of more of the model's context when
-a long description loads. It is Claude Code's setting, not Exegete's:
+20000, for example, lets every Exegete description through whole on
+any Python, for every server's tools, at the cost of more of the
+model's context when a long description loads; a figure under 16,384
+lowers the limit for tools found through tool search, so it cuts
+more, not less. It is Claude Code's setting, not Exegete's:
 set it where Claude Code reads its own environment (in the shell before
 `claude`, or the `env` field of Claude Code's settings), not with `-e`
 on `claude mcp add`, which passes settings to Exegete.
@@ -673,7 +681,7 @@ and `EXEGETE_USES_QUALCODER`, all below.
   `full` (the desktop extension's default before 0.15.0), is read as
   `full` until v1.0, and Exegete names it in its log at each start.
   The desktop extension sets this variable from its "Tool set"
-  setting, whose default is `full`. Any other value stops the server
+  setting, whose default is `full`. Any other value stops Exegete
   at start-up with an error naming the valid values. Resources and
   prompts are not affected.
 - `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
@@ -713,8 +721,8 @@ and `EXEGETE_USES_QUALCODER`, all below.
   coder name: with `EXEGETE_AI_CODER_NAME` the same, `create_project`
   makes no project until one of them is changed, and
   `set_project_ai_coder_name` refuses it as an AI coder name. If you
-  also use QualCoder, give the name in its settings ("Current coder"),
-  exactly as there. The value is trimmed and follows the rules for
+  also use QualCoder, use the name its settings show as "Current
+  coder", exactly as written there. The value is trimmed and follows the rules for
   `EXEGETE_AI_CODER_NAME`, below (at most 80 characters, single-line
   plain text, no invisible formatting character, no `#####`); an
   invalid value stops Exegete at start-up with "Error:
@@ -778,7 +786,8 @@ and `EXEGETE_USES_QUALCODER`, all below.
   with `not sure`, it decides from what it finds on each project and on
   this computer. Notes worded "if the project is opened in QualCoder",
   such as the one on emoji and Windows line breaks, are given with any
-  answer. Any other value is read as `not sure`, and the log
+  answer, and so is the line saying that a new project is in
+  QualCoder's format. Any other value is read as `not sure`, and the log
   says so once at start, never the value; it never stops Exegete.
   Whatever it says, Exegete still refuses to write while QualCoder 3.8
   has a project open, and still warns when it sees signs that QualCoder
@@ -824,7 +833,7 @@ and `EXEGETE_USES_QUALCODER`, all below.
   preview, 40 when the import reads a file again), a preview spends up
   to 5 seconds more keeping the texts it read, and a file kept online
   only by a cloud drive is downloaded whole. Any other value is not
-  used, and the log says so once at start; it never stops the server.
+  used, and the log says so once at start; it never stops Exegete.
   The desktop extension's settings do not offer it.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
@@ -1467,7 +1476,7 @@ safeguard", below, says holds in Codex too.
   `tool_timeout_sec`, and before asking again check whether the change
   was made (ask for the project summary, or the list of backups):
   Exegete may have finished it.
-- An `EXEGETE_TOOLSET` other than `full` or `core` stops the server at
+- An `EXEGETE_TOOLSET` other than `full` or `core` stops Exegete at
   start-up (`lifecycle`, the earlier name of `full`, is read as
   `full`), and so does a relative path in
   `EXEGETE_WORKSPACE`; the error names the setting.

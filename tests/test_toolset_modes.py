@@ -432,9 +432,14 @@ class TestThePublishedSchemaBudget:
     # deprecation sentence, and the names list's leads with
     # pseudonyms.json (whole-branch review, round 1): 105 characters more
     # in `full` and 4 in `core`, on both interpreters.
-    FULL_MEASURED = 205_127          # 81 tools, Python 3.13.5, mcp 1.30.0
+    # The REFI-QDA export's, the journals' and the rename back's notes
+    # naming QualCoder's feature only for researchers who use it, and
+    # import_text_file's sentence on what pseudonymisation is for
+    # (whole-branch review, round 2): 195 and 164 characters more in
+    # `full` (195 and 176 on 3.11); `core` serves none of the five tools.
+    FULL_MEASURED = 205_486          # 81 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 68_124           # 25 tools, same environment
-    FULL_MEASURED_310 = 215_495      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 215_866      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 71_544
 
     # Why two per cent, away from the reference environment.
@@ -462,7 +467,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,127"
+    FULL_CHARS = "205,486"
     CORE_CHARS = "68,124"
     FULL_ROUNDED = "205,000"
     CORE_ROUNDED = "68,000"

@@ -308,8 +308,17 @@ class TestTheWriteToolsSentence:
     def test_each_description_is_shorter_than_before(self):
         which = 0 if sys.version_info[:2] >= (3, 13) else 1
         server._apply_toolset("full")
-        raw = server.mcp.original_descriptions
+        raw = dict(server.mcp.original_descriptions)
         assert len(BEFORE) == 28 and set(BEFORE) <= set(raw)
+        # The whole-branch review's round 2 then gives import_text_file a
+        # paragraph on what pseudonymisation is for (ruling 74): this
+        # piece's change is still held to its own length, measured with
+        # that paragraph taken out
+        from test_v0150_wb_fix_r2 import without_the_pseudonyms_sentence
+        raw["import_text_file"] = without_the_pseudonyms_sentence(
+            raw["import_text_file"])
+        assert (raw["import_text_file"]
+                != server.mcp.original_descriptions["import_text_file"])
         longer = {name: (len(raw[name]), before[which])
                   for name, before in BEFORE.items()
                   if len(raw[name]) >= before[which]}

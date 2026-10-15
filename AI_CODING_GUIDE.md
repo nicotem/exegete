@@ -6,8 +6,9 @@ qualcoder-mcp), in the conversational workflow.
 > Codings are written directly to the project database after your
 > explicit approval; no import step is needed. (A REFI-QDA *export*
 > tool, `export_refi_qda`, is deprecated and goes in v0.15.1: it files
-> every coding under the AI coder name; QualCoder's own export,
-> Project, Export, REFI-QDA Project export, keeps each coder.) For the
+> every coding under the AI coder name. Exegete has no other REFI-QDA
+> export yet; QualCoder's own export, if you use QualCoder, keeps each
+> coder: Project, Export, REFI-QDA Project export.) For the
 > step-by-step walkthrough with example conversations, see
 > [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md).
 
@@ -66,9 +67,12 @@ reports against what you said.
   (`create_code`, `rename_code`, `move_code_to_category`, ...) edit it
   from the conversation
 - A project schema from v14 (QualCoder 3.8.x) through v17 (QualCoder
-  4.0); see "Supported QualCoder versions"
-  in TOOLS.md. Older projects: open them once in QualCoder 3.8 or
-  newer, which updates them as they open
+  4.0); see "Supported QualCoder versions" in TOOLS.md. An older
+  project is refused until QualCoder 3.8 or newer has opened it once;
+  without QualCoder, someone who has it and may see the project's data
+  can do this and send you the updated copy, and without QualCoder at
+  all a new project made in Exegete from the original documents is a
+  way on, without the old project's coding
 
 ## Quick Start
 
@@ -120,7 +124,7 @@ session. None of this replaces your approval of each suggestion.
 | `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` | **Write**: bring documents in from your computer by their paths or a folder's, their text never passing through the conversation; a preview first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
 | `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
-| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (deprecated, removed in v0.15.1; use QualCoder's own export) |
+| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (deprecated, removed in v0.15.1; QualCoder's own export, if you use QualCoder, keeps each coder) |
 | `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` / `cleanup_old_sessions` (deprecated) | Session management |
 | `copy_project_to_workspace(source_path, new_name)` | Copy a project into the safe workspace |
 

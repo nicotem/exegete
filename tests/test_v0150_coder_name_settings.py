@@ -123,8 +123,9 @@ CODER_DESCRIPTION = (
     "AI's. Filled in, Exegete gives it to each project it creates, without "
     "asking; left empty, Claude asks for it each time. Projects that "
     "already exist keep their coder name, or their lack of one. It must "
-    "differ from the AI coder name. If you also use QualCoder, give the "
-    "name in its settings (Current coder), exactly as there. At most 80 "
+    "differ from the AI coder name. If you also use QualCoder, use the "
+    "name its settings show as \"Current coder\", exactly as written "
+    "there. At most 80 "
     "characters; a line break or tab, an invisible formatting character "
     "(the joiners some scripts need are allowed) or ##### stops the "
     "extension from starting.")

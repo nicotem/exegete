@@ -299,7 +299,9 @@ FREQUENCIES_COUNT_NOTE = (
 # sentence, the same in the tool's description and in its answer, so a
 # test can pin one source of wording. The names list's leads with what
 # every researcher has, the file itself (whole-branch review, round 1;
-# QUALCODER_MENTIONS_AUDIT.md).
+# QUALCODER_MENTIONS_AUDIT.md); the REFI-QDA export's, the journals' and
+# the rename back's name QualCoder's own feature only for researchers who
+# use it, the gap said as Exegete's (round 2).
 DEPRECATED_PSEUDONYM_LIST = (
     "Deprecated, removed in v0.15.1: the list stays in pseudonyms.json in "
     "the project folder, where the researcher can read it without sending "
@@ -309,9 +311,10 @@ DEPRECATED_REFI_EXPORT = (
     "Deprecated, removed in v0.15.1: this export files every coding under "
     "the AI coder name (a hidden coder's too) and leaves out cases, "
     "annotations, journals and media, and a session's export includes "
-    "rejected suggestions unmarked; QualCoder's own export (Project, "
-    "Export, REFI-QDA Project export) keeps each coder, the cases, notes "
-    "and media.")
+    "rejected suggestions unmarked. Exegete has no other REFI-QDA export "
+    "yet; QualCoder's own export (Project, Export, REFI-QDA Project "
+    "export), for researchers who have QualCoder, keeps each coder, the "
+    "cases, notes and media.")
 DEPRECATED_CODE_REPORT = (
     "Deprecated, removed in v0.15.1: get_coded_segments(code_id=...) reads "
     "the same passages, page by page and without the 1,000 limit.")
@@ -339,8 +342,8 @@ DEPRECATED_MERGE_PROPOSALS = (
     "its passages to the other with update_proposal if they belong there.")
 DEPRECATED_JOURNAL_ATTRIBUTES = (
     "Deprecated, removed in v0.15.1: attributes on journal entries, which "
-    "Exegete can set but never reads back; QualCoder's Journals "
-    "window sets them.")
+    "Exegete can set but never reads back (QualCoder's Journals window, "
+    "for researchers who use it, sets and shows them).")
 DEPRECATED_MEMO_SEARCH = (
     "Deprecated, removed in v0.15.1: search_memo; search_memos searches "
     "file memos and every other kind of note.")
@@ -349,7 +352,8 @@ DEPRECATED_EDIT_PARITY = (
     "which deletes codings on names and is not exact parity.")
 DEPRECATED_RENAME_BACK = (
     "Deprecated, removed in v0.15.1: a rename back recognised from the "
-    "project's backups; QualCoder's own Rename makes it.")
+    "project's backups (QualCoder's own Rename, if the researcher uses it, "
+    "still makes one).")
 
 # start_coding_session without the researcher's answers (owner ruling 25,
 # question 5, with the Saldaña reading's item 17)
@@ -8296,8 +8300,9 @@ def get_cases_by_code(code_id: int, coder: Optional[str] = None) -> str:
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 # The judgement of requests sits inside the first 2,048 characters, where
-# Claude Code cuts a description (v0.14.2); the grounding rules do not fit
-# beside it and follow the workflow, as before
+# Claude Code cut a description before its version 2.1.296, now kept as a
+# margin (v0.14.2); the grounding rules do not fit beside it and follow
+# the workflow, as before
 @_with_guidance(GROUNDING_RULES, before="SPAN STYLE")
 @_with_guidance(METHODOLOGY_VOCABULARY, before="It reads no file")
 def start_coding_session(
@@ -10397,6 +10402,10 @@ def import_text_file(
     4.0, get_current_project shows any signs of an open window, and when
     there are some, ask the researcher before writing.
 
+    apply_project_pseudonyms helps with what is shared with others; to
+    keep names from the assistant altogether, see PRIVACY.md, "What
+    pseudonymisation is for".
+
     Args:
         filename: Name for the new file (must include extension, e.g., "interview_04.txt").
                   The name rules rename_file applies: at most 200 bytes
@@ -11676,10 +11685,18 @@ def list_backups() -> str:
 # list_backups' notes (v0.15.0, not presuming QualCoder, piece 11): the
 # facts about Exegete's backups always; what concerns QualCoder only on a
 # sign, each named where it is read.
+# What QualCoder does with its own backups (whole-branch review, round 2;
+# read in the project folder's copies of QualCoder 3.8.2 and 4.0: a backup
+# on opening, and before merging coders or projects; on closing, the
+# opening's backup deleted when nothing changed, and only the newest
+# backup_num kept)
 QUALCODER_BACKUPS_NOTE = (
-    "kind='qualcoder' backups are made by QualCoder itself on project "
-    "open; they may exclude audio/video files and QualCoder deletes them "
-    "again when a session made no changes.")
+    "kind='qualcoder' backups are made by QualCoder itself when it opens "
+    "a project, and before some merges; they may exclude audio/video "
+    "files. QualCoder deletes the opening's backup again when a session "
+    "made no changes, and keeps only its newest few (a number set in "
+    "QualCoder), so one may be gone after QualCoder next closes the "
+    "project.")
 QUALCODER_38_BACKUPS_NOTE = (
     "If the researcher uses QualCoder 3.8.0 to 3.8.2, it may keep further "
     "backups in the folder set in its settings; those are not listed "
@@ -16535,8 +16552,9 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any]
 
 # v0.14.2: the rule of the description's paragraph "Two people who share a
 # name", said in the preview whenever the run would rewrite a note. Since
-# v0.14.2 that paragraph sits past the 2,048 characters Claude Code shows
-# of a tool description (the rules that apply to every run come first), so
+# v0.14.2 that paragraph sits past the first 2,048 characters, where Claude
+# Code cut a description before its version 2.1.296, now kept as a margin
+# (the rules that apply to every run come first), so
 # the preview, which every host passes on, is where the model meets it.
 # Its three instructions are the paragraph's own words, pinned by
 # tests/test_v0142_shared_name_in_notes.py; "(a yes or no is enough)" keeps

@@ -232,7 +232,12 @@ def _tools(mode="full"):
 # removals in 0.15.1 and "What comes next" with v0.15.1 and v0.15.2; and
 # three sentences that presumed QualCoder. That takes 927 characters, and
 # the limit is raised by that and no more: 37,612.
-README_LIMIT = 37_612
+# Round 2: Claude Code's limits with tool search first and the one
+# description past 16,384 on both Pythons, importing and correcting your
+# own coder name among the previews, set_project_coder_name among the
+# guarded changes, and "More than 8,000" tests. That takes 526
+# characters, and the limit is raised by that and no more: 38,138.
+README_LIMIT = 38_138
 
 
 def test_the_readme_stays_short():
@@ -777,13 +782,17 @@ def test_the_advanced_section_rests_on_the_code():
                  "**Resources**"):
         assert lead in beyond, lead
     # Claude Code's limits as they are since its version 2.1.296
-    # (whole-branch review, round 1)
-    assert ("Claude Code shows the first 4,096 characters of a tool's "
-            "description (16,384 when it finds the tool through its tool "
-            "search, and 2,048 before its version 2.1.296), so the rules "
-            "that matter come first, within 2,048; the rest reach the "
-            "model through `read_brief` or the answers.") in beyond
+    # (whole-branch review, round 1), the default, tool search, first
+    # (round 2; tests/test_v0150_wb_fix_r2.py pins the long description)
+    assert ("Claude Code keeps the first 16,384 characters of a tool's "
+            "description when it finds the tool through its tool search, "
+            "as it does by default, and the first 4,096 when it loads the "
+            "tool at the start (2,048 before its version 2.1.296). So the "
+            "rules that matter come first in each description, within "
+            "2,048 characters; the rest reach the model through "
+            "`read_brief` or the answers.") in beyond
     assert "Claude Code shows only the first 2,048" not in beyond
+    assert "Claude Code shows the first 4,096" not in beyond
     assert ("`pseudonymise_source` (these five also say whose work is "
             "affected), `restore_backup`, `prune_backups`") in beyond
     assert "def _pseudonymise_by_owner" in database
@@ -798,7 +807,9 @@ def test_the_advanced_section_rests_on_the_code():
 
 def test_how_it_is_tested_matches_the_workflow():
     flat = _flat(_section("For advanced users", "What comes next"))
-    assert ("More than 5,000 automated tests run on Windows, macOS and "
+    # (the whole-branch review of v0.15.0, round 2: both suites pass more
+    # than 8,300)
+    assert ("More than 8,000 automated tests run on Windows, macOS and "
             "Linux, with Python 3.10 and 3.13, on every change pushed; they "
             "test Exegete, not a researcher's use of it") in flat
     workflow = _read(".github/workflows/ci.yml")

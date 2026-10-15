@@ -79,10 +79,16 @@ OLD_IN_ANSWERS = (
 # The texts, word for word
 # ---------------------------------------------------------------------------
 
+# What QualCoder does with its own backups, said more fully (whole-branch
+# review, round 2): a backup before some merges too, and only the newest
+# few kept when QualCoder closes the project
 QUALCODER_BACKUPS = (
-    "kind='qualcoder' backups are made by QualCoder itself on project "
-    "open; they may exclude audio/video files and QualCoder deletes them "
-    "again when a session made no changes.")
+    "kind='qualcoder' backups are made by QualCoder itself when it opens "
+    "a project, and before some merges; they may exclude audio/video "
+    "files. QualCoder deletes the opening's backup again when a session "
+    "made no changes, and keeps only its newest few (a number set in "
+    "QualCoder), so one may be gone after QualCoder next closes the "
+    "project.")
 QUALCODER_38 = (
     "If the researcher uses QualCoder 3.8.0 to 3.8.2, it may keep further "
     "backups in the folder set in its settings; those are not listed "

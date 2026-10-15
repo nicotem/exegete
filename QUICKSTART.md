@@ -113,7 +113,7 @@ Or via Claude Desktop: Settings > Developer > Edit Config
       "command": "/Users/yourname/Documents/exegete/venv/bin/python",
       "args": ["-m", "exegete.server"],
       "env": {
-        "EXEGETE_PROJECT_PATH": "/Users/yourname/Documents/QualCoder_projects/MyProject/MyProject.qda",
+        "EXEGETE_PROJECT_PATH": "/Users/yourname/Exegete projects/MyProject.qda",
         "EXEGETE_CODER_NAME": "Your name"
       }
     }
@@ -127,16 +127,19 @@ Replace:
 - `Your name` with your own coder name, or leave that line out to be
   asked when a project is made
 
-**No project yet?** Leave out the `env` block, as below: Exegete then
-starts with no project selected, and in step 5 you can ask the
-assistant to create one (Experimental).
+**No project yet?** Leave out the `EXEGETE_PROJECT_PATH` line, as
+below: Exegete then starts with no project selected, and in step 5 you
+can ask the assistant to create one (Experimental).
 
 ```json
 {
   "mcpServers": {
     "exegete": {
       "command": "/Users/yourname/Documents/exegete/venv/bin/python",
-      "args": ["-m", "exegete.server"]
+      "args": ["-m", "exegete.server"],
+      "env": {
+        "EXEGETE_CODER_NAME": "Your name"
+      }
     }
   }
 }
@@ -149,10 +152,9 @@ transcripts imported into it included, off the computer; a sync
 service can also copy a project's database and its journal separately.
 Consider naming a folder outside Documents, such as
 `~/Exegete projects`: add
-`"env": {"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"}`
-after the `"args"` line, with a comma at the end of that line
-(INSTALL.md, "What You'll Need" and "Environment variables the
-server reads").
+`"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"` as a line of
+the `env` block, with a comma after the line before it (INSTALL.md,
+"What You'll Need" and "Environment variables the server reads").
 
 ### 4. Restart Claude Desktop
 

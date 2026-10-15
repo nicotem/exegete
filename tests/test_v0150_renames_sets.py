@@ -273,7 +273,8 @@ class TestOverStandardInput:
     @pytest.mark.parametrize("variable,value,with_project", [
         (None, None, True), (NEW, "lifecycle", True),
         (OLD, "lifecycle", True),
-        # QUICKSTART's start with no project yet: no `env` block at all
+        # QUICKSTART's start with no project yet: no project path (the
+        # whole-branch review, round 2, keeps the coder name's line)
         (None, None, False)])
     def test_full_lists_78_and_creates_a_project(self, variable, value,
                                                  with_project, tmp_path):
@@ -524,18 +525,22 @@ class TestTheDocuments:
                 "create one.") in step2
         step3 = flat[flat.index("### 3. Configure Claude Desktop"):]
         step3 = step3[:step3.index("### 4.")]
-        assert ("**No project yet?** Leave out the `env` block, as below: "
-                "Exegete then starts with no project selected, and in step "
-                "5 you can ask the assistant to create one (Experimental)."
-                ) in step3
+        # The whole-branch review of v0.15.0, round 2: only the project's
+        # line is left out, so the coder name the page added stays, and
+        # the workspace is a line of the same block, never a second one
+        assert ("**No project yet?** Leave out the `EXEGETE_PROJECT_PATH` "
+                "line, as below: Exegete then starts with no project "
+                "selected, and in step 5 you can ask the assistant to "
+                "create one (Experimental).") in step3
         text = (REPO / "QUICKSTART.md").read_text(encoding="utf-8")
         blocks = re.findall(r"```json\n(.*?)```", text, re.S)
         configs = [json.loads(block) for block in blocks]
-        bare = [c for c in configs
-                if "env" not in c["mcpServers"]["exegete"]]
+        bare = [c for c in configs if "EXEGETE_PROJECT_PATH"
+                not in c["mcpServers"]["exegete"].get("env", {})]
         assert bare == [{"mcpServers": {"exegete": {
             "command": "/Users/yourname/Documents/exegete/venv/bin/python",
-            "args": ["-m", "exegete.server"]}}}]
+            "args": ["-m", "exegete.server"],
+            "env": {"EXEGETE_CODER_NAME": "Your name"}}}}]
         assert ("On this setup a new project goes to `~/Documents/Exegete "
                 "projects` unless `EXEGETE_WORKSPACE` names another folder. "
                 "iCloud (Desktop and Documents) or OneDrive may sync "
@@ -544,8 +549,10 @@ class TestTheDocuments:
                 "also copy a project's database and its journal separately. "
                 "Consider naming a folder outside Documents, such as "
                 "`~/Exegete projects`:") in step3
-        assert ("`\"env\": {\"EXEGETE_WORKSPACE\": \"/Users/yourname/Exegete "
-                "projects\"}`") in step3
+        assert ("add `\"EXEGETE_WORKSPACE\": \"/Users/yourname/Exegete "
+                "projects\"` as a line of the `env` block, with a comma "
+                "after the line before it") in step3
+        assert '`"env": {"EXEGETE_WORKSPACE"' not in step3
         # Fix round 2: INSTALL's heading in its own words
         assert ("(INSTALL.md, \"What You'll Need\" and \"Environment "
                 "variables the server reads\")") in step3

@@ -45,7 +45,7 @@ Through these tools an AI assistant can:
 - **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
 - **Undo & restore**: delete a coding, list backups, and restore a whole project to an earlier state
 - **Bring in documents** from the computer (v0.14.3: Word, OpenDocument, RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part) and **transcripts** through the conversation, link files to cases, and **rename cases and files** the way QualCoder's Manage Cases and Manage Files do (`rename_case`, `rename_file`)
-- **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti, and MAXQDA: **deprecated, removed in v0.15.1**, because it files every coding under the AI coder name and leaves out cases, annotations, journals and media; QualCoder's own export (Project, Export, REFI-QDA Project export) keeps them
+- **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti, and MAXQDA: **deprecated, removed in v0.15.1**, because it files every coding under the AI coder name and leaves out cases, annotations, journals and media; Exegete has no other REFI-QDA export yet, and QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
 - **Report exports**: codebook, coded segments, code frequencies and case-code matrix as CSV, txt or Markdown files
 - **Pseudonymisation that keeps the coding** (`pseudonymise_source`): replace the names you list, as whole words, in the stored text of one text source per call, moving every coding, annotation and case link with the text; a preview and a residue report come first, a mandatory backup is taken, and what the tool does not rewrite is counted rather than left to be discovered, and the names left in every file's text are counted, both readings; with `rewrite_memos` the public part of every note and journal entry is rewritten too, and a mapping you type must be saved into the project's own `pseudonyms.json` or attested as kept before a run goes ahead
 - **Coder comparison** (`compare_coders`): per-code agreement between two coders, with QualCoder's own coefficient and Cohen's kappa side by side
@@ -936,7 +936,7 @@ no longer listed, until v1.0.
 
 Claude can use these tools to analyse your data. The full toolset
 (`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
-extension and when you configure the server yourself) registers 81
+extension and when you configure Exegete yourself) registers 81
 tools, two of them the earlier names of two renamed tools (see "Earlier
 names" below); the argument lists below name every argument each tool
 declares, and each tool's own description says what each one does.
@@ -1057,8 +1057,8 @@ still answers empty, and that answer is a finding.
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **WRITES TO DATABASE** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and names it)
 - `create_case(name, memo, create_backup)` - **WRITES TO DATABASE** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)
 - `rename_case(case_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a case, as QualCoder's Manage Cases does: the name only, the date untouched. A name another case has, ignoring letter case, spacing and Unicode form, is refused; the result says where the old name stays (saved graph labels, table displays and filters, files named after the case, backups)
-- `rename_file(file_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text). A rename back recognised from the project's backups is deprecated, removed in v0.15.1: QualCoder's own Rename makes it
-- `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **WRITES TO DATABASE** - Define a new attribute for cases, files or journals. Attributes on journal entries are deprecated, removed in v0.15.1: Exegete can set them but never reads them back, and QualCoder's Journals window sets them
+- `rename_file(file_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text). A rename back recognised from the project's backups is deprecated, removed in v0.15.1 (QualCoder's own Rename, if you use it, still makes one)
+- `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **WRITES TO DATABASE** - Define a new attribute for cases, files or journals. Attributes on journal entries are deprecated, removed in v0.15.1: Exegete can set them but never reads them back (QualCoder's Journals window, for researchers who use it, sets and shows them)
 - `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **WRITES TO DATABASE** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them). Journal attributes are deprecated (see `create_attribute_type`)
 
 **Recovery & Safety:**
@@ -1069,7 +1069,7 @@ still answers empty, and that answer is a finding.
 - `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused)
 
 **Interchange & Report Exports (exported files keep full memos, private sections included; give `output_path` as a full path or one starting with `~`: since 0.14 a relative one is refused and nothing is written):**
-- `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA. **Deprecated, removed in v0.15.1**: it files every coding under the AI coder name and leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions unmarked; QualCoder's own export (Project, Export, REFI-QDA Project export) keeps them
+- `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA. **Deprecated, removed in v0.15.1**: it files every coding under the AI coder name and leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions unmarked. Exegete has no other REFI-QDA export yet; QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
 - `export_codebook(output_path, format, include_memos, sanitize_formulas, overwrite)` - Codebook (codes and category tree) as CSV, txt or Markdown, matching QualCoder's Codebook export; in Markdown the codes without a category come first under their own heading, each category's codes directly under its heading, and a sub-code indented under its parent
 - `export_coded_segments_report(output_path, code_names, case_names, coder, file_ids, search_text, important, include_variables, format, sanitize_formulas, overwrite)` - QualCoder's Coding Report as a file
 - `export_frequencies_csv(output_path, sanitize_formulas, overwrite)` - Code frequencies table as CSV
@@ -1132,7 +1132,8 @@ v0.15.2) removes them: `analyze_for_coding` is now
 the earlier names without asking, it may ask again for the new one.
 Likewise, a choice to block or switch off an earlier name does not
 carry over to its new name: if you blocked one, you may want to block
-the new name too.
+the new name too. Blocking or switching off a new name leaves its
+earlier name able to run the same tool, so you may want to block both.
 
 ## Available Prompts
 

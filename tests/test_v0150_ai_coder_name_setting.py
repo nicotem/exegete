@@ -713,8 +713,9 @@ class TestTheDocuments:
         # nine since the write tools' sentence (not presuming QualCoder,
         # piece 5) landed beside this piece, ten since the four
         # outcomes' sentence (piece 13), and eleven since the removals
-        # moved to v0.15.1 (whole-branch review, round 1)
-        assert ("on 3.13), eleven changes moved them;") in unreleased
+        # moved to v0.15.1 (whole-branch review, round 1), and thirteen
+        # since the second round's notes and import_text_file's sentence
+        assert ("on 3.13), thirteen changes moved them;") in unreleased
         assert ("And the AI coder name in the settings is given to each new "
                 "project: `create_project`'s sentence on it grew its entry "
                 "by 115 characters, 123 on 3.11, and `export_refi_qda`'s "

@@ -146,7 +146,8 @@ Suggested codings and proposed codes wait in a review list outside the
 project until you approve them and the assistant writes them. Other
 changes, such as making a code or writing a memo, are made when the
 tool runs; the larger ones (merging or deleting codes and categories,
-replacing names, restoring backups) show a preview first. A suggested
+replacing names, restoring backups, bringing documents in, correcting
+your own coder name) show a preview first. A suggested
 coding's path:
 
 ```text
@@ -563,21 +564,28 @@ the extension, is still accepted and means `full`.
 - **Guarded changes**, previewed, then made on a token bound to the
   preview: `merge_codes`, `merge_category`, `delete_code`,
   `delete_category`, `pseudonymise_source` (these five also say whose
-  work is affected), `restore_backup`, `prune_backups`.
+  work is affected), `restore_backup`, `prune_backups`,
+  `set_project_coder_name` (your own coder name, while nothing is
+  recorded under it).
 - **Documents in, whole files read**: `import_documents`
   (a preview, then the import on its token, after a backup; PDF and
   EPUB need `exegete[pdf-epub]`) and `open_file_for_reading` (on the
   researcher's screen, never in the conversation).
 - **The brief** (provisional), how the assistant is to work with you
-  (`read_brief`). Claude Code shows the first 4,096 characters of a
-  tool's description (16,384 when it finds the tool through its tool
-  search, and 2,048 before its version 2.1.296), so the rules that
-  matter come first, within 2,048; the rest reach the model through
-  `read_brief` or the answers.
+  (`read_brief`). Claude Code keeps the first 16,384 characters of a
+  tool's description when it finds the tool through its tool search,
+  as it does by default, and the first 4,096 when it loads the tool at
+  the start (2,048 before its version 2.1.296). So the rules that
+  matter come first in each description, within 2,048 characters; the
+  rest reach the model through `read_brief` or the answers. One
+  description is longer than 16,384 characters, `pseudonymise_source`'s
+  (17,791 on Python 3.13, 18,919 on 3.10 to 3.12):
+  [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients)
+  says how to let it through whole.
 - **Resources** (`exegete://...`), prompts, and
   `exegete --check-transition` for a move from qualcoder-mcp.
 
-**Tested.** More than 5,000 automated tests run on Windows, macOS and
+**Tested.** More than 8,000 automated tests run on Windows, macOS and
 Linux, with Python 3.10 and 3.13, on every change pushed; they test
 Exegete, not a researcher's use of it
 ([CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md)).

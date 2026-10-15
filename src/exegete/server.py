@@ -244,8 +244,7 @@ GROUNDING_RULES = """GROUNDING RULES (every analysis tool expects these):
 METHODOLOGY_VOCABULARY = """METHODOLOGICAL JUDGEMENT: before acting on a request, ask whether it is
 sound for this study; the project memo (exegete://project/info) may
 state the methodology, and if it is unclear, ask and suggest recording it
-there. Four outcomes, in the vocabulary QualCoder 4.0's own assistant
-uses:
+there. Four outcomes:
 - allow: sound as stated; proceed.
 - allow_with_caveat: workable, but state the limit before the result (for
   example, one file cannot show a pattern across cases; a keyword search
@@ -535,6 +534,11 @@ the researcher why; do not look for a way round it.
   project.
 - Some researchers also use QualCoder, by choice or for what Exegete
   does not do yet, among them images, audio, video and graphs.
+- Mention QualCoder when the researcher says they use it, when a tool's
+  answer shows a sign of it (a sign in qualcoder_history, the lock file,
+  signs of a window) or qualcoder_history's setting is yes, or when they
+  ask about it; otherwise say what Exegete does and what it does not do
+  yet.
 - Only one program should change a project at a time. Exegete refuses
   to write while QualCoder 3.8.2 has the project open; for QualCoder
   4.0 it can only see signs, so when a tool says the project may be
@@ -676,9 +680,9 @@ Each is stated in full by its tool:
   project) differs from this text, it describes this project at this
   moment: follow it and tell the researcher.
 - explain_ai_coding_tools() gives an overview of the coding loop;
-  {names.RESOURCE_SCHEME}://guidance/methods gives the methods notes and the
-  literature QualCoder's prompts cite. For using QualCoder itself, point
-  to its own manual.
+  {names.RESOURCE_SCHEME}://guidance/methods gives the methods notes and
+  some published approaches to prompting. For using QualCoder itself,
+  point to its own manual.
 """
 
 # The MCP initialize handshake carries an `instructions` string that hosts
@@ -3851,13 +3855,11 @@ and their host's per-call approval are for.
 
 {METHODOLOGY_VOCABULARY}
 
-QualCoder 4.0's built-in assistant applies the same four decisions
-inside its own chat, where they can stop a plan before any tool runs.
-Here the decision is yours to make and to explain; for coding
-suggestions and code proposals the safety mechanism is the researcher's
-approval of each item, which you relay: Exegete writes only what is
-marked approved, and cannot see who marked it. The direct write tools
-write on the call itself, with a backup.
+The decision is yours to make and to explain; for coding suggestions
+and code proposals the safety mechanism is the researcher's approval of
+each item, which you relay: Exegete writes only what is marked
+approved, and cannot see who marked it. The direct write tools write on
+the call itself, with a backup.
 
 ## Where the study's framework lives
 
@@ -3867,13 +3869,11 @@ exegete://project/info or get_project_summary. Text after a '#####'
 marker is the researcher's private zone and is never shown to you; do
 not try to infer it.
 
-## Method literature QualCoder 4.0 ships prompts for
+## Method literature
 
-QualCoder 4.0 carries a prompt library (system, user and project scopes;
-project prompts live in <project>/ai_data/ai_prompts) that its own
-assistant loads by /name. Exegete does not read or reproduce those
-prompts. The sources they cite, for researchers who want to bring a
-method into a start_coding_session instruction or into the project memo:
+Some published approaches to prompting in qualitative analysis, for
+researchers who want to bring a method into a start_coding_session
+instruction or into the project memo:
 
 - Friese, S. (2024). Prompting for Themes.
   https://community.qeludra.com/posts/prompts-for-qualitative-research-prompting-for-themes
@@ -3890,10 +3890,10 @@ method into a start_coding_session instruction or into the project memo:
   a time, confronting interpretations with quotes that may contradict
   them; explicitly speculative at times.
 
-Common ground across these and QualCoder's own analysis prompts: base
-the analysis firmly on the empirical data, make no assumptions the data
-does not back, treat "no difference found" as a valid result, and say
-when the data base is thin and the assessment is provisional.
+Common ground across these: base the analysis firmly on the empirical
+data, make no assumptions the data does not back, treat "no difference
+found" as a valid result, and say when the data base is thin and the
+assessment is provisional.
 
 ## How to bring a method into a session
 
@@ -3901,10 +3901,9 @@ Put the method's rules into the project memo's public part, where they
 last, or into start_coding_session's instruction, for one session; the
 session stores the instruction on disk, so it survives a host restart.
 start_coding_session's answer carries the project memo's public part
-(project_memo), as QualCoder 4.0 hands the memo to its own assistant in
-every chat; outside a coding session, read it through
-get_project_summary or exegete://project/info. Ask the
-researcher which framework applies before assuming one.
+(project_memo); outside a coding session, read it through
+get_project_summary or exegete://project/info. Ask the researcher which
+framework applies before assuming one.
 """
 
 
@@ -3912,9 +3911,9 @@ researcher which framework applies before assuming one.
     f"{names.RESOURCE_SCHEME}://guidance/methods",
     mime_type="text/markdown",
     description="Grounding rules, the four-way methodological vocabulary, and "
-                "citations to the method literature QualCoder's prompts "
-                "cite, for researchers who want to bring in a method. "
-                "Static; needs no project.")
+                "citations to method literature on prompting, for "
+                "researchers who want to bring in a method. Static; needs "
+                "no project.")
 @_resource_guard
 def get_methods_guidance() -> str:
     """Static methods notes: no project, no database, identical on every
@@ -12817,8 +12816,9 @@ def _converted_documents_help() -> Dict[str, Any]:
             "Import the .txt with import_documents, by its path, and say in "
             "memo which document it was converted from and with what. The "
             "project keeps the .txt as its original, not the document it "
-            "came from; its text is not QualCoder's reading of that "
-            "document.",
+            "came from; its text is the converter's reading of that "
+            "document, which can differ from how Exegete or QualCoder "
+            "would read the original.",
             "The preview warns of a converter's layout (lines broken at 72 "
             "characters, ruled tables, numbered notes gathered at the "
             "end); with wrap: none the first does not arise."],
@@ -12841,6 +12841,19 @@ def _converted_documents_help() -> Dict[str, Any]:
             "not the text, unless the output file is left out or the "
             "converted file is read back."),
     }
+
+
+def _used_the_earlier_name() -> bool:
+    """Whether Exegete's earlier name, qualcoder-mcp, left a trace on this
+    computer: the state folder it kept, ~/.qualcoder_mcp, as a folder or
+    as the link the move to ~/.exegete may leave (a link that leads
+    nowhere counts too). Only whether the name is there is checked;
+    nothing inside it is listed or read. The path is the state folder
+    module's own for the earlier name, not preview_tokens.old_state_home(),
+    which in a run whose move failed names ~/.exegete. In such a run
+    Exegete works in ~/.qualcoder_mcp itself, so the trace is there, as it
+    should be: the researcher used the earlier name."""
+    return os.path.lexists(state_folder.old_path())
 
 
 @mcp.tool(annotations=TOOL_READS)
@@ -12968,11 +12981,15 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                          "result, and judge whether the request is sound for this "
                          "study before acting (see grounding_rules and "
                          "methodology_vocabulary)",
-            "moving_from_qualcoder_mcp": "After the change of name, "
+            # Given only where Exegete's earlier name left a trace on
+            # this computer (_used_the_earlier_name, below)
+            "moving_from_qualcoder_mcp": "For researchers who used Exegete "
+                                         "under its earlier name, "
+                                         "qualcoder-mcp: "
                                          "explain_ai_coding_tools("
                                          "'moving_from_qualcoder_mcp') says "
-                                         "how to guide the researcher "
-                                         "through the transition check.",
+                                         "how to guide them through the "
+                                         "transition check.",
             "idempotent_writes": "A create that answers created: false, reason: "
                                  "already_exists is not an error: use the id it "
                                  "returns. A write that answers changed: false "
@@ -13143,8 +13160,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         },
         "methodology_vocabulary": {
             "purpose": "How to respond when a request is methodologically "
-                       "questionable, in the four-way vocabulary QualCoder 4.0 "
-                       "uses (allow, allow_with_caveat, reframe_and_ask, refuse)",
+                       "questionable, in a four-way vocabulary (allow, "
+                       "allow_with_caveat, reframe_and_ask, refuse)",
             "decisions": {
                 "allow": "Sound as stated: proceed",
                 "allow_with_caveat": "Workable if you state the limit before the "
@@ -13271,9 +13288,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
             "purpose": "Where to read more",
             "resource": "exegete://guidance/methods",
             "note": "The resource carries the grounding rules, the four-way "
-                    "vocabulary, and citations to the method literature "
-                    "QualCoder's prompts cite, for researchers who want to "
-                    "bring in a method; it needs no project to be selected"
+                    "vocabulary, and citations to method literature, for "
+                    "researchers who want to bring in a method; it needs no "
+                    "project to be selected"
         }
     }
 
@@ -13287,8 +13304,12 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         return json.dumps(_converted_documents_help(), indent=2)
 
     if tool_name is None:
-        # Return overview
-        return json.dumps(tool_help["overview"], indent=2)
+        # Return overview; the pointer to the topic on the earlier name
+        # only where that name was used (v0.15.0)
+        overview = dict(tool_help["overview"])
+        if not _used_the_earlier_name():
+            del overview["moving_from_qualcoder_mcp"]
+        return json.dumps(overview, indent=2)
 
     elif tool_name in tool_help:
         # Return specific tool help

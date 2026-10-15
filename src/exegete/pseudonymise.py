@@ -446,9 +446,9 @@ def _check_pseudonym(value: Any, entry_index: int,
         raise MappingError(
             f"mapping entry {entry_index}: {shown} contains "
             f"characters beyond U+FFFF (emoji or similar) or a carriage "
-            f"return; QualCoder's editor would misplace positions in the "
-            f"rewritten file. Choose a pseudonym in the Basic Multilingual "
-            f"Plane.")
+            f"return; if the project is opened in QualCoder, its editor "
+            f"would misplace positions in the rewritten file. Choose a "
+            f"pseudonym in the Basic Multilingual Plane.")
     return value
 
 

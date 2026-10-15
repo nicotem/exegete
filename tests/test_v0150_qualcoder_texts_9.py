@@ -35,6 +35,11 @@ researcher who uses it:
 14. a PDF given to pseudonymise_source;
 15. parts the preview could not read: "check them by hand".
 
+Fix round 2: entry 4's stop for a list that can be read but not used
+ends "a list it cannot use"; entry 10 says what to write into the file;
+entry 12 warns that removing the file's entry can leave one person with
+two pseudonyms, and to keep a note of the entry first.
+
 Named as guards, and not counted with the tests of the new words: the
 old phrases gone (the guard of every piece), a list saved with Windows
 line endings read as any other, the preview's conflict warning keeping
@@ -99,6 +104,16 @@ OLD_IN_ROUND_1 = (
     "Manage Files also edits it",
 )
 
+# Fix round 2: the round 1 words the gate's second review corrected, each
+# from a single literal part on the branch before the round.
+OLD_IN_ROUND_2 = (
+    "can also remove the file's entry in its Pseudonyms dialog, under "
+    "Manage Files.)",
+    "with a text editor; or, if they use QualCoder, enter it in its",
+    "add it again), then ask again. The import applies the list as the "
+    "text comes in, so it cannot go ahead with a list it cannot read.",
+)
+
 # A name no answer may carry: it is in every list the tests write.
 SENTINEL = "Zebedee"
 OPENS = ("The project's names list (pseudonyms.json, a list of {original, "
@@ -151,6 +166,12 @@ class TestTheGuard:
     def test_no_phrase_corrected_in_fix_round_1_is_in_an_answer(self):
         texts = answer_texts()
         found = [(phrase, t[:120]) for phrase in OLD_IN_ROUND_1
+                 for t in texts if _flat(phrase) in t]
+        assert not found, found
+
+    def test_no_phrase_corrected_in_fix_round_2_is_in_an_answer(self):
+        texts = answer_texts()
+        found = [(phrase, t[:120]) for phrase in OLD_IN_ROUND_2
                  for t in texts if _flat(phrase) in t]
         assert not found, found
 
@@ -314,9 +335,10 @@ class TestAListThatCannotBeRead:
         stops = [s for s in preview.get("stops_the_import", [])
                  if CORRECT.strip() in s]
         assert len(stops) == 1, preview
+        # Fix round 2: the list can be read; it cannot be used.
         assert stops[0].endswith(
             CORRECT + "The import applies the list as the text comes in, "
-            "so it cannot go ahead with a list it cannot read.")
+            "so it cannot go ahead with a list it cannot use.")
         # The engine's own refusal names a departure from QualCoder's
         # import (kept); the advice that follows leads with the editor.
         _before_qualcoder(stops[0][stops[0].index(CORRECT):],
@@ -426,8 +448,9 @@ NOT_MADE = (
     "save was requested, not made. Make sure the researcher keeps the "
     "mapping now: save it with a run on another file that still contains "
     "one of the names, or write it into pseudonyms.json in the project "
-    "folder with a text editor; or, if they use QualCoder, enter it in its "
-    "Pseudonyms dialog (the button in Manage Files).")
+    "folder with a text editor, as a list of {original, pseudonym} entries; "
+    "or, if they use QualCoder, enter it in its Pseudonyms dialog (the "
+    "button in Manage Files).")
 CONFLICT = (
     "The mapping cannot be saved into this project's pseudonyms.json: entry "
     "[1] maps a name the file already maps, and the file holds one "
@@ -436,7 +459,9 @@ CONFLICT = (
     "again; or preview again without save_mapping_to_project and execute "
     "with researcher_keeps_mapping=true. (A researcher who uses QualCoder "
     "can also remove the file's entry in its Pseudonyms dialog, under "
-    "Manage Files.)")
+    "Manage Files. Files already rewritten or imported with that entry keep "
+    "its pseudonym, so one person can end up with two; keep a note of the "
+    "entry first.)")
 CONFLICT_WARNING_KEEPS = (
     "and QualCoder's Pseudonyms dialog (the button in Manage Files) refuses "
     "a duplicate original as well (see mapping_retention.if_saved."
@@ -588,6 +613,10 @@ class TestThePreviewAndItsRefusals:
         assert note.endswith(NOT_MADE)
         _before_qualcoder(NOT_MADE, "save it with a run on another file")
         _before_qualcoder(NOT_MADE, "with a text editor")
+        # Fix round 2: what to write, in the words the reader's refusal
+        # uses for the file.
+        _before_qualcoder(NOT_MADE, "with a text editor, as a list of "
+                          "{original, pseudonym} entries;")
 
     def test_a_name_the_list_already_maps(self, project):
         """Entry 12: the refusal; the preview's warning keeps its
@@ -602,6 +631,12 @@ class TestThePreviewAndItsRefusals:
         remedy = CONFLICT[CONFLICT.index("Nothing was written."):]
         _before_qualcoder(remedy, "Remove or change the entry")
         assert "can also remove the file's entry in its Pseudonyms" in remedy
+        # Fix round 2: what removing it does, said after the way.
+        removing = remedy[remedy.index("can also remove the file's entry"):]
+        assert ("Files already rewritten or imported with that entry "
+                "keep its pseudonym, so one person can end up with two;"
+                ) in removing
+        assert removing.endswith("keep a note of the entry first.)")
         assert backups(project) == []
 
     @POSIX_ONLY
@@ -727,7 +762,11 @@ def test_the_changelog_says_what_changed():
             "replaced again",
             "where an entry already in the file can pre-empt a longer name",
             "that still contains one of the names, or write it into "
-            "pseudonyms.json with a text editor",
+            "pseudonyms.json with a text editor, as a list of {original, "
+            "pseudonym} entries",
+            "removing the file's entry can leave one person with two "
+            "pseudonyms, since files already rewritten or imported with it "
+            "keep its pseudonym",
             "\"in Exegete as in QualCoder\"",
             "\"Exegete leaves it so\"",
             "\"rewrites text sources only\""):

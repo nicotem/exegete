@@ -4841,7 +4841,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "save_mapping_to_project and execute with "
             "researcher_keeps_mapping=true. (A researcher who uses QualCoder "
             "can also remove the file's entry in its Pseudonyms dialog, "
-            "under Manage Files.)")
+            "under Manage Files. Files already rewritten or imported with "
+            "that entry keep its pseudonym, so one person can end up with "
+            "two; keep a note of the entry first.)")
         # The file's own value is never quoted.
         assert "Zelda" not in json.dumps(out) + json.dumps(refused)
         assert backups(project) == []
@@ -5073,7 +5075,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "not made. Make sure the researcher keeps the mapping now: save "
             "it with a run on another file that still contains one of the "
             "names, or write it into pseudonyms.json in the project folder "
-            "with a text editor; or, if they use QualCoder, enter it in its "
+            "with a text editor, as a list of {original, pseudonym} "
+            "entries; or, if they use QualCoder, enter it in its "
             "Pseudonyms dialog (the button in Manage Files).")
         record = json.loads(Path(result["manifest_path"]).read_text(
             encoding="utf-8"))

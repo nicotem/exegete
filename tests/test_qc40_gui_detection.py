@@ -630,7 +630,10 @@ class TestProcessScanCallersAreDocumented:
                 "set_project_coder_name",
                 # v0.15.0, not presuming QualCoder, piece 11: whether
                 # their notes speak of QualCoder (the same history)
-                "list_backups", "pseudonymise_source"}
+                "list_backups", "pseudonymise_source",
+                # v0.15.0, piece 12: whether their note says what
+                # QualCoder's imports and Merge Projects can bring back
+                "rename_case", "rename_file"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's

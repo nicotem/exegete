@@ -1085,17 +1085,26 @@ class TestTheCapabilityIsNotAVersion:
             self, visibility_db):
         out = json.loads(server.get_coded_segments(1))
         note = out["coder_visibility"]["note"]
-        assert "3.8.2" in note, note
+        # v0.15.0, not presuming QualCoder, piece 12: the note names
+        # where the setting lives and no version at all
+        assert note.startswith(
+            "This project hides 1 coder(s) (a visibility setting made in "
+            "QualCoder and stored in the project). Results follow that "
+            "setting;"), note
+        assert "4.0" not in note and "3.8.2" not in note, note
         assert not self._offends(note), note
 
     def test_the_override_disclosure_keeps_its_4_0_reference(
             self, visibility_db):
-        """The sibling branch is about the override QualCoder 4.0's own
-        AI uses, which is a fact about 4.0 rather than a version standing
-        in for the capability. It stays as it is."""
+        """The sibling branch was about the override QualCoder 4.0's own
+        AI uses; v0.15.0 (piece 12) drops that aside on parity, and the
+        note says what the filter read."""
         out = json.loads(server.get_coded_segments(1, coder=HIDDEN))
         note = out["coder_visibility"]["note"]
-        assert "QualCoder 4.0's own AI" in note
+        assert note == (
+            "This project hides 1 coder(s) (a visibility setting made in "
+            "QualCoder), but the explicit coder filter read that coder's "
+            "full data instead.")
         assert not self._offends(note), note
 
     def test_no_shipped_prose_makes_4_0_the_qualifier(self):

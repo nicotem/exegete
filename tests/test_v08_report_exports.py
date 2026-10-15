@@ -357,7 +357,9 @@ class TestE3CaseCodeMatrix:
         out = json.loads(server.export_case_code_matrix_csv(
             str(tmp_path / "matrix.csv")))
         assert "CONTAINMENT" in out["counting_rule"]
-        assert "file-linkage" in out["counting_rule"]
+        # v0.15.0, piece 12: the rule first, QualCoder's table compared
+        assert "which counts by file linkage, the numbers will differ." \
+            in out["counting_rule"]
 
 
 # ============================================================================

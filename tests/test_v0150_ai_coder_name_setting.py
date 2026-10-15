@@ -154,9 +154,9 @@ ASK_WITH_SETTING = (
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
     "models can then be compared later. Quick picks: \"AI Coding "
-    "Assistant\" (Exegete's built-in default), \"AI Agent\" (the name "
-    "QualCoder 4.0's built-in assistant uses), \"Qwen 3.8 6bit\" (the AI "
-    "coder name in Exegete's settings). The name can be changed at any "
+    "Assistant\" (Exegete's built-in default), \"Qwen 3.8 6bit\" (the AI "
+    "coder name in Exegete's settings), or a name the researcher chooses "
+    "(the model's name, for example). The name can be changed at any "
     "time with the same tool; earlier rows keep the name they were written "
     "under.")
 
@@ -486,8 +486,8 @@ class TestARefusedSettingIsNotOffered:
             monkeypatch.setenv(CODER, "Ann Lee")
         out = json.loads(server.create_code("Asked", create_backup=False))
         assert out["error"] == ASK_WITHOUT_SETTING
-        assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME,
-                                      server.KNOWN_AI_ASSISTANT_OWNER]
+        # v0.15.0, piece 12: "AI Agent" only on its sign
+        assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME]
         # the import's preview gives the same ask
         assert server._import_owner_stop() == ASK_WITHOUT_SETTING
         # and the setter does refuse it
@@ -516,8 +516,8 @@ class TestARefusedSettingIsNotOffered:
         out = json.loads(server.create_code("Asked", create_backup=False))
         assert out["error"] == ASK_WITHOUT_SETTING
         assert out["existing_ai_coder_names_in_project"] == []
-        assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME,
-                                      server.KNOWN_AI_ASSISTANT_OWNER]
+        # v0.15.0, piece 12: "AI Agent" only on its sign
+        assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME]
 
     @pytest.mark.parametrize("reserved", ["default", SPEAKER])
     def test_after_creation_the_first_change_does_not_offer_it(

@@ -11665,12 +11665,14 @@ def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
         notes.append(QUALCODER_BACKUPS_NOTE)
     if level != "none":
         notes.append(QUALCODER_38_BACKUPS_NOTE)
-    notes.append(
+    # It names prune_backups, which the core set does not register:
+    # marked where it is written, as the caller marks every note
+    notes.append(_mark_unregistered(
         "Exegete's backups (kind='exegete', which was kind='mcp' before "
         "0.15.0) accumulate until pruned; use prune_backups(keep_last=..., "
         "older_than_days=...) to reclaim disk space"
         + (" (retention never touches QualCoder's own backups)."
-           if qualcoder_listed else "."))
+           if qualcoder_listed else ".")))
     if qualcoder_history.ai_data_found(project_folder):
         notes.append(AI_DATA_BACKUPS_NOTE)
     notes.append(

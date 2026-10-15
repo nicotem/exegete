@@ -237,7 +237,11 @@ class TestParityHardening:
         assert "data.qda" in copied
 
     def test_d4_settings_directory_note_scoped(self, setup_server,
-                                               qualcoder_db_path):
+                                               qualcoder_db_path,
+                                               monkeypatch):
+        # v0.15.0, not presuming QualCoder, piece 11: the note comes on a
+        # sign of QualCoder, here the researcher's setting "yes"
+        monkeypatch.setenv("EXEGETE_USES_QUALCODER", "yes")
         json.loads(server.import_text_file("d4probe.txt", "x"))
         listed = json.loads(server.list_backups())
         notes = " ".join(listed["notes"])

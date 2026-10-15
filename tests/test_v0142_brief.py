@@ -549,10 +549,13 @@ class TestTheSizes:
     # in export_refi_qda's (17 more in `full`). Not presuming QualCoder,
     # piece 5, makes the write tools' closing paragraph one sentence, in
     # 26 descriptions, and apply_codings' and restore_backup's likewise
-    # (3,302 characters fewer in `full`, 494 in `core`). Their entries
-    # as 0.14.2 served them are below, so every other tool is still held
-    # to 0.14.2's figure.
-    NOW = {"full": 196_354, "core": 64_859}
+    # (3,302 characters fewer in `full`, 494 in `core`). Not presuming
+    # QualCoder, piece 13, takes the attribution to QualCoder 4.0's
+    # assistant out of the four outcomes' sentence that
+    # start_coding_session's description shares (55 characters fewer in
+    # both sets). Their entries as 0.14.2 served them are below, so every
+    # other tool is still held to 0.14.2's figure.
+    NOW = {"full": 196_299, "core": 64_804}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

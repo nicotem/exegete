@@ -614,7 +614,7 @@ CHANGED_0150 = {
     "record_suggestions": (4455, 3574, "8eebddf228bc704c"),
     "review_suggestions": (1327, 1093, "7175c61a45e95f8e"),
     "search_files": (4800, 3794, "60efa551cbfa9147"),
-    "start_coding_session": (6096, 4954, "6f9dd3d79152da08"),
+    # (start_coding_session's line moved to piece 13's, below)
     "update_suggestion_status": (1537, 1263, "f885b390be42a9ab"),
     # the coder names, piece 1: create_project's paragraph on the
     # researcher's coder name, which now comes from Exegete's settings
@@ -669,6 +669,11 @@ CHANGED_0150 = {
     # says yes (its fix round 1 named the setting); the same length as
     # before (tests/test_v0150_qualcoder_texts_6.py)
     "select_project": (2415, 1996, "67eb0818c7355df8"),
+    # not presuming QualCoder, piece 13: the four outcomes' sentence in
+    # the text start_coding_session's description shares ("Four
+    # outcomes:", without the attribution to QualCoder 4.0's assistant),
+    # 54 characters fewer on 3.13 (tests/test_v0150_qualcoder_texts_13.py)
+    "start_coding_session": (6042, 4908, "662931b185aced31"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

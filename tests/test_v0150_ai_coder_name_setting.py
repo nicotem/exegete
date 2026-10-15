@@ -711,8 +711,9 @@ class TestTheDocuments:
                 "when a project is asked for its AI coder name.") in unreleased
         assert "**Empty means ask**" in unreleased
         # nine since the write tools' sentence (not presuming QualCoder,
-        # piece 5) landed beside this piece
-        assert ("on 3.13), nine changes moved them.") in unreleased
+        # piece 5) landed beside this piece, and ten since the four
+        # outcomes' sentence (piece 13)
+        assert ("on 3.13), ten changes moved them.") in unreleased
         assert ("And the AI coder name in the settings is given to each new "
                 "project: `create_project`'s sentence on it grew its entry "
                 "by 115 characters, 123 on 3.11, and `export_refi_qda`'s "

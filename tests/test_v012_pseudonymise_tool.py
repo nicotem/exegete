@@ -2413,7 +2413,9 @@ class TestTheLabelsAndMemosTheResidueCounts:
 
         v0.15.0, not presuming QualCoder, piece 11: the clause on a coder
         hidden in QualCoder is given only when the project hides one, so
-        this project hides one."""
+        this project hides one. Fix round 1: the clause names the setting
+        rather than presuming the researcher made it, and says which read
+        gives that coder's coding notes."""
         hide_coder(project, "Hidden Coder")
         server.db.close()
         server.db = QualcoderDatabase(str(project))
@@ -2430,8 +2432,10 @@ class TestTheLabelsAndMemosTheResidueCounts:
         assert "Each count is two readings, wide and whole-word." in note
         assert ("search_memos searches the public part of all twelve "
                 "fields and names each result's kind; it leaves out the "
-                "coding notes and annotations of a coder hidden in "
-                "QualCoder, which are read there." in note)
+                "coding notes and annotations of a coder the project hides "
+                "(a visibility setting made in QualCoder); "
+                "get_coded_segments reads that coder's coding notes when "
+                "the coder is named." in note)
         assert ("search_files reads narrower than this block does (a plain "
                 "substring, no normalisation), so a name it does not find "
                 "may still be counted here." in note)

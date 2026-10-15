@@ -12676,9 +12676,15 @@ class QualcoderDatabase:
         # QualCoder or a saved place only on its sign, a hidden coder
         # (hidden_coder_count) or a saved place that holds a row
         # (saved_places_in_use, read once per preview); the rest always.
+        # Hiding a coder is a setting QualCoder makes (Exegete writes
+        # every coder visible); get_coded_segments' `coder` reads that
+        # coder's codings with their notes, while no read of Exegete's
+        # gives a hidden coder's annotations (fix round 1)
         hidden_coders = (
             "; it leaves out the coding notes and annotations of a coder "
-            "hidden in QualCoder, which are read there"
+            "the project hides (a visibility setting made in QualCoder); "
+            "get_coded_segments reads that coder's coding notes when the "
+            "coder is named"
             if self.hidden_coder_count() > 0 else "")
         places = self.saved_places_in_use()
         unreached = [
@@ -12714,10 +12720,12 @@ class QualcoderDatabase:
         # this one
         from . import qualcoder_history
         if qualcoder_history.ai_data_found(folder):
+            # QualCoder's, not 4.0's alone: 3.8.2 makes the folder too
+            # (fix round 1)
             residue["ai_data_note"] = (
-                "QualCoder 4.0's ai_data folder (chat history and the "
-                "search index) is never read or written by Exegete and is "
-                "not scanned; it may still hold the previous text.")
+                "QualCoder's ai_data folder (chat history and the search "
+                "index) is never read or written by Exegete and is not "
+                "scanned; it may still hold the previous text.")
         if memo_plan is not None:
             residue["after_rewrite_note"] = self.PSEUDONYMISE_AFTER_REWRITE_NOTE
         try:

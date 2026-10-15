@@ -11643,13 +11643,23 @@ QUALCODER_38_BACKUPS_NOTE = (
     "If the researcher uses QualCoder 3.8.0 to 3.8.2, it may keep further "
     "backups in the folder set in its settings; those are not listed "
     "here.")
+# What a backup holds is a fact about Exegete's backups, said always;
+# what it adds on ai_data/ only when the project holds that folder (fix
+# round 1). QualCoder 3.8.2 makes the folder too, with the prompt library
+# (ai_prompts.py:465) and the chat history (ai_chat.py:185-187) in it and
+# its own search index under ai_data/vectorstore (ai_vectorstore.py:297),
+# at the tag 3.8.2, which backups keep; only 4.0's ai_data/search.sqlite
+# is left out (BACKUP_IGNORE_PATTERNS).
+BACKUPS_HOLD_NOTE = (
+    "Backups hold the whole project folder, except lock files and "
+    "SQLite's working files.")
 AI_DATA_BACKUPS_NOTE = (
-    "Backups hold the whole project folder except ai_data/search.sqlite, "
-    "a search index that can be rebuilt, and its sidecar files. When a "
-    "project has been used in QualCoder 4.0, ai_data/ also holds its AI "
-    "prompt library and chat history, which backups keep (and pruning "
-    "removes); QualCoder rebuilds the search index when it next opens the "
-    "project, so a restored project without one is normal.")
+    "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
+    "also holds its AI prompt library and chat history, which backups "
+    "keep (and pruning removes). Backups leave out QualCoder 4.0's AI "
+    "search index, ai_data/search.sqlite, which QualCoder rebuilds when it "
+    "next opens the project with AI enabled, so a restored project without "
+    "one is normal.")
 
 
 def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
@@ -11658,8 +11668,9 @@ def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
     'qualcoder' is in the list just built (the first note, and the
     parentheses on QualCoder's own backups). `level`: the project's
     history with QualCoder, `History.level`, "none" when there is none
-    (the note on QualCoder 3.8.0 to 3.8.2). The note on ai_data/ when
-    the project holds that folder, checked now."""
+    (the note on QualCoder 3.8.0 to 3.8.2). The note on what backups
+    hold always, with what it adds on ai_data/ when the project holds
+    that folder, checked now."""
     notes = []
     if qualcoder_listed:
         notes.append(QUALCODER_BACKUPS_NOTE)
@@ -11673,8 +11684,10 @@ def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
         "older_than_days=...) to reclaim disk space"
         + (" (retention never touches QualCoder's own backups)."
            if qualcoder_listed else ".")))
-    if qualcoder_history.ai_data_found(project_folder):
-        notes.append(AI_DATA_BACKUPS_NOTE)
+    notes.append(BACKUPS_HOLD_NOTE
+                 + (" " + AI_DATA_BACKUPS_NOTE
+                    if qualcoder_history.ai_data_found(project_folder)
+                    else ""))
     notes.append(
         "Since v0.14 Exegete copies the project database with SQLite's own "
         "online backup, so a backup taken while another program is writing "
@@ -16821,8 +16834,9 @@ PSEUDONYMISE_SEARCH_INDEX_NOTE = (
     "enabled.")
 PSEUDONYMISE_CHAT_HISTORY_NOTE = (
     "QualCoder's AI chat history in this project "
-    "(ai_data/chat_history.sqlite) can hold the previous text and is "
-    "never re-indexed.")
+    "(ai_data/chat_history.sqlite) may quote the text as it was before "
+    "this run, real names included, and is not changed by it; it travels "
+    "with the project folder if the folder is shared.")
 
 
 def _pseudonymise_ai_files_note(search_index: bool,

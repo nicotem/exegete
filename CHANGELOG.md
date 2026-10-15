@@ -141,9 +141,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed: a project's history with QualCoder
 
-- **What Exegete finds of QualCoder is worked out once, when a project
-  is selected** (the owner's decision of 12 October 2026), and kept in
-  memory for the session: whether the project shows traces of QualCoder
+- **What Exegete finds of QualCoder is worked out once for each
+  project** (the owner's decision of 12 October 2026): when
+  `select_project` selects it or, straight after `create_project` or
+  `restore_backup` or for a project set in the host's configuration, at
+  the first answer that reads it. It is kept in memory for the session:
+  whether the project shows traces of QualCoder
   (an `ai_data` folder, which QualCoder 3.8.2 and 4.0 make when they
   first open a project and Exegete never makes; the AI chat history or
   search index in it; QualCoder's own `_BKUP_` backups beside the
@@ -641,10 +644,12 @@ not changed.
   here.", and comes only when the project or this computer shows
   QualCoder, or the setting "Do you also use QualCoder on this
   computer?" says yes (with "no", QualCoder's settings folder alone does
-  not bring it). The note on the `ai_data` folder comes only when the
-  project has one, and says that backups hold the whole project folder
-  except `ai_data/search.sqlite`, a search index that can be rebuilt,
-  and its sidecar files. The note on how Exegete copies the database
+  not bring it). The note that backups hold the whole project folder,
+  except lock files and SQLite's working files, is always given; what it
+  adds on the `ai_data` folder (QualCoder's AI prompt library and chat
+  history, which backups keep, and QualCoder 4.0's search index,
+  `ai_data/search.sqlite`, which they leave out) comes only when the
+  project has one. The note on how Exegete copies the database
   speaks of a backup taken while "another program" is writing to the
   project.
 - **After a pseudonymisation run**: the note on an open QualCoder window
@@ -654,13 +659,19 @@ not changed.
   project holds either file, and names the one or both it holds.
 - **The pseudonymisation preview**: its note on the `ai_data` folder
   comes only when the folder is there; its note on what it reads speaks
-  of the notes of a coder hidden in QualCoder only when the project
-  hides one, and, among what a rename does not reach, names saved graph
-  labels, saved table displays and filters, and QualCoder's saved SQL
-  queries each only when that place holds a saved row (the stored copy
-  and path of an imported file always); and the note on hidden coders'
+  of the notes of a coder the project hides (a visibility setting made
+  in QualCoder) only when there is one, and, among what a rename does
+  not reach, names saved graph labels, saved table displays and
+  filters, and QualCoder's saved SQL queries each only when that place
+  holds a saved row (the stored copy and path of an imported file
+  always); and the note on hidden coders'
   notes comes only when there is one, the count being given always.
   Whether a saved place holds a row is read without reading the row.
+
+After `create_project` or `restore_backup`, or for a project set in the
+host's configuration, the first `list_backups` or pseudonymisation run
+can be what looks for a running QualCoder (the process scan), as
+PRIVACY.md describes.
 
 ### Measured
 

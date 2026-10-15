@@ -66,6 +66,13 @@ OLD_IN_ANSWERS = (
     "Backups include the whole project tree",
     "a backup taken while QualCoder is writing",
     "An open QualCoder window will not refresh from this write",
+    # fix round 1: the ai_data texts, the chat history and the hidden
+    # coder's clause
+    "When a project has been used in QualCoder 4.0,",
+    "a search index that can be rebuilt, and its sidecar files",
+    "can hold the previous text and is never re-indexed",
+    "QualCoder 4.0's ai_data folder (chat history",
+    "coder hidden in QualCoder, which are read there",
 )
 
 # ---------------------------------------------------------------------------
@@ -85,13 +92,17 @@ EXEGETE_BACKUPS = (
     "0.15.0) accumulate until pruned; use prune_backups(keep_last=..., "
     "older_than_days=...) to reclaim disk space")
 RETENTION = " (retention never touches QualCoder's own backups)"
+# Fix round 1: what a backup holds, always; what it adds on ai_data/, on
+# its sign, in the same note
+BACKUPS_HOLD = ("Backups hold the whole project folder, except lock files "
+                "and SQLite's working files.")
 AI_DATA = (
-    "Backups hold the whole project folder except ai_data/search.sqlite, "
-    "a search index that can be rebuilt, and its sidecar files. When a "
-    "project has been used in QualCoder 4.0, ai_data/ also holds its AI "
-    "prompt library and chat history, which backups keep (and pruning "
-    "removes); QualCoder rebuilds the search index when it next opens the "
-    "project, so a restored project without one is normal.")
+    "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
+    "also holds its AI prompt library and chat history, which backups "
+    "keep (and pruning removes). Backups leave out QualCoder 4.0's AI "
+    "search index, ai_data/search.sqlite, which QualCoder rebuilds when it "
+    "next opens the project with AI enabled, so a restored project without "
+    "one is normal.")
 ONLINE_BACKUP = (
     "Since v0.14 Exegete copies the project database with SQLite's own "
     "online backup, so a backup taken while another program is writing to "
@@ -115,8 +126,9 @@ SEARCH_INDEX = (
     "enabled.")
 CHAT_HISTORY = (
     "QualCoder's AI chat history in this project "
-    "(ai_data/chat_history.sqlite) can hold the previous text and is "
-    "never re-indexed.")
+    "(ai_data/chat_history.sqlite) may quote the text as it was before "
+    "this run, real names included, and is not changed by it; it travels "
+    "with the project folder if the folder is shared.")
 AI_FILES = {
     (True, False): SEARCH_INDEX + " Exegete neither reads nor writes it.",
     (False, True): CHAT_HISTORY + " Exegete neither reads nor writes it.",
@@ -124,14 +136,16 @@ AI_FILES = {
                    + " Exegete neither reads nor writes either file."),
 }
 AI_DATA_PREVIEW = (
-    "QualCoder 4.0's ai_data folder (chat history and the search index) "
+    "QualCoder's ai_data folder (chat history and the search index) "
     "is never read or written by Exegete and is not scanned; it may still "
     "hold the previous text.")
 SEARCH_MEMOS = (
     "To find the notes a count points at, search_memos searches the public "
     "part of all twelve fields and names each result's kind")
 HIDDEN_CLAUSE = ("; it leaves out the coding notes and annotations of a "
-                 "coder hidden in QualCoder, which are read there")
+                 "coder the project hides (a visibility setting made in "
+                 "QualCoder); get_coded_segments reads that coder's coding "
+                 "notes when the coder is named")
 UNREACHED = ("A rename does not reach, and this block does not read, the "
              "stored copy and stored path of an imported file (the copy in "
              "the project folder keeps the name it was imported under and, "
@@ -218,7 +232,8 @@ class TestQualCodersBackupsListed:
         # The facts about Exegete's backups, still there
         assert [b["name"] for b in answer["backups"]] == [own[0].name]
         assert answer["backup_count"] == 1
-        assert notes == [EXEGETE_BACKUPS + ".", ONLINE_BACKUP + UNCLEAN]
+        assert notes == [EXEGETE_BACKUPS + ".", BACKUPS_HOLD,
+                         ONLINE_BACKUP + UNCLEAN]
         # What the researcher sees on a project with no sign of QualCoder
         assert "QualCoder" not in json.dumps([answer["notes"],
                                               answer["hint"]])
@@ -255,7 +270,14 @@ class TestQualCoder38:
             (folder / "ai_data").mkdir()
         else:
             _qualcoder_backup(folder)
-        assert QUALCODER_38 in _notes()
+        notes = _notes()
+        assert QUALCODER_38 in notes
+        if sign != "qualcoder backup":
+            # Entries 1, 3 and 5 follow a QualCoder backup in the list,
+            # not the level these signs raise (fix round 1)
+            assert QUALCODER_BACKUPS not in notes
+            assert EXEGETE_BACKUPS + "." in notes
+            assert ONLINE_BACKUP + UNCLEAN in notes
 
     def test_without_one(self, setup_server, qualcoder_db_path, home):
         notes = _notes()
@@ -281,13 +303,13 @@ class TestQualCoder38:
 
 
 class TestTheAiDataFolder:
-    """Entry 4: the note on what backups hold of ai_data/, in the audit's
-    words, when the project holds that folder, checked as the answer is
-    built."""
+    """Entry 4: the note on what backups hold, always; what it adds on
+    ai_data/, in the audit's words as fix round 1 corrected them, when
+    the project holds that folder, checked as the answer is built."""
 
     def test_with_the_folder(self, setup_server, qualcoder_db_path, home):
         (Path(qualcoder_db_path) / "ai_data").mkdir()
-        assert AI_DATA in _notes()
+        assert BACKUPS_HOLD + " " + AI_DATA in _notes()
 
     def test_without_it(self, setup_server, qualcoder_db_path, home):
         folder = Path(qualcoder_db_path)
@@ -298,7 +320,8 @@ class TestTheAiDataFolder:
         (folder / "ai_data").write_bytes(b"not a folder")
         notes = _notes()
         assert AI_DATA not in notes
-        assert notes == [EXEGETE_BACKUPS + ".", ONLINE_BACKUP + UNCLEAN]
+        assert notes == [EXEGETE_BACKUPS + ".", BACKUPS_HOLD,
+                         ONLINE_BACKUP + UNCLEAN]
 
 
 class TestAProjectMadeInExegete:
@@ -316,6 +339,8 @@ class TestAProjectMadeInExegete:
         assert answer["backup_count"] == 1
         assert "QualCoder" not in json.dumps([answer["notes"],
                                               answer["hint"]])
+        # What a backup holds is said for this project too (fix round 1)
+        assert BACKUPS_HOLD in [_flat(note) for note in answer["notes"]]
 
 
 @pytest.fixture
@@ -645,3 +670,38 @@ class TestNoSavedQueryInAnyAnswer:
         answers = [preview, execute_from(preview),
                    json.loads(server.list_backups())]
         assert all(self.SENTINEL not in json.dumps(a) for a in answers)
+
+
+# ---------------------------------------------------------------------------
+# The CHANGELOG (fix round 1)
+# ---------------------------------------------------------------------------
+
+def _changelog_section(heading):
+    text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert text.count(heading + "\n") == 1, heading
+    start = text.index(heading + "\n")
+    return _flat(text[start:text.index("\n### ", start)])
+
+
+class TestTheChangelog:
+    """The CHANGELOG says that list_backups and a pseudonymisation run can
+    be what starts the process scan, as PRIVACY.md and TOOLS.md do, and
+    no longer says that the history is worked out only when a project is
+    selected."""
+
+    def test_this_entry_names_the_scan(self):
+        entry = _changelog_section(
+            "### Changed: notes about QualCoder's backups, windows, AI files "
+            "and saved places, on a sign")
+        assert ("After `create_project` or `restore_backup`, or for a "
+                "project set in the host's configuration, the first "
+                "`list_backups` or pseudonymisation run can be what looks "
+                "for a running QualCoder") in entry
+
+    def test_the_history_section(self):
+        section = _changelog_section(
+            "### Changed: a project's history with QualCoder")
+        assert "worked out once, when a project is selected" not in section
+        assert ("**What Exegete finds of QualCoder is worked out once for "
+                "each project**") in section
+        assert "at the first answer that reads it" in section

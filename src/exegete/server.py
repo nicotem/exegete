@@ -47,6 +47,7 @@ from .database import (
     DatabaseOpenError,
     UnsupportedSchemaError,
     DB_LOCKED_MESSAGE,
+    version_for_details,
     validate_qda_path,
     validate_coder_name,
     validate_coder_note,
@@ -1992,7 +1993,10 @@ def _schema_block() -> Dict[str, Any]:
         # visibility can arrive after the connection opened.
         capabilities["has_coder_visibility"] = db.has_coder_visibility_now()
     block: Dict[str, Any] = {
-        "databaseversion": getattr(db, "db_version", None),
+        # In QualCoder's form only: the field is the project's own text
+        # (ruling 77)
+        "databaseversion": version_for_details(
+            getattr(db, "db_version", None)),
         "capabilities": capabilities,
         "write_support": supported,
     }

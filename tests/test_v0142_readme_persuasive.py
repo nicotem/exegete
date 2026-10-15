@@ -220,7 +220,12 @@ def _tools(mode="full"):
 # not asked for when the project was made while it was filled in
 # Exegete's settings. That takes 71 characters (72 before its first fix
 # round's wording), and the limit is raised by that and no more: 36,573.
-README_LIMIT = 36_573
+# A project from a QualCoder older than 3.8, its first fix round: "A
+# project you already have" no longer gives QualCoder as the only way
+# through, adding that without QualCoder someone who has it and may see
+# the project's data can do this and send the updated copy. That takes
+# 112 characters, and the limit is raised by that and no more: 36,685.
+README_LIMIT = 36_685
 
 
 def test_the_readme_stays_short():

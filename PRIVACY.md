@@ -84,7 +84,11 @@ What stays local, always, unless a sync service copies the folder it is in:
   what to do. A link left under the old name after `~/.exegete` was
   removed by hand is left as it is, and a fresh `~/.exegete` is made.
   The export tools, `create_project` and the workspace setting refuse
-  both names, whether or not the old one exists, in every run.
+  both names, whether or not the old one exists, in every run. The
+  help's overview (`explain_ai_coding_tools()`) checks only whether
+  `~/.qualcoder_mcp` is there, as a folder or a link, to point the
+  assistant to the topic on the earlier name; nothing inside it is
+  listed or read.
 - the reading folder (v0.14.3), where Exegete writes the
   pages and read-only copies it opens for you to read a file, and the
   page on which you check an import's letters that look garbled:

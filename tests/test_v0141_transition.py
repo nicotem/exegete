@@ -1312,6 +1312,12 @@ class TestTheHelpTopic:
                       "installing Exegete first", "uv tool or pipx",
                       "older than 0.14.1", "full paths"):
             assert words in flat, words
+        # v0.15.0 (not presuming QualCoder, piece 13): the overview
+        # points to the topic only where the earlier name left a trace,
+        # its state folder ~/.qualcoder_mcp
+        overview = json.loads(server.explain_ai_coding_tools())
+        assert "moving_from_qualcoder_mcp" not in overview
+        state_folder.old_path().mkdir()
         overview = json.loads(server.explain_ai_coding_tools())
         assert "moving_from_qualcoder_mcp" in overview[
             "moving_from_qualcoder_mcp"]

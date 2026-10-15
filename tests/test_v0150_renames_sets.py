@@ -487,7 +487,8 @@ class TestTheDocuments:
         # names, piece 2): 81 tools, 208,247; and the AI coder name in
         # the settings given to each new project (the coder names, piece
         # 3): 208,379; and the write tools' sentence (not presuming
-        # QualCoder, piece 5): 205,077
+        # QualCoder, piece 5): 205,077; and the four outcomes without
+        # their attribution (not presuming QualCoder, piece 13): 205,022
         assert (rounded, tokens) == ("205,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "

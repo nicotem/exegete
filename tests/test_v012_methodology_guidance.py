@@ -216,7 +216,12 @@ class TestMethodsResource:
         assert server.METHODOLOGY_VOCABULARY in body
         assert "10.31235/osf.io/d6e9m" in body
         assert "Friese, S. (2024)" in body
-        assert "Exegete does not read or reproduce those" in body
+        # v0.15.0 (not presuming QualCoder, piece 13): the literature is
+        # introduced by what it is, not by QualCoder's prompt library
+        # (and, from its fix round 1, not every entry called published)
+        assert ("## Method literature\n\nSome approaches to prompting in "
+                "qualitative analysis, two of them\npublished") in body
+        assert "prompt library" not in body
         assert body.startswith("# Methods notes")
 
     def test_registered_as_markdown_resource(self):

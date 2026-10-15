@@ -762,17 +762,61 @@ QualCoder (the process scan), as PRIVACY.md describes.
   with a schema before v14 says the same. TOOLS.md, AI_CODING_GUIDE.md
   and the README follow.
 
+### Changed: the brief, the help and the methods notes, without presuming QualCoder
+
+The brief, the help and the methods notes speak of method without
+framing it by QualCoder's own assistant, and the brief says when to
+mention QualCoder. The four outcomes, their labels and definitions, the
+literature listed and the grounding rules have not changed; the credit
+for the four labels stays in NOTICE.
+
+- **The four outcomes** (allow, allow_with_caveat, reframe_and_ask,
+  refuse) are introduced as "Four outcomes:", without "in the
+  vocabulary QualCoder 4.0's own assistant uses", in
+  `start_coding_session`'s description (54 characters shorter), the
+  brief's section on judging requests and the methods notes; the help
+  topic `methodology_vocabulary` speaks of "a four-way vocabulary".
+- **The methods notes** (`exegete://guidance/methods`) list their
+  literature under "Method literature", as "some approaches to
+  prompting in qualitative analysis, two of them published", rather
+  than as the sources
+  QualCoder 4.0's prompts cite, and no longer describe QualCoder's
+  prompt library, or how its assistant applies the four decisions and
+  is given the project memo. The resource's description, the brief and
+  the help topic `methods_notes` name the literature by what it is,
+  each in no more characters than before; TOOLS.md and the AI coding
+  guide say the same.
+- **The help on converted documents** says that a converted file's text
+  "is the converter's reading of that document, which can differ from
+  how Exegete or QualCoder would read the original".
+- **The brief says when to mention QualCoder**: when the researcher says
+  they use it or asks about it, when the answer to "Do you also use
+  QualCoder on this computer?" is yes, or when a tool's answer brings it
+  up (a sign on the project in `qualcoder_history`, a lock file the
+  answer ascribes to QualCoder, signs of a window). QualCoder merely
+  installed is not a sign once that answer is no. Otherwise the
+  assistant says what Exegete does and what it does not do yet. The
+  full brief is now about 12,900 characters; the opening text has not
+  changed.
+- **The help's overview points to the topic on Exegete's earlier name**
+  (`moving_from_qualcoder_mcp`) only on a computer where that name was
+  used: where the state folder it kept, `~/.qualcoder_mcp`, or the link
+  Exegete's move left in its place, is present, whether the overview is
+  asked for with no topic or as `overview`. Exegete checks only that
+  the name is there, and lists and reads nothing inside it. The topic
+  itself is still given by name.
+
 ### Measured
 
-- Serialised tool JSON: full = 205,077 characters (about 51.3k tokens
-  at chars/4) over 81 tools, and core = 68,175 (about 17.0k) over 25,
+- Serialised tool JSON: full = 205,022 characters (about 51.3k tokens
+  at chars/4) over 81 tools, and core = 68,120 (about 17.0k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 215,445 and
-  71,595. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), nine changes
+  which also gives exactly 0.14.3's figures for its tree), 215,390 and
+  71,540. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the opt-in lifecycle set's 204,244 over 78, on 3.13), ten changes
   moved them. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -809,6 +853,10 @@ QualCoder (the process scan), as PRIVACY.md describes.
   `core`, whose `apply_codings`, `create_code`, `delete_coding` and
   `set_memo` carry it (3,082 and 470 on 3.11). And `select_project`'s
   sentence on when its warning comes changed its words, not its length.
+  And the four outcomes' sentence, in the text `start_coding_session`'s
+  description shares, lost its attribution to QualCoder 4.0's
+  assistant: 55 characters fewer in both sets (the line break it lost
+  counts as two there), on both interpreters.
   No other tool's entry changed.
 
 ## [0.14.3-alpha] - 2026-10-12

@@ -39,6 +39,8 @@ import exegete.server as server  # noqa: E402
 sys.path.insert(0, str(Path(__file__).parent))
 from test_v0150_qualcoder_texts_5 import (  # noqa: E402
     LOCK_PARAGRAPH_BEFORE, put_back_the_lock_paragraph)
+from test_v0150_qualcoder_texts_13 import (  # noqa: E402
+    put_back_the_four_outcomes)
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -118,7 +120,11 @@ def _put_back(text):
 # made the write tools' closing paragraph one sentence, in delete_coding
 # and update_annotation among others. The paragraph as it stood before,
 # as Python 3.13 serves it, is put back too, so that what the rename
-# changed is still checked to be the names alone.
+# changed is still checked to be the names alone. Piece 13
+# (tests/test_v0150_qualcoder_texts_13.py) took the attribution to
+# QualCoder 4.0's assistant out of the four outcomes' sentence in the
+# text start_coding_session's description shares; that sentence is put
+# back the same way.
 
 
 class TestTheRegistry:
@@ -176,6 +182,8 @@ class TestTheRegistry:
                 _flat(server.DEPRECATED_HELP_TOPICS), "")), name
             if name in LOCK_PARAGRAPH_BEFORE:
                 text = put_back_the_lock_paragraph(name, text)
+            if name == "start_coding_session":
+                text = put_back_the_four_outcomes(text)
             text = _put_back(text)
             dropped = name == "explain_ai_coding_tools"
             if dropped:

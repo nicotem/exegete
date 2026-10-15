@@ -516,15 +516,22 @@ class TestExegeteNotTheServer:
                 ) in for_the_user
 
 
-class TestTheMethodLiteratureIsQualCodersPrompts:
-    """The methods notes list the sources QualCoder 4.0's prompts cite,
-    for researchers who want to bring in a method; Exegete's rules are
-    not drawn from them (the sweep's truth check found four texts saying
-    that the notes "rest on" them)."""
+class TestTheMethodLiteratureSaysWhatItIs:
+    """The methods notes list some approaches to prompting in qualitative
+    analysis, two of them published, for researchers who want to bring in
+    a method; Exegete's rules are not drawn from them (the sweep's truth
+    check found four texts saying that the notes "rest on" them). Until
+    v0.15.0 the texts named the list by where it was found, "the method
+    literature QualCoder's prompts cite"; not presuming QualCoder, piece
+    13, names it by what it is (tests/test_v0150_qualcoder_texts_13.py)."""
 
-    CREDIT = "the method literature QualCoder's prompts cite"
+    OLD = "QualCoder's prompts cite"
+    FOR_WHOM = ", for researchers who want to bring in a method"
+    SAID = {"the resource's description":
+            "citations to method literature on prompting" + FOR_WHOM,
+            "the help": "citations to method literature" + FOR_WHOM}
 
-    def test_the_resource_and_the_help_say_whose_literature_it_is(self):
+    def test_the_resource_and_the_help_say_what_the_literature_is(self):
         for mode in TOOL_SETS:
             served = _served(mode)
             texts = {"the resource's description": served[
@@ -533,24 +540,29 @@ class TestTheMethodLiteratureIsQualCodersPrompts:
                 texts["the help"] = served["help methods_notes"]
             for where, text in texts.items():
                 flat = _flat(text)
-                assert self.CREDIT + ", for researchers who want to bring " \
-                    "in a method" in flat, (mode, where)
+                assert self.SAID[where] in flat, (mode, where)
+                assert self.OLD not in flat, (mode, where)
                 assert "rest on" not in flat, (mode, where)
-        assert "## Method literature QualCoder 4.0 ships prompts for" in \
-            server.METHODS_GUIDANCE
+        notes = _flat(server.METHODS_GUIDANCE)
+        assert ("## Method literature Some approaches to prompting in "
+                "qualitative analysis, two of them published, for "
+                "researchers who want to bring a method into") in notes
+        assert self.OLD not in notes
 
     def test_the_documents_say_the_same(self):
         tools = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         entry = tools[tools.index("- `exegete://guidance/methods` -"):]
         entry = entry[:entry.index(" - `")]
-        assert self.CREDIT + ", for researchers who want to bring in a " \
-            "method; needs no project" in entry
+        assert ("citations to method literature on prompting, for "
+                "researchers who want to bring in a method; needs no "
+                "project") in entry
         guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
             encoding="utf-8"))
         assert ("read the `exegete://guidance/methods` resource, which also "
-                "lists " + self.CREDIT + ", if you want to bring a method "
-                "into a session.") in guide
+                "lists some published approaches to prompting, if you want "
+                "to bring a method into a session.") in guide
         for text in (tools, guide):
+            assert self.OLD not in text
             assert "literature the notes rest on" not in text
             assert "literature it rests on" not in text
 

@@ -424,10 +424,14 @@ class TestThePublishedSchemaBudget:
     # closing paragraph of 26 descriptions, apply_codings' and
     # restore_backup's, each one sentence now, took 3,302 characters off
     # `full` and 494 off `core` (3,082 and 470 on 3.11).
-    FULL_MEASURED = 205_077          # 81 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_175           # 25 tools, same environment
-    FULL_MEASURED_310 = 215_445      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 71_595
+    # The four outcomes without their attribution to QualCoder 4.0's
+    # assistant (not presuming QualCoder, piece 13), in the text
+    # start_coding_session's description shares, took 55 characters off
+    # both sets, on both interpreters.
+    FULL_MEASURED = 205_022          # 81 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_120           # 25 tools, same environment
+    FULL_MEASURED_310 = 215_390      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 71_540
 
     # Why two per cent, away from the reference environment.
     #
@@ -454,8 +458,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,077"
-    CORE_CHARS = "68,175"
+    FULL_CHARS = "205,022"
+    CORE_CHARS = "68,120"
     FULL_ROUNDED = "205,000"
     CORE_ROUNDED = "68,000"
     FULL_TOKENS = "51k"

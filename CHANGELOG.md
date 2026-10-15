@@ -562,17 +562,20 @@ When each is given, what it refuses and its counts have not changed.
   Saving under a mode that ignores letter case warns that later imports
   apply the file case-sensitively, "in Exegete as in QualCoder"; a
   refusal of a name the file already maps says that the file holds one
-  pseudonym per name; the refusal to save into a read-only names list
-  says "Exegete leaves it so"; and a PDF is refused because the tool
-  "rewrites text sources only". The steps that named QualCoder's
+  pseudonym per name, and that removing the file's entry can leave one
+  person with two pseudonyms, since files already rewritten or imported
+  with it keep its pseudonym; the refusal to save into a read-only names
+  list says "Exegete leaves it so"; and a PDF is refused because the
+  tool "rewrites text sources only". The steps that named QualCoder's
   Pseudonyms dialog or a check in QualCoder name the way through in
   Exegete or by hand first, and the dialog only for a researcher who
   uses QualCoder: after nothing was saved, pick a file that contains one
   of the names; after a save that was not made, save the mapping with a
   run on another file that still contains one of the names, or write it
-  into pseudonyms.json with a text editor; for alternative spellings,
-  edit the file; for parts the preview could not read, check them by
-  hand or treat them as still holding names.
+  into pseudonyms.json with a text editor, as a list of {original,
+  pseudonym} entries; for alternative spellings, edit the file; for
+  parts the preview could not read, check them by hand or treat them as
+  still holding names.
 
 ### Measured
 

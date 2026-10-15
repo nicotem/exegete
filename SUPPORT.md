@@ -46,11 +46,13 @@ Issues help everyone, permanently. Please use
   provider at all with a fully local host). Prefer synthetic or
   consented data, and check your ethics/GDPR position before using real
   participant data; see [PRIVACY.md](PRIVACY.md).
-- Close the project in QualCoder before any writing. Writes are refused
-  while QualCoder 3.x has the project open, by design, through its
-  lock file. QualCoder 4.0 writes no lock file, so there Exegete can only report that the project appears to
-  be open (heuristics, which can miss an open window); never write while
-  any QualCoder window has the same project open.
+- If you also use QualCoder, close the project there before any
+  writing. Writes are refused while the project's lock file is active
+  (QualCoder 3.8.2 has the project open, or another conversation using
+  Exegete is writing to it). QualCoder 4.0 writes no lock file, so
+  there Exegete can only report signs that the project may be open,
+  which can miss an open window; a write into a project open in any
+  QualCoder window can lose work.
 - Include in bug reports: your QualCoder version, if you use QualCoder
   (a 3.8.x release or 4.0; see "Supported QualCoder versions" in
   TOOLS.md for the supported project schemas),

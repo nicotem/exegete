@@ -29,10 +29,11 @@ qualcoder-mcp), in the conversational workflow.
    (`update_suggestion_status`)
 4. **Claude** writes only the approved suggestions to the database
    (`apply_codings`), after re-validating each one, creating a backup,
-   and checking QualCoder's lock file (a project open in QualCoder 3.x
-   is refused; a QualCoder 4.0 window writes no lock file and is detected
-   only heuristically, so confirm yourself that none has the project
-   open)
+   and checking the project's lock file (refused while QualCoder 3.8.2
+   has the project open or another conversation using Exegete is
+   writing to it; a QualCoder 4.0 window writes no lock file and is
+   seen only by its signs, so if you use QualCoder, confirm yourself
+   that none has the project open)
 5. **You** read the coded passages back in the conversation, ask
    Claude to open the file for reading (a page in your browser shows
    them highlighted in the text, which stays off the conversation), or
@@ -55,12 +56,13 @@ reports against what you said.
   in the workspace: say "Copy my
   project 'Interview Study' to the workspace"
   (`copy_project_to_workspace`), then open the copy with `select_project`
-- **QualCoder closed** for the project you are writing to. Writes are
-  refused while QualCoder 3.x has the project open (its
-  `project_in_use.lock` heartbeat); QualCoder 4.0 writes no lock file,
-  so there Exegete can only report that the project appears to be
-  open (`qualcoder_gui_signals`, a heuristic that can miss an idle
-  window), and you must make sure no 4.0 window has it open
+- **If you also use QualCoder**, the project closed there before any
+  write. Writes are refused while the project's lock file is active
+  (QualCoder 3.8.2 has the project open, or another conversation using
+  Exegete is writing to it); QualCoder 4.0 writes no lock file, so
+  there Exegete can only report that the project appears to be open
+  (`qualcoder_gui_signals`, signs that can miss an idle window), and
+  you make sure no 4.0 window has it open
 - Codes to apply. The supervised loop applies your existing codebook;
   the AI can also propose new codes for your approval (`propose_codes`
   through `create_proposed_codes`), and the codebook tools
@@ -207,10 +209,12 @@ session. None of this replaces your approval of each suggestion.
   documents is a way on, without the old coding), and schemas newer
   than v17 refuse writes until
   Exegete has been verified against them
-- Writes are refused while QualCoder 3.x has the project
-  open (its lock file), and Exegete holds the project lock itself
-  during its own writes; QualCoder 4.0 writes no lock file, so for it
-  Exegete only warns on heuristics (`qualcoder_gui_signals`)
+- Writes are refused while the project's lock file is active
+  (QualCoder 3.8.2 has the project open, or another conversation using
+  Exegete is writing to it, since Exegete holds the project lock itself
+  during its own writes); QualCoder 4.0 writes no lock file, so for it
+  Exegete only warns on signs of an open window
+  (`qualcoder_gui_signals`)
 - Memo text from the first `#####` marker onward (QualCoder 4.0's
   private-note convention) is never sent to the AI through Exegete (an
   assistant that opens a project's files by itself reads every memo

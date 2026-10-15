@@ -879,8 +879,11 @@ for the four labels stays in NOTICE.
   project's lock file is active (QualCoder 3.8.2 has the project open,
   or another conversation is writing to it); and its help section
   speaks of "approaches to prompting (two published)", in no more
-  characters than before. README.md and TOOLS.md describe the lock
-  file's refusal the same way.
+  characters than before. README.md, TOOLS.md, PRIVACY.md, SUPPORT.md,
+  PROJECT_SELECTION_GUIDE.md, the AI coding guide and the bug report
+  form describe the lock file's refusal the same way, and where they
+  ask for the project to be closed in QualCoder, they ask it of those
+  who also use QualCoder.
 - **The help's overview points to the topic on Exegete's earlier name**
   (`moving_from_qualcoder_mcp`) only on a computer where that name was
   used: where the state folder it kept, `~/.qualcoder_mcp`, or the link

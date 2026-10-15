@@ -2148,10 +2148,11 @@ will ask, and the summary above depends on them:
 - **Consult your institution's DPO or ethics board** if you are unsure,
   before the analysis, not after.
 - Remember that Exegete's safety features (read-only default,
-  automatic local backups, refuse-while-QualCoder-is-open through the
-  lock file QualCoder 3.x writes, and for
-  QualCoder 4.0 a best-effort check of this machine's process list that
-  reports only a count, never names or command lines) protect your
+  automatic local backups, refusing to write while the project's lock
+  file is active (QualCoder 3.8 keeps it while it has the project open,
+  and Exegete during each of its own writes), and for QualCoder 4.0 a
+  best-effort check of this machine's process list that reports only a
+  count, never names or command lines) protect your
   project's **integrity on disk**; they do not change what leaves the
   machine through the conversation.
 

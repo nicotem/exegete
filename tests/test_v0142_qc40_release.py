@@ -229,9 +229,12 @@ def test_the_bug_report_form_names_the_release():
     # who use QualCoder
     assert ('description: A release (3.8.x or 4.0), or "none" if you do '
             'not use QualCoder.') in form
-    assert ("Writes are refused while QualCoder 3.x has the project open, "
-            "which its lock file shows; QualCoder 4.0 writes no lock file")\
-        in form
+    # v0.15.0, the whole-branch review's round 3: the lock file has two
+    # causes, QualCoder 3.8 or another conversation using Exegete
+    assert ("Writes are refused while the project's lock file is active "
+            "(QualCoder 3.8 has the project open, or another conversation "
+            "using Exegete is writing to it); QualCoder 4.0 writes no lock "
+            "file") in form
 
 
 def test_the_verified_check_would_notice():

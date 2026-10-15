@@ -221,9 +221,10 @@ open QualCoder 4.0 window; a released QualCoder 3.x is detected through
 its lock file) and remembers the selection as the last-used project.
 
 ### 3. `get_current_project`
-Shows which project is currently open, whether a released QualCoder has
-it open (`qualcoder_open`, from its lock file) and the QualCoder 4.0
-heuristics (`qualcoder_gui_signals`)
+Shows which project is currently open, whether the project's lock file
+is active (`qualcoder_open`: QualCoder 3.8 has the project open, or
+another conversation using Exegete is writing to it) and the signs of
+an open QualCoder 4.0 window (`qualcoder_gui_signals`)
 
 **No parameters**
 

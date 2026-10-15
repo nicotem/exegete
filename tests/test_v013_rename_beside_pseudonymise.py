@@ -57,6 +57,23 @@ def test_the_residue_count_follows_the_rename(project):
 
 
 def test_the_preview_says_what_a_rename_cannot_reach(project):
+    # v0.15.0, not presuming QualCoder, piece 11: each saved place is
+    # named only when it holds a row, so this project saves one in each
+    # (its tables as QualCoder 4.0 creates them, new_project.TABLES)
+    con = sqlite3.connect(str(project / "data.qda"))
+    con.execute("CREATE TABLE manage_files_display (mfid integer primary "
+                "key, name text, tblrows text, tblcolumns text, owner text)")
+    con.execute("CREATE TABLE files_filter (filterid integer primary key, "
+                "name text, filter text, owner text)")
+    con.execute("INSERT INTO graph (grid, name) VALUES (1, 'A graph')")
+    con.execute("INSERT INTO manage_files_display (mfid, name) "
+                "VALUES (1, 'A display')")
+    con.execute("INSERT INTO stored_sql (title, ssql) "
+                "VALUES ('A query', 'select 1')")
+    con.commit()
+    con.close()
+    server.db.close()
+    server.db = QualcoderDatabase(str(project))
     residue = preview_of()["preview"]["residue"]
     note = residue["scope_note"]
     assert ("The labels include case and file names, which rename_case "

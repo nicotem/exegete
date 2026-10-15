@@ -11617,39 +11617,87 @@ def list_backups() -> str:
     if unclean:
         answer["unclean_backups"] = unclean
         answer["unclean_note"] = _mark_unregistered(UNCLEAN_BACKUP_NOTE)
+    history = _qualcoder_history()
+    notes = _list_backups_notes(
+        project_folder, any(b["kind"] == "qualcoder" for b in backups),
+        history.level if history is not None else "none")
     # The notes and the hint name restore_backup and prune_backups, which
     # the core set does not register; there they are marked so.
     return json.dumps({
         **answer,
-        "notes": [_mark_unregistered(note) for note in [
-            "kind='qualcoder' backups are made by QualCoder itself on "
-            "project open; they may exclude audio/video files and QualCoder "
-            "deletes them again when a session made no changes.",
-            "QualCoder 3.8.0 through 3.8.2 may also store backups in the "
-            "QualCoder settings 'directory' (not listed here); newer "
-            "QualCoder builds write _BKUP_ backups next to the project "
-            "again, and those ARE listed with kind='qualcoder'.",
-            "Exegete's backups (kind='exegete', which was kind='mcp' "
-            "before 0.15.0) accumulate until pruned; use "
-            "prune_backups(keep_last=..., older_than_days=...) to reclaim "
-            "disk space (retention never touches QualCoder's own backups).",
-            "Backups include the whole project tree, ai_data/ included "
-            "(QualCoder 4.0's AI prompt library and chat history are "
-            "non-regenerable user data), but exclude the regenerable "
-            "vector-search database ai_data/search.sqlite and its sqlite "
-            "sidecar files, like QualCoder's own backups. QualCoder "
-            "rebuilds search.sqlite when the project is opened.",
-            "Since v0.14 Exegete copies the project database with "
-            "SQLite's own online backup, so a backup taken while QualCoder "
-            "is writing holds what was last committed, and the database's "
-            "journal and WAL files are never copied (QualCoder's own "
-            "backups copy the database as a file). A backup that holds "
-            "them is marked unclean and is not restored."
-        ]],
+        "notes": [_mark_unregistered(note) for note in notes],
         "hint": _mark_unregistered(
             "Use restore_backup(backup_path) to roll the project back to "
             "one of these snapshots.")
     }, indent=2)
+
+
+# list_backups' notes (v0.15.0, not presuming QualCoder, piece 11): the
+# facts about Exegete's backups always; what concerns QualCoder only on a
+# sign, each named where it is read.
+QUALCODER_BACKUPS_NOTE = (
+    "kind='qualcoder' backups are made by QualCoder itself on project "
+    "open; they may exclude audio/video files and QualCoder deletes them "
+    "again when a session made no changes.")
+QUALCODER_38_BACKUPS_NOTE = (
+    "If the researcher uses QualCoder 3.8.0 to 3.8.2, it may keep further "
+    "backups in the folder set in its settings; those are not listed "
+    "here.")
+# What a backup holds is a fact about Exegete's backups, said always;
+# what it adds on ai_data/ only when the project holds that folder (fix
+# round 1). QualCoder 3.8.2 makes the folder too, with the prompt library
+# (ai_prompts.py:465) and the chat history (ai_chat.py:185-187) in it and
+# its own search index under ai_data/vectorstore (ai_vectorstore.py:297),
+# at the tag 3.8.2, which backups keep; only 4.0's ai_data/search.sqlite
+# is left out (BACKUP_IGNORE_PATTERNS).
+BACKUPS_HOLD_NOTE = (
+    "Backups hold the whole project folder, except lock files and "
+    "SQLite's working files.")
+AI_DATA_BACKUPS_NOTE = (
+    "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
+    "also holds its AI prompt library and chat history, which backups "
+    "keep (and pruning removes). Backups leave out QualCoder 4.0's AI "
+    "search index, ai_data/search.sqlite, which QualCoder rebuilds when it "
+    "next opens the project with AI enabled, so a restored project without "
+    "one is normal.")
+
+
+def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
+                        level: str) -> List[str]:
+    """list_backups' notes. `qualcoder_listed`: a backup of kind
+    'qualcoder' is in the list just built (the first note, and the
+    parentheses on QualCoder's own backups). `level`: the project's
+    history with QualCoder, `History.level`, "none" when there is none
+    (the note on QualCoder 3.8.0 to 3.8.2). The note on what backups
+    hold always, with what it adds on ai_data/ when the project holds
+    that folder, checked now."""
+    notes = []
+    if qualcoder_listed:
+        notes.append(QUALCODER_BACKUPS_NOTE)
+    if level != "none":
+        notes.append(QUALCODER_38_BACKUPS_NOTE)
+    # It names prune_backups, which the core set does not register:
+    # marked where it is written, as the caller marks every note
+    notes.append(_mark_unregistered(
+        "Exegete's backups (kind='exegete', which was kind='mcp' before "
+        "0.15.0) accumulate until pruned; use prune_backups(keep_last=..., "
+        "older_than_days=...) to reclaim disk space"
+        + (" (retention never touches QualCoder's own backups)."
+           if qualcoder_listed else ".")))
+    notes.append(BACKUPS_HOLD_NOTE
+                 + (" " + AI_DATA_BACKUPS_NOTE
+                    if qualcoder_history.ai_data_found(project_folder)
+                    else ""))
+    notes.append(
+        "Since v0.14 Exegete copies the project database with SQLite's own "
+        "online backup, so a backup taken while another program is writing "
+        "to the project holds what was last committed, and the database's "
+        "journal and WAL files are never copied"
+        + (" (QualCoder's own backups copy the database as a file)"
+           if qualcoder_listed else "")
+        + ". A backup that holds them is marked unclean and is not "
+          "restored.")
+    return notes
 
 
 UNCLEAN_BACKUP_NOTE = (
@@ -11911,9 +11959,13 @@ def prune_backups(keep_last: Optional[int] = None,
             "would_keep": [b["name"] for b in kept],
             "reclaimed_mb": reclaimed_mb,
             **_never_removed_block(not_ours),
+            # QualCoder's own backups named only when one is beside the
+            # project (v0.15.0, not presuming QualCoder, piece 11)
             "hint": "Call prune_backups again with the preview_token to "
-                    "delete these backup folders. QualCoder's own _BKUP_ "
-                    "backups are never touched.",
+                    "delete these backup folders."
+                    + (" QualCoder's own _BKUP_ backups are never touched."
+                       if any(b["kind"] == "qualcoder"
+                              for b in all_backups) else ""),
         }
         # A kept backup restore_backup would refuse (fix round 1): a
         # retention policy can otherwise keep only backups that cannot
@@ -16766,8 +16818,48 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     return warnings
 
 
+# After a pseudonymisation run (v0.15.0, not presuming QualCoder, piece
+# 11): the note on an open QualCoder window only where the project or
+# this computer shows QualCoder, or the researcher said they use it; the
+# notes on QualCoder's AI files only for a file the project holds.
+PSEUDONYMISE_WINDOW_NOTE = (
+    "If the project is open in a QualCoder window, that window will not "
+    "refresh from this write on its own: it has no file watcher. "
+    "Re-selecting the file in the Files list re-reads it, and reopening "
+    "the project always does.")
+PSEUDONYMISE_SEARCH_INDEX_NOTE = (
+    "QualCoder 4.0's AI search index in this project "
+    "(ai_data/search.sqlite) still holds the previous text and re-indexes "
+    "the source the next time QualCoder opens the project with AI "
+    "enabled.")
+PSEUDONYMISE_CHAT_HISTORY_NOTE = (
+    "QualCoder's AI chat history in this project "
+    "(ai_data/chat_history.sqlite) may quote the text as it was before "
+    "this run, real names included, and is not changed by it; it travels "
+    "with the project folder if the folder is shared.")
+
+
+def _pseudonymise_ai_files_note(search_index: bool,
+                                chat_history: bool) -> Optional[str]:
+    """The note on QualCoder's AI files a run cannot reach, naming the
+    one or both the project holds; None when it holds neither."""
+    parts = []
+    if search_index:
+        parts.append(PSEUDONYMISE_SEARCH_INDEX_NOTE)
+    if chat_history:
+        parts.append(PSEUDONYMISE_CHAT_HISTORY_NOTE)
+    if not parts:
+        return None
+    parts.append("Exegete neither reads nor writes "
+                 + ("either file." if len(parts) == 2 else "it."))
+    return " ".join(parts)
+
+
 def _pseudonymise_notes(backup_name: Optional[str],
-                        file_rewritten: bool = True) -> List[str]:
+                        file_rewritten: bool = True, *,
+                        qualcoder_seen: bool = False,
+                        search_index: bool = False,
+                        chat_history: bool = False) -> List[str]:
     """What is true after a run, whether or not anyone asks (D1 3.5).
 
     The backup is named rather than merely alluded to: a note that
@@ -16777,6 +16869,11 @@ def _pseudonymise_notes(backup_name: Optional[str],
     The positions note is said only when the file's text was rewritten:
     a run that rewrote notes and no file text (rewrite_memos on, no
     match in the file) moved no position (Brief 2, 4.8).
+
+    On a sign (v0.15.0): `qualcoder_seen`, the project's history with
+    QualCoder at a level other than "none", gives the note on an open
+    QualCoder window; `search_index` and `chat_history`, each of
+    QualCoder's AI files the project holds, the note that names them.
     """
     backup = (f"The backup taken before this run ({backup_name}) contains"
               if backup_name else "The backup taken before this run "
@@ -16786,20 +16883,16 @@ def _pseudonymise_notes(backup_name: Optional[str],
         "changed: re-read it before any further coding, and treat any "
         "pending coding suggestion for it as stale."] if file_rewritten \
         else []
-    return positions + [
+    notes = positions + [
         f"{backup} the pre-pseudonymisation text and, if the researcher "
         f"keeps one, pseudonyms.json; both hold the real names. Secure or "
-        f"prune it with prune_backups once the run is verified.",
-        "An open QualCoder window will not refresh from this write on its "
-        "own: it has no file watcher. Re-selecting the file in the Files "
-        "list re-reads it, and reopening the project always does.",
-        "QualCoder 4.0's AI search index (ai_data/search.sqlite), if this "
-        "project has one, still holds the previous text and re-indexes the "
-        "source the next time QualCoder opens the project with AI enabled. "
-        "Its chat history (ai_data/chat_history.sqlite) can hold the "
-        "previous text too and is never re-indexed; Exegete neither "
-        "reads nor writes either file.",
-    ]
+        f"prune it with prune_backups once the run is verified."]
+    if qualcoder_seen:
+        notes.append(PSEUDONYMISE_WINDOW_NOTE)
+    ai_files = _pseudonymise_ai_files_note(search_index, chat_history)
+    if ai_files is not None:
+        notes.append(ai_files)
+    return notes
 
 
 def _pseudonymise_mapping_notes(result: Dict[str, Any],
@@ -18193,9 +18286,14 @@ def pseudonymise_source(
         [item["file_id"] for item in captured["written"]["files"]])
     result["stale_sessions"] = holding
     result["stale_sessions_with_work_to_apply"] = to_apply
+    history = _qualcoder_history()
+    project_folder = Path(project_path_at_start).parent
     result["notes"] = _pseudonymise_notes(
         Path(backup_path).name if backup_path else None,
-        file_rewritten=bool(captured["written"]["files"]))
+        file_rewritten=bool(captured["written"]["files"]),
+        qualcoder_seen=history is not None and history.level != "none",
+        search_index=qualcoder_history.search_index_found(project_folder),
+        chat_history=qualcoder_history.chat_history_found(project_folder))
     result["notes"].extend(_sessions_note(holding, to_apply))
     memos = captured["written"].get("memos")
     if memos is not None:

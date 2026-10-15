@@ -186,6 +186,18 @@ def _ai_data_file_found(project_folder: PathLike, name: str) -> bool:
         lambda: (Path(project_folder) / "ai_data" / name).is_file())
 
 
+def chat_history_found(project_folder: PathLike) -> bool:
+    """The project holds QualCoder's AI chat history,
+    `ai_data/chat_history.sqlite`, as a file."""
+    return _ai_data_file_found(project_folder, "chat_history.sqlite")
+
+
+def search_index_found(project_folder: PathLike) -> bool:
+    """The project holds QualCoder 4.0's AI search index,
+    `ai_data/search.sqlite`, as a file."""
+    return _ai_data_file_found(project_folder, "search.sqlite")
+
+
 def qualcoder_backup_beside(project_folder: PathLike) -> bool:
     """A folder named `<stem>_BKUP_*.qda` sits beside the project: one of
     QualCoder's own backups. Its absence proves nothing (QualCoder
@@ -244,9 +256,9 @@ def work_out(project_folder: PathLike, *, scan_processes: bool,
     signs = []
     if ai_data_found(project_folder):
         signs.append(AI_DATA_SIGN)
-    if _ai_data_file_found(project_folder, "chat_history.sqlite"):
+    if chat_history_found(project_folder):
         signs.append(CHAT_HISTORY_SIGN)
-    if _ai_data_file_found(project_folder, "search.sqlite"):
+    if search_index_found(project_folder):
         signs.append(SEARCH_INDEX_SIGN)
     if qualcoder_backup_beside(project_folder):
         signs.append(BACKUP_SIGN)

@@ -30,6 +30,7 @@ suite that builds one is testing its own invention.
 
 import ast
 import collections
+import itertools
 import json
 import logging
 import os
@@ -458,6 +459,9 @@ class TestResidue:
                     "1,'d','TestCoder')")
         con.commit()
         con.close()
+        # v0.15.0, not presuming QualCoder, piece 11: the note on the
+        # ai_data folder is given only when the project holds one
+        (project / "ai_data").mkdir()
         server.db.close()
         server.db = QualcoderDatabase(str(project))
         residue = preview_of()["preview"]["residue"]
@@ -2405,7 +2409,16 @@ class TestTheLabelsAndMemosTheResidueCounts:
         all twelve note fields since v0.14 (it reached three, and the
         note said so), with a hidden coder's notes left out; and
         `search_files` reads narrower than this block, so a researcher
-        sent there is told."""
+        sent there is told.
+
+        v0.15.0, not presuming QualCoder, piece 11: the clause on a coder
+        hidden in QualCoder is given only when the project hides one, so
+        this project hides one. Fix round 1: the clause names the setting
+        rather than presuming the researcher made it, and says which read
+        gives that coder's coding notes."""
+        hide_coder(project, "Hidden Coder")
+        server.db.close()
+        server.db = QualcoderDatabase(str(project))
         note = preview_of()["preview"]["residue"]["scope_note"]
         # Decision A, said once in the preview and once in the
         # description; since v0.13's Brief 2 the notes are named with the
@@ -2419,8 +2432,10 @@ class TestTheLabelsAndMemosTheResidueCounts:
         assert "Each count is two readings, wide and whole-word." in note
         assert ("search_memos searches the public part of all twelve "
                 "fields and names each result's kind; it leaves out the "
-                "coding notes and annotations of a coder hidden in "
-                "QualCoder, which are read there." in note)
+                "coding notes and annotations of a coder the project hides "
+                "(a visibility setting made in QualCoder); "
+                "get_coded_segments reads that coder's coding notes when "
+                "the coder is named." in note)
         assert ("search_files reads narrower than this block does (a plain "
                 "substring, no normalisation), so a name it does not find "
                 "may still be counted here." in note)
@@ -5996,12 +6011,20 @@ class TestTheDeclaredRoutesAreNarrowerThanAPosition:
         """
         rule = next(r for r in DECLARED_ROUTES
                     if r.path.pattern.startswith(r"^\.notes"))
+        # v0.15.0, not presuming QualCoder, piece 11: the window note and
+        # the AI files' note come on their signs, so every combination
+        # of signs is read, the fullest giving four notes
         for backup_name in ("study_backup_20260101_000000.qda", None):
-            notes = server._pseudonymise_notes(backup_name)
-            assert len(notes) == 4, notes
-            allowed = [text for text in notes if rule.text.match(text)]
-            assert len(allowed) == 1, notes
-            assert allowed[0].startswith("The backup taken before this run")
+            for seen, index, chat in itertools.product((True, False),
+                                                       repeat=3):
+                notes = server._pseudonymise_notes(
+                    backup_name, qualcoder_seen=seen, search_index=index,
+                    chat_history=chat)
+                assert len(notes) == 2 + seen + (index or chat), notes
+                allowed = [text for text in notes if rule.text.match(text)]
+                assert len(allowed) == 1, notes
+                assert allowed[0].startswith(
+                    "The backup taken before this run")
 
     def test_the_file_text_route_admits_the_name_and_nothing_else(self):
         """v0.13, ruling 12. The block's file name is declared; a form,
@@ -7876,13 +7899,22 @@ class TestImportRider:
 
 class TestResultShape:
 
-    def test_the_result_carries_the_notes(self, project):
+    def test_the_result_carries_the_notes(self, project, monkeypatch):
         """The four notes of v0.12, and on the typed path the mapping note
-        of ruling 14d (Brief 2), by their opening words."""
+        of ruling 14d (Brief 2), by their opening words.
+
+        v0.15.0, not presuming QualCoder, piece 11: the window note comes
+        when the project or this computer shows QualCoder (here the
+        researcher's setting "yes"), and the AI files' note when the
+        project holds one of them (here both)."""
+        monkeypatch.setenv("EXEGETE_USES_QUALCODER", "yes")
+        (project / "ai_data").mkdir()
+        (project / "ai_data" / "search.sqlite").write_bytes(b"index")
+        (project / "ai_data" / "chat_history.sqlite").write_bytes(b"chat")
         result = execute_from(preview_of())
         assert [note.split(" ")[:3] for note in result["notes"]] == [
             ["Positions", "after", "the"], ["The", "backup", "taken"],
-            ["An", "open", "QualCoder"], ["QualCoder", "4.0's", "AI"],
+            ["If", "the", "project"], ["QualCoder", "4.0's", "AI"],
             ["The", "mapping", "you"]]
         joined = " ".join(result["notes"])
         assert ("Positions after the first replacement in this file have "
@@ -7891,8 +7923,8 @@ class TestResultShape:
         assert "Positions in these files have changed" not in joined
         assert "in these files" not in joined
         assert "backup" in joined
-        assert "open QualCoder window" in joined
-        assert "search index" in joined
+        assert "open in a QualCoder window" in joined
+        assert "search index" in joined and "chat history" in joined
         _house_rules(result["notes"])
 
     def test_the_result_reports_both_lengths_and_the_new_digest(

@@ -627,15 +627,19 @@ class TestProcessScanCallersAreDocumented:
                 "start_coding_session", "restore_backup", "import_documents",
                 # v0.15.0: after a change, whether its answer mentions
                 # QualCoder (the project's history with QualCoder)
-                "set_project_coder_name"}
+                "set_project_coder_name",
+                # v0.15.0, not presuming QualCoder, piece 11: whether
+                # their notes speak of QualCoder (the same history)
+                "list_backups", "pseudonymise_source"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's
-        # callers are these six (restore_backup and import_documents:
+        # callers are these eight (restore_backup and import_documents:
         # their previews, the calls without a token;
-        # set_project_coder_name: the change, through the project's
-        # history with QualCoder). Update PRIVACY.md and TOOLS.md when
-        # this set grows.
+        # set_project_coder_name: the change, list_backups, and
+        # pseudonymise_source: the run, through the project's history
+        # with QualCoder). Update PRIVACY.md and TOOLS.md when this set
+        # grows.
         assert _tools_running_the_process_scan() == self.EXPECTED
 
     def test_privacy_doc_names_every_caller(self):

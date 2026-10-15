@@ -107,11 +107,19 @@ class TestT14BackupSidecars:
 class TestT15BackupNotes:
 
     def test_notes_scope_settings_directory_to_382(self, setup_server,
-                                                   qualcoder_db_path):
+                                                   qualcoder_db_path,
+                                                   monkeypatch):
+        """v0.15.0, not presuming QualCoder, piece 11: the note is given
+        on a sign of QualCoder (here the researcher's setting "yes"), in
+        the audit's words, still scoped to 3.8.0 to 3.8.2. Its sentence
+        on newer builds' _BKUP_ backups is gone: a listed one now has its
+        own note (test_master_style_sibling_bkup_listed)."""
+        monkeypatch.setenv("EXEGETE_USES_QUALCODER", "yes")
         out = json.loads(server.list_backups())
         notes = " ".join(out["notes"])
-        assert "3.8.0 through 3.8.2" in notes
-        assert "next to the project again" in notes
+        assert ("If the researcher uses QualCoder 3.8.0 to 3.8.2, it may "
+                "keep further backups in the folder set in its settings; "
+                "those are not listed here.") in notes
 
     def test_master_style_sibling_bkup_listed(self, setup_server,
                                               qualcoder_db_path):
@@ -122,6 +130,9 @@ class TestT15BackupNotes:
         out = json.loads(server.list_backups())
         kinds = {b["name"]: b["kind"] for b in out["backups"]}
         assert kinds.get(sibling.name) == "qualcoder"
+        assert any(note.startswith("kind='qualcoder' backups are made by "
+                                   "QualCoder itself")
+                   for note in out["notes"])
 
 
 # ===========================================================================

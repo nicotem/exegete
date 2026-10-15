@@ -738,7 +738,9 @@ class TestTheWords:
         section = _collapsed(_section(
             unreleased, "### Changed: a project's history with QualCoder"))
         assert "—" not in section
-        assert "worked out once, when a project is selected" in section
+        # piece 11, fix round 1: once for each project, at selection or
+        # at the first answer that reads it
+        assert "worked out once for each project" in section
         assert "`qualcoder_history`" in section
         assert "no longer read as a sign that QualCoder has the project " \
                "open when no QualCoder is running" in section

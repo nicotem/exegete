@@ -621,6 +621,47 @@ have not changed.
   split it into parts and import each; QualCoder, if you use it,
   imports it whole."
 
+### Changed: notes about QualCoder's backups, windows, AI files and saved places, on a sign
+
+The notes below are now given only when the project or this computer
+shows that QualCoder has been used, or the researcher said they use it,
+or when the project holds what the note is about. The facts about
+Exegete in the same answers are always given; which backups are listed
+and their kinds, what pruning removes and keeps, and every count have
+not changed.
+
+- **`list_backups` and `prune_backups`**: the note on backups of kind
+  `qualcoder`, and the remarks that retention never touches QualCoder's
+  own backups and that they copy the database as a file, come only when
+  one of QualCoder's backups is listed; `prune_backups`' preview says
+  that QualCoder's own `_BKUP_` backups are never touched only when one
+  is beside the project. The note on QualCoder 3.8.0 to 3.8.2 reads "If
+  the researcher uses QualCoder 3.8.0 to 3.8.2, it may keep further
+  backups in the folder set in its settings; those are not listed
+  here.", and comes only when the project or this computer shows
+  QualCoder, or the setting "Do you also use QualCoder on this
+  computer?" says yes (with "no", QualCoder's settings folder alone does
+  not bring it). The note on the `ai_data` folder comes only when the
+  project has one, and says that backups hold the whole project folder
+  except `ai_data/search.sqlite`, a search index that can be rebuilt,
+  and its sidecar files. The note on how Exegete copies the database
+  speaks of a backup taken while "another program" is writing to the
+  project.
+- **After a pseudonymisation run**: the note on an open QualCoder window
+  opens "If the project is open in a QualCoder window" and comes on the
+  same signs as the note on QualCoder 3.8.0 to 3.8.2; the note on
+  QualCoder's AI search index and chat history comes only when the
+  project holds either file, and names the one or both it holds.
+- **The pseudonymisation preview**: its note on the `ai_data` folder
+  comes only when the folder is there; its note on what it reads speaks
+  of the notes of a coder hidden in QualCoder only when the project
+  hides one, and, among what a rename does not reach, names saved graph
+  labels, saved table displays and filters, and QualCoder's saved SQL
+  queries each only when that place holds a saved row (the stored copy
+  and path of an imported file always); and the note on hidden coders'
+  notes comes only when there is one, the count being given always.
+  Whether a saved place holds a row is read without reading the row.
+
 ### Measured
 
 - Serialised tool JSON: full = 205,077 characters (about 51.3k tokens

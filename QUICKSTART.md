@@ -113,7 +113,8 @@ Or via Claude Desktop: Settings > Developer > Edit Config
       "command": "/Users/yourname/Documents/exegete/venv/bin/python",
       "args": ["-m", "exegete.server"],
       "env": {
-        "EXEGETE_PROJECT_PATH": "/Users/yourname/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/yourname/Documents/QualCoder_projects/MyProject/MyProject.qda",
+        "EXEGETE_CODER_NAME": "Your name"
       }
     }
   }
@@ -123,6 +124,8 @@ Or via Claude Desktop: Settings > Developer > Edit Config
 Replace:
 - `yourname` with your actual username
 - The paths with your actual paths from steps above
+- `Your name` with your own coder name, or leave that line out to be
+  asked when a project is made
 
 **No project yet?** Leave out the `env` block, as below: Exegete then
 starts with no project selected, and in step 5 you can ask the

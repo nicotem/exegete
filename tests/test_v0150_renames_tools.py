@@ -112,7 +112,11 @@ DROPPED_EXAMPLE = '"How do I use analyze_for_coding?"'
 def _put_back(text):
     for old, new in RENAMED.items():
         text = re.sub(rf"\b{new}\b", old, text)
-    return text
+    # The whole-branch review of v0.15.0, round 1, moved the removals
+    # announced for v0.15 to v0.15.1 (ruling 70): put back the release the
+    # rename's descriptions named, so that what the rename changed is
+    # still checked to be the names alone
+    return text.replace("removed in v0.15.1:", "removed in v0.15:")
 
 
 # A later v0.15.0 piece that rewords one of the descriptions above:
@@ -795,8 +799,11 @@ class TestTheDocuments:
                 "same.") in others
         sets = others[others.index("### Changed: one tool set called full"):]
         sets = sets[:sets.index("###", 5)]
-        assert ("78 tools (80 with the earlier names of the two tools "
+        # one count for `full`: set_project_coder_name included
+        # (whole-branch review, round 1)
+        assert ("79 tools (81 with the earlier names of the two tools "
                 "renamed below), creating a project") in sets
+        assert "78 tools (80" not in sets
         assert ("`core` keeps its 23 tools (25 with the two earlier names "
                 "below), without creating a project.") in sets
         assert "`core` is unchanged" not in sets
@@ -838,3 +845,51 @@ class TestTheDocuments:
         assert "### Step 2: Start a Coding Session" in workflow
         assert ("2. Starts a new coding session with unique ID "
                 "(`start_coding_session`),") in workflow
+
+
+# ---------------------------------------------------------------------------
+# Help under the new names (whole-branch review, round 1)
+# ---------------------------------------------------------------------------
+
+class TestHelpUnderTheNewNames:
+    """The help tool answered "Unknown tool" for start_coding_session and
+    read_file_with_codings, the names every text now uses, and offered
+    the coding loop's help only under the name being retired."""
+
+    def test_the_new_name_reads_the_earlier_name_s_topic(self):
+        new = server.explain_ai_coding_tools("start_coding_session")
+        assert new == server.explain_ai_coding_tools("analyze_for_coding")
+        answer = json.loads(new)
+        assert "error" not in answer
+        # the topic is deprecated under either name, and says so
+        assert answer["deprecated"] == server.DEPRECATED_HELP_TOPICS
+
+    @pytest.mark.parametrize("name", ["read_file_with_codings",
+                                      "analyze_file_with_coding",
+                                      "select_project", "read_brief"])
+    def test_a_tool_with_no_topic_is_not_unknown(self, name):
+        answer = json.loads(server.explain_ai_coding_tools(name))
+        assert "error" not in answer
+        assert "Unknown tool" not in json.dumps(answer)
+        assert answer["tool"] == name
+        assert answer["note"] == (
+            f"{name} has no help topic of its own: its description "
+            f"documents its arguments, refusals and overrides.")
+        assert "analyze_for_coding" in answer["available_tools"]
+        assert "deprecated" not in answer
+
+    def test_in_core_a_tool_it_lacks_is_marked(self):
+        server._apply_toolset("core")
+        try:
+            answer = json.loads(server.explain_ai_coding_tools(
+                "create_project"))
+        finally:
+            server._apply_toolset("full")
+        assert answer["note"].startswith(
+            "create_project (not available in this tool set) has no help "
+            "topic of its own")
+
+    def test_a_name_exegete_does_not_have_is_still_unknown(self):
+        answer = json.loads(server.explain_ai_coding_tools("no_such_tool"))
+        assert answer["error"] == "Unknown tool: no_such_tool"
+        assert "tool" not in answer

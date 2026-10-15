@@ -529,6 +529,49 @@ class TestTheThreeRefusals:
             "coder name as coder_name. Nothing was created.")
         _nothing_made(tmp_path)
 
+    # Whole-branch review, round 1 (parity, finding 2): the names AI work
+    # is stored under that are known before a project exists are refused
+    # as the researcher's own at creation, from either source, as
+    # set_project_coder_name refuses them
+    AI_NAMES = ["AI Agent", "AI Coding Assistant"]
+
+    @pytest.mark.parametrize("name", AI_NAMES)
+    def test_an_ai_name_given_for_the_researcher(self, name, tmp_path):
+        answer = _create("Study", tmp_path, coder_name=name)
+        assert _refused(answer) == (
+            f"\"{name}\" is a name AI work is stored under (Exegete's "
+            "built-in default AI coder name, or \"AI Agent\", the name "
+            "QualCoder 4.0's assistant writes under); the researcher's own "
+            "coder name must differ, or AI rows could not be told apart "
+            "from theirs. Ask the researcher for their own coder name. "
+            "Nothing was created.")
+        _nothing_made(tmp_path)
+
+    @pytest.mark.parametrize("name", AI_NAMES)
+    @pytest.mark.parametrize("route", ROUTES)
+    def test_an_ai_name_in_the_setting(self, name, route, monkeypatch,
+                                       tmp_path):
+        places = _route(monkeypatch, route)
+        monkeypatch.setenv(CODER, name)
+        answer = _create("Study", tmp_path)
+        assert _refused(answer) == (
+            f"\"{name}\" is a name AI work is stored under (Exegete's "
+            "built-in default AI coder name, or \"AI Agent\", the name "
+            "QualCoder 4.0's assistant writes under); the researcher's own "
+            "coder name must differ, or AI rows could not be told apart "
+            "from theirs. Exegete's settings give it as the researcher's "
+            f"own coder name: ask the researcher to change "
+            f"{places['coder']}, or call again with their own coder name "
+            "as coder_name. Nothing was created.")
+        _nothing_made(tmp_path)
+        # and the correction refuses the same names
+        assert name in (server._ai_names_for_project()
+                        + [server.KNOWN_AI_ASSISTANT_OWNER])
+
+    def test_a_name_that_only_looks_like_one_is_accepted(self, tmp_path):
+        answer = _create("Study", tmp_path, coder_name="AI Agents")
+        assert answer["success"] is True, answer
+
     def test_a_refusal_rides_beside_a_place_refusal(self, monkeypatch,
                                                     tmp_path):
         monkeypatch.setenv(CODER, "Ann Lee")
@@ -813,8 +856,11 @@ class TestTheDocuments:
                 "the answer that creates the project says where the name "
                 "came from (`coder_name_source`, with `coder_name_note` when "
                 "the settings hold another name); refuses a coder name equal "
-                "to the AI coder name in the settings, and every creation "
-                "while the two settings hold one name;") in tools
+                "to the AI coder name in the settings, or one AI work is "
+                "stored under (Exegete's built-in default AI coder name, or "
+                "`AI Agent`, the name QualCoder 4.0's assistant writes "
+                "under), whether given or in the settings, and every "
+                "creation while the two settings hold one name;") in tools
         assert ("and `coder_name_notes` when a note on the researcher's own "
                 "coder name in Exegete's settings applies") in tools
         assert "`coder_name_notes` as `select_project` gives them" in tools

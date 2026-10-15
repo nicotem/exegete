@@ -580,6 +580,14 @@ OLDER_QUALCODER_ROUTE = (
     "set_project_coder_name can put your name in place of theirs while "
     "nothing is recorded under their name.")
 
+# A way on that needs no QualCoder at all, after the route in both
+# refusals of an older project (whole-branch review, round 1: the route
+# above runs through someone's QualCoder, and the owner's rule is never
+# to send the researcher to QualCoder as the only way through).
+NO_QUALCODER_ROUTE = (
+    "Without QualCoder at all, a new project made in Exegete from the "
+    "original documents is a way on, without this project's coding.")
+
 
 class DatabaseOpenError(ValueError):
     """A well-formed project location whose data.qda SQLite would not open.
@@ -3677,7 +3685,8 @@ class QualcoderDatabase:
                         "This project uses a pre-v14 schema, from a "
                         "QualCoder older than 3.8: Exegete reads it but "
                         "does not write to it, and cannot bring it up to "
-                        "date itself. " + OLDER_QUALCODER_ROUTE),
+                        "date itself. " + OLDER_QUALCODER_ROUTE + " "
+                        + NO_QUALCODER_ROUTE),
                     False)
         if self._unknown_future_schema():
             if env_settings.value("allow_unknown_schema") == "1":
@@ -3769,17 +3778,43 @@ class QualcoderDatabase:
                         else "its database schema value is missing or not "
                              "in QualCoder's form, so it is not repeated "
                              "here")
-                    # "Appears": the missing columns are the sign, and
-                    # a damaged copy can lack them too (documents
-                    # review, round 1). The route names a tool, marked
-                    # where the set lacks it.
+                    columns_said = ', '.join(
+                        table + '.' + c for c in missing)
+                    if version is not None and int(version[1:]) >= 14:
+                        # A value from v14 on is a schema that has these
+                        # columns, so the project is not from before 3.8:
+                        # it may have been damaged or altered. QualCoder
+                        # adds a missing column as it opens a project,
+                        # whatever the value (3.8.2 `__main__.py` 2768 to
+                        # 2818; 4.0, tag `4.0`, 2527 to 2580), so the
+                        # route holds (whole-branch review, round 1, and
+                        # FIX_older-projects_R1.md, the lead's first
+                        # point). The backup tools need a selected
+                        # project, so a backup is reached by selecting it.
+                        said = (
+                            f"This project reports database schema "
+                            f"{version} but lacks column(s) {columns_said}, "
+                            f"which that schema has, so it may have been "
+                            f"damaged or altered; Exegete cannot read it as "
+                            f"it is or repair it itself. A copy from before "
+                            f"the change (a backup folder beside it, "
+                            f"selected in its place, for example) may have "
+                            f"them; otherwise ")
+                    else:
+                        # "Appears": the missing columns are the sign, and
+                        # a damaged copy can lack them too (documents
+                        # review, round 1).
+                        said = (
+                            f"This project appears to have been made with a "
+                            f"QualCoder older than 3.8 ({schema}; missing "
+                            f"column(s) {columns_said}), and Exegete cannot "
+                            f"read it as it is or bring it up to date "
+                            f"itself. ")
+                    # The route names a tool, marked where the set lacks
+                    # it; the way on without QualCoder at all follows.
                     raise UnsupportedSchemaError(_mark_unregistered(
-                        f"This project appears to have been made with a "
-                        f"QualCoder older than 3.8 ({schema}; missing "
-                        f"column(s) "
-                        f"{', '.join(table + '.' + c for c in missing)}), "
-                        f"and Exegete cannot read it as it is or bring it up "
-                        f"to date itself. " + OLDER_QUALCODER_ROUTE))
+                        said + OLDER_QUALCODER_ROUTE + " "
+                        + NO_QUALCODER_ROUTE))
         except sqlite3.OperationalError as e:
             if _is_locked_error(e):
                 raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None

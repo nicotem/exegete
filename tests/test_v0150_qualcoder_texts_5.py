@@ -208,13 +208,16 @@ class TestThePutBack:
         pinned it before this piece: the same words, and on 3.13 the same
         length."""
         from test_v0142_description_cut import _fingerprint
+        # the whole-branch review's round 1 moved the removals to v0.15.1:
+        # put back too
+        from test_v0150_wb_fix_r1 import before_the_review
         pinned = {"delete_coding": (2992, 2420, "11210044336ce58c"),
                   "update_annotation": (2052, 1709, "32e8e8c22ca88105"),
                   "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f")}
         server._apply_toolset("full")
         for name, (length, solid, digest) in pinned.items():
-            text = put_back_the_lock_paragraph(
-                name, server.mcp.original_descriptions[name])
+            text = before_the_review(put_back_the_lock_paragraph(
+                name, server.mcp.original_descriptions[name]))
             got = _fingerprint(text)
             assert got[1:] == (solid, digest), name
             if sys.version_info[:2] == (3, 13):
@@ -601,8 +604,10 @@ class TestFixRound1:
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
         comment = _comment_above(source, "SERVER_INSTRUCTIONS = BRIEF_SHORT")
-        found = re.search(r"within those ([\d,]+) characters and bytes "
-                          r"\(([\d,]+) in v0\.15\.0\)", comment)
+        # (the whole-branch review, round 1: 2,048 now a margin, since
+        # Claude Code keeps 4,096 from its version 2.1.296)
+        found = re.search(r"within ([\d,]+) characters and bytes, now kept "
+                          r"as a margin \(([\d,]+) in v0\.15\.0\)", comment)
         assert found, comment
         bound, now = (int(n.replace(",", "")) for n in found.groups())
         text = server.SERVER_INSTRUCTIONS

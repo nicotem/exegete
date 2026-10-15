@@ -42,6 +42,7 @@ WINDOWS = sys.platform == "win32"
 # The real request to Time Machine, before the suite's sandbox stands it
 # aside for every test (conftest's _no_time_machine_request).
 REAL_EXCLUDE = kept_texts._exclude_from_backups
+REAL_AGAIN = kept_texts._exclude_again
 
 
 @pytest.fixture(autouse=True)
@@ -353,6 +354,19 @@ ANSWER = {"text": "Some text.\n", "signs": {}, "notes": [],
 DIGEST = "ab" * 32
 
 
+# How the log names the folder: never by its path, which holds the
+# account's name (PRIVACY.md, "Error answers and the server's log").
+SHOWN = "~/.exegete/import-texts.noindex"
+
+
+def _no_path(line):
+    """No part of the folder's real path, nor the home folder's, in a
+    log line."""
+    return all(part not in line for part in (
+        str(kept_texts.folder()), str(kept_texts.folder().parent),
+        str(Path.home())))
+
+
 def _keep(digest=DIGEST, answer=ANSWER):
     return kept_texts.keep(digest, 11, doc_readers.TEXT, 1000, answer)
 
@@ -417,7 +431,10 @@ class TestTheFolder:
         said = [r.getMessage() for r in caplog.records]
         assert len(said) == 1
         assert "belongs to another account" in said[0]
-        assert str(kept_texts.folder()) in said[0]
+        # Named under ~/.exegete, never by its path (whole-branch review,
+        # security, round 1)
+        assert SHOWN in said[0]
+        assert _no_path(said[0])
 
     @pytest.mark.skipif(not (POSIX or WINDOWS), reason="links")
     def test_a_link_in_its_place_keeps_nothing_and_the_import_reads(
@@ -437,8 +454,10 @@ class TestTheFolder:
         done = _import([str(folder)], preview)
         assert done["success"] is True, done
         assert len(starts) == 2
-        assert any("is a link, or not an ordinary folder" in r.getMessage()
-                   for r in caplog.records)
+        said = [r.getMessage() for r in caplog.records
+                if "is a link, or not an ordinary folder" in r.getMessage()]
+        assert said and all(SHOWN in line and _no_path(line)
+                            for line in said)
 
     def test_marked_not_indexed(self, monkeypatch):
         marked = []
@@ -494,7 +513,57 @@ class TestTimeMachine:
         calls, _answer = runs
         for platform in ("win32", "linux"):
             assert REAL_EXCLUDE(tmp_path, platform) is False
+            assert REAL_AGAIN(tmp_path, platform) is False
         assert calls == []
+
+    def _a_later_run(self, monkeypatch):
+        """The folder made in an earlier run (its request stood aside),
+        then a new run on a Mac, with the real request and question."""
+        assert _keep() is True
+        monkeypatch.setattr(kept_texts, "_time_machine_asked", False)
+        monkeypatch.setattr(
+            kept_texts, "_exclude_from_backups",
+            lambda path, platform=None: REAL_EXCLUDE(path, "darwin"))
+        monkeypatch.setattr(
+            kept_texts, "_exclude_again",
+            lambda path, platform=None: REAL_AGAIN(path, "darwin"))
+
+    @pytest.mark.parametrize("excluded", [True, False])
+    def test_an_existing_folder_is_asked_about_once_in_each_run(
+            self, excluded, monkeypatch, runs, caplog):
+        """Whole-branch review, security, round 1: a request that failed
+        when the folder was made is not final. Each run that finds the
+        folder asks Time Machine once whether it leaves it out, and asks
+        it to only when it does not; never again in that run."""
+        calls, answer = runs
+        self._a_later_run(monkeypatch)
+        said_by_tool = b"[Excluded]" if excluded else b"[Included]"
+        answer["isexcluded"] = lambda: subprocess.CompletedProcess(
+            [], 0, stdout=said_by_tool + b"  " + str(
+                kept_texts.folder()).encode() + b"\n")
+        caplog.set_level(logging.WARNING, logger="exegete.kept_texts")
+        assert _keep(digest="cd" * 32) is True
+        assert _keep(digest="ef" * 32) is True
+        assert _load(digest="cd" * 32) == ANSWER
+        place = str(kept_texts.folder())
+        asked = [(["/usr/bin/tmutil", "isexcluded", place], 1)]
+        if not excluded:
+            asked.append((["/usr/bin/tmutil", "addexclusion", place], 3))
+        assert calls == asked
+        assert [r.getMessage() for r in caplog.records] == []
+
+    def test_a_failed_request_in_a_later_run_is_logged_without_a_path(
+            self, monkeypatch, runs, caplog):
+        calls, answer = runs
+        self._a_later_run(monkeypatch)
+        answer["do"] = lambda: subprocess.CompletedProcess([], 1)
+        caplog.set_level(logging.WARNING, logger="exegete.kept_texts")
+        assert _keep(digest="cd" * 32) is True
+        assert [command[1] for command, _limit in calls] == [
+            "isexcluded", "addexclusion", "isexcluded"]
+        said = [r.getMessage() for r in caplog.records]
+        assert len(said) == 1 and "could not confirm" in said[0]
+        assert SHOWN in said[0] and _no_path(said[0])
 
     @pytest.mark.parametrize("failure", ["code", "slow", "missing"])
     def test_a_failure_is_logged_once_and_keeping_goes_on(
@@ -517,6 +586,7 @@ class TestTimeMachine:
         assert _load() == ANSWER
         said = [r.getMessage() for r in caplog.records]
         assert len(said) == 1 and "Time Machine" in said[0]
+        assert SHOWN in said[0] and _no_path(said[0])
         # The request, then the question whether the folder is left out,
         # which fails the same way here
         assert [command[1] for command, _limit in calls] == [

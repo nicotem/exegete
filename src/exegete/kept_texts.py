@@ -16,9 +16,10 @@ kept text is found only under that digest.
   narrowed), with a short note. Not a link or junction, a folder, and on
   POSIX this account's, or nothing is kept or used (one warning names
   it and why). Spotlight skips it by its ending; on Windows it is marked
-  "not content indexed"; on a Mac, Time Machine is asked once, when the
-  folder is made, to leave it out (best effort; a warning only when
-  Time Machine then says the folder is not left out).
+  "not content indexed"; on a Mac, Time Machine is asked to leave it out
+  when the folder is made, and asked again once in each run that finds
+  it not left out (best effort; a warning only when Time Machine then
+  says the folder is not left out).
 - One entry per text, `<name>.json` (0600): the name is keyed with the
   preview-token secret, so it confirms no guessed content; the content
   is ASCII JSON signed with the same secret.
@@ -29,7 +30,9 @@ kept text is found only under that digest.
   that time has passed (or when dated more than five minutes ahead, a
   clock put back since), at each start and each import.
 
-Nothing here ever logs a document's text or a file's name.
+Nothing here ever logs a document's text or a file's name, nor the
+folder's own path: the log names it `~/.exegete/import-texts.noindex`
+(PRIVACY.md: the log carries no path).
 """
 
 import hashlib
@@ -45,7 +48,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from . import __version__, import_reading, preview_tokens, reading_folder
+from . import (__version__, import_reading, names, preview_tokens,
+               reading_folder, state_folder)
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +103,10 @@ it copies the documents themselves.
 
 # The problems already logged, so that each is said once.
 _warned: set = set()
+# Whether this run has already asked Time Machine about an existing
+# folder (whole-branch review, security, round 1: a request that failed
+# when the folder was made is asked again, once in each run).
+_time_machine_asked = False
 
 
 def _now() -> int:
@@ -109,6 +117,15 @@ def _now() -> int:
 def folder() -> Path:
     """Where the kept texts are (not created)."""
     return preview_tokens.state_home() / FOLDER_NAME
+
+
+def shown() -> str:
+    """The folder as the log names it: under `~/.exegete`, or the state
+    folder this run uses, never the full path, which holds the account's
+    name (PRIVACY.md, "Error answers and the server's log", whole-branch
+    review, security, round 1)."""
+    return state_folder.in_this_run(
+        f"~/{names.STATE_FOLDER}/{FOLDER_NAME}")
 
 
 def _problem(path: Path, info: os.stat_result) -> Optional[str]:
@@ -130,7 +147,7 @@ def _warn_once(path: Path, why: str) -> None:
         "Exegete's folder for the texts an import's preview reads (%s) %s, "
         "so nothing is kept or used there and each import reads its files "
         "again. Removing it lets Exegete make the folder again.",
-        path, why)
+        shown(), why)
 
 
 def _usable(path: Path) -> bool:
@@ -189,8 +206,21 @@ def _exclude_from_backups(path: Path, platform: Optional[str] = None) -> bool:
         "Exegete could not confirm that Time Machine leaves out its folder "
         "for the texts an import's preview reads (%s): %s. Keeping goes on; "
         "you can leave the folder out in Time Machine's own settings.",
-        path, why)
+        shown(), why)
     return False
+
+
+def _exclude_again(path: Path, platform: Optional[str] = None) -> bool:
+    """On a Mac, for a folder made in an earlier run: ask Time Machine
+    whether it leaves the folder out (an answer within a second), and
+    only when it does not, ask it again to (_exclude_from_backups), so
+    that a request that failed once is not final. Elsewhere, nothing."""
+    platform = platform or sys.platform
+    if platform != "darwin":
+        return False
+    if _is_excluded(path):
+        return True
+    return _exclude_from_backups(path, platform)
 
 
 def _narrow(path: Path) -> None:
@@ -225,6 +255,7 @@ def _ensure_folder() -> Optional[Path]:
     """The folder, made if missing (owner-only, not indexed, out of Time
     Machine on a Mac, with its note) and checked; None when it cannot be
     used."""
+    global _time_machine_asked
     path = folder()
     made = False
     if not os.path.lexists(path):
@@ -242,6 +273,9 @@ def _ensure_folder() -> Optional[Path]:
     reading_folder.mark_not_indexed(path)
     if made:
         _exclude_from_backups(path)
+    elif not _time_machine_asked:
+        _exclude_again(path)
+    _time_machine_asked = True
     _write_note(path)
     return path
 

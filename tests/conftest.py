@@ -162,10 +162,16 @@ def _no_time_machine_request(_sandbox_patch):
     Mac, to leave it out, through `tmutil`, which can take seconds; no
     test makes that request unless it asks for it (the tests of the
     request call the real function, with `subprocess.run` replaced).
-    Each test also starts with no folder problem already logged."""
+    Each test also starts with no folder problem already logged, and as
+    a run that has not yet asked Time Machine about an existing folder
+    (the question asked again once in each run, whole-branch review,
+    security, round 1, stood aside the same way)."""
     from exegete import kept_texts
     _sandbox_patch.setattr(kept_texts, "_exclude_from_backups",
                            lambda path, platform=None: False)
+    _sandbox_patch.setattr(kept_texts, "_exclude_again",
+                           lambda path, platform=None: False)
+    _sandbox_patch.setattr(kept_texts, "_time_machine_asked", False)
     kept_texts._warned.clear()
 
 

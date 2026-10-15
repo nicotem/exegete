@@ -91,9 +91,43 @@ class TestSessionStartCraftedLocks:
             _lock(qualcoder_db_path).unlink()
 
     def test_huge_lock_capped_fast_and_stale(self, setup_server,
-                                             qualcoder_db_path):
+                                             qualcoder_db_path, monkeypatch):
         """8 MiB single-line lock: the 4 KiB read cap (SEC S-3) must keep the
-        session-start check fast and memory-safe, and treat it stale."""
+        session-start check fast and memory-safe, and treat it stale.
+
+        Measured by count (the whole-branch review of v0.15.0, round 1: a
+        bound of 3 seconds missed by under a second on a slow Windows
+        runner): every read of the lock asks for the cap and gets no more;
+        the time is kept only as a guard against a hang, with a wide
+        margin."""
+        from exegete import database
+        reads = []
+        real_open = open
+
+        class _Counted:
+            def __init__(self, handle):
+                self._handle = handle
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return self._handle.__exit__(*exc)
+
+            def read(self, *args):
+                data = self._handle.read(*args)
+                reads.append((args, len(data)))
+                return data
+
+            def __getattr__(self, name):
+                return getattr(self._handle, name)
+
+        def counting_open(file, *args, **kwargs):
+            handle = real_open(file, *args, **kwargs)
+            if os.path.basename(str(file)) == QUALCODER_LOCK_FILENAME:
+                return _Counted(handle)
+            return handle
+        monkeypatch.setattr(database, "open", counting_open, raising=False)
         _lock(qualcoder_db_path).write_bytes(b"A" * (8 * 1024 * 1024))
         try:
             t0 = time.perf_counter()
@@ -101,7 +135,11 @@ class TestSessionStartCraftedLocks:
             elapsed = time.perf_counter() - t0
             assert "STOP" not in out
             assert "Session ID: `" in out
-            assert elapsed < 3.0                    # retry sleep only, no slurp
+            cap = database.LOCK_READ_MAX_BYTES
+            assert reads, "the lock was not read"
+            assert all(args == (cap,) and got <= cap
+                       for args, got in reads), reads
+            assert elapsed < 30.0          # a hang guard only
         finally:
             _lock(qualcoder_db_path).unlink()
 

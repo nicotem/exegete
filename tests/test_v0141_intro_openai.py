@@ -246,8 +246,8 @@ class TestTheIntroduction:
                 "bringing in images, audio and video; coding by selecting "
                 "text yourself; coding images, audio, video or an area of a "
                 "PDF page; graphs; and QualCoder's Reports menu. If your "
-                "study needs any of these now, get QualCoder from the "
-                "start.") in needs
+                "study needs any of these now, you may want QualCoder "
+                "from the start.") in needs
         for gone in ("documents other than text", "Word, PDF",
                      "coding highlighted", "in development"):
             assert gone not in needs, gone
@@ -1097,8 +1097,11 @@ class TestTheStepsANewcomerCanGetWrong:
         assert warning in first
         steps = first.replace(warning, "")
         assert re.findall(r"\bClaude\b(?! Desktop)", steps) == []
+        # (the whole-branch review of v0.15.0, round 1: "If you also use
+        # QualCoder, close the project there before the assistant changes
+        # it")
         for words in ("Ask the assistant to",
-                      "Before the assistant changes a project"):
+                      "before the assistant changes it"):
             assert words in first, words
 
 

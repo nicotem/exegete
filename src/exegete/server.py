@@ -294,56 +294,61 @@ FREQUENCIES_COUNT_NOTE = (
     "applied most often are not thereby the most important, and one "
     "participant can account for many codings.")
 
-# What warns in v0.14 and goes in v0.15 (owner ruling 25, questions 3, 7
-# and 8): one sentence, the same in the tool's description and in its
-# answer, so a test can pin one source of wording
+# What warns in v0.14 and goes in v0.15.1 (owner ruling 25, questions 3,
+# 7 and 8; ruling 70 moved the removals from v0.15 to v0.15.1): one
+# sentence, the same in the tool's description and in its answer, so a
+# test can pin one source of wording. The names list's leads with what
+# every researcher has, the file itself (whole-branch review, round 1;
+# QUALCODER_MENTIONS_AUDIT.md).
 DEPRECATED_PSEUDONYM_LIST = (
-    "Deprecated, removed in v0.15: QualCoder's Pseudonyms dialog (the "
-    "button in Manage Files) shows this list without sending it anywhere.")
+    "Deprecated, removed in v0.15.1: the list stays in pseudonyms.json in "
+    "the project folder, where the researcher can read it without sending "
+    "it anywhere; QualCoder's Pseudonyms dialog (Manage Files) also shows "
+    "it.")
 DEPRECATED_REFI_EXPORT = (
-    "Deprecated, removed in v0.15: this export files every coding under "
+    "Deprecated, removed in v0.15.1: this export files every coding under "
     "the AI coder name (a hidden coder's too) and leaves out cases, "
     "annotations, journals and media, and a session's export includes "
     "rejected suggestions unmarked; QualCoder's own export (Project, "
     "Export, REFI-QDA Project export) keeps each coder, the cases, notes "
     "and media.")
 DEPRECATED_CODE_REPORT = (
-    "Deprecated, removed in v0.15: get_coded_segments(code_id=...) reads "
+    "Deprecated, removed in v0.15.1: get_coded_segments(code_id=...) reads "
     "the same passages, page by page and without the 1,000 limit.")
 DEPRECATED_CLEANUP = (
-    "Deprecated, removed in v0.15: it deletes every project's old "
+    "Deprecated, removed in v0.15.1: it deletes every project's old "
     "sessions with no preview; delete_coding_session removes one.")
 DEPRECATED_CASCADE = (
-    "Deprecated, removed in v0.15: cascade; the preview token already "
+    "Deprecated, removed in v0.15.1: cascade; the preview token already "
     "approves the whole branch.")
 DEPRECATED_OWNER = (
-    "Deprecated, removed in v0.15: owner, which can only repeat the "
+    "Deprecated, removed in v0.15.1: owner, which can only repeat the "
     "project's AI coder name.")
 DEPRECATED_IMPORT_SKIP_BACKUP = (
-    "Deprecated, removed in v0.15: create_backup=false; an import always "
+    "Deprecated, removed in v0.15.1: create_backup=false; an import always "
     "takes a backup first.")
 DEPRECATED_HELP_TOPICS = (
-    "Deprecated, removed in v0.15: the topics analyze_for_coding, "
+    "Deprecated, removed in v0.15.1: the topics analyze_for_coding, "
     "apply_codings, edit_suggestion and coding_style_guidance, which "
     "repeat the tools' own descriptions.")
 DEPRECATED_HELP_TOPIC_NAMES = frozenset({
     "analyze_for_coding", "apply_codings", "edit_suggestion",
     "coding_style_guidance"})
 DEPRECATED_MERGE_PROPOSALS = (
-    "Deprecated, removed in v0.15: reject the proposal instead, and add "
+    "Deprecated, removed in v0.15.1: reject the proposal instead, and add "
     "its passages to the other with update_proposal if they belong there.")
 DEPRECATED_JOURNAL_ATTRIBUTES = (
-    "Deprecated, removed in v0.15: attributes on journal entries, which "
+    "Deprecated, removed in v0.15.1: attributes on journal entries, which "
     "Exegete can set but never reads back; QualCoder's Journals "
     "window sets them.")
 DEPRECATED_MEMO_SEARCH = (
-    "Deprecated, removed in v0.15: search_memo; search_memos searches "
+    "Deprecated, removed in v0.15.1: search_memo; search_memos searches "
     "file memos and every other kind of note.")
 DEPRECATED_EDIT_PARITY = (
-    "Deprecated, removed in v0.15: overlap_policy qualcoder_edit_parity, "
+    "Deprecated, removed in v0.15.1: overlap_policy qualcoder_edit_parity, "
     "which deletes codings on names and is not exact parity.")
 DEPRECATED_RENAME_BACK = (
-    "Deprecated, removed in v0.15: a rename back recognised from the "
+    "Deprecated, removed in v0.15.1: a rename back recognised from the "
     "project's backups; QualCoder's own Rename makes it.")
 
 # start_coding_session without the researcher's answers (owner ruling 25,
@@ -542,9 +547,10 @@ the researcher why; do not look for a way round it.
   QualCoder merely installed is not a sign once the setting is no.
   Otherwise say what Exegete does and what it does not do yet.
 - Only one program should change a project at a time. Exegete refuses
-  to write while QualCoder 3.8.2 has the project open; for QualCoder
-  4.0 it can only see signs, so when a tool says the project may be
-  open, ask the researcher to close it there before any write.
+  to write while the project's lock file is active (QualCoder 3.8.2 has
+  the project open, or another conversation is writing to it); for
+  QualCoder 4.0 it can only see signs, so when a tool says the project
+  may be open, ask the researcher to close it there before any write.
 - You read text only: documents and transcripts, codes and categories,
   cases, attributes, memos, annotations and journals; not images, audio
   or video.
@@ -560,9 +566,10 @@ the researcher why; do not look for a way round it.
   you call the tool at the researcher's request, with a backup of the
   project first, unless the researcher asks for none.
 - Deleting or merging codes and categories, restoring or pruning
-  backups and pseudonymising a file take two steps: a preview, which you
-  show the researcher in plain words, then the call with the preview's
-  token once they agree.
+  backups, pseudonymising a file, importing documents and correcting
+  the researcher's coder name take two steps: a preview, which you show
+  the researcher in plain words, then the call with the preview's token
+  once they agree.
 - To undo: delete_coding removes one coding; restore_backup returns the
   project to an earlier state.
 - Rows you write carry the project's AI coder name, which the
@@ -683,15 +690,15 @@ Each is stated in full by its tool:
   moment: follow it and tell the researcher.
 - explain_ai_coding_tools() gives an overview of the coding loop;
   {names.RESOURCE_SCHEME}://guidance/methods gives the methods notes and
-  some published approaches to prompting. For using QualCoder itself,
+  approaches to prompting (two published). For using QualCoder itself,
   point to its own manual.
 """
 
 # The MCP initialize handshake carries an `instructions` string that hosts
 # may show the model (best effort; host behaviour varies: Claude Code shows
-# it and keeps its first 2,048 characters). From v0.14.2 it is the brief's
-# short version, within those 2,048 characters and bytes (2,034 in
-# v0.15.0).
+# it and keeps its first 4,096 characters, 2,048 before its version
+# 2.1.296). From v0.14.2 it is the brief's short version, within 2,048
+# characters and bytes, now kept as a margin (2,034 in v0.15.0).
 SERVER_INSTRUCTIONS = BRIEF_SHORT
 
 
@@ -705,8 +712,10 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
     The text is inserted without the docstring's indentation so the
     registered description contains each constant verbatim and a test can
     pin one source of wording. Where a block goes decides whether it falls
-    within the first 2,048 characters, all Claude Code shows of a
-    description (v0.14.2, tests/test_v0142_description_cut.py).
+    within the first 2,048 characters of a description, all Claude Code
+    showed before its version 2.1.296 (it now keeps 4,096, and 16,384
+    for a tool found through its tool search), kept as a margin (v0.14.2,
+    tests/test_v0142_description_cut.py).
     """
     text = "\n\n".join(blocks)
 
@@ -741,7 +750,8 @@ def _with_deprecation(answer: Any, sentence: str) -> Any:
 
 def _deprecated(sentence: Any, before: Optional[str],
                 when: Optional[Callable[[Dict[str, Any]], bool]] = None):
-    """What goes in v0.15 (owner ruling 25, questions 3, 7 and 8): the
+    """What goes in v0.15.1 (owner ruling 25, questions 3, 7 and 8; ruling
+    70): the
     sentence in the tool's description (before the line holding
     `before`), and in every answer the tool gives, or, for an option,
     only when `when(arguments)` holds. Sits inside _tool_guard.
@@ -6273,7 +6283,7 @@ def search_files(
     cursor WITH THE SAME other arguments to continue; a cursor is bound
     to them. Nothing is stored between calls.
 
-    Deprecated, removed in v0.15: search_memo; search_memos searches file memos and every other kind of note.
+    Deprecated, removed in v0.15.1: search_memo; search_memos searches file memos and every other kind of note.
 
     Args:
         pattern: Text to search for (case-insensitive by default)
@@ -12861,10 +12871,21 @@ def _used_the_earlier_name() -> bool:
     return os.path.lexists(state_folder.old_path())
 
 
+def _help_topic(tool_name: Optional[str]) -> Optional[str]:
+    """The help topic a name asks for: a renamed tool's new name reads the
+    topic its earlier name has, while the deprecated topics last
+    (whole-branch review, round 1: help asked for under the name every
+    text now uses was answered "Unknown tool")."""
+    earlier = {new: old for old, new in RENAMED_TOOLS.items()}.get(
+        tool_name)
+    return earlier if earlier in DEPRECATED_HELP_TOPIC_NAMES else tool_name
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 @_deprecated(DEPRECATED_HELP_TOPICS, before="Args:",
-             when=lambda a: a.get("tool_name") in DEPRECATED_HELP_TOPIC_NAMES)
+             when=lambda a: _help_topic(a.get("tool_name"))
+             in DEPRECATED_HELP_TOPIC_NAMES)
 def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     """Get help and examples for AI coding tools.
 
@@ -13299,6 +13320,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         }
     }
 
+    asked = tool_name
+    tool_name = _help_topic(tool_name)
+
     if tool_name == "brief":
         # v0.14.2: the assistant's brief, the very text read_brief and
         # the exegete://guidance/brief resource return
@@ -13322,10 +13346,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
         return json.dumps(tool_help[tool_name], indent=2)
 
     else:
-        # Unknown tool
-        return json.dumps({
-            "error": f"Unknown tool: {tool_name}",
-            "available_tools": [
+        topics = [
                 "analyze_for_coding",
                 "apply_codings",
                 "edit_suggestion",
@@ -13336,12 +13357,30 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "moving_from_qualcoder_mcp",
                 "brief",
                 "converted_documents"
-            ],
-            "tip": "Use explain_ai_coding_tools() with no arguments for an "
-                   "overview of the coding loop. Only the topics listed above "
-                   "have a dedicated help entry here; every other tool "
-                   "documents its arguments, refusals and overrides in its "
-                   "own description."
+            ]
+        tip = ("Use explain_ai_coding_tools() with no arguments for an "
+               "overview of the coding loop. Only the topics listed above "
+               "have a dedicated help entry here; every other tool "
+               "documents its arguments, refusals and overrides in its "
+               "own description.")
+        if asked in ALL_TOOL_NAMES:
+            # One of Exegete's tools, with no topic of its own: not
+            # "unknown" (whole-branch review, round 1); marked where the
+            # tool set lacks it
+            return json.dumps({
+                "tool": asked,
+                "note": _mark_unregistered(
+                    f"{asked} has no help topic of its own: its "
+                    f"description documents its arguments, refusals and "
+                    f"overrides."),
+                "available_tools": topics,
+                "tip": tip,
+            }, indent=2)
+        # Unknown tool
+        return json.dumps({
+            "error": f"Unknown tool: {asked}",
+            "available_tools": topics,
+            "tip": tip,
         }, indent=2)
 
 
@@ -19482,7 +19521,7 @@ def rename_file(file_id: int, new_name: str,
                             backup_fail_detail="the file was not renamed")
     if result.get("changed"):
         _forget_reading_copies([file_id])
-    # A rename back that only a backup licensed goes in v0.15 (owner
+    # A rename back that only a backup licensed goes in v0.15.1 (owner
     # ruling 25, question 8)
     if result.get("changed") and any(name is not None
                                      for name in evidence.values()):
@@ -20794,6 +20833,28 @@ CODER_NAME_SETTING_IS_SPEAKER_REFUSAL = (
     "lists; it is not a person's coder name. Ask the researcher to change "
     "{place}, or call again with the researcher's own coder name as "
     "coder_name. Nothing was created.")
+# The names AI work is stored under that are known before a project
+# exists, refused as the researcher's own coder name at creation for the
+# reason set_project_coder_name refuses them (whole-branch review, round
+# 1, parity: creation took "AI Agent" and the correction refused it).
+CODER_NAME_CREATION_IS_AI_REFUSAL = (
+    "\"{name}\" is a name AI work is stored under (Exegete's built-in "
+    "default AI coder name, or \"AI Agent\", the name QualCoder 4.0's "
+    "assistant writes under); the researcher's own coder name must differ, "
+    "or AI rows could not be told apart from theirs. {ask} Nothing was "
+    "created.")
+CODER_NAME_CREATION_IS_AI_ASK_GIVEN = (
+    "Ask the researcher for their own coder name.")
+CODER_NAME_CREATION_IS_AI_ASK_SETTING = (
+    "Exegete's settings give it as the researcher's own coder name: ask "
+    "the researcher to change {place}, or call again with their own coder "
+    "name as coder_name.")
+
+
+# Exegete's built-in default and QualCoder 4.0's assistant's name: the
+# AI names set_project_coder_name refuses that need no project to know
+_AI_NAMES_BEFORE_A_PROJECT = frozenset({DEFAULT_AI_CODER_NAME,
+                                        KNOWN_AI_ASSISTANT_OWNER})
 
 
 class _CreationCoderName(NamedTuple):
@@ -20843,6 +20904,12 @@ def _coder_name_for_creation(coder_name: Any, not_known: Any
                 None, CODER_NAME_SETTING_IS_SPEAKER_REFUSAL.format(
                     speaker=SPEAKER_SYSTEM_CODER,
                     place=_settings_place("coder")))
+        if setting in _AI_NAMES_BEFORE_A_PROJECT:
+            return _CreationCoderName(
+                None, CODER_NAME_CREATION_IS_AI_REFUSAL.format(
+                    name=setting,
+                    ask=CODER_NAME_CREATION_IS_AI_ASK_SETTING.format(
+                        place=_settings_place("coder"))))
         return _CreationCoderName(setting, None, "settings")
     if not isinstance(coder_name, str):
         return _CreationCoderName(
@@ -20868,6 +20935,9 @@ def _coder_name_for_creation(coder_name: Any, not_known: Any
     if ai_setting is not None and name == ai_setting:
         return _CreationCoderName(None, CODER_NAME_GIVEN_IS_AI_REFUSAL.format(
             name=name, place=_settings_place("ai")))
+    if name in _AI_NAMES_BEFORE_A_PROJECT:
+        return _CreationCoderName(None, CODER_NAME_CREATION_IS_AI_REFUSAL.format(
+            name=name, ask=CODER_NAME_CREATION_IS_AI_ASK_GIVEN))
     note = (CODER_NAME_GIVEN_DIFFERS_NOTE.format(s=setting, given=name)
             if setting is not None and setting != name else None)
     return _CreationCoderName(name, None, "given", note)

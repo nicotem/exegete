@@ -428,10 +428,14 @@ class TestThePublishedSchemaBudget:
     # assistant (not presuming QualCoder, piece 13), in the text
     # start_coding_session's description shares, took 55 characters off
     # both sets, on both interpreters.
-    FULL_MEASURED = 205_022          # 81 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_120           # 25 tools, same environment
-    FULL_MEASURED_310 = 215_390      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 71_540
+    # The removals announced for v0.15 moved to v0.15.1 in every
+    # deprecation sentence, and the names list's leads with
+    # pseudonyms.json (whole-branch review, round 1): 105 characters more
+    # in `full` and 4 in `core`, on both interpreters.
+    FULL_MEASURED = 205_127          # 81 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_124           # 25 tools, same environment
+    FULL_MEASURED_310 = 215_495      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 71_544
 
     # Why two per cent, away from the reference environment.
     #
@@ -458,8 +462,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,022"
-    CORE_CHARS = "68,120"
+    FULL_CHARS = "205,127"
+    CORE_CHARS = "68,124"
     FULL_ROUNDED = "205,000"
     CORE_ROUNDED = "68,000"
     FULL_TOKENS = "51k"

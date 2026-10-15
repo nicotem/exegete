@@ -150,8 +150,10 @@ def test_how_it_works_explains_before_it_instructs():
     data = _between(_readme(), "## Where your data goes", "## Start here")
     # v0.14.3: a document brought in through Exegete too, and what the
     # import's preview sends
-    assert ("Text you paste or attach goes in full; a document imported in "
-            "QualCoder or brought in through Exegete, only as far as the "
+    # (the whole-branch review, round 1: Exegete's route first)
+    assert ("Text you paste or attach goes in full; a document in the "
+            "project, brought in through Exegete or imported in QualCoder, "
+            "only as far as the "
             "assistant reads it: Exegete's preview of an import gives the "
             "assistant the documents' names, sizes, lengths and "
             "warnings, never their "
@@ -439,7 +441,7 @@ RELEASE_LABELS = (re.compile(r"\bNEW\b"),
 VERSIONS_IN_PLACE = ("## What comes next", "## Disclaimer", "## Licence",
                      "## Acknowledgements")
 DATED = re.compile(r"Exegete v?0\.\d+\.\d+ against QualCoder|"
-                   r"\(removed in 0\.\d+\)")
+                   r"\(removed in 0\.\d+(?:\.\d+)?\)")
 
 
 def _release_labels(text):

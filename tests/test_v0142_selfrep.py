@@ -283,9 +283,12 @@ class TestWhatWasDecided:
                                "go:")
         assert BRIEF_SECTION_4 in full
         # The section's other points stay, with Exegete for "the server"
+        # The whole-branch review of v0.15.0, round 1: the lock file is
+        # not QualCoder's alone
         assert ("- Only one program should change a project at a time. "
-                "Exegete refuses to write while QualCoder 3.8.2 has the "
-                "project open;") in full
+                "Exegete refuses to write while the project's lock file is "
+                "active (QualCoder 3.8.2 has the project open, or another "
+                "conversation is writing to it);") in full
         assert ("- For how to do something in QualCoder itself, point the "
                 "researcher to QualCoder's own manual rather than guess at "
                 "its menus.") in full
@@ -337,8 +340,9 @@ class TestWhatWasDecided:
                 "program, one at a time.") in readme
         assert ("**Not in Exegete yet**, and done in QualCoder for now:"
                 in readme)
-        assert ("If your study needs any of these now, get QualCoder from "
-                "the start.") in readme
+        # A suggestion, not an instruction (whole-branch review, round 1)
+        assert ("If your study needs any of these now, you may want "
+                "QualCoder from the start.") in readme
         assert ("It is not QualCoder, nor an add-on or a remote control for "
                 "it, and it is not made or endorsed by QualCoder's "
                 "developers") in readme
@@ -832,6 +836,17 @@ class TestNoDescriptionGrew:
     # pins its description), whose sentence in create_project's
     # description is counted with piece 1's change above
     NEW_IN_0150 = {"set_project_coder_name"}
+    # and the whole-branch review of v0.15.0, round 1: every deprecation
+    # sentence now says "removed in v0.15.1" (ruling 70), two characters
+    # more, and the names list's leads with pseudonyms.json in the project
+    # folder (tests/test_v0150_wb_fix_r1.py; their words pinned in
+    # tests/test_v0142_description_cut.py, CHANGED_0150)
+    REMOVALS_MOVED_0150 = {
+        "apply_codings", "cleanup_old_sessions", "create_attribute_type",
+        "delete_code", "explain_ai_coding_tools", "export_code_report",
+        "export_refi_qda", "import_text_file", "merge_proposals",
+        "pseudonymise_source", "read_pseudonym_list", "rename_file",
+        "search_files", "set_attribute"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
@@ -843,7 +858,7 @@ class TestNoDescriptionGrew:
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
             if name in (self.CHANGED_IN_0143 | self.CHANGED_IN_0150
-                        | self.RENAMED_IN_0150):
+                        | self.RENAMED_IN_0150 | self.REMOVALS_MOVED_0150):
                 continue
             text = registered[name]
             if name in self.LENGTHENED_IN_0150:

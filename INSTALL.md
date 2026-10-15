@@ -77,7 +77,9 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      changes, for example); with no, it leaves those out, unless a
      project shows signs that QualCoder may have opened it or QualCoder
      is running when a project is selected; with not sure, it decides
-     from what it finds on each project and on this computer. Whatever
+     from what it finds on each project and on this computer. Notes
+     worded "if the project is opened in QualCoder", such as the one on
+     emoji and Windows line breaks, are given with any answer. Whatever
      you answer, Exegete still refuses to write while QualCoder 3.8 has
      a project open, and still warns when it sees signs that QualCoder
      4.0 may have one open.
@@ -183,9 +185,9 @@ and LM Studio are considered on request: ask in
 assistant a brief: how it expects the assistant to work with you
 (TOOLS.md, "What the assistant is told"). Hosts differ in what they
 pass on, so the brief reaches the assistant four ways. A short version
-is Exegete's opening text: Claude Code shows it (and keeps only the
-first 2,048 characters of any server's opening text; this one is
-shorter); Claude Desktop does not pass it on, in its chat or in Cowork
+is Exegete's opening text: Claude Code shows it (and keeps the first
+4,096 characters of a server's opening text, 2,048 before its version
+2.1.296; this one is 2,034); Claude Desktop does not pass it on, in its chat or in Cowork
 (checked on 9 October 2026); and LM Studio does not support it. The
 tool `read_brief`, in every tool set, has a description that asks the
 assistant to call it at the start of every conversation about a
@@ -603,6 +605,27 @@ The server behaves the same under any client; which tools are
 registered is decided by `EXEGETE_TOOLSET` (see "Environment
 variables the server reads" below), not by the client.
 
+**Long tool descriptions in Claude Code.** Claude Code keeps the first
+4,096 characters of a tool's description, or 16,384 for a tool it
+finds through its tool search, which it uses by default (Anthropic's
+page on MCP in Claude Code, read on 15 October 2026; before Claude
+Code 2.1.296, 2,048). Exegete puts the rules a model must not miss
+within each description's first 2,048 characters, a few named
+exceptions apart, which reach the model through `read_brief` or the
+tools' answers. Measured for 0.15.0 on Python 3.13, 4 of `full`'s 81
+descriptions are longer than 4,096 characters (`pseudonymise_source`,
+17,791; `start_coding_session`, 6,042; `search_files`, 4,802;
+`record_suggestions`, 4,455), and `pseudonymise_source` is longer than
+16,384, so its last 1,407 characters are cut even through tool search.
+Claude Code's own setting `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`
+(version 2.1.280 or later) replaces both limits with one figure:
+18000, for example, lets every Exegete description through whole, for
+every server's tools, at the cost of more of the model's context when
+a long description loads. It is Claude Code's setting, not Exegete's:
+set it where Claude Code reads its own environment (in the shell before
+`claude`, or the `env` field of Claude Code's settings), not with `-e`
+on `claude mcp add`, which passes settings to Exegete.
+
 ---
 
 ## Environment variables the server reads
@@ -753,7 +776,9 @@ and `EXEGETE_USES_QUALCODER`, all below.
   leaves those out, unless a project shows signs that QualCoder may
   have opened it or QualCoder is running when a project is selected;
   with `not sure`, it decides from what it finds on each project and on
-  this computer. Any other value is read as `not sure`, and the log
+  this computer. Notes worded "if the project is opened in QualCoder",
+  such as the one on emoji and Windows line breaks, are given with any
+  answer. Any other value is read as `not sure`, and the log
   says so once at start, never the value; it never stops Exegete.
   Whatever it says, Exegete still refuses to write while QualCoder 3.8
   has a project open, and still warns when it sees signs that QualCoder
@@ -787,9 +812,9 @@ and `EXEGETE_USES_QUALCODER`, all below.
 - `EXEGETE_CALL_SECONDS` (0.15.0): how many seconds one call of
   `import_documents` may take, counted from its start, before it stops
   between files and leaves the rest for the next call, whose answer
-  says how to go on: a whole number from 30 to 600. Unset, it is 30 in
-  the desktop extension, a figure measured against how long Claude
-  Desktop waits, and 30 installed any other way. A host stops a tool
+  says how to go on: a whole number from 30 to 600. Unset, it is 30
+  seconds on every route; the desktop extension's own figure follows a
+  measurement of how long Claude Desktop waits. A host stops a tool
   call that runs past its own limit, and a call stopped so loses its
   answer while Exegete reads on to the end; until a call has finished,
   Exegete answers no other call, from any chat. So a higher figure
@@ -1486,9 +1511,10 @@ call of such a tool in every permission mode, auto and
 `bypassPermissions` included, offers no "don't ask again", lets no
 allow rule skip it, and in `dontAsk` refuses it. Earlier versions ignore
 the mark. The tool is deprecated: v0.14 says so in its description
-and in every answer, and v0.15 removes it (QualCoder's Pseudonyms
-dialog, the button in Manage Files, shows the list without sending it
-anywhere).
+and in every answer, and v0.15.1 removes it: the list stays in
+`pseudonyms.json` in the project folder, which you can open in a text
+editor without sending it anywhere (QualCoder's Pseudonyms dialog, if
+you use it, shows it too).
 
 `check_for_updates` is not marked read-only either: it records each
 check in Exegete's own folder, so a host that asks before a tool runs

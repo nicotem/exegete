@@ -52,7 +52,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server  # noqa: E402
 
-# Claude Code's cut, in characters (since its version 2.1.84)
+# Rules a model must not miss sit within a description's first 2,048
+# characters: Claude Code cut there from its version 2.1.84 until 2.1.296;
+# it now keeps 4,096 (16,384 through its tool search), and 2,048 is kept
+# as a margin (whole-branch review of v0.15.0, round 1)
 CUT = 2048
 
 # name: (kind, first words, last words, or None for the end of the
@@ -603,17 +606,17 @@ CHANGED_0143 = {
 CHANGED_0150 = {
     "get_current_project": (1920, 1570, "da157f879c430be0"),
     "list_available_projects": (904, 716, "0117f9141c0b48ea"),
-    "read_pseudonym_list": (1037, 856, "637792f4e7f7de38"),
+    "read_pseudonym_list": (1114, 921, "a12932a8639d99f9"),
     # the renames, piece 3
     "compare_coders": (3004, 2458, "d2d2e9480ae8fbae"),
     "edit_suggestion": (3389, 2721, "8b47aab19f6e5052"),
-    "explain_ai_coding_tools": (633, 515, "4bce34c0ba922adc"),
+    "explain_ai_coding_tools": (635, 517, "3f1f40dd7c7cab17"),
     "list_backups": (2168, 1823, "79414633203c51eb"),
     "propose_codes": (2696, 2145, "9f80d0ddcfc067bd"),
     "prune_backups": (3030, 2464, "d7d3ffb7136f16b2"),
     "record_suggestions": (4455, 3574, "8eebddf228bc704c"),
     "review_suggestions": (1327, 1093, "7175c61a45e95f8e"),
-    "search_files": (4800, 3794, "60efa551cbfa9147"),
+    "search_files": (4802, 3796, "a3506c45c5cadeb7"),
     # (start_coding_session's line moved to piece 13's, below)
     "update_suggestion_status": (1537, 1263, "f885b390be42a9ab"),
     # the coder names, piece 1: create_project's paragraph on the
@@ -628,7 +631,7 @@ CHANGED_0150 = {
     # tests/test_v0150_ai_coder_name_setting.py pins both)
     "create_project": (2486, 1975, "3de9483aca76e003"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
-    "export_refi_qda": (2105, 1734, "14ad70dbebf2cc8f"),
+    "export_refi_qda": (2107, 1736, "ecd69c6356ce112a"),
     # not presuming QualCoder, piece 5: the write tools' closing
     # paragraph in 26 descriptions, apply_codings' lock sentence and
     # first safety guarantee, and restore_backup's item 4, each now
@@ -637,30 +640,30 @@ CHANGED_0150 = {
     # (tests/test_v0150_qualcoder_texts_5.py)
     "add_annotation": (1576, 1295, "30fa6ba96b8fc4f3"),
     "add_journal_entry": (1016, 832, "1b25da385b143c6b"),
-    "apply_codings": (2494, 2029, "e2e2c8a5331f5703"),
-    "create_attribute_type": (2000, 1602, "17ffe331bebf249e"),
+    "apply_codings": (2496, 2031, "a97a90f226a08cbe"),
+    "create_attribute_type": (2002, 1604, "0bf443341e0272e2"),
     "create_case": (1588, 1330, "3f4c1103d70864f8"),
     "create_category": (1780, 1424, "cd1a4abde9502311"),
     "create_code": (2824, 2302, "fadda64984f15768"),
     "create_proposed_codes": (1808, 1495, "29ca47a65f2356cb"),
     "delete_annotation": (1865, 1489, "05bf0b03dff8918f"),
     "delete_category": (1619, 1331, "9eb6c6a6a9058d7a"),
-    "delete_code": (2519, 2059, "e550e2042c4e0873"),
+    "delete_code": (2521, 2061, "78013b1797b214f5"),
     "delete_coding": (2867, 2307, "be5e2d1ea0338a1e"),
-    "import_text_file": (3897, 2881, "5465cbd940de55a3"),
+    "import_text_file": (3901, 2885, "f25306f9966defe8"),
     "link_file_to_case": (1721, 1321, "3f77ab2b8289b508"),
     "merge_category": (2423, 1967, "38623bf46a7b6e6f"),
     "merge_codes": (2748, 2285, "4ce3a749f3c106ca"),
     "move_category": (1339, 1040, "4ad846b358aa58fd"),
     "move_code_to_category": (1676, 1338, "c8c5eb5b28da0027"),
-    "pseudonymise_source": (17789, 13072, "1020363808bc374d"),
+    "pseudonymise_source": (17791, 13074, "f5be68114fdbf2c1"),
     "recolor_code": (1234, 1029, "71044e04657e3df6"),
     "rename_case": (2076, 1712, "61ef53bce7266c93"),
     "rename_category": (939, 776, "498212de941bf07d"),
     "rename_code": (909, 746, "f53e3d4db9605ebb"),
-    "rename_file": (3383, 2806, "6f4764b247ea0d83"),
+    "rename_file": (3385, 2808, "946958d59cfb0083"),
     "restore_backup": (2730, 2247, "87717bbc6793a0e9"),
-    "set_attribute": (1646, 1344, "927d82ca1d9ffcac"),
+    "set_attribute": (1648, 1346, "8851ca2e41f1a738"),
     "set_memo": (2551, 2048, "9e62726bc0ecece1"),
     "update_annotation": (1931, 1599, "be5fbd103294206a"),
     # not presuming QualCoder, piece 6: select_project's sentence on the
@@ -674,6 +677,17 @@ CHANGED_0150 = {
     # outcomes:", without the attribution to QualCoder 4.0's assistant),
     # 54 characters fewer on 3.13 (tests/test_v0150_qualcoder_texts_13.py)
     "start_coding_session": (6042, 4908, "662931b185aced31"),
+    # The whole-branch review of v0.15.0, round 1: the removals announced
+    # in v0.14 for v0.15 now say v0.15.1 (ruling 70), two characters more
+    # in each description that carries a deprecation sentence; and the
+    # names list's deprecation now leads with pseudonyms.json in the
+    # project folder, which every researcher can read without sending it
+    # anywhere, before QualCoder's dialog (77 characters more). The lines
+    # above for those already changed in this release moved with them
+    # (tests/test_v0150_wb_fix_r1.py)
+    "cleanup_old_sessions": (844, 686, "843ad008664c1c1b"),
+    "export_code_report": (1563, 1265, "f254265202c3248d"),
+    "merge_proposals": (665, 561, "c20e837ad86f296b"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

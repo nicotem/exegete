@@ -63,6 +63,11 @@ ROUTE = (
     "yours (and back afterwards). Once you have the copy, "
     "set_project_coder_name can put your name in place of theirs while "
     "nothing is recorded under their name.")
+# The way on without QualCoder at all, after the route in both refusals
+# (whole-branch review, round 1)
+NO_QUALCODER = (
+    "Without QualCoder at all, a new project made in Exegete from the "
+    "original documents is a way on, without this project's coding.")
 # The tool the route names, marked where the tool set lacks it (`core`)
 TOOL = "set_project_coder_name"
 MARKED = TOOL + " (not available in this tool set)"
@@ -72,7 +77,19 @@ def missing_columns(schema, columns="code_text.important"):
     return (f"This project appears to have been made with a QualCoder "
             f"older than 3.8 ({schema}; missing column(s) {columns}), and "
             f"Exegete cannot read it as it is or bring it up to date "
-            f"itself. " + ROUTE)
+            f"itself. " + ROUTE + " " + NO_QUALCODER)
+
+
+def damaged(version, columns="code_text.important"):
+    """The refusal for a value from v14 on: a schema that has the
+    columns, so not a project from before 3.8 (whole-branch review, round
+    1; FIX_older-projects_R1.md, the lead's first point)."""
+    return (f"This project reports database schema {version} but lacks "
+            f"column(s) {columns}, which that schema has, so it may have "
+            f"been damaged or altered; Exegete cannot read it as it is or "
+            f"repair it itself. A copy from before the change (a backup "
+            f"folder beside it, selected in its place, for example) may "
+            f"have them; otherwise " + ROUTE + " " + NO_QUALCODER)
 
 
 NOT_REPEATED = ("its database schema value is missing or not in "
@@ -80,7 +97,7 @@ NOT_REPEATED = ("its database schema value is missing or not in "
 PRE_V14 = (
     "This project uses a pre-v14 schema, from a QualCoder older than 3.8: "
     "Exegete reads it but does not write to it, and cannot bring it up to "
-    "date itself. " + ROUTE)
+    "date itself. " + ROUTE + " " + NO_QUALCODER)
 NOT_IN_FORM = "not in QualCoder's form"
 
 # Phrases the earlier refusals used, which must not come back
@@ -155,6 +172,7 @@ class TestTheRoute:
 
     def test_the_constant_word_for_word(self):
         assert database.OLDER_QUALCODER_ROUTE == ROUTE
+        assert database.NO_QUALCODER_ROUTE == NO_QUALCODER
 
     def test_selecting_again_lets_the_writes_through(self, opened):
         """Named as a guard: what the route says to do works. Whether a
@@ -211,6 +229,30 @@ class TestTheMissingColumnsRefusal:
             assert phrase not in out["error"], phrase
         assert server.current_project_path is None
 
+    @pytest.mark.parametrize("value", ["v14", "v17", "v0018", "v9999"])
+    @pytest.mark.parametrize("column", ["code_text.important",
+                                        "project.codername"])
+    def test_a_value_from_v14_is_not_called_older_than_3_8(
+            self, opened, value, column):
+        """Whole-branch review, round 1 (parity, finding 4): a value from
+        v14 on names a schema that has these columns, so the refusal no
+        longer says the project is from before 3.8."""
+        folder = _without(opened, column, value)
+        expected = damaged(value, column)
+        with pytest.raises(UnsupportedSchemaError) as raised:
+            QualcoderDatabase(str(folder))
+        assert str(raised.value) == expected
+        out = _select(folder)
+        assert out["error"] == expected + " No project is selected."
+        assert "older than 3.8" not in out["error"]
+
+    @pytest.mark.parametrize("value", ["v2", "v13"])
+    def test_a_value_before_v14_keeps_the_older_wording(self, opened, value):
+        folder = _without(opened, "code_text.important", value)
+        out = _select(folder)
+        assert out["error"] == (missing_columns(f"database schema {value}")
+                                + " No project is selected.")
+
     @pytest.mark.parametrize("value", [None, "", "v12345", SENTINEL])
     def test_not_in_form_the_value_is_not_repeated(self, opened, value):
         folder = _without(opened, "code_text.important", value)
@@ -256,13 +298,30 @@ class TestThePreV14WriteRefusal:
         folder = opened("v13")
         _select(folder)
         supported, reason, _ = server.get_db().write_support()
-        assert supported is False and reason.endswith(" " + ROUTE)
+        assert supported is False
+        assert reason.endswith(" " + ROUTE + " " + NO_QUALCODER)
         # The missing-columns refusal as Exegete gives it (gate review,
         # round 1: the test's own helper proved nothing)
         missing = _without(opened, "code_text.important", "v2")
         with pytest.raises(UnsupportedSchemaError) as raised:
             QualcoderDatabase(str(missing))
-        assert str(raised.value).endswith(" " + ROUTE)
+        assert str(raised.value).endswith(" " + ROUTE + " " + NO_QUALCODER)
+
+    @pytest.mark.parametrize("value", ["v2", "v13", "v14", "v17", None])
+    def test_each_refusal_offers_a_way_on_without_qualcoder(self, opened,
+                                                            value):
+        """Whole-branch review, round 1: the route runs through someone's
+        QualCoder; a researcher with neither QualCoder nor anyone to ask
+        is offered a way on too, in each refusal."""
+        missing = _without(opened, "code_text.important", value)
+        out = _select(missing)
+        assert out.get("success") is False, out
+        assert NO_QUALCODER in out["error"]
+        folder = opened("v13")
+        _select(folder)
+        refused = json.loads(server.set_memo("code", 1, "x",
+                                             create_backup=False))
+        assert NO_QUALCODER in refused["error"]
 
 
 class TestTheSourceSaysSo:
@@ -451,7 +510,9 @@ TOOLS_SAYS = (
     "unless they first set their coder name in QualCoder to yours (and "
     "back afterwards). Once you have the copy, `set_project_coder_name` "
     "(not in `core`) can put your name in place of theirs while nothing "
-    "is recorded under their name.")
+    "is recorded under their name. Without QualCoder at all, a new "
+    "project made in Exegete from the original documents is a way on, "
+    "without the old project's coding.")
 
 
 class TestTheDocuments:
@@ -468,7 +529,9 @@ class TestTheDocuments:
                 "has opened them once, which brings them up to date with "
                 "no save, and they are selected again; Exegete cannot, but "
                 "someone with QualCoder who may see the data can do it and "
-                "send the updated copy)") in guide
+                "send the updated copy, and without QualCoder at all a "
+                "new project made in Exegete from the original documents "
+                "is a way on, without the old coding)") in guide
         assert "open and save them in QualCoder 3.8" not in guide
 
     def test_the_readme(self):
@@ -478,7 +541,9 @@ class TestTheDocuments:
         assert ("A project from before QualCoder 3.8 must first be opened "
                 "once in 3.8 or newer; without QualCoder, someone who has "
                 "it and may see the project's data can do this and send "
-                "you the updated copy.") in readme
+                "you the updated copy. Without QualCoder at all, a new "
+                "project made in Exegete from the original documents is a "
+                "way on, without the old project's coding.") in readme
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

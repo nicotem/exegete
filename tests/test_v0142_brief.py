@@ -553,9 +553,13 @@ class TestTheSizes:
     # QualCoder, piece 13, takes the attribution to QualCoder 4.0's
     # assistant out of the four outcomes' sentence that
     # start_coding_session's description shares (55 characters fewer in
-    # both sets). Their entries as 0.14.2 served them are below, so every
-    # other tool is still held to 0.14.2's figure.
-    NOW = {"full": 196_299, "core": 64_804}
+    # both sets). The whole-branch review of v0.15.0, round 1, moves the
+    # removals announced for v0.15 to v0.15.1 in every deprecation
+    # sentence (two characters each) and leads the names list's with
+    # pseudonyms.json (105 characters more in `full`, 4 in `core`). Their
+    # entries as 0.14.2 served them are below, so every other tool is
+    # still held to 0.14.2's figure.
+    NOW = {"full": 196_404, "core": 64_808}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -582,6 +586,11 @@ class TestTheSizes:
                           "set_project_ai_coder_name": 2_564,
                           # the coder names, piece 3
                           "export_refi_qda": 2_584,
+                          # the whole-branch review, round 1: the
+                          # removals in v0.15.1
+                          "cleanup_old_sessions": 1_111,
+                          "export_code_report": 1_846,
+                          "merge_proposals": 1_138,
                           # not presuming QualCoder, piece 5
                           "add_annotation": 2_233,
                           "add_journal_entry": 1_534,

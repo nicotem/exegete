@@ -860,7 +860,7 @@ project has the coder-visibility capability:
   the pseudonym rather than grown to contain it, which shrinks it; that
   too is classed `snapped` and needs the override (the
   `qualcoder_edit_parity` policy is deprecated: v0.14 says so whenever
-  it is used, and v0.15 removes it). The refusal names
+  it is used, and v0.15.1 removes it). The refusal names
   neither the coder nor a count. A row whose stored end lies past the
   end of the text is clamped first, as QualCoder clamps its own, and is
   counted under its own class rather than under one the exemption
@@ -1100,7 +1100,7 @@ sits beside the database of the backup you choose, opens it to check
 it, reads its first bytes for the preview and copies it back,
 one tool reads the backups' contents: `rename_file`, to recognise a
 rename back (a name, or an ending, the file had before; deprecated:
-v0.14 says so when it happens, and v0.15 removes it). Only when one of
+v0.14 says so when it happens, and v0.15.1 removes it). Only when one of
 its rules would refuse the new name, it opens the database of the
 project's own backups beside it, Exegete's `_backup_` copies and
 QualCoder's `_BKUP_` copies, newest first and at most 200, read-only and
@@ -1921,7 +1921,7 @@ will ask, and the summary above depends on them:
     and how many entries it has, never a name. The names themselves
     reach the conversation only through a tool of their own,
     `read_pseudonym_list` (in the full tool set, the default, and not
-    in core; deprecated, and removed in v0.15), whose description says
+    in core; deprecated, and removed in v0.15.1), whose description says
     first that it sends the
     real names to the AI provider. It
     carries `anthropic/requiresUserInteraction`, so Claude Code (2.1.199

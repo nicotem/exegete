@@ -778,6 +778,8 @@ def test_the_changelog_section_wraps_at_72():
     """Fix round 1: the section's lines wrap as the file's do."""
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
     heading = "### Changed: the names list and pseudonymisation's messages"
-    section = text.split(heading, 1)[1].split("\n### ", 1)[0]
+    # to the next heading of any level: since the whole-branch review the
+    # texts' parts are sub-parts of one section
+    section = text.split(heading, 1)[1].split("\n#", 1)[0]
     long_lines = [line for line in section.splitlines() if len(line) > 72]
     assert not long_lines, long_lines

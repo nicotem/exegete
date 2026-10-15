@@ -7,25 +7,289 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+v0.15.0, the first of three v0.15 releases: v0.15.1 brings the safety
+net (undoing what a session did, choosing what a pseudonymisation run
+changes) and the removals announced in 0.14, and v0.15.2 brings
+method. What a researcher notices first in this one: one tool set,
+`full`, the default on every route, creating a project included; two
+tools whose names say what they do; your own coder name and the AI
+coder name as settings, and a way to correct your own coder name in a
+project while nothing is recorded under it; and an import that reads
+each document once, so that it usually takes seconds. Exegete's texts
+no longer presume that you use QualCoder: they name it when a project
+or this computer shows it, when you say you use it (a new setting, "Do
+you also use QualCoder on this computer?"), or when the sentence is
+about QualCoder itself or its format. Less visible: the extension
+keeps new projects in `~/Exegete projects`; Exegete's backups have the
+kind `exegete`; a project from a QualCoder older than 3.8 has a way on
+without QualCoder; and PRIVACY.md says what pseudonymisation is for.
+
+The maintainer decided the questions behind these on 11 and 12 October
+2026, and on 14 October that a project's format value is repeated only
+in QualCoder's form. One thing stays provisional: how long one import
+call may take in the desktop extension, 30 seconds until the time
+Claude Desktop waits has been measured. The sections below follow what
+a researcher meets: the tool set and the renames, the coder names,
+imports, Exegete's texts about QualCoder, older projects, what is
+deprecated; then a part for contributors, and the measurements.
+
+### Upgrading from 0.14.3
+
+- **One tool set, `full`.** `full` and `lifecycle` are now one set,
+  `full`: every tool, creating a project (Experimental) included, the
+  default on every route. If your extension's "Tool set" shows
+  `lifecycle`, or your configuration sets `EXEGETE_TOOLSET=lifecycle`,
+  nothing needs changing: it is read as `full` until v1.0. On the
+  Terminal routes `full` now includes `create_project`; new projects
+  go to `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE`
+  names another folder, and iCloud or OneDrive may sync Documents
+  (INSTALL.md, "What You'll Need").
+- **Two tools renamed.** `start_coding_session` and
+  `read_file_with_codings` are the new names of the tools that start a
+  coding session and read a file with its codings ("Changed: two tools
+  renamed, and Exegete's backups", below). The earlier names work as
+  before, with the same arguments and answers, until v0.15.2 removes
+  them. Your assistant app keeps its choices per tool name: a choice
+  to run an earlier name without asking, or to block it, does not
+  carry over to the new name, so look at the new names once in its
+  settings.
+- **Exegete's backups.** `list_backups` gives Exegete's own backups the
+  kind `exegete` instead of `mcp`. No backup changes, and
+  `prune_backups` removes what it removed before; a script or a saved
+  instruction that looks for `mcp` should look for `exegete`.
+- **The extension's folder for projects.** New installs use
+  `~/Exegete projects`. An install whose setting shows
+  `~/QualCoder projects` keeps it; nothing is moved, and both folders
+  are searched on every route. To use the new folder, change the
+  setting: the projects in the earlier one are still found.
+- **New settings, all optional** (INSTALL.md, step 4, and
+  "Environment variables the server reads"): "Your coder name"
+  (`EXEGETE_CODER_NAME`), "Do you also use QualCoder on this
+  computer?" (`EXEGETE_USES_QUALCODER`, not sure by default) and, on
+  any route, `EXEGETE_CALL_SECONDS`. "AI coder name"
+  (`EXEGETE_AI_CODER_NAME`) now does more: filled in, it is stored in
+  each new project without asking. Projects you already have keep
+  their coder names: Exegete never changes them silently, and
+  `set_project_coder_name` corrects your own while nothing is recorded
+  under it.
+- **Imports.** One `import_documents` call now takes up to 30 seconds
+  on every route (up to 45 in 0.14.3), and usually a few, since the
+  import reuses the text its preview read; a large batch may take
+  more calls, each of which says how to go on. The preview keeps those
+  texts, whole and before your names list is applied, in
+  `~/.exegete/import-texts.noindex` until the import, or for an hour
+  or more (PRIVACY.md, "How your data flows", says for how long).
+- **A write now refused.** A project whose format value only looks
+  like one Exegete knows (`v17` with a line break after it, or written
+  with another script's digits) is refused for writes as a value
+  Exegete cannot tell, with the same override as before.
+- **Not in this release.** The removals announced in 0.14 for v0.15
+  (TOOLS.md names each) come in v0.15.1, with the safety net; until
+  then the deprecated tools and arguments work, and say so
+  ("Deprecated: the removals move to v0.15.1", below).
+
+### Changed: one tool set called full
+
+- **`full` and `lifecycle` are one tool set, called `full`** (the
+  maintainer's decision of 12 October 2026): 79 tools (81 with the
+  earlier names of the two tools renamed below), creating a project
+  (still Experimental) and correcting your own coder name included, the
+  default on every route, in the Claude Desktop extension and wherever
+  Exegete is configured by hand. An install whose tool set is `full`
+  gains creating a project. `lifecycle`, the earlier name of `full`, set
+  anywhere (the extension's "Tool set" setting, `EXEGETE_TOOLSET` or
+  `QUALCODER_MCP_TOOLSET`, in any letter case), means `full` and is read
+  until v1.0; the log says so once at each start, never in an answer.
+  `core` keeps its 23 tools (25 with the two earlier names below),
+  without creating a project. The extension's "Tool set" setting now
+  comes as `full` and names the two words, and the bug report offers
+  `full`, `core` and `lifecycle (the earlier name of full)`.
+- **On the Terminal routes the assistant can now create a project
+  without a setting.** New projects go to
+  `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
+  another folder. iCloud
+  (Desktop and Documents) or OneDrive may sync Documents, and a sync
+  service can copy a project's database and its journal separately, so
+  a folder outside Documents, such as `~/Exegete projects`, is worth
+  considering (INSTALL.md, "What You'll Need").
+
+### Changed: two tools renamed, and Exegete's backups
+
+- **Two tools have names that say what they do** (the maintainer's
+  decision of 12 October 2026): `analyze_for_coding` is now
+  `start_coding_session` (it starts a coding session and reads nothing),
+  and `analyze_file_with_coding` is now `read_file_with_codings` (a
+  file's text with its codings). Every description, answer, refusal and
+  help text that names them uses the new names, and so do the documents.
+- **The earlier names are still listed**, each with a short
+  description, and do exactly what the new ones do, with the same
+  arguments and the same answers, until a later release (planned as
+  v0.15.2) removes them. Listing them adds 1,231 characters to
+  every request, in `full` and in `core` (see "Measured"). A host
+  that remembers a choice to run an earlier name without asking may ask
+  again for the new one. Likewise, a choice to block or switch off an
+  earlier name does not carry over to its new name: if you blocked one,
+  you may want to block the new name too. The help topic
+  `analyze_for_coding` of `explain_ai_coding_tools`, deprecated, keeps
+  its name until the deprecated topics go; its text names
+  `start_coding_session`, and help asked for under
+  `start_coding_session` gives it. Help asked for about any other of
+  Exegete's tools that has no topic of its own now says so, and that
+  the tool's description documents it, where it called the tool
+  unknown.
+- **"MCP backups" is now "Exegete's backups"**, and `list_backups` gives
+  Exegete's own backups the kind `exegete` (it was `mcp`). The kind is
+  worked out from each folder's name whenever the backups are listed,
+  so no backup changes and `prune_backups` removes exactly what it
+  removed before; but an assistant or a script that looked for the kind
+  `mcp` now sees `exegete`.
+
+### Changed: the extension's folder for projects
+
+- **New installs of the Claude Desktop extension keep projects in
+  `~/Exegete projects`** (the maintainer's decision of 12 October 2026):
+  its "Folder for projects" setting now comes as `~/Exegete projects`,
+  and its description says so. An install whose setting shows
+  `~/QualCoder projects`, the earlier default, keeps it, and Exegete
+  never moves or empties that folder; Exegete never writes the setting,
+  so a folder you chose reaches it unchanged. INSTALL's steps for Codex
+  name `~/Exegete projects` too; an entry written from the earlier
+  steps, naming `~/QualCoder projects`, the earlier default, keeps
+  working.
+- **Both folders are among the usual places, on every route**: with no
+  folders given, `list_available_projects` searches `~/Exegete projects`
+  and `~/QualCoder projects` after `~/QualCoder` and before
+  `~/Documents`. So a project the extension made, under either default,
+  is found in the extension and on the Terminal routes alike, and an
+  install moved to the new folder still finds its earlier projects.
+- **Either folder, as the workspace, is now searched three levels
+  deep**, as the other usual places are, where the extension's folder
+  was searched at its top level only; the answer's
+  `searched.top_level_only` is absent for it. A workspace anywhere else
+  is still searched at its top level only, and `top_level_only` names
+  it. `list_available_projects`' description says both. A workspace
+  that is one of the usual places spelt in another letter case, on a
+  Mac's usual disk, which ignores letter case, is now taken for that
+  place, compared by which folder it is rather than by its spelling,
+  so its projects are listed once, not twice.
+
+### Added: your coder name and the AI coder name as settings
+
+- **Two settings in the extension, "Your coder name" and "AI coder
+  name"** (the maintainer's decision of 12 October 2026), both empty by
+  default. Installed any other way, they are `EXEGETE_CODER_NAME`, new,
+  with one spelling, and `EXEGETE_AI_CODER_NAME`, which the extension
+  now sets under both its spellings.
+- **Your coder name is given to each new project without asking.** With
+  it filled in, `create_project` makes the project without the
+  question, and its answer says that the name came from the settings
+  (`coder_name_source`). Left empty, the assistant asks as before, and
+  the question says where the name can be filled in. A name given for
+  one project is used, with a note when it is not the one in the
+  settings.
+- **Projects that already exist keep their coder name, or their lack
+  of one**: Exegete gives the setting's name only to the projects it
+  creates from now on. Selecting a project that records another name,
+  or none, says so (`coder_name_notes`), and so does selecting one
+  whose AI coder name is the name in the settings.
+- **Equal names are refused in the conversation**: with the two settings
+  the same, `create_project` makes no project until one is changed; a
+  coder name given for the researcher that is the AI coder name in the
+  settings is refused, and so is QualCoder's speaker coder as the
+  researcher's setting. So are the names AI work is stored under that
+  are known before a project exists, Exegete's built-in default AI coder
+  name and "AI Agent", the name QualCoder 4.0's assistant writes under,
+  given or in the setting, as `set_project_coder_name` refuses them. An
+  invalid value of either setting (over 80 characters, a line break or
+  tab, an invisible formatting character other than the joiners some
+  scripts need, or `#####`) stops Exegete at start-up, naming the
+  setting, never its value, and saying where to change it.
+
+### Changed: the AI coder name in the settings, and the names the setter refuses
+
+- **The AI coder name in Exegete's settings is given to each new
+  project without asking.** With "AI coder name"
+  (`EXEGETE_AI_CODER_NAME`) filled in, `create_project` stores it as
+  the new project's AI coder name, and its answer says so
+  (`ai_coder_name`, and the first of its next steps); the new project's
+  folder then also holds `exegete.json`, and `qualcoder_mcp.json`
+  written already marked as moved, so that copies of Exegete from
+  before its rename (0.12 to 0.14) refuse to write the project. Up to
+  0.14.3 the setting was offered first and checked against a project's
+  own AI coder name, but never stored by itself. A project that
+  already has an AI coder name keeps it, and when the setting differs
+  the next write asks once which to use there; a project made another
+  way, without one, is asked at its first write, with the setting
+  offered first. `default` and QualCoder's speaker coder are not
+  stored: the project is made without an AI coder name, with a warning.
+  A setting the setter would refuse (these two, or the researcher's own
+  coder name in the settings) is not offered when a project is asked
+  for its AI coder name.
+  The texts that called the setting this host's declaration now call it
+  the AI coder name in Exegete's settings, and the brief and the help
+  on the AI coder name say that the researcher chooses it there or when
+  Exegete asks.
+- **Empty means ask**: empty, blank or a placeholder the app left
+  unfilled means not set, as unset does, so the extension starts with
+  its "AI coder name" left empty, and each project is asked for one.
+- **`set_project_ai_coder_name` refuses the researcher's own coder name
+  in Exegete's settings**, as it refuses the project's own.
+
+### Added: correcting your own coder name in a project
+
+- **Your own coder name in a project can be corrected.**
+  `set_project_coder_name` corrects the researcher's own coder name in a
+  project, or gives one to a project made without it, while nothing is
+  recorded under the current name: a preview, then the change with the
+  preview's token, after a backup. Refused, with the reason, once any
+  coding, annotation, case, memo, journal entry, code, category, file,
+  attribute or file-list view saved by QualCoder carries the name. The
+  refusal names the kinds of record that carry it, never how many; the
+  change is refused too while the project's AI coder name file or its
+  coder list cannot be read. The name is the researcher's own, never a
+  name AI work is stored under (this project's AI coder name or an
+  earlier one its AI coder name file lists, Exegete's built-in default,
+  the AI coder name in the settings, or "AI Agent"). In the project's
+  list of coders the old name's row takes the new name (or goes, when
+  the new name has a row already), keeping whether it is hidden. This
+  departs from QualCoder, whose Rename, and whose opening of a project,
+  make its current coder visible: Exegete changes no coder's
+  visibility anywhere, so a hidden name stays hidden, with the
+  researcher's codings under it, until QualCoder opens the project.
+  The preview warns when the new name would be hidden there or already
+  carries work. The question `create_project` asks now says the name
+  can be corrected while nothing is recorded under it, and the warnings
+  and selection notes about a project without a name, or with another
+  one, name `set_project_coder_name`. The tool is in `full`, not in
+  `core`.
+
 ### Changed: an import reads each document once
 
-- **An import reads each document once** (the owner's decision of 11
-  October 2026): `import_documents` now uses the text its preview read
-  instead of reading each file again. The preview keeps that text,
+- **An import reads each document once** (the maintainer's decision of
+  11 October 2026): `import_documents` now uses the text its preview
+  read instead of reading each file again. The preview keeps that text,
   readable by your account only and signed, in Exegete's own folder
   (`~/.exegete/import-texts.noindex`), and the import removes it once
   the files are in. A kept text is used only when the file is byte for
   byte the one previewed (its size and SHA-256, as the import already
   checked); a file whose kept text cannot be used is read again, as
-  before. So an import usually takes seconds. The time one call may
-  take is in the next entry.
+  before. So an import usually takes seconds. The time one call may take
+  is in the next entry.
+- **The folder's name in the log**: the two log lines about the folder
+  (when it cannot be used, and when Time Machine could not be asked to
+  leave it out) name it `~/.exegete/import-texts.noindex`, never by its
+  full path, which holds your account's name, as PRIVACY.md promises of
+  the log. On a Mac, Time Machine is asked to leave the folder out when
+  it is made, and asked again once in each later run that finds it not
+  left out, so that one failed request is not final.
 
-### Changed: the time for one import call, by the way Exegete runs
+### Changed: the time for one import call
 
-- **The time one `import_documents` call may take depends on how
-  Exegete was installed** (the owner's decision of 12 October 2026):
-  about 30 seconds in the Claude Desktop extension and about 30
-  installed any other way, counted from the call's start. The preview
+- **The time one `import_documents` call may take is chosen for each
+  way Exegete runs** (the maintainer's decision of 12 October 2026):
+  for now 30 seconds on every route, counted from the call's start,
+  until a measurement of how long Claude Desktop waits gives the
+  extension its own figure. The preview
   reads for that long; the import, which now usually reads nothing
   again, works within the same time instead of 0.14.3's 45 seconds.
   One file still has 30 seconds to be read at the preview, and 40 when
@@ -35,44 +299,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the log says so once. INSTALL.md, "Environment variables the server
   reads", says what to watch for.
 
-### Changed: the tests on Windows in three parts
+### Changed: Exegete's texts about QualCoder
 
-- **The automated tests run on Windows in three jobs**, a part each, so
-  the checks on a change finish sooner: one job there took 40 to 60
-  minutes. A part is made of whole test files, weighed by their number
-  of tests. `EXEGETE_TEST_SHARD="k/n"` (such as `2/3`) runs part k of n
-  on any computer, n at most 100; left empty, every test runs. A part
-  ends its run with a line naming its share of the tests and a
-  fingerprint of the whole split, the same in every part of one run.
-  Linux and macOS still run every test in one job each.
+Exegete's answers, warnings, refusals and help no longer presume that
+the researcher uses QualCoder (the maintainer's rule of 11 October
+2026): they name QualCoder when the sentence is about QualCoder itself
+or its format, when the project or this computer shows signs of it, or
+when the researcher says they use it, and they never send the
+researcher to QualCoder as the only way through. The parts below say
+what changed, family by family; the tool descriptions' other wording
+comes with v0.15.2.
 
-### Added: made-up documents for timing the preview
+#### Added: "Do you also use QualCoder on this computer?"
 
-- **`scripts/make_timing_documents.py`**, for contributors: it writes
-  made-up Word files that are slow to read for their size (made-up
-  English from a fixed list of plain words, no names; each letter a run
-  of its own), the same bytes for the same arguments, with the standard
-  library only. Its defaults make the 45 files of the timing session
-  that measures how long a host lets an import's preview read.
+- **A setting in the extension, "Do you also use QualCoder on this
+  computer?"** (the maintainer's decision of 12 October 2026), answered
+  yes, no or not sure; not sure is the default. Installed any other way,
+  it is `EXEGETE_USES_QUALCODER`, new, with one spelling. Any other word
+  is read as not sure, and the log says so once at start, never the word
+  itself.
+- **It decides whether some notes about QualCoder are relevant**, with
+  what Exegete finds when a project is selected: with yes, some notes
+  that matter only if you also open your projects in QualCoder are
+  relevant (such as whether an open QualCoder window shows Exegete's
+  changes); with no, those are not, unless the project shows signs that
+  QualCoder may have opened it or QualCoder is running when the project
+  is selected; with not sure, the default, what Exegete finds decides.
+  Notes worded "if the project is opened in QualCoder", such as the one
+  on emoji and Windows line breaks, are given with any answer, and the
+  extension's setting and INSTALL.md say so.
+  `select_project` and `get_current_project` give the answer as
+  `setting` in `qualcoder_history`, so the assistant knows it; the
+  field is now given whenever the answer is yes or no.
+- **It never changes the refusal or the warnings**: whatever the
+  answer, Exegete still refuses to write while QualCoder 3.8's lock
+  file is active, and still warns when it sees signs that QualCoder 4.0
+  may have the project open, since an answer can be out of date and a
+  write into a project open in QualCoder can lose work.
 
-### Changed: the libraries the extension installs, brought up to date
+#### Changed: a project's history with QualCoder
 
-- **The locked libraries are brought up to date** (`uv.lock`, which the
-  Claude Desktop extension installs from): 31 move to newer releases,
-  none uploaded in the week before the refresh. This clears the 20
-  advisories OSV listed on 12 October 2026 for eight of them: pyjwt
-  2.14.0 to 2.15.1 (two), starlette 0.49.1 to 1.7.0 (five),
-  python-multipart 0.0.20 to 0.0.32 (seven), anyio 4.11.0 to 4.15.1
-  (two), idna 3.11 to 3.20 and python-dotenv 1.2.1 to 1.2.4 (one each),
-  and, for contributors, pytest 8.4.2 to 9.1.1 and pygments 2.19.2 to
-  2.21.0 (one each). A scanner reading the lock still flags
-  `cryptography` 48.0.1 on Intel Macs and 46.0.3 on Windows on Arm, the
-  last releases with a ready-made package for those computers; Exegete
-  does not load `cryptography` or pyjwt when it starts and sets up its
-  tools, and a test now checks that. PyMuPDF, EbookLib and lxml are
-  unchanged, so PDFs and EPUBs are read as before.
+- **What Exegete finds of QualCoder is worked out once for each
+  project** (the maintainer's decision of 12 October 2026): when
+  `select_project` selects it or, straight after `create_project` or
+  `restore_backup` or for a project set in the host's configuration, at
+  the first answer that reads it. It is kept in memory for the session:
+  whether the project shows traces of QualCoder
+  (an `ai_data` folder, which QualCoder 3.8.2 and 4.0 make when they
+  first open a project and Exegete never makes; the AI chat history or
+  search index in it; QualCoder's own `_BKUP_` backups beside the
+  project; a lock file left over, by QualCoder 3.8 or by an interrupted
+  write of Exegete's), and whether QualCoder is installed
+  (its settings folder, `~/.qualcoder`, looked for but never read) or
+  running on this computer. `select_project` and `get_current_project`
+  give it as `qualcoder_history` when there is something to say. Later
+  changes use it to decide which notes about QualCoder an answer
+  carries. Whether QualCoder has the project open now is checked as
+  before, at every write and every `get_current_project`.
+- **A recently changed chat history is no longer read as a sign that
+  QualCoder has the project open when no QualCoder is running** (from
+  the maintainer's sitting of 11 October, where `select_project` said
+  that the project appeared to be open in QualCoder a minute after
+  QualCoder had closed). When the check of running programs could read
+  programs' command lines and found no QualCoder, the change says
+  nothing about an open window and is left out of
+  `qualcoder_gui_signals`; the file still counts as a trace in
+  `qualcoder_history`. Where that check could not run, cannot see a
+  QualCoder started from Python (Windows without psutil, which lists
+  program names only; a running Python program whose command line could
+  not be read), runs in a Linux sandbox whose process list holds only
+  its own programs (a Flatpak app, a container) or inside WSL (Windows
+  Subsystem for Linux), which lists none of Windows' programs, or finds
+  a program that may be a QualCoder it cannot read (one run through
+  Python, or one of QualCoder's Linux downloads, from a folder whose
+  path holds a space), the sign is given as before. Without psutil, a
+  few such paths are still read as no QualCoder, and the sign is then
+  left out: a folder whose name holds a word that begins with a hyphen
+  or a tilde (`Apps -old`, `Apps ~old`), a program started by a path
+  relative to the current folder that does not begin with `./` or
+  `../`, a space in the program's own file name, and a path of more
+  than 32 words. That check sees only this computer: a QualCoder open
+  on another computer, on a project in a synced or shared folder, is
+  not seen, and when the check here finds no QualCoder the chat
+  history's recent change no longer shows it either.
 
-### Changed: texts that were inaccurate about QualCoder
+#### Changed: texts that were inaccurate about QualCoder
 
 - **A busy database** no longer says that QualCoder may have the project
   open. QualCoder holds no database lock while a project is merely open,
@@ -116,265 +427,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   while the project's lock file is active, rather than while QualCoder
   3.x has the project open.
 
-### Changed: what pseudonymisation is for
-
-- **PRIVACY.md says what pseudonymisation is for**, in a section of its
-  own, "What pseudonymisation is for": the names list and
-  `pseudonymise_source` are useful for managing what is shared with
-  other people (a colleague or second coder, a supervisor, whoever
-  receives an export), though the project's folder still holds the
-  originals and any names list, and an export can still carry real
-  names (the section says where). For what reaches the AI assistant
-  they help, but they should not be trusted blindly: what Exegete's
-  tools return carries the pseudonyms only where names were replaced
-  (the section says what is not), and an assistant that opens files by
-  itself can read the originals by a route outside Exegete, as an
-  imagined example shows. For anyone who wants to be sure that real
-  names never reach the assistant, it suggests replacing them before
-  the documents come to the computer where the assistant works.
-  "Practical mitigations" points to the section.
-- **The README** ("Where your data goes") **and `pseudonymise_source`'s
-  description** say so briefly; the description also asks the
-  assistant not to open originals itself to work round a problem, and
-  to ask the researcher. The description grows by that paragraph (see
-  "Measured"); what pseudonymisation does has not changed.
-
-### Changed: a project's history with QualCoder
-
-- **What Exegete finds of QualCoder is worked out once for each
-  project** (the owner's decision of 12 October 2026): when
-  `select_project` selects it or, straight after `create_project` or
-  `restore_backup` or for a project set in the host's configuration, at
-  the first answer that reads it. It is kept in memory for the session:
-  whether the project shows traces of QualCoder
-  (an `ai_data` folder, which QualCoder 3.8.2 and 4.0 make when they
-  first open a project and Exegete never makes; the AI chat history or
-  search index in it; QualCoder's own `_BKUP_` backups beside the
-  project; a lock file left over, by QualCoder 3.8 or by an interrupted
-  write of Exegete's), and whether QualCoder is installed
-  (its settings folder, `~/.qualcoder`, looked for but never read) or
-  running on this computer. `select_project` and `get_current_project`
-  give it as `qualcoder_history` when there is something to say. Later
-  changes use it to decide which notes about QualCoder an answer
-  carries. Whether QualCoder has the project open now is checked as
-  before, at every write and every `get_current_project`.
-- **A recently changed chat history is no longer read as a sign that
-  QualCoder has the project open when no QualCoder is running** (from
-  the maintainer's sitting of 11 October, where `select_project` said
-  that the project appeared to be open in QualCoder a minute after
-  QualCoder had closed). When the check of running programs could read
-  programs' command lines and found no QualCoder, the change says
-  nothing about an open window and is left out of
-  `qualcoder_gui_signals`; the file still counts as a trace in
-  `qualcoder_history`. Where that check could not run, cannot see a
-  QualCoder started from Python (Windows without psutil, which lists
-  program names only; a running Python program whose command line could
-  not be read), runs in a Linux sandbox whose process list holds only
-  its own programs (a Flatpak app, a container) or inside WSL (Windows
-  Subsystem for Linux), which lists none of Windows' programs, or finds
-  a program that may be a QualCoder it cannot read (one run through
-  Python, or one of QualCoder's Linux downloads, from a folder whose
-  path holds a space), the sign is given as before. Without psutil, a
-  few such paths are still read as no QualCoder, and the sign is then
-  left out: a folder whose name holds a word that begins with a hyphen
-  or a tilde (`Apps -old`, `Apps ~old`), a program started by a path
-  relative to the current folder that does not begin with `./` or
-  `../`, a space in the program's own file name, and a path of more
-  than 32 words. That check sees only this computer: a QualCoder open
-  on another computer, on a project in a synced or shared folder, is
-  not seen, and when the check here finds no QualCoder the chat
-  history's recent change no longer shows it either.
-
-### Changed: one tool set called full
-
-- **`full` and `lifecycle` are one tool set, called `full`** (the
-  owner's decision of 12 October 2026): 78 tools (80 with the earlier
-  names of the two tools renamed below), creating a project (still
-  Experimental) included, the default on every route, in the
-  Claude Desktop extension and wherever Exegete is configured by hand.
-  An install whose tool set is `full` gains creating a project.
-  `lifecycle`, the earlier name of `full`, set anywhere (the extension's
-  "Tool set" setting, `EXEGETE_TOOLSET` or `QUALCODER_MCP_TOOLSET`, in
-  any letter case), means `full` and is read until v1.0; the log says so
-  once at each start, never in an answer. `core` keeps its 23 tools
-  (25 with the two earlier names below), without creating a project.
-  The extension's "Tool set" setting now comes as `full` and names the
-  two words, and the bug report offers `full`, `core` and
-  `lifecycle (the earlier name of full)`.
-- **On the Terminal routes the assistant can now create a project
-  without a setting.** New projects go to
-  `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
-  another folder. iCloud
-  (Desktop and Documents) or OneDrive may sync Documents, and a sync
-  service can copy a project's database and its journal separately, so
-  a folder outside Documents, such as `~/Exegete projects`, is worth
-  considering (INSTALL.md, "What You'll Need").
-
-### Changed: the extension's folder for projects
-
-- **New installs of the Claude Desktop extension keep projects in
-  `~/Exegete projects`** (the owner's decision of 12 October 2026): its
-  "Folder for projects" setting now comes as `~/Exegete projects`, and
-  its description says so. An install whose setting shows
-  `~/QualCoder projects`, the earlier default, keeps it, and Exegete
-  never moves or empties that folder; Exegete never writes the
-  setting, so a folder you chose reaches it unchanged. INSTALL's steps
-  for Codex name `~/Exegete projects` too; an entry written from the
-  earlier steps, naming `~/QualCoder projects`, the earlier default,
-  keeps working.
-- **Both folders are among the usual places, on every route**: with no
-  folders given, `list_available_projects` searches `~/Exegete projects`
-  and `~/QualCoder projects` after `~/QualCoder` and before
-  `~/Documents`. So a project the extension made, under either default,
-  is found in the extension and on the Terminal routes alike, and an
-  install moved to the new folder still finds its earlier projects.
-- **Either folder, as the workspace, is now searched three levels
-  deep**, as the other usual places are, where the extension's folder
-  was searched at its top level only; the answer's
-  `searched.top_level_only` is absent for it. A workspace anywhere else
-  is still searched at its top level only, and `top_level_only` names
-  it. `list_available_projects`' description says both. A workspace
-  that is one of the usual places spelt in another letter case, on a
-  Mac's usual disk, which ignores letter case, is now taken for that
-  place, compared by which folder it is rather than by its spelling,
-  so its projects are listed once, not twice.
-
-### Changed: two tools renamed, and Exegete's backups
-
-- **Two tools have names that say what they do** (the owner's decision
-  of 12 October 2026): `analyze_for_coding` is now
-  `start_coding_session` (it starts a coding session and reads
-  nothing), and `analyze_file_with_coding` is now
-  `read_file_with_codings` (a file's text with its codings). Every
-  description, answer, refusal and help text that names them uses the
-  new names, and so do the documents.
-- **The earlier names are still listed**, each with a short
-  description, and do exactly what the new ones do, with the same
-  arguments and the same answers, until a later release (planned as
-  v0.15.2) removes them. Listing them adds 1,231 characters to
-  every request, in `full` and in `core` (see "Measured"). A host
-  that remembers a choice to run an earlier name without asking may ask
-  again for the new one. Likewise, a choice to block or switch off an
-  earlier name does not carry over to its new name: if you blocked one,
-  you may want to block the new name too. The help topic
-  `analyze_for_coding` of `explain_ai_coding_tools`, deprecated, keeps
-  its name until the deprecated topics go; its text names
-  `start_coding_session`.
-- **"MCP backups" is now "Exegete's backups"**, and `list_backups` gives
-  Exegete's own backups the kind `exegete` (it was `mcp`). The kind is
-  worked out from each folder's name whenever the backups are listed,
-  so no backup changes and `prune_backups` removes exactly what it
-  removed before; but an assistant or a script that looked for the kind
-  `mcp` now sees `exegete`.
-
-### Added: your coder name and the AI coder name as settings
-
-- **Two settings in the extension, "Your coder name" and "AI coder
-  name"** (the owner's decision of 12 October 2026), both empty by
-  default. Installed any other way, they are `EXEGETE_CODER_NAME`, new,
-  with one spelling, and `EXEGETE_AI_CODER_NAME`, which the extension
-  now sets under both its spellings.
-- **Your coder name is given to each new project without asking.** With
-  it filled in, `create_project` makes the project without the
-  question, and its answer says that the name came from the settings
-  (`coder_name_source`). Left empty, the assistant asks as before, and
-  the question says where the name can be filled in. A name given for
-  one project is used, with a note when it is not the one in the
-  settings.
-- **Projects that already exist keep their coder name, or their lack
-  of one**: Exegete gives the setting's name only to the projects it
-  creates from now on. Selecting a project that records another name,
-  or none, says so (`coder_name_notes`), and so does selecting one
-  whose AI coder name is the name in the settings.
-- **Equal names are refused in the conversation**: with the two
-  settings the same, `create_project` makes no project until one is
-  changed; a coder name given for the researcher that is the AI coder
-  name in the settings is refused, and so is QualCoder's speaker coder
-  as the researcher's setting. An invalid value of either setting (over
-  80 characters, a line break or tab, an invisible formatting character
-  other than the joiners some scripts need, or `#####`) stops Exegete
-  at start-up, naming the setting, never its value, and saying
-  where to change it.
-
-### Added: correcting your own coder name in a project
-
-- **Your own coder name in a project can be corrected.**
-  `set_project_coder_name` corrects the researcher's own coder name in a
-  project, or gives one to a project made without it, while nothing is
-  recorded under the current name: a preview, then the change with the
-  preview's token, after a backup. Refused, with the reason, once any
-  coding, annotation, case, memo, journal entry, code, category, file,
-  attribute or file-list view saved by QualCoder carries the name. The
-  refusal names the kinds of record that carry it, never how many; the
-  change is refused too while the project's AI coder name file or its
-  coder list cannot be read. The name is the researcher's own, never a
-  name AI work is stored under (this project's AI coder name or an
-  earlier one its AI coder name file lists, Exegete's built-in default,
-  the AI coder name in the settings, or "AI Agent"). In the project's
-  list of coders the old name's row takes the new name, keeping whether
-  it is hidden; the
-  preview warns when the new name would be hidden there or already
-  carries work. The question `create_project` asks now says the name
-  can be corrected while nothing is recorded under it, and the warnings
-  and selection notes about a project without a name, or with another
-  one, name `set_project_coder_name`. The tool is in `full`, not in
-  `core`.
-
-### Changed: the AI coder name in the settings, and the names the setter refuses
-
-- **The AI coder name in Exegete's settings is given to each new
-  project without asking.** With "AI coder name"
-  (`EXEGETE_AI_CODER_NAME`) filled in, `create_project` stores it as
-  the new project's AI coder name, and its answer says so
-  (`ai_coder_name`, and the first of its next steps); the new project's
-  folder then also holds `exegete.json`, and `qualcoder_mcp.json`
-  written already marked as moved, so that copies of Exegete from
-  before its rename (0.12 to 0.14) refuse to write the project. Up to
-  0.14.3 the setting was offered first and checked against a project's
-  own AI coder name, but never stored by itself. A project that
-  already has an AI coder name keeps it, and when the setting differs
-  the next write asks once which to use there; a project made another
-  way, without one, is asked at its first write, with the setting
-  offered first. `default` and QualCoder's speaker coder are not
-  stored: the project is made without an AI coder name, with a warning.
-  A setting the setter would refuse (these two, or the researcher's own
-  coder name in the settings) is not offered when a project is asked
-  for its AI coder name.
-  The texts that called the setting this host's declaration now call it
-  the AI coder name in Exegete's settings, and the brief and the help
-  on the AI coder name say that the researcher chooses it there or when
-  Exegete asks (the full brief is now about 12,500 characters).
-- **Empty means ask**: empty, blank or a placeholder the app left
-  unfilled means not set, as unset does, so the extension starts with
-  its "AI coder name" left empty, and each project is asked for one.
-- **`set_project_ai_coder_name` refuses the researcher's own coder name
-  in Exegete's settings**, as it refuses the project's own.
-
-### Added: "Do you also use QualCoder on this computer?"
-
-- **A setting in the extension, "Do you also use QualCoder on this
-  computer?"** (the owner's decision of 12 October 2026), answered yes,
-  no or not sure; not sure is the default. Installed any other way, it
-  is `EXEGETE_USES_QUALCODER`, new, with one spelling. Any other word
-  is read as not sure, and the log says so once at start, never the
-  word itself.
-- **It decides whether some notes about QualCoder are relevant**, with
-  what Exegete finds when a project is selected: with yes, some notes
-  that matter only if you also open your projects in QualCoder are
-  relevant (such as whether an open QualCoder window shows Exegete's
-  changes); with no, those are not, unless the project shows signs that
-  QualCoder may have opened it or QualCoder is running when the project
-  is selected; with not sure, the default, what Exegete finds decides.
-  `select_project` and `get_current_project` give the answer as
-  `setting` in `qualcoder_history`, so the assistant knows it; the
-  field is now given whenever the answer is yes or no.
-- **It never changes the refusal or the warnings**: whatever the
-  answer, Exegete still refuses to write while QualCoder 3.8's lock
-  file is active, and still warns when it sees signs that QualCoder 4.0
-  may have the project open, since an answer can be out of date and a
-  write into a project open in QualCoder can lose work.
-
-### Changed: when a write is refused, and what a failure says
+#### Changed: when a write is refused, and what a failure says
 
 - **The write tools' descriptions say once when a write is refused**:
   while the project's lock file is active (QualCoder 3.8 has the
@@ -393,8 +446,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   says another program, such as QualCoder, may have the project open,
   do not write: ask the researcher to close it there." The full brief's
   section on when to ask says the same. Exegete's opening text is now
-  2,034 characters, within the 2,048 that Claude Code keeps, and the
-  full brief about 12,500.
+  2,034 characters, within the 4,096 that Claude Code keeps from its
+  version 2.1.296 (2,048 before).
 - **`create_project`'s question for the coder name** offers
   `coder_name_not_known=true` to a researcher who would rather not give
   a name, as well as to one who does not know it.
@@ -410,7 +463,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   messages say where its backups sit and that one can be copied back by
   hand, since no tool can list or restore them then.
 
-### Changed: selecting or creating a project says more about QualCoder only where there is a sign of it
+#### Changed: selecting or creating a project says more about QualCoder only where there is a sign of it
 
 - **`select_project`, when it finds no sign of an open QualCoder
   window**, mentions QualCoder only when the project or this computer
@@ -440,7 +493,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   QualCoder 4.0." It never looks at the programs running on the
   computer for this.
 
-### Changed: refusals about the database and the format, and about what Exegete does not do yet
+#### Changed: refusals about the database and the format, and about what Exegete does not do yet
 
 Refusals and warnings about the database and the format, and about
 features Exegete lacks, say what Exegete does and does not do yet, and
@@ -487,17 +540,17 @@ given, what it refuses and its override have not changed.
   refused as a value Exegete cannot tell, with the override as before.
 - **Where Exegete lacks a feature**, the refusal says so instead of
   sending the researcher to QualCoder: "Exegete does not merge cases
-  yet"; "Exegete does not yet move an existing code under another
-  code"; a PDF with no usable text is not linked to a case, and
-  "QualCoder, if you use it, can still link it to the case"; a refusal
-  about a file name's ending says that "Exegete leaves a name's ending as
-  it is, to protect the project's links and exports", and that
-  QualCoder's own Rename can make the change for a researcher who uses
-  it; and a new name that clashes with a file in the documents folder
-  names `restore_backup` first, "or QualCoder's own Rename, if the
-  researcher uses it".
+  yet"; "Exegete does not yet move an existing code under another code";
+  a PDF with no usable text is not linked to a case, and "QualCoder, if
+  you use it, can still link it to the case"; a refusal about a file
+  name's ending says that "Exegete leaves a name's ending as it is, to
+  protect the project's links and exports", and that QualCoder's own
+  Rename can make the change for a researcher who uses it; and a new
+  name that clashes with a file in the documents folder names
+  `restore_backup` first, "or QualCoder's own Rename, if the researcher
+  uses it".
 
-### Changed: the codebook, searching and coder names
+#### Changed: the codebook, searching and coder names
 
 The codebook's previews, the searches and the messages on coder names
 say what Exegete does, without measuring it against QualCoder; Exegete's
@@ -543,7 +596,7 @@ When each is given, what it refuses and its overrides have not changed.
   (unless the researcher has said in Exegete's settings that they do not
   use it) or the researcher's answer that they use it.
 
-### Changed: the names list and pseudonymisation's messages
+#### Changed: the names list and pseudonymisation's messages
 
 The import's and pseudonymisation's messages about the names list lead
 with what every researcher can do in Exegete, name QualCoder about its
@@ -593,7 +646,30 @@ When each is given, what it refuses and its counts have not changed.
   parts the preview could not read, check them by hand or treat them as
   still holding names.
 
-### Changed: messages about emoji, PDFs and imported documents
+#### Changed: what pseudonymisation is for
+
+- **PRIVACY.md says what pseudonymisation is for**, in a section of its
+  own, "What pseudonymisation is for": the names list and
+  `pseudonymise_source` are useful for managing what is shared with
+  other people (a colleague or second coder, a supervisor, whoever
+  receives an export), though the project's folder still holds the
+  originals and any names list, and an export can still carry real
+  names (the section says where). For what reaches the AI assistant
+  they help, but they should not be trusted blindly: what Exegete's
+  tools return carries the pseudonyms only where names were replaced
+  (the section says what is not), and an assistant that opens files by
+  itself can read the originals by a route outside Exegete, as an
+  imagined example shows. For anyone who wants to be sure that real
+  names never reach the assistant, it suggests replacing them before
+  the documents come to the computer where the assistant works.
+  "Practical mitigations" points to the section.
+- **The README** ("Where your data goes") **and `pseudonymise_source`'s
+  description** say so briefly; the description also asks the
+  assistant not to open originals itself to work round a problem, and
+  to ask the researcher. The description grows by that paragraph (see
+  "Measured"); what pseudonymisation does has not changed.
+
+#### Changed: messages about emoji, PDFs and imported documents
 
 The messages below now say what happens in Exegete, and what happens
 in QualCoder only if the project is opened there or for a researcher
@@ -637,7 +713,7 @@ have not changed.
   split it into parts and import each; QualCoder, if you use it,
   imports it whole."
 
-### Changed: notes about QualCoder's backups, windows, AI files and saved places, on a sign
+#### Changed: notes about QualCoder's backups, windows, AI files and saved places, on a sign
 
 The notes below are now given only when the project or this computer
 shows that QualCoder has been used, or the researcher said they use it,
@@ -686,7 +762,7 @@ host's configuration, the first `list_backups` or pseudonymisation run
 can be what looks for a running QualCoder (the process scan), as
 PRIVACY.md describes.
 
-### Changed: renames, exports, the reading copy and coder names, without presuming QualCoder
+#### Changed: renames, exports, the reading copy and coder names, without presuming QualCoder
 
 After a rename, Exegete names QualCoder's places only where the project
 has them; exports state their counting rule first, with QualCoder's
@@ -744,25 +820,7 @@ After `create_project` or `restore_backup`, or for a project set in the
 host's configuration, the first rename can be what looks for a running
 QualCoder (the process scan), as PRIVACY.md describes.
 
-### Changed: a project from a QualCoder older than 3.8
-
-- **The refusal of a project from a QualCoder older than 3.8** no
-  longer asks for it to be opened and saved in QualCoder 3.8: QualCoder
-  3.8 or newer brings such a project up to date as it opens it, with no
-  save, and the project is then selected again in Exegete. It now says
-  that Exegete cannot do this itself; what to do without QualCoder
-  (someone who has it and is allowed to see the project's data can do
-  it and send the updated copy); and that QualCoder writes that
-  person's coder name into the project as it opens it, unless they set
-  theirs to the researcher's first (and back afterwards), and that
-  `set_project_coder_name` can then put the researcher's name in its
-  place while nothing is recorded under it. It says the project
-  "appears to have been made" with such a QualCoder, since a damaged
-  copy can lack the same columns. The refusal to write to a project
-  with a schema before v14 says the same. TOOLS.md, AI_CODING_GUIDE.md
-  and the README follow.
-
-### Changed: the brief, the help and the methods notes, without presuming QualCoder
+#### Changed: the brief, the help and the methods notes, without presuming QualCoder
 
 The brief, the help and the methods notes speak of method without
 framing it by QualCoder's own assistant, and the brief says when to
@@ -796,8 +854,17 @@ for the four labels stays in NOTICE.
   answer ascribes to QualCoder, signs of a window). QualCoder merely
   installed is not a sign once that answer is no. Otherwise the
   assistant says what Exegete does and what it does not do yet. The
-  full brief is now about 12,900 characters; the opening text has not
+  full brief is now about 13,000 characters; the opening text has not
   changed.
+- **The brief's other points**: its section on how changes happen
+  names importing documents and correcting the researcher's coder name
+  among the changes that take a preview and then the preview's token;
+  its section on QualCoder says that Exegete refuses to write while the
+  project's lock file is active (QualCoder 3.8.2 has the project open,
+  or another conversation is writing to it); and its help section
+  speaks of "approaches to prompting (two published)", in no more
+  characters than before. README.md and TOOLS.md describe the lock
+  file's refusal the same way.
 - **The help's overview points to the topic on Exegete's earlier name**
   (`moving_from_qualcoder_mcp`) only on a computer where that name was
   used: where the state folder it kept, `~/.qualcoder_mcp`, or the link
@@ -806,18 +873,105 @@ for the four labels stays in NOTICE.
   the name is there, and lists and reads nothing inside it. The topic
   itself is still given by name.
 
+### Changed: a project from a QualCoder older than 3.8
+
+- **The refusal of a project from a QualCoder older than 3.8** no
+  longer asks for it to be opened and saved in QualCoder 3.8: QualCoder
+  3.8 or newer brings such a project up to date as it opens it, with no
+  save, and the project is then selected again in Exegete. It now says
+  that Exegete cannot do this itself; what to do without QualCoder
+  (someone who has it and is allowed to see the project's data can do
+  it and send the updated copy); and that QualCoder writes that
+  person's coder name into the project as it opens it, unless they set
+  theirs to the researcher's first (and back afterwards), and that
+  `set_project_coder_name` can then put the researcher's name in its
+  place while nothing is recorded under it. It says the project
+  "appears to have been made" with such a QualCoder, since a damaged
+  copy can lack the same columns. The refusal to write to a project
+  with a schema before v14 says the same. Both refusals then end with a
+  way on that needs no QualCoder at all: "Without QualCoder at all, a
+  new project made in Exegete from the original documents is a way on,
+  without this project's coding." TOOLS.md, AI_CODING_GUIDE.md and the
+  README follow.
+- **A project whose format value is v14 or later but lacks the
+  columns** is no longer said to come from a QualCoder older than 3.8:
+  the refusal says that its schema has those columns, so it may have
+  been damaged or altered, and that a copy from before the change (a
+  backup folder beside it, selected in its place, for example) may
+  have them; otherwise the same ways on follow, since QualCoder adds a
+  missing column as it opens a project, whatever the value.
+
+### Changed: the libraries the extension installs, brought up to date
+
+- **The locked libraries are brought up to date** (`uv.lock`, which the
+  Claude Desktop extension installs from): 31 move to newer releases,
+  none uploaded in the week before the refresh. This clears the 20
+  advisories OSV listed on 12 October 2026 for eight of them: pyjwt
+  2.14.0 to 2.15.1 (two), starlette 0.49.1 to 1.7.0 (five),
+  python-multipart 0.0.20 to 0.0.32 (seven), anyio 4.11.0 to 4.15.1
+  (two), idna 3.11 to 3.20 and python-dotenv 1.2.1 to 1.2.4 (one each),
+  and, for contributors, pytest 8.4.2 to 9.1.1 and pygments 2.19.2 to
+  2.21.0 (one each). A scanner reading the lock still flags
+  `cryptography` 48.0.1 on Intel Macs and 46.0.3 on Windows on Arm, the
+  last releases with a ready-made package for those computers; Exegete
+  does not load `cryptography` or pyjwt when it starts and sets up its
+  tools, and a test now checks that. PyMuPDF, EbookLib and lxml are
+  unchanged, so PDFs and EPUBs are read as before.
+
+### Deprecated: the removals move to v0.15.1
+
+- **Every removal announced in 0.14 for v0.15 now comes in v0.15.1**,
+  with the safety net, as the plan for v0.15 in three releases has it:
+  the REFI-QDA export, `read_pseudonym_list`, `export_code_report`,
+  `cleanup_old_sessions`, `merge_proposals`, four help topics, and the
+  arguments and options TOOLS.md names. Until then each works, and its
+  description and answers say "Deprecated, removed in v0.15.1" (they
+  said v0.15). TOOLS.md, PRIVACY.md, INSTALL.md, the AI coding guide
+  and the README say the same, and the README's "What comes next"
+  lists v0.15.1 and v0.15.2.
+- **`read_pseudonym_list`'s note leads with the file itself**: the list
+  stays in `pseudonyms.json` in the project folder, where the
+  researcher can read it without sending it anywhere; QualCoder's
+  Pseudonyms dialog (Manage Files) also shows it. It no longer names
+  QualCoder's dialog as the only way to see the list without sending
+  it. INSTALL.md and TOOLS.md say the same.
+
+### For contributors
+
+#### Changed: the tests on Windows in three parts
+
+- **The automated tests run on Windows in three jobs**, a part each, so
+  the checks on a change finish sooner: one job there took 40 to 60
+  minutes. A part is made of whole test files, weighed by their number
+  of tests. `EXEGETE_TEST_SHARD="k/n"` (such as `2/3`) runs part k of n
+  on any computer, n at most 100; left empty, every test runs. A part
+  ends its run with a line naming its share of the tests and a
+  fingerprint of the whole split, the same in every part of one run.
+  Linux and macOS still run every test in one job each.
+
+#### Added: made-up documents for timing the preview
+
+- **`scripts/make_timing_documents.py`**, for contributors: it writes
+  made-up Word files that are slow to read for their size (made-up
+  English from a fixed list of plain words, no names; each letter a run
+  of its own), the same bytes for the same arguments, with the standard
+  library only. Its defaults make the 45 files of the timing session
+  that measures how long a host lets an import's preview read.
+
 ### Measured
 
-- Serialised tool JSON: full = 205,022 characters (about 51.3k tokens
-  at chars/4) over 81 tools, and core = 68,120 (about 17.0k) over 25,
+- Serialised tool JSON: full = 205,127 characters (about 51.3k tokens
+  at chars/4) over 81 tools, and core = 68,124 (about 17.0k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 215,390 and
-  71,540. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
-  the opt-in lifecycle set's 204,244 over 78, on 3.13), ten changes
-  moved them. `full` and `lifecycle` became one set of 78 tools, so
+  which also gives exactly 0.14.3's figures for its tree), 215,495 and
+  71,544. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  the `lifecycle` set's, the extension's default, 204,244 over 78, on
+  3.13), eleven changes moved them; for most researchers, on the
+  extension, the change is from `lifecycle` to `full`: 883 characters
+  more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
   descriptions changed with the names list's wording:
@@ -857,7 +1011,23 @@ for the four labels stays in NOTICE.
   description shares, lost its attribution to QualCoder 4.0's
   assistant: 55 characters fewer in both sets (the line break it lost
   counts as two there), on both interpreters.
+  And the removals announced for v0.15 now say v0.15.1, two characters
+  in each description that carries a deprecation sentence, and
+  `read_pseudonym_list`'s leads with `pseudonyms.json` in the project
+  folder: 105 characters more in `full` and 4 in `core`, on both
+  interpreters.
   No other tool's entry changed.
+- Claude Code now keeps 4,096 characters of a tool's description, and
+  16,384 through its tool search (2,048 before its version 2.1.296):
+  in `full`, 30 descriptions pass 2,048 (33 on 3.11), 4 pass 4,096 (5
+  on 3.11) and one, `pseudonymise_source` (17,791 characters), passes
+  16,384, so its last paragraphs (the arguments bound into the token,
+  the lock file, Returns) reach Claude Code only with a larger limit
+  (INSTALL.md, "Alternative: Claude Code and other MCP clients", says
+  how to set one). The rules the
+  tests hold within the first 2,048 characters are kept there as a
+  margin; the shortening of the descriptions comes with v0.15.2. The
+  opening text is 2,034 characters and the full brief 12,998.
 
 ## [0.14.3-alpha] - 2026-10-12
 

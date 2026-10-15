@@ -667,6 +667,8 @@ def test_the_changelog_says_what_changed():
 
 def test_the_changelog_section_wraps_at_72():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    section = text.split(HEADING, 1)[1].split("\n### ", 1)[0]
+    # to the next heading of any level: since the whole-branch review the
+    # texts' parts are sub-parts of one section
+    section = text.split(HEADING, 1)[1].split("\n#", 1)[0]
     long_lines = [line for line in section.splitlines() if len(line) > 72]
     assert not long_lines, long_lines

@@ -80,8 +80,8 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     # so the list starts with images, audio and video
     assert ("**Not in Exegete yet**, and done in QualCoder for now: "
             "bringing in images, audio and video;") in flat
-    assert ("If your study needs any of these now, get QualCoder from the "
-            "start.") in flat
+    assert ("If your study needs any of these now, you may want "
+            "QualCoder from the start.") in flat
     # v0.14.3: neither document says any longer that only
     # handed text comes in, nor that QualCoder is needed for Word or PDF
     # files

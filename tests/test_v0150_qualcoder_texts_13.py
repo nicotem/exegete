@@ -106,9 +106,9 @@ SECTION_4_AROUND = (
     + " - Only one program should change a project at a time.")
 SECTION_14_LINE = (
     "- explain_ai_coding_tools() gives an overview of the coding loop; "
-    "exegete://guidance/methods gives the methods notes and some published "
-    "approaches to prompting. For using QualCoder itself, point to its own "
-    "manual.")
+    "exegete://guidance/methods gives the methods notes and approaches to "
+    "prompting (two published). For using QualCoder itself, point to its "
+    "own manual.")
 OLD_SECTION_14_LINE = (
     "- explain_ai_coding_tools() gives an overview of the coding loop; "
     "exegete://guidance/methods gives the methods notes and the literature "

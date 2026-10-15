@@ -225,7 +225,14 @@ def _tools(mode="full"):
 # through, adding that without QualCoder someone who has it and may see
 # the project's data can do this and send the updated copy. That takes
 # 112 characters, and the limit is raised by that and no more: 36,685.
-README_LIMIT = 36_685
+# The whole-branch review of v0.15.0, round 1: a way on without QualCoder
+# at all for a project from before 3.8; the kept preview texts in "What
+# stays on your computer"; where the settings are; Claude Code's limits
+# as they now are; the lock file's refusal not QualCoder's alone; the
+# removals in 0.15.1 and "What comes next" with v0.15.1 and v0.15.2; and
+# three sentences that presumed QualCoder. That takes 927 characters, and
+# the limit is raised by that and no more: 37,612.
+README_LIMIT = 37_612
 
 
 def test_the_readme_stays_short():
@@ -728,8 +735,10 @@ def test_the_advanced_section_rests_on_the_code():
                   "clears old ones.",
                   "It reads a project's SQLite database read-only; each "
                   "tool that writes opens its own connection, after a "
-                  "backup (by default), and refuses while QualCoder 3.8.2 "
-                  "has the project open.",
+                  "backup (by default), and refuses while the project's "
+                  "lock file is active (QualCoder 3.8.2 has the project "
+                  "open, or another conversation using Exegete is writing "
+                  "to it).",
                   "`pipx install exegete`"):
         assert words in opening, words
     with open(REPO / "pyproject.toml", "rb") as handle:
@@ -767,9 +776,14 @@ def test_the_advanced_section_rests_on_the_code():
                  "**Analysis**", "**Guarded changes**", "**The brief**",
                  "**Resources**"):
         assert lead in beyond, lead
-    assert ("Claude Code shows only the first 2,048 characters of a tool's "
-            "description, so the rules that matter come first; the rest "
-            "reach the model through `read_brief` or the answers.") in beyond
+    # Claude Code's limits as they are since its version 2.1.296
+    # (whole-branch review, round 1)
+    assert ("Claude Code shows the first 4,096 characters of a tool's "
+            "description (16,384 when it finds the tool through its tool "
+            "search, and 2,048 before its version 2.1.296), so the rules "
+            "that matter come first, within 2,048; the rest reach the "
+            "model through `read_brief` or the answers.") in beyond
+    assert "Claude Code shows only the first 2,048" not in beyond
     assert ("`pseudonymise_source` (these five also say whose work is "
             "affected), `restore_backup`, `prune_backups`") in beyond
     assert "def _pseudonymise_by_owner" in database
@@ -805,8 +819,10 @@ def test_what_comes_next_is_plans():
     items = re.findall(r" - ([^ ]+(?: [^ ]+)?)", section)
     # v0.14.3: bringing documents in and reading a whole
     # file yourself are in Exegete, so they are no longer the next plan
+    # (the whole-branch review of v0.15.0, round 1: v0.15 in three
+    # releases, the safety net in v0.15.1 and method in v0.15.2)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15", "v0.16", "v0.17", "Later"]
+        "v0.15.1", "v0.15.2", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do

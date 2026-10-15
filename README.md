@@ -106,8 +106,8 @@ never put participant data in an issue.
 **Not in Exegete yet**, and done in QualCoder for now: bringing in
 images, audio and video; coding by selecting text yourself; coding
 images, audio, video or an area of a PDF page; graphs; and QualCoder's
-Reports menu. If your study needs any of these now, get QualCoder from
-the start.
+Reports menu. If your study needs any of these now, you may want
+QualCoder from the start.
 
 **The aim** is the whole life of a project in Exegete, from its
 creation to the finished analysis, without needing QualCoder for any of
@@ -188,8 +188,8 @@ you switch it off ("Updating", below). What the assistant reads through it (pass
 codes, memos, names) goes to the maker of the AI behind your assistant:
 Anthropic for Claude's apps, OpenAI for ChatGPT's desktop app and
 Codex, no one with a local model. Text you paste or attach goes in
-full; a document imported in QualCoder or brought in through Exegete,
-only as far as the assistant reads it: Exegete's preview
+full; a document in the project, brought in through Exegete or
+imported in QualCoder, only as far as the assistant reads it: Exegete's preview
 of an import gives the assistant the documents' names, sizes, lengths
 and warnings, never their text
 ([PRIVACY.md, "Bringing documents in"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#bringing-documents-in-0143)).
@@ -266,6 +266,8 @@ says where):
 - your project, backups, exports and pending suggestions;
 - the pages and copies Exegete opens for you to read a file (an EPUB
   opened in Apple Books joins its library, and iCloud if Books syncs);
+- the texts an import's preview read, kept in Exegete's own folder
+  until the import (PRIVACY.md says for how long);
 - Claude Desktop's log of the extension, with every request and answer;
 - Codex's session files, with what Codex read by itself.
 
@@ -383,7 +385,11 @@ it). Not using QualCoder? Any name you choose will do. Do not know
 yours? Say so. Before its first write, it asks for the AI coder name,
 kept per project, under which Exegete writes what is done through the
 conversation, unless the project was made while it was filled in
-Exegete's settings.
+Exegete's settings. Both names, and whether you also use QualCoder on
+this computer, are set in Claude Desktop's Settings, Extensions,
+Exegete, or elsewhere as INSTALL.md's
+[Environment variables the server reads](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
+says.
 
 **A project you already have.** Ask the assistant to copy it into its
 folder for projects and to work on the copy. The original is not
@@ -391,10 +397,12 @@ touched, though an assistant that opens files by itself, such as
 Codex, can read it from the path you give. A project from before
 QualCoder 3.8 must first be opened once in 3.8 or newer; without
 QualCoder, someone who has it and may see the project's data can do
-this and send you the updated copy.
+this and send you the updated copy. Without QualCoder at all, a new
+project made in Exegete from the original documents is a way on,
+without the old project's coding.
 
-**One program at a time.** Before the assistant changes a project,
-close that project in QualCoder. With QualCoder 3.8.2, an open project
+**One program at a time.** If you also use QualCoder, close the
+project there before the assistant changes it. With QualCoder 3.8.2, an open project
 is detected and the change refused. In QualCoder 4.0 it cannot be
 detected, so there only you can make sure; an open 4.0 window shows
 the changes only once the project is opened again.
@@ -460,10 +468,10 @@ QualCoder 3.8.2 and 4.0:
 | Import sources | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part, which the extension has), and text the assistant hands over |
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
-| Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting; nesting an existing code under another is done in QualCoder |
+| Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting; not yet nesting an existing code under another |
 | Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
 | Reports | Many, in its Reports menu | Some: codebook, coding report, frequencies, case-by-code matrix, co-occurrence |
-| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, being withdrawn (removed in 0.15) |
+| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, being withdrawn (removed in 0.15.1) |
 | Comparing two coders | Per code, with a figure QualCoder labels Kappa | The same figure, and Cohen's kappa beside it; set against the AI coder name it is not agreement between independent coders |
 | Pseudonyms | Applied when a file is imported | Also applied to text already coded |
 | AI suggestions for coding | 3.8.2: an AI search finds passages, which you code; 4.0: its assistant codes as it works, within the AI permission you set (read only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
@@ -514,7 +522,8 @@ the AI behind it
 ([Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes)).
 It reads a project's SQLite database read-only; each tool that writes
 opens its own connection, after a backup (by default), and refuses
-while QualCoder 3.8.2 has the project open. Each backup copies the
+while the project's lock file is active (QualCoder 3.8.2 has the
+project open, or another conversation using Exegete is writing to it). Each backup copies the
 whole project folder, with any media stored in it, next to the project;
 `prune_backups` clears old ones. Install it with `pipx install exegete`;
 [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)
@@ -560,9 +569,11 @@ the extension, is still accepted and means `full`.
   EPUB need `exegete[pdf-epub]`) and `open_file_for_reading` (on the
   researcher's screen, never in the conversation).
 - **The brief** (provisional), how the assistant is to work with you
-  (`read_brief`). Claude Code shows only the first 2,048 characters of
-  a tool's description, so the rules that matter come first; the rest
-  reach the model through `read_brief` or the answers.
+  (`read_brief`). Claude Code shows the first 4,096 characters of a
+  tool's description (16,384 when it finds the tool through its tool
+  search, and 2,048 before its version 2.1.296), so the rules that
+  matter come first, within 2,048; the rest reach the model through
+  `read_brief` or the answers.
 - **Resources** (`exegete://...`), prompts, and
   `exegete --check-transition` for a move from qualcoder-mcp.
 
@@ -600,9 +611,12 @@ github.com/nicotem/exegete
 
 Plans, not promises: the order may change with what testers report.
 
-- v0.15, the safety net: undo everything a session did; when replacing
-  names, choose which mentions to keep; old tools marked as going are
-  retired (TOOLS.md names each)
+- v0.15.1, the safety net: undo everything a session did; when
+  replacing names, choose which mentions to keep; old tools marked as
+  going are retired (TOOLS.md names each)
+- v0.15.2, method: how the assistant supports a study's method,
+  reviewed; shorter tool descriptions; the earlier names of the two
+  renamed tools retired
 - v0.16, chat-first: more of the analysis shown in the conversation,
   as tables and graphs (codes that occur together, the code tree,
   counts by attribute); PDFs that say where their text came from;

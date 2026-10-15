@@ -530,9 +530,12 @@ class TestTheThreeDescriptions:
         # piece's change is still held to 0.14.3's length, measured
         # with that paragraph taken out
         from test_v0150_qualcoder_texts_2 import without_the_paragraph
+        # and the whole-branch review's round 1 rewords read_pseudonym_list's
+        # deprecation and moves the removals to v0.15.1: put back too
+        from test_v0150_wb_fix_r1 import before_the_review
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
-            text = raw[name]
+            text = before_the_review(raw[name])
             if name == "pseudonymise_source":
                 text = without_the_paragraph(text)
                 assert text != raw[name], name

@@ -81,9 +81,10 @@ of a project from the conversation. It runs as an MCP server.
   only.
 - **Tool descriptions are measured.** Tests pin the size sent with every
   request. Rules a model must not miss sit within a description's first
-  2,048 characters, because Claude Code cuts there; the few left past the
-  cut, each with its reason, are listed in `LEFT_PAST_THE_CUT` in
-  `tests/test_v0142_description_cut.py`.
+  2,048 characters: Claude Code cut there before its version 2.1.296; it
+  now keeps 4,096 (16,384 through tool search), and 2,048 is kept as a
+  margin. The few left past it, each with its reason, are listed in
+  `LEFT_PAST_THE_CUT` in `tests/test_v0142_description_cut.py`.
 - **Documents:** plain UK English, no em dashes. Many sentences in the
   documents are pinned by tests, so move the pin with its sentence.
   Explain risks and suggest alternatives; do not prescribe.

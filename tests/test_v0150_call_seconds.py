@@ -321,9 +321,15 @@ def _figures():
 def test_tools_says_the_figures():
     e, t, least, most = _figures()
     tools = _flat("TOOLS.md")
+    # One figure on every route until the owner's timing gives the
+    # extension its own; a figure not yet measured is not called measured
+    # (whole-branch review, round 1). A change to either constant moves
+    # these sentences with it.
+    assert e == t
     assert (f"Each call stops between files within its time, counted from "
-            f"the call's start: about {e} seconds in the Claude Desktop "
-            f"extension and about {t} installed any other way, or the "
+            f"the call's start: {e} seconds on every route for now (the "
+            f"Claude Desktop extension's own figure follows a measurement "
+            f"of how long it waits), or the "
             f"whole number of seconds from {least} to {most} set in "
             f"`{SETTING}` (INSTALL.md); the preview reads for that long "
             f"and the import works within the same time; the files not "
@@ -338,9 +344,11 @@ def test_install_says_the_figures():
             f"`import_documents` may take, counted from its start, before "
             f"it stops between files and leaves the rest for the next "
             f"call, whose answer says how to go on: a whole number from "
-            f"{least} to {most}. Unset, it is {e} in the desktop "
-            f"extension, a figure measured against how long Claude "
-            f"Desktop waits, and {t} installed any other way.") in install
+            f"{least} to {most}. Unset, it is {e} seconds on every route; "
+            f"the desktop extension's own figure follows a measurement of "
+            f"how long Claude Desktop waits.") in install
+    assert e == t
+    assert "a figure measured against" not in install
     # How far past the figure a call can run, and what waits meanwhile
     # (fix round 1): the import gives a file read again 40 seconds, and
     # import_documents runs on the server's one event loop.
@@ -363,11 +371,14 @@ def test_the_changelog_says_the_figures():
     changelog = _flat("CHANGELOG.md")
     unreleased = changelog[changelog.index("## [Unreleased]"):]
     unreleased = unreleased[:unreleased.index("## [0.14.3-alpha]")]
-    assert ("### Changed: the time for one import call, by the way "
-            "Exegete runs") in unreleased
-    assert (f"about {e} seconds in the Claude Desktop extension and about "
-            f"{t} installed any other way, counted from the call's "
-            f"start.") in unreleased
+    # One figure for now, not called measured (whole-branch review,
+    # round 1)
+    assert e == t
+    assert "### Changed: the time for one import call " in unreleased
+    assert "by the way Exegete runs" not in unreleased
+    assert (f"for now {e} seconds on every route, counted from the call's "
+            f"start, until a measurement of how long Claude Desktop waits "
+            f"gives the extension its own figure.") in unreleased
     assert (f"A new setting, `{SETTING}`, a whole number of seconds from "
             f"{least} to {most}, sets the time on any route") in unreleased
     assert "instead of 0.14.3's 45 seconds" in unreleased

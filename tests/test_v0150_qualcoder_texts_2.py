@@ -208,7 +208,8 @@ PARAGRAPH = (
     "To keep real names from the assistant altogether, suggest "
     "replacing them before the documents reach this computer (PRIVACY.md, "
     "\"What pseudonymisation is for\").")
-DEPRECATION = "Deprecated, removed in v0.15: overlap_policy"
+# (removed in v0.15.1 since the whole-branch review, round 1)
+DEPRECATION = "Deprecated, removed in v0.15.1: overlap_policy"
 # The CHANGELOG entry's heading
 ENTRY = "### Changed: what pseudonymisation is for"
 
@@ -491,9 +492,13 @@ class TestTheDescription:
         # paragraph one sentence; it is put back as it was, so that this
         # still compares with piece 1's pin
         from test_v0150_qualcoder_texts_5 import put_back_the_lock_paragraph
+        # and the whole-branch review's round 1 moved the removals to
+        # v0.15.1: put back too
+        from test_v0150_wb_fix_r1 import before_the_review
         server._apply_toolset("full")
-        before = without_the_paragraph(put_back_the_lock_paragraph(
-            TOOL, server.mcp.original_descriptions[TOOL]))
+        before = before_the_review(without_the_paragraph(
+            put_back_the_lock_paragraph(
+                TOOL, server.mcp.original_descriptions[TOOL])))
         length, solid, digest = _fingerprint(before)
         assert (solid, digest) == (12705, "b497f4c553410195")
         if sys.version_info[:2] == (3, 13):

@@ -49,26 +49,27 @@ the full path: use that one.
 2. Work only on the workspace copy
 3. Check the results, in the conversation or in QualCoder, before replacing the original
 
-### Close QualCoder First
+### One program at a time
 
-QualCoder 3.x marks an open project with a `project_in_use.lock`
-heartbeat file, and Exegete respects it: **every write operation is
-refused while the project's lock file is active**. Exegete writes the
-same file during each of its own writes, so the refusal names both
-causes and both ways through: "This project is in use by another
-program: its lock file is active (user ...), so QualCoder 3.8 has it
-open, or another conversation using Exegete is writing to it. Ask the
-researcher to close it in QualCoder, or wait a moment; once
-get_current_project shows qualcoder_open false, retry." Reads still
-work, with a warning that data may change underneath.
+A project's lock file, `project_in_use.lock`, is active while another
+conversation using Exegete is writing to the project (Exegete writes
+the file during each of its own writes) or while QualCoder 3.8.2 has
+the project open (it keeps the file as a heartbeat), and **every write
+operation is refused while the project's lock file is active**. The
+refusal names both causes and the way through for each: "This project
+is in use by another program: its lock file is active (user ...), so
+QualCoder 3.8.2 has it open, or another conversation using Exegete is
+writing to it. Ask the researcher to close it in QualCoder, or wait a
+moment; once get_current_project shows qualcoder_open false, retry."
+Reads still work, with a warning that data may change underneath.
 
 QualCoder 4.0 writes no lock file. For it Exegete can only report
 that the project appears to be open (`qualcoder_gui_signals` in
 `select_project`, `get_current_project` and `start_coding_session`: a
-heuristic that can miss an idle window), so make sure yourself that no
-QualCoder window has the project open before writing. An open 4.0
-window will not show changes written by Exegete until the project
-is closed and reopened there.
+heuristic that can miss an idle window), so if you also use QualCoder,
+make sure yourself that no window has the project open before writing.
+An open 4.0 window will not show changes written by Exegete until the
+project is closed and reopened there.
 
 ### Backups
 

@@ -122,13 +122,20 @@ class TestQualCoderFoursSigns:
                 "QualCoder 4.0 writes no lock, so the signs that it may "
                 "have the project open are passed on as a warning in the "
                 "preview") in changelog
-        assert ("Refused or kept out, saying why: while QualCoder 3.8.2 "
-                "has the project open;") in _description()
-        assert ("QualCoder 3.8.2's lock refuses the import before any "
-                "backup, and the signs that QualCoder 4.0 may have the "
-                "project open (it writes no lock) are passed on as a "
-                "warning in the preview (`qualcoder_gui_hint`)") in \
-            _doc("TOOLS.md")
+        # v0.15.0 (the fourth reading of the documents): the lock file
+        # has two causes, another conversation using Exegete or QualCoder
+        # 3.8.2 (tests/test_v0150_lock_wording.py)
+        assert ("Refused or kept out, saying why: while another "
+                "conversation using Exegete or QualCoder 3.8.2 has the "
+                "project in use (its lock file);") in _description()
+        assert ("The import is refused before any backup while the "
+                "project's lock file is active: another conversation using "
+                "Exegete is writing to the project (wait a moment and try "
+                "again), or QualCoder 3.8.2 has it open (if you use "
+                "QualCoder, close the project there). The signs that "
+                "QualCoder 4.0 may have the project open (it writes no lock "
+                "file) are passed on as a warning in the preview "
+                "(`qualcoder_gui_hint`)") in _doc("TOOLS.md")
 
 
 # ---------------------------------------------------------------------------

@@ -79,7 +79,7 @@ RULES = {
         "capability that hide coders)", None),
     "close_qualcoder_40_before_renaming": (
         "safety", "QualCoder 4.0 writes no lock file, so Exegete "
-        "cannot see a 4.0 window", None),
+        "may miss a 4.0 window", None),
     "relay_position_safety_warning": (
         "safety", "contains `position_safety_warning`", "."),
     # Grounding and the judgement of requests
@@ -130,7 +130,7 @@ RULES = {
     "researchers_coder_name": ("approval", "THE RESEARCHER'S CODER NAME:",
                                None),
     # Writes, destructive tools and QualCoder being open
-    "qualcoder_open_stop": ("safety", "QUALCODER OPEN: if the result has",
+    "qualcoder_open_stop": ("safety", "IN USE: if `qualcoder_open` is true",
                             None),
     # apply_codings' own wording of the refusal ("Writes are refused
     # while QualCoder has the project open ... then retry.") became, in
@@ -140,12 +140,11 @@ RULES = {
         "refusal", "The session must belong to the CURRENTLY OPEN project",
         "is refused."),
     "relay_open_warning": (
-        "safety", "The result may include a `warning`, for example that "
-        "QualCoder", None),
+        "safety", "The result may include a `warning`; RELAY it.", None),
     "where_the_next_write_lands": (
         "safety", "QualCoder 4.0 detection is best-effort", None),
     "open_signals": (
-        "safety", "Also reports whether QualCoder currently has this "
+        "safety", "Also reports whether another program may have this "
         "project open", None),
     "work_on_a_copy": (
         "safety", "IMPORTANT: work on a project in the workspace", None),
@@ -272,7 +271,9 @@ LEFT_PAST_THE_CUT = {
         "say the same",
     ("start_coding_session", "qualcoder_open_stop"):
         "the answer carries qualcoder_open and, when it is true, "
-        "action_required, which asks the user to close QualCoder",
+        "action_required, which names both causes of the lock file and "
+        "asks the researcher to close the project in QualCoder or to wait "
+        "a moment",
     ("start_coding_session", "session_pairings"):
         "record_suggestions, where a pairing is recorded, carries its "
         "own rule on pairings within its cut",
@@ -608,7 +609,7 @@ CHANGED_0150 = {
     # Exegete keeps for the project in its Exegete folder
     # (files_exegete_keeps), a paragraph after pseudonyms_json's; 1,920
     # to 2,067 characters on 3.13 (tests/test_v0150_private_files.py)
-    "get_current_project": (2067, 1694, "ebd78e91ecb07fe8"),
+    "get_current_project": (2066, 1686, "eb39266c8cb70989"),
     "list_available_projects": (904, 716, "0117f9141c0b48ea"),
     "read_pseudonym_list": (1114, 921, "a12932a8639d99f9"),
     # the renames, piece 3
@@ -642,45 +643,45 @@ CHANGED_0150 = {
     # one sentence naming both causes of the lock file and the signs
     # of a QualCoder 4.0 window; every one is shorter than before
     # (tests/test_v0150_qualcoder_texts_5.py)
-    "add_annotation": (1576, 1295, "30fa6ba96b8fc4f3"),
-    "add_journal_entry": (1016, 832, "1b25da385b143c6b"),
-    "apply_codings": (2496, 2031, "a97a90f226a08cbe"),
-    "create_attribute_type": (2042, 1637, "5dffe7dbcf3380a3"),
-    "create_case": (1588, 1330, "3f4c1103d70864f8"),
-    "create_category": (1780, 1424, "cd1a4abde9502311"),
-    "create_code": (2824, 2302, "fadda64984f15768"),
-    "create_proposed_codes": (1808, 1495, "29ca47a65f2356cb"),
-    "delete_annotation": (1865, 1489, "05bf0b03dff8918f"),
-    "delete_category": (1619, 1331, "9eb6c6a6a9058d7a"),
-    "delete_code": (2521, 2061, "78013b1797b214f5"),
-    "delete_coding": (2867, 2307, "be5e2d1ea0338a1e"),
-    "import_text_file": (4059, 3021, "391eee5ed31906cd"),
-    "link_file_to_case": (1721, 1321, "3f77ab2b8289b508"),
-    "merge_category": (2423, 1967, "38623bf46a7b6e6f"),
-    "merge_codes": (2748, 2285, "4ce3a749f3c106ca"),
-    "move_category": (1339, 1040, "4ad846b358aa58fd"),
-    "move_code_to_category": (1676, 1338, "c8c5eb5b28da0027"),
-    "pseudonymise_source": (17791, 13074, "f5be68114fdbf2c1"),
-    "recolor_code": (1234, 1029, "71044e04657e3df6"),
-    "rename_case": (2076, 1712, "61ef53bce7266c93"),
-    "rename_category": (939, 776, "498212de941bf07d"),
-    "rename_code": (909, 746, "f53e3d4db9605ebb"),
-    "rename_file": (3421, 2838, "b83e356de67a9cdf"),
+    "add_annotation": (1576, 1295, "3bac821e2956808a"),
+    "add_journal_entry": (1016, 832, "5bd02446471b324d"),
+    "apply_codings": (2496, 2031, "8fb1ef18c49210c3"),
+    "create_attribute_type": (2042, 1637, "db6c8ce575e25836"),
+    "create_case": (1588, 1330, "322f18769bd3e363"),
+    "create_category": (1780, 1424, "1cb094331ffa608e"),
+    "create_code": (2824, 2302, "4afc8edcc457f115"),
+    "create_proposed_codes": (1808, 1495, "976135978c55cbf7"),
+    "delete_annotation": (1865, 1489, "d2b3b1e544c8747e"),
+    "delete_category": (1619, 1331, "80c54259987e993d"),
+    "delete_code": (2521, 2061, "d660dcbb1daf32a5"),
+    "delete_coding": (2867, 2307, "ad4e0e0cb8346094"),
+    "import_text_file": (4059, 3021, "481e0147558819b6"),
+    "link_file_to_case": (1721, 1321, "6bf63a6d149042d8"),
+    "merge_category": (2423, 1967, "42aeef5b97fcd7a6"),
+    "merge_codes": (2748, 2285, "0a59d4b7a163c90a"),
+    "move_category": (1339, 1040, "368688abac4d0ce5"),
+    "move_code_to_category": (1676, 1338, "2590d024f0b97c26"),
+    "pseudonymise_source": (17791, 13074, "3fbebb2123003b54"),
+    "recolor_code": (1234, 1029, "1d4326ac95cbd2d9"),
+    "rename_case": (2065, 1701, "f26e0f2c3e992401"),
+    "rename_category": (939, 776, "b0f0f61ac346d4c4"),
+    "rename_code": (909, 746, "39a4d64e6ae7eb33"),
+    "rename_file": (3410, 2827, "a8bc00ae39bed6cc"),
     # (restore_backup's line moved to the files design's piece 2, below)
-    "set_attribute": (1688, 1379, "0b8ef40bcc0986d9"),
-    "set_memo": (2551, 2048, "9e62726bc0ecece1"),
-    "update_annotation": (1931, 1599, "be5fbd103294206a"),
+    "set_attribute": (1688, 1379, "bc73c6300bbf0bd6"),
+    "set_memo": (2551, 2048, "3a417646b9157db2"),
+    "update_annotation": (1931, 1599, "1aa9c4205c15c2ec"),
     # not presuming QualCoder, piece 6: select_project's sentence on the
     # warning when no sign of an open window is found, which now comes
     # only when this project or computer shows QualCoder or the setting
     # says yes (its fix round 1 named the setting); the same length as
     # before (tests/test_v0150_qualcoder_texts_6.py)
-    "select_project": (2415, 1996, "67eb0818c7355df8"),
+    "select_project": (2403, 1987, "588a84f350aec6c9"),
     # not presuming QualCoder, piece 13: the four outcomes' sentence in
     # the text start_coding_session's description shares ("Four
     # outcomes:", without the attribution to QualCoder 4.0's assistant),
     # 54 characters fewer on 3.13 (tests/test_v0150_qualcoder_texts_13.py)
-    "start_coding_session": (6042, 4908, "662931b185aced31"),
+    "start_coding_session": (6038, 4904, "753c9a5eb76d3f91"),
     # The whole-branch review of v0.15.0, round 1: the removals announced
     # in v0.14 for v0.15 now say v0.15.1 (ruling 70), two characters more
     # in each description that carries a deprecation sentence; and the
@@ -702,7 +703,18 @@ CHANGED_0150 = {
     # project's Exegete folder, which a restore keeps as it is, after its
     # paragraph on symlinks; 2,730 to 2,877 characters on 3.13
     # (tests/test_v0150_restore_keeps_folder.py)
-    "restore_backup": (2877, 2367, "9014851203733822"),
+    # The fourth reading of the documents (tests/test_v0150_lock_wording.py):
+    # the lock file's cause is QualCoder 3.8.2 in the write tools'
+    # sentence (26 descriptions, apply_codings' first guarantee and
+    # restore_backup's item 4), with "if there are some" for "when there
+    # are some", so their lengths hold; get_current_project,
+    # select_project, start_coding_session, rename_case and rename_file
+    # name both causes of the lock file, or ask for QualCoder 4.0 to be
+    # closed only if the researcher uses it, each shorter than before
+    # (get_current_project 2,066 characters on 3.13, from 2,067); its
+    # fix round 1: the renames say Exegete "may miss" a 4.0 window, not
+    # that it "cannot see" one (rename_case 2,065, rename_file 3,410)
+    "restore_backup": (2877, 2367, "06cea91506d0e578"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

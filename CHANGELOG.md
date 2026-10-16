@@ -380,7 +380,7 @@ comes with v0.15.2.
   `setting` in `qualcoder_history`, so the assistant knows it; the
   field is now given whenever the answer is yes or no.
 - **It never changes the refusal or the warnings**: whatever the
-  answer, Exegete still refuses to write while QualCoder 3.8's lock
+  answer, Exegete still refuses to write while QualCoder 3.8.2's lock
   file is active, and still warns when it sees signs that QualCoder 4.0
   may have the project open, since an answer can be out of date and a
   write into a project open in QualCoder can lose work.
@@ -396,7 +396,7 @@ comes with v0.15.2.
   (an `ai_data` folder, which QualCoder 3.8.2 and 4.0 make when they
   first open a project and Exegete never makes; the AI chat history or
   search index in it; QualCoder's own `_BKUP_` backups beside the
-  project; a lock file left over, by QualCoder 3.8 or by an interrupted
+  project; a lock file left over, by QualCoder 3.8.2 or by an interrupted
   write of Exegete's), and whether QualCoder is installed
   (its settings folder, `~/.qualcoder`, looked for but never read) or
   running on this computer. `select_project` and `get_current_project`
@@ -439,13 +439,23 @@ comes with v0.15.2.
   names another conversation using Exegete, a sync or backup service,
   or QualCoder if you use it, and says to wait a moment and try again.
 - **The refusal while a project's lock file is active** names both of
-  its causes: QualCoder 3.8 has the project open, or another
+  its causes: QualCoder 3.8.2 has the project open, or another
   conversation using Exegete is writing to it (Exegete writes the same
   file during each of its own writes), and both ways through: closing
   the project in QualCoder, or waiting a moment. `select_project`'s
   warning, `get_current_project`'s note and `start_coding_session`'s
-  request and banner say the same. `get_current_project`'s note on a
-  lock file not refreshed for over 30 seconds says that QualCoder 3.8
+  request and banner say the same. So do the descriptions of
+  `get_current_project`, `select_project`, `start_coding_session` and
+  `import_documents`, which gave the lock file as QualCoder's alone or
+  asked every researcher to close the project in QualCoder, and the new
+  `set_project_coder_name`'s: each names both causes, gives the way
+  through for each where it says what to do, and asks for the project
+  to be closed in QualCoder only if the researcher uses it.
+  `rename_case`'s and `rename_file`'s descriptions ask for the project
+  to be closed in QualCoder 4.0 only if the researcher uses 4.0. None
+  of the changed descriptions is longer than before, and every text
+  that names the QualCoder release behind the lock file says 3.8.2. `get_current_project`'s note on a
+  lock file not refreshed for over 30 seconds says that QualCoder 3.8.2
   leaves one when it does not close cleanly, and that a write by
   Exegete leaves one when it is cut short, or shows as one while it
   runs longer than that. When each is given has not changed.
@@ -474,12 +484,14 @@ comes with v0.15.2.
 - AI_CODING_WORKFLOW.md quotes the new refusal whole, with its two
   ways through, and its rule in bold says that every write is refused
   while the project's lock file is active, rather than while QualCoder
-  3.x has the project open.
+  3.x has the project open. Its section is now called "One program at
+  a time", as in TOOLS.md, and asks those who also use QualCoder to
+  make sure that no window has the project open before writing.
 
 #### Changed: when a write is refused, and what a failure says
 
 - **The write tools' descriptions say once when a write is refused**:
-  while the project's lock file is active (QualCoder 3.8 has the
+  while the project's lock file is active (QualCoder 3.8.2 has the
   project open, or another conversation using Exegete is writing to
   it) or another program is writing to the database. For QualCoder 4.0,
   which writes no lock file, they point to the signs of an open window
@@ -520,7 +532,7 @@ comes with v0.15.2.
   settings that they use it (with the answer no, QualCoder's settings
   folder alone does not count), and says which: the project has been
   opened in QualCoder before; a lock file was left in the project by a
-  program that did not close it cleanly, as QualCoder 3.8 does and an
+  program that did not close it cleanly, as QualCoder 3.8.2 does and an
   interrupted write by Exegete can; the researcher has said they use
   QualCoder on this computer; or QualCoder is on this computer, though
   nothing shows it has opened the project. Each adds that QualCoder 4.0
@@ -531,7 +543,7 @@ comes with v0.15.2.
   file, only if the researcher uses QualCoder); in the last, the
   researcher is asked only if they may have it open there. Otherwise it
   gives no warning about QualCoder; before, it always named the limits
-  of seeing a QualCoder 4.0 window. The refusal while QualCoder 3.8's
+  of seeing a QualCoder 4.0 window. The refusal while QualCoder 3.8.2's
   lock file is active, and the warning when there are signs of an open
   QualCoder 4.0 window, have not changed.
 - **`create_project` explains how QualCoder 4.0 and 3.8.2 open the new
@@ -920,10 +932,10 @@ for the four labels stays in NOTICE.
   or another conversation is writing to it); and its help section
   speaks of "approaches to prompting (two published)", in no more
   characters than before. README.md, TOOLS.md, PRIVACY.md, SUPPORT.md,
-  PROJECT_SELECTION_GUIDE.md, the AI coding guide and the bug report
-  form describe the lock file's refusal the same way, and where they
-  ask for the project to be closed in QualCoder, they ask it of those
-  who also use QualCoder.
+  PROJECT_SELECTION_GUIDE.md, AI_CODING_WORKFLOW.md, the AI coding
+  guide and the bug report form describe the lock file's refusal the
+  same way, and where they ask for the project to be closed in
+  QualCoder, they ask it of those who also use QualCoder.
 - **The help's overview points to the topic on Exegete's earlier name**
   (`moving_from_qualcoder_mcp`) only on a computer where that name was
   used: where the state folder it kept, `~/.qualcoder_mcp`, or the link
@@ -1080,17 +1092,17 @@ for the four labels stays in NOTICE.
 
 ### Measured
 
-- Serialised tool JSON: full = 205,788 characters (about 51.4k tokens
-  at chars/4) over 81 tools, and core = 68,275 (about 17.1k) over 25,
+- Serialised tool JSON: full = 205,741 characters (about 51.4k tokens
+  at chars/4) over 81 tools, and core = 68,258 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 216,192 and
-  71,707. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  which also gives exactly 0.14.3's figures for its tree), 216,145 and
+  71,690. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
-  3.13), fifteen changes moved them; for most researchers, on the
-  extension, the change is from `lifecycle` to `full`: 1,544 characters
+  3.13), sixteen changes moved them; for most researchers, on the
+  extension, the change is from `lifecycle` to `full`: 1,497 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -1148,6 +1160,13 @@ for the four labels stays in NOTICE.
   sets, 163 on 3.11. And `restore_backup`'s description says a restore
   keeps the project's `Exegete` folder as it is: 151 characters more in
   `full`, 163 on 3.11; `core` does not serve it.
+  And the descriptions that gave the lock file's refusal as
+  QualCoder's alone now name both of its causes, and those that asked
+  every researcher to close QualCoder 4.0 ask it only of those who use
+  it, in fewer characters: 47 fewer in `full` (`select_project` 12,
+  `rename_case` and `rename_file` 11 each, `import_documents` 8,
+  `start_coding_session` 4 and `get_current_project` 1) and 17 fewer in
+  `core`, on both interpreters.
   No other tool's entry changed.
 - Claude Code now keeps 4,096 characters of a tool's description, and
   16,384 through its tool search (2,048 before its version 2.1.296):

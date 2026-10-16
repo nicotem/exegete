@@ -97,7 +97,7 @@ BUSY = (
 def refusal(holder):
     return (
         f"This project is in use by another program: its lock file is "
-        f"active (user {holder}), so QualCoder 3.8 has it open, or another "
+        f"active (user {holder}), so QualCoder 3.8.2 has it open, or another "
         f"conversation using Exegete is writing to it. Ask the researcher "
         f"to close it in QualCoder, or wait a moment; once "
         f"get_current_project shows qualcoder_open false, retry.")
@@ -105,7 +105,7 @@ def refusal(holder):
 
 def in_use(holder):
     return (f"This project is in use by another program (its lock file is "
-            f"active, user {holder}): QualCoder 3.8 has it open, or another "
+            f"active, user {holder}): QualCoder 3.8.2 has it open, or another "
             f"conversation using Exegete is writing to it.")
 
 
@@ -321,7 +321,7 @@ class TestTheActiveLockFile:
         answer = json.loads(server.get_current_project())
         assert answer["qualcoder_open"] is True
         assert answer["qualcoder_lock"]["note"] == (
-            "QualCoder 3.8, or another conversation using Exegete, has this "
+            "QualCoder 3.8.2, or another conversation using Exegete, has this "
             "project in use; all database writes will be refused while the "
             "lock file is active. Ask the researcher to close it in "
             "QualCoder, or wait a moment, then re-check.")
@@ -360,7 +360,7 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     assert answer["qualcoder_lock"] == {
         "state": "stale", "holder": "someone",
         "note": "A lock file not refreshed for over 30 seconds: "
-                "QualCoder 3.8 leaves one when it does not close cleanly, "
+                "QualCoder 3.8.2 leaves one when it does not close cleanly, "
                 "and a write by Exegete leaves one when it is cut short, "
                 "or shows as one while it runs longer than that. Writes "
                 "proceed normally."}
@@ -465,13 +465,14 @@ def test_the_workflow_guides_rule_is_the_lock_file():
     """Fix round 2: the guide's rule in bold said writes are refused while
     QualCoder 3.x has the project open, and its quote of the refusal then
     named another conversation using Exegete; the rule is now the lock
-    file, which the next sentence explains."""
+    file, which the next sentence explains. The fourth reading of the
+    documents put the two causes before the rule, in the section now
+    called "One program at a time" (tests/test_v0150_lock_wording.py)."""
     guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
         encoding="utf-8"))
-    assert ("Exegete respects it: **every write operation is refused while "
-            "the project's lock file is active**. Exegete writes the same "
-            "file during each of its own writes, so the refusal names both "
-            "causes and both ways through") in guide
+    assert ("**every write operation is refused while the project's lock "
+            "file is active**. The refusal names both causes and the way "
+            "through for each") in guide
 
 
 class TestTheMemoIsNotSaidToBeSeeded:

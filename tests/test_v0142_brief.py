@@ -564,10 +564,16 @@ class TestTheSizes:
     # get_current_project a paragraph on the files Exegete keeps for the
     # project (151 characters more in both sets). The files design,
     # piece 2, gives restore_backup a paragraph on the project's Exegete
-    # folder, which a restore keeps (151 characters more in `full`). Their
-    # entries as 0.14.2 served them are below, so every other tool is
-    # still held to 0.14.2's figure.
-    NOW = {"full": 197_065, "core": 64_959}
+    # folder, which a restore keeps (151 characters more in `full`). The
+    # fourth reading of the documents names both causes of the lock file
+    # in get_current_project, select_project and start_coding_session,
+    # and asks for QualCoder 4.0 to be closed only if the researcher uses
+    # it in rename_case and rename_file (35 characters fewer in `full`
+    # here, import_documents being left out, and 17 in `core`); its fix
+    # round 1 says in the renames that Exegete "may miss a 4.0 window"
+    # (4 fewer in `full`). Their entries as 0.14.2 served them are below,
+    # so every other tool is still held to 0.14.2's figure.
+    NOW = {"full": 197_026, "core": 64_942}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -623,7 +629,10 @@ class TestTheSizes:
                           "rename_file": 3_946,
                           "restore_backup": 3_214,
                           "set_attribute": 2_361,
-                          "set_memo": 3_298}
+                          "set_memo": 3_298,
+                          # the fourth reading of the documents (its
+                          # words changed with piece 6, not its length)
+                          "select_project": 2_720}
     # Where `core` serves one of them marked (it names a tool `core`
     # lacks), its entry there as 0.14.2 served it
     CHANGED_AFTER_0142_IN_CORE = {"start_coding_session": 6_775,

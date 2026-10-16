@@ -503,8 +503,8 @@ extension installed before 0.15.0 keeps its earlier folder,
 | Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word) |
 
 For the length of each write, Exegete also writes a lock file into the
-project's folder (`project_in_use.lock`, the file QualCoder 3.8 uses to
-mark a project open), holding your computer account's name and the
+project's folder (`project_in_use.lock`, the file QualCoder 3.8.2 uses
+to mark a project open), holding your computer account's name and the
 time; it removes the file when the write ends, though a write that is
 cut off can leave it behind.
 
@@ -1186,8 +1186,9 @@ from the file it points to; one pointing outside the project is
 refused, and nothing is written. A damaged database is a different
 case: every tool here opens the database before it takes a backup, so
 none can back up or restore a project whose database will not open.
-Copy the whole project folder by hand, with QualCoder closed, before
-trying any repair, and keep that copy.
+Copy the whole project folder by hand, with no program using the
+project (QualCoder closed, if you use it), before trying any repair,
+and keep that copy.
 
 Besides `restore_backup`, which checks that no journal or WAL file
 sits beside the database of the backup you choose, opens it to check
@@ -2244,7 +2245,7 @@ will ask, and the summary above depends on them:
   before the analysis, not after.
 - Remember that Exegete's safety features (read-only default,
   automatic local backups, refusing to write while the project's lock
-  file is active (QualCoder 3.8 keeps it while it has the project open,
+  file is active (QualCoder 3.8.2 keeps it while it has the project open,
   and Exegete during each of its own writes), and for QualCoder 4.0 a
   best-effort check of this machine's process list that reports only a
   count, never names or command lines) protect your

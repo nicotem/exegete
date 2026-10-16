@@ -1244,7 +1244,7 @@ class TestTheWordsAfterReview:
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
         section = _collapsed(_section(
             changelog, "### Changed: a project's history with QualCoder"))
-        assert ("a lock file left over, by QualCoder 3.8 or by an "
+        assert ("a lock file left over, by QualCoder 3.8.2 or by an "
                 "interrupted write of Exegete's") in section
 
     def test_contributing_puts_the_module_beside_path_identity(self):

@@ -1439,7 +1439,7 @@ class TestTheFiveBehavioursQAFoundUnpinned:
                 # each of its writes, so the refusal names both causes
                 assert out == {"error": (
                     "This project is in use by another program: its lock "
-                    "file is active (user gui_user), so QualCoder 3.8 has "
+                    "file is active (user gui_user), so QualCoder 3.8.2 has "
                     "it open, or another conversation using Exegete is "
                     "writing to it. Ask the researcher to close it in "
                     "QualCoder, or wait a moment; once get_current_project "

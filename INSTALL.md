@@ -81,8 +81,8 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      worded "if the project is opened in QualCoder", such as the one on
      emoji and Windows line breaks, are given with any answer, and so is
      the line saying that a new project is in QualCoder's format. Whatever
-     you answer, Exegete still refuses to write while QualCoder 3.8 has
-     a project open, and still warns when it sees signs that QualCoder
+     you answer, Exegete still refuses to write while QualCoder 3.8.2
+     has a project open, and still warns when it sees signs that QualCoder
      4.0 may have one open.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
@@ -617,9 +617,9 @@ tools' answers. Measured for 0.15.0, the descriptions are longer on
 Python 3.10 to 3.12 than on 3.13, which strips the indentation they are
 written with. On Python 3.13, 4 of `full`'s 81 descriptions are longer
 than 4,096 characters (`pseudonymise_source`, 17,791;
-`start_coding_session`, 6,042; `search_files`, 4,802;
+`start_coding_session`, 6,038; `search_files`, 4,802;
 `record_suggestions`, 4,455); on 3.10 to 3.12, 5 are (the same four, at
-18,919, 6,286, 5,150 and 4,691, and `import_text_file`, 4,295).
+18,919, 6,282, 5,150 and 4,691, and `import_text_file`, 4,295).
 `pseudonymise_source` is longer than 16,384, so its last 1,407
 characters are cut even through tool search on 3.13, and its last
 2,535 on 3.10 to 3.12, its sentence on the lock file among them.
@@ -788,8 +788,8 @@ and `EXEGETE_USES_QUALCODER`, all below.
   answer, and so is the line saying that a new project is in
   QualCoder's format. Any other value is read as `not sure`, and the log
   says so once at start, never the value; it never stops Exegete.
-  Whatever it says, Exegete still refuses to write while QualCoder 3.8
-  has a project open, and still warns when it sees signs that QualCoder
+  Whatever it says, Exegete still refuses to write while QualCoder
+  3.8.2 has a project open, and still warns when it sees signs that QualCoder
   4.0 may have one open: an answer can be out of date (a colleague's
   project, QualCoder installed later), and a write into a project open
   in QualCoder can lose work. The desktop extension sets it from its

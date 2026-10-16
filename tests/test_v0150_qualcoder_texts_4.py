@@ -64,7 +64,7 @@ DESCRIPTION = (
     "given with any answer, and so is the line saying that a new project "
     "is in QualCoder's format. Whatever you answer, Exegete still refuses "
     "to write "
-    "while QualCoder 3.8 has a project open, and still warns when it sees "
+    "while QualCoder 3.8.2 has a project open, and still warns when it sees "
     "signs that QualCoder 4.0 may have one open: an answer can be out of "
     "date (a colleague's project, QualCoder installed later), and a write "
     "into a project open in QualCoder can lose work. Any other word is "
@@ -492,7 +492,7 @@ class TestTheDocuments:
                 "Any other value is read as `not sure`, and the log says so "
                 "once at start, never the value; it never stops Exegete.",
                 "Whatever it says, Exegete still refuses to write while "
-                "QualCoder 3.8 has a project open, and still warns when it "
+                "QualCoder 3.8.2 has a project open, and still warns when it "
                 "sees signs that QualCoder 4.0 may have one open",
                 "The desktop extension sets it from its setting \"Do you "
                 "also use QualCoder on this computer?\"."):
@@ -507,7 +507,7 @@ class TestTheDocuments:
                 "new, with one spelling.") in unreleased
         assert ("**It never changes the refusal or the warnings**: whatever "
                 "the answer, Exegete still refuses to write while QualCoder "
-                "3.8's lock file is active") in unreleased
+                "3.8.2's lock file is active") in unreleased
 
 
 # =============================================================================
@@ -568,7 +568,7 @@ class TestFixRoundOneTheDocuments:
 
     def test_install_bullet_says_what_the_answer_never_changes(self):
         assert ("Whatever you answer, Exegete still refuses to write while "
-                "QualCoder 3.8 has a project open, and still warns when it "
+                "QualCoder 3.8.2 has a project open, and still warns when it "
                 "sees signs that QualCoder 4.0 may have one open.") \
             in _install_bullet()
 

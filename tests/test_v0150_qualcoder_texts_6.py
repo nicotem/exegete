@@ -67,7 +67,7 @@ PROJECT = (
 # sign, which an interrupted write by Exegete can leave as well
 LEFTOVER_LOCK = (
     "A lock file was left in this project by a program that did not close "
-    "it cleanly (QualCoder 3.8 leaves one; so can an interrupted write by "
+    "it cleanly (QualCoder 3.8.2 leaves one; so can an interrupted write by "
     "Exegete). QualCoder 4.0 leaves no lock file, so if the researcher "
     "uses QualCoder, ask them once in this conversation whether it has "
     "this project open now, and if it has, to close it there before any "

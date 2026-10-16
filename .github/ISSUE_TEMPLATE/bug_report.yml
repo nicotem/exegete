@@ -82,7 +82,7 @@ body:
     id: qualcoder-open
     attributes:
       label: Was the project open in QualCoder at the time?
-      description: Writes are refused while the project's lock file is active (QualCoder 3.8 has the project open, or another conversation using Exegete is writing to it); QualCoder 4.0 writes no lock file, so an open project there can only be guessed at.
+      description: Writes are refused while the project's lock file is active (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it); QualCoder 4.0 writes no lock file, so an open project there can only be guessed at.
       options:
         - "No"
         - "Yes"

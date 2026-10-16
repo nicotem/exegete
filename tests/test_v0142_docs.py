@@ -919,7 +919,7 @@ def test_qualcoder_4_0_is_named_as_released():
     assert ("A full re-check against the release (6 October 2026) found "
             "the same project schema (v17) and the same format for a new "
             "project") in tools
-    assert ("QualCoder 3.x signals \"project open\" through a lock file, "
+    assert ("QualCoder 3.8.2 signals \"project open\" through a lock file, "
             "which Exegete honours; QualCoder 4.0 uses no lock file") \
         in tools
     assert "Analysis > Code retrieval in 4.0" in tools

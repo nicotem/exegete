@@ -41,6 +41,8 @@ from test_v0150_qualcoder_texts_5 import (  # noqa: E402
     LOCK_PARAGRAPH_BEFORE, put_back_the_lock_paragraph)
 from test_v0150_qualcoder_texts_13 import (  # noqa: E402
     put_back_the_four_outcomes)
+from test_v0150_lock_wording import (  # noqa: E402
+    put_back_the_lock_wording)
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -187,7 +189,10 @@ class TestTheRegistry:
             if name in LOCK_PARAGRAPH_BEFORE:
                 text = put_back_the_lock_paragraph(name, text)
             if name == "start_coding_session":
-                text = put_back_the_four_outcomes(text)
+                # and the fourth reading of the documents' paragraph on
+                # the lock file (tests/test_v0150_lock_wording.py)
+                text = put_back_the_four_outcomes(
+                    put_back_the_lock_wording(name, text))
             text = _put_back(text)
             dropped = name == "explain_ai_coding_tools"
             if dropped:

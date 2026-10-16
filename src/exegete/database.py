@@ -646,13 +646,13 @@ def qualcoder_open_message(holder: Optional[str]) -> str:
     """The refusal of every write while the lock file is active.
 
     Exegete writes the same file during each of its own writes
-    (`hold_project_lock`), so an active lock file means QualCoder 3.8 has
-    the project open or another conversation using Exegete is writing
+    (`hold_project_lock`), so an active lock file means QualCoder 3.8.2
+    has the project open or another conversation using Exegete is writing
     to it; the message names both (v0.15.0).
     """
     return (
         f"This project is in use by another program: its lock file is "
-        f"active (user {holder or 'unknown'}), so QualCoder 3.8 has it "
+        f"active (user {holder or 'unknown'}), so QualCoder 3.8.2 has it "
         f"open, or another conversation using Exegete is writing to it. "
         f"Ask the researcher to close it in QualCoder, or wait a moment; "
         f"once get_current_project shows qualcoder_open false, retry."

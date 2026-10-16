@@ -116,11 +116,12 @@ class TestNarrowingWhatAnAssistantCanReach:
                 "yours to delete.") in section
 
     def test_a_folder_of_its_own_is_not_enough_for_codex(self):
+        """Fix round 2: Codex is no longer the only exception named; the
+        sentence for each kind of assistant is pinned in
+        test_v0150_private_files_fix2.py."""
         section = _files_section()
-        assert ("You could keep the project in a folder no assistant with "
-                "its own file access is given; for Codex a folder of its own "
-                "is not enough, since it can read files well beyond it "
-                "(\"Assistants that open files by themselves\" says "
+        assert ("Codex reads well beyond any folder of its own") in section
+        assert ("(\"Assistants that open files by themselves\" says "
                 "which).") in section
         # what that section says of Codex, which the sentence relies on
         assistants = _flat(_section(_read("PRIVACY.md"),
@@ -172,12 +173,13 @@ class TestThePlacesAndTheTable:
                 "project; where you export;") in section
 
     def test_counted_never_named_and_the_systems_own_files(self):
+        """Fix round 2: which files are named, said plainly."""
         section = _files_section()
-        assert ("Of the files there, Exegete names only its own, such as the "
-                "note; a file or folder of yours there is counted, never "
-                "named, since a name you give a file may hold a "
-                "participant's name, and the count can include hidden files "
-                "your system keeps there.") in section
+        assert ("Exegete names only the files it makes there (the note, and "
+                "the files it gives you to fill in); anything you add "
+                "yourself is counted, never named, since a name you give a "
+                "file may hold a participant's name, and the count can "
+                "include hidden files your system keeps there.") in section
 
     def test_the_file_manager_on_every_system(self):
         section = _files_section()
@@ -214,8 +216,9 @@ class TestTheOtherDocuments:
 
     def test_tools_says_files_of_ones_own_are_never_named(self):
         tools = _flat(_read("TOOLS.md"))
-        assert ("never their contents); files of the researcher's own there "
-                "are counted, never named") in tools
+        assert ("never their contents); Exegete names only the files it "
+                "makes there, and anything else there is counted, never "
+                "named") in tools
 
     def test_the_upgrading_part_names_a_folder_already_called_exegete(self):
         changelog = _read("CHANGELOG.md")
@@ -236,7 +239,7 @@ class TestTheOtherDocuments:
         assert ("It is refused however its place is spelt: another letter "
                 "case on a disk that ignores it, or another spelling Windows "
                 "accepts. The list of projects leaves out anything inside a "
-                "project's `Exegete` folder.") in changelog
+                "project's `Exegete` folder,") in changelog
 
 
 # ---------------------------------------------------------------------------
@@ -266,8 +269,9 @@ class TestTheNotes:
             self, project):
         note = private_files.FOLDER_NOTE
         assert ("Exegete's own files there are listed by name; other_entries "
-                "counts everything else there, hidden files the system keeps "
-                "included, and never names it.") in note
+                "counts everything else there but links (links_not_followed "
+                "counts those), hidden files the system keeps included, and "
+                "never names it.") in note
         assert "These are the files the researcher keeps" not in note
         private_files.ensure_folder(project)
         (project / "Exegete" / ".DS_Store").write_bytes(b"\0")
@@ -352,15 +356,23 @@ class TestTheImportByWhichFolder:
         assert _code(mine / "interview.txt") is None
 
     def test_a_project_folder_whose_name_does_not_say_so(self, tmp_path):
-        """A folder holding a `data.qda` is a project's, however its name
-        is spelt (on Windows `Study.qda.` reaches `Study.qda`)."""
-        project = tmp_path / "Study three"
+        """A project's folder reached by a name that does not end in
+        `.qda` is still a project's (on Windows `Study.qda.` reaches
+        `Study.qda`). Fix round 2: judged by the folder's real name, not
+        by the `data.qda` it holds alone, so here through a link, which
+        the import itself refuses as a link first."""
+        project = tmp_path / "Study three.qda"
         (project / "Exegete").mkdir(parents=True)
         (project / "data.qda").write_bytes(b"")
         (project / "Exegete" / "notes.txt").write_bytes(b"x")
-        assert _code(project / "Exegete" / "notes.txt") == "private_files"
+        spelt = tmp_path / "Study three"
+        if not _symlink(spelt, project, folder=True):
+            pytest.skip("this system makes no symbolic link here")
+        assert private_files.in_a_projects_folder(
+            spelt / "Exegete" / "notes.txt")
         # beside the database, the project's other files are not this rule's
         (project / "memo.txt").write_bytes(b"x")
+        assert not private_files.in_a_projects_folder(spelt / "memo.txt")
         assert _code(project / "memo.txt") is None
 
     @pytest.mark.skipif(not WINDOWS, reason="Windows' spellings")

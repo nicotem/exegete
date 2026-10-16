@@ -59,12 +59,14 @@ NOTE_LINES = [
 ]
 # get_current_project's notes, by case, word for word (fix round 1: the
 # note for a folder says that only Exegete's own files are named, and
-# that other_entries counts the rest, the system's hidden files too).
+# that other_entries counts the rest, the system's hidden files too; fix
+# round 2: but not links, which links_not_followed counts).
 FOLDER_NOTE = (
     "This is the project's Exegete folder, which holds files the "
     "researcher fills in on their own computer. Exegete's own files there "
-    "are listed by name; other_entries counts everything else there, "
-    "hidden files the system keeps included, and never names it. Exegete "
+    "are listed by name; other_entries counts everything else there but "
+    "links (links_not_followed counts those), hidden files the system "
+    "keeps included, and never names it. Exegete "
     "never reports what a file holds: do not open or read these files by "
     "any route, even when a file tool could. To change one, ask the "
     "researcher to open it.")
@@ -737,6 +739,12 @@ class TestNothingLeaks:
             f"{TEXT_TOKEN} wrote this.\n", encoding="utf-8")
         with open(top / NOTE_NAME, "a", encoding="utf-8") as note:
             note.write(f"{TEXT_TOKEN} in the note too.\n")
+        # Fix round 2: a link there named by the token too, which every
+        # backup and copy leaves out and once named; where the system
+        # makes no link, the rest still runs
+        outside = selected.parent / "kept elsewhere.txt"
+        outside.write_text("a sheet kept elsewhere", encoding="utf-8")
+        _symlink(top / f"{NAME_TOKEN} link", outside)
         answers = []
         for mode in ("full", "core"):
             server._apply_toolset(mode)
@@ -920,9 +928,10 @@ class TestTheOpener:
 # The import refuses any project's Exegete folder
 # ---------------------------------------------------------------------------
 
-REFUSAL = ("This is a project's Exegete folder, which holds files you "
-           "fill in for the project; Exegete does not import from it. Bring "
-           "documents in from where you keep them.")
+# Fix round 2: "or is in one", as the refusal answers a file inside too
+REFUSAL = ("This is a project's Exegete folder, or is in one. That folder "
+           "holds files you fill in for the project; Exegete does not "
+           "import from it. Bring documents in from where you keep them.")
 
 
 def _code(path, refused_places=()):
@@ -1063,6 +1072,10 @@ class TestTheDocuments:
                 "coding sessions go at your word (`delete_coding_session`, "
                 "`cleanup_old_sessions`)",
                 "| Pages and copies to look at | the reading folder",
+                "the reading folder's files at its first tidy once they are "
+                "a week old (an hour for an import's page), as \"Reading a "
+                "whole file\" says, so they can stay longer while Exegete is "
+                "not running;",
                 "| Files you fill in | the `Exegete` folder inside the "
                 "project | files you fill in for the project, and a short "
                 "note | you: Exegete never deletes them of its own accord; "
@@ -1102,8 +1115,9 @@ class TestTheDocuments:
         assert ("never a name; `coder_name_notes` as `select_project` gives "
                 "them; `files_exegete_keeps` lists the files kept for the "
                 "project in its `Exegete` folder (name, kind, size and date, "
-                "never their contents); files of the researcher's own there "
-                "are counted, never named") in tools
+                "never their contents); Exegete names only the files it "
+                "makes there, and anything else there is counted, never "
+                "named") in tools
         assert ("the project and Exegete's own folders, any project's "
                 "`Exegete` folder, other formats") in tools
         changelog = _read("CHANGELOG.md")

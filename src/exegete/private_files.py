@@ -6,7 +6,8 @@ Every file Exegete writes outside the conversation is one of four kinds,
 each with its own places, naming, tidying, and way for the researcher to
 reach it:
 
-1. Exegete's working state: `~/.exegete`, hidden; Exegete tidies it.
+1. Exegete's working state: `~/.exegete`, hidden on macOS and Linux;
+   Exegete removes the texts an import's preview read.
 2. Pages and copies to look at: the reading folder (`reading_folder`),
    tidied by age, reached through the reading tool; and the import's
    working folder in the system's temporary folder
@@ -36,11 +37,14 @@ follows a link, and nothing here logs a path or the name of a file.
 `listing` reports names, sizes and dates of Exegete's own files only,
 never what any file holds, and counts every other entry without naming
 it; `read_bytes` returns a file's bytes to Exegete's own code, and no
-answer carries them. On macOS and Linux the folder is opened once, not
-following a link, and every later step in it goes through that opened
-folder, so a folder swapped for a link after its check is never
-followed; where the system has no such calls (Windows), the folder is
-checked again after the file is opened.
+answer carries them. For a write and a read, on macOS and Linux the
+folder is opened once, not following a link, and every later step in
+it goes through that opened folder, so a folder swapped for a link
+after its check is never followed; where the system has no such calls
+(Windows), the folder is checked again after the file is opened. A read
+also checks that the file it opened is the file it looked at. `show`
+and `open_in_app` are not held so: the opener checks the file by its
+path and the system launches it by its path.
 """
 
 import errno
@@ -88,8 +92,9 @@ NOTE = (
 FOLDER_NOTE = (
     "This is the project's Exegete folder, which holds files the "
     "researcher fills in on their own computer. Exegete's own files there "
-    "are listed by name; other_entries counts everything else there, "
-    "hidden files the system keeps included, and never names it. Exegete "
+    "are listed by name; other_entries counts everything else there but "
+    "links (links_not_followed counts those), hidden files the system "
+    "keeps included, and never names it. Exegete "
     "never reports what a file holds: do not open or read these files by "
     "any route, even when a file tool could. To change one, ask the "
     "researcher to open it.")
@@ -99,6 +104,13 @@ NO_FOLDER_NOTE = (
 NOT_LISTED_NOTE = (
     "This project's Exegete folder could not be listed. Its files are the "
     "researcher's own: do not open or read them by any route.")
+
+# select_project's and copy_project_to_workspace's refusal of a project
+# kept in a project's Exegete folder, in the import's words (fix round 2)
+PROJECT_IN_A_FOLDER = (
+    "This is in a project's Exegete folder, which holds files you fill in "
+    "for that project; Exegete does not select or copy a project kept "
+    "there. To work on it, move it out of that folder first.")
 
 _BYTE_ORDER_MARK = b"\xef\xbb\xbf"
 
@@ -148,14 +160,19 @@ def folder(project) -> Path:
 
 def _is_a_project_folder(step: Path, platform: Optional[str]) -> bool:
     """Whether a folder is a project's: its name ends in `.qda` (letter
-    case as the system compares it), or it holds a `data.qda`, which
-    catches another spelling of a project's folder that the system
-    accepts (on Windows, `Study.qda.` is `Study.qda`)."""
+    case as the system compares it), or it holds a `data.qda` and its
+    real name (`Path.resolve`) ends in `.qda`, which catches another
+    spelling of a project's folder that the system accepts (on Windows,
+    `Study.qda.` is `Study.qda`, and a short name is the long one). A
+    folder holding a stray `data.qda` under another name is not a
+    project's, as select_project would not take it either."""
     if is_project_folder_name(step.name, platform):
         return True
     try:
-        return stat.S_ISREG(os.lstat(step / "data.qda").st_mode)
-    except (OSError, ValueError):
+        if not stat.S_ISREG(os.lstat(step / "data.qda").st_mode):
+            return False
+        return is_project_folder_name(step.resolve().name, platform)
+    except (OSError, ValueError, RuntimeError):
         return False
 
 
@@ -186,6 +203,19 @@ def in_a_projects_folder(path, platform: Optional[str] = None) -> bool:
         if is_same(step, parent / FOLDER_NAME):
             return True
     return False
+
+
+def kept_in_a_projects_folder(path) -> bool:
+    """Whether `path`, as spelt or where it really leads (links followed),
+    is a project's Exegete folder or lies inside one: for the places a
+    tool is given or finds, which may reach the folder through a link."""
+    if in_a_projects_folder(path):
+        return True
+    try:
+        real = Path(path).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return in_a_projects_folder(real)
 
 
 def place(project, name: str) -> Path:
@@ -569,6 +599,10 @@ def _read_in(held: Optional[int], top: Path, name: str,
         if not stat.S_ISREG(opened.st_mode):
             raise PrivateFilesError("not_a_file",
                                     "It is not an ordinary file.")
+        if not _same_file(opened, info):
+            # Another file took the name between the look and the open
+            # (on Windows, which opens without O_NOFOLLOW, a link too)
+            raise _file_changed()
         if opened.st_size > MAX_READ:
             raise _too_large()
         chunks = []
@@ -587,6 +621,22 @@ def _read_in(held: Optional[int], top: Path, name: str,
     if len(data) > MAX_READ:
         raise _too_large()
     return data
+
+
+def _same_file(opened: os.stat_result, info: os.stat_result) -> bool:
+    """Whether the file opened is the file looked at. A file system that
+    gives no file numbers (zero) cannot tell, and is not refused."""
+    if not opened.st_ino or not info.st_ino:
+        return True
+    return _same_identity(opened, info)
+
+
+def _file_changed() -> PrivateFilesError:
+    return PrivateFilesError(
+        "changed",
+        "The file changed while Exegete was reading it (it was moved, "
+        "replaced or made a link). Nothing was read; asking again uses the "
+        "file as it is now.")
 
 
 def _too_large() -> PrivateFilesError:

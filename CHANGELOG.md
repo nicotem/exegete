@@ -24,9 +24,9 @@ about QualCoder itself or its format. Less visible: the extension
 keeps new projects in `~/Exegete projects`; Exegete's backups have the
 kind `exegete`; a project from a QualCoder older than 3.8 has a way on
 without QualCoder; and PRIVACY.md says what pseudonymisation is for,
-and which files Exegete keeps on your computer: four kinds, each with
-its place, those you fill in for a project in its new `Exegete`
-folder.
+and which files Exegete keeps on your computer: four kinds, each in
+its own place, with the files you fill in for a project in the
+project's new `Exegete` folder.
 
 The maintainer decided the questions behind these on 11 and 12 October
 2026, and on 14 October that a project's format value is repeated only
@@ -97,9 +97,12 @@ contributors, and the measurements.
   named `Exegete` right inside a project's folder (in any letter case
   on a Mac or Windows) is now the project's Exegete folder: the import
   refuses what is in it, `get_current_project` counts its files without
-  naming them, and the assistant is asked never to open them. If you
-  made such a folder for documents of your own, you may want to rename
-  it, or move its documents, before you upgrade.
+  naming them, and the assistant is asked never to open them. When
+  Exegete first needs the folder, it adds its note there and, on macOS
+  and Linux, makes the folder readable by your account only, which
+  matters for a project folder you share with colleagues. If you made
+  such a folder for documents of your own, you may want to rename it,
+  or move its documents, before you upgrade.
 - **Not in this release.** The removals announced in 0.14 for v0.15
   (TOOLS.md names each) come in v0.15.1, with the safety net; until
   then the deprecated tools and arguments work, and say so
@@ -956,7 +959,9 @@ for the four labels stays in NOTICE.
   once, never replacing a file already there. It never deletes what is
   in the folder of its own accord, never follows a link there, and
   never returns what a file holds to the assistant. The folder travels
-  with the project into its backups and copies.
+  with the project into its backups and copies; a link there that a
+  backup or a copy leaves out is counted
+  (`skipped_symlinks_in_exegete_folder`), never named.
 - **`get_current_project` lists it** (`files_exegete_keeps`, in `full`
   and `core`): the folder's place, whether it is there, and, for each
   of Exegete's own files in it, its name, kind, size and date, never
@@ -968,12 +973,14 @@ for the four labels stays in NOTICE.
   even when a file tool or a shell could.
 - **The import refuses a project's `Exegete` folder** and anything in
   it, the open project's or any other project's, with its own reason:
-  "This is a project's Exegete folder, which holds files you fill in
-  for the project; Exegete does not import from it. Bring documents in
-  from where you keep them." It is refused however its place is spelt:
-  another letter case on a disk that ignores it, or another spelling
-  Windows accepts. The list of projects leaves out anything inside a
-  project's `Exegete` folder.
+  "This is a project's Exegete folder, or is in one. That folder holds
+  files you fill in for the project; Exegete does not import from it.
+  Bring documents in from where you keep them." It is refused however
+  its place is spelt: another letter case on a disk that ignores it, or
+  another spelling Windows accepts. The list of projects leaves out
+  anything inside a project's `Exegete` folder, wherever a place
+  searched leads, and `select_project` and `copy_project_to_workspace`
+  refuse a project kept there.
 
 ### Changed: the libraries the extension installs, brought up to date
 

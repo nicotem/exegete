@@ -1517,8 +1517,10 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
 
                 # v0.15.0: nothing in a project's Exegete folder is listed,
                 # since a name the researcher gives an entry there may hold
-                # a participant's name (private_files)
-                if private_files.in_a_projects_folder(qda_file):
+                # a participant's name (private_files); judged where the
+                # found path really leads too, so a place to search given
+                # as a link to that folder lists nothing in it (fix round 2)
+                if private_files.kept_in_a_projects_folder(qda_file):
                     continue
 
                 seen_paths.add(qda_file)
@@ -3016,6 +3018,36 @@ _SKIPPED_SYMLINKS_NOTE = (
     "backups or copies; the entries named here are absent from this copy.")
 
 
+def _skipped_in_exegete_folder(report: Optional[Dict[str, Any]]) -> int:
+    """How many skipped links lay in a project's Exegete folder: counted,
+    never named (database._withhold_exegete_folder_links, v0.15.0)."""
+    try:
+        return max(0, int((report or {}).get(
+            "skipped_symlinks_in_exegete_folder") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _skipped_where(safety_report: Dict[str, Any]) -> str:
+    """Where a restore's answer reports the links its safety backup
+    skipped: by name, or, when every one lay in a project's Exegete
+    folder, by count only."""
+    if safety_report.get("skipped_symlinks"):
+        return "named in safety_backup_skipped_symlink_names"
+    return "counted in safety_backup_skipped_symlinks_in_exegete_folder"
+
+
+def _skipped_symlinks_note(prefix: str, withheld: int) -> str:
+    """The note on skipped links, with a sentence on those in a project's
+    Exegete folder when there are any."""
+    if not withheld:
+        return _SKIPPED_SYMLINKS_NOTE
+    return (f"{_SKIPPED_SYMLINKS_NOTE} Links in a project's Exegete folder "
+            f"are counted in {prefix}skipped_symlinks_in_exegete_folder and "
+            f"never named, since a name the researcher gives one may hold a "
+            f"participant's name; they are absent from this copy too.")
+
+
 _DATABASE_AS_FILE_NOTE = (
     "SQLite could not read the project database as a database, so this "
     "copy holds it as a file, with any journal or WAL file that was beside "
@@ -3037,11 +3069,16 @@ def _attach_skipped_symlinks(result: Any, report: Optional[Dict[str, Any]],
     if not isinstance(result, dict):
         return
     skipped = list((report or {}).get("skipped_symlinks") or [])
-    if skipped or always:
-        result[f"{prefix}skipped_symlinks"] = len(skipped)
+    withheld = _skipped_in_exegete_folder(report)
+    if skipped or withheld or always:
+        result[f"{prefix}skipped_symlinks"] = len(skipped) + withheld
     if skipped:
         result[f"{prefix}skipped_symlink_names"] = skipped[:20]
-        result[f"{prefix}skipped_symlinks_note"] = _SKIPPED_SYMLINKS_NOTE
+    if withheld:
+        result[f"{prefix}skipped_symlinks_in_exegete_folder"] = withheld
+    if skipped or withheld:
+        result[f"{prefix}skipped_symlinks_note"] = _skipped_symlinks_note(
+            prefix, withheld)
     # A database SQLite could not read, copied as a file (fix round 1)
     as_file = (report or {}).get("database_copied_as_file")
     if as_file:
@@ -3055,11 +3092,16 @@ def _skipped_symlinks_line(report: Optional[Dict[str, Any]]) -> str:
     a tool whose result is Markdown rather than JSON (apply_codings);
     empty when nothing was skipped."""
     skipped = list((report or {}).get("skipped_symlinks") or [])
+    withheld = _skipped_in_exegete_folder(report)
     as_file = (report or {}).get("database_copied_as_file")
     line = ""
-    if skipped:
-        line += (f"backup_skipped_symlinks: {len(skipped)} "
-                 f"({', '.join(skipped[:20])}). {_SKIPPED_SYMLINKS_NOTE} "
+    if skipped or withheld:
+        named = f" ({', '.join(skipped[:20])})" if skipped else ""
+        counted = (f"; backup_skipped_symlinks_in_exegete_folder: "
+                   f"{withheld}" if withheld else "")
+        line += (f"backup_skipped_symlinks: {len(skipped) + withheld}"
+                 f"{named}{counted}. "
+                 f"{_skipped_symlinks_note('backup_', withheld)} "
                  f"Relay this to the user.\n")
     if as_file:
         line += (f"backup_database_copied_as_file: {as_file}. "
@@ -4264,7 +4306,14 @@ def select_project(project_path: str) -> str:
     """
     previous = current_project_path
     try:
-        answer = _select_project(project_path)
+        if private_files.kept_in_a_projects_folder(project_path):
+            # v0.15.0, fix round 2: a project kept in a project's Exegete
+            # folder is the researcher's file there, as the import and
+            # the list of projects already treat it (private_files)
+            answer = {"success": False,
+                      "error": private_files.PROJECT_IN_A_FOLDER}
+        else:
+            answer = _select_project(project_path)
     except DatabaseLockedError as e:
         logger.error("Project locked during select: %s", error_label(e))
         answer = {"success": False, "error": str(e)}
@@ -5482,6 +5531,10 @@ def copy_project_to_workspace(
 
     # Validate that the source is a real QualCoder project before copying
     validate_qda_path(source_path)
+    # v0.15.0, fix round 2: nor one kept in a project's Exegete folder
+    if private_files.kept_in_a_projects_folder(source_path):
+        return json.dumps({"success": False,
+                           "error": private_files.PROJECT_IN_A_FOLDER})
 
     report: Dict[str, Any] = {}
     dest = copy_to_workspace(source_path, new_name=new_name, report=report)
@@ -12525,7 +12578,8 @@ def restore_backup(backup_path: str,
                          "from the safety backup; nothing was lost.",
                 "safety_backup": str(safety_backup),
             }
-            if safety_report.get("skipped_symlinks"):
+            if safety_report.get("skipped_symlinks") or \
+                    _skipped_in_exegete_folder(safety_report):
                 # The safety backup skipped these links (S-P1), so the
                 # recovered folder has no entry for them; what they
                 # pointed to is untouched, but "nothing was lost" would
@@ -12533,7 +12587,7 @@ def restore_backup(backup_path: str,
                 recovered["error"] = (
                     "Restore failed, but the project was recovered from "
                     "the safety backup. That backup skipped the symlinks "
-                    "named in safety_backup_skipped_symlink_names, so the "
+                    f"{_skipped_where(safety_report)}, so the "
                     "recovered project no longer contains those link "
                     "entries (what they pointed to is untouched); "
                     "recreate them by hand if they are needed.")
@@ -12549,10 +12603,11 @@ def restore_backup(backup_path: str,
                      "to recover.",
             "safety_backup": str(safety_backup),
         }
-        if safety_report.get("skipped_symlinks"):
+        if safety_report.get("skipped_symlinks") or \
+                _skipped_in_exegete_folder(safety_report):
             failed["error"] += (
-                " That backup skipped the symlinks named in "
-                "safety_backup_skipped_symlink_names; recreate them by hand "
+                " That backup skipped the symlinks "
+                f"{_skipped_where(safety_report)}; recreate them by hand "
                 "after copying it back.")
         _attach_skipped_symlinks(failed, safety_report,
                                  prefix="safety_backup_")

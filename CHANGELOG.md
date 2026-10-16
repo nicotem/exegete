@@ -48,20 +48,27 @@ for contributors, and the measurements.
   "What You'll Need").
 - **Creating a project is no longer Experimental** (the maintainer's
   decision of 16 October 2026). For this decision, projects made in
-  Exegete (from the settings, with the coder name not known, and with a
-  name given and then corrected), with what Exegete then wrote to them
-  (imports, codings, a names list, renames, a corrected coder name, a
-  restore) and the backups it took, and projects made in QualCoder that
-  Exegete then wrote to, were opened by QualCoder 4.0, as released, and
-  by 3.8.2, run from their published source on a Mac: each opened
-  without an error, kept every row, passed SQLite's integrity check and
-  showed what Exegete wrote where Exegete put it. Not checked: QualCoder
-  installed from its installers, Windows and Linux (Exegete's own tests
-  run there with every change), the Claude Desktop extension's route,
-  and anything only QualCoder's window shows, such as colours and
-  layout. If you also use QualCoder, especially from its installer or on
-  Windows or Linux, letting QualCoder open a project made in Exegete
-  once, before much work goes into it, is a quick check.
+  Exegete were opened by QualCoder 4.0, as released, and by 3.8.2, run
+  from their published source on a Mac. They were made with the coder
+  name taken from Exegete's settings, with the name not known, or with a
+  name given and then corrected, and held what Exegete then wrote to
+  them (imports, codings, pseudonymised texts and the names list saved
+  with them, renames, a corrected coder name, a restore). Three of the
+  backups Exegete took (before a correction, and on either side of a
+  restore), and projects made in QualCoder that Exegete then wrote to,
+  were opened too. Each opened without an error, kept every row, passed
+  SQLite's integrity check and, read back through QualCoder's own views
+  with no window on screen, held what Exegete wrote where Exegete put
+  it. Not checked: QualCoder installed from its installers; Windows and
+  Linux (Exegete's own tests run there with every change); the Claude
+  Desktop extension's route (the same Exegete, its settings passed on by
+  Claude Desktop); opens with QualCoder's own AI switched on; and
+  anything only QualCoder's window shows, such as colours and layout. If
+  you also use QualCoder, especially from its installer or on Windows or
+  Linux, letting QualCoder open a project made in Exegete once, before
+  much work goes into it, is a quick check: it should open without an
+  error and show what you did; close it there before the conversation
+  writes again.
 - **Two tools renamed.** `analyze_for_coding` is now
   `start_coding_session`, and `analyze_file_with_coding` is now
   `read_file_with_codings`: the tools that start a coding session and

@@ -14,7 +14,13 @@ each document read with runs of white space collapsed to one space:
    own setting) still where it was;
 3. the Upgrading part's sentence on what the run checked and what not;
 4. no "experimental", in any letter case, in what create_project says
-   or in the tool set's texts (these held before the change: a guard).
+   or in the tool set's texts (these held before the change: a guard);
+5. the review's wording (fix round 1): the sentence in shorter
+   sentences, the settings and the extension's route explained, only
+   the backups and the names list that were opened, the opens read with
+   no window, QualCoder's own AI among what was not checked, what the
+   quick check looks for, and the run's limits in TOOLS' note on opening
+   a project in QualCoder too.
 """
 
 import json
@@ -274,3 +280,67 @@ def test_the_tool_sets_texts(monkeypatch, _settings_empty):
         server._resolve_toolset_mode()
     assert str(caught.value).startswith(f"Unknown {TOOLSET} value")
     _no_mark(str(caught.value))
+
+
+# 5. Fix round 1: the review's wording
+
+def _bullet():
+    upgrading = _flat(_section(_unreleased(), "### Upgrading from 0.14.3"))
+    start = upgrading.index("**Creating a project is no longer Experimental**")
+    return upgrading[start:upgrading.index("- **Two tools renamed.**", start)]
+
+
+BULLET_GONE = [
+    # more than was opened: three of Exegete's backups were
+    "and the backups it took",
+    # the run's names list was the one pseudonymisation saved
+    "a names list",
+    # beside "anything only QualCoder's window shows"
+    "showed what Exegete wrote",
+    # "the settings" before the settings are introduced
+    "(from the settings,",
+]
+
+BULLET_NEW = [
+    "with the coder name taken from Exegete's settings",
+    "pseudonymised texts and the names list saved with them",
+    "Three of the backups Exegete took (before a correction, and on either "
+    "side of a restore)",
+    "read back through QualCoder's own views with no window on screen, held "
+    "what Exegete wrote where Exegete put it",
+    "the Claude Desktop extension's route (the same Exegete, its settings "
+    "passed on by Claude Desktop)",
+    "opens with QualCoder's own AI switched on",
+    "is a quick check: it should open without an error and show what you "
+    "did; close it there before the conversation writes again.",
+]
+
+
+@pytest.mark.parametrize("words", BULLET_GONE)
+def test_the_bullet_no_longer_says(words):
+    assert words not in _bullet()
+
+
+@pytest.mark.parametrize("words", BULLET_NEW)
+def test_the_bullet_now_says(words):
+    assert words in _bullet()
+
+
+def test_the_bullet_reads_in_sentences_of_sixty_words_at_most():
+    # the first version was one sentence of about a hundred words
+    sentences = re.split(r"(?<=[.?!])\s+", _bullet().strip())
+    assert len(sentences) >= 5
+    for sentence in sentences:
+        assert len(sentence.split()) <= 60, sentence
+
+
+def test_tools_says_how_opening_in_qualcoder_was_checked():
+    # A researcher who starts with 0.15.0 never reads the Upgrading part
+    tools = _flat(_read("TOOLS.md"))
+    opening = tools[tools.index("**Opening it in QualCoder.**"):
+                    tools.index("**The project memo**")]
+    assert ("Opening a new project was checked with QualCoder 4.0 and "
+            "3.8.2 run from their published source on a Mac, not from their "
+            "installers or on Windows or Linux; if you use QualCoder in one "
+            "of those ways, letting it open a new project once, before much "
+            "work goes into it, is a quick check.") in opening

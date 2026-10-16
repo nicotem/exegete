@@ -341,7 +341,11 @@ default on every route; the `core` set for local models leaves it out.
   code deleted in 3.8.2 become ordinary codes with no category; and a
   graph saved after another was deleted can show the deleted graph's
   memo notes. Keep such a project in one QualCoder: moving it between
-  3.8.2 and 4.0 is what changes it.
+  3.8.2 and 4.0 is what changes it. Opening a new project was checked
+  with QualCoder 4.0 and 3.8.2 run from their published source on a Mac,
+  not from their installers or on Windows or Linux; if you use QualCoder
+  in one of those ways, letting it open a new project once, before much
+  work goes into it, is a quick check.
 - **The project memo** starts empty, as QualCoder leaves it;
   `set_memo` with the target `project` writes it (research questions,
   methodology, participants), and QualCoder 4.0's own assistant reads it

@@ -1515,6 +1515,12 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
                 if "_backup_" in qda_file.stem or "_BKUP_" in qda_file.stem:
                     continue
 
+                # v0.15.0: nothing in a project's Exegete folder is listed,
+                # since a name the researcher gives an entry there may hold
+                # a participant's name (private_files)
+                if private_files.in_a_projects_folder(qda_file):
+                    continue
+
                 seen_paths.add(qda_file)
 
                 try:

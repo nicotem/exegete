@@ -93,6 +93,13 @@ contributors, and the measurements.
   like one Exegete knows (`v17` with a line break after it, or written
   with another script's digits) is refused for writes as a value
   Exegete cannot tell, with the same override as before.
+- **A folder already named `Exegete` inside a project.** A subfolder
+  named `Exegete` right inside a project's folder (in any letter case
+  on a Mac or Windows) is now the project's Exegete folder: the import
+  refuses what is in it, `get_current_project` counts its files without
+  naming them, and the assistant is asked never to open them. If you
+  made such a folder for documents of your own, you may want to rename
+  it, or move its documents, before you upgrade.
 - **Not in this release.** The removals announced in 0.14 for v0.15
   (TOOLS.md names each) come in v0.15.1, with the safety net; until
   then the deprecated tools and arguments work, and say so
@@ -961,9 +968,12 @@ for the four labels stays in NOTICE.
   even when a file tool or a shell could.
 - **The import refuses a project's `Exegete` folder** and anything in
   it, the open project's or any other project's, with its own reason:
-  "This is a project's Exegete folder, which holds files the
-  researcher fills in on their own computer; Exegete does not import
-  from it."
+  "This is a project's Exegete folder, which holds files you fill in
+  for the project; Exegete does not import from it. Bring documents in
+  from where you keep them." It is refused however its place is spelt:
+  another letter case on a disk that ignores it, or another spelling
+  Windows accepts. The list of projects leaves out anything inside a
+  project's `Exegete` folder.
 
 ### Changed: the libraries the extension installs, brought up to date
 

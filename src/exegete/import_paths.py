@@ -24,10 +24,12 @@ its own marks, read without following it:
   Windows offer the account's credentials to the computer it names. A
   drive letter the system has mapped, and a share mounted under
   `/Volumes`, are accepted;
-- a project's Exegete folder (a step named `Exegete` right after a step
-  ending in `.qda`, letter case as the system compares names), and
-  anything inside it, is refused, the open project's or any other
-  project's: it holds files the researcher fills in (private_files);
+- a project's Exegete folder, and anything inside it, is refused, the
+  open project's or any other project's: it holds files the researcher
+  fills in (private_files). Decided by name (a step named `Exegete`
+  right after a step ending in `.qda`, letter case as the system
+  compares names) and by which folder a step is, so another spelling
+  of the same folder is refused too (private_files.in_a_projects_folder);
 - the open project's folder, Exegete's state folders and its reading
   folder are refused, decided by which folder each is (path_identity),
   never by comparing paths as text.
@@ -45,7 +47,7 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 from .path_identity import is_inside
-from .private_files import is_folder_name, is_project_folder_name
+from .private_files import in_a_projects_folder
 
 MAX_FOLDER_ENTRIES = 10_000
 
@@ -246,12 +248,10 @@ def walk(given: str, refused_places: Sequence[Tuple[str, Optional[Path]]] = (),
 
 
 def in_a_projects_exegete_folder(path: Path) -> bool:
-    """Whether a step named as a project's Exegete folder comes right
-    after a step ending in `.qda`: the folder itself or anything inside
-    it, whichever project it belongs to."""
-    parts = path.parts
-    return any(is_folder_name(parts[i]) and is_project_folder_name(
-        parts[i - 1]) for i in range(1, len(parts)))
+    """Whether the place the walk reached is a project's Exegete folder
+    or lies inside one, whichever project it belongs to, by name and by
+    which folder each step is (private_files.in_a_projects_folder)."""
+    return in_a_projects_folder(path)
 
 
 @dataclass

@@ -68,8 +68,9 @@ PATH_REFUSALS = {
     "reading_folder": "This is inside Exegete's reading folder, which "
                       "holds reading copies, not documents to import.",
     "private_files": "This is a project's Exegete folder, which holds "
-                     "files the researcher fills in on their own "
-                     "computer; Exegete does not import from it.",
+                     "files you fill in for the project; Exegete does "
+                     "not import from it. Bring documents in from where "
+                     "you keep them.",
 }
 
 OTHER_FORMATS = {

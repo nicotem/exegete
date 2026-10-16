@@ -11,7 +11,8 @@ Exegete's own files and never reads one; that neither a file's name
 nor its text reaches an answer or the log; the opener's check for a file
 in the folder, every other caller's left as it was; the import's
 refusal of any project's Exegete folder; the brief's sentence, the
-note's five lines, and the documents.
+note's lines, and the documents. Fix round 1's additions are in
+test_v0150_private_files_fix1.py.
 """
 
 import json
@@ -39,7 +40,9 @@ POSIX = os.name == "posix"
 WINDOWS = sys.platform == "win32"
 BOM = b"\xef\xbb\xbf"
 
-# The note inside the folder, word for word (the design's five lines).
+# The note inside the folder, word for word (the design's five lines;
+# fix round 1: the last gives the document's address, and a line says
+# the files may be kept, moved or deleted).
 NOTE_LINES = [
     "This folder holds files you fill in for this project.",
     "They are yours. Exegete never shows their contents to the AI "
@@ -48,14 +51,23 @@ NOTE_LINES = [
     "it could any file on this computer.",
     "They travel with the project, into its backups and copies, and to any "
     "service that syncs this folder.",
-    "PRIVACY.md, \"Files Exegete keeps on your computer\", says more.",
+    "You can keep, move or delete them; Exegete never deletes them of its "
+    "own accord.",
+    "\"Files Exegete keeps on your computer\", in PRIVACY.md on Exegete's "
+    "page, says more: https://github.com/nicotem/exegete/blob/main/"
+    "PRIVACY.md",
 ]
-# get_current_project's notes, by case, word for word.
+# get_current_project's notes, by case, word for word (fix round 1: the
+# note for a folder says that only Exegete's own files are named, and
+# that other_entries counts the rest, the system's hidden files too).
 FOLDER_NOTE = (
-    "These are the files the researcher keeps for this project in its "
-    "Exegete folder, on their own computer. Exegete lists them and never "
-    "their contents: do not open or read them by any route, even when a "
-    "file tool could. To change one, ask the researcher to open it.")
+    "This is the project's Exegete folder, which holds files the "
+    "researcher fills in on their own computer. Exegete's own files there "
+    "are listed by name; other_entries counts everything else there, "
+    "hidden files the system keeps included, and never names it. Exegete "
+    "never reports what a file holds: do not open or read these files by "
+    "any route, even when a file tool could. To change one, ask the "
+    "researcher to open it.")
 NO_FOLDER_NOTE = (
     "This project has no Exegete folder. Exegete makes it when a file the "
     "researcher fills in is first needed.")
@@ -281,14 +293,16 @@ class TestWritingANewFile:
         (project / "Exegete").mkdir()
         note = project / "Exegete" / NOTE_NAME
         note.write_bytes(b"the researcher's")
-        real = os.lstat
+        real = private_files._lstat_in
 
-        def lstat(path, *args, **kwargs):
-            if Path(path) == note:
+        # fix round 1: the look goes through the held folder on macOS and
+        # Linux (`_lstat_in`), by path on Windows; both are told "none"
+        def lstat_in(held, top, name):
+            if name == NOTE_NAME:
                 raise FileNotFoundError(2, "No such file or directory")
-            return real(path, *args, **kwargs)
+            return real(held, top, name)
         with monkeypatch.context() as patched:
-            patched.setattr(private_files.os, "lstat", lstat)
+            patched.setattr(private_files, "_lstat_in", lstat_in)
             with pytest.raises(FileExistsError):
                 private_files.write_new(project, NOTE_NAME, "other words")
         assert note.read_bytes() == b"the researcher's"
@@ -437,12 +451,15 @@ class TestReading:
         self._refused(project, "link")
 
     def _never_opened(self, project, monkeypatch):
-        """Refused by its `lstat`, before it is opened at all."""
+        """Refused by its `lstat`, before it is opened at all (fix round
+        1: the folder itself is opened on macOS and Linux, to be held;
+        the file never is)."""
         opened = []
         real = os.open
 
         def recording(path, *args, **kwargs):
-            opened.append(str(path))
+            if str(path).endswith(NOTE_NAME):
+                opened.append(str(path))
             return real(path, *args, **kwargs)
         with monkeypatch.context() as patched:
             patched.setattr(private_files.os, "open", recording)
@@ -903,9 +920,9 @@ class TestTheOpener:
 # The import refuses any project's Exegete folder
 # ---------------------------------------------------------------------------
 
-REFUSAL = ("This is a project's Exegete folder, which holds files the "
-           "researcher fills in on their own computer; Exegete does not "
-           "import from it.")
+REFUSAL = ("This is a project's Exegete folder, which holds files you "
+           "fill in for the project; Exegete does not import from it. Bring "
+           "documents in from where you keep them.")
 
 
 def _code(path, refused_places=()):
@@ -985,7 +1002,7 @@ class TestWhatItSays:
         assert "Exegete folder" not in _flat(server.BRIEF_SHORT)
         assert "Exegete folder" not in _flat(server.SERVER_INSTRUCTIONS)
 
-    def test_the_notes_five_lines(self, project):
+    def test_the_notes_lines(self, project):
         assert private_files.NOTE.splitlines() == NOTE_LINES
         private_files.ensure_folder(project)
         written = (project / "Exegete" / NOTE_NAME).read_bytes()
@@ -1029,19 +1046,21 @@ class TestTheDocuments:
                                       "Files Exegete keeps on your computer"))
         for words in (
                 "Everything Exegete writes outside the conversation is one "
-                "of four kinds.",
-                "into the folder for projects (`~/Exegete projects` in the "
+                "of four kinds,",
+                "- the folder for projects (`~/Exegete projects` in the "
                 "desktop extension, `~/Documents/Exegete projects` "
-                "otherwise, or the folder you set, with the extension's "
-                "\"Folder for projects\" or `EXEGETE_WORKSPACE`), where you "
-                "ask an export to go, and into its own two folders",
-                "a link to the first under its earlier name, "
-                "`~/.qualcoder_mcp`",
-                "into a working folder in the system's temporary folder, "
-                "which it removes when that reading ends. Nowhere else.",
+                "otherwise, or the folder set with the extension's "
+                "\"Folder for projects\" or `EXEGETE_WORKSPACE`), or the "
+                "folder you name when you create a project; - where you "
+                "ask an export to go; - its own two folders: `~/.exegete` "
+                "and the reading folder",
+                "a link under that name pointing at `~/.exegete`",
+                "a working folder in the system's temporary folder, which "
+                "it removes when that reading ends. Nowhere else.",
                 "| Kind | Where | What | Who deletes it |",
-                "| Exegete's working state | `~/.exegete`, hidden |",
-                "coding sessions at your word (`delete_coding_session`, "
+                "| Exegete's working state | `~/.exegete`, hidden on macOS "
+                "and Linux |",
+                "coding sessions go at your word (`delete_coding_session`, "
                 "`cleanup_old_sessions`)",
                 "| Pages and copies to look at | the reading folder",
                 "| Files you fill in | the `Exegete` folder inside the "
@@ -1051,23 +1070,19 @@ class TestTheDocuments:
                 "folder with it, and the safety backup taken first keeps "
                 "the copy you had |",
                 "| Records of the research | beside the project; inside it; "
-                "the folder for projects; where you export; "
+                "the folder for projects, or the folder you named for a new "
+                "project; where you export; "
                 "`~/.exegete/pseudonymisation/` |",
                 "| you (`prune_backups` deletes backups at your word) |",
                 "The files you fill in are never returned to the assistant",
-                "They travel with the project into every backup (Exegete's "
-                "and QualCoder's alike) and every copy, and to any service "
-                "that syncs the project's folder.",
+                "They travel with the project into every backup (Exegete's, "
+                "and QualCoder's if you use it) and every copy, and to any "
+                "service that syncs the project's folder.",
                 "These rules govern what passes through Exegete, not what an "
                 "assistant can reach by other routes. Imagine you tell the "
-                "assistant that a file you filled in was refused",
+                "assistant that Exegete refused a file you filled in",
                 "Filling a file in while no such assistant is working "
-                "protects that moment only",
-                "you could keep the project in a folder no assistant with "
-                "its own file access is given; move a file out of the "
-                "project once Exegete has used it; or prepare pseudonymised "
-                "copies elsewhere before the documents come to this "
-                "computer"):
+                "protects that moment only"):
             assert words in section, words
         assert "better than QualCoder" not in section
         assert "—" not in section
@@ -1087,7 +1102,8 @@ class TestTheDocuments:
         assert ("never a name; `coder_name_notes` as `select_project` gives "
                 "them; `files_exegete_keeps` lists the files kept for the "
                 "project in its `Exegete` folder (name, kind, size and date, "
-                "never their contents)") in tools
+                "never their contents); files of the researcher's own there "
+                "are counted, never named") in tools
         assert ("the project and Exegete's own folders, any project's "
                 "`Exegete` folder, other formats") in tools
         changelog = _read("CHANGELOG.md")

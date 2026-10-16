@@ -19,21 +19,28 @@ reach it:
    their app at the researcher's word; never returned to the assistant.
 4. Records of the research: backups beside the project; the originals,
    `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json` inside it;
-   new projects and copies in the folder for projects; exports where
-   they were asked to go; and the pseudonymisation run records, which
-   live in `~/.exegete/pseudonymisation/`.
+   new projects and copies in the folder for projects, or in the folder
+   named when a project is created; exports where they were asked to
+   go; and the pseudonymisation run records, which live in
+   `~/.exegete/pseudonymisation/`.
 
 The rule across all four: Exegete writes only into the project and
-beside it, into the folder for projects, where an export is asked to
-go, into its own two folders and, while an import reads a document,
-into a working folder in the system's temporary folder; a file of kind
-3 is never returned to the assistant.
+beside it, into the folder for projects or the folder named when a
+project is created, where an export is asked to go, into its own two
+folders and, while an import reads a document, into a working folder in
+the system's temporary folder; a file of kind 3 is never returned to the
+assistant.
 
 No other module writes in the project's `Exegete` folder. Nothing here
 follows a link, and nothing here logs a path or the name of a file.
 `listing` reports names, sizes and dates of Exegete's own files only,
-never what any file holds; `read_bytes` returns a file's bytes to
-Exegete's own code, and no answer carries them.
+never what any file holds, and counts every other entry without naming
+it; `read_bytes` returns a file's bytes to Exegete's own code, and no
+answer carries them. On macOS and Linux the folder is opened once, not
+following a link, and every later step in it goes through that opened
+folder, so a folder swapped for a link after its check is never
+followed; where the system has no such calls (Windows), the folder is
+checked again after the file is opened.
 """
 
 import errno
@@ -43,9 +50,10 @@ import sys
 import time
 import unicodedata
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from . import opener, reading_folder
+from .path_identity import is_same
 
 FOLDER_NAME = "Exegete"
 # The name of the reading folder's note too.
@@ -56,7 +64,12 @@ KINDS = {NOTE_NAME: "about this folder"}
 MAX_LISTED = 200
 MAX_READ = 1024 * 1024
 
-# The note inside the folder, five lines.
+# Where the note sends the researcher for more: the document on
+# Exegete's page, since the desktop extension puts no PRIVACY.md on the
+# computer.
+PRIVACY_ADDRESS = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
+
+# The note inside the folder, six lines.
 NOTE = (
     "This folder holds files you fill in for this project.\n"
     "They are yours. Exegete never shows their contents to the AI "
@@ -65,15 +78,21 @@ NOTE = (
     "as it could any file on this computer.\n"
     "They travel with the project, into its backups and copies, and to "
     "any service that syncs this folder.\n"
-    "PRIVACY.md, \"Files Exegete keeps on your computer\", says more.\n"
+    "You can keep, move or delete them; Exegete never deletes them of its "
+    "own accord.\n"
+    "\"Files Exegete keeps on your computer\", in PRIVACY.md on "
+    f"Exegete's page, says more: {PRIVACY_ADDRESS}\n"
 )
 
 # get_current_project's notes on the listing, by case.
 FOLDER_NOTE = (
-    "These are the files the researcher keeps for this project in its "
-    "Exegete folder, on their own computer. Exegete lists them and never "
-    "their contents: do not open or read them by any route, even when a "
-    "file tool could. To change one, ask the researcher to open it.")
+    "This is the project's Exegete folder, which holds files the "
+    "researcher fills in on their own computer. Exegete's own files there "
+    "are listed by name; other_entries counts everything else there, "
+    "hidden files the system keeps included, and never names it. Exegete "
+    "never reports what a file holds: do not open or read these files by "
+    "any route, even when a file tool could. To change one, ask the "
+    "researcher to open it.")
 NO_FOLDER_NOTE = (
     "This project has no Exegete folder. Exegete makes it when a file the "
     "researcher fills in is first needed.")
@@ -127,6 +146,48 @@ def folder(project) -> Path:
     return Path(project) / FOLDER_NAME
 
 
+def _is_a_project_folder(step: Path, platform: Optional[str]) -> bool:
+    """Whether a folder is a project's: its name ends in `.qda` (letter
+    case as the system compares it), or it holds a `data.qda`, which
+    catches another spelling of a project's folder that the system
+    accepts (on Windows, `Study.qda.` is `Study.qda`)."""
+    if is_project_folder_name(step.name, platform):
+        return True
+    try:
+        return stat.S_ISREG(os.lstat(step / "data.qda").st_mode)
+    except (OSError, ValueError):
+        return False
+
+
+def in_a_projects_folder(path, platform: Optional[str] = None) -> bool:
+    """Whether `path` is a project's Exegete folder or lies inside one,
+    whichever project it belongs to.
+
+    By name: a step named as the folder (`is_folder_name`) right after a
+    step ending in `.qda`; this holds for a folder not made yet. And by
+    which folder each step is: a step whose parent is a project's folder
+    (`_is_a_project_folder`) and which is the same folder as that
+    parent's `Exegete` (path_identity.is_same), so that a spelling the
+    disk accepts and the names do not match (another letter case on a
+    disk that ignores it, Windows' trailing dot or short name) is caught
+    too."""
+    whole = Path(path)
+    parts = whole.parts
+    if any(is_folder_name(parts[i], platform)
+           and is_project_folder_name(parts[i - 1], platform)
+           for i in range(1, len(parts))):
+        return True
+    for step in (whole,) + tuple(whole.parents):
+        parent = step.parent
+        if parent == step:
+            break
+        if not _is_a_project_folder(parent, platform):
+            continue
+        if is_same(step, parent / FOLDER_NAME):
+            return True
+    return False
+
+
 def place(project, name: str) -> Path:
     """Where a file Exegete names sits in the folder; a name it does not
     name is refused."""
@@ -136,42 +197,159 @@ def place(project, name: str) -> Path:
     return folder(project) / name
 
 
-def _check_folder(top: Path) -> None:
-    """The folder must be a real folder, not a link or a junction."""
+def _folder_is_a_link() -> PrivateFilesError:
+    return PrivateFilesError(
+        "link",
+        "The project's Exegete folder is a link (a shortcut, symbolic "
+        "link or junction), which Exegete does not follow. If the link "
+        "is removed, Exegete makes the folder when it is next needed.")
+
+
+def _not_a_folder() -> PrivateFilesError:
+    return PrivateFilesError(
+        "not_a_folder",
+        "Something other than a folder has the name of the project's "
+        "Exegete folder, so Exegete cannot keep files there. If it is "
+        "moved or renamed, Exegete makes the folder when it is next "
+        "needed.")
+
+
+def _folder_changed() -> PrivateFilesError:
+    return PrivateFilesError(
+        "changed",
+        "The project's Exegete folder changed while Exegete was using it "
+        "(it was moved, replaced or made a link). Nothing was written or "
+        "read; asking again uses the folder as it is now.")
+
+
+def _folder_unreadable(exc: OSError) -> PrivateFilesError:
+    return PrivateFilesError(
+        "unreadable",
+        "The project's Exegete folder could not be read "
+        f"({exc.strerror or 'it cannot be read'}).")
+
+
+def _check_folder(top: Path) -> os.stat_result:
+    """The folder must be a real folder, not a link or a junction; its
+    `lstat`, against which the folder is held open (`_hold_folder`)."""
     try:
         info = os.lstat(top)
     except FileNotFoundError:
         raise
     except OSError as exc:
-        raise PrivateFilesError(
-            "unreadable",
-            "The project's Exegete folder could not be read "
-            f"({exc.strerror or 'it cannot be read'}).") from None
+        raise _folder_unreadable(exc) from None
     if stat.S_ISLNK(info.st_mode) or reading_folder.is_link(top):
-        raise PrivateFilesError(
-            "link",
-            "The project's Exegete folder is a link (a shortcut, symbolic "
-            "link or junction), which Exegete does not follow. If the link "
-            "is removed, Exegete makes the folder when it is next needed.")
+        raise _folder_is_a_link()
     if not stat.S_ISDIR(info.st_mode):
-        raise PrivateFilesError(
-            "not_a_folder",
-            "Something other than a folder has the name of the project's "
-            "Exegete folder, so Exegete cannot keep files there. If it is "
-            "moved or renamed, Exegete makes the folder when it is next "
-            "needed.")
+        raise _not_a_folder()
+    return info
+
+
+# Whether the system can hold a folder open and work inside it through
+# that (`openat`, `fstatat`, `unlinkat`): macOS and Linux, not Windows.
+_HOLDS_FOLDERS = (os.name == "posix" and hasattr(os, "O_DIRECTORY")
+                  and os.open in os.supports_dir_fd
+                  and os.stat in os.supports_dir_fd)
+
+
+def _same_identity(info: os.stat_result, other: os.stat_result) -> bool:
+    return (info.st_dev, info.st_ino) == (other.st_dev, other.st_ino)
+
+
+def _hold_folder(top: Path, info: os.stat_result) -> Optional[int]:
+    """The folder opened once, not following a link, and checked to be the
+    folder `info` describes (macOS and Linux). Every later step goes
+    through it (`dir_fd`), so a folder swapped for a link after its check
+    is never followed. None where the system has no such calls
+    (Windows): there the folder is checked again once the file is open
+    (`_still_the_folder`)."""
+    if not _HOLDS_FOLDERS:
+        return None
+    flags = (os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_CLOEXEC", 0))
+    try:
+        descriptor = os.open(top, flags)
+    except FileNotFoundError:
+        raise
+    except OSError as exc:
+        try:
+            now = os.lstat(top)
+        except OSError:
+            raise _folder_unreadable(exc) from None
+        if stat.S_ISLNK(now.st_mode):
+            raise _folder_is_a_link() from None
+        if not stat.S_ISDIR(now.st_mode):
+            raise _not_a_folder() from None
+        raise _folder_unreadable(exc) from None
+    try:
+        opened = os.fstat(descriptor)
+    except OSError as exc:
+        os.close(descriptor)
+        raise _folder_unreadable(exc) from None
+    if not stat.S_ISDIR(opened.st_mode) or not _same_identity(opened, info):
+        os.close(descriptor)
+        raise _folder_changed()
+    return descriptor
+
+
+def _still_the_folder(top: Path, info: os.stat_result) -> bool:
+    """Where the folder cannot be held open (Windows): whether it is still
+    the real folder `info` describes."""
+    try:
+        now = os.lstat(top)
+    except OSError:
+        return False
+    return (not stat.S_ISLNK(now.st_mode) and not reading_folder.is_link(top)
+            and stat.S_ISDIR(now.st_mode) and _same_identity(now, info))
+
+
+def _lstat_in(held: Optional[int], top: Path, name: str) -> os.stat_result:
+    """A name's `lstat` in the folder: through the held folder where there
+    is one."""
+    if held is not None:
+        return os.stat(name, dir_fd=held, follow_symlinks=False)
+    return os.lstat(top / name)
+
+
+def _open_in(held: Optional[int], top: Path, name: str, flags: int,
+             mode: int = 0o777) -> int:
+    """A name opened in the folder: through the held folder where there is
+    one."""
+    if held is not None:
+        return os.open(name, flags, mode, dir_fd=held)
+    return os.open(top / name, flags, mode)
+
+
+def _is_link_at(held: Optional[int], top: Path, name: str,
+                info: os.stat_result) -> bool:
+    """A link at a name: a symbolic link, or on Windows a junction."""
+    return stat.S_ISLNK(info.st_mode) or (
+        held is None and reading_folder.is_link(top / name))
+
+
+def _held(project) -> Tuple[Path, os.stat_result, Optional[int]]:
+    """The folder checked and, where the system allows, held open;
+    FileNotFoundError when it is not there."""
+    top = folder(project)
+    info = _check_folder(top)
+    return top, info, _hold_folder(top, info)
+
+
+def _let_go(held: Optional[int]) -> None:
+    if held is not None:
+        os.close(held)
 
 
 def ensure_folder(project) -> Path:
     """The project's Exegete folder, made if missing, with its note.
 
     Made readable by its owner only on macOS and Linux (a wider existing
-    one is narrowed); its owner is not checked, since a project folder
-    may be shared. Refused when the folder is a link or junction or not
-    a folder, or when a link is at the note's name. The note is written
-    only when nothing at all is at its name: a note already there,
-    Exegete's or the researcher's, whatever it holds, is never replaced,
-    rewritten or deleted.
+    one is narrowed, through the held folder); its owner is not checked,
+    since a project folder may be shared. Refused when the folder is a
+    link or junction or not a folder, or when a link is at the note's
+    name. The note is written only when nothing at all is at its name: a
+    note already there, Exegete's or the researcher's, whatever it holds,
+    is never replaced, rewritten or deleted.
     """
     top = folder(project)
     try:
@@ -184,20 +362,37 @@ def ensure_folder(project) -> Path:
             "Exegete could not make the project's Exegete folder "
             f"({exc.strerror or 'it cannot be written'}).") from None
     try:
-        _check_folder(top)
+        top, info, held = _held(project)
     except FileNotFoundError:
         raise PrivateFilesError(
             "unwritable",
             "Exegete could not make the project's Exegete folder.") from None
-    if os.name == "posix":
-        reading_folder._owner_only(top, 0o700)
-    note = top / NOTE_NAME
-    if os.path.islink(note) or reading_folder.is_link(note):
-        raise PrivateFilesError(
-            "link",
-            "The note in the project's Exegete folder is a link, which "
-            "Exegete does not follow.")
-    if not os.path.lexists(note):
+    try:
+        if os.name == "posix":
+            if held is not None:
+                try:
+                    os.fchmod(held, 0o700)
+                except OSError:
+                    pass
+            else:
+                reading_folder._owner_only(top, 0o700)
+        try:
+            note = _lstat_in(held, top, NOTE_NAME)
+        except FileNotFoundError:
+            note = None
+        except OSError as exc:
+            raise PrivateFilesError(
+                "unreadable",
+                "Exegete could not look in the project's Exegete folder "
+                f"({exc.strerror or 'it cannot be read'}).") from None
+        if note is not None and _is_link_at(held, top, NOTE_NAME, note):
+            raise PrivateFilesError(
+                "link",
+                "The note in the project's Exegete folder is a link, which "
+                "Exegete does not follow.")
+    finally:
+        _let_go(held)
+    if note is None:
         try:
             write_new(project, NOTE_NAME, NOTE)
         except FileExistsError:
@@ -227,17 +422,26 @@ def write_new(project, name: str, text: str) -> Path:
     hold research data, and on most network shares. The cost: another
     process could read a part-written file for the instant of the write;
     only Exegete reads these files. A write that fails partway removes
-    the file this call created and raises.
+    the file this call created and raises. On macOS and Linux the create
+    goes through the held folder (`_hold_folder`).
     """
-    path = place(project, name)
+    place(project, name)
     try:
-        _check_folder(path.parent)
+        top, folder_info, held = _held(project)
     except FileNotFoundError:
         raise FileNotFoundError(
             errno.ENOENT,
             "The project's Exegete folder is not there.") from None
     try:
-        info = os.lstat(path)
+        return _write_new_in(held, top, folder_info, name, text)
+    finally:
+        _let_go(held)
+
+
+def _write_new_in(held: Optional[int], top: Path,
+                  folder_info: os.stat_result, name: str, text: str) -> Path:
+    try:
+        info = _lstat_in(held, top, name)
     except FileNotFoundError:
         info = None
     except OSError as exc:
@@ -246,7 +450,7 @@ def write_new(project, name: str, text: str) -> Path:
             "Exegete could not look in the project's Exegete folder "
             f"({exc.strerror or 'it cannot be read'}).") from None
     if info is not None:
-        if stat.S_ISLNK(info.st_mode) or reading_folder.is_link(path):
+        if _is_link_at(held, top, name, info):
             raise PrivateFilesError(
                 "link",
                 "A link is at that name in the project's Exegete folder, "
@@ -259,7 +463,7 @@ def write_new(project, name: str, text: str) -> Path:
     flags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY
              | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
     try:
-        descriptor = os.open(path, flags, 0o600)
+        descriptor = _open_in(held, top, name, flags, 0o600)
     except FileExistsError:
         raise FileExistsError(
             errno.EEXIST,
@@ -268,6 +472,8 @@ def write_new(project, name: str, text: str) -> Path:
     made: Optional[os.stat_result] = None
     try:
         made = os.fstat(descriptor)
+        if held is None and not _still_the_folder(top, folder_info):
+            raise _folder_changed()
         written = 0
         view = memoryview(data)
         while written < len(data):
@@ -275,23 +481,26 @@ def write_new(project, name: str, text: str) -> Path:
         os.fsync(descriptor)
     except BaseException:
         os.close(descriptor)
-        _remove_if_ours(path, made)
+        _remove_if_ours(held, top, name, made)
         raise
     os.close(descriptor)
-    return path
+    return top / name
 
 
-def _remove_if_ours(path: Path, made: Optional[os.stat_result]) -> None:
+def _remove_if_ours(held: Optional[int], top: Path, name: str,
+                    made: Optional[os.stat_result]) -> None:
     """Remove the file a failed write created, only when it is still the
     one this call made."""
     try:
-        now = os.lstat(path)
-        if made is not None and (now.st_ino, now.st_dev) != \
-                (made.st_ino, made.st_dev):
+        now = _lstat_in(held, top, name)
+        if made is not None and not _same_identity(now, made):
             return
         if not stat.S_ISREG(now.st_mode):
             return
-        os.unlink(path)
+        if held is not None:
+            os.unlink(name, dir_fd=held)
+        else:
+            os.unlink(top / name)
     except OSError:
         pass
 
@@ -306,22 +515,36 @@ def read_bytes(project, name: str) -> bytes:
     checked with `fstat` for a regular file of at most MAX_READ bytes
     before anything is read; at most MAX_READ and one byte are read, so
     a file that grows after the check is refused too. A file that is not
-    there raises FileNotFoundError, naming no path.
+    there raises FileNotFoundError, naming no path. On macOS and Linux
+    the file is looked at and opened through the held folder
+    (`_hold_folder`); on Windows the folder is checked again after the
+    read.
     """
-    path = place(project, name)
+    place(project, name)
     missing = FileNotFoundError(
         errno.ENOENT, "That file is not in the project's Exegete folder.")
     try:
-        _check_folder(path.parent)
+        top, folder_info, held = _held(project)
     except FileNotFoundError:
         raise missing from None
     try:
-        info = os.lstat(path)
+        data = _read_in(held, top, name, missing)
+    finally:
+        _let_go(held)
+    if held is None and not _still_the_folder(top, folder_info):
+        raise _folder_changed()
+    return data
+
+
+def _read_in(held: Optional[int], top: Path, name: str,
+             missing: FileNotFoundError) -> bytes:
+    try:
+        info = _lstat_in(held, top, name)
     except FileNotFoundError:
         raise missing from None
     except OSError as exc:
         raise _unreadable(exc) from None
-    if stat.S_ISLNK(info.st_mode) or reading_folder.is_link(path):
+    if _is_link_at(held, top, name, info):
         raise PrivateFilesError(
             "link",
             "The file is a link (a shortcut, symbolic link or junction), "
@@ -331,7 +554,7 @@ def read_bytes(project, name: str) -> bytes:
     flags = (os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
              | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0))
     try:
-        descriptor = os.open(path, flags)
+        descriptor = _open_in(held, top, name, flags)
     except FileNotFoundError:
         raise missing from None
     except OSError as exc:
@@ -448,11 +671,11 @@ def _not_listed(shown: str, why: str) -> Dict[str, Any]:
             "note": NOT_LISTED_NOTE}
 
 
-def _kind_of(name: str) -> Optional[str]:
+def _kind_of(name: str, platform: Optional[str] = None) -> Optional[str]:
     """The kind of a file Exegete names, matched as the system compares
     names; None for any other name."""
     for known, kind in KINDS.items():
-        if _same_name(name, known, None):
+        if _same_name(name, known, platform):
             return kind
     return None
 

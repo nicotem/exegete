@@ -18,8 +18,10 @@ description, TOOLS, PRIVACY, the CHANGELOG, the module's own words).
 
 import io
 import json
+import hashlib
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import stat
@@ -637,6 +639,18 @@ SENTENCE = ("The project's Exegete folder (files the researcher fills in) "
             "when either has one.")
 
 
+def without_the_folder_paragraph(description):
+    """restore_backup's description with this piece's paragraph taken out,
+    as served on any interpreter (on 3.10 to 3.12 it keeps its
+    indentation), so that a test of an earlier piece still compares with
+    what that piece measured."""
+    words = [re.escape(word) for word in SENTENCE.split()]
+    pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words))
+    found = pattern.search(description)
+    return (description if found is None
+            else description[:found.start()] + description[found.end():])
+
+
 class TestTheTexts:
 
     def test_the_description_after_its_paragraph_on_symlinks(self):
@@ -644,6 +658,21 @@ class TestTheTexts:
         assert SENTENCE in description
         assert description.index("under safety_backup_skipped_symlinks.") \
             < description.index(SENTENCE) < description.index("Args:")
+
+    def test_the_paragraph_is_all_that_changed(self):
+        """Taken out, the description is word for word what the piece
+        before served (tests/test_v0142_description_cut.py's earlier
+        line), its length too on 3.13."""
+        server._apply_toolset("full")
+        served = server.mcp.original_descriptions["restore_backup"]
+        before = without_the_folder_paragraph(served)
+        assert before != served
+        words = before.split()
+        assert (len("".join(words)), hashlib.sha256(
+            " ".join(sorted(words)).encode()).hexdigest()[:16]) == (
+                2247, "87717bbc6793a0e9")
+        if sys.version_info[:2] == (3, 13):
+            assert len(before) == 2730
 
     def test_tools(self):
         tools = _flat(_read("TOOLS.md"))

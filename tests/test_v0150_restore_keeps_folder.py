@@ -181,6 +181,42 @@ class TestStamp:
             assert kind == ("folder" if name == "inner" else "file")
         assert private_files.stamp(project) == stamped
 
+    def test_each_entry_is_read_by_lstat_itself(self, project, monkeypatch):
+        """Each entry by its own `lstat`, never the copy a folder's listing
+        keeps: Windows refreshes that copy lazily, so a folder just
+        written to read one way before a backup read it and another way
+        after (CI, Windows, the first push of this piece). Here `lstat`
+        gives each entry a date of its own, which the stamp must carry."""
+        from types import SimpleNamespace
+        top = project / "Exegete"
+        _fill(top, {"a.txt": "one", "inner/deeper.txt": "two"})
+        real = os.lstat
+        inside = {os.path.normcase(str(top / name)) for name in
+                  ("a.txt", "inner")}
+
+        def own_dates(path, *args, **kwargs):
+            info = real(path, *args, **kwargs)
+            if os.path.normcase(os.fspath(path)) not in inside:
+                return info
+            return SimpleNamespace(st_mode=info.st_mode,
+                                   st_size=info.st_size,
+                                   st_mtime_ns=4242)
+        monkeypatch.setattr(private_files.os, "lstat", own_dates)
+        stamped = private_files.stamp(project)
+        monkeypatch.undo()
+        assert [(e[0], e[3]) for e in stamped] == [("a.txt", 4242),
+                                                   ("inner", 4242)]
+
+    def test_reading_the_folder_does_not_change_it(self, project, tmp_path):
+        """A backup reads the folder between the two stamps a restore
+        compares; reading must not count as a change."""
+        top = project / "Exegete"
+        _fill(top, {"a.txt": "one"})
+        _fill(top, {"inner/deeper.txt": "two", "inner/more.txt": "three"})
+        before = private_files.stamp(project)
+        shutil.copytree(top, tmp_path / "a copy")
+        assert private_files.stamp(project) == before
+
     def test_a_link_is_described_never_followed(self, project, tmp_path):
         top = project / "Exegete"
         top.mkdir()
@@ -311,6 +347,18 @@ class TestTheFourCases:
         assert not os.path.lexists(selected / "Exegete")
         assert "exegete_folder_note" not in preview
         assert "exegete_folder_note" not in answer
+
+    def test_a_folder_inside_saved_just_before_is_no_change(self, selected):
+        """A folder inside, written to just before the restore and not read
+        since: the safety backup reads it, and the restore goes ahead."""
+        backup = _backup(selected)
+        _fill(selected / "Exegete", {"names.txt": "kept",
+                                     "sheets/one.txt": "signed",
+                                     "sheets/two.txt": "signed too"})
+        _, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert (selected / "Exegete" / "sheets" / "two.txt").read_text(
+            encoding="utf-8") == "signed too"
 
     def test_a_folder_of_that_name_further_down_is_restored(self, selected):
         """Only the backup's top-level entry is left out: a folder named

@@ -733,7 +733,9 @@ def stamp(project) -> Optional[Union[Tuple[StampEntry, ...], str]]:
     folder (a link, a junction, a file) is described by its own `lstat`
     as one entry with an empty name, which no entry in a folder can
     have, and never followed; an entry whose `lstat` fails is one with
-    kind other and size and date -1. Never raises, opens no file and
+    kind other and size and date -1. Each entry is read by its own
+    `lstat`, never from the copy the folder's listing keeps, which Windows
+    refreshes lazily. Never raises, opens no file and
     follows no link. It stays in memory: no answer, log line or token
     carries it, since its names are the researcher's."""
     top = folder(project)
@@ -753,7 +755,11 @@ def stamp(project) -> Optional[Union[Tuple[StampEntry, ...], str]]:
                 if len(entries) > MAX_LISTED:
                     break
                 try:
-                    entry_info = entry.stat(follow_symlinks=False)
+                    # its own lstat, not the copy the listing keeps, which
+                    # Windows refreshes lazily: a folder just written to
+                    # would read one way before a backup reads it and
+                    # another way after
+                    entry_info = os.lstat(entry.path)
                 except OSError:
                     entries.append((entry.name, "other", -1, -1))
                     continue

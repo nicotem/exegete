@@ -75,6 +75,16 @@ def _read(name):
     return (REPO / name).read_text(encoding="utf-8")
 
 
+def without_the_files_paragraph(description):
+    """get_current_project's description with this piece's paragraph
+    taken out, exactly as it was before (on 3.10 to 3.12 the paragraph
+    keeps its indentation), for the tests of earlier pieces that hold
+    the rest of it to their length."""
+    return re.sub(r"[ ]*Also lists the files Exegete keeps for this project "
+                  r"in its Exegete\n.*?never their\n[ ]*contents\.\n\n", "",
+                  description, count=1, flags=re.S)
+
+
 def _symlink(link: Path, target: Path, folder: bool = False) -> bool:
     try:
         link.symlink_to(target, target_is_directory=folder)
@@ -661,6 +671,13 @@ class TestGetCurrentProject:
                 "date, never their contents.") in description
         assert description.index("as `pseudonyms_json`") < \
             description.index("(files_exegete_keeps)")
+        raw = server.mcp.original_descriptions["get_current_project"]
+        taken_out = without_the_files_paragraph(raw)
+        assert "files_exegete_keeps" not in taken_out
+        # 1,920 to 2,067 characters on 3.13, 2,048 to 2,207 on 3.10 to
+        # 3.12, which keep the docstring's indentation
+        indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
+        assert len(raw) - len(taken_out) == (159 if indented else 147)
 
     def test_selecting_and_reporting_make_nothing(self, selected):
         json.loads(server.get_current_project())
@@ -1015,8 +1032,9 @@ class TestTheDocuments:
                 "of four kinds.",
                 "into the folder for projects (`~/Exegete projects` in the "
                 "desktop extension, `~/Documents/Exegete projects` "
-                "otherwise, or the folder you set), where you ask an export "
-                "to go, and into its own two folders",
+                "otherwise, or the folder you set, with the extension's "
+                "\"Folder for projects\" or `EXEGETE_WORKSPACE`), where you "
+                "ask an export to go, and into its own two folders",
                 "a link to the first under its earlier name, "
                 "`~/.qualcoder_mcp`",
                 "into a working folder in the system's temporary folder, "

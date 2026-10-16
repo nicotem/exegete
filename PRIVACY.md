@@ -474,7 +474,8 @@ instead, on whichever plan or terms you use.
 Everything Exegete writes outside the conversation is one of four
 kinds. It writes into your project and beside it (backups), into the
 folder for projects (`~/Exegete projects` in the desktop extension,
-`~/Documents/Exegete projects` otherwise, or the folder you set), where
+`~/Documents/Exegete projects` otherwise, or the folder you set, with
+the extension's "Folder for projects" or `EXEGETE_WORKSPACE`), where
 you ask an export to go, and into its own two folders (and, since
 0.14.1, a link to the first under its earlier name, `~/.qualcoder_mcp`,
 as "How your data flows" says); and, while an import reads a document,

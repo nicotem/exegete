@@ -716,8 +716,10 @@ class TestTheDocuments:
         # moved to v0.15.1 (whole-branch review, round 1), and thirteen
         # since the second round's notes and import_text_file's sentence,
         # and fourteen since get_current_project lists the files Exegete
-        # keeps (the files design, piece 1)
-        assert ("on 3.13), fourteen changes moved them;") in unreleased
+        # keeps (the files design, piece 1), and fifteen since
+        # restore_backup says a restore keeps the project's Exegete
+        # folder (piece 2)
+        assert ("on 3.13), fifteen changes moved them;") in unreleased
         assert ("And the AI coder name in the settings is given to each new "
                 "project: `create_project`'s sentence on it grew its entry "
                 "by 115 characters, 123 on 3.11, and `export_refi_qda`'s "

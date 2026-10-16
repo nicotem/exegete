@@ -183,8 +183,12 @@ class TestALinkInTheFolderIsCountedNeverNamed:
 
     def test_a_restore_recovered_from_its_safety_backup(
             self, selected, tmp_path, monkeypatch):
-        """When only links in the folder were left out, a restore that
-        fails mid-swap and recovers must not say nothing was lost."""
+        """When only links in the folder were left out of the safety
+        backup, a restore that fails mid-swap and recovers leaves the
+        folder where it is, its links with it (v0.15.0, piece 2's fix
+        round 1), so nothing was lost; the safety backup's count is still
+        reported. Should the folder be gone by then, the answer says the
+        links are missing: tests/test_v0150_restore_keeps_folder.py."""
         import shutil
         backup = json.loads(server.create_code(name="A code",
                                                create_backup=True))
@@ -206,12 +210,10 @@ class TestALinkInTheFolderIsCountedNeverNamed:
         preview = json.loads(server.restore_backup(str(restore_point)))
         answer = json.loads(server.restore_backup(
             str(restore_point), preview_token=preview["preview_token"]))
-        assert "recovered" in answer["error"], answer
-        assert "nothing was lost" not in answer["error"]
-        assert ("That backup skipped the symlinks counted in "
-                "safety_backup_skipped_symlinks_in_exegete_folder, so the "
-                "recovered project no longer contains those link entries"
-                ) in answer["error"]
+        assert answer["error"] == (
+            "Restore failed, but the project was recovered from the safety "
+            "backup; nothing was lost."), answer
+        assert os.path.islink(top / f"{TOKEN} link")
         assert answer["safety_backup_skipped_symlinks"] == 1
         assert answer["safety_backup_skipped_symlinks_in_exegete_folder"] == 1
         assert "safety_backup_skipped_symlink_names" not in answer

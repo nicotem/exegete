@@ -562,10 +562,12 @@ class TestTheSizes:
     # gives import_text_file a sentence on what pseudonymisation is for
     # (164 more in `full`). The files design, piece 1, gives
     # get_current_project a paragraph on the files Exegete keeps for the
-    # project (151 characters more in both sets). Their entries as
-    # 0.14.2 served them are below, so every other tool is still held to
-    # 0.14.2's figure.
-    NOW = {"full": 196_914, "core": 64_959}
+    # project (151 characters more in both sets). The files design,
+    # piece 2, gives restore_backup a paragraph on the project's Exegete
+    # folder, which a restore keeps (151 characters more in `full`). Their
+    # entries as 0.14.2 served them are below, so every other tool is
+    # still held to 0.14.2's figure.
+    NOW = {"full": 197_065, "core": 64_959}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

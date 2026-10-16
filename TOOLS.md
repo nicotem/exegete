@@ -589,7 +589,8 @@ Claude will:
 **If something went wrong**: `delete_coding(coding_id)` removes a single coding
 and marks its suggestion removed in the session (which then allows it to be
 approved again, reopened and edited, or the passage recorded again);
-`list_backups` + `restore_backup` roll the whole project back to a snapshot.
+`list_backups` + `restore_backup` roll the project back to a snapshot,
+all but its `Exegete` folder, which a restore keeps.
 
 ### Key Features
 
@@ -1076,7 +1077,7 @@ still answers empty, and that answer is a finding.
 - `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` - **WRITES TO DATABASE** - Remove one coded segment (refuses a hidden coder's row or a row carrying a private note unless the override is passed); a coding an AI coding session applied is marked removed in that session, which the answer names
 - `list_backups()` - List this project's backup snapshots (both Exegete's `_backup_` and QualCoder's `_BKUP_` families); a backup holding its database's journal or WAL file, copied while a program was writing, is marked `unclean`
 - `prune_backups(keep_last, older_than_days, preview_token)` - Delete Exegete's own backups by a retention policy (preview first, then the token the preview returns; QualCoder's `_BKUP_` backups are never removed)
-- `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused)
+- `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused). The project's `Exegete` folder (files the researcher fills in) is kept as it is, never taken from the backup; the preview says when either has one
 
 **Interchange & Report Exports (exported files keep full memos, private sections included; give `output_path` as a full path or one starting with `~`: since 0.14 a relative one is refused and nothing is written):**
 - `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA. **Deprecated, removed in v0.15.1**: it files every coding under the AI coder name and leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions unmarked. Exegete has no other REFI-QDA export yet; QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
@@ -1127,10 +1128,11 @@ name(s), a per-owner breakdown of the rest, how many belong to coders
 currently hidden in QualCoder (a count, never a name), and how many
 rows carry a `#####` private note. Of these, `merge_codes` and
 `delete_code` require `allow_hidden_coder=true` to execute when hidden
-coders' codings are affected. `restore_backup` rolls the whole project
-back: its preview does not count codings by owner, and it has no such
-gate; `pseudonymise_source` reports hidden coders' rows as counts and
-gates a narrower set (see its own entry).
+coders' codings are affected. `restore_backup` rolls the project
+back (all but its `Exegete` folder, which a restore keeps): its preview
+does not count codings by owner, and it has no such gate;
+`pseudonymise_source` reports hidden coders' rows as counts and gates a
+narrower set (see its own entry).
 
 ## Earlier names
 

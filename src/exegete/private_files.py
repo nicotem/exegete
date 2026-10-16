@@ -15,9 +15,9 @@ reach it:
 3. Files the researcher fills in and Exegete reads back: the subfolder
    `Exegete` inside the project folder (this module); plain names; a
    short note inside; never deleted by Exegete of its own accord (a
-   restore replaces the folder with the backup's copy, as it replaces
-   the rest of the project); shown in the file manager and opened in
-   their app at the researcher's word; never returned to the assistant.
+   restore leaves the folder where it is, as it is, never taking the
+   backup's copy); shown in the file manager and opened in their app at
+   the researcher's word; never returned to the assistant.
 4. Records of the research: backups beside the project; the originals,
    `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json` inside it;
    new projects and copies in the folder for projects, or in the folder

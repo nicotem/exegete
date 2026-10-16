@@ -319,6 +319,15 @@ class TestTheWriteToolsSentence:
             raw["import_text_file"])
         assert (raw["import_text_file"]
                 != server.mcp.original_descriptions["import_text_file"])
+        # And the files design, piece 2, gives restore_backup a paragraph
+        # on the project's Exegete folder, which a restore keeps: held to
+        # this piece's length likewise, with that paragraph taken out
+        from test_v0150_restore_keeps_folder import \
+            without_the_folder_paragraph
+        raw["restore_backup"] = without_the_folder_paragraph(
+            raw["restore_backup"])
+        assert (raw["restore_backup"]
+                != server.mcp.original_descriptions["restore_backup"])
         longer = {name: (len(raw[name]), before[which])
                   for name, before in BEFORE.items()
                   if len(raw[name]) >= before[which]}

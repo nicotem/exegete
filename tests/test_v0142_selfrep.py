@@ -824,6 +824,12 @@ class TestNoDescriptionGrew:
     # it is still held to 0.14.1's length, measured with that paragraph
     # taken out
     LENGTHENED_IN_0150 = {"pseudonymise_source"}
+    # And the files design, piece 2 (tests/test_v0150_restore_keeps_folder.py,
+    # which pins it): restore_backup says a restore keeps the project's
+    # Exegete folder, a paragraph after the one on symlinks; the rest of
+    # it is still held to 0.14.1's length, measured with that paragraph
+    # taken out
+    FOLDER_KEPT_0150 = {"restore_backup"}
     # and the renames, piece 3: two tools renamed (their lines above are
     # under their new names), and the new names, word for word, in the
     # descriptions that name them, where start_coding_session is two
@@ -870,6 +876,13 @@ class TestNoDescriptionGrew:
                 from test_v0150_qualcoder_texts_2 import \
                     without_the_paragraph
                 taken_out = without_the_paragraph(text)
+                assert taken_out != text, name
+                text = taken_out
+            if name in self.FOLDER_KEPT_0150:
+                sys.path.insert(0, str(Path(__file__).parent))
+                from test_v0150_restore_keeps_folder import \
+                    without_the_folder_paragraph
+                taken_out = without_the_folder_paragraph(text)
                 assert taken_out != text, name
                 text = taken_out
             now_solid = len("".join(text.split()))

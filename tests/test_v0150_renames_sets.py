@@ -491,7 +491,9 @@ class TestTheDocuments:
         # their attribution (not presuming QualCoder, piece 13): 205,022;
         # and, after the whole-branch review, get_current_project's
         # paragraph on the files Exegete keeps for the project (the files
-        # design, piece 1): 205,637, about 206,000
+        # design, piece 1): 205,637; and restore_backup's sentence on the
+        # project's Exegete folder, which a restore keeps (the files
+        # design, piece 2): 205,788, about 206,000
         assert (rounded, tokens) == ("206,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "

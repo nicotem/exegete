@@ -1078,19 +1078,22 @@ class TestTheDocuments:
                 "not running;",
                 "| Files you fill in | the `Exegete` folder inside the "
                 "project | files you fill in for the project, and a short "
-                "note | you: Exegete never deletes them of its own accord; "
-                "restoring a backup replaces the whole project folder, this "
-                "folder with it, and the safety backup taken first keeps "
-                "the copy you had |",
+                # the files design, piece 2: a restore keeps the folder
+                # (tests/test_v0150_restore_keeps_folder.py)
+                "note | you: Exegete never deletes them, and a restore "
+                "keeps them as they are (and leaves the backup's copy in "
+                "the backup) |",
                 "| Records of the research | beside the project; inside it; "
                 "the folder for projects, or the folder you named for a new "
                 "project; where you export; "
                 "`~/.exegete/pseudonymisation/` |",
                 "| you (`prune_backups` deletes backups at your word) |",
                 "The files you fill in are never returned to the assistant",
+                # piece 2's fix round 2: backups leave out files by name
                 "They travel with the project into every backup (Exegete's, "
-                "and QualCoder's if you use it) and every copy, and to any "
-                "service that syncs the project's folder.",
+                "and QualCoder's if you use it) and every copy, apart from "
+                "files whose names those leave out",
+                "and to any service that syncs the project's folder.",
                 "These rules govern what passes through Exegete, not what an "
                 "assistant can reach by other routes. Imagine you tell the "
                 "assistant that Exegete refused a file you filled in",

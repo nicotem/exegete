@@ -10,6 +10,7 @@ import sys
 import json
 import argparse
 import shutil
+import stat
 import logging
 import sqlite3
 import tempfile
@@ -3037,15 +3038,20 @@ def _skipped_where(safety_report: Dict[str, Any]) -> str:
     return "counted in safety_backup_skipped_symlinks_in_exegete_folder"
 
 
-def _skipped_symlinks_note(prefix: str, withheld: int) -> str:
+def _skipped_symlinks_note(prefix: str, withheld: int,
+                           folder_kept: bool = False) -> str:
     """The note on skipped links, with a sentence on those in a project's
-    Exegete folder when there are any."""
+    Exegete folder when there are any. `folder_kept`: a restore's answer,
+    where the project's own folder, left in place, still has them."""
     if not withheld:
         return _SKIPPED_SYMLINKS_NOTE
+    where = ("they are absent from the safety backup, and the project's "
+             "own Exegete folder still has them." if folder_kept else
+             "they are absent from this copy too.")
     return (f"{_SKIPPED_SYMLINKS_NOTE} Links in a project's Exegete folder "
             f"are counted in {prefix}skipped_symlinks_in_exegete_folder and "
             f"never named, since a name the researcher gives one may hold a "
-            f"participant's name; they are absent from this copy too.")
+            f"participant's name; {where}")
 
 
 _DATABASE_AS_FILE_NOTE = (
@@ -3057,7 +3063,8 @@ _DATABASE_AS_FILE_NOTE = (
 
 
 def _attach_skipped_symlinks(result: Any, report: Optional[Dict[str, Any]],
-                             prefix: str = "", always: bool = False) -> None:
+                             prefix: str = "", always: bool = False,
+                             folder_kept: bool = False) -> None:
     """Surface the symlinks a backup or project copy skipped (S-P1).
 
     Adds "<prefix>skipped_symlinks" (a count) and, when any were skipped,
@@ -3078,7 +3085,7 @@ def _attach_skipped_symlinks(result: Any, report: Optional[Dict[str, Any]],
         result[f"{prefix}skipped_symlinks_in_exegete_folder"] = withheld
     if skipped or withheld:
         result[f"{prefix}skipped_symlinks_note"] = _skipped_symlinks_note(
-            prefix, withheld)
+            prefix, withheld, folder_kept)
     # A database SQLite could not read, copied as a file (fix round 1)
     as_file = (report or {}).get("database_copied_as_file")
     if as_file:
@@ -12323,6 +12330,188 @@ def _restore_pseudonyms_json_note(before: Optional[str],
             f"be the only record of a pseudonymisation mapping. {where}")
 
 
+# A restore keeps the project's Exegete folder as it is, never taking the
+# backup's copy (v0.15.0, the files design, piece 2; ruling 78: files the
+# researcher fills in are never deleted by Exegete). The note the preview
+# and the answer carry, word for word, by case.
+EXEGETE_FOLDER_KEPT_NOTE = (
+    "The project's Exegete folder (files the researcher fills in on their "
+    "own computer) is kept as it is, not taken from the backup: Exegete "
+    "never deletes those files.")
+EXEGETE_FOLDER_BACKUP_COPY_NOTE = (
+    "A restore leaves the backup's copy of that folder in the backup.")
+# Backups leave out files by name (database.BACKUP_IGNORE_PATTERNS, and
+# QualCoder's own list), so a backup's copy of the folder can lack some
+EXEGETE_FOLDER_ONLY_IN_BACKUP_NOTE = (
+    "The backup holds an Exegete folder (files the researcher filled in on "
+    "their own computer). The project has none now, so none is restored: "
+    "a restore never brings those files back. A restore leaves the "
+    "backup's copy in the backup, and the researcher can copy it into the "
+    "project folder themselves; that copy can lack some files, since "
+    "backups leave out files named like lock files and database working "
+    "files.")
+# Said when a restore fails and its recovery fails too, while the project
+# still has its Exegete folder, which neither removed: what the researcher
+# may want to do so that the folder stays
+EXEGETE_FOLDER_LEFT_AFTER_FAILURE = (
+    "The project folder still holds its Exegete folder as it was; the "
+    "safety backup's copy of it can lack some files, since backups leave "
+    "out files named like lock files and database working files. When the "
+    "researcher copies the safety backup back, they may want to copy "
+    "everything in it but its Exegete folder into the project folder, so "
+    "that the project's own stays.")
+# Said after either sentence on the backup's copy when the backup is one
+# of QualCoder's own (`<project>_BKUP_`, a file QualCoder leaves beside a
+# project): QualCoder removes its own backups past its `backup_num`
+# setting when it closes a project (4.0 `__main__.py` 3005 and 3018 to
+# 3063, `app.py` 1366; 3.8.2 `__main__.py` 3180 and 3194), so that backup
+# may not stay
+EXEGETE_FOLDER_QUALCODER_BACKUP_NOTE = (
+    "QualCoder removes its own backups beyond the number its settings keep "
+    "when it closes the project, so that backup, and its copy of the "
+    "folder, may not stay: the researcher may want to copy what they need "
+    "from it soon.")
+
+
+def _is_exegete_entry(top: Path, name: str) -> bool:
+    """Whether the top-level entry `name` of a project folder (or of a
+    backup, `top`) is at the Exegete folder's name: a name
+    `private_files.is_folder_name` takes (on macOS and Windows `exegete`
+    too), or, where Exegete compares names exactly and the disk does not
+    (Linux on a disk that ignores letter case), another spelling of it
+    that the disk takes for the folder's own name: the same entry on
+    disk, by device and inode, read with `lstat`, never following a link
+    (v0.15.0). Never raises."""
+    if private_files.is_folder_name(name):
+        return True
+    if name.casefold() != private_files.FOLDER_NAME.casefold():
+        return False
+    try:
+        info = os.lstat(Path(top) / name)
+        own = os.lstat(private_files.folder(top))
+    except (OSError, ValueError):
+        return False
+    return bool(info.st_ino) and (info.st_dev, info.st_ino) == (
+        own.st_dev, own.st_ino)
+
+
+def _holds_exegete_folder(folder: Path) -> bool:
+    """Whether a project folder, or a backup, has the project's Exegete
+    folder: a real folder, read with `lstat`, at a top-level name
+    `_is_exegete_entry` takes (on macOS and Windows `exegete` too). A
+    link or a junction there is not the folder. Never raises."""
+    try:
+        with os.scandir(folder) as entries:
+            for entry in entries:
+                if not _is_exegete_entry(folder, entry.name):
+                    continue
+                info = entry.stat(follow_symlinks=False)
+                if (stat.S_ISDIR(info.st_mode)
+                        and not stat.S_ISLNK(info.st_mode)
+                        and not reading_folder.is_link(Path(entry.path))):
+                    return True
+    except Exception:                                   # noqa: BLE001
+        return False
+    return False
+
+
+def _exegete_folder_note(project_has: bool, backup_has: bool,
+                         qualcoder_backup: bool = False) -> Optional[str]:
+    """The restore's note on the project's Exegete folder; None when
+    neither the project nor the backup has one. When the backup has one
+    and is one of QualCoder's own (`_BKUP_`), a sentence says QualCoder
+    may remove it. Names no file."""
+    if project_has:
+        note = EXEGETE_FOLDER_KEPT_NOTE
+        if backup_has:
+            note = f"{note} {EXEGETE_FOLDER_BACKUP_COPY_NOTE}"
+    elif backup_has:
+        note = EXEGETE_FOLDER_ONLY_IN_BACKUP_NOTE
+    else:
+        return None
+    if backup_has and qualcoder_backup:
+        note = f"{note} {EXEGETE_FOLDER_QUALCODER_BACKUP_NOTE}"
+    return note
+
+
+def _gone_already(function, path, failure) -> None:
+    """shutil.rmtree's error handler: passes over an entry another program
+    removed meanwhile (as rmtree itself does on 3.13 below the top); any
+    other failure raises. `failure` is the exception (3.12 on, onexc) or
+    sys.exc_info() (before, onerror)."""
+    error = failure if isinstance(failure, BaseException) else failure[1]
+    if not isinstance(error, FileNotFoundError):
+        raise error
+
+
+def _clear_all_but_exegete_folder(project_folder: Path) -> None:
+    """Remove every top-level entry of the project folder but the one at
+    the Exegete folder's name (each name `_is_exegete_entry` takes,
+    whatever is there: the folder, a file, a link), which a restore
+    leaves where it is, as it is: nothing in it is read, copied or
+    removed (v0.15.0). A link or a junction is removed as a link, never
+    followed; a folder with everything in it. An entry another program
+    removed since the listing (a temporary file, a .DS_Store) is gone
+    already and passed over. Raises on any other failure, which the
+    restore's recovery from the safety backup answers."""
+    with os.scandir(project_folder) as entries:
+        going = [entry.path for entry in entries
+                 if not _is_exegete_entry(project_folder, entry.name)]
+    for path in going:
+        try:
+            info = os.lstat(path)
+            if (stat.S_ISDIR(info.st_mode)
+                    and not stat.S_ISLNK(info.st_mode)
+                    and not reading_folder.is_link(Path(path))):
+                if sys.version_info >= (3, 12):
+                    shutil.rmtree(path, onexc=_gone_already)
+                else:
+                    shutil.rmtree(path, onerror=_gone_already)
+            else:
+                # a file, a link or a junction (os.unlink removes a
+                # directory link or junction on Windows without touching
+                # what it points to)
+                os.unlink(path)
+        except FileNotFoundError:
+            continue
+
+
+def _copy_around_exegete_folder(source: Path, project_folder: Path,
+                                *, leave_out_folder: bool) -> None:
+    """Copy `source` (the backup; in the recovery, the safety backup) into
+    the project folder, around the entry `_clear_all_but_exegete_folder`
+    left at the Exegete folder's name. With `leave_out_folder`, the
+    source's top-level entry at that name (each name `_is_exegete_entry`
+    takes) is left out, whatever it is; nothing below the top is. Any
+    other entry of the source that would land on something still in the
+    project raises before anything is copied, rather than mixing the
+    source's files into the folder kept. Raises on any failure."""
+    top = os.path.normcase(os.path.abspath(source))
+
+    def leave_out(name: str) -> bool:
+        return leave_out_folder and _is_exegete_entry(source, name)
+
+    for name in os.listdir(source):
+        if not leave_out(name) and os.path.lexists(project_folder / name):
+            raise FileExistsError(
+                errno.EEXIST, "An entry of the copy is already in the project")
+
+    def ignore(dirpath, names):
+        if os.path.normcase(os.path.abspath(dirpath)) != top:
+            return set()
+        return {name for name in names if leave_out(name)}
+    shutil.copytree(source, project_folder, ignore=ignore,
+                    dirs_exist_ok=True)
+
+
+def _project_holds_exegete_entry(project_folder: Path) -> bool:
+    """Whether anything is at the Exegete folder's name at the project's
+    top (a folder, a file or a link). Raises when the project folder
+    cannot be listed."""
+    return any(_is_exegete_entry(project_folder, name)
+               for name in os.listdir(project_folder))
+
+
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def restore_backup(backup_path: str,
@@ -12369,6 +12558,10 @@ def restore_backup(backup_path: str,
     before a restore follows the same rule, and every confirmed-restore
     result (success, recovery from the safety backup, or failure)
     reports what that backup skipped under safety_backup_skipped_symlinks.
+
+    The project's Exegete folder (files the researcher fills in) is kept
+    as it is, never taken from the backup; the preview says when either
+    has one.
 
     Args:
         backup_path: Path to the backup folder (from list_backups)
@@ -12428,6 +12621,10 @@ def restore_backup(backup_path: str,
         return json.dumps(refusal, indent=2)
     # The backup itself must be a valid QualCoder project
     validate_qda_path(str(backup_folder))
+    # One of QualCoder's own, told by its prefix as list_backups tells
+    # them: for a project whose own name holds _BKUP_, Exegete's backups
+    # of it hold those letters too (v0.15.0)
+    qualcoder_made = backup_folder.name.startswith(prefixes[1])
 
     fingerprint = _restore_fingerprint(project_folder, backup_folder)
     token_args = canonical_args("restore_backup",
@@ -12442,7 +12639,7 @@ def restore_backup(backup_path: str,
             "hint": "Call restore_backup again with the preview_token to "
                     "proceed."
         }
-        if "_BKUP_" in backup_folder.name:
+        if qualcoder_made:
             preview["note"] = (
                 "This is a QualCoder-made backup: depending on QualCoder's "
                 "settings it may not contain audio/video media files."
@@ -12462,6 +12659,14 @@ def restore_backup(backup_path: str,
                 "open, and the window will not display the restored state "
                 "until the project is reopened."
             )
+        # The project's Exegete folder is kept, never taken from the
+        # backup (v0.15.0): said when either has one, outside the signed
+        # state, as the signs above are
+        folder_note = _exegete_folder_note(
+            _holds_exegete_folder(project_folder),
+            _holds_exegete_folder(backup_folder), qualcoder_made)
+        if folder_note:
+            preview["exegete_folder_note"] = folder_note
         try:
             payload = _issue_preview(
                 "restore_backup", token_args, preview, fingerprint,
@@ -12506,6 +12711,9 @@ def restore_backup(backup_path: str,
     # project had may be the only record of a pseudonymisation mapping
     # (Brief 2, merge fix M3). A fingerprint only, never the bytes.
     mapping_before = pseudonyms_json_fingerprint(project_folder)
+    # Whether the project has its Exegete folder, which the swap leaves
+    # where it is (v0.15.0), for the note.
+    exegete_had = _holds_exegete_folder(project_folder)
 
     # Safety backup of the current state (rename to mark it as pre-restore)
     safety_report: Dict[str, Any] = {}
@@ -12544,8 +12752,15 @@ def restore_backup(backup_path: str,
 
     try:
         with hold_project_lock(project_folder):
-            shutil.rmtree(project_folder)
-            shutil.copytree(backup_folder, project_folder)
+            # Everything in the project goes but its Exegete folder, which
+            # stays where it is, as it is, never read or copied (v0.15.0):
+            # a file of any name in it, at any depth, saved at any moment,
+            # is kept. Then everything from the backup but its entry of
+            # that name. A failure in either goes to the recovery below,
+            # which leaves the folder where it is too.
+            _clear_all_but_exegete_folder(project_folder)
+            _copy_around_exegete_folder(backup_folder, project_folder,
+                                        leave_out_folder=True)
             # Old backups may contain a copied lock file; QualCoder never
             # puts lock files in backups and neither do we (anymore)
             for stray_lock in project_folder.glob("*.lock"):
@@ -12566,24 +12781,35 @@ def restore_backup(backup_path: str,
         # to (fault-injection D1). Remove any partial folder first so the
         # safety-backup recovery always runs on a clean slate.
         logger.error("Restore failed mid-swap: %s", error_label(e))
+        folder_kept = False
         try:
-            if project_folder.exists():
-                # The original folder was already rmtree'd inside the swap;
-                # anything here now is a partial copy — never the original
-                shutil.rmtree(project_folder)
-            shutil.copytree(safety_backup, project_folder)
+            if os.path.lexists(project_folder):
+                # Everything here but the Exegete folder was cleared or
+                # is a partial copy: cleared again, the folder left where
+                # it is, and the safety backup copied around it; the
+                # safety backup's own copy of the folder comes back only
+                # when nothing is at that name any more (v0.15.0)
+                _clear_all_but_exegete_folder(project_folder)
+                folder_kept = _project_holds_exegete_entry(project_folder)
+                _copy_around_exegete_folder(safety_backup, project_folder,
+                                            leave_out_folder=folder_kept)
+            else:
+                shutil.copytree(safety_backup, project_folder)
             switch_project(current_project_path)
             recovered: Dict[str, Any] = {
                 "error": "Restore failed, but the project was recovered "
                          "from the safety backup; nothing was lost.",
                 "safety_backup": str(safety_backup),
             }
-            if safety_report.get("skipped_symlinks") or \
-                    _skipped_in_exegete_folder(safety_report):
+            if safety_report.get("skipped_symlinks") or (
+                    not folder_kept
+                    and _skipped_in_exegete_folder(safety_report)):
                 # The safety backup skipped these links (S-P1), so the
                 # recovered folder has no entry for them; what they
                 # pointed to is untouched, but "nothing was lost" would
-                # be false here (fix round 4)
+                # be false here (fix round 4). Links in the project's
+                # Exegete folder are lost only when the folder was not
+                # left in place (v0.15.0)
                 recovered["error"] = (
                     "Restore failed, but the project was recovered from "
                     "the safety backup. That backup skipped the symlinks "
@@ -12592,7 +12818,8 @@ def restore_backup(backup_path: str,
                     "entries (what they pointed to is untouched); "
                     "recreate them by hand if they are needed.")
             _attach_skipped_symlinks(recovered, safety_report,
-                                     prefix="safety_backup_")
+                                     prefix="safety_backup_",
+                                     folder_kept=folder_kept)
             return json.dumps(recovered)
         except Exception as recovery_error:
             logger.error("Recovery also failed: %s",
@@ -12603,14 +12830,27 @@ def restore_backup(backup_path: str,
                      "to recover.",
             "safety_backup": str(safety_backup),
         }
-        if safety_report.get("skipped_symlinks") or \
-                _skipped_in_exegete_folder(safety_report):
+        # The project's Exegete folder is never removed by the swap or the
+        # recovery, so it is normally still there, as it was (v0.15.0).
+        # A project folder left empty goes, as it went before the folder
+        # was kept (a folder holding anything stays)
+        try:
+            os.rmdir(project_folder)
+        except OSError:
+            pass
+        folder_left = _holds_exegete_folder(project_folder)
+        if safety_report.get("skipped_symlinks") or (
+                not folder_left
+                and _skipped_in_exegete_folder(safety_report)):
             failed["error"] += (
                 " That backup skipped the symlinks "
                 f"{_skipped_where(safety_report)}; recreate them by hand "
                 "after copying it back.")
+        if folder_left:
+            failed["error"] += " " + EXEGETE_FOLDER_LEFT_AFTER_FAILURE
         _attach_skipped_symlinks(failed, safety_report,
-                                 prefix="safety_backup_")
+                                 prefix="safety_backup_",
+                                 folder_kept=folder_left)
         return json.dumps(failed)
 
     switch_project(current_project_path)
@@ -12656,8 +12896,14 @@ def restore_backup(backup_path: str,
             safety_backup)
         if note:
             result["pseudonyms_json_note"] = note
-        _attach_skipped_symlinks(result, safety_report,
-                                 prefix="safety_backup_")
+        folder_note = _exegete_folder_note(
+            exegete_had, _holds_exegete_folder(backup_folder),
+            qualcoder_made)
+        if folder_note:
+            result["exegete_folder_note"] = folder_note
+        _attach_skipped_symlinks(
+            result, safety_report, prefix="safety_backup_",
+            folder_kept=_holds_exegete_folder(project_folder))
     except Exception as e:                        # noqa: BLE001
         logger.error("Restore completed, reporting degraded: %s",
                      error_label(e))
@@ -13027,7 +13273,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "allow_hidden_coder, and a row whose memo carries a "
                           "'#####' private note without "
                           "confirm_private_note_deletion); list_backups + "
-                          "restore_backup roll the whole project back. The "
+                          "restore_backup roll the project back (all but its "
+                          "Exegete folder, which a restore keeps). The "
                           "destructive codebook tools, restore_backup and "
                           "prune_backups are two-step: call without "
                           "preview_token to see exactly what would change and "
@@ -13190,8 +13437,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "6. Apply approved codings with apply_codings",
                 "7. A backup is created before writing by default; "
                 "delete_coding removes one coding and marks its suggestion "
-                "removed in the session; restore_backup rolls the whole "
-                "project back"
+                "removed in the session; restore_backup rolls the project "
+                "back (all but its Exegete folder, which a restore keeps)"
             ]
         },
         "edit_suggestion": {

@@ -1078,10 +1078,11 @@ class TestTheDocuments:
                 "not running;",
                 "| Files you fill in | the `Exegete` folder inside the "
                 "project | files you fill in for the project, and a short "
-                "note | you: Exegete never deletes them of its own accord; "
-                "restoring a backup replaces the whole project folder, this "
-                "folder with it, and the safety backup taken first keeps "
-                "the copy you had |",
+                # the files design, piece 2: a restore keeps the folder
+                # (tests/test_v0150_restore_keeps_folder.py)
+                "note | you: Exegete never deletes them, and a restore "
+                "keeps them as they are (the backup's copy stays in the "
+                "backup) |",
                 "| Records of the research | beside the project; inside it; "
                 "the folder for projects, or the folder you named for a new "
                 "project; where you export; "

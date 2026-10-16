@@ -983,8 +983,11 @@ for the four labels stays in NOTICE.
   once, never replacing a file already there. It never deletes what is
   in the folder of its own accord, never follows a link there, and
   never returns what a file holds to the assistant. The folder travels
-  with the project into its backups and copies; a link there that a
-  backup or a copy leaves out is counted
+  with the project into its backups and copies, and a restore keeps the
+  project's `Exegete` folder as it is: it never takes the backup's copy,
+  which stays in the backup, and `restore_backup`'s preview and answer
+  say so (`exegete_folder_note`) when the project or the backup has
+  one; a link there that a backup or a copy leaves out is counted
   (`skipped_symlinks_in_exegete_folder`), never named.
 - **`get_current_project` lists it** (`files_exegete_keeps`, in `full`
   and `core`): the folder's place, whether it is there, and, for each
@@ -1074,17 +1077,17 @@ for the four labels stays in NOTICE.
 
 ### Measured
 
-- Serialised tool JSON: full = 205,637 characters (about 51.4k tokens
+- Serialised tool JSON: full = 205,788 characters (about 51.4k tokens
   at chars/4) over 81 tools, and core = 68,275 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 216,029 and
+  which also gives exactly 0.14.3's figures for its tree), 216,192 and
   71,707. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
-  3.13), fourteen changes moved them; for most researchers, on the
-  extension, the change is from `lifecycle` to `full`: 1,393 characters
+  3.13), fifteen changes moved them; for most researchers, on the
+  extension, the change is from `lifecycle` to `full`: 1,544 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -1139,7 +1142,9 @@ for the four labels stays in NOTICE.
   176 on 3.11. `core` serves none of these five.
   And `get_current_project`'s description lists the files Exegete keeps
   for the project in its `Exegete` folder: 151 characters more in both
-  sets, 163 on 3.11.
+  sets, 163 on 3.11. And `restore_backup`'s description says a restore
+  keeps the project's `Exegete` folder as it is: 151 characters more in
+  `full`, 163 on 3.11; `core` does not serve it.
   No other tool's entry changed.
 - Claude Code now keeps 4,096 characters of a tool's description, and
   16,384 through its tool search (2,048 before its version 2.1.296):

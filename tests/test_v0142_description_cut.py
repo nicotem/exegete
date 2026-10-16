@@ -666,7 +666,7 @@ CHANGED_0150 = {
     "rename_category": (939, 776, "498212de941bf07d"),
     "rename_code": (909, 746, "f53e3d4db9605ebb"),
     "rename_file": (3421, 2838, "b83e356de67a9cdf"),
-    "restore_backup": (2730, 2247, "87717bbc6793a0e9"),
+    # (restore_backup's line moved to the files design's piece 2, below)
     "set_attribute": (1688, 1379, "0b8ef40bcc0986d9"),
     "set_memo": (2551, 2048, "9e62726bc0ecece1"),
     "update_annotation": (1931, 1599, "be5fbd103294206a"),
@@ -698,6 +698,11 @@ CHANGED_0150 = {
     "cleanup_old_sessions": (844, 686, "843ad008664c1c1b"),
     "export_code_report": (1563, 1265, "f254265202c3248d"),
     "merge_proposals": (665, 561, "c20e837ad86f296b"),
+    # the files design, piece 2: restore_backup's sentence on the
+    # project's Exegete folder, which a restore keeps as it is, after its
+    # paragraph on symlinks; 2,730 to 2,877 characters on 3.13
+    # (tests/test_v0150_restore_keeps_folder.py)
+    "restore_backup": (2877, 2367, "9014851203733822"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 

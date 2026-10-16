@@ -441,9 +441,12 @@ class TestThePublishedSchemaBudget:
     # files Exegete keeps for the project in its Exegete folder
     # (files_exegete_keeps), 151 characters more in both sets (163 on
     # 3.11).
-    FULL_MEASURED = 205_637          # 81 tools, Python 3.13.5, mcp 1.30.0
+    # The files design, piece 2: restore_backup's sentence on the
+    # project's Exegete folder, which a restore keeps as it is, 151
+    # characters more in `full` (163 on 3.11); `core` does not serve it.
+    FULL_MEASURED = 205_788          # 81 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 68_275           # 25 tools, same environment
-    FULL_MEASURED_310 = 216_029      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 216_192      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 71_707
 
     # Why two per cent, away from the reference environment.
@@ -471,7 +474,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,637"
+    FULL_CHARS = "205,788"
     CORE_CHARS = "68,275"
     FULL_ROUNDED = "206,000"
     CORE_ROUNDED = "68,000"

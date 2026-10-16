@@ -10,6 +10,7 @@ import sys
 import json
 import argparse
 import shutil
+import stat
 import logging
 import sqlite3
 import tempfile
@@ -12323,6 +12324,95 @@ def _restore_pseudonyms_json_note(before: Optional[str],
             f"be the only record of a pseudonymisation mapping. {where}")
 
 
+# A restore keeps the project's Exegete folder as it is, never taking the
+# backup's copy (v0.15.0, the files design, piece 2; ruling 78: files the
+# researcher fills in are never deleted by Exegete). The note the preview
+# and the answer carry, word for word, by case.
+EXEGETE_FOLDER_KEPT_NOTE = (
+    "The project's Exegete folder (files the researcher fills in on their "
+    "own computer) is kept as it is, not taken from the backup: Exegete "
+    "never deletes those files.")
+EXEGETE_FOLDER_BACKUP_COPY_NOTE = (
+    "The backup's copy of that folder stays in the backup.")
+EXEGETE_FOLDER_ONLY_IN_BACKUP_NOTE = (
+    "The backup holds an Exegete folder (files the researcher filled in on "
+    "their own computer). The project has none now, so none is restored: "
+    "a restore never brings those files back. The backup's copy stays in "
+    "the backup, and the researcher can copy it into the project folder "
+    "themselves.")
+
+
+def _holds_exegete_folder(folder: Path) -> bool:
+    """Whether a project folder, or a backup, has the project's Exegete
+    folder: a real folder, read with `lstat`, at a top-level name
+    `private_files.is_folder_name` takes (on macOS and Windows `exegete`
+    too). A link or a junction there is not the folder. Never raises."""
+    try:
+        with os.scandir(folder) as entries:
+            for entry in entries:
+                if not private_files.is_folder_name(entry.name):
+                    continue
+                info = entry.stat(follow_symlinks=False)
+                if (stat.S_ISDIR(info.st_mode)
+                        and not stat.S_ISLNK(info.st_mode)
+                        and not reading_folder.is_link(Path(entry.path))):
+                    return True
+    except Exception:                                   # noqa: BLE001
+        return False
+    return False
+
+
+def _exegete_folder_note(project_has: bool,
+                         backup_has: bool) -> Optional[str]:
+    """The restore's note on the project's Exegete folder; None when
+    neither the project nor the backup has one. Names no file."""
+    if project_has:
+        if backup_has:
+            return (f"{EXEGETE_FOLDER_KEPT_NOTE} "
+                    f"{EXEGETE_FOLDER_BACKUP_COPY_NOTE}")
+        return EXEGETE_FOLDER_KEPT_NOTE
+    if backup_has:
+        return EXEGETE_FOLDER_ONLY_IN_BACKUP_NOTE
+    return None
+
+
+def _leave_out_exegete_folder(backup_folder: Path):
+    """The restore's `ignore` for copying a backup over the project: the
+    backup's top-level entry whose name `private_files.is_folder_name`
+    takes, whatever it is, is left out; nothing below the top is."""
+    top = os.path.normcase(os.path.abspath(backup_folder))
+
+    def ignore(dirpath, names):
+        if os.path.normcase(os.path.abspath(dirpath)) != top:
+            return set()
+        return {name for name in names
+                if private_files.is_folder_name(name)}
+    return ignore
+
+
+def _put_back_exegete_folder(safety_backup: Path,
+                             project_folder: Path) -> None:
+    """Copy the project's own entry of the Exegete folder's name back from
+    the safety backup, under the same name, once the backup's copy has
+    put everything else in place: a folder with its links copied as
+    links, never followed (one the safety backup skipped stays skipped);
+    a file (a researcher's file named so) as a file. A link at the top of
+    the safety backup (no backup Exegete takes holds one) is left out,
+    never followed. Raises on any failure, which the restore's recovery
+    from the safety backup answers."""
+    with os.scandir(safety_backup) as entries:
+        kept = [(entry.name, entry.path, entry.stat(follow_symlinks=False))
+                for entry in entries
+                if private_files.is_folder_name(entry.name)]
+    for name, path, info in kept:
+        if stat.S_ISLNK(info.st_mode) or reading_folder.is_link(Path(path)):
+            continue
+        if stat.S_ISDIR(info.st_mode):
+            shutil.copytree(path, project_folder / name, symlinks=True)
+        elif stat.S_ISREG(info.st_mode):
+            shutil.copy2(path, project_folder / name)
+
+
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 def restore_backup(backup_path: str,
@@ -12369,6 +12459,10 @@ def restore_backup(backup_path: str,
     before a restore follows the same rule, and every confirmed-restore
     result (success, recovery from the safety backup, or failure)
     reports what that backup skipped under safety_backup_skipped_symlinks.
+
+    The project's Exegete folder (files the researcher fills in) is kept
+    as it is, never taken from the backup; the preview says when either
+    has one.
 
     Args:
         backup_path: Path to the backup folder (from list_backups)
@@ -12462,6 +12556,14 @@ def restore_backup(backup_path: str,
                 "open, and the window will not display the restored state "
                 "until the project is reopened."
             )
+        # The project's Exegete folder is kept, never taken from the
+        # backup (v0.15.0): said when either has one, outside the signed
+        # state, as the signs above are
+        folder_note = _exegete_folder_note(
+            _holds_exegete_folder(project_folder),
+            _holds_exegete_folder(backup_folder))
+        if folder_note:
+            preview["exegete_folder_note"] = folder_note
         try:
             payload = _issue_preview(
                 "restore_backup", token_args, preview, fingerprint,
@@ -12506,6 +12608,12 @@ def restore_backup(backup_path: str,
     # project had may be the only record of a pseudonymisation mapping
     # (Brief 2, merge fix M3). A fingerprint only, never the bytes.
     mapping_before = pseudonyms_json_fingerprint(project_folder)
+    # The project's Exegete folder, which the swap keeps (v0.15.0): what
+    # its top level holds, in memory only, so that a file saved there
+    # once the safety backup is taken refuses the restore rather than
+    # being lost; and whether the project has the folder, for the note.
+    exegete_before = private_files.stamp(project_folder)
+    exegete_had = _holds_exegete_folder(project_folder)
 
     # Safety backup of the current state (rename to mark it as pre-restore)
     safety_report: Dict[str, Any] = {}
@@ -12528,10 +12636,16 @@ def restore_backup(backup_path: str,
             pass
         db = None
 
-    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
+    if (_restore_fingerprint(project_folder, backup_folder) != fingerprint
+            or private_files.stamp(project_folder) != exegete_before):
         # The project (or the backup) changed between the preview and
-        # this moment. The safety backup above stays; it is exactly the
-        # state the researcher has now.
+        # this moment, or the project's Exegete folder changed since the
+        # safety backup was taken: the swap puts back the safety
+        # backup's copy of that folder, so a file saved there now would
+        # be lost. The safety backup above stays; it is exactly the
+        # state the researcher had when it was taken. A change made
+        # between these checks and the swap below is not seen: that
+        # window is the one this check has always left.
         return json.dumps({
             "error": TOKEN_ERROR_TEXTS["project_changed"].format(
                 tool="restore_backup")
@@ -12545,7 +12659,14 @@ def restore_backup(backup_path: str,
     try:
         with hold_project_lock(project_folder):
             shutil.rmtree(project_folder)
-            shutil.copytree(backup_folder, project_folder)
+            # Everything from the backup but its entry of the Exegete
+            # folder's name, then the project's own entry back from the
+            # safety backup (v0.15.0); a failure in either goes to the
+            # recovery below, which puts back the whole project as it
+            # was, its Exegete folder included
+            shutil.copytree(backup_folder, project_folder,
+                            ignore=_leave_out_exegete_folder(backup_folder))
+            _put_back_exegete_folder(safety_backup, project_folder)
             # Old backups may contain a copied lock file; QualCoder never
             # puts lock files in backups and neither do we (anymore)
             for stray_lock in project_folder.glob("*.lock"):
@@ -12656,6 +12777,10 @@ def restore_backup(backup_path: str,
             safety_backup)
         if note:
             result["pseudonyms_json_note"] = note
+        folder_note = _exegete_folder_note(
+            exegete_had, _holds_exegete_folder(backup_folder))
+        if folder_note:
+            result["exegete_folder_note"] = folder_note
         _attach_skipped_symlinks(result, safety_report,
                                  prefix="safety_backup_")
     except Exception as e:                        # noqa: BLE001

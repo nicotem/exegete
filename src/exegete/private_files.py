@@ -15,9 +15,9 @@ reach it:
 3. Files the researcher fills in and Exegete reads back: the subfolder
    `Exegete` inside the project folder (this module); plain names; a
    short note inside; never deleted by Exegete of its own accord (a
-   restore replaces the folder with the backup's copy, as it replaces
-   the rest of the project); shown in the file manager and opened in
-   their app at the researcher's word; never returned to the assistant.
+   restore keeps the folder as it is, never taking the backup's copy);
+   shown in the file manager and opened in their app at the
+   researcher's word; never returned to the assistant.
 4. Records of the research: backups beside the project; the originals,
    `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json` inside it;
    new projects and copies in the folder for projects, or in the folder
@@ -36,15 +36,17 @@ No other module writes in the project's `Exegete` folder. Nothing here
 follows a link, and nothing here logs a path or the name of a file.
 `listing` reports names, sizes and dates of Exegete's own files only,
 never what any file holds, and counts every other entry without naming
-it; `read_bytes` returns a file's bytes to Exegete's own code, and no
-answer carries them. For a write and a read, on macOS and Linux the
-folder is opened once, not following a link, and every later step in
-it goes through that opened folder, so a folder swapped for a link
-after its check is never followed; where the system has no such calls
-(Windows), the folder is checked again after the file is opened. A read
-also checks that the file it opened is the file it looked at. `show`
-and `open_in_app` are not held so: the opener checks the file by its
-path and the system launches it by its path.
+it; `stamp` describes the folder's top level for a restore, which
+compares two of them, and stays in memory; `read_bytes` returns a
+file's bytes to Exegete's own code, and no answer carries them. For a
+write and a read, on macOS and Linux the folder is opened once, not
+following a link, and every later step in it goes through that opened
+folder, so a folder swapped for a link after its check is never
+followed; where the system has no such calls (Windows), the folder is
+checked again after the file is opened. A read also checks that the
+file it opened is the file it looked at. `show` and `open_in_app` are
+not held so: the opener checks the file by its path and the system
+launches it by its path.
 """
 
 import errno
@@ -54,7 +56,7 @@ import sys
 import time
 import unicodedata
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 from . import opener, reading_folder
 from .path_identity import is_same
@@ -713,6 +715,65 @@ def listing(project) -> Dict[str, Any]:
         result["listing_stopped_at"] = MAX_LISTED
     result["note"] = FOLDER_NOTE
     return result
+
+
+# One top-level entry of the folder, as `stamp` describes it.
+StampEntry = Tuple[str, str, int, int]
+
+
+def stamp(project) -> Optional[Union[Tuple[StampEntry, ...], str]]:
+    """What the project's Exegete folder holds at its top level, for a
+    restore to tell whether it changed while the restore ran (v0.15.0).
+
+    None when nothing is at `folder(project)`; otherwise a tuple, sorted
+    by name, of `(name, kind, size, mtime_ns)` for each top-level entry
+    by `lstat` (kind: file, folder, link or other; a junction is a
+    link), at most MAX_LISTED + 1 entries; "unreadable" when the folder
+    cannot be listed. Something at the folder's place that is not a real
+    folder (a link, a junction, a file) is described by its own `lstat`
+    as one entry with an empty name, which no entry in a folder can
+    have, and never followed; an entry whose `lstat` fails is one with
+    kind other and size and date -1. Never raises, opens no file and
+    follows no link. It stays in memory: no answer, log line or token
+    carries it, since its names are the researcher's."""
+    top = folder(project)
+    try:
+        try:
+            info = os.lstat(top)
+        except (FileNotFoundError, NotADirectoryError):
+            return None
+        if (stat.S_ISLNK(info.st_mode) or reading_folder.is_link(top)
+                or not stat.S_ISDIR(info.st_mode)):
+            kind = ("link" if stat.S_ISLNK(info.st_mode)
+                    or reading_folder.is_link(top) else _stamp_kind(info))
+            return (("", kind, info.st_size, info.st_mtime_ns),)
+        entries = []
+        with os.scandir(top) as listed:
+            for entry in listed:
+                if len(entries) > MAX_LISTED:
+                    break
+                try:
+                    entry_info = entry.stat(follow_symlinks=False)
+                except OSError:
+                    entries.append((entry.name, "other", -1, -1))
+                    continue
+                kind = ("link" if _entry_is_link(entry, entry_info)
+                        else _stamp_kind(entry_info))
+                entries.append((entry.name, kind, entry_info.st_size,
+                                entry_info.st_mtime_ns))
+        return tuple(sorted(entries))
+    except Exception:                                   # noqa: BLE001
+        return "unreadable"
+
+
+def _stamp_kind(info: os.stat_result) -> str:
+    if stat.S_ISLNK(info.st_mode):
+        return "link"
+    if stat.S_ISDIR(info.st_mode):
+        return "folder"
+    if stat.S_ISREG(info.st_mode):
+        return "file"
+    return "other"
 
 
 def _not_listed(shown: str, why: str) -> Dict[str, Any]:

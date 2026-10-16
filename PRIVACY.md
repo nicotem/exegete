@@ -498,7 +498,7 @@ extension installed before 0.15.0 keeps its earlier folder,
 |---|---|---|---|
 | Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read; the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says; coding sessions go at your word (`delete_coding_session`, `cleanup_old_sessions`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the pseudonymisation run records, and the secret that keys their digests |
 | Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page), as "Reading a whole file" says, so they can stay longer while Exegete is not running; the working folder as each reading ends; you, at any time |
-| Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, and a short note | you: Exegete never deletes them of its own accord; restoring a backup replaces the whole project folder, this folder with it, and the safety backup taken first keeps the copy you had |
+| Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, and a short note | you: Exegete never deletes them, and a restore keeps them as they are (the backup's copy stays in the backup) |
 | Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word) |
 
 For the length of each write, Exegete also writes a lock file into the
@@ -1152,7 +1152,9 @@ report the copy as not properly closed). That mirrors QualCoder's own backups, k
 non-regenerable prompt library and chat history safe in every backup,
 and avoids multiplying plaintext copies of your sources across backup
 folders. A restored or copied project without `search.sqlite` is
-normal: QualCoder rebuilds it on project open.
+normal: QualCoder rebuilds it on project open. A restore keeps the
+project's `Exegete` folder as it is, with the files you fill in; the
+backup's copy of that folder stays in the backup.
 
 The project database is the one file not copied as a file (since
 0.14): `data.qda` is copied with SQLite's own online backup, from a

@@ -160,11 +160,17 @@ NEW_WORDS = {
         "Refused or kept out, saying why: while another conversation using "
         "Exegete or QualCoder 3.8.2 has the project in use (its lock file);"),
     "rename_case": (
-        "If the researcher uses 4.0, ask them to close the project there "
-        "first."),
+        "QualCoder 4.0 writes no lock file, so Exegete may miss a 4.0 "
+        "window: a Manage Cases window opened before the rename still "
+        "shows the old name, and an edit there can overwrite the rename or "
+        "fail on it. If the researcher uses 4.0, ask them to close the "
+        "project there first."),
     "rename_file": (
-        "If the researcher uses 4.0, ask them to close the project there "
-        "first."),
+        "QualCoder 4.0 writes no lock file, so Exegete may miss a 4.0 "
+        "window: a Manage Files window opened before the rename still "
+        "shows the old name, and an edit there can overwrite the rename or "
+        "fail on it. If the researcher uses 4.0, ask them to close the "
+        "project there first."),
 }
 
 # For the tests that compare a description with a pin taken before this
@@ -212,15 +218,24 @@ OLD_WORDS = (
     "Refused while QualCoder 3.8 has the project open",
     "while QualCoder 3.8.2 has the project open;",
     "Close the project in QualCoder 4.0 before renaming",
+    # fix round 1: Exegete looks for signs of a 4.0 window
+    # (qualcoder_gui_signals); it may miss one, and does not fail to look
+    "Exegete cannot see a 4.0 window",
 )
 
 # A request to close QualCoder, or a project in it, made only of those
-# who use it (in the same sentence, or earlier in the same paragraph or
-# list item); or a refusal's own words, which offer waiting as well
-CONDITION = re.compile(
-    r"\b[Ii]f (?:you|they|the researcher)(?: also)? uses?\b"
-    r"|, or wait a moment;")
-REQUEST = re.compile(r"\b(?:close|closed|closing|make sure)\b", re.I)
+# who use it: "if you (also) use QualCoder" in the same sentence or
+# earlier in the same paragraph or list item, or "if they use it" in the
+# same sentence (an "it" further back may be another program); or a
+# refusal's own words, which offer waiting as well
+_IF_USED = r"\b[Ii]f (?:you|they|the researcher)(?: also)? uses? "
+CONDITION = re.compile(_IF_USED + r"QualCoder\b|, or wait a moment;")
+CONDITION_HERE = re.compile(_IF_USED + r"it\b")
+# Closing, quitting or exiting it, or making sure that it is closed or
+# not running
+REQUEST = re.compile(
+    r"\b(?:close|closed|closing|make sure|quit|quits|quitting|exit|exits"
+    r"|exiting|not (?:be )?running)\b", re.I)
 # Sentences about QualCoder itself, which ask nothing before a write
 ABOUT_QUALCODER = re.compile(
     r"\bclos(?:e|ed|ing) and reopen|report the copy as not properly closed")
@@ -247,7 +262,8 @@ def unconditional_requests(text):
         for sentence in _sentences(block):
             if CONDITION.search(sentence):
                 asked_of_users = True
-            if asked_of_users or "QualCoder" not in sentence:
+            if asked_of_users or "QualCoder" not in sentence \
+                    or CONDITION_HERE.search(sentence):
                 continue
             if REQUEST.search(sentence) and \
                     not ABOUT_QUALCODER.search(sentence):
@@ -308,6 +324,9 @@ class TestTheSixDescriptions:
                 assert got[0] == length, name
 
     def test_the_paragraph_the_renames_share(self):
+        assert server._RENAME_QC40_PARAGRAPH.startswith(
+            "QualCoder 4.0 writes no lock file, so Exegete may miss a 4.0 "
+            "window: ")
         assert server._RENAME_QC40_PARAGRAPH.endswith(
             "If the researcher uses 4.0, ask them to close the project "
             "there first.")
@@ -348,7 +367,9 @@ DOCUMENTS = (
     "README.md", "TOOLS.md", "PRIVACY.md", "SUPPORT.md", "INSTALL.md",
     "QUICKSTART.md", "PROJECT_SELECTION_GUIDE.md", "AI_CODING_GUIDE.md",
     "AI_CODING_WORKFLOW.md", ".github/ISSUE_TEMPLATE/bug_report.yml",
-    "packaging/desktop-extension/manifest.in.json")
+    "packaging/desktop-extension/manifest.in.json",
+    # fix round 1: the provenance record, in both packages
+    "NOTICE", "packaging/pypi-old-name/NOTICE")
 
 
 class TestOneSpelling:
@@ -390,6 +411,17 @@ class TestOneSpelling:
             assert not re.search(r"QualCoder 3\.8(\.2)?'s lock refuses",
                                  text), path.name
 
+    @pytest.mark.parametrize("name", (
+        "NOTICE", "packaging/pypi-old-name/NOTICE"))
+    def test_notice_names_the_release_its_lines_come_from(self, name):
+        """Item 32's "From:" line names 3.8.2's source, and so does its
+        title (fix round 1)."""
+        notice = _read(name)
+        assert ("32. QualCoder 3.8.2's lock file: its name, timeout and "
+                "content.\n") in notice
+        assert "From: 3.8.2 __main__.py, lines 131, 2546-2547 and 2637." \
+            in notice
+
     def test_the_changelog_s_new_entries(self):
         entry = WAS.sub("", _flat(_unreleased()))
         found = OTHER_SPELLING.search(entry)
@@ -426,31 +458,54 @@ class TestTheChangelog:
                 "closed, before trying any repair.",
                 "Make sure yourself that no QualCoder window has the "
                 "project open before writing.",
-                "Close the project in QualCoder 4.0 before renaming."):
+                "Close the project in QualCoder 4.0 before renaming.",
+                # fix round 1: quitting, exiting, not running
+                "Quit QualCoder before restoring a backup.",
+                "Exit QualCoder first, then restore the backup.",
+                "QualCoder must not be running while you restore."):
             assert unconditional_requests(sentence) == [sentence]
+        # fix round 1: a condition about another program, or an "it" in
+        # an earlier sentence, excuses nothing
+        for text, sentence in (
+                ("If you use Claude Desktop, restart it. Then close the "
+                 "project in QualCoder.",
+                 "Then close the project in QualCoder."),
+                ("If they use it daily, keep a copy. Quit QualCoder before "
+                 "restoring.", "Quit QualCoder before restoring.")):
+            assert unconditional_requests(text) == [sentence]
         for sentence in (
                 "If you also use QualCoder, close the project there.",
                 "Copy it with no program using the project (QualCoder "
                 "closed, if you use it).",
                 "Ask the researcher to close it in QualCoder, or wait a "
-                "moment; then retry."):
+                "moment; then retry.",
+                "QualCoder 3.8.2 has it open (if the researcher uses it, "
+                "ask them to close it there).",
+                "If you also use QualCoder, quit it before restoring. Make "
+                "sure QualCoder is not running."):
             assert unconditional_requests(sentence) == []
 
     def test_the_six_descriptions(self):
         entry = _flat(_unreleased())
         assert ("`start_coding_session`'s request and banner say the same. "
                 "So do the descriptions of `get_current_project`, "
-                "`select_project`, `start_coding_session`, "
-                "`set_project_coder_name` and `import_documents`, which gave "
-                "the lock file as QualCoder's alone or asked every researcher "
-                "to close the project in QualCoder: each names both causes, "
-                "gives the way through for each where it says what to do, and "
-                "asks for the project to be closed in QualCoder only if the "
-                "researcher uses it. `rename_case`'s and `rename_file`'s ask "
-                "for the project to be closed in QualCoder 4.0 only if the "
-                "researcher uses 4.0. None of these descriptions is longer "
-                "than before, and every text that names the QualCoder release "
-                "behind the lock file says 3.8.2.") in entry
+                "`select_project`, `start_coding_session` and "
+                "`import_documents`, which gave the lock file as QualCoder's "
+                "alone or asked every researcher to close the project in "
+                "QualCoder, and the new `set_project_coder_name`'s: each "
+                "names both causes, gives the way through for each where it "
+                "says what to do, and asks for the project to be closed in "
+                "QualCoder only if the researcher uses it. `rename_case`'s "
+                "and `rename_file`'s descriptions ask for the project to be "
+                "closed in QualCoder 4.0 only if the researcher uses 4.0. None "
+                "of the changed descriptions is longer than before, and every "
+                "text that names the QualCoder release behind the lock file "
+                "says 3.8.2.") in entry
+        # fix round 1: set_project_coder_name is new in this release, so
+        # it has no earlier wording to correct
+        assert "`set_project_coder_name` and `import_documents`, which" \
+            not in entry
+        assert "None of these descriptions is longer" not in entry
 
     def test_the_coding_workflow_s_entry(self):
         entry = _flat(_unreleased())
@@ -476,11 +531,13 @@ class TestTheChangelog:
     def test_the_measurement(self):
         measured = _flat(_unreleased()[_unreleased().index("### Measured"):])
         assert ("And the descriptions that gave the lock file's refusal as "
-                "QualCoder's alone name both of its causes, in fewer "
-                "characters: 43 fewer in `full` (`select_project` 12, "
-                "`rename_case` and `rename_file` 9 each, `import_documents` "
-                "8, `start_coding_session` 4 and `get_current_project` 1) "
-                "and 17 fewer in `core`, on both interpreters.") in measured
+                "QualCoder's alone now name both of its causes, and those "
+                "that asked every researcher to close QualCoder 4.0 ask it "
+                "only of those who use it, in fewer characters: 47 fewer in "
+                "`full` (`select_project` 12, `rename_case` and "
+                "`rename_file` 11 each, `import_documents` 8, "
+                "`start_coding_session` 4 and `get_current_project` 1) and "
+                "17 fewer in `core`, on both interpreters.") in measured
         assert "sixteen changes moved them" in measured
-        assert ("the change is from `lifecycle` to `full`: 1,501 characters "
+        assert ("the change is from `lifecycle` to `full`: 1,497 characters "
                 "more") in measured

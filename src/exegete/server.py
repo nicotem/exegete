@@ -19226,7 +19226,7 @@ def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
 # The accepted limitation both renames carry (rename dossier 1.6), in
 # their descriptions: QualCoder 4.0 writes no lock file.
 _RENAME_QC40_PARAGRAPH = (
-    "QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 "
+    "QualCoder 4.0 writes no lock file, so Exegete may miss a 4.0 "
     "window: a Manage {window} window opened before the rename still "
     "shows the old name, and an edit there can overwrite the rename or "
     "fail on it. If the researcher uses 4.0, ask them to close the "
@@ -19259,7 +19259,7 @@ def rename_case(case_id: int, new_name: str,
     Find a case id in exegete://cases/list, get_case_code_matrix, a
     create_case answer, or QualCoder's own id column.
 
-    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window: a Manage Cases window opened before the rename still shows the old name, and an edit there can overwrite the rename or fail on it. If the researcher uses 4.0, ask them to close the project there first.
+    QualCoder 4.0 writes no lock file, so Exegete may miss a 4.0 window: a Manage Cases window opened before the rename still shows the old name, and an edit there can overwrite the rename or fail on it. If the researcher uses 4.0, ask them to close the project there first.
 
     Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
@@ -19759,7 +19759,7 @@ def rename_file(file_id: int, new_name: str,
     written and no backup made; a name stored with spaces at its ends or
     in another Unicode form is rewritten in normal form when retyped.
 
-    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window: a Manage Files window opened before the rename still shows the old name, and an edit there can overwrite the rename or fail on it. If the researcher uses 4.0, ask them to close the project there first.
+    QualCoder 4.0 writes no lock file, so Exegete may miss a 4.0 window: a Manage Files window opened before the rename still shows the old name, and an edit there can overwrite the rename or fail on it. If the researcher uses 4.0, ask them to close the project there first.
 
     Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing

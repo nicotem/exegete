@@ -79,7 +79,7 @@ RULES = {
         "capability that hide coders)", None),
     "close_qualcoder_40_before_renaming": (
         "safety", "QualCoder 4.0 writes no lock file, so Exegete "
-        "cannot see a 4.0 window", None),
+        "may miss a 4.0 window", None),
     "relay_position_safety_warning": (
         "safety", "contains `position_safety_warning`", "."),
     # Grounding and the judgement of requests
@@ -663,10 +663,10 @@ CHANGED_0150 = {
     "move_code_to_category": (1676, 1338, "2590d024f0b97c26"),
     "pseudonymise_source": (17791, 13074, "3fbebb2123003b54"),
     "recolor_code": (1234, 1029, "1d4326ac95cbd2d9"),
-    "rename_case": (2067, 1703, "4e002b09a5c33265"),
+    "rename_case": (2065, 1701, "f26e0f2c3e992401"),
     "rename_category": (939, 776, "b0f0f61ac346d4c4"),
     "rename_code": (909, 746, "39a4d64e6ae7eb33"),
-    "rename_file": (3412, 2829, "20baff71c7613ca9"),
+    "rename_file": (3410, 2827, "a8bc00ae39bed6cc"),
     # (restore_backup's line moved to the files design's piece 2, below)
     "set_attribute": (1688, 1379, "bc73c6300bbf0bd6"),
     "set_memo": (2551, 2048, "3a417646b9157db2"),
@@ -711,7 +711,9 @@ CHANGED_0150 = {
     # select_project, start_coding_session, rename_case and rename_file
     # name both causes of the lock file, or ask for QualCoder 4.0 to be
     # closed only if the researcher uses it, each shorter than before
-    # (get_current_project 2,066 characters on 3.13, from 2,067)
+    # (get_current_project 2,066 characters on 3.13, from 2,067); its
+    # fix round 1: the renames say Exegete "may miss" a 4.0 window, not
+    # that it "cannot see" one (rename_case 2,065, rename_file 3,410)
     "restore_backup": (2877, 2367, "06cea91506d0e578"),
 }
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}

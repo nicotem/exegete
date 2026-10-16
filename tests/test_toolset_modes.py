@@ -447,10 +447,11 @@ class TestThePublishedSchemaBudget:
     # The fourth reading of the documents: the descriptions that gave the
     # lock file's refusal as QualCoder's alone name both of its causes,
     # 43 characters fewer in `full` and 17 in `core`, on both
-    # interpreters (tests/test_v0150_lock_wording.py).
-    FULL_MEASURED = 205_745          # 81 tools, Python 3.13.5, mcp 1.30.0
+    # interpreters (tests/test_v0150_lock_wording.py); its fix round 1,
+    # the renames' "may miss a 4.0 window", 4 fewer in `full`.
+    FULL_MEASURED = 205_741          # 81 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 68_258           # 25 tools, same environment
-    FULL_MEASURED_310 = 216_149      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 216_145      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 71_690
 
     # Why two per cent, away from the reference environment.
@@ -478,7 +479,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,745"
+    FULL_CHARS = "205,741"
     CORE_CHARS = "68,258"
     FULL_ROUNDED = "206,000"
     CORE_ROUNDED = "68,000"

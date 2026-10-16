@@ -569,10 +569,11 @@ class TestTheSizes:
     # in get_current_project, select_project and start_coding_session,
     # and asks for QualCoder 4.0 to be closed only if the researcher uses
     # it in rename_case and rename_file (35 characters fewer in `full`
-    # here, import_documents being left out, and 17 in `core`). Their
-    # entries as 0.14.2 served them are below, so every other tool is
-    # still held to 0.14.2's figure.
-    NOW = {"full": 197_030, "core": 64_942}
+    # here, import_documents being left out, and 17 in `core`); its fix
+    # round 1 says in the renames that Exegete "may miss a 4.0 window"
+    # (4 fewer in `full`). Their entries as 0.14.2 served them are below,
+    # so every other tool is still held to 0.14.2's figure.
+    NOW = {"full": 197_026, "core": 64_942}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

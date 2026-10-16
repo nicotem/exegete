@@ -445,16 +445,16 @@ comes with v0.15.2.
   the project in QualCoder, or waiting a moment. `select_project`'s
   warning, `get_current_project`'s note and `start_coding_session`'s
   request and banner say the same. So do the descriptions of
-  `get_current_project`, `select_project`, `start_coding_session`,
-  `set_project_coder_name` and `import_documents`, which gave the lock
-  file as QualCoder's alone or asked every researcher to close the
-  project in QualCoder: each names both causes, gives the way through
-  for each where it says what to do, and asks for the project to be
-  closed in QualCoder only if the researcher uses it. `rename_case`'s
-  and `rename_file`'s ask for the project to be closed in QualCoder
-  4.0 only if the researcher uses 4.0. None of these descriptions is
-  longer than before, and every text that names the QualCoder release
-  behind the lock file says 3.8.2. `get_current_project`'s note on a
+  `get_current_project`, `select_project`, `start_coding_session` and
+  `import_documents`, which gave the lock file as QualCoder's alone or
+  asked every researcher to close the project in QualCoder, and the new
+  `set_project_coder_name`'s: each names both causes, gives the way
+  through for each where it says what to do, and asks for the project
+  to be closed in QualCoder only if the researcher uses it.
+  `rename_case`'s and `rename_file`'s descriptions ask for the project
+  to be closed in QualCoder 4.0 only if the researcher uses 4.0. None
+  of the changed descriptions is longer than before, and every text
+  that names the QualCoder release behind the lock file says 3.8.2. `get_current_project`'s note on a
   lock file not refreshed for over 30 seconds says that QualCoder 3.8.2
   leaves one when it does not close cleanly, and that a write by
   Exegete leaves one when it is cut short, or shows as one while it
@@ -1092,17 +1092,17 @@ for the four labels stays in NOTICE.
 
 ### Measured
 
-- Serialised tool JSON: full = 205,745 characters (about 51.4k tokens
+- Serialised tool JSON: full = 205,741 characters (about 51.4k tokens
   at chars/4) over 81 tools, and core = 68,258 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 216,149 and
+  which also gives exactly 0.14.3's figures for its tree), 216,145 and
   71,690. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
   3.13), sixteen changes moved them; for most researchers, on the
-  extension, the change is from `lifecycle` to `full`: 1,501 characters
+  extension, the change is from `lifecycle` to `full`: 1,497 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -1161,11 +1161,12 @@ for the four labels stays in NOTICE.
   keeps the project's `Exegete` folder as it is: 151 characters more in
   `full`, 163 on 3.11; `core` does not serve it.
   And the descriptions that gave the lock file's refusal as
-  QualCoder's alone name both of its causes, in fewer characters: 43
-  fewer in `full` (`select_project` 12, `rename_case` and `rename_file`
-  9 each, `import_documents` 8, `start_coding_session` 4 and
-  `get_current_project` 1) and 17 fewer in `core`, on both
-  interpreters.
+  QualCoder's alone now name both of its causes, and those that asked
+  every researcher to close QualCoder 4.0 ask it only of those who use
+  it, in fewer characters: 47 fewer in `full` (`select_project` 12,
+  `rename_case` and `rename_file` 11 each, `import_documents` 8,
+  `start_coding_session` 4 and `get_current_project` 1) and 17 fewer in
+  `core`, on both interpreters.
   No other tool's entry changed.
 - Claude Code now keeps 4,096 characters of a tool's description, and
   16,384 through its tool search (2,048 before its version 2.1.296):

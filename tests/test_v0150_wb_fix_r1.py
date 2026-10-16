@@ -317,9 +317,10 @@ class TestTheEntryIsOneAccount:
         # (the files design, piece 1), 1,544 since restore_backup says a
         # restore keeps the project's Exegete folder (piece 2), 1,501
         # since the descriptions that gave the lock file as QualCoder's
-        # alone name both of its causes (tests/test_v0150_lock_wording.py)
+        # alone name both of its causes (tests/test_v0150_lock_wording.py),
+        # 1,497 since its fix round 1 (the renames' "may miss a 4.0 window")
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 1,501 characters more") in measured
+                "`lifecycle` to `full`: 1,497 characters more") in measured
 
 
 # ===========================================================================

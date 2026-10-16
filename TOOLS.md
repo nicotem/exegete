@@ -589,7 +589,7 @@ Claude will:
 **If something went wrong**: `delete_coding(coding_id)` removes a single coding
 and marks its suggestion removed in the session (which then allows it to be
 approved again, reopened and edited, or the passage recorded again);
-`list_backups` + `restore_backup` roll the whole project back to a snapshot,
+`list_backups` + `restore_backup` roll the project back to a snapshot,
 all but its `Exegete` folder, which a restore keeps.
 
 ### Key Features
@@ -1128,7 +1128,7 @@ name(s), a per-owner breakdown of the rest, how many belong to coders
 currently hidden in QualCoder (a count, never a name), and how many
 rows carry a `#####` private note. Of these, `merge_codes` and
 `delete_code` require `allow_hidden_coder=true` to execute when hidden
-coders' codings are affected. `restore_backup` rolls the whole project
+coders' codings are affected. `restore_backup` rolls the project
 back (all but its `Exegete` folder, which a restore keeps): its preview
 does not count codings by owner, and it has no such gate;
 `pseudonymise_source` reports hidden coders' rows as counts and gates a

@@ -452,8 +452,9 @@ comes with v0.15.2.
 - **A missing coder-visibility view** is reported as damage to the
   project, with a backup made before it as the way back
   (`list_backups`, `restore_backup`), saying that a restore takes the
-  whole project back to that backup's state; QualCoder 4.0, if you use
-  it, recreates the views when it opens the project.
+  project back to that backup's state, all but its `Exegete` folder,
+  which a restore keeps; QualCoder 4.0, if you use it, recreates the
+  views when it opens the project.
 - **The names list** (`pseudonyms.json`) is described as the project's
   own, applied when files are imported, rather than as QualCoder's
   import-time list: in `get_current_project`'s answer (which also says

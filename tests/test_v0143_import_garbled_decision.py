@@ -598,7 +598,10 @@ class TestTheDocuments:
         assert len(description) <= 2048
         flat = " ".join(description.split())
         for said in ("files whose letters look garbled, are kept out",
-                     ARGUMENT + ": true on the researcher's word",
+                     # v0.15.0: the switches' lines give their default,
+                     # the paragraph says they move only on the
+                     # researcher's word (tests/test_v0150_lock_wording.py)
+                     ARGUMENT + ": default false",
                      "show_text: preview only; opens the garbled-looking "
                      "files' text on the researcher's screen",
                      "only on the researcher's word for this import, "

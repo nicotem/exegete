@@ -502,9 +502,13 @@ class TestThePutBack:
         start_coding_session's description is as
         tests/test_v0142_description_cut.py pinned it before this piece."""
         from test_v0142_description_cut import _fingerprint
+        # the fourth reading of the documents reworded its paragraph on
+        # the lock file: put back too
+        from test_v0150_lock_wording import put_back_the_lock_wording
         server._apply_toolset("full")
-        text = put_back_the_four_outcomes(
-            server.mcp.original_descriptions["start_coding_session"])
+        text = put_back_the_four_outcomes(put_back_the_lock_wording(
+            "start_coding_session",
+            server.mcp.original_descriptions["start_coding_session"]))
         got = _fingerprint(text)
         assert got[1:] == (BEFORE_SOLID, BEFORE_DIGEST)
         if sys.version_info[:2] == (3, 13):

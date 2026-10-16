@@ -1439,7 +1439,10 @@ class TestTheFixRoundDocuments:
         readme = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         assert "QualCoder's own count when no coder is hidden" in readme
         privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
-        assert "Copy the whole project folder by hand, with QualCoder " \
-               "closed, before trying any repair" in privacy
+        # v0.15.0: of those who use QualCoder only
+        # (tests/test_v0150_lock_wording.py)
+        assert "Copy the whole project folder by hand, with no program " \
+               "using the project (QualCoder closed, if you use it), " \
+               "before trying any repair" in privacy
         assert "A database SQLite cannot read (a damaged one) is copied " \
                "as a file" not in privacy

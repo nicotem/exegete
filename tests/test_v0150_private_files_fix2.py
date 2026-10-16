@@ -536,7 +536,7 @@ class TestTheTexts:
             in section
         assert ("For the length of each write, Exegete also writes a lock "
                 "file into the project's folder (`project_in_use.lock`, the "
-                "file QualCoder 3.8 uses to mark a project open), holding "
+                "file QualCoder 3.8.2 uses to mark a project open), holding "
                 "your computer account's name and the time; it removes the "
                 "file when the write ends, though a write that is cut off "
                 "can leave it behind.") in section

@@ -47,7 +47,7 @@ project, or a QualCoder running at the selection, decides whatever the
 answer; "no" outweighs only QualCoder's settings folder, which says that
 QualCoder is installed, not that it is used; "yes" gives the level
 "computer" when nothing is found. It never reaches the live check: the
-refusal while QualCoder 3.8's lock file is active and the warnings on
+refusal while the project's lock file is active and the warnings on
 signs of a QualCoder 4.0 window never consult this module.
 """
 
@@ -84,7 +84,7 @@ BACKUP_SIGN = (
     "QualCoder's own backups beside the project (_BKUP_ in their names)")
 STALE_LOCK_SIGN = (
     "a lock file left in the project by a program that did not close it "
-    "cleanly (QualCoder 3.8 leaves one; so can an interrupted write by "
+    "cleanly (QualCoder 3.8.2 leaves one; so can an interrupted write by "
     "Exegete)")
 
 REPORT_NOTE = (

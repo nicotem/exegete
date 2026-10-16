@@ -444,10 +444,14 @@ class TestThePublishedSchemaBudget:
     # The files design, piece 2: restore_backup's sentence on the
     # project's Exegete folder, which a restore keeps as it is, 151
     # characters more in `full` (163 on 3.11); `core` does not serve it.
-    FULL_MEASURED = 205_788          # 81 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_275           # 25 tools, same environment
-    FULL_MEASURED_310 = 216_192      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 71_707
+    # The fourth reading of the documents: the descriptions that gave the
+    # lock file's refusal as QualCoder's alone name both of its causes,
+    # 43 characters fewer in `full` and 17 in `core`, on both
+    # interpreters (tests/test_v0150_lock_wording.py).
+    FULL_MEASURED = 205_745          # 81 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_258           # 25 tools, same environment
+    FULL_MEASURED_310 = 216_149      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 71_690
 
     # Why two per cent, away from the reference environment.
     #
@@ -474,8 +478,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,788"
-    CORE_CHARS = "68,275"
+    FULL_CHARS = "205,745"
+    CORE_CHARS = "68,258"
     FULL_ROUNDED = "206,000"
     CORE_ROUNDED = "68,000"
     FULL_TOKENS = "51k"

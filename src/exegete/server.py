@@ -4265,11 +4265,11 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
 def select_project(project_path: str) -> str:
     """Switch to a different project.
 
-    The result may include a `warning`, for example that QualCoder
-    currently has this project open. If so, RELAY it to the user: ask them
-    to close the project in QualCoder before any coding they intend to
-    save, because all write operations will be refused until it is closed
-    (re-check with get_current_project).
+    The result may include a `warning`; RELAY it. While the lock file is
+    active, every write is refused: another conversation using Exegete
+    is writing (wait a moment), or QualCoder 3.8.2 has the project open
+    (if the researcher uses it, ask them to close it there); re-check
+    with get_current_project.
 
     QualCoder 4.0 detection is best-effort: 4.0 writes no lock file, so
     the result also carries `qualcoder_gui_signals`, heuristics built from
@@ -4382,13 +4382,13 @@ NO_SIGN_WARNING_PROJECT = (
     "before any write.")
 # Fix round 1: the level "project" when a leftover lock file is its only
 # sign. Exegete writes the same lock file during each of its own writes,
-# so an interrupted write leaves one as QualCoder 3.8 does; the text says
+# so an interrupted write leaves one as QualCoder 3.8.2 does; the text says
 # what the file is (qualcoder_history.STALE_LOCK_SIGN's words), not that
 # QualCoder has opened the project, and asks only if the researcher uses
 # QualCoder.
 NO_SIGN_WARNING_LEFTOVER_LOCK = (
     "A lock file was left in this project by a program that did not close "
-    "it cleanly (QualCoder 3.8 leaves one; so can an interrupted write by "
+    "it cleanly (QualCoder 3.8.2 leaves one; so can an interrupted write by "
     "Exegete). QualCoder 4.0 leaves no lock file, so if the researcher "
     "uses QualCoder, ask them once in this conversation whether it has "
     "this project open now, and if it has, to close it there before any "
@@ -4469,7 +4469,7 @@ def _select_project(project_path: str) -> Dict[str, Any]:
     if state == "active":
         warnings.append(
             f"This project is in use by another program (its lock file "
-            f"is active, user {holder or 'unknown'}): QualCoder 3.8 has "
+            f"is active, user {holder or 'unknown'}): QualCoder 3.8.2 has "
             f"it open, or another conversation using Exegete is writing "
             f"to it. Ask the researcher to close the project in "
             f"QualCoder, or wait a moment, before any coding they intend "
@@ -4969,12 +4969,12 @@ def set_project_coder_name(name: str,
     Ask the researcher for the name, exactly as they want it; never guess it.
     Two steps: call without preview_token for a preview, which changes nothing;
     show it to the researcher, and only if they agree, call again with the same
-    name and preview_token=<the token>. A backup of the project is made first.
-    Refused, with the reason, when work is recorded under the current name,
-    because changing it then would change whose work the record shows. Refused
-    while QualCoder 3.8 has the project open (its lock file); QualCoder 4.0
-    leaves no such sign, so if the researcher uses QualCoder, ask them to close
-    the project there first.
+    name and preview_token=<the token>. A backup is made first. Refused when
+    work is recorded under the current name, as that would change whose work
+    the record shows. Refused while the lock file is active: another
+    conversation using Exegete is writing (wait a moment), or QualCoder 3.8.2
+    has the project open (4.0 leaves no such sign); if the researcher uses
+    QualCoder, ask them to close it there.
 
     Args:
         name: the researcher's own coder name, as they give it
@@ -5312,12 +5312,12 @@ def _pseudonyms_json_report() -> Dict[str, Any]:
 def get_current_project() -> str:
     """Get information about the currently open project.
 
-    Also reports whether QualCoder currently has this project open, with
-    two signals of different strength:
-    - `qualcoder_open` (boolean): QualCoder 3.x's project_in_use.lock
-      heartbeat. This is the hard gate: all database writes are refused
-      while it is true. Use it to re-check after asking the user to close
-      QualCoder, and proceed with coding workflows only when it is false.
+    Also reports whether another program may have this project open,
+    with two signals of different strength:
+    - `qualcoder_open` (boolean): true while its lock file is active and
+      writes are refused: another conversation using Exegete is writing
+      (wait a moment), or QualCoder 3.8.2 has it open (if the researcher
+      uses it, ask them to close it there). Go on only when it is false.
     - `qualcoder_gui_signals` (list, always present): best-effort
       heuristics for an open QualCoder 4.0 window, which writes no lock
       file (a write sidecar on the project database, recent activity on
@@ -5344,7 +5344,7 @@ def get_current_project() -> str:
 
     Returns:
         JSON with current project path, basic metadata, the schema report
-        (capability probes and write support), the QualCoder-open state
+        (capability probes and write support), the lock file's state
         (qualcoder_open boolean; qualcoder_lock detail when a lock file is
         present), qualcoder_gui_signals (with qualcoder_gui_hint when
         any signal is present), and pseudonyms_json. With no project open,
@@ -5397,7 +5397,7 @@ def get_current_project() -> str:
             result["qualcoder_lock"] = {
                 "state": "active",
                 "holder": holder or "unknown",
-                "note": "QualCoder 3.8, or another conversation using "
+                "note": "QualCoder 3.8.2, or another conversation using "
                         "Exegete, has this project in use; all database "
                         "writes will be refused while the lock file is "
                         "active. Ask the researcher to close it in "
@@ -5412,7 +5412,7 @@ def get_current_project() -> str:
                 # a write cut short leaves the same leftover, and a
                 # write still running after 30 seconds reads as one.
                 "note": "A lock file not refreshed for over 30 seconds: "
-                        "QualCoder 3.8 leaves one when it does not close "
+                        "QualCoder 3.8.2 leaves one when it does not close "
                         "cleanly, and a write by Exegete leaves one when "
                         "it is cut short, or shows as one while it runs "
                         "longer than that. Writes proceed normally."
@@ -8418,12 +8418,12 @@ def start_coding_session(
     come back in not_found, a name matching two codes in
     ambiguous_code_names: tell the researcher.
 
-    QUALCODER OPEN: if the result has `qualcoder_open: true`, STOP: ask
-    the user to close the project in QualCoder, re-check with
-    get_current_project, and go on only when it is false. QualCoder 4.0
-    writes no lock file: a `qualcoder_gui_hint` (best-effort signals)
-    means ask whether a window has the project open; an empty list is no
-    proof.
+    IN USE: if `qualcoder_open` is true, STOP: wait a moment (another
+    conversation using Exegete is writing) or, if the researcher uses
+    QualCoder 3.8.2, ask them to close it there; re-check with
+    get_current_project. QualCoder 4.0 writes no lock file: a
+    `qualcoder_gui_hint` means ask if a window has it open; an empty list
+    is no proof.
 
     WORKFLOW: read each file and record suggestions; present each quote,
     its reading and its reason; the researcher reviews (edit_suggestion
@@ -8597,7 +8597,7 @@ def start_coding_session(
     if state == "active":
         action_required = (
             f"This project is in use by another program (its lock file "
-            f"is active, user {holder or 'unknown'}): QualCoder 3.8 has "
+            f"is active, user {holder or 'unknown'}): QualCoder 3.8.2 has "
             f"it open, or another conversation using Exegete is writing "
             f"to it. Ask the researcher to close the project in "
             f"QualCoder, or wait a moment, before continuing; all database "
@@ -10066,11 +10066,11 @@ def apply_codings(
     first by default for safety.
 
     Safety guarantees:
-    - Refused while the project's lock file is active (QualCoder 3.8 has
+    - Refused while the project's lock file is active (QualCoder 3.8.2 has
       the project open, or another conversation using Exegete is writing
       to it) or another program is writing to the database; for
       QualCoder 4.0, get_current_project shows any signs of an open
-      window, and when there are some, ask the researcher before writing.
+      window, and if there are some, ask the researcher before writing.
     - The session must belong to the CURRENTLY OPEN project; applying a
       session to a different project is refused.
     - If the success output contains `position_safety_warning`, relay it
@@ -10475,10 +10475,10 @@ def import_text_file(
     IMPORTANT: work on a project in the workspace (the folder set for
     projects: get_current_project gives it), or on a copy there.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     apply_project_pseudonyms helps with what is shared with others; to
@@ -11008,7 +11008,7 @@ PRUNE_MENTION_MB = 500
 # QualCoder 4.0 writes no lock file, so the signs that it may have the
 # project open (`qualcoder_gui_signals`) are passed on in the import's
 # preview as a warning, never a refusal, as the other write tools'
-# previews pass them on; only QualCoder 3.8.2's lock refuses the import.
+# previews pass them on; only the project's lock file refuses the import.
 IMPORT_GUI_HINT = (
     "This project appears to be open in QualCoder ({signs}). That is a "
     "heuristic (QualCoder 4.0 writes no lock file), so ask the researcher "
@@ -11036,17 +11036,17 @@ def import_documents(
 
     Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The names list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
-    Refused or kept out, saying why: while QualCoder 3.8.2 has the project open; paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
+    Refused or kept out, saying why: while another conversation using Exegete or QualCoder 3.8.2 has the project in use (its lock file); paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
 
     Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
 
     Args:
         paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
-        preview_token: from the preview, for the import
+        preview_token: from the preview
         apply_project_pseudonyms: default true
-        import_pdfs_with_listed_names: true on the researcher's word
-        import_file_names_with_listed_names: true on the researcher's word
-        import_files_with_garbled_letters: true on the researcher's word
+        import_pdfs_with_listed_names: default false
+        import_file_names_with_listed_names: default false
+        import_files_with_garbled_letters: default false
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
         memo: a note for every file; at most 10,000 characters
     """
@@ -11420,10 +11420,10 @@ def link_file_to_case(
     usable text (no text layer, or the file itself stored by QualCoder
     3.8.2) is refused: the case read would have no text from it.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -11529,10 +11529,10 @@ def delete_coding(coding_id: int, create_backup: bool = True,
     When both apply, both overrides are required and both refusals come
     back in one response.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
     A backup is created first by default, so the deletion can be undone with
     restore_backup if needed. When the coding came from an AI coding
@@ -12529,10 +12529,10 @@ def restore_backup(backup_path: str,
     3. creates a safety backup of the CURRENT state first, so even a restore
        can be undone,
     4. refuses to run while the project's lock file is active (QualCoder
-       3.8 has the project open, or another conversation using Exegete is
+       3.8.2 has the project open, or another conversation using Exegete is
        writing to it) or another program is writing to the database; for
        QualCoder 4.0, this tool's preview and get_current_project show any
-       signs of an open window, and when there are some, ask the researcher
+       signs of an open window, and if there are some, ask the researcher
        before restoring,
     5. refuses a backup list_backups marks `unclean` (its database's
        journal or WAL file beside it: copied mid-write).
@@ -13373,11 +13373,11 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "Write approved codings to the project (with a backup "
                 "first, unless create_backup is false)",
                 "Writes are refused while the project's lock file is active "
-                "(QualCoder 3.8 has the project open, or another conversation "
-                "using Exegete is writing to it) or another program is "
-                "writing to the database; for QualCoder 4.0, "
+                "(QualCoder 3.8.2 has the project open, or another "
+                "conversation using Exegete is writing to it) or another "
+                "program is writing to the database; for QualCoder 4.0, "
                 "get_current_project shows any signs of an open window "
-                "(qualcoder_gui_signals), and when there are some, ask the "
+                "(qualcoder_gui_signals), and if there are some, ask the "
                 "researcher before writing",
                 "Session persistence: resume work at any time",
                 "Full recovery tools: delete_coding, list_backups, restore_backup"
@@ -14395,10 +14395,10 @@ def create_proposed_codes(coding_session_id: str,
     written. Only APPROVED proposals are created: a rejected one only if
     it is approved again, a merged one never.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -14613,10 +14613,10 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
     section always survives the write. Memos returned by read tools
     contain the public part only.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Coder visibility (projects with the coder-visibility capability that
@@ -14696,10 +14696,10 @@ def add_journal_entry(name: str, entry: str,
     THIS WRITES TO THE DATABASE. Journals are free-form research notes
     (reflexive memos, decisions, an audit trail) kept alongside the coding.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -14767,10 +14767,10 @@ def create_code(name: str, category: Optional[str] = None,
     a category. A code has either a parent code or a category, never
     both; on projects without sub-code support the parameter is refused.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Colours are stored as the nearest QualCoder palette colour (120 fixed
@@ -14893,10 +14893,10 @@ def rename_code(code_id: int, new_name: str,
     `changed: false, reason: unchanged` with nothing written and no
     backup made. Successful renames carry `changed: true`.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -14964,10 +14964,10 @@ def recolor_code(code_id: int, color: str,
     stored off-palette colour, is a real change and is written (QualCoder
     compares colour strings). Successful recolours carry `changed: true`.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -15041,10 +15041,10 @@ def move_code_to_category(code_id: int,
     under it. Nesting an existing code under another code is done in
     QualCoder. Successful moves carry `changed: true`.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -15151,10 +15151,10 @@ def create_category(name: str, parent_category: Optional[str] = None,
     Successful creates carry `created: true`. Whitespace runs in the name
     collapse to one space.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -15229,10 +15229,10 @@ def rename_category(category_id: int, new_name: str,
     current name answers `changed: false, reason: unchanged` with nothing
     written and no backup made. Successful renames carry `changed: true`.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -15295,10 +15295,10 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
     level) the result is `changed: false, reason: unchanged` with nothing
     written and no backup made. Successful moves carry `changed: true`.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -15832,10 +15832,10 @@ def merge_codes(from_code_id: int, into_code_id: int,
     changed in between, the execute is refused and you must preview again. A
     backup is always created first.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     The codebook changes too, as in QualCoder, and the preview names each
@@ -15917,10 +15917,10 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     changed in between, the execute is refused and you must preview again. A
     backup is always created first.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     SUB-CODES (projects with schema v16 or newer): deleting a code that
@@ -16004,10 +16004,10 @@ def delete_category(category_id: int,
     changed in between, the execute is refused and you must preview again. A
     backup is always created first.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -16068,10 +16068,10 @@ def merge_category(from_category_id: int,
     changed in between, the execute is refused and you must preview again. A
     backup is always created first.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Source category memo: on projects with sub-code support (v16+
@@ -18143,10 +18143,10 @@ def pseudonymise_source(
     rewrite_memos and save_mapping_to_project, and they must be repeated
     identically on the execute call.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Returns:
@@ -18846,10 +18846,10 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
     case the row is kept with the private section intact and only the
     public text is cleared. One annotation per coder per exact span.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -18927,10 +18927,10 @@ def update_annotation(annotation_id: int, memo: str,
     coder_visibility note; the hidden coder's name, span and file never
     enter the conversation.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -18988,10 +18988,10 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
     When both apply, both overrides are required and both refusals come
     back in one response.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -19053,10 +19053,10 @@ def create_case(name: str, memo: Optional[str] = None,
     case (set_memo does that). Successful creates carry `created: true`.
     Whitespace runs in the name collapse to one space.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -19227,10 +19227,10 @@ def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
 # their descriptions: QualCoder 4.0 writes no lock file.
 _RENAME_QC40_PARAGRAPH = (
     "QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 "
-    "window that has the project open: a Manage {window} window opened "
-    "before the rename keeps showing the old name, and an edit there can "
-    "overwrite the rename or fail on it. Close the project in QualCoder "
-    "4.0 before renaming.")
+    "window: a Manage {window} window opened before the rename still "
+    "shows the old name, and an edit there can overwrite the rename or "
+    "fail on it. If the researcher uses 4.0, ask them to close the "
+    "project there first.")
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
@@ -19259,12 +19259,12 @@ def rename_case(case_id: int, new_name: str,
     Find a case id in exegete://cases/list, get_case_code_matrix, a
     create_case answer, or QualCoder's own id column.
 
-    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window that has the project open: a Manage Cases window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
+    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window: a Manage Cases window opened before the rename still shows the old name, and an edit there can overwrite the rename or fail on it. If the researcher uses 4.0, ask them to close the project there first.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -19759,12 +19759,12 @@ def rename_file(file_id: int, new_name: str,
     written and no backup made; a name stored with spaces at its ends or
     in another Unicode form is rewritten in normal form when retyped.
 
-    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window that has the project open: a Manage Files window opened before the rename keeps showing the old name, and an edit there can overwrite the rename or fail on it. Close the project in QualCoder 4.0 before renaming.
+    QualCoder 4.0 writes no lock file, so Exegete cannot see a 4.0 window: a Manage Files window opened before the rename still shows the old name, and an edit there can overwrite the rename or fail on it. If the researcher uses 4.0, ask them to close the project there first.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Refused, each with its reason: an empty, spaces-only or dots-only
@@ -19891,10 +19891,10 @@ def create_attribute_type(name: str, applies_to: str,
     names (Ref_Type, Ref_Author, Ref_Authors, Ref_Title, Ref_Year,
     Ref_Journal) are reserved for QualCoder's reference importer.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:
@@ -19959,10 +19959,10 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     then reads as other numbers; Exegete refuses them, so what it
     stores is what query_by_attribute compares.
 
-    Refused while the project's lock file is active (QualCoder 3.8 has
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
     the project open, or another conversation using Exegete is writing
     to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and when
+    4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
 
     Args:

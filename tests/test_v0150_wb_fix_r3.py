@@ -39,6 +39,7 @@ NAMED_IN_THE_CHANGELOG = {
     "SUPPORT.md": "SUPPORT.md",
     "PROJECT_SELECTION_GUIDE.md": "PROJECT_SELECTION_GUIDE.md",
     "the AI coding guide": "AI_CODING_GUIDE.md",
+    "AI_CODING_WORKFLOW.md": "AI_CODING_WORKFLOW.md",
     "the bug report form": ".github/ISSUE_TEMPLATE/bug_report.yml",
 }
 
@@ -54,6 +55,10 @@ OLD_WORDINGS = (
     r"\*\*QualCoder closed\*\*",
     r"^- Close the project in QualCoder",
     r"QualCoder-Aware",
+    # the fourth reading of the documents (tests/test_v0150_lock_wording.py)
+    r"QualCoder 3\.8(\.2)?'s lock refuses",
+    r"with QualCoder closed",
+    r"^### Close QualCoder First",
 )
 
 
@@ -129,7 +134,7 @@ class TestTheRefusalNamesBothCauses:
         value = line.split("description:", 1)[1].strip()
         assert value == (
             "Writes are refused while the project's lock file is active "
-            "(QualCoder 3.8 has the project open, or another conversation "
+            "(QualCoder 3.8.2 has the project open, or another conversation "
             "using Exegete is writing to it); QualCoder 4.0 writes no lock "
             "file, so an open project there can only be guessed at.")
         # Still one plain YAML value: nothing in it starts a mapping or a
@@ -164,7 +169,7 @@ class TestTheRefusalNamesBothCauses:
         tools = _flat(_read("TOOLS.md"))
         assert ("- `get_current_project()` - Show which project is open, "
                 "whether the project's lock file is active (`qualcoder_open`: "
-                "QualCoder 3.8 has the project open, or another conversation "
+                "QualCoder 3.8.2 has the project open, or another conversation "
                 "using Exegete is writing to it), and the 4.0 signs "
                 "(`qualcoder_gui_signals`);") in tools
 
@@ -172,7 +177,7 @@ class TestTheRefusalNamesBothCauses:
         privacy = _flat(_read("PRIVACY.md"))
         assert ("- Remember that Exegete's safety features (read-only "
                 "default, automatic local backups, refusing to write while "
-                "the project's lock file is active (QualCoder 3.8 keeps it "
+                "the project's lock file is active (QualCoder 3.8.2 keeps it "
                 "while it has the project open, and Exegete during each of "
                 "its own writes), and for QualCoder 4.0 a best-effort check "
                 "of this machine's process list that reports only a count, "
@@ -183,7 +188,7 @@ class TestTheRefusalNamesBothCauses:
         guide = _flat(_read("PROJECT_SELECTION_GUIDE.md"))
         assert ("Shows which project is currently open, whether the "
                 "project's lock file is active (`qualcoder_open`: QualCoder "
-                "3.8 has the project open, or another conversation using "
+                "3.8.2 has the project open, or another conversation using "
                 "Exegete is writing to it) and the signs of an open "
                 "QualCoder 4.0 window (`qualcoder_gui_signals`)") in guide
 
@@ -201,11 +206,11 @@ class TestTheChangelogHoldsWhatItSays:
     def test_the_sentence(self):
         entry = _flat(_unreleased())
         assert ("README.md, TOOLS.md, PRIVACY.md, SUPPORT.md, "
-                "PROJECT_SELECTION_GUIDE.md, the AI coding guide and the bug "
-                "report form describe the lock file's refusal the same way, "
-                "and where they ask for the project to be closed in "
-                "QualCoder, they ask it of those who also use QualCoder.") \
-            in entry
+                "PROJECT_SELECTION_GUIDE.md, AI_CODING_WORKFLOW.md, the AI "
+                "coding guide and the bug report form describe the lock "
+                "file's refusal the same way, and where they ask for the "
+                "project to be closed in QualCoder, they ask it of those who "
+                "also use QualCoder.") in entry
         assert "README.md and TOOLS.md describe the lock" not in entry
 
     @pytest.mark.parametrize("named", sorted(NAMED_IN_THE_CHANGELOG))

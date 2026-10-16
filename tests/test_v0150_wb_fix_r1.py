@@ -315,9 +315,11 @@ class TestTheEntryIsOneAccount:
         # 1,242 since the second round (tests/test_v0150_wb_fix_r2.py),
         # 1,393 since get_current_project lists the files Exegete keeps
         # (the files design, piece 1), 1,544 since restore_backup says a
-        # restore keeps the project's Exegete folder (piece 2)
+        # restore keeps the project's Exegete folder (piece 2), 1,501
+        # since the descriptions that gave the lock file as QualCoder's
+        # alone name both of its causes (tests/test_v0150_lock_wording.py)
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 1,544 characters more") in measured
+                "`lifecycle` to `full`: 1,501 characters more") in measured
 
 
 # ===========================================================================

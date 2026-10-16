@@ -217,12 +217,12 @@ Opens a project (a `.qda` folder)
 - `project_path`: Path to the `.qda` project folder (or to the `data.qda` file inside it)
 
 The result reports `qualcoder_gui_signals` (best-effort heuristics for an
-open QualCoder 4.0 window; a released QualCoder 3.x is detected through
-its lock file) and remembers the selection as the last-used project.
+open QualCoder 4.0 window; QualCoder 3.8.2 is detected through the
+project's lock file) and remembers the selection as the last-used project.
 
 ### 3. `get_current_project`
 Shows which project is currently open, whether the project's lock file
-is active (`qualcoder_open`: QualCoder 3.8 has the project open, or
+is active (`qualcoder_open`: QualCoder 3.8.2 has the project open, or
 another conversation using Exegete is writing to it) and the signs of
 an open QualCoder 4.0 window (`qualcoder_gui_signals`)
 

@@ -232,7 +232,7 @@ def test_the_bug_report_form_names_the_release():
     # v0.15.0, the whole-branch review's round 3: the lock file has two
     # causes, QualCoder 3.8 or another conversation using Exegete
     assert ("Writes are refused while the project's lock file is active "
-            "(QualCoder 3.8 has the project open, or another conversation "
+            "(QualCoder 3.8.2 has the project open, or another conversation "
             "using Exegete is writing to it); QualCoder 4.0 writes no lock "
             "file") in form
 

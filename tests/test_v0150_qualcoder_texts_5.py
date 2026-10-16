@@ -51,29 +51,32 @@ TOOL_SETS = ("full", "core")
 # The new texts, word for word
 # ---------------------------------------------------------------------------
 
-BOTH_CAUSES = ("QualCoder 3.8 has the project open, or another "
+# The fourth reading of the documents gave the release behind the lock
+# file one spelling, 3.8.2, and "if there are some" for "when there are
+# some", so that no description grew (tests/test_v0150_lock_wording.py)
+BOTH_CAUSES = ("QualCoder 3.8.2 has the project open, or another "
                "conversation using Exegete is writing to it")
 ANOTHER_PROGRAM = "another program is writing to the database"
 
 SENTENCE = (
-    "Refused while the project's lock file is active (QualCoder 3.8 has "
+    "Refused while the project's lock file is active (QualCoder 3.8.2 has "
     "the project open, or another conversation using Exegete is writing "
     "to it) or another program is writing to the database; for QualCoder "
-    "4.0, get_current_project shows any signs of an open window, and when "
+    "4.0, get_current_project shows any signs of an open window, and if "
     "there are some, ask the researcher before writing.")
 RESTORE_ITEM = (
     "4. refuses to run while the project's lock file is active (QualCoder "
-    "3.8 has the project open, or another conversation using Exegete is "
+    "3.8.2 has the project open, or another conversation using Exegete is "
     "writing to it) or another program is writing to the database; for "
     "QualCoder 4.0, this tool's preview and get_current_project show any "
-    "signs of an open window, and when there are some, ask the researcher "
+    "signs of an open window, and if there are some, ask the researcher "
     "before restoring, 5.")
 HELP_FEATURE = (
     "Writes are refused while the project's lock file is active "
-    "(QualCoder 3.8 has the project open, or another conversation using "
+    "(QualCoder 3.8.2 has the project open, or another conversation using "
     "Exegete is writing to it) or another program is writing to the "
     "database; for QualCoder 4.0, get_current_project shows any signs of "
-    "an open window (qualcoder_gui_signals), and when there are some, ask "
+    "an open window (qualcoder_gui_signals), and if there are some, ask "
     "the researcher before writing")
 
 RULE_9 = ("9. When a tool says another program, such as QualCoder, may "
@@ -369,7 +372,7 @@ class TestTheWriteToolsSentence:
             assert BOTH_CAUSES in text, where
             assert ANOTHER_PROGRAM in text, where
         refusal = _flat(server.qualcoder_open_message("someone"))
-        assert "QualCoder 3.8 has it open, or another conversation using " \
+        assert "QualCoder 3.8.2 has it open, or another conversation using " \
                "Exegete is writing to it" in refusal
 
 

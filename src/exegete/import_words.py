@@ -67,6 +67,10 @@ PATH_REFUSALS = {
                     "holds no documents.",
     "reading_folder": "This is inside Exegete's reading folder, which "
                       "holds reading copies, not documents to import.",
+    "private_files": "This is a project's Exegete folder, or is in one. "
+                     "That folder holds files you fill in for the "
+                     "project; Exegete does not import from it. Bring "
+                     "documents in from where you keep them.",
 }
 
 OTHER_FORMATS = {

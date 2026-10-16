@@ -345,7 +345,9 @@ jobs:
         env:
           QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src
           EXEGETE_PARITY_GATE: ${{ matrix.which == 'gate' && '1' || '' }}
-        run: python -m pytest -ra tests/test_v0143_import_parity.py
+        # and QualCoder's backup, which copies the project folder whole,
+        # its Exegete folder included (v0.15.0, the files design)
+        run: python -m pytest -ra tests/test_v0143_import_parity.py tests/test_v0150_private_files_qualcoder.py
 
       - name: What QualCoder's newest code stores differently
         if: matrix.which == 'watch'

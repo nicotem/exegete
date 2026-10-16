@@ -2918,6 +2918,35 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
         ignore=_copy_ignore(source, skipped,
                             database_copied=database_copied,
                             exclude_real=exclude_real))
+    _withhold_exegete_folder_links(source, skipped, report)
+
+
+def _withhold_exegete_folder_links(source: Path, skipped: List[str],
+                                   report: Optional[Dict[str, Any]]) -> None:
+    """Take the skipped links in a project's Exegete folder out of
+    `skipped`, and count them in the report
+    ("skipped_symlinks_in_exegete_folder"), never named (v0.15.0): a
+    name the researcher gives an entry there may hold a participant's
+    name, and the folder's listing counts its entries without naming
+    them (private_files). Every other skipped link stays named."""
+    from . import private_files
+    kept: List[str] = []
+    withheld = 0
+    for rel in skipped:
+        try:
+            inside = private_files.in_a_projects_folder(Path(source) / rel)
+        except Exception:                               # noqa: BLE001
+            inside = True       # not known: counted, never named
+        if inside:
+            withheld += 1
+        else:
+            kept.append(rel)
+    skipped[:] = kept
+    if report is not None:
+        if withheld:
+            report["skipped_symlinks_in_exegete_folder"] = withheld
+        else:
+            report.pop("skipped_symlinks_in_exegete_folder", None)
 
 
 def backup_project(project_path: Union[str, Path],

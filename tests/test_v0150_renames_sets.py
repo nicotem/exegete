@@ -488,8 +488,11 @@ class TestTheDocuments:
         # the settings given to each new project (the coder names, piece
         # 3): 208,379; and the write tools' sentence (not presuming
         # QualCoder, piece 5): 205,077; and the four outcomes without
-        # their attribution (not presuming QualCoder, piece 13): 205,022
-        assert (rounded, tokens) == ("205,000", "51k")
+        # their attribution (not presuming QualCoder, piece 13): 205,022;
+        # and, after the whole-branch review, get_current_project's
+        # paragraph on the files Exegete keeps for the project (the files
+        # design, piece 1): 205,637, about 206,000
+        assert (rounded, tokens) == ("206,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "

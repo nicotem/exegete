@@ -533,9 +533,16 @@ class TestTheThreeDescriptions:
         # and the whole-branch review's round 1 rewords read_pseudonym_list's
         # deprecation and moves the removals to v0.15.1: put back too
         from test_v0150_wb_fix_r1 import before_the_review
+        # and the files design, piece 1, gives get_current_project a
+        # paragraph on the files Exegete keeps for the project
+        # (tests/test_v0150_private_files.py, which pins it): taken out too
+        from test_v0150_private_files import without_the_files_paragraph
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
             text = before_the_review(raw[name])
+            if name == "get_current_project":
+                text = without_the_files_paragraph(text)
+                assert text != raw[name], name
             if name == "pseudonymise_source":
                 text = without_the_paragraph(text)
                 assert text != raw[name], name

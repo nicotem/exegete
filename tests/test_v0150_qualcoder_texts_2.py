@@ -136,8 +136,8 @@ SECTION = (
     + NOT_EVERYTHING + " "
     "And depending on how your assistant is set up, an assistant that "
     "meets a problem may work round it by a route outside Exegete, and "
-    "what it reads that way goes to its AI provider in full (the section "
-    "above). "
+    "what it reads that way goes to its AI provider in full (\"Assistants "
+    "that open files by themselves\", above). "
     "An imagined example. You bring ten interview transcripts into a "
     "project, meaning to replace the names before any coding starts. One "
     "file is refused. The assistant, which in your set-up can open files on "
@@ -289,8 +289,12 @@ class TestPrivacy:
         privacy = _doc("PRIVACY.md")
         headings = re.findall(r"(?m)^## (.+?)\s*$", privacy)
         here = headings.index("What pseudonymisation is for")
-        assert headings[here - 1] == \
-            "Assistants that open files by themselves"
+        # v0.15.0, the files design (piece 1): "Files Exegete keeps on
+        # your computer" comes between the two, as its design says
+        # (tests/test_v0150_private_files.py)
+        assert headings[here - 2:here] == [
+            "Assistants that open files by themselves",
+            "Files Exegete keeps on your computer"]
         assert headings[here + 1].startswith("Keeping notes private from "
                                              "the AI")
         section = _flat(_section(privacy, "What pseudonymisation is for"))

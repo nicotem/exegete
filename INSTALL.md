@@ -216,19 +216,19 @@ Before starting, make sure you have:
   recipes for Claude Code, LM Studio, and OpenAI's ChatGPT desktop app
   and Codex follow further down
 - ✅ **A project, or a new one.** The default tool set, `full`,
-  includes creating a project (Experimental): the assistant can start
-  one in the conversation, in a new folder, never changing an existing
-  one. On this route new projects, and copies made by
-  `copy_project_to_workspace`, go to `~/Documents/Exegete projects`
-  unless `EXEGETE_WORKSPACE` names another folder ("Environment
-  variables the server reads", below). iCloud (Desktop and Documents)
-  or OneDrive may sync Documents, and a sync service can copy a
-  project's database and its journal separately: consider naming a
-  folder outside Documents, such as `~/Exegete projects`. Or use an
-  existing project (a folder ending in `.qda`, made by Exegete or by
-  QualCoder, with a `data.qda` database file inside; know where it
-  is). Projects in the formats of QualCoder 3.8.x and 4.0 work
-  (project schemas v14 through v17); see "Supported QualCoder versions" in
+  includes creating a project: the assistant can start one in the
+  conversation, in a new folder, never changing an existing one. On this
+  route new projects, and copies made by `copy_project_to_workspace`, go
+  to `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
+  another folder ("Environment variables the server reads", below).
+  iCloud (Desktop and Documents) or OneDrive may sync Documents, and a
+  sync service can copy a project's database and its journal separately:
+  consider naming a folder outside Documents, such as
+  `~/Exegete projects`. Or use an existing project (a folder ending in
+  `.qda`, made by Exegete or by QualCoder, with a `data.qda` database
+  file inside; know where it is). Projects in the formats of QualCoder
+  3.8.x and 4.0 work (project schemas v14 through v17); see "Supported
+  QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
 - **QualCoder, optional.** Today it does what Exegete does not do
   yet: bringing in images, audio and video, coding images, audio, video
@@ -672,18 +672,17 @@ and `EXEGETE_USES_QUALCODER`, all below.
   another tool had run). Without it, select a project with the tools
   (Option A).
 - `EXEGETE_TOOLSET`: `full` (default) registers 81 tools, every tool,
-  creating a project (Experimental) included, so that a study can be
-  started from the conversation (TOOLS.md, "Starting a project from
-  the conversation"); two of them are the earlier names of two renamed
-  tools (TOOLS.md, "Earlier names"). `core` registers the 25-tool
-  supervised coding set for local models (see the LM Studio recipe),
-  which cannot create a project. `lifecycle`, the earlier name of
-  `full` (the desktop extension's default before 0.15.0), is read as
-  `full` until v1.0, and Exegete names it in its log at each start.
-  The desktop extension sets this variable from its "Tool set"
-  setting, whose default is `full`. Any other value stops Exegete
-  at start-up with an error naming the valid values. Resources and
-  prompts are not affected.
+  creating a project included, so that a study can be started from the
+  conversation (TOOLS.md, "Starting a project from the conversation");
+  two of them are the earlier names of two renamed tools (TOOLS.md,
+  "Earlier names"). `core` registers the 25-tool supervised coding set
+  for local models (see the LM Studio recipe), which cannot create a
+  project. `lifecycle`, the earlier name of `full` (the desktop
+  extension's default before 0.15.0), is read as `full` until v1.0, and
+  Exegete names it in its log at each start. The desktop extension sets
+  this variable from its "Tool set" setting, whose default is `full`.
+  Any other value stops Exegete at start-up with an error naming the
+  valid values. Resources and prompts are not affected.
 - `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`

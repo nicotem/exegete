@@ -11,7 +11,7 @@ coding loop with example conversations.
 - [What the tools do, in brief](#what-the-tools-do-in-brief)
 - [Supported QualCoder versions](#supported-qualcoder-versions)
 - [Choosing the AI coder name](#choosing-the-ai-coder-name-attribution)
-- [Starting a project from the conversation](#starting-a-project-from-the-conversation-experimental)
+- [Starting a project from the conversation](#starting-a-project-from-the-conversation)
 - [Working alongside QualCoder 4.0](#working-alongside-qualcoder-40)
 - [QualCoder 3.8.2 and edit mode: a caution](#qualcoder-382-and-edit-mode-a-caution)
 - [AI-Assisted Coding](#ai-assisted-coding)
@@ -266,7 +266,7 @@ name is never used for rows Exegete writes. It will be removed in
 v0.15.1, and an answer to a call that passes it says so. If you use
 QualCoder and want a file under your own name, import it there.
 
-## Starting a project from the conversation (Experimental)
+## Starting a project from the conversation
 
 Exegete can create a new, empty project, in QualCoder's format, so a
 study can begin in the conversation. It is in the full tool set, the
@@ -943,11 +943,11 @@ tools, two of them the earlier names of two renamed tools (see "Earlier
 names" below); the argument lists below name every argument each tool
 declares, and each tool's own description says what each one does.
 
-> **Creating projects (Experimental):** `create_project` makes a new,
-> empty project folder and never changes an existing one. Since 0.15.0
-> it is in `full` on every route; `lifecycle`, the earlier name of
-> `full` (the Claude Desktop extension's default before 0.15.0), is read
-> as `full`. It is not in `core`.
+> **Creating projects:** `create_project` makes a new, empty project
+> folder and never changes an existing one. Since 0.15.0 it is in `full`
+> on every route; `lifecycle`, the earlier name of `full` (the Claude
+> Desktop extension's default before 0.15.0), is read as `full`. It is
+> not in `core`.
 
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in the server's environment, only the

@@ -101,8 +101,8 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             ) in one_click_readme
     assert "whose standard tool set cannot create a project unless switched " \
         "on" not in flat
-    assert ("whose default tool set, `full`, can create a project too "
-            "(Experimental)") in flat
+    assert ("whose default tool set, `full`, can create a project "
+            "too.") in flat
     assert "`lifecycle`" not in one_click_readme
     one_click = install[install.index("## Claude Desktop: the one-click "
                                       "extension"):
@@ -119,8 +119,8 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     needs = install[install.index("## What You'll Need"):
                     install.index("## Recommended: Install from PyPI")]
     flat_needs = " ".join(needs.split())
-    assert ("The default tool set, `full`, includes creating a project "
-            "(Experimental)") in flat_needs
+    assert ("The default tool set, `full`, includes creating a project: "
+            "the assistant") in flat_needs
     assert "EXEGETE_TOOLSET=lifecycle" not in needs
     # Since the owner's ruling of 7 October 2026: optional, with what it
     # does that Exegete does not do yet; v0.14.3: documents

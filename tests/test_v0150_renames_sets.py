@@ -2,7 +2,7 @@
 """v0.15.0, the renames, piece 1: one tool set called `full`.
 
 `full` and `lifecycle` became one set, `full`: every tool, creating a
-project (Experimental) included, registered at import, the default on
+project included, registered at import, the default on
 every route. `core` is unchanged. `lifecycle`, the extension's default
 until 0.15.0, is read as `full` until v1.0 (names.OLD_TOOLSET_NAMES), and
 the start-up log says so once; the extension's setting, the bug report
@@ -460,10 +460,9 @@ class TestTheDocuments:
         flat = _flat("INSTALL.md")
         item = flat[flat.index("- ✅ **A project, or a new one.**"):]
         item = item[:item.index("- **QualCoder, optional.**")]
-        assert ("The default tool set, `full`, includes creating a project "
-                "(Experimental): the assistant can start one in the "
-                "conversation, in a new folder, never changing an existing "
-                "one.") in item
+        assert ("The default tool set, `full`, includes creating a "
+                "project: the assistant can start one in the conversation, "
+                "in a new folder, never changing an existing one.") in item
         assert "`EXEGETE_WORKSPACE`" in item
         assert ("iCloud (Desktop and Documents) or OneDrive may sync "
                 "Documents, and a sync service can copy a project's "
@@ -493,7 +492,7 @@ class TestTheDocuments:
         assert (rounded, tokens) == ("205,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
-                f"(Experimental) and two renamed tools' earlier names "
+                f"and two renamed tools' earlier names "
                 f"included | about {rounded} characters, "
                 f"{tokens} tokens | hosted models, such as Claude or "
                 f"OpenAI's | every route |") in readme
@@ -531,7 +530,7 @@ class TestTheDocuments:
         assert ("**No project yet?** Leave out the `EXEGETE_PROJECT_PATH` "
                 "line, as below: Exegete then starts with no project "
                 "selected, and in step 5 you can ask the assistant to "
-                "create one (Experimental).") in step3
+                "create one.") in step3
         text = (REPO / "QUICKSTART.md").read_text(encoding="utf-8")
         blocks = re.findall(r"```json\n(.*?)```", text, re.S)
         configs = [json.loads(block) for block in blocks]
@@ -591,9 +590,9 @@ class TestTheDocuments:
 
     def test_the_ai_coding_guide_on_every_route(self):
         flat = _flat("AI_CODING_GUIDE.md")
-        assert ("A project: a new one the assistant creates (Experimental; "
-                "in the default tool set, `full`, on every route), or a "
-                "copy of one you have") in flat
+        assert ("A project: a new one the assistant creates (in the "
+                "default tool set, `full`, on every route), or a copy of one "
+                "you have") in flat
         assert "(the extension's default tool set)" not in flat
 
     def test_the_readme_sentences(self):
@@ -601,9 +600,9 @@ class TestTheDocuments:
         assert ("Leave its \"Tool set\" setting as it comes (`full`): "
                 "`core`, the smaller set for local models, cannot create a "
                 "project") in readme
-        assert ("whose default tool set, `full`, can create a project too "
-                "(Experimental).") in readme
-        assert "| Create a project | Yes | Yes (Experimental) |" in readme
+        assert ("whose default tool set, `full`, can create a project "
+                "too.") in readme
+        assert "| Create a project | Yes | Yes |" in readme
         assert "two tool sets, every tool" in readme
 
     # Fix round 2

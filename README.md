@@ -71,8 +71,7 @@ never put participant data in an issue.
 
 ## What you can do
 
-- **Start a project** in QualCoder's format (Experimental), or work on
-  a copy of yours.
+- **Start a project** in QualCoder's format, or work on a copy of yours.
 - **Bring in transcripts** as documents from your computer (Word,
   OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB
   with the optional part, which the extension has), read by Exegete on
@@ -368,14 +367,13 @@ does not put the study out of reach, and what they open goes to their
 maker, which may train on it while training is on.
 
 Ask the assistant to "Create a new project in Exegete called
-Practice" (Experimental), then bring in your page: paste it, as in the
-example, or save it as a Word or text file and give the assistant its
-place, which keeps its text off the conversation (on a Mac, hold
-Option, right-click it and choose Copy as Pathname; on Windows 11, Copy
-as path). With the extension or
-OpenAI's steps, the project is made, by default, in "Exegete projects",
-in your home folder (the assistant's answer gives the full path): ask
-to open a file for reading, or open the project in
+Practice", then bring in your page: paste it, as in the example, or save
+it as a Word or text file and give the assistant its place, which keeps
+its text off the conversation (on a Mac, hold Option, right-click it and
+choose Copy as Pathname; on Windows 11, Copy as path). With the
+extension or OpenAI's steps, the project is made, by default, in
+"Exegete projects", in your home folder (the assistant's answer gives
+the full path): ask to open a file for reading, or open the project in
 QualCoder (Project, Open Project), to see your coding in the text.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).
 
@@ -414,9 +412,9 @@ the changes only once the project is opened again.
 Studio, other MCP hosts and Claude Desktop set up by hand take the
 Terminal route
 ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)),
-whose default tool set, `full`, can create a project too (Experimental).
-There, new projects and copies go to `~/Documents/Exegete projects`,
-which iCloud or OneDrive may sync, unless
+whose default tool set, `full`, can create a project too. There, new
+projects and copies go to `~/Documents/Exegete projects`, which iCloud
+or OneDrive may sync, unless
 [`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
 names another folder. Claude Code opens files by itself ("Where your
 data goes", above), so for participants' data this project suggests
@@ -465,7 +463,7 @@ QualCoder 3.8.2 and 4.0:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
-| Create a project | Yes | Yes (Experimental) |
+| Create a project | Yes | Yes |
 | Import sources | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part, which the extension has), and text the assistant hands over |
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
@@ -534,7 +532,7 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 81: all, creating a project (Experimental) and two renamed tools' earlier names included | about 205,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `full` | 81: all, creating a project and two renamed tools' earlier names included | about 205,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every

@@ -737,8 +737,8 @@ class TestTheDocuments:
         assert "Exegete offers 81 tools by default" in install
         assert "register only the 25-tool supervised coding set" in install
         readme = _read("README.md")
-        assert ("| `full` | 81: all, creating a project (Experimental) and "
-                "two renamed tools' earlier names included |") in readme
+        assert ("| `full` | 81: all, creating a project and two renamed "
+                "tools' earlier names included |") in readme
         assert "| `core` | 25: the coding loop and its safety tools |" \
             in readme
         for name in DOCUMENTS:

@@ -26,25 +26,42 @@ kind `exegete`; a project from a QualCoder older than 3.8 has a way on
 without QualCoder; and PRIVACY.md says what pseudonymisation is for.
 
 The maintainer decided the questions behind these on 11 and 12 October
-2026, and on 14 October that a project's format value is repeated only
-in QualCoder's form. One thing stays provisional: how long one import
-call may take in the desktop extension, 30 seconds until the time
-Claude Desktop waits has been measured. The sections below follow what
-a researcher meets: the tool set and the renames, the coder names,
-imports, Exegete's texts about QualCoder, older projects, what is
-deprecated; then a part for contributors, and the measurements.
+2026, on 14 October that a project's format value is repeated only in
+QualCoder's form, and on 16 October that creating a project is no longer
+Experimental. One thing stays provisional: how long one import call may
+take in the desktop extension, 30 seconds until the time Claude Desktop
+waits has been measured. The sections below follow what a researcher
+meets: the tool set and the renames, the coder names, imports, Exegete's
+texts about QualCoder, older projects, what is deprecated; then a part
+for contributors, and the measurements.
 
 ### Upgrading from 0.14.3
 
 - **One tool set, `full`.** `full` and `lifecycle` are now one set,
-  `full`: every tool, creating a project (Experimental) included, the
-  default on every route. If your extension's "Tool set" shows
-  `lifecycle`, or your configuration sets `EXEGETE_TOOLSET=lifecycle`,
-  nothing needs changing: it is read as `full` until v1.0. On the
-  Terminal routes `full` now includes `create_project`; new projects
-  go to `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE`
-  names another folder, and iCloud or OneDrive may sync Documents
-  (INSTALL.md, "What You'll Need").
+  `full`: every tool, creating a project included, the default on every
+  route. If your extension's "Tool set" shows `lifecycle`, or your
+  configuration sets `EXEGETE_TOOLSET=lifecycle`, nothing needs
+  changing: it is read as `full` until v1.0. On the Terminal routes
+  `full` now includes `create_project`; new projects go to
+  `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
+  another folder, and iCloud or OneDrive may sync Documents (INSTALL.md,
+  "What You'll Need").
+- **Creating a project is no longer Experimental** (the maintainer's
+  decision of 16 October 2026). For this decision, projects made in
+  Exegete (from the settings, with the coder name not known, and with a
+  name given and then corrected), with what Exegete then wrote to them
+  (imports, codings, a names list, renames, a corrected coder name, a
+  restore) and the backups it took, and projects made in QualCoder that
+  Exegete then wrote to, were opened by QualCoder 4.0, as released, and
+  by 3.8.2, run from their published source on a Mac: each opened
+  without an error, kept every row, passed SQLite's integrity check and
+  showed what Exegete wrote where Exegete put it. Not checked: QualCoder
+  installed from its installers, Windows and Linux (Exegete's own tests
+  run there with every change), the Claude Desktop extension's route,
+  and anything only QualCoder's window shows, such as colours and
+  layout. If you also use QualCoder, especially from its installer or on
+  Windows or Linux, letting QualCoder open a project made in Exegete
+  once, before much work goes into it, is a quick check.
 - **Two tools renamed.** `analyze_for_coding` is now
   `start_coding_session`, and `analyze_file_with_coding` is now
   `read_file_with_codings`: the tools that start a coding session and
@@ -99,11 +116,11 @@ deprecated; then a part for contributors, and the measurements.
 - **`full` and `lifecycle` are one tool set, called `full`** (the
   maintainer's decision of 12 October 2026): 79 tools (81 with the
   earlier names of the two tools renamed below), creating a project
-  (still Experimental) and correcting your own coder name included, the
-  default on every route, in the Claude Desktop extension and wherever
-  Exegete is configured by hand. An install whose tool set is `full`
-  gains creating a project. `lifecycle`, the earlier name of `full`, set
-  anywhere (the extension's "Tool set" setting, `EXEGETE_TOOLSET` or
+  and correcting your own coder name included, the default on every
+  route, in the Claude Desktop extension and wherever Exegete is
+  configured by hand. An install whose tool set is `full` gains creating
+  a project. `lifecycle`, the earlier name of `full`, set anywhere (the
+  extension's "Tool set" setting, `EXEGETE_TOOLSET` or
   `QUALCODER_MCP_TOOLSET`, in any letter case), means `full` and is read
   until v1.0; the log says so once at each start, never in an answer.
   `core` keeps its 23 tools (25 with the two earlier names below),

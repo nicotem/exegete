@@ -172,7 +172,7 @@ class TestTheIntroduction:
         tools = _full_tools()
         # Each item the list names, and the tools that carry it
         claims = {
-            "**Start a project** in QualCoder's format (Experimental)": [
+            "**Start a project** in QualCoder's format, or work on": [
                 "create_project", "copy_project_to_workspace"],
             "sort them into cases with attributes such as age, role or "
             "site": ["create_case", "create_attribute_type",
@@ -1146,8 +1146,8 @@ class TestTheOtherFirstImpressions:
         # v0.15.0: the default set creates a project on every route
         assert ("- [ ] A project to work on (a `.qda` folder, in "
                 "QualCoder's format), or none: the default tool set, `full`, "
-                "can create one in the conversation (Experimental; "
-                "INSTALL.md says where it goes)") in _flat("QUICKSTART.md")
+                "can create one in the conversation (INSTALL.md says where "
+                "it goes)") in _flat("QUICKSTART.md")
 
     def test_the_texts_the_first_pass_did_not_read(self):
         """v0.14.2 (the owner's ruling of 7 October 2026): the opening

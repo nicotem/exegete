@@ -97,6 +97,9 @@ What stays local, always, unless a sync service copies the folder it is in:
   `~/.cache/exegete/reading` on Linux; out of iCloud and OneDrive, not
   indexed by the computer's search, readable by your account only, and
   tidied ("Reading a whole file", below)
+- the project's `Exegete` folder (v0.15.0), with the files you fill in
+  for it: yours to keep or delete; never returned to the assistant
+  ("Files Exegete keeps on your computer")
 - the texts an import's preview read (v0.15.0), kept for its import in
   `~/.exegete/import-texts.noindex`: one file for each document the
   preview found ready, holding the document's whole text as the preview
@@ -465,6 +468,47 @@ your projects out of that folder, but does not stop its read-only
 commands reading them, or its file tools in auto mode (above), which
 is why, for participants' data, this project suggests the chat above
 instead, on whichever plan or terms you use.
+
+## Files Exegete keeps on your computer
+
+Everything Exegete writes outside the conversation is one of four
+kinds. It writes into your project and beside it (backups), into the
+folder for projects (`~/Exegete projects` in the desktop extension,
+`~/Documents/Exegete projects` otherwise, or the folder you set), where
+you ask an export to go, and into its own two folders (and, since
+0.14.1, a link to the first under its earlier name, `~/.qualcoder_mcp`,
+as "How your data flows" says); and, while an import reads a document,
+into a working folder in the system's temporary folder, which it
+removes when that reading ends. Nowhere else.
+
+| Kind | Where | What | Who deletes it |
+|---|---|---|---|
+| Exegete's working state | `~/.exegete`, hidden | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read; the pseudonymisation run records live here too (the last row) | Exegete, as "How your data flows" says for each (the texts an import's preview read, after their import or once an hour has passed); coding sessions at your word (`delete_coding_session`, `cleanup_old_sessions`). Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the pseudonymisation run records, and the secret that keys their digests |
+| Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled | Exegete: the reading folder's files by age (a week at most), the working folder as each reading ends; you, at any time |
+| Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, and a short note | you: Exegete never deletes them of its own accord; restoring a backup replaces the whole project folder, this folder with it, and the safety backup taken first keeps the copy you had |
+| Records of the research | beside the project; inside it; the folder for projects; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word) |
+
+The files you fill in are never returned to the assistant: Exegete
+reports what is in the folder, never what the files hold, and its brief
+tells the assistant never to open them. Exegete shows them in Finder or
+File Explorer, and opens them in their app, when you ask. They travel
+with the project into every backup (Exegete's and QualCoder's alike)
+and every copy, and to any service that syncs the project's folder.
+
+These rules govern what passes through Exegete, not what an assistant
+can reach by other routes. Imagine you tell the assistant that a file
+you filled in was refused: one that can open files by itself may decide
+to look at the file to see why, and what it reads goes to its AI
+provider in full ("Assistants that open files by themselves", above).
+Filling a file in while no such assistant is working protects that
+moment only: afterwards the file stays in the project's folder, as
+`pseudonyms.json` and the originals do, where such an assistant can
+read it at any time. If you want to be sure that what you write there
+never reaches an assistant, you could keep the project in a folder no
+assistant with its own file access is given; move a file out of the
+project once Exegete has used it; or prepare pseudonymised copies
+elsewhere before the documents come to this computer, as "What
+pseudonymisation is for" suggests.
 
 ## What pseudonymisation is for
 

@@ -289,8 +289,12 @@ class TestPrivacy:
         privacy = _doc("PRIVACY.md")
         headings = re.findall(r"(?m)^## (.+?)\s*$", privacy)
         here = headings.index("What pseudonymisation is for")
-        assert headings[here - 1] == \
-            "Assistants that open files by themselves"
+        # v0.15.0, the files design (piece 1): "Files Exegete keeps on
+        # your computer" comes between the two, as its design says
+        # (tests/test_v0150_private_files.py)
+        assert headings[here - 2:here] == [
+            "Assistants that open files by themselves",
+            "Files Exegete keeps on your computer"]
         assert headings[here + 1].startswith("Keeping notes private from "
                                              "the AI")
         section = _flat(_section(privacy, "What pseudonymisation is for"))

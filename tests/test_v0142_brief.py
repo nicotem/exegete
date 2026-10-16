@@ -560,9 +560,12 @@ class TestTheSizes:
     # round 2 rewords the REFI-QDA export's, the journals' and the rename
     # back's deprecation sentences (195 characters more in `full`) and
     # gives import_text_file a sentence on what pseudonymisation is for
-    # (164 more in `full`). Their entries as 0.14.2 served them are
-    # below, so every other tool is still held to 0.14.2's figure.
-    NOW = {"full": 196_763, "core": 64_808}
+    # (164 more in `full`). The files design, piece 1, gives
+    # get_current_project a paragraph on the files Exegete keeps for the
+    # project (151 characters more in both sets). Their entries as
+    # 0.14.2 served them are below, so every other tool is still held to
+    # 0.14.2's figure.
+    NOW = {"full": 196_914, "core": 64_959}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

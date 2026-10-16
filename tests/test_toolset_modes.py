@@ -437,10 +437,14 @@ class TestThePublishedSchemaBudget:
     # import_text_file's sentence on what pseudonymisation is for
     # (whole-branch review, round 2): 195 and 164 characters more in
     # `full` (195 and 176 on 3.11); `core` serves none of the five tools.
-    FULL_MEASURED = 205_486          # 81 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_124           # 25 tools, same environment
-    FULL_MEASURED_310 = 215_866      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 71_544
+    # The files design, piece 1: get_current_project's paragraph on the
+    # files Exegete keeps for the project in its Exegete folder
+    # (files_exegete_keeps), 151 characters more in both sets (163 on
+    # 3.11).
+    FULL_MEASURED = 205_637          # 81 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_275           # 25 tools, same environment
+    FULL_MEASURED_310 = 216_029      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 71_707
 
     # Why two per cent, away from the reference environment.
     #
@@ -467,9 +471,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,486"
-    CORE_CHARS = "68,124"
-    FULL_ROUNDED = "205,000"
+    FULL_CHARS = "205,637"
+    CORE_CHARS = "68,275"
+    FULL_ROUNDED = "206,000"
     CORE_ROUNDED = "68,000"
     FULL_TOKENS = "51k"
     CORE_TOKENS = "17k"

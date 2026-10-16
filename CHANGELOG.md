@@ -23,7 +23,10 @@ you also use QualCoder on this computer?"), or when the sentence is
 about QualCoder itself or its format. Less visible: the extension
 keeps new projects in `~/Exegete projects`; Exegete's backups have the
 kind `exegete`; a project from a QualCoder older than 3.8 has a way on
-without QualCoder; and PRIVACY.md says what pseudonymisation is for.
+without QualCoder; and PRIVACY.md says what pseudonymisation is for,
+and which files Exegete keeps on your computer: four kinds, each with
+its place, those you fill in for a project in its new `Exegete`
+folder.
 
 The maintainer decided the questions behind these on 11 and 12 October
 2026, and on 14 October that a project's format value is repeated only
@@ -31,8 +34,9 @@ in QualCoder's form. One thing stays provisional: how long one import
 call may take in the desktop extension, 30 seconds until the time
 Claude Desktop waits has been measured. The sections below follow what
 a researcher meets: the tool set and the renames, the coder names,
-imports, Exegete's texts about QualCoder, older projects, what is
-deprecated; then a part for contributors, and the measurements.
+imports, Exegete's texts about QualCoder, older projects, the files
+Exegete keeps for a project, what is deprecated; then a part for
+contributors, and the measurements.
 
 ### Upgrading from 0.14.3
 
@@ -870,7 +874,7 @@ for the four labels stays in NOTICE.
   answer ascribes to QualCoder, signs of a window). QualCoder merely
   installed is not a sign once that answer is no. Otherwise the
   assistant says what Exegete does and what it does not do yet. The
-  full brief is now about 13,000 characters; the opening text has not
+  full brief is now about 13,200 characters; the opening text has not
   changed.
 - **The brief's other points**: its section on how changes happen
   names importing documents and correcting the researcher's coder name
@@ -921,6 +925,45 @@ for the four labels stays in NOTICE.
   backup folder beside it, selected in its place, for example) may
   have them; otherwise the same ways on follow, since QualCoder adds a
   missing column as it opens a project, whatever the value.
+
+### Added: the files Exegete keeps for a project
+
+- **Four kinds of file, each with its own place.** Everything Exegete
+  writes outside the conversation is one of four kinds: its working
+  state, in `~/.exegete`; pages and copies to look at, in the reading
+  folder, and, while an import reads a document, a working folder in
+  the system's temporary folder, removed as each reading ends; files
+  the researcher fills in, in the project's `Exegete` folder; and
+  records of the research (backups, the documents' originals,
+  `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`, new
+  projects and copies, exports, and the pseudonymisation run records).
+  PRIVACY.md's new section "Files Exegete keeps on your computer" says
+  where each kind lives, who deletes it, and what an assistant that
+  opens files by itself can still reach; its list of what stays local
+  names the new folder.
+- **The project's `Exegete` folder** holds the files the researcher
+  fills in on their own computer and Exegete reads back. Exegete makes
+  it when such a file is first needed, readable by the researcher's
+  account only on macOS and Linux, with a short note,
+  `About this folder.txt`, and writes each of its own files there
+  once, never replacing a file already there. It never deletes what is
+  in the folder of its own accord, never follows a link there, and
+  never returns what a file holds to the assistant. The folder travels
+  with the project into its backups and copies.
+- **`get_current_project` lists it** (`files_exegete_keeps`, in `full`
+  and `core`): the folder's place, whether it is there, and, for each
+  of Exegete's own files in it, its name, kind, size and date, never
+  what it holds. Any other file or folder there is counted, never
+  named, since a name the researcher gives a file may hold a
+  participant's name; links are counted apart and never followed.
+  Listing makes nothing. The full brief's section on working only
+  through Exegete's tools now says never to open or read those files,
+  even when a file tool or a shell could.
+- **The import refuses a project's `Exegete` folder** and anything in
+  it, the open project's or any other project's, with its own reason:
+  "This is a project's Exegete folder, which holds files the
+  researcher fills in on their own computer; Exegete does not import
+  from it."
 
 ### Changed: the libraries the extension installs, brought up to date
 
@@ -990,17 +1033,17 @@ for the four labels stays in NOTICE.
 
 ### Measured
 
-- Serialised tool JSON: full = 205,486 characters (about 51.4k tokens
-  at chars/4) over 81 tools, and core = 68,124 (about 17.0k) over 25,
+- Serialised tool JSON: full = 205,637 characters (about 51.4k tokens
+  at chars/4) over 81 tools, and core = 68,275 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 215,866 and
-  71,544. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
+  which also gives exactly 0.14.3's figures for its tree), 216,029 and
+  71,707. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
-  3.13), thirteen changes moved them; for most researchers, on the
-  extension, the change is from `lifecycle` to `full`: 1,242 characters
+  3.13), fourteen changes moved them; for most researchers, on the
+  extension, the change is from `lifecycle` to `full`: 1,393 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -1053,10 +1096,13 @@ for the four labels stays in NOTICE.
   `set_attribute` and `rename_file`. And `import_text_file`'s
   description says what pseudonymisation is for: 164 characters more,
   176 on 3.11. `core` serves none of these five.
+  And `get_current_project`'s description lists the files Exegete keeps
+  for the project in its `Exegete` folder: 151 characters more in both
+  sets, 163 on 3.11.
   No other tool's entry changed.
 - Claude Code now keeps 4,096 characters of a tool's description, and
   16,384 through its tool search (2,048 before its version 2.1.296):
-  in `full`, 30 descriptions pass 2,048 (33 on 3.11), 4 pass 4,096 (5
+  in `full`, 31 descriptions pass 2,048 (34 on 3.11), 4 pass 4,096 (5
   on 3.11) and one, `pseudonymise_source` (17,791 characters; 18,919
   on 3.11), passes 16,384, so its last paragraphs (the arguments bound into the token,
   the lock file, Returns) reach Claude Code only with a larger limit
@@ -1064,7 +1110,7 @@ for the four labels stays in NOTICE.
   how to set one). The rules the
   tests hold within the first 2,048 characters are kept there as a
   margin; the shortening of the descriptions comes with v0.15.2. The
-  opening text is 2,034 characters and the full brief 12,998.
+  opening text is 2,034 characters and the full brief 13,240.
 
 ## [0.14.3-alpha] - 2026-10-12
 

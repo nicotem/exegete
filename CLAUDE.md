@@ -50,6 +50,9 @@ of a project from the conversation. It runs as an MCP server.
   `reading_folder.py`, `opener.py`, `origin_mark.py`: reading a whole
   file on the researcher's screen (`open_file_for_reading`).
   `parts.py`: long files read in parts.
+  `private_files.py`: the four kinds of file Exegete keeps, and the
+  project's `Exegete` folder for files the researcher fills in (listed,
+  never read into an answer).
 - `refi_export.py`: REFI-QDA. `coder_comparison.py`: coder agreement.
 - `updates.py`: the check for new versions (`check_for_updates` and the
   notes given once). `release.py`: this release's version, date and

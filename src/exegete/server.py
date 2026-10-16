@@ -99,7 +99,7 @@ from .database import (
 )
 from . import pseudonymise as pseudo
 from . import new_project
-from . import parts, reading, reading_folder
+from . import parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
 from . import doc_import, doc_readers, kept_texts
 from . import qualcoder_history
@@ -528,12 +528,16 @@ the conversation, and the project's list of the real names behind its
 pseudonyms (pseudonyms.json, in the project folder) too, unless the
 researcher asks to see it; they back the project up, hold suggestions
 for approval and check whether QualCoder has the project open. A direct
-read or write bypasses all of that. Files exported by export_codebook,
-export_coded_segments_report and export_refi_qda carry memos in full,
-private notes included: open one only when the researcher asks, and
-tell them first that it holds any private notes they wrote, which then
-go to the AI provider with the conversation. When a tool refuses, tell
-the researcher why; do not look for a way round it.
+read or write bypasses all of that. Files in a project's Exegete folder
+are the researcher's own, filled in on their computer: never open or
+read them, even when a file tool or a shell could. Exegete lists them
+(get_current_project's files_exegete_keeps), never their contents.
+Files exported by export_codebook, export_coded_segments_report and
+export_refi_qda carry memos in full, private notes included: open one
+only when the researcher asks, and tell them first that it holds any
+private notes they wrote, which then go to the AI provider with the
+conversation. When a tool refuses, tell the researcher why; do not look
+for a way round it.
 
 ## 4. The project, Exegete and QualCoder
 
@@ -5272,6 +5276,10 @@ def get_current_project() -> str:
     whether it is present, how many entries it has and which encoding it
     read as, with no name in it.
 
+    Also lists the files Exegete keeps for this project in its Exegete
+    folder (files_exegete_keeps): name, kind, size and date, never their
+    contents.
+
     Returns:
         JSON with current project path, basic metadata, the schema report
         (capability probes and write support), the QualCoder-open state
@@ -5313,6 +5321,11 @@ def get_current_project() -> str:
         # The project's own pseudonyms.json (v0.13, Brief 2, ruling 14b):
         # presence and count by default, the list only when asked.
         result["pseudonyms_json"] = _pseudonyms_json_report()
+        # v0.15.0: the files Exegete keeps for the project in its Exegete
+        # folder, listed by name, kind, size and date, never their
+        # contents; nothing is created by listing
+        result["files_exegete_keeps"] = private_files.listing(
+            _current_project_folder())
 
         # QualCoder-open state, cheap to re-check after the user says
         # they have closed it (heartbeat refreshes every 5 s, stale > 30 s)

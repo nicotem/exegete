@@ -604,7 +604,11 @@ CHANGED_0143 = {
 # prune_backups say "Exegete's backups" and the kind 'exegete'. Later
 # v0.15.0 pieces add their lines here.
 CHANGED_0150 = {
-    "get_current_project": (1920, 1570, "da157f879c430be0"),
+    # the files design, piece 1: get_current_project lists the files
+    # Exegete keeps for the project in its Exegete folder
+    # (files_exegete_keeps), a paragraph after pseudonyms_json's; 1,920
+    # to 2,067 characters on 3.13 (tests/test_v0150_private_files.py)
+    "get_current_project": (2067, 1694, "ebd78e91ecb07fe8"),
     "list_available_projects": (904, 716, "0117f9141c0b48ea"),
     "read_pseudonym_list": (1114, 921, "a12932a8639d99f9"),
     # the renames, piece 3

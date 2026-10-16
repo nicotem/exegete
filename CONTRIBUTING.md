@@ -233,6 +233,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── reading_copy.py      # The reading page: a file's whole text and its codings
 │   │   ├── reading_folder.py    # The private reading folder, and its tidying
 │   │   ├── opener.py            # Opening a file in its own app, or showing it in its folder
+│   │   ├── private_files.py     # The files Exegete keeps, and the project's Exegete folder (0.15.0)
 │   │   ├── origin_mark.py       # The internet-origin mark, carried to a copy
 │   │   ├── parts.py             # Whole-file reads in parts
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools

@@ -283,6 +283,8 @@ class TestTheEntryIsOneAccount:
             "### Changed: the time for one import call",
             "### Changed: Exegete's texts about QualCoder",
             "### Changed: a project from a QualCoder older than 3.8",
+            # the files design, piece 1 (tests/test_v0150_private_files.py)
+            "### Added: the files Exegete keeps for a project",
             "### Changed: the libraries the extension installs, brought up "
             "to date",
             "### Deprecated: the removals move to v0.15.1",
@@ -310,9 +312,11 @@ class TestTheEntryIsOneAccount:
         assert "opt-in lifecycle" not in measured
         assert ("the `lifecycle` set's, the extension's default, 204,244 "
                 "over 78") in measured
-        # 1,242 since the second round (tests/test_v0150_wb_fix_r2.py)
+        # 1,242 since the second round (tests/test_v0150_wb_fix_r2.py),
+        # 1,393 since get_current_project lists the files Exegete keeps
+        # (the files design, piece 1)
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 1,242 characters more") in measured
+                "`lifecycle` to `full`: 1,393 characters more") in measured
 
 
 # ===========================================================================

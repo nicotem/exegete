@@ -24,6 +24,10 @@ its own marks, read without following it:
   Windows offer the account's credentials to the computer it names. A
   drive letter the system has mapped, and a share mounted under
   `/Volumes`, are accepted;
+- a project's Exegete folder (a step named `Exegete` right after a step
+  ending in `.qda`, letter case as the system compares names), and
+  anything inside it, is refused, the open project's or any other
+  project's: it holds files the researcher fills in (private_files);
 - the open project's folder, Exegete's state folders and its reading
   folder are refused, decided by which folder each is (path_identity),
   never by comparing paths as text.
@@ -41,6 +45,7 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 from .path_identity import is_inside
+from .private_files import is_folder_name, is_project_folder_name
 
 MAX_FOLDER_ENTRIES = 10_000
 
@@ -166,11 +171,13 @@ def walk(given: str, refused_places: Sequence[Tuple[str, Optional[Path]]] = (),
          longest: Optional[int] = None) -> Walked:
     """Walk one given path under the rules above, or raise PathRefused.
 
-    `refused_places` pairs a reason code with a folder ("project",
-    "state_folder", "reading_folder"); a path inside one is refused with
-    that code. `longest`, on Windows with long paths switched off, is the
-    longest place Windows opens (259 characters): a longer one is refused
-    as too long, rather than as not there."""
+    A path in a project's Exegete folder is refused with "private_files"
+    first, the open project's included. `refused_places` pairs a reason
+    code with a folder ("project", "state_folder", "reading_folder"); a
+    path inside one is refused with that code. `longest`, on Windows
+    with long paths switched off, is the longest place Windows opens
+    (259 characters): a longer one is refused as too long, rather than
+    as not there."""
     text = clean_given(given) if isinstance(given, str) else ""
     if not text or "\x00" in text:
         raise PathRefused("missing")
@@ -226,6 +233,8 @@ def walk(given: str, refused_places: Sequence[Tuple[str, Optional[Path]]] = (),
         current = step
     if info is None:
         raise PathRefused("not_a_file")
+    if in_a_projects_exegete_folder(current):
+        raise PathRefused("private_files")
     for code, place in refused_places:
         if place is not None and is_inside(current, place):
             raise PathRefused(code)
@@ -234,6 +243,15 @@ def walk(given: str, refused_places: Sequence[Tuple[str, Optional[Path]]] = (),
     if stat.S_ISREG(info.st_mode):
         return Walked(current, False, real_place)
     raise PathRefused("not_a_file")
+
+
+def in_a_projects_exegete_folder(path: Path) -> bool:
+    """Whether a step named as a project's Exegete folder comes right
+    after a step ending in `.qda`: the folder itself or anything inside
+    it, whichever project it belongs to."""
+    parts = path.parts
+    return any(is_folder_name(parts[i]) and is_project_folder_name(
+        parts[i - 1]) for i in range(1, len(parts)))
 
 
 @dataclass

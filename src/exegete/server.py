@@ -21480,8 +21480,9 @@ del _old_name, _new_name, _renamed
 # surface (backward compatible). Required for local models, optional
 # elsewhere. Resources and prompts are unaffected.
 #
-# Since 0.15.0 `full` is every tool, `create_project` (Experimental)
-# included, registered at import like the others. From 0.14.0 to 0.14.3
+# Since 0.15.0 `full` is every tool, `create_project` included
+# (Experimental until 0.15.0, when the acceptance run inside QualCoder
+# passed), registered at import like the others. From 0.14.0 to 0.14.3
 # creating a project was added at start-up by a third set, `lifecycle`,
 # the desktop extension's default; that name is now read as `full`
 # (names.OLD_TOOLSET_NAMES) until v1.0, and the start-up log says so once.

@@ -51,10 +51,9 @@ reports against what you said.
 
 - Exegete installed in your assistant (the one-click extension for
   Claude Desktop, or [INSTALL.md](INSTALL.md))
-- A project: a new one the assistant creates (Experimental; in the
-  default tool set, `full`, on every route), or a copy of one you have,
-  in the workspace: say "Copy my
-  project 'Interview Study' to the workspace"
+- A project: a new one the assistant creates (in the default tool set,
+  `full`, on every route), or a copy of one you have, in the workspace:
+  say "Copy my project 'Interview Study' to the workspace"
   (`copy_project_to_workspace`), then open the copy with `select_project`
 - **If you also use QualCoder**, the project closed there before any
   write. Writes are refused while the project's lock file is active

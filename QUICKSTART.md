@@ -35,7 +35,7 @@ is the easier start.
       "Assistants that open files by themselves")
 - [ ] A project to work on (a `.qda` folder, in QualCoder's format),
       or none: the default tool set, `full`, can create one in the
-      conversation (Experimental; INSTALL.md says where it goes)
+      conversation (INSTALL.md says where it goes)
 
 > Choosing between Claude plans, an API key, or a fully local model?
 > See "Choosing your AI host: data-governance options" in INSTALL.md
@@ -129,7 +129,7 @@ Replace:
 
 **No project yet?** Leave out the `EXEGETE_PROJECT_PATH` line, as
 below: Exegete then starts with no project selected, and in step 5 you
-can ask the assistant to create one (Experimental).
+can ask the assistant to create one.
 
 ```json
 {

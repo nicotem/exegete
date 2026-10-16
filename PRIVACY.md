@@ -1153,8 +1153,11 @@ non-regenerable prompt library and chat history safe in every backup,
 and avoids multiplying plaintext copies of your sources across backup
 folders. A restored or copied project without `search.sqlite` is
 normal: QualCoder rebuilds it on project open. A restore keeps the
-project's `Exegete` folder as it is, with the files you fill in; the
-backup's copy of that folder stays in the backup.
+project's `Exegete` folder as it is, with every file in it, those whose
+names backups leave out included: it leaves the folder where it is. The
+backup's copy of that folder stays in the backup; when the project has
+no such folder, a restore does not bring the backup's back, and you can
+copy it into the project yourself.
 
 The project database is the one file not copied as a file (since
 0.14): `data.qda` is copied with SQLite's own online backup, from a
@@ -1961,7 +1964,8 @@ will ask, and the summary above depends on them:
     the project (Exegete's, and QualCoder's if you use it).
     Exegete writes it only when asked, in QualCoder's own format,
     and removes or replaces it only by a restore: `restore_backup` rolls
-    the whole folder back, this file with it, so restoring a backup taken
+    the project back (all but its `Exegete` folder, which a restore
+    keeps), this file with it, so restoring a backup taken
     before a save takes the file out of the project, and restoring one
     that holds another version puts that one back. The restore result
     says so when the file appears, disappears or changes, and the one

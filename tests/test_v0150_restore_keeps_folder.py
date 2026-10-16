@@ -2,18 +2,21 @@
 """v0.15.0, the files Exegete keeps (the files design, piece 2): a
 restore keeps the project's Exegete folder as it is.
 
-Pinned here, each shown to fail with its part reverted: `stamp`, which
-describes the folder's top level for the restore and stays in memory;
-the restore leaves the backup's entry of the folder's name out and
-copies the project's own back from the safety backup, a folder with its
-links copied as links and a file as a file; a file saved into the folder
-after the safety backup is taken refuses the restore as a change; a
-failure while the folder is copied back recovers the whole project from
-the safety backup; the note, `exegete_folder_note`, in the preview and
-in the answer, word for word by case; a link at the folder's own name is
-not the folder; a backup's folder named `exegete`; nothing in the folder
-named or quoted in an answer or a log line; and the texts (the
-description, TOOLS, PRIVACY, the CHANGELOG, the module's own words).
+Pinned here, each shown to fail with its part reverted: the restore
+removes everything in the project but its Exegete folder, which stays
+where it is, never read or copied, and copies the backup in around it,
+leaving out the backup's entry of the folder's name; so every file in
+the folder is kept, whatever its name (those every backup leaves out
+included) and however late it was saved, its links and extended
+attributes with it; the recovery from the safety backup leaves the
+folder in place too, and its answers say so; an entry of the backup
+that would land in the folder kept raises rather than mixing into it;
+the note, `exegete_folder_note`, in the preview and in the answer, word
+for word by case, with a sentence on QualCoder's own backups; a link at
+the folder's own name is kept as a link and is not the folder; a
+backup's folder named `exegete`; nothing in the folder named or quoted
+in an answer or a log line; and the texts (the description, TOOLS,
+PRIVACY, the CHANGELOG, the module's own words).
 """
 
 import io
@@ -54,6 +57,12 @@ ONLY_IN_BACKUP = (
     "a restore never brings those files back. The backup's copy stays in "
     "the backup, and the researcher can copy it into the project folder "
     "themselves.")
+QUALCODER_PRUNES = (
+    " QualCoder removes its own backups beyond the number its settings keep "
+    "when it closes the project, so this copy may not stay: the researcher "
+    "may want to copy what they need from it soon.")
+RECOVERED = ("Restore failed, but the project was recovered from the "
+             "safety backup; nothing was lost.")
 
 
 def _flat(text):
@@ -152,138 +161,6 @@ def _fill(top: Path, files: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# stamp: the folder's top level, for the restore, in memory only
-# ---------------------------------------------------------------------------
-
-class TestStamp:
-
-    @pytest.fixture
-    def project(self, tmp_path):
-        folder = tmp_path / "My studies" / "Study one.qda"
-        folder.mkdir(parents=True)
-        return folder
-
-    def test_nothing_at_the_folders_place(self, project):
-        assert private_files.stamp(project) is None
-        assert not os.path.lexists(project / "Exegete")
-
-    def test_each_top_level_entry_by_lstat_sorted_by_name(self, project):
-        top = project / "Exegete"
-        _fill(top, {"b names.txt": "two", "a consent.txt": "one",
-                    "inner/deeper.txt": "not listed"})
-        stamped = private_files.stamp(project)
-        assert isinstance(stamped, tuple)
-        assert [entry[0] for entry in stamped] == [
-            "a consent.txt", "b names.txt", "inner"]
-        for name, kind, size, mtime_ns in stamped:
-            info = os.lstat(top / name)
-            assert (size, mtime_ns) == (info.st_size, info.st_mtime_ns)
-            assert kind == ("folder" if name == "inner" else "file")
-        assert private_files.stamp(project) == stamped
-
-    def test_each_entry_is_read_by_lstat_itself(self, project, monkeypatch):
-        """Each entry by its own `lstat`, never the copy a folder's listing
-        keeps: Windows refreshes that copy lazily, so a folder just
-        written to read one way before a backup read it and another way
-        after (CI, Windows, the first push of this piece). Here `lstat`
-        gives each entry a date of its own, which the stamp must carry."""
-        from types import SimpleNamespace
-        top = project / "Exegete"
-        _fill(top, {"a.txt": "one", "inner/deeper.txt": "two"})
-        real = os.lstat
-        inside = {os.path.normcase(str(top / name)) for name in
-                  ("a.txt", "inner")}
-
-        def own_dates(path, *args, **kwargs):
-            info = real(path, *args, **kwargs)
-            if os.path.normcase(os.fspath(path)) not in inside:
-                return info
-            return SimpleNamespace(st_mode=info.st_mode,
-                                   st_size=info.st_size,
-                                   st_mtime_ns=4242)
-        monkeypatch.setattr(private_files.os, "lstat", own_dates)
-        stamped = private_files.stamp(project)
-        monkeypatch.undo()
-        assert [(e[0], e[3]) for e in stamped] == [("a.txt", 4242),
-                                                   ("inner", 4242)]
-
-    def test_reading_the_folder_does_not_change_it(self, project, tmp_path):
-        """A backup reads the folder between the two stamps a restore
-        compares; reading must not count as a change."""
-        top = project / "Exegete"
-        _fill(top, {"a.txt": "one"})
-        _fill(top, {"inner/deeper.txt": "two", "inner/more.txt": "three"})
-        before = private_files.stamp(project)
-        shutil.copytree(top, tmp_path / "a copy")
-        assert private_files.stamp(project) == before
-
-    def test_a_link_is_described_never_followed(self, project, tmp_path):
-        top = project / "Exegete"
-        top.mkdir()
-        elsewhere = tmp_path / "elsewhere"
-        elsewhere.mkdir()
-        if not _symlink(top / "a link", elsewhere, folder=True):
-            pytest.skip("this system makes no symbolic link here")
-        (top / "a file.txt").write_text("x", encoding="utf-8")
-        stamped = dict((e[0], e[1:]) for e in private_files.stamp(project))
-        assert stamped["a link"][0] == "link"
-        assert stamped["a file.txt"][0] == "file"
-        before = private_files.stamp(project)
-        (elsewhere / "new.txt").write_text("y", encoding="utf-8")
-        assert private_files.stamp(project) == before
-
-    def test_any_change_at_the_top_changes_it(self, project):
-        top = project / "Exegete"
-        _fill(top, {"names.txt": "Alice"})
-        before = private_files.stamp(project)
-        (top / "names.txt").write_text("Alice and Bob", encoding="utf-8")
-        assert private_files.stamp(project) != before
-        before = private_files.stamp(project)
-        (top / "another.txt").write_text("", encoding="utf-8")
-        assert private_files.stamp(project) != before
-        before = private_files.stamp(project)
-        (top / "another.txt").unlink()
-        assert private_files.stamp(project) != before
-
-    def test_at_most_one_entry_past_the_listing(self, project, monkeypatch):
-        monkeypatch.setattr(private_files, "MAX_LISTED", 3)
-        _fill(project / "Exegete",
-              {f"file {n}.txt": str(n) for n in range(7)})
-        assert len(private_files.stamp(project)) == 4
-
-    def test_a_folder_that_cannot_be_listed(self, project, monkeypatch):
-        (project / "Exegete").mkdir()
-
-        def refused(*args, **kwargs):
-            raise PermissionError(13, "Permission denied")
-        monkeypatch.setattr(private_files.os, "scandir", refused)
-        assert private_files.stamp(project) == "unreadable"
-
-    def test_it_never_raises(self, project, monkeypatch):
-        (project / "Exegete").mkdir()
-
-        def broken(*args, **kwargs):
-            raise RuntimeError("anything at all")
-        monkeypatch.setattr(private_files.reading_folder, "is_link", broken)
-        assert private_files.stamp(project) == "unreadable"
-
-    def test_something_else_at_the_name_is_described_by_itself(
-            self, project, tmp_path):
-        (project / "Exegete").write_text("a file of the researcher's",
-                                         encoding="utf-8")
-        stamped = private_files.stamp(project)
-        info = os.lstat(project / "Exegete")
-        assert stamped == (("", "file", info.st_size, info.st_mtime_ns),)
-        (project / "Exegete").unlink()
-        elsewhere = tmp_path / "elsewhere"
-        _fill(elsewhere, {"inside.txt": "x"})
-        if not _symlink(project / "Exegete", elsewhere, folder=True):
-            pytest.skip("this system makes no symbolic link here")
-        stamped = private_files.stamp(project)
-        assert len(stamped) == 1 and stamped[0][:2] == ("", "link")
-
-
-# ---------------------------------------------------------------------------
 # The four cases: both, the project only, the backup only, neither
 # ---------------------------------------------------------------------------
 
@@ -348,9 +225,10 @@ class TestTheFourCases:
         assert "exegete_folder_note" not in preview
         assert "exegete_folder_note" not in answer
 
-    def test_a_folder_inside_saved_just_before_is_no_change(self, selected):
+    def test_a_folder_inside_saved_just_before_is_kept(self, selected):
         """A folder inside, written to just before the restore and not read
-        since: the safety backup reads it, and the restore goes ahead."""
+        since (on Windows its date then reads one way before the safety
+        backup and another after): the restore goes ahead and keeps it."""
         backup = _backup(selected)
         _fill(selected / "Exegete", {"names.txt": "kept",
                                      "sheets/one.txt": "signed",
@@ -408,103 +286,358 @@ class TestTheFourCases:
 
 
 # ---------------------------------------------------------------------------
-# A change after the safety backup, and a failure while copying back
+# Files whose names every backup leaves out: kept, at any depth
 # ---------------------------------------------------------------------------
 
-class TestAChangeAfterTheSafetyBackup:
-    """A file the researcher saves into the folder after the safety
-    backup is taken would be lost: the restore is refused instead, as
-    any change between the preview and the swap is."""
+# One name for each of the patterns every backup leaves out
+# (database.BACKUP_IGNORE_PATTERNS), checked below to cover them all
+LEFT_OUT_BY_BACKUPS = ("consent.lock", "search.sqlite", "search.sqlite-wal",
+                       "tally.sqlite-shm", "tally.sqlite-wal",
+                       "tally.sqlite-journal")
 
-    def _refused(self, selected, monkeypatch, change):
+
+class TestFilesBackupsLeaveOut:
+    """A file in the folder whose name every backup leaves out is in no
+    backup, the safety backup included: copied back from it, the folder
+    lost such a file for good. Left where it is, the folder keeps it."""
+
+    def test_the_names_cover_every_pattern(self):
+        import fnmatch
+        for pattern in database.BACKUP_IGNORE_PATTERNS:
+            assert any(fnmatch.fnmatch(name, pattern)
+                       for name in LEFT_OUT_BY_BACKUPS), pattern
+
+    @pytest.mark.parametrize("name", LEFT_OUT_BY_BACKUPS)
+    def test_kept_at_the_top_and_further_down(self, selected, name):
+        _fill(selected / "Exegete", {"names.txt": "the backup's names"})
         backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "the project's names",
+                    name: f"{name} at the top",
+                    f"sub/deeper/{name}": f"{name} further down"})
+        kept = _tree(top)
+        preview, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert _tree(top) == kept
+        # in no backup: the safety backup left it out, as every backup does
+        safety = Path(answer["safety_backup"])
+        assert not os.path.lexists(safety / "Exegete" / name)
+        assert not os.path.lexists(safety / "Exegete" / "sub" / "deeper"
+                                   / name)
+        assert "After the backup" not in _codes(selected)
+        assert answer["exegete_folder_note"] == KEPT_BACKUP_TOO
+
+    def test_kept_when_the_project_is_recovered(self, selected, monkeypatch):
+        """The recovery from the safety backup leaves the folder where it
+        is too."""
+        backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {name: name for name in LEFT_OUT_BY_BACKUPS})
+        _fill(top, {f"sub/{name}": name for name in LEFT_OUT_BY_BACKUPS})
+        kept = _tree(top)
+        _fail_the_copy_of(backup, monkeypatch)
+        _, answer = _restore(backup)
+        assert answer["error"] == RECOVERED, answer
+        assert _tree(top) == kept
+        assert "After the backup" in _codes(selected)
+
+
+def _fail_the_copy_of(source: Path, monkeypatch, times: int = 1):
+    """Make the copy of `source` into the project raise `times` times."""
+    real = shutil.copytree
+    source = source.resolve()
+    failed = []
+
+    def failing(src, dst, *args, **kwargs):
+        if Path(src).resolve() == source and len(failed) < times:
+            failed.append(dst)
+            raise OSError(28, "Injected: no space left on device")
+        return real(src, dst, *args, **kwargs)
+    monkeypatch.setattr(shutil, "copytree", failing)
+    return failed
+
+
+# ---------------------------------------------------------------------------
+# The folder stays where it is: a save at any moment, its own identity
+# ---------------------------------------------------------------------------
+
+def _rewrite_one_further_down(top: Path) -> None:
+    (top / "sheets" / "one.txt").write_text("saved again, further down",
+                                            encoding="utf-8")
+
+
+def _add_one_at_the_top(top: Path) -> None:
+    (top / "saved later.txt").write_text("saved later", encoding="utf-8")
+
+
+def _rewrite_every_one(top: Path) -> None:
+    for n in range(8):
+        (top / f"file {n}.txt").write_text(f"saved again {n}",
+                                           encoding="utf-8")
+
+
+class TestTheFolderStaysInPlace:
+
+    @pytest.mark.parametrize("save", [_add_one_at_the_top,
+                                      _rewrite_one_further_down,
+                                      _rewrite_every_one],
+                             ids=["at the top", "further down",
+                                  "past what a listing shows"])
+    def test_a_file_saved_after_the_safety_backup_is_kept(
+            self, selected, monkeypatch, tmp_path, save):
+        """The folder is never copied back, so a save made while the
+        restore runs is kept, wherever it is in the folder; the restore
+        is not refused for it."""
+        backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {"sheets/one.txt": "signed"})
+        _fill(top, {f"file {n}.txt": str(n) for n in range(8)})
+        # what the folder holds once the save is made, built in a copy
+        expected = tmp_path / "expected"
+        shutil.copytree(top, expected)
+        save(expected)
+        expected = _tree(expected)
+        monkeypatch.setattr(private_files, "MAX_LISTED", 3)
         real = server.backup_project
-        taken = []
 
         def backup_then_save(project_path, **kwargs):
             out = real(project_path, **kwargs)
-            taken.append(out)
-            change(selected / "Exegete")
+            save(top)
             return out
         monkeypatch.setattr(server, "backup_project", backup_then_save)
-        preview = json.loads(server.restore_backup(str(backup)))
-        answer = json.loads(server.restore_backup(
-            str(backup), preview_token=preview["preview_token"]))
-        assert answer["reason"] == "project_changed", answer
-        assert answer["nothing_changed"] is True
-        assert "A backup had already been taken before the change was " \
-               "detected" in answer["error"]
-        safety = Path(answer["safety_backup"])
-        assert safety.is_dir() and taken
-        # nothing changed: the project as it was, the change included
-        assert "After the backup" in _codes(selected)
-        assert (selected / "after the backup.txt").exists()
-        return safety
+        _, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert _tree(top) == expected
+        assert "After the backup" not in _codes(selected)
 
-    def test_a_new_file(self, selected, monkeypatch):
-        _fill(selected / "Exegete", {"names.txt": "Alice"})
-
-        def save(top):
-            (top / "saved later.txt").write_text("Bob", encoding="utf-8")
-        safety = self._refused(selected, monkeypatch, save)
-        assert (selected / "Exegete" / "saved later.txt").read_text(
-            encoding="utf-8") == "Bob"
-        assert not (safety / "Exegete" / "saved later.txt").exists()
-
-    def test_a_file_saved_again(self, selected, monkeypatch):
-        _fill(selected / "Exegete", {"names.txt": "Alice"})
-
-        def save(top):
-            (top / "names.txt").write_text("Alice, Bob and Carol",
-                                           encoding="utf-8")
-        self._refused(selected, monkeypatch, save)
-        assert (selected / "Exegete" / "names.txt").read_text(
-            encoding="utf-8") == "Alice, Bob and Carol"
-
-    def test_a_folder_made_after(self, selected, monkeypatch):
-        def save(top):
-            _fill(top, {"names.txt": "Alice"})
-        self._refused(selected, monkeypatch, save)
-        assert (selected / "Exegete" / "names.txt").exists()
-
-
-class TestAFailureWhileCopyingBack:
-
-    def test_the_whole_project_is_recovered_its_folder_included(
+    def test_a_file_saved_while_the_backup_is_copied_in_is_kept(
             self, selected, monkeypatch):
+        backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "kept"})
+        real = shutil.copytree
+        source = backup.resolve()
+
+        def save_then_copy(src, dst, *args, **kwargs):
+            if Path(src).resolve() == source:
+                (top / "saved meanwhile.txt").write_text(
+                    "meanwhile", encoding="utf-8")
+            return real(src, dst, *args, **kwargs)
+        monkeypatch.setattr(shutil, "copytree", save_then_copy)
+        _, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert _tree(top) == {"names.txt": ("file", b"kept"),
+                              "saved meanwhile.txt": ("file", b"meanwhile")}
+
+    def test_nothing_comes_from_the_safety_backups_copy(self, selected,
+                                                        monkeypatch):
+        backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "kept"})
+        real = server.backup_project
+
+        def backup_then_plant(project_path, **kwargs):
+            out = real(project_path, **kwargs)
+            _fill(out / "Exegete", {"only in the safety backup.txt": "x"})
+            return out
+        monkeypatch.setattr(server, "backup_project", backup_then_plant)
+        _, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert _tree(top) == {"names.txt": ("file", b"kept")}
+        assert (Path(answer["safety_backup"]) / "Exegete"
+                / "only in the safety backup.txt").is_file()
+
+    def test_the_folder_and_its_files_are_the_same_on_disk(self, selected):
+        backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "kept", "sheets/one.txt": "signed"})
+        before = {rel: os.lstat(top / rel).st_ino
+                  for rel in ("", "names.txt", "sheets", "sheets/one.txt")}
+        _, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert {rel: os.lstat(top / rel).st_ino for rel in before} == before
+
+    def test_extended_attributes_are_kept(self, selected):
+        """Finder tags and comments on a Mac are extended attributes; a
+        copy made by Python on a Mac leaves them behind."""
+        backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "kept"})
+        name = "org.exegete.test" if sys.platform == "darwin" else \
+            "user.exegete_test"
+        if not _set_attribute(top / "names.txt", name, "kept too"):
+            pytest.skip("this disk keeps no extended attribute here")
+        _, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert _get_attribute(top / "names.txt", name) == "kept too"
+
+
+
+def _darwin_libc():
+    import ctypes
+    import ctypes.util
+    libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
+    libc.setxattr.argtypes = [ctypes.c_char_p, ctypes.c_char_p,
+                              ctypes.c_char_p, ctypes.c_size_t,
+                              ctypes.c_uint32, ctypes.c_int]
+    libc.getxattr.argtypes = [ctypes.c_char_p, ctypes.c_char_p,
+                              ctypes.c_char_p, ctypes.c_size_t,
+                              ctypes.c_uint32, ctypes.c_int]
+    libc.getxattr.restype = ctypes.c_ssize_t
+    return libc
+
+
+def _set_attribute(path: Path, name: str, value: str) -> bool:
+    """An extended attribute set on a file; False where the system or
+    the disk keeps none."""
+    data = value.encode("utf-8")
+    try:
+        if hasattr(os, "setxattr"):
+            os.setxattr(path, name, data)
+            return True
+        if sys.platform == "darwin":
+            return _darwin_libc().setxattr(
+                os.fsencode(path), name.encode(), data, len(data), 0, 0) == 0
+    except OSError:
+        return False
+    return False
+
+
+def _get_attribute(path: Path, name: str):
+    if hasattr(os, "getxattr"):
+        try:
+            return os.getxattr(path, name).decode("utf-8")
+        except OSError:
+            return None
+    import ctypes
+    buffer = ctypes.create_string_buffer(256)
+    size = _darwin_libc().getxattr(os.fsencode(path), name.encode(), buffer,
+                                   256, 0, 0)
+    return buffer.raw[:size].decode("utf-8") if size >= 0 else None
+
+
+# ---------------------------------------------------------------------------
+# A failure in the swap: the recovery leaves the folder in place too
+# ---------------------------------------------------------------------------
+
+def _before(project: Path) -> dict:
+    return {rel: value for rel, value in _tree(project).items()
+            if not rel.startswith("data.qda")}
+
+
+class TestAFailureInTheSwap:
+
+    def test_a_failure_while_the_backup_is_copied_in(self, selected,
+                                                     monkeypatch):
         _fill(selected / "Exegete", {"names.txt": "the backup's names"})
         backup = _backup(selected)
         _fill(selected / "Exegete", {"names.txt": "the project's names",
                                      "consent/sheet.txt": "signed"})
-        before = {rel: value for rel, value in _tree(selected).items()
-                  if not rel.startswith("data.qda")}
-        codes = _codes(selected)
-        project = selected.resolve()
-        real_copytree = shutil.copytree
-        calls = []
-
-        def failing(src, dst, *args, **kwargs):
-            # the first copy into the project's Exegete folder is the
-            # copy back; the recovery's own copy, later, goes through
-            if (not calls and Path(dst).parent.resolve() == project
-                    and Path(dst).name == "Exegete"):
-                calls.append(dst)
-                raise OSError(28, "Injected: no space left on device")
-            return real_copytree(src, dst, *args, **kwargs)
-        monkeypatch.setattr(shutil, "copytree", failing)
-        preview = json.loads(server.restore_backup(str(backup)))
-        answer = json.loads(server.restore_backup(
-            str(backup), preview_token=preview["preview_token"]))
-        assert calls, "the folder was never copied back"
-        assert answer["error"] == ("Restore failed, but the project was "
-                                   "recovered from the safety backup; "
-                                   "nothing was lost."), answer
+        before, codes = _before(selected), _codes(selected)
+        failed = _fail_the_copy_of(backup, monkeypatch)
+        _, answer = _restore(backup)
+        assert failed, "the backup was never copied in"
+        assert answer["error"] == RECOVERED, answer
         assert Path(answer["safety_backup"]).is_dir()
-        after = {rel: value for rel, value in _tree(selected).items()
-                 if not rel.startswith("data.qda")}
-        assert after == before
+        assert _before(selected) == before
         assert _codes(selected) == codes
         assert "exegete_folder_note" not in answer
+
+    def test_a_failure_while_the_project_is_cleared(self, selected,
+                                                    monkeypatch):
+        _fill(selected / "documents", {"one.txt": "a document"})
+        backup = _backup(selected)
+        _fill(selected / "Exegete", {"names.txt": "the project's names",
+                                     "consent.lock": "kept"})
+        before, codes = _before(selected), _codes(selected)
+        real = shutil.rmtree
+        doomed = (selected / "documents").resolve()
+        refused = []
+
+        def refuse_once(path, *args, **kwargs):
+            if Path(path).resolve() == doomed and not refused:
+                refused.append(path)
+                raise PermissionError(13, "Injected: permission denied")
+            return real(path, *args, **kwargs)
+        monkeypatch.setattr(shutil, "rmtree", refuse_once)
+        _, answer = _restore(backup)
+        assert refused
+        assert answer["error"] == RECOVERED, answer
+        assert _before(selected) == before
+        assert _codes(selected) == codes
+
+    def test_a_link_the_safety_backup_skipped_is_not_lost(
+            self, selected, monkeypatch, tmp_path):
+        """A link in the folder that points out of the project is in no
+        backup; the recovery leaves the folder, the link with it, so
+        nothing was lost, and the answer says so."""
+        backup = _backup(selected)
+        outside = tmp_path / "kept elsewhere.txt"
+        outside.write_text(TEXT_TOKEN, encoding="utf-8")
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "kept"})
+        if not _symlink(top / f"{NAME_TOKEN} link", outside):
+            pytest.skip("this system makes no symbolic link here")
+        kept = _tree(top)
+        _fail_the_copy_of(backup, monkeypatch)
+        _, answer = _restore(backup)
+        assert answer["error"] == RECOVERED, answer
+        assert _tree(top) == kept
+        assert answer["safety_backup_skipped_symlinks_in_exegete_folder"] \
+            == 1
+        assert NAME_TOKEN not in json.dumps(answer)
+
+    def test_when_the_folder_went_the_safety_backups_copy_comes_back(
+            self, selected, monkeypatch, tmp_path):
+        """Should the folder be gone by the time the recovery runs, the
+        safety backup's copy is put back, and a link it skipped is said
+        to be missing."""
+        backup = _backup(selected)
+        outside = tmp_path / "kept elsewhere.txt"
+        outside.write_text(TEXT_TOKEN, encoding="utf-8")
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "kept"})
+        if not _symlink(top / f"{NAME_TOKEN} link", outside):
+            pytest.skip("this system makes no symbolic link here")
+        real = shutil.copytree
+        source = backup.resolve()
+
+        def remove_the_folder_then_fail(src, dst, *args, **kwargs):
+            if Path(src).resolve() == source:
+                shutil.rmtree(top)
+                raise OSError(28, "Injected: no space left on device")
+            return real(src, dst, *args, **kwargs)
+        monkeypatch.setattr(shutil, "copytree", remove_the_folder_then_fail)
+        _, answer = _restore(backup)
+        assert ("That backup skipped the symlinks counted in "
+                "safety_backup_skipped_symlinks_in_exegete_folder, so the "
+                "recovered project no longer contains those link entries"
+                ) in answer["error"], answer
+        assert _tree(top) == {"names.txt": ("file", b"kept")}
+        assert NAME_TOKEN not in json.dumps(answer)
+
+    def test_when_the_recovery_fails_too(self, selected, monkeypatch):
+        backup = _backup(selected)
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "kept", "consent.lock": "kept too"})
+        kept = _tree(top)
+        real = shutil.copytree
+        project = selected.resolve()
+
+        def no_copy_into_the_project(src, dst, *args, **kwargs):
+            if Path(dst).resolve() == project:
+                raise OSError(28, "Injected: no space left on device")
+            return real(src, dst, *args, **kwargs)
+        monkeypatch.setattr(shutil, "copytree", no_copy_into_the_project)
+        _, answer = _restore(backup)
+        assert answer["error"] == (
+            "Restore failed. The pre-restore state is preserved in the "
+            "safety backup; copy it back over the project folder to "
+            "recover. The project's Exegete folder is still in the project "
+            "folder as it was, and the safety backup's copy of it can lack "
+            "files a backup leaves out: keeping the project's own when "
+            "copying the safety backup back is safer."), answer
+        assert _tree(top) == kept
 
 
 # ---------------------------------------------------------------------------
@@ -513,8 +646,8 @@ class TestAFailureWhileCopyingBack:
 
 class TestLinks:
 
-    def test_a_link_inside_pointing_outside_stays_left_out(
-            self, selected, tmp_path):
+    def test_a_link_inside_pointing_outside_is_kept(self, selected,
+                                                    tmp_path):
         _fill(selected / "Exegete", {"names.txt": "the backup's"})
         backup = _backup(selected)
         _fill(selected / "Exegete", {"names.txt": "kept"})
@@ -523,58 +656,34 @@ class TestLinks:
         top = selected / "Exegete"
         if not _symlink(top / f"{NAME_TOKEN} link", outside):
             pytest.skip("this system makes no symbolic link here")
+        kept = _tree(top)
         _, answer = _restore(backup)
         assert answer.get("success") is True, answer
-        # the safety backup skipped it, so the folder comes back without
-        # it; what it pointed to is untouched and was never copied
-        assert not os.path.lexists(top / f"{NAME_TOKEN} link")
-        assert _tree(top) == {"names.txt": ("file", b"kept")}
+        # the folder is left where it is: the link stays, never followed;
+        # the safety backup skipped it, and the answer counts that
+        assert _tree(top) == kept
         assert outside.read_text(encoding="utf-8") == TEXT_TOKEN
         assert answer["safety_backup_skipped_symlinks_in_exegete_folder"] \
             == 1
         assert NAME_TOKEN not in json.dumps(answer)
 
-    def test_a_link_inside_pointing_inside_comes_back_as_kept(
-            self, selected):
-        backup = _backup(selected)
+    def test_a_link_inside_pointing_inside_is_kept_as_a_link(self,
+                                                             selected):
         (selected / "a sheet.txt").write_text("in the project",
                                               encoding="utf-8")
+        backup = _backup(selected)
         top = selected / "Exegete"
         top.mkdir()
         if not _symlink(top / "sheet link", selected / "a sheet.txt"):
             pytest.skip("this system makes no symbolic link here")
+        kept = _tree(top)
         _, answer = _restore(backup)
         assert answer.get("success") is True, answer
-        # as the safety backup kept it: the file it pointed to, copied
-        assert _tree(top) == {"sheet link": ("file", b"in the project")}
+        assert _tree(top) == kept
+        assert os.path.islink(top / "sheet link")
 
-    def test_a_link_the_safety_backup_kept_is_copied_as_a_link(
-            self, selected, tmp_path, monkeypatch):
-        backup = _backup(selected)
-        _fill(selected / "Exegete", {"names.txt": "kept"})
-        outside = tmp_path / "kept elsewhere.txt"
-        outside.write_text(TEXT_TOKEN, encoding="utf-8")
-        real = server.backup_project
-        made = []
-
-        def backup_keeping_a_link(project_path, **kwargs):
-            out = real(project_path, **kwargs)
-            made.append(_symlink(out / "Exegete" / "kept link", outside))
-            return out
-        monkeypatch.setattr(server, "backup_project", backup_keeping_a_link)
-        preview = json.loads(server.restore_backup(str(backup)))
-        answer = json.loads(server.restore_backup(
-            str(backup), preview_token=preview["preview_token"]))
-        if not made[0]:
-            pytest.skip("this system makes no symbolic link here")
-        assert answer.get("success") is True, answer
-        kept = selected / "Exegete" / "kept link"
-        assert os.path.islink(kept), "the link was followed"
-        assert os.readlink(kept) == os.readlink(
-            Path(answer["safety_backup"]) / "Exegete" / "kept link")
-
-    def test_a_link_at_the_folders_name_is_not_the_folder(
-            self, selected, tmp_path):
+    def test_a_link_at_the_folders_name_pointing_outside(self, selected,
+                                                         tmp_path):
         _fill(selected / "Exegete", {"names.txt": "the backup's names"})
         backup = _backup(selected)
         shutil.rmtree(selected / "Exegete")
@@ -582,27 +691,85 @@ class TestLinks:
         _fill(elsewhere, {"sheet.txt": TEXT_TOKEN})
         if not _symlink(selected / "Exegete", elsewhere, folder=True):
             pytest.skip("this system makes no symbolic link here")
+        link = os.readlink(selected / "Exegete")
         preview, answer = _restore(backup)
         assert answer.get("success") is True, answer
-        # today's handling of a link: the safety backup skipped it and
-        # the answer counts it; the backup's entry is still left out
+        # not the folder, and kept as it is: the link stays, never
+        # followed; the safety backup skipped it, as it skips any link
+        # pointing out; the backup's entry is left out
+        assert os.path.islink(selected / "Exegete")
+        assert os.readlink(selected / "Exegete") == link
         assert answer["safety_backup_skipped_symlinks"] == 1
-        assert not os.path.lexists(selected / "Exegete")
         assert _tree(elsewhere) == {"sheet.txt": ("file",
                                                   TEXT_TOKEN.encode())}
         assert preview["exegete_folder_note"] == ONLY_IN_BACKUP
         assert answer["exegete_folder_note"] == ONLY_IN_BACKUP
 
+    @pytest.mark.parametrize("backup_has_one", [True, False],
+                             ids=["the backup has one", "it has none"])
+    def test_a_link_at_the_folders_name_pointing_inside(
+            self, selected, backup_has_one):
+        """The safety backup follows a link that points inside the project
+        and holds a real folder there; the restore keeps the link, so no
+        folder appears that the note does not speak of."""
+        _fill(selected / "shared notes", {"sheet.txt": "in the project"})
+        if backup_has_one:
+            _fill(selected / "Exegete", {"names.txt": "the backup's"})
+        backup = _backup(selected)
+        if backup_has_one:
+            shutil.rmtree(selected / "Exegete")
+        target = selected / "shared notes"
+        if WINDOWS:
+            _junction(selected / "Exegete", target)
+        elif not _symlink(selected / "Exegete", target, folder=True):
+            pytest.skip("this system makes no symbolic link here")
+        preview, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        from exegete import reading_folder
+        assert reading_folder.is_link(selected / "Exegete")
+        assert os.path.realpath(selected / "Exegete") == \
+            os.path.realpath(target)
+        assert _tree(target) == {"sheet.txt": ("file", b"in the project")}
+        if backup_has_one:
+            assert preview["exegete_folder_note"] == ONLY_IN_BACKUP
+            assert answer["exegete_folder_note"] == ONLY_IN_BACKUP
+        else:
+            assert "exegete_folder_note" not in preview
+            assert "exegete_folder_note" not in answer
+
+    def test_a_link_elsewhere_in_the_project_goes_never_followed(
+            self, selected, tmp_path):
+        """Everything but the folder is cleared: a link at the project's
+        top to a folder outside goes as a link, and what it points to is
+        untouched, as when the whole project folder was removed."""
+        backup = _backup(selected)
+        elsewhere = tmp_path / "media kept elsewhere"
+        _fill(elsewhere, {"clip.txt": TEXT_TOKEN})
+        if WINDOWS:
+            _junction(selected / "media", elsewhere)
+        elif not _symlink(selected / "media", elsewhere, folder=True):
+            pytest.skip("this system makes no symbolic link here")
+        _, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert not os.path.lexists(selected / "media")
+        assert _tree(elsewhere) == {"clip.txt": ("file",
+                                                 TEXT_TOKEN.encode())}
+
     @pytest.mark.skipif(not WINDOWS, reason="a junction is Windows'")
-    def test_a_junction_at_the_folders_name_is_not_the_folder(
+    def test_a_junction_at_the_folders_name_pointing_outside(
             self, selected, tmp_path):
         backup = _backup(selected)
         _fill(backup / "Exegete", {"names.txt": "the backup's names"})
         elsewhere = tmp_path / "elsewhere"
         _fill(elsewhere, {"sheet.txt": "x"})
         _junction(selected / "Exegete", elsewhere)
-        preview = json.loads(server.restore_backup(str(backup)))
+        preview, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        from exegete import reading_folder
+        assert reading_folder.is_link(selected / "Exegete")
+        assert _tree(elsewhere) == {"sheet.txt": ("file", b"x")}
         assert preview["exegete_folder_note"] == ONLY_IN_BACKUP
+        assert answer["exegete_folder_note"] == ONLY_IN_BACKUP
 
 
 class TestTheNameInLowerCase:
@@ -644,6 +811,88 @@ class TestTheNameInLowerCase:
         assert answer["exegete_folder_note"] == KEPT_BACKUP_TOO
 
 
+
+    def test_an_entry_that_would_land_in_the_folder_kept_is_refused(
+            self, selected, monkeypatch, tmp_path):
+        """On a disk that ignores letter case where Exegete compares names
+        exactly (Linux on such a disk), the backup's `exegete` is the
+        project's `Exegete`: copied in, it would mix the backup's files
+        into the folder kept. The swap raises instead, and the recovery
+        puts the project back as it was."""
+        probe = tmp_path / "Case probe"
+        probe.mkdir()
+        if not os.path.exists(tmp_path / "case PROBE"):
+            pytest.skip("this disk tells letter case apart")
+        monkeypatch.setattr(private_files, "is_folder_name",
+                            lambda name, platform=None: name == "Exegete")
+        backup = _backup(selected)
+        _fill(backup / "exegete", {"names.txt": "the backup's names"})
+        top = selected / "Exegete"
+        _fill(top, {"names.txt": "the project's names"})
+        kept = _tree(top)
+        _, answer = _restore(backup)
+        assert answer["error"] == RECOVERED, answer
+        assert [name for name in os.listdir(selected)
+                if name.casefold() == "exegete"] == ["Exegete"]
+        assert _tree(top) == kept
+        assert "After the backup" in _codes(selected)
+
+
+# ---------------------------------------------------------------------------
+# A backup QualCoder made, which QualCoder itself may remove
+# ---------------------------------------------------------------------------
+
+def _qualcoder_backup(project: Path) -> Path:
+    """A backup named as QualCoder names its own, then the change."""
+    made = database.backup_project(project)
+    backup = made.with_name(f"{project.stem}_BKUP_20261016_120000.qda")
+    made.rename(backup)
+    answer = json.loads(server.create_code(name="After the backup",
+                                           create_backup=False))
+    assert "error" not in answer, answer
+    return backup
+
+
+class TestAQualCoderBackup:
+
+    def test_both_have_one(self, selected):
+        _fill(selected / "Exegete", {"names.txt": "the backup's names"})
+        backup = _qualcoder_backup(selected)
+        preview, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert preview["exegete_folder_note"] == \
+            KEPT_BACKUP_TOO + QUALCODER_PRUNES
+        assert answer["exegete_folder_note"] == \
+            KEPT_BACKUP_TOO + QUALCODER_PRUNES
+
+    def test_only_the_backup_has_one(self, selected):
+        _fill(selected / "Exegete", {"names.txt": "the backup's names"})
+        backup = _qualcoder_backup(selected)
+        shutil.rmtree(selected / "Exegete")
+        preview, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert not os.path.lexists(selected / "Exegete")
+        assert preview["exegete_folder_note"] == \
+            ONLY_IN_BACKUP + QUALCODER_PRUNES
+        assert answer["exegete_folder_note"] == \
+            ONLY_IN_BACKUP + QUALCODER_PRUNES
+
+    def test_the_project_only_has_one(self, selected):
+        backup = _qualcoder_backup(selected)
+        _fill(selected / "Exegete", {"names.txt": "the project's names"})
+        preview, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert preview["exegete_folder_note"] == KEPT
+        assert answer["exegete_folder_note"] == KEPT
+
+    def test_neither_has_one(self, selected):
+        backup = _qualcoder_backup(selected)
+        preview, answer = _restore(backup)
+        assert answer.get("success") is True, answer
+        assert "exegete_folder_note" not in preview
+        assert "exegete_folder_note" not in answer
+
+
 # ---------------------------------------------------------------------------
 # Nothing in the folder named or quoted; the texts
 # ---------------------------------------------------------------------------
@@ -673,6 +922,22 @@ class TestNothingLeaks:
             json.dumps(preview), json.dumps(answer), caplog.text,
             "\n".join(r.getMessage() for r in caplog.records),
             printed.err, printed.out, stream.getvalue()])
+        assert NAME_TOKEN not in everything
+        assert TEXT_TOKEN not in everything
+
+    def test_nor_when_the_project_is_recovered(self, selected, caplog,
+                                               capsys, monkeypatch):
+        caplog.set_level(logging.DEBUG)
+        _fill(selected / "Exegete",
+              {f"{NAME_TOKEN}.lock": f"{TEXT_TOKEN} kept"})
+        backup = _backup(selected)
+        _fail_the_copy_of(backup, monkeypatch)
+        preview, answer = _restore(backup)
+        assert answer["error"] == RECOVERED, answer
+        printed = capsys.readouterr()
+        everything = "\n".join([
+            json.dumps(preview), json.dumps(answer), caplog.text,
+            printed.err, printed.out])
         assert NAME_TOKEN not in everything
         assert TEXT_TOKEN not in everything
 
@@ -730,6 +995,12 @@ class TestTheTexts:
         assert ("The project's `Exegete` folder (files the researcher fills "
                 "in) is kept as it is, never taken from the backup; the "
                 "preview says when either has one") in entry
+        assert ("`list_backups` + `restore_backup` roll the whole project "
+                "back to a snapshot, all but its `Exegete` folder, which a "
+                "restore keeps.") in tools
+        assert ("`restore_backup` rolls the whole project back (all but its "
+                "`Exegete` folder, which a restore keeps): its preview does "
+                "not count codings by owner") in tools
 
     def test_privacy(self):
         privacy = _read("PRIVACY.md")
@@ -747,22 +1018,42 @@ class TestTheTexts:
         backups = backups[:backups.index(" ## ")]
         assert ("A restored or copied project without `search.sqlite` is "
                 "normal: QualCoder rebuilds it on project open. A restore "
-                "keeps the project's `Exegete` folder as it is, with the "
-                "files you fill in; the backup's copy of that folder stays "
-                "in the backup.") in backups
+                "keeps the project's `Exegete` folder as it is, with every "
+                "file in it, those whose names backups leave out included: "
+                "it leaves the folder where it is. The backup's copy of that "
+                "folder stays in the backup; when the project has no such "
+                "folder, a restore does not bring the backup's back, and you "
+                "can copy it into the project yourself.") in backups
+        # the passage on pseudonyms.json no longer says the whole folder
+        assert "rolls the whole folder back" not in _flat(privacy)
+        assert ("`restore_backup` rolls the project back (all but its "
+                "`Exegete` folder, which a restore keeps), this file with "
+                "it") in _flat(privacy)
 
     def test_the_changelog(self):
         changelog = _flat(_read("CHANGELOG.md"))
         entry = changelog[changelog.index(
             "### Added: the files Exegete keeps for a project"):]
         entry = entry[:entry.index(" ### ", 4)]
-        assert "a restore keeps the project's `Exegete` folder as it is" \
-            in entry
+        assert ("(`skipped_symlinks_in_exegete_folder`), never named. A "
+                "restore keeps the project's `Exegete` folder as it is, with "
+                "every file in it: it leaves the folder where it is, never "
+                "takes the backup's copy, which stays in the backup, and "
+                "`restore_backup`'s preview and answer say so "
+                "(`exegete_folder_note`) when the project or the backup has "
+                "one.") in entry
+        upgrading = changelog[changelog.index(
+            "**A folder already named `Exegete` inside a project.**"):]
+        upgrading = upgrading[:upgrading.index(" - **")]
+        assert ("the assistant is asked never to open them, and a restore "
+                "keeps it as it is rather than taking the backup's copy."
+                ) in upgrading
 
     def test_the_modules_own_words(self):
         words = _flat(private_files.__doc__)
         assert "a restore replaces the folder" not in words
         assert ("never deleted by Exegete of its own accord (a restore "
-                "keeps the folder as it is, never taking the backup's "
-                "copy)") in words
-        assert "stays in memory" in _flat(private_files.stamp.__doc__)
+                "leaves the folder where it is, as it is, never taking the "
+                "backup's copy)") in words
+        assert "No other module writes in the project's `Exegete` folder." \
+            in words

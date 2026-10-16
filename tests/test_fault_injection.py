@@ -1062,7 +1062,9 @@ def _partial_copytree_patch(monkeypatch, env: Env, unrecoverable: bool = False):
                 raise OSError(28, "Injected: no space left on device")
             return real_copytree(src, dst, *args, **kwargs)
         if dst_p == env.folder and src_p == env.backup_folder:
-            dst_p.mkdir()
+            # the project folder itself stays since v0.15.0 (a restore
+            # clears it around its Exegete folder), so it may be there
+            dst_p.mkdir(exist_ok=True)
             shutil.copy2(src_p / "data.qda", dst_p / "data.qda")
             raise OSError(28, "Injected: no space left on device (mid-copy)")
         return real_copytree(src, dst, *args, **kwargs)

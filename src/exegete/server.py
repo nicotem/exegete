@@ -12340,6 +12340,22 @@ EXEGETE_FOLDER_ONLY_IN_BACKUP_NOTE = (
     "a restore never brings those files back. The backup's copy stays in "
     "the backup, and the researcher can copy it into the project folder "
     "themselves.")
+# Said when a restore fails and its recovery fails too, while the project
+# still has its Exegete folder, which neither removed
+EXEGETE_FOLDER_LEFT_AFTER_FAILURE = (
+    "The project's Exegete folder is still in the project folder as it "
+    "was, and the safety backup's copy of it can lack files a backup "
+    "leaves out: keeping the project's own when copying the safety backup "
+    "back is safer.")
+# Said after either sentence on the backup's copy when the backup is one
+# of QualCoder's own (`_BKUP_`, a file QualCoder leaves beside a project):
+# QualCoder removes its own backups past its `backup_num` setting when it
+# closes a project (4.0 `__main__.py` 3005 and 3018 to 3063, `app.py`
+# 1365; 3.8.2 `__main__.py` 3180 and 3194), so that copy may not stay
+EXEGETE_FOLDER_QUALCODER_BACKUP_NOTE = (
+    "QualCoder removes its own backups beyond the number its settings keep "
+    "when it closes the project, so this copy may not stay: the researcher "
+    "may want to copy what they need from it soon.")
 
 
 def _holds_exegete_folder(folder: Path) -> bool:
@@ -12362,55 +12378,82 @@ def _holds_exegete_folder(folder: Path) -> bool:
     return False
 
 
-def _exegete_folder_note(project_has: bool,
-                         backup_has: bool) -> Optional[str]:
+def _exegete_folder_note(project_has: bool, backup_has: bool,
+                         qualcoder_backup: bool = False) -> Optional[str]:
     """The restore's note on the project's Exegete folder; None when
-    neither the project nor the backup has one. Names no file."""
+    neither the project nor the backup has one. When the backup has one
+    and is one of QualCoder's own (`_BKUP_`), a sentence says QualCoder
+    may remove it. Names no file."""
     if project_has:
+        note = EXEGETE_FOLDER_KEPT_NOTE
         if backup_has:
-            return (f"{EXEGETE_FOLDER_KEPT_NOTE} "
-                    f"{EXEGETE_FOLDER_BACKUP_COPY_NOTE}")
-        return EXEGETE_FOLDER_KEPT_NOTE
-    if backup_has:
-        return EXEGETE_FOLDER_ONLY_IN_BACKUP_NOTE
-    return None
+            note = f"{note} {EXEGETE_FOLDER_BACKUP_COPY_NOTE}"
+    elif backup_has:
+        note = EXEGETE_FOLDER_ONLY_IN_BACKUP_NOTE
+    else:
+        return None
+    if backup_has and qualcoder_backup:
+        note = f"{note} {EXEGETE_FOLDER_QUALCODER_BACKUP_NOTE}"
+    return note
 
 
-def _leave_out_exegete_folder(backup_folder: Path):
-    """The restore's `ignore` for copying a backup over the project: the
-    backup's top-level entry whose name `private_files.is_folder_name`
-    takes, whatever it is, is left out; nothing below the top is."""
-    top = os.path.normcase(os.path.abspath(backup_folder))
+def _clear_all_but_exegete_folder(project_folder: Path) -> None:
+    """Remove every top-level entry of the project folder but the one at
+    the Exegete folder's name (each name `private_files.is_folder_name`
+    takes, whatever is there: the folder, a file, a link), which a restore
+    leaves where it is, as it is: nothing in it is read, copied or
+    removed (v0.15.0). A link or a junction is removed as a link, never
+    followed; a folder with everything in it. Raises on any failure, which
+    the restore's recovery from the safety backup answers."""
+    with os.scandir(project_folder) as entries:
+        going = [entry.path for entry in entries
+                 if not private_files.is_folder_name(entry.name)]
+    for path in going:
+        info = os.lstat(path)
+        if (stat.S_ISDIR(info.st_mode) and not stat.S_ISLNK(info.st_mode)
+                and not reading_folder.is_link(Path(path))):
+            shutil.rmtree(path)
+        else:
+            # a file, a link or a junction (os.unlink removes a directory
+            # link or junction on Windows without touching what it points to)
+            os.unlink(path)
+
+
+def _copy_around_exegete_folder(source: Path, project_folder: Path,
+                                *, leave_out_folder: bool) -> None:
+    """Copy `source` (the backup; in the recovery, the safety backup) into
+    the project folder, around the entry `_clear_all_but_exegete_folder`
+    left at the Exegete folder's name. With `leave_out_folder`, the
+    source's top-level entry at that name (each name `is_folder_name`
+    takes) is left out, whatever it is; nothing below the top is. Any
+    other entry of the source that would land on something still in the
+    project (on a disk that ignores letter case where Exegete compares
+    names exactly) raises before anything is copied, rather than mixing
+    the source's files into the folder kept. Raises on any failure."""
+    top = os.path.normcase(os.path.abspath(source))
+
+    def leave_out(name: str) -> bool:
+        return leave_out_folder and private_files.is_folder_name(name)
+
+    for name in os.listdir(source):
+        if not leave_out(name) and os.path.lexists(project_folder / name):
+            raise FileExistsError(
+                errno.EEXIST, "An entry of the copy is already in the project")
 
     def ignore(dirpath, names):
         if os.path.normcase(os.path.abspath(dirpath)) != top:
             return set()
-        return {name for name in names
-                if private_files.is_folder_name(name)}
-    return ignore
+        return {name for name in names if leave_out(name)}
+    shutil.copytree(source, project_folder, ignore=ignore,
+                    dirs_exist_ok=True)
 
 
-def _put_back_exegete_folder(safety_backup: Path,
-                             project_folder: Path) -> None:
-    """Copy the project's own entry of the Exegete folder's name back from
-    the safety backup, under the same name, once the backup's copy has
-    put everything else in place: a folder with its links copied as
-    links, never followed (one the safety backup skipped stays skipped);
-    a file (a researcher's file named so) as a file. A link at the top of
-    the safety backup (no backup Exegete takes holds one) is left out,
-    never followed. Raises on any failure, which the restore's recovery
-    from the safety backup answers."""
-    with os.scandir(safety_backup) as entries:
-        kept = [(entry.name, entry.path, entry.stat(follow_symlinks=False))
-                for entry in entries
-                if private_files.is_folder_name(entry.name)]
-    for name, path, info in kept:
-        if stat.S_ISLNK(info.st_mode) or reading_folder.is_link(Path(path)):
-            continue
-        if stat.S_ISDIR(info.st_mode):
-            shutil.copytree(path, project_folder / name, symlinks=True)
-        elif stat.S_ISREG(info.st_mode):
-            shutil.copy2(path, project_folder / name)
+def _project_holds_exegete_entry(project_folder: Path) -> bool:
+    """Whether anything is at the Exegete folder's name at the project's
+    top (a folder, a file or a link). Raises when the project folder
+    cannot be listed."""
+    return any(private_files.is_folder_name(name)
+               for name in os.listdir(project_folder))
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
@@ -12561,7 +12604,8 @@ def restore_backup(backup_path: str,
         # state, as the signs above are
         folder_note = _exegete_folder_note(
             _holds_exegete_folder(project_folder),
-            _holds_exegete_folder(backup_folder))
+            _holds_exegete_folder(backup_folder),
+            "_BKUP_" in backup_folder.name)
         if folder_note:
             preview["exegete_folder_note"] = folder_note
         try:
@@ -12608,11 +12652,8 @@ def restore_backup(backup_path: str,
     # project had may be the only record of a pseudonymisation mapping
     # (Brief 2, merge fix M3). A fingerprint only, never the bytes.
     mapping_before = pseudonyms_json_fingerprint(project_folder)
-    # The project's Exegete folder, which the swap keeps (v0.15.0): what
-    # its top level holds, in memory only, so that a file saved there
-    # once the safety backup is taken refuses the restore rather than
-    # being lost; and whether the project has the folder, for the note.
-    exegete_before = private_files.stamp(project_folder)
+    # Whether the project has its Exegete folder, which the swap leaves
+    # where it is (v0.15.0), for the note.
     exegete_had = _holds_exegete_folder(project_folder)
 
     # Safety backup of the current state (rename to mark it as pre-restore)
@@ -12636,16 +12677,10 @@ def restore_backup(backup_path: str,
             pass
         db = None
 
-    if (_restore_fingerprint(project_folder, backup_folder) != fingerprint
-            or private_files.stamp(project_folder) != exegete_before):
+    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
         # The project (or the backup) changed between the preview and
-        # this moment, or the project's Exegete folder changed since the
-        # safety backup was taken: the swap puts back the safety
-        # backup's copy of that folder, so a file saved there now would
-        # be lost. The safety backup above stays; it is exactly the
-        # state the researcher had when it was taken. A change made
-        # between these checks and the swap below is not seen: that
-        # window is the one this check has always left.
+        # this moment. The safety backup above stays; it is exactly the
+        # state the researcher has now.
         return json.dumps({
             "error": TOKEN_ERROR_TEXTS["project_changed"].format(
                 tool="restore_backup")
@@ -12658,15 +12693,15 @@ def restore_backup(backup_path: str,
 
     try:
         with hold_project_lock(project_folder):
-            shutil.rmtree(project_folder)
-            # Everything from the backup but its entry of the Exegete
-            # folder's name, then the project's own entry back from the
-            # safety backup (v0.15.0); a failure in either goes to the
-            # recovery below, which puts back the whole project as it
-            # was, its Exegete folder included
-            shutil.copytree(backup_folder, project_folder,
-                            ignore=_leave_out_exegete_folder(backup_folder))
-            _put_back_exegete_folder(safety_backup, project_folder)
+            # Everything in the project goes but its Exegete folder, which
+            # stays where it is, as it is, never read or copied (v0.15.0):
+            # a file of any name in it, at any depth, saved at any moment,
+            # is kept. Then everything from the backup but its entry of
+            # that name. A failure in either goes to the recovery below,
+            # which leaves the folder where it is too.
+            _clear_all_but_exegete_folder(project_folder)
+            _copy_around_exegete_folder(backup_folder, project_folder,
+                                        leave_out_folder=True)
             # Old backups may contain a copied lock file; QualCoder never
             # puts lock files in backups and neither do we (anymore)
             for stray_lock in project_folder.glob("*.lock"):
@@ -12687,24 +12722,35 @@ def restore_backup(backup_path: str,
         # to (fault-injection D1). Remove any partial folder first so the
         # safety-backup recovery always runs on a clean slate.
         logger.error("Restore failed mid-swap: %s", error_label(e))
+        folder_kept = False
         try:
-            if project_folder.exists():
-                # The original folder was already rmtree'd inside the swap;
-                # anything here now is a partial copy — never the original
-                shutil.rmtree(project_folder)
-            shutil.copytree(safety_backup, project_folder)
+            if os.path.lexists(project_folder):
+                # Everything here but the Exegete folder was cleared or
+                # is a partial copy: cleared again, the folder left where
+                # it is, and the safety backup copied around it; the
+                # safety backup's own copy of the folder comes back only
+                # when nothing is at that name any more (v0.15.0)
+                _clear_all_but_exegete_folder(project_folder)
+                folder_kept = _project_holds_exegete_entry(project_folder)
+                _copy_around_exegete_folder(safety_backup, project_folder,
+                                            leave_out_folder=folder_kept)
+            else:
+                shutil.copytree(safety_backup, project_folder)
             switch_project(current_project_path)
             recovered: Dict[str, Any] = {
                 "error": "Restore failed, but the project was recovered "
                          "from the safety backup; nothing was lost.",
                 "safety_backup": str(safety_backup),
             }
-            if safety_report.get("skipped_symlinks") or \
-                    _skipped_in_exegete_folder(safety_report):
+            if safety_report.get("skipped_symlinks") or (
+                    not folder_kept
+                    and _skipped_in_exegete_folder(safety_report)):
                 # The safety backup skipped these links (S-P1), so the
                 # recovered folder has no entry for them; what they
                 # pointed to is untouched, but "nothing was lost" would
-                # be false here (fix round 4)
+                # be false here (fix round 4). Links in the project's
+                # Exegete folder are lost only when the folder was not
+                # left in place (v0.15.0)
                 recovered["error"] = (
                     "Restore failed, but the project was recovered from "
                     "the safety backup. That backup skipped the symlinks "
@@ -12724,12 +12770,24 @@ def restore_backup(backup_path: str,
                      "to recover.",
             "safety_backup": str(safety_backup),
         }
-        if safety_report.get("skipped_symlinks") or \
-                _skipped_in_exegete_folder(safety_report):
+        # The project's Exegete folder is never removed by the swap or the
+        # recovery, so it is normally still there, as it was (v0.15.0).
+        # A project folder left empty goes, as it went before the folder
+        # was kept (a folder holding anything stays)
+        try:
+            os.rmdir(project_folder)
+        except OSError:
+            pass
+        folder_left = _holds_exegete_folder(project_folder)
+        if safety_report.get("skipped_symlinks") or (
+                not folder_left
+                and _skipped_in_exegete_folder(safety_report)):
             failed["error"] += (
                 " That backup skipped the symlinks "
                 f"{_skipped_where(safety_report)}; recreate them by hand "
                 "after copying it back.")
+        if folder_left:
+            failed["error"] += " " + EXEGETE_FOLDER_LEFT_AFTER_FAILURE
         _attach_skipped_symlinks(failed, safety_report,
                                  prefix="safety_backup_")
         return json.dumps(failed)
@@ -12778,7 +12836,8 @@ def restore_backup(backup_path: str,
         if note:
             result["pseudonyms_json_note"] = note
         folder_note = _exegete_folder_note(
-            exegete_had, _holds_exegete_folder(backup_folder))
+            exegete_had, _holds_exegete_folder(backup_folder),
+            "_BKUP_" in backup_folder.name)
         if folder_note:
             result["exegete_folder_note"] = folder_note
         _attach_skipped_symlinks(result, safety_report,

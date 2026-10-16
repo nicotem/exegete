@@ -121,7 +121,8 @@ measurements.
   named `Exegete` right inside a project's folder (in any letter case
   on a Mac or Windows) is now the project's Exegete folder: the import
   refuses what is in it, `get_current_project` counts its files without
-  naming them, and the assistant is asked never to open them. When
+  naming them, the assistant is asked never to open them, and a restore
+  keeps it as it is rather than taking the backup's copy. When
   Exegete first needs the folder, it adds its note there and, on macOS
   and Linux, makes the folder readable by your account only, which
   matters for a project folder you share with colleagues. If you made
@@ -983,12 +984,13 @@ for the four labels stays in NOTICE.
   once, never replacing a file already there. It never deletes what is
   in the folder of its own accord, never follows a link there, and
   never returns what a file holds to the assistant. The folder travels
-  with the project into its backups and copies, and a restore keeps the
-  project's `Exegete` folder as it is: it never takes the backup's copy,
-  which stays in the backup, and `restore_backup`'s preview and answer
-  say so (`exegete_folder_note`) when the project or the backup has
-  one; a link there that a backup or a copy leaves out is counted
-  (`skipped_symlinks_in_exegete_folder`), never named.
+  with the project into its backups and copies; a link there that a
+  backup or a copy leaves out is counted
+  (`skipped_symlinks_in_exegete_folder`), never named. A restore keeps
+  the project's `Exegete` folder as it is, with every file in it: it
+  leaves the folder where it is, never takes the backup's copy, which
+  stays in the backup, and `restore_backup`'s preview and answer say so
+  (`exegete_folder_note`) when the project or the backup has one.
 - **`get_current_project` lists it** (`files_exegete_keeps`, in `full`
   and `core`): the folder's place, whether it is there, and, for each
   of Exegete's own files in it, its name, kind, size and date, never

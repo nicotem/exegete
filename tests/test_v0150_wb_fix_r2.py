@@ -137,8 +137,9 @@ class TestClaudeCodesLimitsOnEveryPython:
                        if len(d) > 4096), reverse=True)
         lengths = {name: length for length, name in over}
         long = _long_paragraph()
-        # 83 since save_names_list (the files design, piece 4)
-        said = re.search(r"On Python 3\.13, 4 of `full`'s 83 descriptions "
+        # 83 since save_names_list (the files design, piece 4), 82 since
+        # read_pseudonym_list was removed (piece 5)
+        said = re.search(r"On Python 3\.13, 4 of `full`'s 82 descriptions "
                          r"are longer than 4,096 characters \(([^)]*)\)",
                          long).group(1)
         four = re.findall(r"`(\w+)`", said)

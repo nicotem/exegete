@@ -539,10 +539,12 @@ class TestTheChangelog:
                 "`start_coding_session` 4 and `get_current_project` 1) and "
                 "17 fewer in `core`, on both interpreters.") in measured
         # seventeen since prepare_names_list (the files design, piece 3),
-        # eighteen since save_names_list (piece 4)
-        assert "eighteen changes moved them" in measured
+        # eighteen since save_names_list (piece 4), nineteen since
+        # read_pseudonym_list was removed (piece 5)
+        assert "nineteen changes moved them" in measured
         # 2,369 since prepare_names_list (the files design, piece 3),
         # 3,668 since save_names_list (piece 4), 3,690 since its fix
-        # round 1 (the description names import_documents)
-        assert ("the change is from `lifecycle` to `full`: 3,690 characters "
+        # round 1 (the description names import_documents), 2,380 since
+        # read_pseudonym_list was removed (piece 5)
+        assert ("the change is from `lifecycle` to `full`: 2,380 characters "
                 "more") in measured

@@ -119,14 +119,25 @@ VISIBILITY = (
     "when it opens the project.")
 
 
-def names_note(count):
-    return (
+def names_note(count, core=False):
+    """The note in `core`, as this piece wrote it; in `full`, since the
+    files design's piece 5, it sends the researcher to the names file
+    (tests/test_v0150_pseudonym_list_removed.py)."""
+    opening = (
         f"The project's pseudonyms.json (its list of real names and their "
         f"pseudonyms, applied when files are imported) is present with "
-        f"{count} entr(ies). Its contents are the researcher's reverse key "
-        f"and are not returned here; the researcher can read the file in "
-        f"the project folder, or in QualCoder's Pseudonyms dialog if they "
-        f"use QualCoder.")
+        f"{count} entr(ies). ")
+    if core:
+        return opening + (
+            "Its contents are the researcher's reverse key and are not "
+            "returned here; the researcher can read the file in the "
+            "project folder, or in QualCoder's Pseudonyms dialog if they "
+            "use QualCoder.")
+    return opening + (
+        "Its contents are the researcher's reverse key and are never "
+        "returned. To read or change the list, the researcher fills in the "
+        "names file on their own computer: prepare_names_list shows and "
+        "opens it, and save_names_list saves it as the list.")
 
 
 def pre_empted(entries):
@@ -431,6 +442,9 @@ class TestTheNamesListIsTheProjects:
         for name in ("Thomas", "Mary Ann", "Participant A",
                      "Participant B"):
             assert name not in serialised, name
+        server._apply_toolset("core")
+        answer = json.loads(server.get_current_project())
+        assert answer["pseudonyms_json"]["note"] == names_note(2, core=True)
 
     def test_privacy_says_so(self):
         privacy = _flat((REPO / "PRIVACY.md").read_text(encoding="utf-8"))
@@ -494,22 +508,18 @@ class TestTheMemoIsNotSaidToBeSeeded:
 # The three descriptions item 4 changes, as 0.14.3 served them
 # (tests/test_v0142_description_cut.py pins the first two figures): the
 # length on 3.13, the characters that are not white space, and the
-# length on 3.10 to 3.12, which keep a docstring's indentation.
+# length on 3.10 to 3.12, which keep a docstring's indentation. The third,
+# read_pseudonym_list's, went with the tool, removed in v0.15.0 (the files
+# design, piece 5).
 BEFORE = {
     "get_current_project": (1921, 1571, 2053),
-    "read_pseudonym_list": (1040, 860, 1092),
     "pseudonymise_source": (17353, 12719, 18437),
 }
+REMOVED = "read_pseudonym_list"
 NEW_WORDS = {
     "get_current_project": "the project's pseudonyms.json (its names "
                            "list, applied at import; the researcher's "
                            "reverse key)",
-    # Fix round 1: get_current_project's words, so that the description
-    # is no longer than before (the design's words made it one character
-    # longer) and the two say the same
-    "read_pseudonym_list": "The list is the project's pseudonyms.json: its "
-                           "names list, applied at import; the "
-                           "researcher's reverse key.",
     # Fix round 1: "the project's" said once, not twice
     "pseudonymise_source": "the project's own pseudonyms.json instead (its "
                            "names list).",
@@ -539,6 +549,7 @@ class TestTheThreeDescriptions:
         # paragraph on the files Exegete keeps for the project
         # (tests/test_v0150_private_files.py, which pins it): taken out too
         from test_v0150_private_files import without_the_files_paragraph
+        assert REMOVED not in descriptions and REMOVED not in raw
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
             text = before_the_review(raw[name])

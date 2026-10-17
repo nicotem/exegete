@@ -1297,8 +1297,9 @@ class TestTheDocuments:
         assert lines[at + 2].startswith("- `create_project(")
         assert tools.index("**Project Management:**") < tools.index(
             TOOLS_ENTRY) < tools.index("**Keeping Exegete up to date:**")
-        # 83 since save_names_list (the files design, piece 4)
-        assert "registers 83 tools, two of them the earlier names" in \
+        # 83 since save_names_list (the files design, piece 4), 82 since
+        # read_pseudonym_list was removed (piece 5)
+        assert "registers 82 tools, two of them the earlier names" in \
             _flat(tools)
 
     def test_privacy_names_the_file_among_the_files_you_fill_in(self):

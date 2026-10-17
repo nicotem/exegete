@@ -730,22 +730,23 @@ class TestTheDocuments:
 
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
-        # 83 since save_names_list (the files design, piece 4)
-        assert ("registers 83 tools, two of them the earlier names of two "
+        # 83 since save_names_list (the files design, piece 4), 82 since
+        # read_pseudonym_list was removed (piece 5)
+        assert ("registers 82 tools, two of them the earlier names of two "
                 "renamed tools (see \"Earlier names\" below)") in tools
         assert ("only the 25-tool supervised coding set is registered: "
                 "read_brief,") in tools.replace("> ", "")
         assert ("copy_project_to_workspace, delete_coding, list_backups, and "
                 "the two earlier names below.") in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
-        assert "`full` (default) registers 83 tools, every tool," in install
+        assert "`full` (default) registers 82 tools, every tool," in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
         assert "`core` registers the 25-tool supervised coding set" in install
-        assert "Exegete offers 83 tools by default" in install
+        assert "Exegete offers 82 tools by default" in install
         assert "register only the 25-tool supervised coding set" in install
         readme = _read("README.md")
-        assert ("| `full` | 83: all, creating a project and two renamed "
+        assert ("| `full` | 82: all, creating a project and two renamed "
                 "tools' earlier names included |") in readme
         assert "| `core` | 25: the coding loop and its safety tools |" \
             in readme
@@ -818,8 +819,9 @@ class TestTheDocuments:
         # one count for `full`: set_project_coder_name included
         # (whole-branch review, round 1)
         # one tool more since the names file (the files design, piece 3),
-        # and one more since its save (piece 4)
-        assert ("81 tools (83 with the earlier names of the two tools "
+        # and one more since its save (piece 4), and one fewer since
+        # read_pseudonym_list was removed (piece 5)
+        assert ("80 tools (82 with the earlier names of the two tools "
                 "renamed below), creating a project") in sets
         assert "78 tools (80" not in sets
         assert ("`core` keeps its 23 tools (25 with the two earlier names "

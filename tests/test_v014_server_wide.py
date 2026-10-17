@@ -83,10 +83,9 @@ EXPECTED_HINTS = {
     "explain_ai_coding_tools": R, "review_proposals": R,
     # the assistant's brief (v0.14.2): reads nothing from the project
     "read_brief": R,
-    # Changes nothing, but sends every real name in pseudonyms.json to the
-    # AI provider: marked as not read-only so that hosts ask before it
-    # runs, as the owner's v0.13 ruling intends (the lead's correction)
-    "read_pseudonym_list": (False, False, True, False),
+    # (read_pseudonym_list, which changed nothing and was marked not
+    # read-only so that hosts asked before it sent the names, was removed
+    # in v0.15.0: the files design, piece 5)
     # Changes nothing in a project, but fetches Exegete's version file
     # from the network and records the check: the one tool reaching
     # beyond the computer (the owner's ruling of 5 October 2026), not
@@ -206,52 +205,52 @@ class TestToolAnnotations:
             assert listed[name].annotations.destructiveHint is True, name
             assert listed[name].annotations.readOnlyHint is False, name
 
-    def test_the_name_list_is_not_marked_read_only(self):
-        """The host must ask before read_pseudonym_list sends the real
-        names: a read-only mark lets Cowork and the desktop Code sessions
-        in auto mode run it without asking."""
-        hints = _listed("full")["read_pseudonym_list"].annotations
-        assert hints.readOnlyHint is False
-        assert hints.destructiveHint is False
+    def test_the_name_list_is_in_no_set(self):
+        """The tool that sent the real names, which hosts had to ask
+        before (it was marked not read-only), was removed in v0.15.0 (the
+        files design, piece 5): no host has it to run."""
+        assert "read_pseudonym_list" not in _listed("full")
+        assert "read_pseudonym_list" not in _listed("core")
 
-    def test_the_name_list_asks_in_every_mode_where_honoured(self):
-        """Fix round 1: read_pseudonym_list's tools/list entry carries
+    def test_the_marked_tools_ask_in_every_mode_where_honoured(self):
+        """Fix round 1: the tools/list entries of the tools whose call
+        the researcher approves each time carry
         "anthropic/requiresUserInteraction": true (Claude Code 2.1.199
-        and later asks before every call of it in every mode), read over
-        the host's path; no other tool carries it."""
+        and later asks before every call of them in every mode), read
+        over the host's path; no other tool carries it."""
         server._apply_toolset("full")
         listed = host_session(lambda client: client.list_tools()).tools
         marked = {tool.name: tool.meta for tool in listed if tool.meta}
-        # 0.14.3: and import_documents, whose two calls the researcher
-        # approves (the design's "Asking every time"); v0.15.0: and
-        # save_names_list, whose list changes every later import
+        # 0.14.3: import_documents, whose two calls the researcher
+        # approves (the design's "Asking every time"); v0.15.0:
+        # save_names_list, whose list changes every later import; and no
+        # longer read_pseudonym_list, removed (the files design, piece 5)
         assert marked == {
-            "read_pseudonym_list": {
-                "anthropic/requiresUserInteraction": True},
             "import_documents": {
                 "anthropic/requiresUserInteraction": True},
             "save_names_list": {
                 "anthropic/requiresUserInteraction": True}}
         wire = next(t for t in listed
-                    if t.name == "read_pseudonym_list").model_dump(
+                    if t.name == "save_names_list").model_dump(
                         by_alias=True, exclude_none=True)
         assert wire["_meta"]["anthropic/requiresUserInteraction"] is True
 
-    def test_privacy_says_when_the_host_asks_for_the_name_list(self):
-        """Fix round 2: PRIVACY.md no longer says a host asks before the
-        name list runs, whatever the host and mode."""
+    def test_privacy_says_no_tool_returns_the_names(self):
+        """Fix round 2 made PRIVACY.md say when a host asked before the
+        name list ran; v0.15.0 removed the tool (the files design, piece
+        5), so PRIVACY.md says that no tool returns the names, and where
+        the researcher reads the list instead."""
         privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md")
                            .read_text(encoding="utf-8").split())
         assert "so a host asks the researcher's approval for it" \
             not in privacy
-        assert ("It carries `anthropic/requiresUserInteraction`, so Claude "
-                "Code (2.1.199 and later) asks the researcher before every "
-                "call of it, in every permission mode but `dontAsk`, which "
-                "refuses it. Earlier Claude Code, and another host in an "
-                "auto mode or with approvals skipped, can run it without "
-                "asking") in privacy
-        assert ("for a project with a pseudonyms file keep the host in its "
-                "asking mode") in privacy
+        assert "Each call writes one line to the server's log" \
+            not in privacy
+        assert ("No tool returns the names (`read_pseudonym_list` was "
+                "removed in 0.15.0): you read and change the list in the "
+                "names file on your own computer (`prepare_names_list`, "
+                "then `save_names_list`), whose preview gives counts and "
+                "line numbers, never a name.") in privacy
 
     def test_install_says_what_the_modes_do(self):
         install = " ".join((Path(__file__).parent.parent / "INSTALL.md")
@@ -266,8 +265,10 @@ class TestToolAnnotations:
                        # fix round 2: dontAsk refuses; the version
                        "in every one of these modes but `dontAsk`, which "
                        "refuses it",
+                       # v0.15.0: the tools carrying the mark, the one
+                       # that returned the names list removed
                        "except, in Claude Code 2.1.199 and later, "
-                       "`read_pseudonym_list`"):
+                       "`import_documents` and `save_names_list`"):
             assert needed in section, needed
 
     def test_one_tool_alone_claims_the_open_world(self):
@@ -856,7 +857,6 @@ async def call_every_tool(client, root, lock_check=False):
     await run("get_codes_by_case", {"case_id": 1})
     await run("get_cases_by_code", {"code_id": 2})
     await run("explain_ai_coding_tools", {"tool_name": "apply_codings"})
-    await run("read_pseudonym_list", {})
     # v0.15.0: the names file, made, shown and opened (the recorders)
     await run("prepare_names_list", {})
     # v0.15.0: the names file filled in, then saved as the project's
@@ -2041,7 +2041,6 @@ NOT_PROJECT_WRITES = {
     "export_refi_qda": "writes a file outside the project",
     "export_codebook": "file", "export_coded_segments_report": "file",
     "export_frequencies_csv": "file", "export_case_code_matrix_csv": "file",
-    "read_pseudonym_list": "reads only (marked so that hosts ask)",
     "prepare_names_list": "writes the names file in the project's "
                           "Exegete folder, which the project's format "
                           "never reads, and never touches the database",

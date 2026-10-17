@@ -1860,24 +1860,19 @@ class TestFixRound2WhatGoesInV015:
         assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
-        self._described("read_pseudonym_list",
-                        server.DEPRECATED_PSEUDONYM_LIST)
-        present = jcall("read_pseudonym_list")
-        assert present["deprecated"] == server.DEPRECATED_PSEUDONYM_LIST
-        # the file itself first, then QualCoder's dialog (the whole-branch
-        # review of v0.15.0, round 1)
-        assert "the list stays in pseudonyms.json in the project folder" \
-            in present["deprecated"]
-        assert "Pseudonyms dialog (Manage Files) also shows it" in \
-            present["deprecated"]
-        server.current_project_path = None
-        server.db = None
-        closed = jcall("read_pseudonym_list")
-        assert "error" in closed
-        assert closed["deprecated"] == server.DEPRECATED_PSEUDONYM_LIST
-        # its marks stay: the host still asks before the names leave
-        assert server.mcp._tool_manager._tools[
-            "read_pseudonym_list"].annotations == server.TOOL_DISCLOSES
+        """v0.15.0 (ruling 78; the files design, piece 5): the name list
+        tool did not wait for v0.15.1. It is gone now, with its
+        deprecation sentence and its mark, and no other tool's
+        description or answer carries that sentence."""
+        tools = server.mcp._tool_manager._tools
+        assert "read_pseudonym_list" not in tools
+        assert not hasattr(server, "DEPRECATED_PSEUDONYM_LIST")
+        assert not hasattr(server, "TOOL_DISCLOSES")
+        for name, tool in tools.items():
+            assert "the list stays in pseudonyms.json" not in (
+                tool.description or ""), name
+        summary = json.dumps(jcall("get_current_project"))
+        assert "deprecated" not in summary.lower()
 
     def test_the_refi_qda_exports(self, setup_server, tmp_path):
         self._described("export_refi_qda", server.DEPRECATED_REFI_EXPORT)

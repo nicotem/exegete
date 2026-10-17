@@ -516,8 +516,12 @@ class TestTheSizes:
 
     # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
     BEFORE = {"full": 197_845, "core": 64_804}
-    # The same tools as 0.14.2 served them, on the same interpreter
-    NOW_0142 = {"full": 197_586, "core": 64_687}
+    # The same tools as 0.14.2 served them, on the same interpreter.
+    # v0.15.0 removed read_pseudonym_list (the files design, piece 5), so
+    # the tools held to 0.14.2's figure are the others: its entry as
+    # 0.14.2 served it, 1,234 characters, and its separator are left out
+    # of `full`'s (197,586 before); `core` never served it.
+    NOW_0142 = {"full": 196_350, "core": 64_687}
     # The same tools as this tree serves them: v0.14.3
     # lengthens two, read_file_with_codings (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
@@ -572,14 +576,15 @@ class TestTheSizes:
     # here, import_documents being left out, and 17 in `core`); its fix
     # round 1 says in the renames that Exegete "may miss a 4.0 window"
     # (4 fewer in `full`). Their entries as 0.14.2 served them are below,
-    # so every other tool is still held to 0.14.2's figure.
-    NOW = {"full": 197_026, "core": 64_942}
+    # so every other tool is still held to 0.14.2's figure. The files
+    # design, piece 5, removes read_pseudonym_list: its entry, 1,308
+    # characters here, and its separator leave `full` (197,026 before).
+    NOW = {"full": 195_716, "core": 64_942}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
                           "create_project": 2_555,
                           "get_current_project": 2_133,
-                          "read_pseudonym_list": 1_234,
                           "pseudonymise_source": 19_391,
                           "list_available_projects": 1_113,
                           # the renames, piece 3

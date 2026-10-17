@@ -12,7 +12,8 @@ researcher who uses it:
 1. after an import into a project with no names list, or an empty one:
    pseudonymise_source on each file, and a list made now changes nothing
    stored;
-2. the import's preview of such a project: pseudonymise_source first,
+2. the import's preview of such a project: pseudonymise_source first
+   (since the files design, piece 5, the names file before it),
    QualCoder's button only "if you use it";
 3. a names list that cannot be read, in each of the reader's four ways:
    "The project's names list (pseudonyms.json, a list of {original,
@@ -129,13 +130,18 @@ CORRECT = (" Correct the list (open pseudonyms.json in the project folder "
 # cannot open either, is corrected in a text editor alone.
 CORRECT_UNREADABLE = (" Correct the list (open pseudonyms.json in the "
                       "project folder in a text editor), then ask again. ")
+# The files design, piece 5, leads it with the names file, which every
+# researcher has, then pseudonymise_source; QualCoder's button stays a
+# choice for a researcher who uses it
+# (tests/test_v0150_pseudonym_list_removed.py)
 PREVIEW_NO_LIST = (
     "This project has no names list. If these documents name participants "
-    "or places, run pseudonymise_source on each file once it is in and "
-    "before the assistant reads it; it can save the names as the project's "
-    "list, which later imports then apply as the text comes in. QualCoder, "
-    "if you use it, can also make the list before importing (the "
-    "Pseudonyms button in Manage Files).")
+    "or places, ask the assistant to prepare the names file: you fill it in "
+    "on your own computer, so the names do not pass through the "
+    "conversation, and later imports replace them as the text comes in. "
+    "pseudonymise_source can also replace names in a file already in the "
+    "project. QualCoder, if you use it, can also make the list before "
+    "importing (the Pseudonyms button in Manage Files).")
 AFTER_NO_LIST = (
     ", so the names in these files came in as written. If these documents "
     "name participants, replace the names before the assistant reads them: "
@@ -267,13 +273,15 @@ class TestImportingWithNoNamesList:
         _before_qualcoder(lines[0], "run pseudonymise_source on each file")
         assert "QualCoder" not in lines[0]
 
-    def test_the_preview_leads_with_pseudonymise_source(self, importing,
-                                                        tmp_path):
+    def test_the_preview_leads_with_what_every_researcher_has(
+            self, importing, tmp_path):
         """Entry 2."""
         preview = _import(paths=[str(_transcript(tmp_path))])
         line = preview["names_list"]
         assert line == PREVIEW_NO_LIST
-        _before_qualcoder(line, "run pseudonymise_source on each file")
+        _before_qualcoder(line, "ask the assistant to prepare the names "
+                                "file")
+        _before_qualcoder(line, "pseudonymise_source can also replace")
         assert "QualCoder, if you use it, can also make the list" in line
 
     def test_the_line_itself(self):

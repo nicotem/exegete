@@ -320,11 +320,13 @@ class TestTheNamesListLines:
                                  documents_listing=[], refused_places=[],
                                  names_list="none")
         line = doc_import.names_list_line(ctx)
-        # v0.15.0: the way every researcher has first, and QualCoder's
-        # button for a researcher who uses it
-        assert ("run pseudonymise_source on each file once it is in and "
-                "before the assistant reads it; it can save the names as "
-                "the project's list") in line
+        # v0.15.0: the ways every researcher has first, the names file
+        # (the files design, piece 5) and then pseudonymise_source, and
+        # QualCoder's button for a researcher who uses it
+        assert ("ask the assistant to prepare the names file: you fill it "
+                "in on your own computer") in line
+        assert ("pseudonymise_source can also replace names in a file "
+                "already in the project.") in line
         assert ("QualCoder, if you use it, can also make the list before "
                 "importing (the Pseudonyms button in Manage Files).") in line
 

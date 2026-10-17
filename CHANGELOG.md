@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 v0.15.0, the first of three v0.15 releases: v0.15.1 brings the safety
 net (undoing what a session did, choosing what a pseudonymisation run
-changes) and the removals announced in 0.14, and v0.15.2 brings
+changes) and the other removals announced in 0.14, and v0.15.2 brings
 method. What a researcher notices first in this one: one tool set,
 `full`, the default on every route, creating a project included; two
 tools whose names say what they do; your own coder name and the AI
@@ -151,15 +151,23 @@ contributors, and the measurements.
   you change it in the file. Entries the file cannot hold as one line
   stay in the list as they are. Claude Code 2.1.199 and later asks
   before both calls, and refuses them in `dontAsk`.
+- **`read_pseudonym_list` is gone.** It sent every real name in the
+  project's list to the AI provider. The list is now read and changed
+  in the names file on your own computer (`prepare_names_list`, then
+  `save_names_list`), and its contents do not pass through the
+  conversation. A choice your assistant app saved for
+  `read_pseudonym_list` no longer applies; in Codex, remove its table
+  from the configuration (INSTALL.md).
 - **Not in this release.** The removals announced in 0.14 for v0.15
-  (TOOLS.md names each) come in v0.15.1, with the safety net; until
-  then the deprecated tools and arguments work, and say so
-  ("Deprecated: the removals move to v0.15.1", below).
+  (TOOLS.md names each), except `read_pseudonym_list`, removed now
+  (above), come in v0.15.1, with the safety net; until then the
+  deprecated tools and arguments work, and say so ("Deprecated: the
+  removals move to v0.15.1", below).
 
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the
-  maintainer's decision of 12 October 2026): 81 tools (83 with the
+  maintainer's decision of 12 October 2026): 80 tools (82 with the
   earlier names of the two tools renamed below), creating a project
   and correcting your own coder name included, the default on every
   route, in the Claude Desktop extension and wherever Exegete is
@@ -491,7 +499,8 @@ comes with v0.15.2.
 - **The names list** (`pseudonyms.json`) is described as the project's
   own, applied when files are imported, rather than as QualCoder's
   import-time list: in `get_current_project`'s answer (which also says
-  the researcher can read the file in the project folder) and
+  where the researcher reads and changes the list: in the names file, or,
+  in `core`, in the file in the project folder) and
   description, in `read_pseudonym_list`'s description, in
   `pseudonymise_source`'s `use_project_pseudonyms`, and in PRIVACY.md,
   which also names the backups the file travels into (Exegete's, and
@@ -688,10 +697,12 @@ own imports and dialog, and offer its routes only to those who use it.
 When each is given, what it refuses and its counts have not changed.
 
 - **Importing into a project with no names list**: the preview suggests
-  running `pseudonymise_source` on each file once it is in and before
-  the assistant reads it (it can save the names as the project's list,
-  which later imports then apply), and adds that QualCoder, if you use
-  it, can also make the list before importing; after the import, the
+  asking the assistant to prepare the names file, which you fill in on
+  your own computer, so the names do not pass through the conversation,
+  and which later imports then apply; that `pseudonymise_source` can
+  also replace names in a file already in the project; and that
+  QualCoder, if you use it, can also make the list before importing;
+  after the import, the
   answer says to replace the names with `pseudonymise_source` before the
   assistant reads them, and that a list made now does not change files
   already stored.
@@ -945,7 +956,7 @@ for the four labels stays in NOTICE.
   answer ascribes to QualCoder, signs of a window). QualCoder merely
   installed is not a sign once that answer is no. Otherwise the
   assistant says what Exegete does and what it does not do yet. The
-  full brief is now about 13,300 characters; the opening text has not
+  full brief is now about 13,200 characters; the opening text has not
   changed.
 - **The brief's other points**: its section on how changes happen
   names importing documents, saving the names list and correcting the
@@ -1147,19 +1158,15 @@ for the four labels stays in NOTICE.
 
 - **Every removal announced in 0.14 for v0.15 now comes in v0.15.1**,
   with the safety net, as the plan for v0.15 in three releases has it:
-  the REFI-QDA export, `read_pseudonym_list`, `export_code_report`,
-  `cleanup_old_sessions`, `merge_proposals`, four help topics, and the
-  arguments and options TOOLS.md names. Until then each works, and its
+  the REFI-QDA export, `export_code_report`, `cleanup_old_sessions`,
+  `merge_proposals`, four help topics, and the arguments and options
+  TOOLS.md names. Until then each works, and its
   description and answers say "Deprecated, removed in v0.15.1" (they
   said v0.15). TOOLS.md, PRIVACY.md, INSTALL.md, the AI coding guide
   and the README say the same, and the README's "What comes next"
   lists v0.15.1 and v0.15.2.
-- **`read_pseudonym_list`'s note leads with the file itself**: the list
-  stays in `pseudonyms.json` in the project folder, where the
-  researcher can read it without sending it anywhere; QualCoder's
-  Pseudonyms dialog (Manage Files) also shows it. It no longer names
-  QualCoder's dialog as the only way to see the list without sending
-  it. INSTALL.md and TOOLS.md say the same.
+- **`read_pseudonym_list` is removed now**, not in v0.15.1: "Upgrading
+  from 0.14.3" says why, and what replaces it.
 - **Three more notes no longer send the researcher to QualCoder as the
   only way**, in the descriptions and the answers that give them: the
   REFI-QDA export's says that Exegete has no other REFI-QDA export yet,
@@ -1194,17 +1201,17 @@ for the four labels stays in NOTICE.
 
 ### Measured
 
-- Serialised tool JSON: full = 207,934 characters (about 52.0k tokens
-  at chars/4) over 83 tools, and core = 68,258 (about 17.1k) over 25,
+- Serialised tool JSON: full = 206,624 characters (about 51.7k tokens
+  at chars/4) over 82 tools, and core = 68,258 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 218,446 and
+  which also gives exactly 0.14.3's figures for its tree), 217,084 and
   71,690. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
-  3.13), eighteen changes moved them; for most researchers, on the
-  extension, the change is from `lifecycle` to `full`: 3,690 characters
+  3.13), nineteen changes moved them; for most researchers, on the
+  extension, the change is from `lifecycle` to `full`: 2,380 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -1275,6 +1282,9 @@ for the four labels stays in NOTICE.
   And `save_names_list`, which saves the names file as the list, adds
   its entry and its separator: 1,294 characters in `full`, 1,358 on
   3.11; `core` does not serve it.
+  And `read_pseudonym_list` was removed, its entry and its separator
+  with it: 1,310 characters fewer in `full`, 1,362 on 3.11; `core` did
+  not serve it.
   No other tool's entry changed.
 - Claude Code now keeps 4,096 characters of a tool's description, and
   16,384 through its tool search (2,048 before its version 2.1.296):
@@ -1286,7 +1296,7 @@ for the four labels stays in NOTICE.
   how to set one). The rules the
   tests hold within the first 2,048 characters are kept there as a
   margin; the shortening of the descriptions comes with v0.15.2. The
-  opening text is 2,034 characters and the full brief 13,263.
+  opening text is 2,034 characters and the full brief 13,225.
 
 ## [0.14.3-alpha] - 2026-10-12
 

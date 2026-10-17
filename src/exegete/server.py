@@ -298,16 +298,11 @@ FREQUENCIES_COUNT_NOTE = (
 # What warns in v0.14 and goes in v0.15.1 (owner ruling 25, questions 3,
 # 7 and 8; ruling 70 moved the removals from v0.15 to v0.15.1): one
 # sentence, the same in the tool's description and in its answer, so a
-# test can pin one source of wording. The names list's leads with what
-# every researcher has, the file itself (whole-branch review, round 1;
-# QUALCODER_MENTIONS_AUDIT.md); the REFI-QDA export's, the journals' and
-# the rename back's name QualCoder's own feature only for researchers who
-# use it, the gap said as Exegete's (round 2).
-DEPRECATED_PSEUDONYM_LIST = (
-    "Deprecated, removed in v0.15.1: the list stays in pseudonyms.json in "
-    "the project folder, where the researcher can read it without sending "
-    "it anywhere; QualCoder's Pseudonyms dialog (Manage Files) also shows "
-    "it.")
+# test can pin one source of wording. The REFI-QDA export's, the
+# journals' and the rename back's name QualCoder's own feature only for
+# researchers who use it, the gap said as Exegete's (whole-branch review,
+# round 2). The tool that returned the names list, deprecated in v0.14
+# too, was removed in v0.15.0 (ruling 78): the names file replaces it.
 DEPRECATED_REFI_EXPORT = (
     "Deprecated, removed in v0.15.1: this export files every coding under "
     "the AI coder name (a hidden coder's too) and leaves out cases, "
@@ -526,10 +521,10 @@ Read and change the project only through these tools. Never open its
 folder or its database directly, even when your host gives you file or
 shell tools that could. The tools keep the private part of memos out of
 the conversation, and the project's list of the real names behind its
-pseudonyms (pseudonyms.json, in the project folder) too, unless the
-researcher asks to see it; they back the project up, hold suggestions
-for approval and check whether QualCoder has the project open. A direct
-read or write bypasses all of that. Files in a project's Exegete folder
+pseudonyms (pseudonyms.json, in the project folder) too; they back the
+project up, hold suggestions for approval and check whether QualCoder
+has the project open. A direct read or write bypasses all of that.
+Files in a project's Exegete folder
 are the researcher's own, filled in on their computer: never open or
 read them, even when a file tool or a shell could. Exegete lists them
 (get_current_project's files_exegete_keeps), never their contents.
@@ -822,8 +817,6 @@ def _is(value: Any, word: str) -> bool:
 #   computer's files and nothing else. check_for_updates alone reaches
 #   beyond the computer, to fetch Exegete's version file (the owner's
 #   ruling of 5 October 2026), and carries TOOL_CHECKS_ONLINE.
-# One tool that changes nothing is still not marked read-only:
-# read_pseudonym_list (TOOL_DISCLOSES below says why).
 #
 # What the hosts do with the hints is INSTALL.md's "What hosts do with
 # the tools' read and write marks", from Anthropic's own pages mode by
@@ -845,19 +838,6 @@ TOOL_CHANGES = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
                                idempotentHint=False, openWorldHint=False)
 TOOL_CHANGES_ONCE = ToolAnnotations(readOnlyHint=False, destructiveHint=True,
                                     idempotentHint=True, openWorldHint=False)
-# read_pseudonym_list alone (the lead's correction, 2026-09-26). It changes
-# nothing, but it sends every real name in the project's pseudonyms.json
-# to the AI provider, and the owner made it a tool of its own so that the
-# host asks before it does (v0.13). Marked read-only, it would be
-# approved without asking in the auto modes, so it is marked as a tool
-# that is not read-only, adds nothing and can be repeated. That alone
-# does not make an auto mode ask: there a classifier decides on a tool
-# that is not read-only. So it also carries TOOL_META's
-# "anthropic/requiresUserInteraction", with which Claude Code, from
-# 2.1.199, asks before every call in every mode but dontAsk, which
-# refuses it (fix round 1).
-TOOL_DISCLOSES = ToolAnnotations(readOnlyHint=False, destructiveHint=False,
-                                 idempotentHint=True, openWorldHint=False)
 # check_for_updates alone (the owner's ruling of 5 October 2026). It
 # changes nothing in a project, but it may fetch a file from the network
 # and records the check in the state folder, so it is not marked
@@ -878,7 +858,6 @@ TOOL_CHECKS_ONLINE = ToolAnnotations(readOnlyHint=False,
 # `_ExegeteMCP.list_tools`, which the mcp floor (1.17) needs: its
 # FastMCP sends no tool metadata of its own.
 TOOL_META = {
-    "read_pseudonym_list": {"anthropic/requiresUserInteraction": True},
     # import_documents (0.14.3): the researcher approves each
     # import, the preview and then the import; Claude Code asks before
     # both calls (the design's "Asking every time").
@@ -5282,33 +5261,50 @@ def _pseudonyms_json_read() -> Tuple[Dict[str, Any], Optional[List[Dict]]]:
             "encoding": encoding}, entries
 
 
+# Where get_current_project's note sends the researcher to read or change
+# the names list (v0.15.0, the files design, piece 5): the names file in
+# `full`, which serves its two tools; in `core`, which serves neither, the
+# file in the project folder, as before.
+PSEUDONYMS_JSON_NOTE_FULL = (
+    "Its contents are the researcher's reverse key and are never returned. "
+    "To read or change the list, the researcher fills in the names file on "
+    "their own computer: prepare_names_list shows and opens it, and "
+    "save_names_list saves it as the list.")
+PSEUDONYMS_JSON_NOTE_CORE = (
+    "Its contents are the researcher's reverse key and are not returned "
+    "here; the researcher can read the file in the project folder, or in "
+    "QualCoder's Pseudonyms dialog if they use QualCoder.")
+
+
 def _pseudonyms_json_report() -> Dict[str, Any]:
     """`get_current_project`'s report of the project's pseudonyms.json.
 
-    No name enters the conversation by this route (ruling 14b, and the
-    owner's ruling of 2026-09-24 that the list itself has a tool of its
-    own, `read_pseudonym_list`): whether the file is present, how many
-    entries it has, which encoding it read as, and where the human sees
-    the list: the file in the project folder, or QualCoder's Pseudonyms
-    dialog (the button in Manage Files, `manage_files.py:285`,
-    `:733-743` at the pin) if they use QualCoder. The list is the
-    project's own, applied by Exegete's imports and written by
-    `pseudonymise_source` (v0.15.0). It does not invite the call that
-    returns the names. An
+    No name enters the conversation by this route (ruling 14b), nor by
+    any other since the tool that returned the list was removed in
+    v0.15.0 (ruling 78): whether the file is present, how many entries it
+    has, which encoding it read as, and where the researcher reads and
+    changes the list. In `full`, that is the names file, which
+    prepare_names_list shows and opens and save_names_list saves as the
+    list; in `core`, which serves neither, the file itself in the project
+    folder, or
+    QualCoder's Pseudonyms dialog (the button in Manage Files,
+    `manage_files.py:285`, `:733-743` at the pin) if they use QualCoder.
+    The list is the project's own, applied by Exegete's imports and
+    written by `pseudonymise_source` and save_names_list (v0.15.0). An
     unreadable file is reported with the reader's own value-free message.
     """
     block, entries = _pseudonyms_json_read()
     if entries is None:
         return block
-    return {
-        **block,
-        "note": (
-            f"The project's pseudonyms.json (its list of real names and "
-            f"their pseudonyms, applied when files are imported) is "
-            f"present with {len(entries)} entr(ies). Its contents are the "
-            f"researcher's reverse key and are not returned here; the "
-            f"researcher can read the file in the project folder, or in "
-            f"QualCoder's Pseudonyms dialog if they use QualCoder.")}
+    opening = (f"The project's pseudonyms.json (its list of real names and "
+               f"their pseudonyms, applied when files are imported) is "
+               f"present with {len(entries)} entr(ies). ")
+    if _small_tool_set():
+        return {**block, "note": opening + PSEUDONYMS_JSON_NOTE_CORE}
+    # Marked as every text a core tool reaches is (a set with one of the
+    # two tools and not the other would show which it lacks)
+    return {**block,
+            "note": opening + _mark_unregistered(PSEUDONYMS_JSON_NOTE_FULL)}
 
 
 @mcp.tool(annotations=TOOL_READS)
@@ -6317,45 +6313,6 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
         "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "note": SAVE_NAMES_LIST_NOTE,
     }, indent=2)
-
-
-@mcp.tool(annotations=TOOL_DISCLOSES)
-@_tool_guard
-@_deprecated(DEPRECATED_PSEUDONYM_LIST, before="Call it only")
-def read_pseudonym_list() -> str:
-    """This sends every real name in the project's pseudonyms.json, with its pseudonym, to the AI provider.
-
-    Call it only when the researcher has asked, in this conversation, to
-    see or check the project's pseudonym list. get_current_project says
-    whether the file exists and how many entries it has without any name.
-
-    The list is the project's pseudonyms.json: its names list, applied at
-    import; the researcher's reverse key. Each call that returns it
-    writes one line to the server's log saying that the list was
-    returned and how many entries it had, with no name in it, so the
-    host's log shows every time the list left the project.
-
-    Returns:
-        JSON: `pseudonyms_json` with `present`, `entries` (the count),
-        `encoding` and `entries_list` (`{original, pseudonym}` objects);
-        `present` false when the project has no such file; an error, with
-        the reader's value-free message, when it cannot be read.
-    """
-    _adopt_configured_project()
-    if current_project_path is None:
-        return json.dumps({"error": _no_project_message()}, indent=2)
-    report, entries = _pseudonyms_json_read()
-    if entries is None:
-        return json.dumps({"pseudonyms_json": report}, indent=2)
-    report["entries_list"] = [{"original": item["original"],
-                               "pseudonym": item["pseudonym"]}
-                              for item in entries]
-    # The owner's ruling of 2026-09-24: every return of the list leaves
-    # one line in the host's log, a count and nothing else.
-    logger.info("read_pseudonym_list returned the project's "
-                "pseudonyms.json list (%d entries) to the conversation.",
-                len(entries))
-    return json.dumps({"pseudonyms_json": report}, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS)

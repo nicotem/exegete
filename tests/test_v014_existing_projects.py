@@ -721,7 +721,9 @@ class TestAConfiguredProjectAtFirstUse:
 
     @pytest.mark.parametrize("call", [
         lambda: server.get_current_project(),
-        lambda: server.read_pseudonym_list(),
+        # v0.15.0: the names file's tool in place of the one that returned
+        # the list, removed (the files design, piece 5)
+        lambda: server.prepare_names_list(),
         lambda: server.set_project_ai_coder_name("Model A"),
         lambda: server.set_memo("code", 1, "a note", create_backup=False),
     ])

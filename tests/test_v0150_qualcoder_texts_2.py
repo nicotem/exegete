@@ -82,6 +82,14 @@ EXPORTS = (
     "An export from Exegete carries the replaced text, but file and case "
     "names as they are, and notes in full, private parts included; an "
     "export made in QualCoder carries the unchanged originals.")
+# The files design, piece 5 (read_pseudonym_list removed): the list can
+# be filled in on the researcher's own computer, a paragraph after the
+# first (tests/test_v0150_pseudonym_list_removed.py)
+FILLED_IN = (
+    "The list can be filled in on your own computer, in the names file "
+    "Exegete prepares, so that the names do not pass through the "
+    "conversation; an assistant that opens files by itself could still read "
+    "that file (\"Files Exegete keeps on your computer\").")
 # Fix round 2: the list is a selection, a name in another form is
 # named, the condition is on the last item alone, and the long sentence
 # is three
@@ -136,7 +144,7 @@ SECTION = (
     "them in a file already in the project. They are useful for managing "
     "what you disclose to other people: a colleague or second coder you "
     "share the project with, a supervisor, or whoever receives an export. "
-    + SHARING_THE_FOLDER + " " + EXPORTS + " "
+    + SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN + " "
     "For what reaches the AI assistant, they help, but they should not be "
     "trusted blindly. "
     + NOT_EVERYTHING + " "
@@ -196,7 +204,11 @@ MITIGATION = (
 README_SENTENCES = (
     "Replacing names reduces the risk; it does not make anyone anonymous. "
     "Exegete can replace them, with the project's names list as documents "
-    "come in or with `pseudonymise_source` afterwards. That helps you "
+    "come in or with `pseudonymise_source` afterwards. "
+    # the files design, piece 5
+    "The list can be one you fill in on your own computer, in a file "
+    "Exegete prepares, so the names do not pass through the conversation. "
+    "That helps you "
     "manage what you share with other people, though the project's folder "
     "still holds the originals and any names list. For what the assistant "
     "reads, the replacement should not be trusted blindly: Exegete's tools "
@@ -346,7 +358,9 @@ class TestPrivacy:
         # where an export is offered as a use
         section = _flat(_section(_doc("PRIVACY.md"),
                                  "What pseudonymisation is for"))
-        assert (SHARING_THE_FOLDER + " " + EXPORTS
+        # (the files design, piece 5: then the paragraph on a list filled
+        # in on the researcher's own computer)
+        assert (SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN
                 + " For what reaches the AI assistant") in section
 
     def test_the_list_is_a_selection_with_its_condition_last(self):

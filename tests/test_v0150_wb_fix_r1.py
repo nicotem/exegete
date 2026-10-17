@@ -321,9 +321,21 @@ class TestTheEntryIsOneAccount:
         # restore keeps the project's Exegete folder (piece 2), 1,501
         # since the descriptions that gave the lock file as QualCoder's
         # alone name both of its causes (tests/test_v0150_lock_wording.py),
-        # 1,497 since its fix round 1 (the renames' "may miss a 4.0 window")
+        # 1,497 since its fix round 1 (the renames' "may miss a 4.0 window"),
+        # 2,369 since prepare_names_list (the files design, piece 3)
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 1,497 characters more") in measured
+                "`lifecycle` to `full`: 2,369 characters more") in measured
+        # and the figure is the difference of the two the paragraph gives,
+        # so a piece that moves `full` moves it too
+        full = re.search(r"full = ([\d,]+) characters", measured)
+        lifecycle = re.search(r"the extension's default, ([\d,]+) over 78",
+                              measured)
+        change = re.search(r"the change is from `lifecycle` to `full`: "
+                           r"([\d,]+) characters more", measured)
+        assert full and lifecycle and change
+        figure = [int(m.group(1).replace(",", ""))
+                  for m in (full, lifecycle, change)]
+        assert figure[0] - figure[1] == figure[2]
 
 
 # ===========================================================================

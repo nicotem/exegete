@@ -5457,30 +5457,42 @@ def get_current_project() -> str:
 # names do not pass through the conversation (ruling 73, item 9; ruling 78)
 # ---------------------------------------------------------------------------
 
-PREPARE_NAMES_LIST_NEXT_STEP = (
+# Fix round 2: the ordinary next step in its three sentences, so that a
+# step for a file Exegete did not read can stand in for the second
+PREPARE_NAMES_LIST_WHERE = (
     "Tell the researcher that the names file is open on their computer "
-    "(or, when it could not be opened, where it is). They write each real "
-    "name and its pseudonym on a line of their own, save the file, and "
-    "tell you when the list is ready. Never open or read the file "
-    "yourself, even when a file tool could.")
+    "(or, when it could not be opened, where it is).")
+PREPARE_NAMES_LIST_FILL_IN = (
+    "They write each real name and its pseudonym on a line of their own, "
+    "save the file, and tell you when the list is ready.")
+PREPARE_NAMES_LIST_NEVER_OPEN = (
+    "Never open or read the file yourself, even when a file tool could.")
+PREPARE_NAMES_LIST_NEXT_STEP = " ".join((
+    PREPARE_NAMES_LIST_WHERE, PREPARE_NAMES_LIST_FILL_IN,
+    PREPARE_NAMES_LIST_NEVER_OPEN))
 NAMES_FILE_NOT_UTF8_STEP = (
     "The names file there is not saved as UTF-8 text: ask the researcher "
     "to save it again as plain text in UTF-8; most text editors offer the "
     "encoding when saving a file.")
 # Fix round 1: a step for each other reason a names file there was not
 # read, and for the counts that compare it with the list, in the manner
-# of the UTF-8 step
+# of the UTF-8 step. Fix round 2: a file kept aside is renamed in the
+# project's Exegete folder, where the import does not reach it, rather
+# than moved out; the step for something that is not an ordinary file
+# says where it is itself, since nothing was shown or opened
 NAMES_FILE_NOT_A_FILE_STEP = (
     "Something at the names file's place is not an ordinary file (a link, "
     "a folder or another kind of entry), so Exegete did not read, show or "
-    "open it: ask the researcher to move it out of the project's Exegete "
-    "folder or rename it, then call prepare_names_list again to make a new "
+    "open it. Tell the researcher where it is, and that they can rename "
+    "it, leaving it in the project's Exegete folder, which Exegete does "
+    "not import from; then call prepare_names_list again to make a new "
     "names file.")
 NAMES_FILE_TOO_LARGE_STEP = (
     "The names file there is larger than 1 MB, more than a names file "
     "should hold, so Exegete did not read it: the researcher may want to "
-    "look at what it holds. To start afresh, they can move it out of the "
-    "project's Exegete folder, then call prepare_names_list again.")
+    "look at what it holds. To start afresh, they can rename it, leaving "
+    "it in the project's Exegete folder, which Exegete does not import "
+    "from; then call prepare_names_list again to make a new names file.")
 NAMES_FILE_NOT_READ_STEP = (
     "The names file there could not be read just now (it changed or went "
     "while Exegete was reading it, or the system refused to read it): call "
@@ -5488,21 +5500,25 @@ NAMES_FILE_NOT_READ_STEP = (
     "researcher to check that they can open it in their text editor.")
 LIST_ENTRIES_NOT_IN_FILE_STEP = (
     "Some entries of the project's names list are on no line of the names "
-    "file, so the file may be older than the list: the researcher can add "
-    "those names to the file, or move the file out of the project's "
-    "Exegete folder and ask for a new one made from the list, then copy "
-    "across any lines of their own.")
+    "file, so the file may be older than the list. The researcher can find "
+    "those entries by comparing the file with pseudonyms.json, in the "
+    "project folder (looking at it changes nothing; changing it by hand "
+    "can make the list unreadable), and add them to the file. Or they can "
+    "rename the file, leaving it in the project's Exegete folder, which "
+    "Exegete does not import from; then call prepare_names_list again to "
+    "make a new one from the list, and they can copy across any lines of "
+    "their own from the renamed file.")
 LIST_ENTRIES_THE_FILE_CANNOT_HOLD_STEP = (
     "Some entries of the project's names list cannot be written as one "
     "line of the names file and are on no line of it; they are counted "
     "apart, not as missing from the file, and stay in the list as they "
     "are. If the researcher wants such a name in the names file, they can "
     "write a form of it there as a line of its own.")
+# The steps added after the ordinary one (fix round 2: a link, something
+# that is not an ordinary file and a file past 1 MB have steps that stand
+# in for it, in prepare_names_list)
 NAMES_FILE_NOT_READ_STEPS = {
     "not_utf8": NAMES_FILE_NOT_UTF8_STEP,
-    "link": NAMES_FILE_NOT_A_FILE_STEP,
-    "not_a_file": NAMES_FILE_NOT_A_FILE_STEP,
-    "too_large": NAMES_FILE_TOO_LARGE_STEP,
     "changed": NAMES_FILE_NOT_READ_STEP,
     "unreadable": NAMES_FILE_NOT_READ_STEP,
     "not_there": NAMES_FILE_NOT_READ_STEP,
@@ -5630,7 +5646,18 @@ def prepare_names_list() -> str:
         answer["not_opened_because"] = opened.reason
     step = PREPARE_NAMES_LIST_NEXT_STEP
     not_read = found.get("existing_file_not_read")
-    if not_read is not None:
+    if not_read in ("link", "not_a_file"):
+        # Fix round 2: nothing there to fill in, nothing shown or opened:
+        # the step stands in for the ordinary one, keeping its last
+        # sentence
+        step = " ".join((NAMES_FILE_NOT_A_FILE_STEP,
+                         PREPARE_NAMES_LIST_NEVER_OPEN))
+    elif not_read == "too_large":
+        # Fix round 2: shown and opened, but not one to fill in: the step
+        # stands in for the ordinary one's second sentence
+        step = " ".join((PREPARE_NAMES_LIST_WHERE, NAMES_FILE_TOO_LARGE_STEP,
+                         PREPARE_NAMES_LIST_NEVER_OPEN))
+    elif not_read is not None:
         step += " " + NAMES_FILE_NOT_READ_STEPS.get(
             not_read, NAMES_FILE_NOT_READ_STEP)
     if found.get("list_entries_not_in_file"):

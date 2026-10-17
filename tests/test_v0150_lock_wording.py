@@ -540,5 +540,6 @@ class TestTheChangelog:
                 "17 fewer in `core`, on both interpreters.") in measured
         # seventeen since prepare_names_list (the files design, piece 3)
         assert "seventeen changes moved them" in measured
-        assert ("the change is from `lifecycle` to `full`: 1,497 characters "
+        # 2,369 since prepare_names_list (the files design, piece 3)
+        assert ("the change is from `lifecycle` to `full`: 2,369 characters "
                 "more") in measured

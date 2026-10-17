@@ -527,9 +527,10 @@ folder.
 When a names file is already there, Exegete reads it for counts only:
 the lines it read, the lines it could not read, and how many entries
 of the project's names list are on no line of it. Because those counts
-compare the list with the file, a name added to the list shows, in the
-next count the assistant receives, whether that name is on a line of
-the file. The export tools
+compare the list with the file, an assistant that adds a name to the
+list (with a typed mapping saved to it, for instance) can tell from the
+next count whether that name is in your names file; it learns nothing
+of names it does not already have. The export tools
 refuse to write in any project's `Exegete` folder, so an export cannot
 replace a file you filled in. The names file opens in the app your
 computer uses for text files: if that app has an AI assistant of its
@@ -2060,7 +2061,9 @@ will ask, and the summary above depends on them:
     there holds it, so a project you are about to share is not free of
     names while it is there. You can move it out of the project before sharing, and remove
     the backups and copies that still hold it ("Files Exegete keeps on
-    your computer").
+    your computer"). Once it is out of a project's `Exegete` folder,
+    Exegete no longer refuses to import it, so you may prefer to keep it
+    in a folder you do not ask the assistant to bring documents from.
   - **Notes (twelve fields, the audio/video and image coding notes
     included), journal entries and their names, case names, file names,
     code names, category names, attribute-type names and attribute

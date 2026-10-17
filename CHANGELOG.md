@@ -136,7 +136,10 @@ contributors, and the measurements.
   wherever the project goes: into its backups and copies, and to any
   service that syncs its folder. It is yours to move or delete; Exegete
   never deletes it. Before you share a project folder, you may want to
-  move it out (PRIVACY.md, "What pseudonymisation is for").
+  move it out (PRIVACY.md, "What pseudonymisation is for"); once it is
+  out of the `Exegete` folder, Exegete no longer refuses to import it,
+  so you may prefer to keep it in a folder you do not ask the assistant
+  to bring documents from.
 - **Not in this release.** The removals announced in 0.14 for v0.15
   (TOOLS.md names each) come in v0.15.1, with the safety net; until
   then the deprecated tools and arguments work, and say so
@@ -1144,7 +1147,7 @@ for the four labels stays in NOTICE.
   71,690. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
   3.13), seventeen changes moved them; for most researchers, on the
-  extension, the change is from `lifecycle` to `full`: 1,497 characters
+  extension, the change is from `lifecycle` to `full`: 2,369 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three

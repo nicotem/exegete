@@ -17,6 +17,7 @@ import io
 import json
 import logging
 import os
+import re
 import stat
 import sys
 from pathlib import Path
@@ -91,34 +92,69 @@ ENTRIES_NOTE = (
     "unreadable.")
 # Fix round 1: a step for each other reason a file there was not read,
 # and for the counts that compare it with the list
+# Fix round 2: a file kept aside is renamed in the project's Exegete
+# folder, where the import does not reach it, rather than moved out
 NOT_A_FILE_STEP = (
     "Something at the names file's place is not an ordinary file (a link, "
     "a folder or another kind of entry), so Exegete did not read, show or "
-    "open it: ask the researcher to move it out of the project's Exegete "
-    "folder or rename it, then call prepare_names_list again to make a new "
+    "open it. Tell the researcher where it is, and that they can rename "
+    "it, leaving it in the project's Exegete folder, which Exegete does "
+    "not import from; then call prepare_names_list again to make a new "
     "names file.")
 TOO_LARGE_STEP = (
     "The names file there is larger than 1 MB, more than a names file "
     "should hold, so Exegete did not read it: the researcher may want to "
-    "look at what it holds. To start afresh, they can move it out of the "
-    "project's Exegete folder, then call prepare_names_list again.")
+    "look at what it holds. To start afresh, they can rename it, leaving "
+    "it in the project's Exegete folder, which Exegete does not import "
+    "from; then call prepare_names_list again to make a new names file.")
 NOT_READ_STEP = (
     "The names file there could not be read just now (it changed or went "
     "while Exegete was reading it, or the system refused to read it): call "
     "prepare_names_list again; if it still cannot be read, ask the "
     "researcher to check that they can open it in their text editor.")
+# Fix round 2: how the researcher finds the entries, and the file
+# renamed rather than moved out
 NOT_IN_FILE_STEP = (
     "Some entries of the project's names list are on no line of the names "
-    "file, so the file may be older than the list: the researcher can add "
-    "those names to the file, or move the file out of the project's "
-    "Exegete folder and ask for a new one made from the list, then copy "
-    "across any lines of their own.")
+    "file, so the file may be older than the list. The researcher can find "
+    "those entries by comparing the file with pseudonyms.json, in the "
+    "project folder (looking at it changes nothing; changing it by hand "
+    "can make the list unreadable), and add them to the file. Or they can "
+    "rename the file, leaving it in the project's Exegete folder, which "
+    "Exegete does not import from; then call prepare_names_list again to "
+    "make a new one from the list, and they can copy across any lines of "
+    "their own from the renamed file.")
 CANNOT_HOLD_STEP = (
     "Some entries of the project's names list cannot be written as one "
     "line of the names file and are on no line of it; they are counted "
     "apart, not as missing from the file, and stay in the list as they "
     "are. If the researcher wants such a name in the names file, they can "
     "write a form of it there as a line of its own.")
+# Fix round 2: the whole next step when something else holds the names
+# file's place, or the file there is past 1 MB: the step for the case
+# stands in for the ordinary step's second sentence (where it is, then
+# what to do, then never open or read it), so that the assistant is not
+# told both to have the file filled in and to rename it
+FILL_IN = (
+    "They write each real name and its pseudonym on a line of their own, "
+    "save the file, and tell you when the list is ready.")
+NOT_A_FILE_NEXT_STEP = (
+    "Something at the names file's place is not an ordinary file (a link, "
+    "a folder or another kind of entry), so Exegete did not read, show or "
+    "open it. Tell the researcher where it is, and that they can rename "
+    "it, leaving it in the project's Exegete folder, which Exegete does "
+    "not import from; then call prepare_names_list again to make a new "
+    "names file. Never open or read the file yourself, even when a file "
+    "tool could.")
+TOO_LARGE_NEXT_STEP = (
+    "Tell the researcher that the names file is open on their computer "
+    "(or, when it could not be opened, where it is). The names file there "
+    "is larger than 1 MB, more than a names file should hold, so Exegete "
+    "did not read it: the researcher may want to look at what it holds. "
+    "To start afresh, they can rename it, leaving it in the project's "
+    "Exegete folder, which Exegete does not import from; then call "
+    "prepare_names_list again to make a new names file. Never open or "
+    "read the file yourself, even when a file tool could.")
 
 
 def _flat(text):
@@ -342,8 +378,89 @@ def _write_list(folder, entries):
                    indent=2), encoding="utf-8")
 
 
+_JSON_STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
+_SEPARATORS = re.compile(r"=>|->|\u2192|=|\t|,")
+
+
+def _names_in_reach():
+    """Fix round 2: every real name and pseudonym a call of
+    prepare_names_list could reach: each string in pseudonyms.json (read
+    as text, so that a list the reader refuses counts too), and each side
+    of every line of the names file there, or of the file a link there
+    leads to (a FIFO, a folder or a file past 1 MB is not read here), read
+    as UTF-8 or, failing that, as cp1252. Names Exegete's own words for
+    this tool hold cannot be told apart, so they are left out, as are
+    names of fewer than three characters."""
+    if server.current_project_path is None:
+        return set()
+    folder = Path(server._current_project_folder())
+    found = set()
+    try:
+        text = (folder / "pseudonyms.json").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        text = ""
+    for literal in _JSON_STRING.findall(text):
+        try:
+            found.add(json.loads(f'"{literal}"'))
+        except ValueError:
+            found.add(literal)
+    place = folder / "Exegete" / NAMES_FILE
+    try:
+        regular = stat.S_ISREG(os.stat(place).st_mode)
+        raw = place.read_bytes() if regular and os.stat(place).st_size <= \
+            private_files.MAX_READ else b""
+    except OSError:
+        raw = b""
+    try:
+        lines = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        lines = raw.decode("cp1252", errors="replace")
+    for line in lines.splitlines():
+        if not line.lstrip().startswith("#"):
+            found.update(side.strip() for side in _SEPARATORS.split(line))
+    own_words = " ".join(
+        value for key, value in vars(server).items()
+        if isinstance(value, str) and key.startswith(
+            ("PREPARE_NAMES_LIST", "NAMES_FILE_", "LIST_ENTRIES_",
+             "ENTRIES_NOT_WRITTEN")))
+    return {name for name in found if len(name.strip()) >= 3
+            and name not in ("original", "pseudonym")
+            and name not in own_words}
+
+
+def _strings(value):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            yield key
+            yield from _strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _strings(item)
+    elif isinstance(value, str):
+        yield value
+
+
 def _prepare():
-    return json.loads(server.prepare_names_list())
+    """prepare_names_list's answer, parsed, after proving on every call
+    that no real name or pseudonym within its reach is in it (fix round
+    2): the names file's place is given as it is, and no other key or
+    value holds a name, as written or escaped."""
+    before = _names_in_reach()
+    raw = server.prepare_names_list()
+    answer = json.loads(raw)
+    names = before | _names_in_reach()
+    if "names_file" in answer:
+        assert answer["names_file"] == str(
+            Path(server._current_project_folder()) / "Exegete" / NAMES_FILE)
+    rest = dict(answer)
+    rest.pop("names_file", None)
+    said = "\n".join(_strings(rest))
+    escaped = json.dumps(rest)
+    for name in names:
+        for form in {name, name.strip()}:
+            assert form not in said, form
+            assert json.dumps(form)[1:-1] not in escaped, form
+    return answer
 
 
 def _on_disk(text):
@@ -562,7 +679,9 @@ class TestAFileAlreadyThere:
 
     def test_a_file_gone_between_the_look_and_the_read(
             self, selected, asked, monkeypatch):
-        """Fix round 1: `not_there`, with its step."""
+        """Fix round 1: `not_there`, with its step (fix round 2: a list in
+        reach, whose names the answer must not hold)."""
+        _write_list(selected, [("Morwenna Quill", "Participant A")])
         self._place(selected, b"Jane Doe = P01\n")
 
         def gone(project, name):
@@ -577,6 +696,7 @@ class TestAFileAlreadyThere:
     @pytest.mark.parametrize("code", ["changed", "unreadable"])
     def test_a_file_that_changed_or_could_not_be_read(
             self, selected, asked, monkeypatch, code):
+        _write_list(selected, [("Morwenna Quill", "Participant A")])
         self._place(selected, b"Jane Doe = P01\n")
 
         def refused(project, name):
@@ -597,6 +717,7 @@ class TestAFileAlreadyThere:
     def test_a_dangling_link(self, selected, asked, tmp_path):
         """Fix round 1: a link at the name that leads nowhere is reported
         as a link, not handed to the writer."""
+        _write_list(selected, [("Morwenna Quill", "Participant A")])
         private_files.ensure_folder(selected)
         if not _symlink(_names(selected), tmp_path / "nowhere.txt"):
             pytest.skip("this system makes no symbolic link here")
@@ -604,12 +725,13 @@ class TestAFileAlreadyThere:
         assert "error" not in answer
         assert answer["existing_file_not_read"] == "link"
         assert answer["created"] is False
-        assert answer["next_step"] == NEXT_STEP + " " + NOT_A_FILE_STEP
+        assert answer["next_step"] == NOT_A_FILE_NEXT_STEP
         assert asked == []
         assert not (tmp_path / "nowhere.txt").exists()
         assert os.path.islink(_names(selected))
 
     def test_a_link(self, selected, asked, tmp_path):
+        _write_list(selected, [("Morwenna Quill", "Participant A")])
         outside = tmp_path / "elsewhere.txt"
         outside.write_bytes(b"Jane Doe = P01\n")
         private_files.ensure_folder(selected)
@@ -625,32 +747,35 @@ class TestAFileAlreadyThere:
         assert asked == []
         assert outside.read_bytes() == b"Jane Doe = P01\n"
         assert os.path.islink(_names(selected))
-        assert answer["next_step"] == NEXT_STEP + " " + NOT_A_FILE_STEP
+        assert answer["next_step"] == NOT_A_FILE_NEXT_STEP
 
     @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no FIFOs here")
     def test_a_fifo(self, selected, asked):
+        _write_list(selected, [("Morwenna Quill", "Participant A")])
         private_files.ensure_folder(selected)
         os.mkfifo(_names(selected))
         answer = _prepare()          # would hang if the FIFO were opened
         assert answer["existing_file_not_read"] == "not_a_file"
         assert answer["opened"] is False and asked == []
-        assert answer["next_step"] == NEXT_STEP + " " + NOT_A_FILE_STEP
+        assert answer["next_step"] == NOT_A_FILE_NEXT_STEP
 
     def test_a_folder_at_the_name(self, selected, asked):
+        _write_list(selected, [("Morwenna Quill", "Participant A")])
         private_files.ensure_folder(selected)
         _names(selected).mkdir()
         answer = _prepare()
         assert answer["existing_file_not_read"] == "not_a_file"
         assert answer["created"] is False and asked == []
-        assert answer["next_step"] == NEXT_STEP + " " + NOT_A_FILE_STEP
+        assert answer["next_step"] == NOT_A_FILE_NEXT_STEP
 
     def test_a_file_past_the_limit(self, selected, asked):
+        _write_list(selected, [("Morwenna Quill", "Participant A")])
         raw = self._place(selected, b"x" * (private_files.MAX_READ + 1))
         answer = _prepare()
         assert answer["existing_file_not_read"] == "too_large"
         assert _names(selected).read_bytes() == raw
         assert answer["opened"] is True        # an ordinary file is opened
-        assert answer["next_step"] == NEXT_STEP + " " + TOO_LARGE_STEP
+        assert answer["next_step"] == TOO_LARGE_NEXT_STEP
 
     def test_a_file_not_in_utf8(self, selected, asked):
         raw = self._place(selected,
@@ -818,6 +943,8 @@ EXPORTS = [
 
 
 class TestExportsKeepOut:
+    """Each refusal is compared whole (fix round 2), so that nothing of
+    what is at the refused place can ride along in it."""
 
     @pytest.fixture
     def other(self, selected, tmp_path):
@@ -838,7 +965,11 @@ class TestExportsKeepOut:
         target = names if suffix == ".txt" else names.with_suffix(suffix)
         answer = json.loads(getattr(server, tool)(
             output_path=str(target), overwrite=True, **extra))
-        assert answer.get("error") == EXPORT_REFUSAL, answer
+        refusal = {"error": EXPORT_REFUSAL}
+        if tool == "export_refi_qda":
+            # deprecated: every answer carries the sentence
+            refusal["deprecated"] = server.DEPRECATED_REFI_EXPORT
+        assert answer == refusal, answer
         assert names.read_bytes() == before
         assert sorted(os.listdir(other / "Exegete")) == sorted(
             [private_files.NOTE_NAME, NAMES_FILE])
@@ -848,7 +979,7 @@ class TestExportsKeepOut:
             self, selected, other, tool, extra, suffix):
         answer = json.loads(getattr(server, tool)(
             output_path=str(other / "Exegete"), **extra))
-        assert answer.get("error") == EXPORT_REFUSAL, answer
+        assert answer == {"error": EXPORT_REFUSAL}, answer
         assert sorted(os.listdir(other / "Exegete")) == sorted(
             [private_files.NOTE_NAME, NAMES_FILE])
 
@@ -860,7 +991,7 @@ class TestExportsKeepOut:
         answer = json.loads(server.export_codebook(
             output_path=str(link / NAMES_FILE), format="txt",
             overwrite=True))
-        assert answer.get("error") == EXPORT_REFUSAL, answer
+        assert answer == {"error": EXPORT_REFUSAL}, answer
         assert (other / "Exegete" / NAMES_FILE).read_bytes() == \
             b"Jane Doe = Participant A\n"
 
@@ -877,7 +1008,7 @@ class TestExportsKeepOut:
         answer = json.loads(server.export_codebook(
             output_path=str(third / "Exegete" / "Codebook.txt"),
             format="txt"))
-        assert answer.get("error") == EXPORT_REFUSAL, answer
+        assert answer == {"error": EXPORT_REFUSAL}, answer
         assert os.listdir(elsewhere) == []
 
     def test_an_export_beside_it_is_written(self, selected, other,
@@ -929,6 +1060,42 @@ class TestNoNameLeaks:
         for token in TOKENS:
             assert token not in everything, token
 
+    def test_every_call_in_this_file_checks_the_names_in_its_reach(
+            self, selected, tmp_path):
+        """Fix round 2: the helper every test here calls gathers the list's
+        names (an unreadable list's too), both sides of the names file's
+        lines (a cp1252 file's too) and a link's target's, and leaves a
+        FIFO and a file past 1 MB unread."""
+        _write_list(selected, [(LIST_NAME, LIST_PSEUDONYM)])
+        assert {LIST_NAME, LIST_PSEUDONYM} <= _names_in_reach()
+        (selected / "pseudonyms.json").write_text(
+            f'[{{"original": "{BROKEN_NAME}", ', encoding="utf-8")
+        assert BROKEN_NAME in _names_in_reach()
+        private_files.ensure_folder(selected)
+        _names(selected).write_text(f"# {BAD_NAME}\n{FILE_NAME} -> "
+                                    f"{FILE_PSEUDONYM}\n", encoding="utf-8")
+        reach = _names_in_reach()
+        assert {FILE_NAME, FILE_PSEUDONYM} <= reach
+        assert not any("Xandrel" in name for name in reach)
+        _names(selected).write_bytes(f"{FILE_NAME} = Zoë\n".encode("cp1252"))
+        assert {FILE_NAME, "Zoë"} <= _names_in_reach()
+        _names(selected).unlink()
+        outside = tmp_path / "elsewhere.txt"
+        outside.write_text(f"{FILE_NAME} = {FILE_PSEUDONYM}\n",
+                           encoding="utf-8")
+        if _symlink(_names(selected), outside):
+            assert {FILE_NAME, FILE_PSEUDONYM} <= _names_in_reach()
+            _names(selected).unlink()
+        line = f"{FILE_NAME} = x\n"
+        _names(selected).write_text(
+            line * (private_files.MAX_READ // len(line) + 1),
+            encoding="utf-8")
+        assert FILE_NAME not in _names_in_reach()
+        _names(selected).unlink()
+        if hasattr(os, "mkfifo"):
+            os.mkfifo(_names(selected))     # would hang if it were read
+            assert FILE_NAME not in _names_in_reach()
+
     def _run_everything(self, selected, tmp_path):
         answers = []
         # a list with a name the file can hold and one it cannot
@@ -952,10 +1119,73 @@ class TestNoNameLeaks:
         answers.append(server.prepare_names_list())
         _names(selected).unlink()
         answers.append(server.prepare_names_list())
+        answers.extend(self._the_edge_paths(selected, tmp_path))
         for mode in ("full", "core"):
             server._apply_toolset(mode)
             answers.append(server.get_current_project())
         server._apply_toolset("full")
+        return answers
+
+    def _the_edge_paths(self, selected, tmp_path):
+        """Fix round 2: each path on which a names file there is not read,
+        or another call wrote it first, with a list in reach and names in
+        whatever is at the place."""
+        answers, reasons = [], []
+        lines = f"{FILE_NAME} = {FILE_PSEUDONYM}\n"
+
+        def call(reason):
+            answers.append(server.prepare_names_list())
+            reasons.append(reason)
+
+        _write_list(selected, [(LIST_NAME, LIST_PSEUDONYM),
+                               (BAD_NAME, "P02")])
+        # another call writes the file first
+        _names(selected).unlink()
+        real_write = private_files.write_new
+
+        def first_another(project, name, text):
+            real_write(project, name, lines)
+            return real_write(project, name, text)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(private_files, "write_new", first_another)
+            call(None)
+        assert _names(selected).read_text(encoding="utf-8-sig") == lines
+        # the file goes, changes or is refused while it is read
+        for code in ("not_there", "changed", "unreadable"):
+            def refused(project, name, code=code):
+                if code == "not_there":
+                    raise FileNotFoundError("That file is not in the "
+                                            "project's Exegete folder.")
+                raise private_files.PrivateFilesError(code, "It could not "
+                                                            "be read.")
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(private_files, "read_bytes", refused)
+                call(code)
+        # a file past 1 MB, names in it
+        _names(selected).write_text(
+            lines * (private_files.MAX_READ // len(lines) + 1),
+            encoding="utf-8")
+        call("too_large")
+        _names(selected).unlink()
+        # a link to a file of names elsewhere
+        outside = tmp_path / "elsewhere.txt"
+        outside.write_text(lines, encoding="utf-8")
+        if _symlink(_names(selected), outside):
+            call("link")
+            _names(selected).unlink()
+        # a folder at the name, a file of names in it
+        _names(selected).mkdir()
+        (_names(selected) / "inside.txt").write_text(lines, encoding="utf-8")
+        call("not_a_file")
+        (_names(selected) / "inside.txt").unlink()
+        _names(selected).rmdir()
+        # a FIFO
+        if hasattr(os, "mkfifo"):
+            os.mkfifo(_names(selected))
+            call("not_a_file")
+            _names(selected).unlink()
+        assert [json.loads(answer).get("existing_file_not_read")
+                for answer in answers] == reasons
         return answers
 
 
@@ -983,9 +1213,35 @@ class TestWhatItSays:
             CANNOT_HOLD_STEP
         for text in (DESCRIPTION, NEXT_STEP, NOT_UTF8_STEP, ENTRIES_NOTE,
                      HEADER, NOT_A_FILE_STEP, TOO_LARGE_STEP, NOT_READ_STEP,
-                     NOT_IN_FILE_STEP, CANNOT_HOLD_STEP):
+                     NOT_IN_FILE_STEP, CANNOT_HOLD_STEP, NOT_A_FILE_NEXT_STEP,
+                     TOO_LARGE_NEXT_STEP):
             assert "—" not in text and "QualCoder" not in text
             assert "the server" not in text
+
+    def test_a_step_for_a_file_not_to_fill_in_stands_in_for_the_ordinary(
+            self):
+        """Fix round 2: the ordinary step in its three sentences; with
+        something else at the place, or a file past 1 MB, the step for the
+        case takes the place of "They write each real name ...", and the
+        last sentence stays."""
+        assert server.PREPARE_NAMES_LIST_FILL_IN == FILL_IN
+        assert " ".join((server.PREPARE_NAMES_LIST_WHERE, FILL_IN,
+                         server.PREPARE_NAMES_LIST_NEVER_OPEN)) == NEXT_STEP
+        for step in (NOT_A_FILE_NEXT_STEP, TOO_LARGE_NEXT_STEP):
+            assert FILL_IN not in step
+            assert step.endswith(server.PREPARE_NAMES_LIST_NEVER_OPEN)
+        assert TOO_LARGE_NEXT_STEP.startswith(server.PREPARE_NAMES_LIST_WHERE)
+
+    def test_no_step_suggests_moving_the_file_out(self):
+        """Fix round 2: out of the project's Exegete folder, the import no
+        longer refuses the file, so the steps suggest renaming it there."""
+        for text in (NOT_A_FILE_STEP, TOO_LARGE_STEP, NOT_IN_FILE_STEP,
+                     server.NAMES_FILE_NOT_A_FILE_STEP,
+                     server.NAMES_FILE_TOO_LARGE_STEP,
+                     server.LIST_ENTRIES_NOT_IN_FILE_STEP):
+            assert "move" not in text and "out of the project" not in text
+            assert ("leaving it in the project's Exegete folder, which "
+                    "Exegete does not import from") in text
 
     def test_in_full_not_in_core(self):
         server._apply_toolset("full")
@@ -1011,12 +1267,13 @@ class TestWhatItSays:
 # The documents
 # ---------------------------------------------------------------------------
 
+# Fix round 2: a names file already there is kept
 TOOLS_ENTRY = (
     "- `prepare_names_list()` - **WRITES A FILE ON YOUR COMPUTER** - Makes "
     "`Names to replace.txt` in the project's `Exegete` folder for you to "
-    "fill in, with the project's names list in it when there is one, and "
-    "shows and opens it; never returns its contents. In the full tool set, "
-    "not in core")
+    "fill in, with the project's names list in it when there is one, or "
+    "keeps the one already there as it is, and shows and opens it; never "
+    "returns its contents. In the full tool set, not in core")
 PRIVACY_ROW = (
     "| Files you fill in | the `Exegete` folder inside the project | files "
     "you fill in for the project, such as the names file (`Names to "
@@ -1076,7 +1333,10 @@ class TestTheDocuments:
             "it, so a project you are about to share is not free of names "
             "while it is there. You can move it out of the project before "
             "sharing, and remove the backups and copies that still hold it "
-            "(\"Files Exegete keeps on your computer\").")
+            "(\"Files Exegete keeps on your computer\"). Once it is out of a "
+            "project's `Exegete` folder, Exegete no longer refuses to import "
+            "it, so you may prefer to keep it in a folder you do not ask the "
+            "assistant to bring documents from.")
 
     def test_privacy_says_what_the_counts_show_and_warns_of_the_app(self):
         """Fix round 1: the counts compare the list with the file; exports
@@ -1091,10 +1351,12 @@ class TestTheDocuments:
             "counts only: the lines it read, the lines it could not read, "
             "and how many entries of the project's names list are on no "
             "line of it. Because those counts compare the list with the "
-            "file, a name added to the list shows, in the next count the "
-            "assistant receives, whether that name is on a line of the "
-            "file. The export tools refuse to write in any project's "
-            "`Exegete` folder, so an export cannot replace a file you "
+            "file, an assistant that adds a name to the list (with a typed "
+            "mapping saved to it, for instance) can tell from the next count "
+            "whether that name is in your names file; it learns nothing of "
+            "names it does not already have. The export tools refuse to "
+            "write in any project's `Exegete` folder, so an export cannot "
+            "replace a file you "
             "filled in. The names file opens in the app your computer uses "
             "for text files: if that app has an AI assistant of its own, "
             "what the file holds can reach that assistant's provider when "
@@ -1127,7 +1389,10 @@ class TestTheDocuments:
                 "folder. It is yours to move or delete; Exegete never "
                 "deletes it. Before you share a project folder, you may "
                 "want to move it out (PRIVACY.md, \"What pseudonymisation "
-                "is for\").") in upgrading
+                "is for\"); once it is out of the `Exegete` folder, Exegete "
+                "no longer refuses to import it, so you may prefer to keep it "
+                "in a folder you do not ask the assistant to bring documents "
+                "from.") in upgrading
 
     def test_the_changelog_says_what_was_added(self):
         log = _read("CHANGELOG.md")

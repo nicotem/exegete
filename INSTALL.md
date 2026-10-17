@@ -1329,7 +1329,7 @@ line has one command:
 codex mcp add exegete --env EXEGETE_TOOLSET=full --env "EXEGETE_WORKSPACE=~/Exegete projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
 ```
 
-OpenAI does not document that either writes the approval lines, so
+OpenAI does not document that either writes the approval line, so
 after either one, open the file as above and add what it lacks:
 `default_tools_approval_mode = "writes"` on the line straight after
 `[mcp_servers.exegete]`; and, if the settings screen had no place for

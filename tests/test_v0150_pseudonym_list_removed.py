@@ -35,6 +35,10 @@ in v0.15.1, with its deprecation sentence, its mark and its metadata.
     Codex entry can drop the removed tool's table; the documents' pronouns
     name what they refer to; the release notes describe no text of the
     removed tool as changed.
+11. Fix round 2 (GATE_names-list-removal_DOCS_R2.md): INSTALL's Codex
+    step 2 speaks of the one approval line its recipe now has; the
+    release notes name pseudonyms.json where get_current_project's answer
+    sends the researcher for the entries the names file cannot hold.
 """
 
 import asyncio
@@ -552,12 +556,15 @@ class TestChangelog:
                 "replace names in a file already in the project; and that "
                 "QualCoder, if you use it, can also make the list before "
                 "importing;") in log
+        # Fix round 2: pseudonyms.json named, where "the file in the
+        # project folder" could be read as the names file
         assert ("in `get_current_project`'s answer (which also says where "
                 "the researcher sees and changes the list: in the names "
-                "file, the entries it cannot hold as one line staying in "
-                "the file in the project folder, or, in `core`, in that "
-                "file) and description, in `pseudonymise_source`'s "
-                "`use_project_pseudonyms`, and in PRIVACY.md,") in log
+                "file, with the entries it cannot hold as one line seen in "
+                "`pseudonyms.json` itself, or, in `core`, in "
+                "`pseudonyms.json`) and description, in "
+                "`pseudonymise_source`'s `use_project_pseudonyms`, and in "
+                "PRIVACY.md,") in log
         # Fix round 1: no change to a description 0.15.0 does not serve
         assert "in `read_pseudonym_list`'s description" not in log
         assert "The two descriptions are shorter than before." in log
@@ -672,3 +679,42 @@ class TestFixRound1:
         assert "remove it and store it securely" not in privacy
         assert ("QualCoder's own guidance is to remove `pseudonyms.json` and "
                 "store it securely once the import is done") in privacy
+
+
+# ---------------------------------------------------------------------------
+# 11. Fix round 2
+# ---------------------------------------------------------------------------
+
+class TestFixRound2:
+
+    def test_install_speaks_of_one_approval_line(self):
+        """The recipe's block has one approval line since the removed
+        tool's table went, so "Other ways to add it" says "line"."""
+        install = _flat(_read("INSTALL.md"))
+        other_ways = install[install.index("**Other ways to add it.**"):
+                             install.index("**Step 3. Give Codex a folder")]
+        assert ("OpenAI does not document that either writes the approval "
+                "line, so after either one, open the file as above and add "
+                "what it lacks: `default_tools_approval_mode = \"writes\"` "
+                "on the line straight after `[mcp_servers.exegete]`;"
+                ) in other_ways
+        assert "the approval lines" not in install
+        raw = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        block = raw[raw.index("```toml\n[mcp_servers.exegete]"):]
+        block = block[:block.index("\n```", 4)]
+        assert block.count("approval_mode = ") == 1
+
+    def test_the_changelog_names_pseudonyms_json_for_both_routes(self):
+        """get_current_project's answer, in `full` and in `core`, sends the
+        researcher to pseudonyms.json for what the names file cannot hold
+        or for the list itself; the release notes name it rather than
+        leave "the file in the project folder" to be guessed."""
+        log = TestChangelog._unreleased()
+        assert "staying in the file in the project folder" not in log
+        assert "or, in `core`, in that file)" not in log
+        assert ("seen in `pseudonyms.json` itself, or, in `core`, in "
+                "`pseudonyms.json`)") in log
+        assert "pseudonyms.json, in the project folder" in (
+            server.PSEUDONYMS_JSON_NOTE_FULL)
+        assert "read the file in the project folder" in (
+            server.PSEUDONYMS_JSON_NOTE_CORE)

@@ -504,8 +504,8 @@ comes with v0.15.2.
   own, applied when files are imported, rather than as QualCoder's
   import-time list: in `get_current_project`'s answer (which also says
   where the researcher sees and changes the list: in the names file,
-  the entries it cannot hold as one line staying in the file in the
-  project folder, or, in `core`, in that file) and description, in
+  with the entries it cannot hold as one line seen in `pseudonyms.json`
+  itself, or, in `core`, in `pseudonyms.json`) and description, in
   `pseudonymise_source`'s `use_project_pseudonyms`, and in PRIVACY.md,
   which also names the backups the file travels into (Exegete's, and
   QualCoder's if you use it). The two descriptions are shorter than

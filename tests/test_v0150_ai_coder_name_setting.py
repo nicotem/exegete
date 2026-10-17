@@ -721,8 +721,9 @@ class TestTheDocuments:
         # folder (piece 2), and sixteen since the descriptions that gave
         # the lock file as QualCoder's alone name both of its causes (the
         # fourth reading of the documents), and seventeen since
-        # prepare_names_list (the files design, piece 3)
-        assert ("on 3.13), seventeen changes moved them;") in unreleased
+        # prepare_names_list (the files design, piece 3), and eighteen
+        # since save_names_list (piece 4)
+        assert ("on 3.13), eighteen changes moved them;") in unreleased
         assert ("And the AI coder name in the settings is given to each new "
                 "project: `create_project`'s sentence on it grew its entry "
                 "by 115 characters, 123 on 3.11, and `export_refi_qda`'s "

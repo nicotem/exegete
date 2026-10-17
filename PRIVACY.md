@@ -524,13 +524,18 @@ SQLite's side files, and in QualCoder's backups, audio and video when
 its settings say so), and to any service that syncs the project's
 folder.
 
-When a names file is already there, Exegete reads it for counts only:
-the lines it read, the lines it could not read, and how many entries
-of the project's names list are on no line of it. Because those counts
-compare the list with the file, an assistant that adds a name to the
-list (with a typed mapping saved to it, for instance) can tell from the
-next count whether that name is in your names file; it learns nothing
-of names it does not already have. The export tools
+When a names file is already there, `prepare_names_list` reads it for
+counts only: the lines it read, the lines it could not read, and how
+many entries of the project's names list are on no line of it.
+Because those counts compare the list with the file, an assistant that
+adds a name to the list (with a typed mapping saved to it, for
+instance) can tell from the next count whether that name is in your
+names file; it learns nothing of names it does not already have. When
+you say the list is ready, `save_names_list` reads the file to check
+it: its preview gives counts, which compare the list with the file in
+the same way, and the numbers of the lines to correct, never a name;
+on your word, after a backup, it copies the file's names into
+`pseudonyms.json`, and the file itself stays as it is. The export tools
 refuse to write in any project's `Exegete` folder, so an export cannot
 replace a file you filled in. The names file opens in the app your
 computer uses for text files: if that app has an AI assistant of its

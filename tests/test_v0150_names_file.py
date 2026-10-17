@@ -63,14 +63,16 @@ DESCRIPTION = (
     "already there is kept as it is. Then shows it in its folder and opens "
     "it in the computer's text editor. Exegete never fills in names from "
     "the documents and never returns the file's contents. Tell the "
-    "researcher to fill it in, save it and say when the list is ready. "
-    "Never open or read the file yourself.")
+    "researcher to fill it in, save it and say when the list is ready; "
+    # the files design, piece 4: the call that saves it
+    "then call save_names_list. Never open or read the file yourself.")
 NEXT_STEP = (
     "Tell the researcher that the names file is open on their computer "
     "(or, when it could not be opened, where it is). They write each real "
     "name and its pseudonym on a line of their own, save the file, and "
-    "tell you when the list is ready. Never open or read the file "
-    "yourself, even when a file tool could.")
+    # the files design, piece 4: the call that saves it
+    "tell you when the list is ready; then call save_names_list. Never "
+    "open or read the file yourself, even when a file tool could.")
 NOT_UTF8_STEP = (
     "The names file there is not saved as UTF-8 text: ask the researcher "
     "to save it again as plain text in UTF-8; most text editors offer the "
@@ -137,7 +139,8 @@ CANNOT_HOLD_STEP = (
 # told both to have the file filled in and to rename it
 FILL_IN = (
     "They write each real name and its pseudonym on a line of their own, "
-    "save the file, and tell you when the list is ready.")
+    "save the file, and tell you when the list is ready; then call "
+    "save_names_list.")
 NOT_A_FILE_NEXT_STEP = (
     "Something at the names file's place is not an ordinary file (a link, "
     "a folder or another kind of entry), so Exegete did not read, show or "
@@ -1289,10 +1292,13 @@ class TestTheDocuments:
         lines = tools.splitlines()
         at = lines.index(TOOLS_ENTRY)
         assert lines[at - 1].startswith("- `get_current_project()` - ")
-        assert lines[at + 1].startswith("- `create_project(")
+        # the files design, piece 4: the save comes next
+        assert lines[at + 1].startswith("- `save_names_list(")
+        assert lines[at + 2].startswith("- `create_project(")
         assert tools.index("**Project Management:**") < tools.index(
             TOOLS_ENTRY) < tools.index("**Keeping Exegete up to date:**")
-        assert "registers 82 tools, two of them the earlier names" in \
+        # 83 since save_names_list (the files design, piece 4)
+        assert "registers 83 tools, two of them the earlier names" in \
             _flat(tools)
 
     def test_privacy_names_the_file_among_the_files_you_fill_in(self):
@@ -1346,15 +1352,23 @@ class TestTheDocuments:
         files = _flat(privacy[privacy.index(
             "\n## Files Exegete keeps on your computer\n"):])
         files = files[:files.index(" ## ")]
+        # the files design, piece 4: prepare_names_list reads it for
+        # counts only, save_names_list to check and save it
         assert (
-            "When a names file is already there, Exegete reads it for "
-            "counts only: the lines it read, the lines it could not read, "
+            "When a names file is already there, `prepare_names_list` reads "
+            "it for counts only: the lines it read, the lines it could not read, "
             "and how many entries of the project's names list are on no "
             "line of it. Because those counts compare the list with the "
             "file, an assistant that adds a name to the list (with a typed "
             "mapping saved to it, for instance) can tell from the next count "
             "whether that name is in your names file; it learns nothing of "
-            "names it does not already have. The export tools refuse to "
+            "names it does not already have. When you say the list is "
+            "ready, `save_names_list` reads the file to check it: its "
+            "preview gives counts, which compare the list with the file in "
+            "the same way, and the numbers of the lines to correct, never a "
+            "name; on your word, after a backup, it copies the file's names "
+            "into `pseudonyms.json`, and the file itself stays as it is. "
+            "The export tools refuse to "
             "write in any project's `Exegete` folder, so an export cannot "
             "replace a file you "
             "filled in. The names file opens in the app your computer uses "
@@ -1418,7 +1432,8 @@ class TestTheDocuments:
                 "it stays in the list. Exegete never fills in a name from "
                 "the documents.",
                 "A names file already there is kept as it is, never "
-                "replaced or rewritten.",
+                "replaced or rewritten. `prepare_names_list` reads it only "
+                "to count:",
                 "Then Exegete shows the file in its folder and opens it in "
                 "your text editor",
                 # fix round 1
@@ -1451,10 +1466,13 @@ class TestTheDocuments:
         log = _flat(_read("CHANGELOG.md"))
         measured = log[log.index("### Measured"):log.index(
             "## [0.14.3-alpha]")]
+        # the files design, piece 4: its pointer to save_names_list, 27
+        # characters more on both interpreters, and the save's own entry
+        # after it (tests/test_v0150_save_names_list.py)
         assert ("And `prepare_names_list`, the names file's tool, adds its "
-                "entry and its separator: 872 characters in `full`, 916 on "
-                "3.11; `core` does not serve it. No other tool's entry "
-                "changed.") in measured
+                "entry and its separator: 899 characters in `full`, 943 on "
+                "3.11, its pointer to `save_names_list` included; `core` "
+                "does not serve it.") in measured
         server._apply_toolset("full")
         import asyncio
         tool = next(t for t in asyncio.run(server.mcp.list_tools())
@@ -1463,6 +1481,6 @@ class TestTheDocuments:
                                 "description": tool.description or "",
                                 "inputSchema": tool.inputSchema}))
         if sys.version_info[:2] == (3, 13):
-            assert entry + len(", ") == 872
+            assert entry + len(", ") == 899
         elif sys.version_info[:2] == (3, 11):
-            assert entry + len(", ") == 916
+            assert entry + len(", ") == 943

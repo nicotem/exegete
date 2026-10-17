@@ -322,9 +322,10 @@ class TestTheEntryIsOneAccount:
         # since the descriptions that gave the lock file as QualCoder's
         # alone name both of its causes (tests/test_v0150_lock_wording.py),
         # 1,497 since its fix round 1 (the renames' "may miss a 4.0 window"),
-        # 2,369 since prepare_names_list (the files design, piece 3)
+        # 2,369 since prepare_names_list (the files design, piece 3),
+        # 3,668 since save_names_list (piece 4)
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 2,369 characters more") in measured
+                "`lifecycle` to `full`: 3,668 characters more") in measured
         # and the figure is the difference of the two the paragraph gives,
         # so a piece that moves `full` moves it too
         full = re.search(r"full = ([\d,]+) characters", measured)
@@ -363,9 +364,10 @@ class TestTheDocumentsOtherPoints:
 
     def test_the_brief_s_two_steps_and_its_literature(self):
         brief = _flat(server.BRIEF_FULL)
+        # v0.15.0, the files design, piece 4: and saving the names list
         assert ("restoring or pruning backups, pseudonymising a file, "
-                "importing documents and correcting the researcher's coder "
-                "name take two steps") in brief
+                "importing documents, saving the names list and correcting "
+                "the researcher's coder name take two steps") in brief
         assert ("gives the methods notes and approaches to prompting (two "
                 "published)") in brief
         assert "some published approaches" not in brief

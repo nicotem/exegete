@@ -846,8 +846,10 @@ class TestNoDescriptionGrew:
     # pins its description), whose sentence in create_project's
     # description is counted with piece 1's change above; and the files
     # design, piece 3: the names file's tool
-    # (tests/test_v0150_names_file.py pins its description)
-    NEW_IN_0150 = {"set_project_coder_name", "prepare_names_list"}
+    # (tests/test_v0150_names_file.py pins its description), and piece 4:
+    # the names list's save (tests/test_v0150_save_names_list.py)
+    NEW_IN_0150 = {"set_project_coder_name", "prepare_names_list",
+                   "save_names_list"}
     # and the whole-branch review of v0.15.0, round 1: every deprecation
     # sentence now says "removed in v0.15.1" (ruling 70), two characters
     # more, and the names list's leads with pseudonyms.json in the project

@@ -538,8 +538,10 @@ class TestTheChangelog:
                 "`rename_file` 11 each, `import_documents` 8, "
                 "`start_coding_session` 4 and `get_current_project` 1) and "
                 "17 fewer in `core`, on both interpreters.") in measured
-        # seventeen since prepare_names_list (the files design, piece 3)
-        assert "seventeen changes moved them" in measured
-        # 2,369 since prepare_names_list (the files design, piece 3)
-        assert ("the change is from `lifecycle` to `full`: 2,369 characters "
+        # seventeen since prepare_names_list (the files design, piece 3),
+        # eighteen since save_names_list (piece 4)
+        assert "eighteen changes moved them" in measured
+        # 2,369 since prepare_names_list (the files design, piece 3),
+        # 3,668 since save_names_list (piece 4)
+        assert ("the change is from `lifecycle` to `full`: 3,668 characters "
                 "more") in measured

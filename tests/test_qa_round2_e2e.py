@@ -48,8 +48,9 @@ EXPECTED_TOOLS = {
     # v0.15.0: the researcher's own coder name, corrected while nothing
     # is recorded under it
     "set_project_coder_name",
-    # v0.15.0: the names file, filled in on the researcher's computer
-    "prepare_names_list",
+    # v0.15.0: the names file, filled in on the researcher's computer,
+    # and its save as the project's names list
+    "prepare_names_list", "save_names_list",
     # read/analysis (15)
     "search_coded_text", "get_coded_segments", "search_files",
     "get_coding_frequencies", "search_memos", "export_code_report",

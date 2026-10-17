@@ -500,8 +500,9 @@ class TestTheDocuments:
         # the documents): 205,745, and its fix round 1 (the renames'
         # "may miss a 4.0 window"): 205,741, about 206,000; and
         # prepare_names_list (the files design, piece 3): 82 tools,
-        # 206,613, about 207,000
-        assert (rounded, tokens) == ("207,000", "52k")
+        # 206,613, about 207,000; and save_names_list (piece 4): 83
+        # tools, 207,912, about 208,000
+        assert (rounded, tokens) == ("208,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "

@@ -1127,7 +1127,8 @@ class TestTheTool:
         assert ("It is refused too while the project's AI coder name file "
                 "or its coder list cannot be read.") in tools
         assert "Exegete cannot change it" not in tools
-        assert "registers 82 tools" in tools
+        # 83 since save_names_list (the files design, piece 4)
+        assert "registers 83 tools" in tools
 
     def test_the_changelog_says_what_was_added(self):
         log = _flat((REPO / "CHANGELOG.md").read_text(

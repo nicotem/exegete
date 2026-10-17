@@ -130,6 +130,9 @@ EXPECTED_HINTS = {
     "set_project_coder_name": C,
     "set_attribute": C, "update_annotation": C,
     "pseudonymise_source": C, "restore_backup": C, "prune_backups": C,
+    # v0.15.0: replaces the project's pseudonyms.json with the names file
+    # (the files design, piece 4)
+    "save_names_list": C,
     # the earlier names of the two tools renamed in 0.15.0, with the new
     # tools' hints
     "analyze_for_coding": A, "analyze_file_with_coding": R,
@@ -190,8 +193,9 @@ class TestToolAnnotations:
             "delete_category", "delete_code", "import_documents",
             "merge_category", "merge_codes", "prune_backups",
             "pseudonymise_source", "restore_backup",
-            # v0.15.0: correcting the researcher's own coder name
-            "set_project_coder_name"])
+            # v0.15.0: correcting the researcher's own coder name, and
+            # saving the names list
+            "set_project_coder_name", "save_names_list"])
         for name in gated:
             if name == "import_documents":
                 # 0.14.3: a preview first for the researcher's approval of
@@ -219,11 +223,14 @@ class TestToolAnnotations:
         listed = host_session(lambda client: client.list_tools()).tools
         marked = {tool.name: tool.meta for tool in listed if tool.meta}
         # 0.14.3: and import_documents, whose two calls the researcher
-        # approves (the design's "Asking every time")
+        # approves (the design's "Asking every time"); v0.15.0: and
+        # save_names_list, whose list changes every later import
         assert marked == {
             "read_pseudonym_list": {
                 "anthropic/requiresUserInteraction": True},
             "import_documents": {
+                "anthropic/requiresUserInteraction": True},
+            "save_names_list": {
                 "anthropic/requiresUserInteraction": True}}
         wire = next(t for t in listed
                     if t.name == "read_pseudonym_list").model_dump(
@@ -852,6 +859,15 @@ async def call_every_tool(client, root, lock_check=False):
     await run("read_pseudonym_list", {})
     # v0.15.0: the names file, made, shown and opened (the recorders)
     await run("prepare_names_list", {})
+    # v0.15.0: the names file filled in, then saved as the project's
+    # names list, preview then save (the files design, piece 4)
+    names_file = run.folder / "Exegete" / "Names to replace.txt"
+    names_file.write_text(names_file.read_text(encoding="utf-8-sig")
+                          + "Zebedee Quill = Participant Z\n",
+                          encoding="utf-8")
+    names_preview = await run("save_names_list", {})
+    await run("save_names_list",
+              {"preview_token": names_preview["preview_token"]})
     # exports
     await run("export_refi_qda", {"output_path": str(exports / "s.qdpx")})
     await run("export_codebook", {"output_path": str(exports / "c.csv")})

@@ -730,21 +730,22 @@ class TestTheDocuments:
 
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
-        assert ("registers 82 tools, two of them the earlier names of two "
+        # 83 since save_names_list (the files design, piece 4)
+        assert ("registers 83 tools, two of them the earlier names of two "
                 "renamed tools (see \"Earlier names\" below)") in tools
         assert ("only the 25-tool supervised coding set is registered: "
                 "read_brief,") in tools.replace("> ", "")
         assert ("copy_project_to_workspace, delete_coding, list_backups, and "
                 "the two earlier names below.") in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
-        assert "`full` (default) registers 82 tools, every tool," in install
+        assert "`full` (default) registers 83 tools, every tool," in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
         assert "`core` registers the 25-tool supervised coding set" in install
-        assert "Exegete offers 82 tools by default" in install
+        assert "Exegete offers 83 tools by default" in install
         assert "register only the 25-tool supervised coding set" in install
         readme = _read("README.md")
-        assert ("| `full` | 82: all, creating a project and two renamed "
+        assert ("| `full` | 83: all, creating a project and two renamed "
                 "tools' earlier names included |") in readme
         assert "| `core` | 25: the coding loop and its safety tools |" \
             in readme

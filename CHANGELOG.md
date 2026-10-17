@@ -148,7 +148,7 @@ contributors, and the measurements.
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the
-  maintainer's decision of 12 October 2026): 80 tools (82 with the
+  maintainer's decision of 12 October 2026): 81 tools (83 with the
   earlier names of the two tools renamed below), creating a project
   and correcting your own coder name included, the default on every
   route, in the Claude Desktop extension and wherever Exegete is

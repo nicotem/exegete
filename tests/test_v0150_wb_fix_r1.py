@@ -300,7 +300,8 @@ class TestTheEntryIsOneAccount:
     def test_one_count_and_one_size(self):
         entry = _flat(_unreleased())
         assert "78 tools (80" not in entry and "80 with" not in entry
-        assert "80 tools (82 with the earlier names" in entry
+        # 81 (83) since save_names_list (the files design, piece 4)
+        assert "81 tools (83 with the earlier names" in entry
         sizes = re.findall(r"about (1[23],\d00) characters", entry)
         assert sizes == [f"{round(len(server.BRIEF_FULL), -2):,}"]
         assert "12,500" not in entry and "12,900" not in entry

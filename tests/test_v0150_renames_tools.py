@@ -817,8 +817,9 @@ class TestTheDocuments:
         sets = sets[:sets.index("###", 5)]
         # one count for `full`: set_project_coder_name included
         # (whole-branch review, round 1)
-        # one tool more since the names file (the files design, piece 3)
-        assert ("80 tools (82 with the earlier names of the two tools "
+        # one tool more since the names file (the files design, piece 3),
+        # and one more since its save (piece 4)
+        assert ("81 tools (83 with the earlier names of the two tools "
                 "renamed below), creating a project") in sets
         assert "78 tools (80" not in sets
         assert ("`core` keeps its 23 tools (25 with the two earlier names "

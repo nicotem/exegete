@@ -519,6 +519,9 @@ class TestTheDocuments:
                 f"serialised tool definitions alone measure about {rounded} "
                 f"characters, roughly {tokens} tokens") in install
         assert f"(about {rounded} characters with `full`;" in install
+        # the LM Studio recipe's sentence (the names file's fix round 1)
+        assert (f"or 64k if you must run the full surface (its schema "
+                f"alone is about {tokens} tokens).") in install
         tools = _flat("TOOLS.md")
         assert f"registers {EXPECTED_FULL} tools" in tools
         assert (f"about {rounded} characters for `full`, roughly {tokens} "

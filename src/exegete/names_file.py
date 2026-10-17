@@ -163,10 +163,16 @@ def parse(text: str) -> Parsed:
 
 def format_entry(real_name: str, pseudonym: str) -> Optional[str]:
     """The entry as one line, `<real name> = <pseudonym>`, when reading
-    that line gives back exactly this pair; otherwise None (a strong
-    separator or a line break in either, a real name starting with `#`,
-    an empty side, white space at either end)."""
+    that line gives back exactly this pair and the line can be saved as
+    UTF-8 text; otherwise None (a strong separator or a line break in
+    either, a real name starting with `#`, an empty side, white space at
+    either end, or a character UTF-8 cannot hold: a lone surrogate, which
+    a JSON file can carry as an escape, fix round 1)."""
     line = f"{real_name} = {pseudonym}"
+    try:
+        line.encode("utf-8")
+    except UnicodeEncodeError:
+        return None
     parsed = parse(line)
     if parsed.pairs == [(1, real_name, pseudonym)] and not parsed.not_read \
             and not parsed.empty_side:

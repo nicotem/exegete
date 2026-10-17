@@ -524,6 +524,19 @@ SQLite's side files, and in QualCoder's backups, audio and video when
 its settings say so), and to any service that syncs the project's
 folder.
 
+When a names file is already there, Exegete reads it for counts only:
+the lines it read, the lines it could not read, and how many entries
+of the project's names list are on no line of it. Because those counts
+compare the list with the file, a name added to the list shows, in the
+next count the assistant receives, whether that name is on a line of
+the file. The export tools
+refuse to write in any project's `Exegete` folder, so an export cannot
+replace a file you filled in. The names file opens in the app your
+computer uses for text files: if that app has an AI assistant of its
+own, what the file holds can reach that assistant's provider when it
+is used on the file, so you may prefer to fill the file in with an
+editor whose AI features are switched off.
+
 These rules govern what passes through Exegete, not what an assistant
 can reach by other routes. Imagine you tell the assistant that Exegete
 refused a file you filled in: one that can open files by itself may
@@ -561,10 +574,13 @@ what you disclose to other people: a colleague or second coder you
 share the project with, a supervisor, or whoever receives an export.
 Sharing the project's folder itself, though, shares what it still
 holds, real names included: the imported documents' originals, copied
-unchanged into its folder of originals, and `pseudonyms.json`, if you
-keep one, the reverse key at its root. "Pseudonymising a project does
-not empty it of names", below, says what stays, the backups beside the
-project included. An export from Exegete carries the replaced text, but
+unchanged into its folder of originals; `pseudonyms.json`, if you keep
+one, the reverse key at its root; and the names file, `Names to
+replace.txt` in the project's `Exegete` folder, if you made one, which
+holds real names and their pseudonyms in plain text as
+`pseudonyms.json` does. "Pseudonymising a project does not empty it of
+names", below, says what stays, the backups beside the project
+included. An export from Exegete carries the replaced text, but
 file and case names as they are, and notes in full, private parts
 included; an export made in QualCoder carries the unchanged originals.
 
@@ -2035,6 +2051,16 @@ will ask, and the summary above depends on them:
     too. `speakers.json` and `speaker_regex.json` can hold names as
     well; the preview reports whether they are present and never reads
     them.
+  - **The names file** (`Names to replace.txt`), if you made one with
+    `prepare_names_list`. It sits in the project's `Exegete` folder and
+    holds real names and their pseudonyms in plain text, the same
+    reverse key as `pseudonyms.json`; `pseudonymise_source`'s preview
+    does not report it. Exegete never deletes it, a restore keeps it as
+    it is, and every backup and copy of the project made while it is
+    there holds it, so a project you are about to share is not free of
+    names while it is there. You can move it out of the project before sharing, and remove
+    the backups and copies that still hold it ("Files Exegete keeps on
+    your computer").
   - **Notes (twelve fields, the audio/video and image coding notes
     included), journal entries and their names, case names, file names,
     code names, category names, attribute-type names and attribute

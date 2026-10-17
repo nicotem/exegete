@@ -14,8 +14,10 @@ method. What a researcher notices first in this one: one tool set,
 `full`, the default on every route, creating a project included; two
 tools whose names say what they do; your own coder name and the AI
 coder name as settings, and a way to correct your own coder name in a
-project while nothing is recorded under it; and an import that reads
-each document once, so that it usually takes seconds. Exegete's
+project while nothing is recorded under it; an import that reads each
+document once, so that it usually takes seconds; and a names list you
+fill in on your own computer, so the names do not pass through the
+conversation. Exegete's
 answers, warnings, refusals and help no longer presume that you use
 QualCoder: they name it when a project
 or this computer shows it, when you say you use it (a new setting, "Do
@@ -36,8 +38,8 @@ take in the desktop extension, 30 seconds until the time Claude Desktop
 waits has been measured. The sections below follow what a researcher
 meets: the tool set and the renames, the coder names, imports, Exegete's
 texts about QualCoder, older projects, the files Exegete keeps for a
-project, what is deprecated; then a part for contributors, and the
-measurements.
+project, the names list, what is deprecated; then a part for
+contributors, and the measurements.
 
 ### Upgrading from 0.14.3
 
@@ -128,6 +130,13 @@ measurements.
   matters for a project folder you share with colleagues. If you made
   such a folder for documents of your own, you may want to rename it,
   or move its documents, before you upgrade.
+- **A names file stays with the project.** If you make one
+  (`prepare_names_list`), `Names to replace.txt` stays in the project's
+  `Exegete` folder with the real names in it, in plain text, and goes
+  wherever the project goes: into its backups and copies, and to any
+  service that syncs its folder. It is yours to move or delete; Exegete
+  never deletes it. Before you share a project folder, you may want to
+  move it out (PRIVACY.md, "What pseudonymisation is for").
 - **Not in this release.** The removals announced in 0.14 for v0.15
   (TOOLS.md names each) come in v0.15.1, with the safety net; until
   then the deprecated tools and arguments work, and say so
@@ -1036,19 +1045,26 @@ for the four labels stays in NOTICE.
   names list (`pseudonyms.json`), its entries are already in the file,
   one line each, in the list's order. An entry the file cannot hold as
   one line (a name holding `=`, `=>`, `->`, `→`, a tab or a line break,
-  a real name starting with `#`, or white space at either end) is left
-  out, and the answer gives its number in the list, never the name; it
-  stays in the list. Exegete never fills in a name from the documents.
+  a real name starting with `#`, an empty name, white space at either
+  end, or a character that cannot be saved as text) is left out, and
+  the answer gives its number in the list, never the name; it stays in
+  the list. Exegete never fills in a name from the documents.
 - **A names file already there is kept as it is**, never replaced or
   rewritten. Exegete reads it only to count: the lines it read, the
   lines it could not read, and the list's entries whose real name is on
-  no line; it says when it cannot read the file (a link, not an
-  ordinary file, larger than 1 MB, or not saved as UTF-8 text).
+  no line (those the file cannot hold counted apart). It says when it
+  cannot read the file (a link, not an ordinary file, larger than 1 MB,
+  not saved as UTF-8 text, or changed while it was read), and each time
+  what you can do.
 - **Then Exegete shows the file in its folder and opens it in your text
   editor**, and its answer tells the assistant to leave the file to
-  you: never to open or read it, and never to return what it holds. An
-  assistant that opens files by itself could still read it (PRIVACY.md,
-  "Files Exegete keeps on your computer").
+  you, never opening or reading it; Exegete itself never returns what
+  the file holds. An assistant that opens files by itself could still
+  read it, and so could an AI assistant built into the app that opens
+  it (PRIVACY.md, "Files Exegete keeps on your computer").
+- **Exports are not written in a project's `Exegete` folder**, any
+  project's: the export tools refuse such a place, as the import
+  refuses to read from one, so an export cannot replace a names file.
 
 ### Changed: the libraries the extension installs, brought up to date
 

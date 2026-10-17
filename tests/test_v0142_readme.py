@@ -421,7 +421,10 @@ def test_latest_carries_the_date_it_was_checked():
     assert len(dated) == 1 and readme.count("\"Latest\"") == 1
     assert ("3.8.2 is listed just below 4.0, the release marked \"Latest\" "
             f"when this was checked, on {dated[0]}.") in readme
-    assert re.search(r"Checked on \d{1,2} \w+ \d{4}, Exegete ", readme)
+    # v0.15.0, the release review: QualCoder's side as checked, beside
+    # the Exegete the table's column describes
+    assert re.search(r"QualCoder 3\.8\.2 and 4\.0 as checked on \d{1,2} "
+                     r"\w+ \d{4}, beside Exegete 0\.\d+\.\d+:", readme)
 
 
 # ---------------------------------------------------------------------------
@@ -440,7 +443,10 @@ RELEASE_LABELS = (re.compile(r"\bNEW\b"),
 # the export being withdrawn
 VERSIONS_IN_PLACE = ("## What comes next", "## Disclaimer", "## Licence",
                      "## Acknowledgements")
+# (v0.15.0, the release review: the table's stamp gives QualCoder's
+# side its date and names the Exegete its column describes)
 DATED = re.compile(r"Exegete v?0\.\d+\.\d+ against QualCoder|"
+                   r"beside Exegete v?0\.\d+\.\d+:|"
                    r"\(removed in 0\.\d+(?:\.\d+)?\)")
 
 
@@ -475,8 +481,9 @@ def test_the_label_check_would_notice():
         assert _release_labels(old), old
     for kept in ("QualCoder 3.8.2 and the 4.0 beta", "QualCoder 4.0's format",
                  "Checked on 1 October 2026, Exegete 0.14.2 against "
-                 "QualCoder 3.8.2", "Export only, being withdrawn (removed "
-                 "in 0.15)", "a name that starts with `exegete-` and ends "
+                 "QualCoder 3.8.2", "QualCoder 3.8.2 and 4.0 as checked on "
+                 "10 October 2026, beside Exegete 0.15.0:",
+                 "Export only, being withdrawn (removed in 0.15)", "a name that starts with `exegete-` and ends "
                  "in `.mcpb`"):
         assert not _release_labels(kept), kept
 

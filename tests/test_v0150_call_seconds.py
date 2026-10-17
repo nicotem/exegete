@@ -379,7 +379,11 @@ def test_the_changelog_says_the_figures():
     assert (f"for now {e} seconds on every route, counted from the call's "
             f"start, until a measurement of how long Claude Desktop waits "
             f"gives the extension its own figure.") in unreleased
+    # the release review: the extension's settings do not offer it
     assert (f"A new setting, `{SETTING}`, a whole number of seconds from "
-            f"{least} to {most}, sets the time on any route") in unreleased
+            f"{least} to {most}, sets the time on the Terminal routes, for "
+            f"a host known to wait longer (the desktop extension's "
+            f"settings do not offer it)") in unreleased
+    assert "on any route" not in unreleased
     assert "instead of 0.14.3's 45 seconds" in unreleased
     assert "The time limits are unchanged" not in unreleased

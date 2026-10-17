@@ -182,8 +182,9 @@ def test_tools_says_what_the_full_re_check_found():
 def test_the_readme_table_is_checked_against_the_release():
     readme = _flat("README.md")
     # checked again for 0.14.3, whose import row the table carries
-    assert ("Checked on 10 October 2026, Exegete 0.14.3 against QualCoder "
-            "3.8.2 and 4.0:") in readme
+    # v0.15.0, the release review: the Exegete column is 0.15.0's
+    assert ("QualCoder 3.8.2 and 4.0 as checked on 10 October 2026, beside "
+            "Exegete 0.15.0:") in readme
     assert ("3.8.2: an AI search finds passages, which you code; 4.0: its "
             "assistant codes as it works, within the AI permission you set "
             "(read only stops it), with undo") in readme

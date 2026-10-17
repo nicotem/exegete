@@ -464,8 +464,8 @@ them, with where each comes from.
 **Symmetry: the same work in either place, as a commitment.** The aim
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
-directions. Checked on 10 October 2026, Exegete 0.14.3 against
-QualCoder 3.8.2 and 4.0:
+directions. QualCoder 3.8.2 and 4.0 as checked on 10 October 2026,
+beside Exegete 0.15.0:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|

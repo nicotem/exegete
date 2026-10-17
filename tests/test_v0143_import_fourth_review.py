@@ -402,7 +402,9 @@ class TestTheTexts:
         assert "on Windows 11, Copy as path" in readme
         assert ("an EPUB opened in Apple Books joins its library, and "
                 "iCloud if Books syncs") in readme
-        assert "Checked on 10 October 2026, Exegete 0.14.3 against" in readme
+        # v0.15.0, the release review: the stamp names 0.15.0's column
+        assert ("as checked on 10 October 2026, beside Exegete 0.15.0"
+                in readme)
 
     def test_the_small_wording_points(self):
         assert "into the selected project" in _description()

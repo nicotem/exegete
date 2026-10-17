@@ -891,6 +891,17 @@ class TestTheRelease:
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
         assert f"## [{release.VERSION}] - {release.RELEASED}" in text
 
+    def test_the_citation_carries_the_version_and_the_date(self):
+        # The release review of 0.15.0: Zenodo takes a release's record
+        # from CITATION.cff, so a release day that moves must not leave
+        # the file's version or date behind
+        text = (REPO / "CITATION.cff").read_text(encoding="utf-8")
+        quoted = r"""\s*["']?([^"'\n]+?)["']?\s*$"""
+        versions = re.findall(r"^version:" + quoted, text, re.M)
+        dates = re.findall(r"^date-released:" + quoted, text, re.M)
+        assert versions == [release.VERSION]
+        assert dates == [release.RELEASED]
+
     def test_the_summary_is_plain_short_text(self):
         assert forbidden_display_char(release.SUMMARY) is None
         assert release.SUMMARY.isprintable()

@@ -29,7 +29,8 @@ you also use QualCoder on this computer?"), or when the sentence is
 about QualCoder itself or its format. Less visible: the extension
 keeps new projects in `~/Exegete projects`; Exegete's backups have the
 kind `exegete`; a project from a QualCoder older than 3.8 has a way on
-without QualCoder; and PRIVACY.md says what pseudonymisation is for,
+without QualCoder (a new project from the original documents, without
+the old coding); and PRIVACY.md says what pseudonymisation is for,
 and which files Exegete keeps on your computer: four kinds, each in
 its own place, with the files you fill in for a project in the
 project's new `Exegete` folder.
@@ -52,8 +53,9 @@ measurements.
 - **One tool set, `full`.** `full` and `lifecycle` are now one set,
   `full`: every tool, creating a project included, the default on every
   route. If your extension's "Tool set" shows `lifecycle`, or your
-  configuration sets `EXEGETE_TOOLSET=lifecycle`, nothing needs
-  changing: it is read as `full` until v1.0. On the Terminal routes
+  configuration sets `EXEGETE_TOOLSET=lifecycle` (or
+  `QUALCODER_MCP_TOOLSET=lifecycle`), nothing needs changing: it is
+  read as `full` until v1.0. On the Terminal routes
   `full` now includes `create_project`; new projects go to
   `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
   another folder, and iCloud or OneDrive may sync Documents (INSTALL.md,
@@ -95,11 +97,11 @@ measurements.
   sure by default: if you
   use QualCoder, answering yes adds the notes that matter only if you
   also open your projects there, even where Exegete finds no sign of
-  it, while with not sure what Exegete finds decides) and, on any
-  route, `EXEGETE_CALL_SECONDS` (under "Imports", next). "AI coder name"
-  (`EXEGETE_AI_CODER_NAME`) now does more: filled in, it is stored in
-  each new project without asking. Projects you already have keep
-  their coder names: Exegete never changes them silently, and
+  it, while with not sure what Exegete finds decides) and, on the
+  Terminal routes, `EXEGETE_CALL_SECONDS` (under "Imports", next). "AI
+  coder name" (`EXEGETE_AI_CODER_NAME`) now does more: filled in, it is
+  stored in each new project without asking. Projects you already have
+  keep their coder names: Exegete never changes them silently, and
   `set_project_coder_name` corrects your own while nothing is recorded
   under it.
 - **Imports.** One `import_documents` call is now given 30 seconds on
@@ -107,8 +109,9 @@ measurements.
   import reuses the text its preview read; a large batch may take
   more calls, each of which says how to go on. For a host known to
   wait longer, `EXEGETE_CALL_SECONDS`, a whole number of seconds from
-  30 to 600, sets the time on any route; the desktop extension's own
-  figure waits for a measurement of how long Claude Desktop waits. The
+  30 to 600, sets the time on the Terminal routes (the desktop
+  extension's settings do not offer it); the extension's own figure
+  waits for a measurement of how long Claude Desktop waits. The
   preview keeps those
   texts, whole and before your names list is applied, in
   `~/.exegete/import-texts.noindex` until the import, or for an hour
@@ -148,7 +151,8 @@ measurements.
   `prepare_names_list` copies into the file as a line, is refused until
   you change it in the file. Entries the file cannot hold as one line
   stay in the list as they are. Claude Code 2.1.199 and later asks
-  before both calls, and refuses them in `dontAsk`.
+  before both of `save_names_list`'s calls, the preview and the save,
+  and refuses them in `dontAsk`.
 - **`read_pseudonym_list` is gone.** It sent every real name in the
   project's list to the AI provider. You now see and change the list
   in the names file on your own computer (`prepare_names_list`, then
@@ -1012,8 +1016,8 @@ for the four labels stays in NOTICE.
   refuses to read from one, so an export cannot replace a names file.
 - **`read_pseudonym_list` leaves every tool set**, with its
   deprecation sentence, its marks and its metadata: it sent every real
-  name in the project's list to the AI provider. `full` goes from 83
-  tools to 82, and a host's call of it is refused as an unknown tool.
+  name in the project's list to the AI provider. `full` loses it, and
+  a host's call of it is refused as an unknown tool.
   `get_current_project`'s note, the import's note, the brief, INSTALL,
   PRIVACY, TOOLS and the README now point to the names file.
 - **PRIVACY.md says what pseudonymisation is for**, in a section of its
@@ -1050,7 +1054,7 @@ for the four labels stays in NOTICE.
   byte the one previewed (its size and SHA-256, as the import already
   checked); a file whose kept text cannot be used is read again, as
   before. So an import usually takes seconds. The time one call may take
-  is in the next entry.
+  is in the last point of this part.
 - **The folder's name in the log**: the two log lines about the folder
   (when it cannot be used, and when Time Machine could not be asked to
   leave it out) name it `~/.exegete/import-texts.noindex`, never by its
@@ -1067,10 +1071,11 @@ for the four labels stays in NOTICE.
   again, works within the same time instead of 0.14.3's 45 seconds.
   One file still has 30 seconds to be read at the preview, and 40 when
   the import reads it again. A new setting, `EXEGETE_CALL_SECONDS`, a
-  whole number of seconds from 30 to 600, sets the time on any route,
-  for a host known to wait longer; any other value is not used, and
-  the log says so once. INSTALL.md, "Environment variables the server
-  reads", says what to watch for.
+  whole number of seconds from 30 to 600, sets the time on the
+  Terminal routes, for a host known to wait longer (the desktop
+  extension's settings do not offer it); any other value is not used,
+  and the log says so once. INSTALL.md, "Environment variables the
+  server reads", says what to watch for.
 
 ### The files Exegete keeps on your computer
 

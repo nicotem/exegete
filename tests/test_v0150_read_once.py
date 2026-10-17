@@ -1155,5 +1155,7 @@ def test_the_changelog_says_it():
                  "byte for byte the one previewed (its size and SHA-256",
                  "is read again, as before",
                  "an import usually takes seconds",
-                 "The time one call may take is in the next entry"):
+                 # the release review: one account, not entries
+                 "The time one call may take is in the last point of "
+                 "this part"):
         assert said in unreleased, said

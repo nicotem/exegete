@@ -39,6 +39,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server  # noqa: E402
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 # Every deprecation sentence Exegete serves
 DEPRECATIONS = sorted(name for name in dir(server)
@@ -200,7 +201,7 @@ class TestClaudeCodesLimits:
         served = _served("full")
         over = sorted(((len(d), name) for name, d in served.items()
                        if len(d) > 4096), reverse=True)
-        assert len(served) == 81
+        assert len(served) == FULL_TOOLS
         said = "; ".join(f"`{name}`, {length:,}" for length, name in over)
         install = _flat(_read("INSTALL.md"))
         assert (f"{len(over)} of `full`'s {len(served)} descriptions are "
@@ -285,6 +286,8 @@ class TestTheEntryIsOneAccount:
             "### Changed: a project from a QualCoder older than 3.8",
             # the files design, piece 1 (tests/test_v0150_private_files.py)
             "### Added: the files Exegete keeps for a project",
+            # the files design, piece 3 (tests/test_v0150_names_file.py)
+            "### Added: the names list, filled in on your computer",
             "### Changed: the libraries the extension installs, brought up "
             "to date",
             "### Deprecated: the removals move to v0.15.1",
@@ -297,7 +300,7 @@ class TestTheEntryIsOneAccount:
     def test_one_count_and_one_size(self):
         entry = _flat(_unreleased())
         assert "78 tools (80" not in entry and "80 with" not in entry
-        assert "79 tools (81 with the earlier names" in entry
+        assert "80 tools (82 with the earlier names" in entry
         sizes = re.findall(r"about (1[23],\d00) characters", entry)
         assert sizes == [f"{round(len(server.BRIEF_FULL), -2):,}"]
         assert "12,500" not in entry and "12,900" not in entry
@@ -318,9 +321,21 @@ class TestTheEntryIsOneAccount:
         # restore keeps the project's Exegete folder (piece 2), 1,501
         # since the descriptions that gave the lock file as QualCoder's
         # alone name both of its causes (tests/test_v0150_lock_wording.py),
-        # 1,497 since its fix round 1 (the renames' "may miss a 4.0 window")
+        # 1,497 since its fix round 1 (the renames' "may miss a 4.0 window"),
+        # 2,369 since prepare_names_list (the files design, piece 3)
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 1,497 characters more") in measured
+                "`lifecycle` to `full`: 2,369 characters more") in measured
+        # and the figure is the difference of the two the paragraph gives,
+        # so a piece that moves `full` moves it too
+        full = re.search(r"full = ([\d,]+) characters", measured)
+        lifecycle = re.search(r"the extension's default, ([\d,]+) over 78",
+                              measured)
+        change = re.search(r"the change is from `lifecycle` to `full`: "
+                           r"([\d,]+) characters more", measured)
+        assert full and lifecycle and change
+        figure = [int(m.group(1).replace(",", ""))
+                  for m in (full, lifecycle, change)]
+        assert figure[0] - figure[1] == figure[2]
 
 
 # ===========================================================================

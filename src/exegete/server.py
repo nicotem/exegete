@@ -100,7 +100,7 @@ from .database import (
 )
 from . import pseudonymise as pseudo
 from . import new_project
-from . import parts, private_files, reading, reading_folder
+from . import names_file, parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
 from . import doc_import, doc_readers, kept_texts
 from . import qualcoder_history
@@ -5451,6 +5451,228 @@ def get_current_project() -> str:
             {"error": f"Failed to get project info: {error_text(e)}"})
 
 
+# ---------------------------------------------------------------------------
+# The names file (v0.15.0, the files design, piece 3): the researcher fills
+# in the project's names list on their own computer, so that the real
+# names do not pass through the conversation (ruling 73, item 9; ruling 78)
+# ---------------------------------------------------------------------------
+
+# Fix round 2: the ordinary next step in its three sentences, so that a
+# step for a file Exegete did not read can stand in for the second
+PREPARE_NAMES_LIST_WHERE = (
+    "Tell the researcher that the names file is open on their computer "
+    "(or, when it could not be opened, where it is).")
+PREPARE_NAMES_LIST_FILL_IN = (
+    "They write each real name and its pseudonym on a line of their own, "
+    "save the file, and tell you when the list is ready.")
+PREPARE_NAMES_LIST_NEVER_OPEN = (
+    "Never open or read the file yourself, even when a file tool could.")
+PREPARE_NAMES_LIST_NEXT_STEP = " ".join((
+    PREPARE_NAMES_LIST_WHERE, PREPARE_NAMES_LIST_FILL_IN,
+    PREPARE_NAMES_LIST_NEVER_OPEN))
+NAMES_FILE_NOT_UTF8_STEP = (
+    "The names file there is not saved as UTF-8 text: ask the researcher "
+    "to save it again as plain text in UTF-8; most text editors offer the "
+    "encoding when saving a file.")
+# Fix round 1: a step for each other reason a names file there was not
+# read, and for the counts that compare it with the list, in the manner
+# of the UTF-8 step. Fix round 2: a file kept aside is renamed in the
+# project's Exegete folder, where the import does not reach it, rather
+# than moved out; the step for something that is not an ordinary file
+# says where it is itself, since nothing was shown or opened
+NAMES_FILE_NOT_A_FILE_STEP = (
+    "Something at the names file's place is not an ordinary file (a link, "
+    "a folder or another kind of entry), so Exegete did not read, show or "
+    "open it. Tell the researcher where it is, and that they can rename "
+    "it, leaving it in the project's Exegete folder, which Exegete does "
+    "not import from; then call prepare_names_list again to make a new "
+    "names file.")
+NAMES_FILE_TOO_LARGE_STEP = (
+    "The names file there is larger than 1 MB, more than a names file "
+    "should hold, so Exegete did not read it: the researcher may want to "
+    "look at what it holds. To start afresh, they can rename it, leaving "
+    "it in the project's Exegete folder, which Exegete does not import "
+    "from; then call prepare_names_list again to make a new names file.")
+NAMES_FILE_NOT_READ_STEP = (
+    "The names file there could not be read just now (it changed or went "
+    "while Exegete was reading it, or the system refused to read it): call "
+    "prepare_names_list again; if it still cannot be read, ask the "
+    "researcher to check that they can open it in their text editor.")
+LIST_ENTRIES_NOT_IN_FILE_STEP = (
+    "Some entries of the project's names list are on no line of the names "
+    "file, so the file may be older than the list. The researcher can find "
+    "those entries by comparing the file with pseudonyms.json, in the "
+    "project folder (looking at it changes nothing; changing it by hand "
+    "can make the list unreadable), and add them to the file. Or they can "
+    "rename the file, leaving it in the project's Exegete folder, which "
+    "Exegete does not import from; then call prepare_names_list again to "
+    "make a new one from the list, and they can copy across any lines of "
+    "their own from the renamed file.")
+LIST_ENTRIES_THE_FILE_CANNOT_HOLD_STEP = (
+    "Some entries of the project's names list cannot be written as one "
+    "line of the names file and are on no line of it; they are counted "
+    "apart, not as missing from the file, and stay in the list as they "
+    "are. If the researcher wants such a name in the names file, they can "
+    "write a form of it there as a line of its own.")
+# The steps added after the ordinary one (fix round 2: a link, something
+# that is not an ordinary file and a file past 1 MB have steps that stand
+# in for it, in prepare_names_list)
+NAMES_FILE_NOT_READ_STEPS = {
+    "not_utf8": NAMES_FILE_NOT_UTF8_STEP,
+    "changed": NAMES_FILE_NOT_READ_STEP,
+    "unreadable": NAMES_FILE_NOT_READ_STEP,
+    "not_there": NAMES_FILE_NOT_READ_STEP,
+}
+# The lead's answer to the design's open point 3 (17 October 2026): an
+# entry the names file cannot hold as one line is left out, by its number
+# in the list, with a suggestion; it stays in the list. Fix round 1: a
+# character that cannot be saved as text among the reasons, and what the
+# researcher can do
+ENTRIES_NOT_WRITTEN_NOTE = (
+    "These entries of the project's names list (numbered from 1, in the "
+    "order of pseudonyms.json) cannot be written as one line of the names "
+    "file: a name holds =, =>, ->, →, a tab or a line break, the real "
+    "name starts with #, a name is empty, a name has white space at "
+    "either end, or a name holds a character that cannot be saved as "
+    "text. They were left out of the names file and stay in the list as "
+    "they are. Tell the researcher so. If they want such a name in the "
+    "names file, they can write a form of it there as a line of its own. "
+    "They can see these entries in pseudonyms.json, in the project "
+    "folder, on their own computer: looking at it in a text editor "
+    "changes nothing, but changing it by hand can make the list "
+    "unreadable.")
+
+
+def _names_file_counts(folder: Path, entries: Optional[List[Dict]]
+                       ) -> Dict[str, Any]:
+    """The names file already there, read for counts only: lines read,
+    lines not read (an empty side among them), and the list's entries
+    whose real name, compared exactly, is on no line; or, when it cannot
+    be read, why (`existing_file_not_read`). Never a name."""
+    try:
+        text = names_file.decode(private_files.read_bytes(
+            folder, private_files.NAMES_FILE))
+    except names_file.NotUtf8:
+        return {"existing_file_not_read": "not_utf8"}
+    except private_files.PrivateFilesError as e:
+        return {"existing_file_not_read": e.code}
+    except FileNotFoundError:
+        # removed in the instant between the look and the read
+        return {"existing_file_not_read": "not_there"}
+    parsed = names_file.parse(text)
+    counts: Dict[str, Any] = {
+        "lines_read": len(parsed.pairs),
+        "lines_not_read": len(parsed.not_read) + len(parsed.empty_side)}
+    if entries is not None:
+        on_a_line = {real_name for _, real_name, _ in parsed.pairs}
+        missing = [entry for entry in entries
+                   if entry["original"] not in on_a_line]
+        # Fix round 1: an entry the file cannot hold as one line was left
+        # out when the file was made, and stays in the list; it is counted
+        # apart, not as one missing from the file
+        cannot_hold = sum(
+            1 for entry in missing
+            if names_file.format_entry(entry["original"],
+                                       entry["pseudonym"]) is None)
+        counts["list_entries_not_in_file"] = len(missing) - cannot_hold
+        if cannot_hold:
+            counts["list_entries_the_file_cannot_hold"] = cannot_hold
+    return counts
+
+
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
+@_tool_guard
+def prepare_names_list() -> str:
+    """Make the names file for the researcher to fill in on their own
+    computer, so that the real names do not pass through this
+    conversation. Writes Names to replace.txt in the project's Exegete
+    folder (a few lines of instructions, then one line per name: Real
+    name = Pseudonym), with the entries of the project's names list
+    (pseudonyms.json) already in it when there is one; a names file
+    already there is kept as it is. Then shows it in its folder and opens
+    it in the computer's text editor. Exegete never fills in names from
+    the documents and never returns the file's contents. Tell the
+    researcher to fill it in, save it and say when the list is ready.
+    Never open or read the file yourself.
+    """
+    _adopt_configured_project()
+    if current_project_path is None:
+        return json.dumps({"error": _no_project_message()}, indent=2)
+    folder = _current_project_folder()
+    try:
+        private_files.ensure_folder(folder)
+    except private_files.PrivateFilesError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    place = private_files.place(folder, private_files.NAMES_FILE)
+    # The list, read once: absent, no entries; unreadable, no entries and
+    # its reader's value-free message
+    block, entries = _pseudonyms_json_read()
+    list_error = block.get("error") if entries is None else None
+    created, written, not_written = False, 0, []
+    found: Dict[str, Any] = {}
+    if not os.path.lexists(str(place)):
+        rows = []
+        for number, entry in enumerate(entries or [], start=1):
+            line = names_file.format_entry(entry["original"],
+                                           entry["pseudonym"])
+            if line is None:
+                not_written.append(number)
+            else:
+                rows.append(line + "\n")
+        try:
+            private_files.write_new(folder, private_files.NAMES_FILE,
+                                    names_file.HEADER + "".join(rows))
+            created, written = True, len(rows)
+        except FileExistsError:
+            # another call wrote it first: it is kept and read as found
+            not_written = []
+        except private_files.PrivateFilesError as e:
+            return json.dumps({"error": str(e)}, indent=2)
+    if not created:
+        found = _names_file_counts(folder, entries)
+    shown = private_files.show(folder, private_files.NAMES_FILE)
+    opened = private_files.open_in_app(folder, private_files.NAMES_FILE)
+    answer: Dict[str, Any] = {"names_file": str(place), "created": created,
+                              "entries_written": written}
+    if not_written:
+        answer["entries_not_written"] = not_written
+        answer["entries_not_written_note"] = ENTRIES_NOT_WRITTEN_NOTE
+    if list_error:
+        answer["names_list_not_read"] = list_error
+    answer.update(found)
+    answer["shown_in_folder"] = shown.done
+    answer["opened"] = opened.done
+    if not opened.done:
+        answer["not_opened_because"] = opened.reason
+    step = PREPARE_NAMES_LIST_NEXT_STEP
+    not_read = found.get("existing_file_not_read")
+    if not_read in ("link", "not_a_file"):
+        # Fix round 2: nothing there to fill in, nothing shown or opened:
+        # the step stands in for the ordinary one, keeping its last
+        # sentence
+        step = " ".join((NAMES_FILE_NOT_A_FILE_STEP,
+                         PREPARE_NAMES_LIST_NEVER_OPEN))
+    elif not_read == "too_large":
+        # Fix round 2: shown and opened, but not one to fill in: the step
+        # stands in for the ordinary one's second sentence
+        step = " ".join((PREPARE_NAMES_LIST_WHERE, NAMES_FILE_TOO_LARGE_STEP,
+                         PREPARE_NAMES_LIST_NEVER_OPEN))
+    elif not_read is not None:
+        step += " " + NAMES_FILE_NOT_READ_STEPS.get(
+            not_read, NAMES_FILE_NOT_READ_STEP)
+    if found.get("list_entries_not_in_file"):
+        step += " " + LIST_ENTRIES_NOT_IN_FILE_STEP
+    if found.get("list_entries_the_file_cannot_hold"):
+        step += " " + LIST_ENTRIES_THE_FILE_CANNOT_HOLD_STEP
+    answer["next_step"] = step
+    if created:
+        logger.info("prepare_names_list made the names file (%d entries).",
+                    written)
+    else:
+        logger.info("prepare_names_list kept the names file that was there.")
+    return json.dumps(answer, indent=2)
+
+
 @mcp.tool(annotations=TOOL_DISCLOSES)
 @_tool_guard
 @_deprecated(DEPRECATED_PSEUDONYM_LIST, before="Call it only")
@@ -6804,6 +7026,8 @@ def export_refi_qda(
             "error": "Refusing to write the export inside the project folder; "
                      "choose a location outside it."
         })
+    if _in_a_projects_exegete_folder(output_path, out_file):
+        return json.dumps({"error": EXPORT_IN_A_PROJECTS_FOLDER_REFUSAL})
 
     # --- collect what to export ---
     skipped_non_text = 0
@@ -20028,6 +20252,27 @@ def _inside_project_folder(out_file) -> bool:
     return is_inside(out_file, project_folder)
 
 
+# v0.15.0, the names file's fix round 1: an export is not written in any
+# project's Exegete folder, where the researcher keeps files they fill in
+# (the names file among them), in the import's words
+EXPORT_IN_A_PROJECTS_FOLDER_REFUSAL = (
+    "This is a project's Exegete folder, or is in one. That folder holds "
+    "files you fill in for the project; Exegete does not write exports "
+    "there. Choose a location outside it. Nothing was written.")
+
+
+def _in_a_projects_exegete_folder(output_path: str, out_file) -> bool:
+    """Whether an export lands in a project's Exegete folder, any project's
+    (private_files.kept_in_a_projects_folder), by the place as given or
+    where it leads."""
+    try:
+        given = Path(output_path).expanduser()
+    except (RuntimeError, ValueError, TypeError):
+        given = None
+    return any(private_files.kept_in_a_projects_folder(place)
+               for place in (given, out_file) if place is not None)
+
+
 def _relative_output_refusal(output_path: Any) -> Optional[str]:
     """The refusal for an export path that is not a full path (v0.14).
 
@@ -20120,6 +20365,8 @@ def _resolve_export_path(output_path: str, suffix: str, default_name: str,
             "error": "Refusing to write the export inside the project "
                      "folder; choose a location outside it."
         }
+    if _in_a_projects_exegete_folder(output_path, out_file):
+        return None, {"error": EXPORT_IN_A_PROJECTS_FOLDER_REFUSAL}
     return out_file, None
 
 

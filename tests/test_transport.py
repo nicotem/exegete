@@ -42,6 +42,7 @@ from pathlib import Path
 import pytest
 
 from track5_helpers import write_fixture_sidecar
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -89,7 +90,7 @@ def _projects_dir() -> Path:
 def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
-EXPECTED_TOOLS = 81              # read_brief and check_for_updates joined in v0.14.2; open_file_for_reading and import_documents in 0.14.3; create_project in `full` from 0.15.0, the two earlier names and set_project_coder_name (0.15.0)
+EXPECTED_TOOLS = FULL_TOOLS      # tests/tool_counts.py
 EXPECTED_CONCRETE_RESOURCES = 8   # six data resources + exegete://guidance/methods (0.12) + exegete://guidance/brief (0.14.2)
 EXPECTED_RESOURCE_TEMPLATES = 4      # the file resource's later parts (v0.14.3)
 EXPECTED_RESOURCES_TOTAL = 12

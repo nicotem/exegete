@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import build_desktop_extension as build        # noqa: E402
 import exegete.server as server                # noqa: E402
+from tool_counts import FULL_TOOLS  # noqa: E402
 from exegete import env_settings, names        # noqa: E402
 
 from test_toolset_modes import (               # noqa: E402
@@ -75,7 +76,7 @@ class TestTheSet:
 
     def test_full_at_import_holds_create_project_in_its_place(self):
         names_ = _names()
-        assert len(names_) == EXPECTED_FULL == 81   # the two earlier names (0.15.0) after check_for_updates, and set_project_coder_name (0.15.0)
+        assert len(names_) == EXPECTED_FULL == FULL_TOOLS
         assert names_[0] == "read_brief"
         at = names_.index("create_project")
         assert names_[at - 1] == "export_case_code_matrix_csv"
@@ -194,7 +195,7 @@ class TestTheNote:
         notes = self._lines(caplog, f"{NEW} is set to lifecycle")
         assert notes == [NOTE.format(setting=NEW)]
         assert not self._lines(caplog, f"{OLD} is the earlier")
-        assert "Toolset mode: full (81 tools registered)" in \
+        assert f"Toolset mode: full ({FULL_TOOLS} tools registered)" in \
             [r.getMessage() for r in caplog.records]
         assert len(stub_run) == 1
 
@@ -317,7 +318,7 @@ class TestOverStandardInput:
                         return tools, before, made, after
 
         tools, before, made, after = asyncio.run(drive())
-        assert len(tools) == 81 and "create_project" in tools
+        assert len(tools) == FULL_TOOLS and "create_project" in tools
         if with_project:
             assert Path(before["current_project"]).resolve() == \
                 project.resolve()
@@ -333,7 +334,8 @@ class TestOverStandardInput:
             assert "is set to lifecycle" not in stderr
         else:
             assert NOTE.format(setting=variable) in stderr
-        assert "Toolset mode: full (81 tools registered)" in stderr
+        assert f"Toolset mode: full ({FULL_TOOLS} tools registered)" in \
+            stderr
 
 
 # ---------------------------------------------------------------------------
@@ -359,10 +361,10 @@ class TestTheExtension:
         assert "the `full` tool set (the widest: `core` is a subset of " \
                "`full`)" in doc
 
-    def test_the_built_manifest_lists_81_tools(self):
+    def test_the_built_manifest_lists_every_tool(self):
         manifest, _ = build.bundle(build.TreeSource(REPO))
         listed = [t["name"] for t in manifest["tools"]]
-        assert len(listed) == 81
+        assert len(listed) == FULL_TOOLS
         assert listed == _names()
 
     def test_the_bug_report(self):
@@ -496,8 +498,10 @@ class TestTheDocuments:
         # design, piece 2): 205,788; and the descriptions that gave the
         # lock file's refusal as QualCoder's alone (the fourth reading of
         # the documents): 205,745, and its fix round 1 (the renames'
-        # "may miss a 4.0 window"): 205,741, about 206,000
-        assert (rounded, tokens) == ("206,000", "51k")
+        # "may miss a 4.0 window"): 205,741, about 206,000; and
+        # prepare_names_list (the files design, piece 3): 82 tools,
+        # 206,613, about 207,000
+        assert (rounded, tokens) == ("207,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "
@@ -515,6 +519,9 @@ class TestTheDocuments:
                 f"serialised tool definitions alone measure about {rounded} "
                 f"characters, roughly {tokens} tokens") in install
         assert f"(about {rounded} characters with `full`;" in install
+        # the LM Studio recipe's sentence (the names file's fix round 1)
+        assert (f"or 64k if you must run the full surface (its schema "
+                f"alone is about {tokens} tokens).") in install
         tools = _flat("TOOLS.md")
         assert f"registers {EXPECTED_FULL} tools" in tools
         assert (f"about {rounded} characters for `full`, roughly {tokens} "

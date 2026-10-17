@@ -64,13 +64,19 @@ FIRST_LINE = "Replace names with pseudonyms in a project's stored text."
 # offered the tools for sharing the project without saying what its
 # folder still holds. Each sentence that says so is its own constant,
 # so that a test names what it guards.
+# The names file's fix round 1 (v0.15.0, the files design, piece 3): the
+# names file, a second plain-text file of real names, joins what the
+# folder still holds (tests/test_v0150_names_file.py)
 SHARING_THE_FOLDER = (
     "Sharing the project's folder itself, though, shares what it still "
     "holds, real names included: the imported documents' originals, copied "
-    "unchanged into its folder of originals, and `pseudonyms.json`, if you "
-    "keep one, the reverse key at its root. \"Pseudonymising a project does "
-    "not empty it of names\", below, says what stays, the backups beside "
-    "the project included.")
+    "unchanged into its folder of originals; `pseudonyms.json`, if you keep "
+    "one, the reverse key at its root; and the names file, `Names to "
+    "replace.txt` in the project's `Exegete` folder, if you made one, which "
+    "holds real names and their pseudonyms in plain text as "
+    "`pseudonyms.json` does. \"Pseudonymising a project does not empty it "
+    "of names\", below, says what stays, the backups beside the project "
+    "included.")
 # Fix round 2: what an export still carries, said after the folder
 EXPORTS = (
     "An export from Exegete carries the replaced text, but file and case "

@@ -25,6 +25,7 @@ from track5_helpers import write_fixture_sidecar
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -32,7 +33,7 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 81              # 73, plus read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), and create_project (v0.15.0: `full` and `lifecycle` became one set), and the earlier names of the two tools renamed in 0.15.0, and set_project_coder_name (v0.15.0)
+EXPECTED_FULL = FULL_TOOLS      # tests/tool_counts.py
 EXPECTED_CORE = 25              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), and the earlier names of the two tools renamed in 0.15.0; check_for_updates, import_documents and create_project are not in core
 
 SCHEMA = """
@@ -449,9 +450,12 @@ class TestThePublishedSchemaBudget:
     # 43 characters fewer in `full` and 17 in `core`, on both
     # interpreters (tests/test_v0150_lock_wording.py); its fix round 1,
     # the renames' "may miss a 4.0 window", 4 fewer in `full`.
-    FULL_MEASURED = 205_741          # 81 tools, Python 3.13.5, mcp 1.30.0
+    # The files design, piece 3: prepare_names_list's entry, with its
+    # separator, 872 characters more in `full` (916 on 3.11); `core`
+    # does not serve it.
+    FULL_MEASURED = 206_613          # 82 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 68_258           # 25 tools, same environment
-    FULL_MEASURED_310 = 216_145      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 217_061      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 71_690
 
     # Why two per cent, away from the reference environment.
@@ -479,11 +483,11 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,741"
+    FULL_CHARS = "206,613"
     CORE_CHARS = "68,258"
-    FULL_ROUNDED = "206,000"
+    FULL_ROUNDED = "207,000"
     CORE_ROUNDED = "68,000"
-    FULL_TOKENS = "51k"
+    FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"
 
     @staticmethod

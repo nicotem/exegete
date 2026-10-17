@@ -733,8 +733,10 @@ NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
 EARLIER_NAMES_0150 = {"analyze_for_coding", "analyze_file_with_coding"}
 # and the tool that corrects the researcher's own coder name (the coder
 # names, piece 2), whose description
-# tests/test_v0150_coder_name_correction.py pins word for word
-NEW_IN_0150 = {"set_project_coder_name"}
+# tests/test_v0150_coder_name_correction.py pins word for word, and
+# the names file's tool (the files design, piece 3), whose description
+# tests/test_v0150_names_file.py pins word for word
+NEW_IN_0150 = {"set_project_coder_name", "prepare_names_list"}
 
 
 def _fingerprint(description):

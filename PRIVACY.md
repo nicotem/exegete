@@ -499,7 +499,7 @@ extension installed before 0.15.0 keeps its earlier folder,
 |---|---|---|---|
 | Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read; the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says; coding sessions go at your word (`delete_coding_session`, `cleanup_old_sessions`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the pseudonymisation run records, and the secret that keys their digests |
 | Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page), as "Reading a whole file" says, so they can stay longer while Exegete is not running; the working folder as each reading ends; you, at any time |
-| Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
+| Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
 | Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word) |
 
 For the length of each write, Exegete also writes a lock file into the
@@ -523,6 +523,20 @@ from files whose names those leave out (lock files, `search.sqlite` and
 SQLite's side files, and in QualCoder's backups, audio and video when
 its settings say so), and to any service that syncs the project's
 folder.
+
+When a names file is already there, Exegete reads it for counts only:
+the lines it read, the lines it could not read, and how many entries
+of the project's names list are on no line of it. Because those counts
+compare the list with the file, an assistant that adds a name to the
+list (with a typed mapping saved to it, for instance) can tell from the
+next count whether that name is in your names file; it learns nothing
+of names it does not already have. The export tools
+refuse to write in any project's `Exegete` folder, so an export cannot
+replace a file you filled in. The names file opens in the app your
+computer uses for text files: if that app has an AI assistant of its
+own, what the file holds can reach that assistant's provider when it
+is used on the file, so you may prefer to fill the file in with an
+editor whose AI features are switched off.
 
 These rules govern what passes through Exegete, not what an assistant
 can reach by other routes. Imagine you tell the assistant that Exegete
@@ -561,10 +575,13 @@ what you disclose to other people: a colleague or second coder you
 share the project with, a supervisor, or whoever receives an export.
 Sharing the project's folder itself, though, shares what it still
 holds, real names included: the imported documents' originals, copied
-unchanged into its folder of originals, and `pseudonyms.json`, if you
-keep one, the reverse key at its root. "Pseudonymising a project does
-not empty it of names", below, says what stays, the backups beside the
-project included. An export from Exegete carries the replaced text, but
+unchanged into its folder of originals; `pseudonyms.json`, if you keep
+one, the reverse key at its root; and the names file, `Names to
+replace.txt` in the project's `Exegete` folder, if you made one, which
+holds real names and their pseudonyms in plain text as
+`pseudonyms.json` does. "Pseudonymising a project does not empty it of
+names", below, says what stays, the backups beside the project
+included. An export from Exegete carries the replaced text, but
 file and case names as they are, and notes in full, private parts
 included; an export made in QualCoder carries the unchanged originals.
 
@@ -2035,6 +2052,18 @@ will ask, and the summary above depends on them:
     too. `speakers.json` and `speaker_regex.json` can hold names as
     well; the preview reports whether they are present and never reads
     them.
+  - **The names file** (`Names to replace.txt`), if you made one with
+    `prepare_names_list`. It sits in the project's `Exegete` folder and
+    holds real names and their pseudonyms in plain text, the same
+    reverse key as `pseudonyms.json`; `pseudonymise_source`'s preview
+    does not report it. Exegete never deletes it, a restore keeps it as
+    it is, and every backup and copy of the project made while it is
+    there holds it, so a project you are about to share is not free of
+    names while it is there. You can move it out of the project before sharing, and remove
+    the backups and copies that still hold it ("Files Exegete keeps on
+    your computer"). Once it is out of a project's `Exegete` folder,
+    Exegete no longer refuses to import it, so you may prefer to keep it
+    in a folder you do not ask the assistant to bring documents from.
   - **Notes (twelve fields, the audio/video and image coding notes
     included), journal entries and their names, case names, file names,
     code names, category names, attribute-type names and attribute

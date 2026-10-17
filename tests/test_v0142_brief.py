@@ -680,10 +680,10 @@ class TestTheSizes:
 # Tools added after 0.14.2, left out of its growth figure.
 # 0.15.0: and the earlier names of the two tools renamed then, listed
 # after the last tool, and set_project_coder_name (the coder names,
-# piece 2)
+# piece 2), and prepare_names_list (the files design, piece 3)
 ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading",
                     "analyze_for_coding", "analyze_file_with_coding",
-                    "set_project_coder_name")
+                    "set_project_coder_name", "prepare_names_list")
 
 
 # ---------------------------------------------------------------------------

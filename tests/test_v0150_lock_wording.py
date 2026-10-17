@@ -542,6 +542,7 @@ class TestTheChangelog:
         # eighteen since save_names_list (piece 4)
         assert "eighteen changes moved them" in measured
         # 2,369 since prepare_names_list (the files design, piece 3),
-        # 3,668 since save_names_list (piece 4)
-        assert ("the change is from `lifecycle` to `full`: 3,668 characters "
+        # 3,668 since save_names_list (piece 4), 3,690 since its fix
+        # round 1 (the description names import_documents)
+        assert ("the change is from `lifecycle` to `full`: 3,690 characters "
                 "more") in measured

@@ -84,8 +84,8 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > which Exegete honours; QualCoder 4.0 uses no lock file, so Exegete
 > falls back to best-effort heuristics there (reported as
 > `qualcoder_gui_signals` by `select_project`, `get_current_project`,
-> `start_coding_session` and the `restore_backup` and `import_documents`
-> previews:
+> `start_coding_session` and the `restore_backup`, `import_documents` and
+> `save_names_list` previews:
 > database write sidecars, recent activity on the 4.0 AI search index, a
 > chat-history file changed recently (QualCoder 3.8.2 and 4.0 both create
 > it on a project's first open and change it when the chat is used; since
@@ -917,7 +917,11 @@ is misaligned; but:
   files among them), so the subtitle row's "taken only as a recording's
   transcript" is 4.0's way, not 3.8.2's;
 - the names list is applied with each name written literally, where
-  3.8.2 read it as a pattern.
+  3.8.2 read it as a pattern: there a real name holding a bracket, a
+  question mark or another sign a pattern reads, or beginning or ending
+  with a character that is not a letter or a digit, may be left in the
+  text, stop the import, or replace other words; `save_names_list`'s
+  preview warns of such names by line number.
 
 Every document is read in a separate, short-lived process with a time
 limit and a memory cap, and every refusal and warning is in Exegete's

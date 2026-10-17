@@ -456,10 +456,12 @@ class TestThePublishedSchemaBudget:
     # The files design, piece 4: save_names_list's entry, with its
     # separator, 1,272 characters more in `full` (1,336 on 3.11), and
     # prepare_names_list's pointer to it, 27 more (27 on 3.11); `core`
-    # serves neither.
-    FULL_MEASURED = 207_912          # 83 tools, Python 3.13.5, mcp 1.30.0
+    # serves neither. Its fix round 1: the description names
+    # import_documents as the import that applies the list, 22 more in
+    # `full` on both interpreters.
+    FULL_MEASURED = 207_934          # 83 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 68_258           # 25 tools, same environment
-    FULL_MEASURED_310 = 218_424      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 218_446      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 71_690
 
     # Why two per cent, away from the reference environment.
@@ -487,7 +489,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "207,912"
+    FULL_CHARS = "207,934"
     CORE_CHARS = "68,258"
     FULL_ROUNDED = "208,000"
     CORE_ROUNDED = "68,000"

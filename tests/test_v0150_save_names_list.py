@@ -47,7 +47,8 @@ NAMES_FILE = "Names to replace.txt"
 DESCRIPTION = (
     "Check the names file the researcher filled in on their own computer "
     "(see prepare_names_list) and save it as the project's names list, "
-    "pseudonyms.json, in QualCoder's format, which later imports apply. "
+    "pseudonyms.json, in QualCoder's format, which import_documents "
+    "applies to later imports. "
     "Two calls. Without preview_token: a preview of counts and line "
     "numbers, never a name: lines read, lines it could not read, lines "
     "with an empty side, a real name listed twice, a pseudonym that is "
@@ -68,12 +69,18 @@ NOT_READABLE = {
                   "read.",
     "too_large": "The names file is larger than 1 MB, so it was not read.",
 }
+# Fix round 1: piece 3's sentence ends each refusal and step that asks the
+# researcher to act on the file
+NEVER_OPEN = (
+    "Never open or read the file yourself, even when a file tool could.")
 NOT_UTF8 = (
     "The names file is not saved as UTF-8 text. Ask the researcher to save "
-    "it again as plain text in UTF-8, then preview again.")
+    "it again as plain text in UTF-8 (most text editors offer the encoding "
+    "when saving a file), then preview again. " + NEVER_OPEN)
 EMPTY = (
     "The names file holds no names yet, only notes or blank lines. Ask the "
-    "researcher to fill it in and save it, then preview again.")
+    "researcher to fill it in and save it, then preview again. "
+    + NEVER_OPEN)
 UNREADABLE_ADVICE = (
     "Exegete does not replace a names list it cannot read. The researcher "
     "can correct pseudonyms.json in a text editor, or move it out of the "
@@ -85,10 +92,34 @@ HINT = ("Show the researcher these counts; call again with preview_token "
         "only on their word.")
 SHARED = ("The same pseudonym on more than one line: right for forms of "
           "one person's name, wrong for two people.")
-NO_BACKUP = "No backup could be made, so the names list was not saved."
-NOTE = ("The names list is saved as pseudonyms.json; later imports apply "
-        "it. The names file stays as the place to change it: edit it, save "
-        "it, and call save_names_list again.")
+NO_BACKUP = (
+    "No backup could be made, so the names list was not saved. The "
+    "researcher can check that the disk has free space and that the "
+    "project folder can be written to, then preview again.")
+NOTE = (
+    "The names list is saved as pseudonyms.json. import_documents applies "
+    "it to the documents it brings in from now on, unless asked not to; "
+    "documents already in the project keep their text, and "
+    "pseudonymise_source with use_project_pseudonyms replaces the names in "
+    "them, a file at a time. Exegete applies the list in one pass, longest "
+    "name first, so nothing it writes is replaced again; QualCoder's text "
+    "and transcript imports, for those who use them, apply it one entry at "
+    "a time in the file's order, which is why it is saved longest real "
+    "name first; there two names that overlap without either containing "
+    "the other (Mary Ann and Ann Lee, in Mary Ann Lee) can come out "
+    "differently, and a pseudonym that contains a name from the list is "
+    "rewritten again. The names file stays as the place to change the "
+    "list: edit it, save it, and call save_names_list again.")
+# The token refused in the names file's words (fix round 1)
+TOKEN_CHANGED = (
+    "preview_token did not verify for this save. The likeliest reason is "
+    "that the names file or the project's names list changed since the "
+    "preview, so the token no longer applies.")
+TOKEN_CHANGED_UNDER_THE_LOCK = (
+    "The names file or the project's names list changed since the "
+    "preview, so the token no longer applies. Call save_names_list "
+    "without preview_token for a fresh preview, show the researcher what "
+    "it says, then save on their word. Nothing was changed.")
 # The design's table, word for word
 RULES = {
     "name_too_short": "the real name is shorter than 2 characters",
@@ -269,6 +300,47 @@ def _save(token=None, **kwargs):
     return answer
 
 
+@pytest.fixture(autouse=True)
+def _no_name_in_any_log(request, caplog, capsys, monkeypatch):
+    """Fix round 1: every test in this file, its failure paths included,
+    reads the log at DEBUG (caplog, a root handler of its own, and the
+    captured standard error and output) and fails at its end if a name
+    within reach of any call of save_names_list or prepare_names_list
+    (taken before and after each call, and at the end) is in it, as
+    written or escaped."""
+    if "selected" in request.fixturenames:
+        # set up first, so that the project is still selected at the end
+        request.getfixturevalue("selected")
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setLevel(logging.DEBUG)
+    root = logging.getLogger()
+    root.addHandler(handler)
+    caplog.set_level(logging.DEBUG)
+    reach = set()
+    for name in ("save_names_list", "prepare_names_list"):
+        def wrapped(*args, _real=getattr(server, name), **kwargs):
+            reach.update(_names_in_reach())
+            try:
+                return _real(*args, **kwargs)
+            finally:
+                reach.update(_names_in_reach())
+        monkeypatch.setattr(server, name, wrapped)
+    try:
+        yield
+    finally:
+        root.removeHandler(handler)
+    reach.update(_names_in_reach())
+    printed = capsys.readouterr()
+    logs = "\n".join([caplog.text, stream.getvalue(), printed.err,
+                      printed.out]
+                     + [r.getMessage() for r in caplog.records])
+    for name in reach:
+        for form in {name, name.strip()}:
+            assert form not in logs, form
+            assert json.dumps(form)[1:-1] not in logs, form
+
+
 def _preview(folder):
     """A preview that gives a token; its preview block and the token."""
     answer = _save()
@@ -292,6 +364,9 @@ VALUES = [
     "Jane####Doe", "P\U0001f600 1", "P\\1", "C:\\Users", "Jane\rDoe",
     "Jane\tDoe", " Jane", "Jane ", "\u00a0Jane", "Jean-Paul", "O'Brien",
     "Room #4", "Zoë\u200dx", "#Jane", "A = B", "P\udfff1",
+    # fix round 1: both an emoji and a backslash, so the order of the two
+    # rules is held where the engine's check refuses
+    "P\U0001f600\\1",
 ]
 
 
@@ -342,6 +417,9 @@ class TestTheRuleTable:
         ("P\U0001f600 1", "pseudonym", "pseudonym_rare_characters"),
         ("P\\1", "pseudonym", "pseudonym_backslash"),
         ("Jane ", "name", "white_space_at_an_end"),
+        # the emoji first: the engine refuses it, and the backslash alone
+        # is the rule a kept entry may break
+        ("P\U0001f600\\1", "pseudonym", "pseudonym_rare_characters"),
     ])
     def test_each_rule_by_a_value_that_breaks_it(self, value, kind, code):
         assert pseudo.rule_broken(value, kind) == code
@@ -446,7 +524,7 @@ class TestTheRefusals:
         ("unreadable", "The system refused to read the names file, so it "
                        "was not read. The researcher can check that they "
                        "can open it in their text editor; then preview "
-                       "again.")])
+                       "again. " + NEVER_OPEN)])
     def test_the_readers_other_refusals(self, selected, monkeypatch, code,
                                         words):
         _write_names(selected, "Quorvin Ashdale = Participant Q")
@@ -501,7 +579,9 @@ class TestTheRefusals:
             "The names list cannot be saved: pseudonyms.json in the project "
             "folder is a symbolic link, and this tool saves by renaming a "
             "new file into place, which would replace the link and leave "
-            "the file it points to as it was.")
+            "the file it points to as it was. If the researcher wants the "
+            "list saved, they can replace the link with the file it points "
+            "to, then preview again.")
 
     @pytest.mark.skipif(not POSIX or os.geteuid() == 0,
                         reason="a mode the system enforces")
@@ -513,7 +593,8 @@ class TestTheRefusals:
         assert text == (
             "The names list cannot be saved: pseudonyms.json in the project "
             "folder is read-only for this account, and Exegete leaves it "
-            "so.")
+            "so. If the researcher wants the list saved, they can make the "
+            "file writable again, then preview again.")
 
     def test_the_guards_refusal(self, selected, monkeypatch):
         _write_names(selected, "Quorvin Ashdale = Participant Q")
@@ -637,6 +718,20 @@ class TestTheBlockingChecks:
                                  for i in range(pseudo.MAX_ENTRIES)))
         assert _preview(selected)["preview"]["too_many_names"] is False
 
+    def test_a_name_listed_twice_is_one_entry_towards_too_many(
+            self, selected):
+        """Fix round 1: too many is counted as entries_after counts the
+        entries a save writes; the name listed twice blocks on its own."""
+        _write_names(selected, *(f"Name{i:04d} = Participant {i:04d}"
+                                 for i in range(pseudo.MAX_ENTRIES)),
+                     "Name0000 = Participant 0000")
+        preview, answer = _blocked(selected)
+        assert preview["effect"]["entries_after"] == pseudo.MAX_ENTRIES
+        assert preview["too_many_names"] is False
+        assert preview["real_names_listed_twice"] == {
+            "count": 2, "lines": [6, 506]}
+        assert server.SAVE_NAMES_LIST_TOO_MANY not in answer["next_step"]
+
     def test_the_kept_entries_count_towards_too_many(self, selected):
         _write_names(selected, *(f"Name{i:04d} = Participant {i:04d}"
                                  for i in range(pseudo.MAX_ENTRIES)))
@@ -673,6 +768,10 @@ class TestTheBlockingChecks:
         assert preview["kept_entries_in_conflict"] == 1
         _only(preview, "kept_entries_in_conflict")
         assert server.SAVE_NAMES_LIST_KEPT_CONFLICT in answer["next_step"]
+        # fix round 1: the lines the researcher can find, not "those lines"
+        assert ("The researcher can change the lines whose names those "
+                "entries use, or correct or remove those entries in "
+                "pseudonyms.json") in server.SAVE_NAMES_LIST_KEPT_CONFLICT
 
     @pytest.mark.parametrize("entries", [
         # two kept entries with one real name
@@ -705,9 +804,28 @@ class TestTheBlockingChecks:
         point 3), as pseudonymise_source keeps writing one."""
         _write_names(selected, GOOD)
         _write_list(selected, [("Brisemar = Tull", "Participant\\B")])
-        preview = _preview(selected)["preview"]
+        answer = _preview(selected)
+        preview = answer["preview"]
         assert preview["kept_entries_in_conflict"] == 0
         assert preview["effect"]["kept_entries_the_file_cannot_hold"] == 1
+        # fix round 1: counted and said, not kept without a word
+        assert preview["kept_entries_with_a_backslash"] == 1
+        assert server.SAVE_NAMES_LIST_KEPT_BACKSLASH in answer["warnings"]
+        for words in ("(kept_entries_with_a_backslash counts them)",
+                      "They are kept as they are",
+                      "QualCoder's import among them, reads a backslash as "
+                      "an instruction rather than a letter",
+                      "change those pseudonyms in pseudonyms.json"):
+            assert words in server.SAVE_NAMES_LIST_KEPT_BACKSLASH, words
+
+    def test_a_kept_entry_holding_an_emoji_and_a_backslash(self, selected):
+        """Fix round 1: the emoji's rule is met first, so the entry is in
+        conflict, never kept for the guard to refuse."""
+        _write_names(selected, GOOD)
+        _write_list(selected, [("Brisemar = Tull", "P\U0001f600\\B")])
+        preview, _ = _blocked(selected)
+        assert preview["kept_entries_in_conflict"] == 1
+        _only(preview, "kept_entries_in_conflict")
 
     def test_a_line_wins_over_the_entry_it_names(self, selected):
         _write_names(selected, "Quorvin Ashdale = Participant Q")
@@ -719,6 +837,21 @@ class TestTheBlockingChecks:
 
 
 class TestLineNumbers:
+
+    def test_the_step_says_how_to_find_a_line_and_never_to_open_it(
+            self, selected):
+        """Fix round 1: how a line is found by its number, and piece 3's
+        sentence on never opening the file, last."""
+        _write_names(selected, GOOD, "Quorvin", "Q = Participant S")
+        _, answer = _blocked(selected)
+        assert answer["next_step"].startswith(server.SAVE_NAMES_LIST_CORRECT)
+        assert answer["next_step"].endswith(" " + NEVER_OPEN)
+        assert server.PREPARE_NAMES_LIST_NEVER_OPEN == NEVER_OPEN
+        assert ("(counted from the first line of the file, the lines of "
+                "instructions at the top included; many text editors show a "
+                "line's number or can go to one, and in one that shows none, "
+                "such as TextEdit, count from the top)") in \
+            server.SAVE_NAMES_LIST_CORRECT
 
     def test_as_a_text_editor_counts_them(self, selected):
         """The five lines of instructions counted; CR LF, CR and LF each
@@ -778,6 +911,12 @@ class TestTheWarnings:
         assert answer["preview"]["pseudonyms_putting_a_name_back"] == {
             "count": 1, "lines": [7]}
         assert server.SAVE_NAMES_LIST_PUT_BACK in answer["warnings"]
+        # fix round 1: what Exegete's imports do, and what an import
+        # applying the list entry by entry does
+        assert ("so where Exegete applies the list it puts that name back; "
+                "an import that applies the list one entry at a time, as "
+                "QualCoder's does, can replace it again, so the two store "
+                "different text.") in server.SAVE_NAMES_LIST_PUT_BACK
 
     def test_its_own_name_put_back(self, selected):
         _write_names(selected, "Quorvin = Quorvin Junior")
@@ -800,9 +939,17 @@ class TestTheWarnings:
     def test_a_kept_entry_putting_a_name_back_is_counted(self, selected):
         _write_names(selected, "Ashdale = Participant A1")
         _write_list(selected, [("Brisemar = Tull", "Mr Ashdale")])
-        block = _preview(selected)["preview"][
-            "pseudonyms_putting_a_name_back"]
+        answer = _preview(selected)
+        block = answer["preview"]["pseudonyms_putting_a_name_back"]
         assert block == {"count": 0, "lines": [], "kept_entries": 1}
+        # fix round 1: where such an entry can be changed, since it is on
+        # no line
+        assert answer["warnings"] == [
+            server.SAVE_NAMES_LIST_PUT_BACK + " "
+            + server.SAVE_NAMES_LIST_PUT_BACK_KEPT]
+        assert ("on no line of the names file: the researcher can change "
+                "them in pseudonyms.json") in \
+            server.SAVE_NAMES_LIST_PUT_BACK_KEPT
 
     def test_one_pseudonym_on_more_than_one_line(self, selected):
         _write_names(selected, "Quorvin Ashdale = Participant Q",
@@ -831,6 +978,92 @@ class TestTheWarnings:
         assert answer["preview"]["effect"]["removed"] == 1
         assert server.SAVE_NAMES_LIST_REMOVES in answer["warnings"]
         assert "ask the researcher which" in server.SAVE_NAMES_LIST_REMOVES
+        # fix round 1: how to find those entries, and the way back
+        for words in (
+                "To find them, they can compare the file with "
+                "pseudonyms.json, in the project folder, in a text editor",
+                "or they can rename the names file, leaving it in the "
+                "project's Exegete folder, and you call prepare_names_list "
+                "for a new one made from the list",
+                "The backup made before the save keeps the list as it "
+                "was."):
+            assert words in server.SAVE_NAMES_LIST_REMOVES, words
+
+    def test_a_pseudonym_the_save_would_change(self, selected):
+        """Fix round 1: an older names file can change a pseudonym back,
+        so a change warns as a removal does, and the researcher decides."""
+        _write_list(selected, [("Quorvin Ashdale", "Participant Z")])
+        _write_names(selected, GOOD)
+        answer = _preview(selected)
+        assert answer["preview"]["effect"]["changed"] == 1
+        assert answer["warnings"] == [server.SAVE_NAMES_LIST_CHANGES]
+        for words in ("(effect.changed counts them)",
+                      "That is right if the researcher changed those "
+                      "pseudonyms in the names file.",
+                      "the older pseudonyms would come back: ask the "
+                      "researcher which.",
+                      "documents imported later would give those people "
+                      "other pseudonyms than earlier ones."):
+            assert words in server.SAVE_NAMES_LIST_CHANGES, words
+
+    @pytest.mark.parametrize("real_name", [
+        "Ann Lee Jr.", "Smith (Jr)", "Ann [Lee", "C:\\Users", "(Jo) Ann",
+        "Ann|Bob", "Jo Ann?", "Ann+", "Ann*", "^Ann", "Ann$", "Ann{2}",
+        "Ann-", "'Ann", "Jose\u0301"])
+    def test_a_real_name_some_imports_read_as_a_pattern(self, selected,
+                                                        real_name):
+        """Fix round 1: a warning by line number, never blocking, for a
+        real name QualCoder 3.8.2's text import (and 4.0's survey import)
+        cannot find as written."""
+        _write_names(selected, GOOD, f"{real_name} = Participant P")
+        answer = _preview(selected)
+        assert answer["preview"]["real_names_read_as_patterns"] == {
+            "count": 1, "lines": [7]}
+        assert server.SAVE_NAMES_LIST_PATTERN in answer["warnings"]
+
+    def test_the_pattern_warning_says_what_and_for_whom(self):
+        text = server.SAVE_NAMES_LIST_PATTERN
+        for words in ("(one of \\ [ ] ( ) { } ^ $ | ? * +)",
+                      "Exegete's imports replace them as written.",
+                      "QualCoder 3.8.2's text and survey imports, and "
+                      "QualCoder 4.0's survey import and its replacement of "
+                      "a document with a newer file",
+                      "for those who use them, such a name may be left in "
+                      "the text, stop the import with an error, or replace "
+                      "other words."):
+            assert words in text, words
+
+    @pytest.mark.parametrize("value", [
+        "Ann Lee Jr.", "Smith (Jr)", "Ann [Lee", "C:\\Users", "(Jo) Ann",
+        "Ann|Bob", "Jo Ann?", "Ann+", "Ann*", "^Ann", "Ann$", "Ann{2}",
+        "Ann-", "'Ann", "Jose\u0301"])
+    def test_flagged_names_are_not_found_by_3_8_2s_replacement(self, value):
+        """QualCoder 3.8.2's replacement, mirrored (`manage_files.py`
+        line 2039 at 3.8.2): each name the warning flags is left, stops
+        the import, or replaces something else."""
+        assert server._read_as_a_pattern(value)
+        try:
+            out = re.sub(rf"\b{value}\b", "P", f"said {value} today")
+        except re.error:
+            out = None
+        assert out != "said P today", value
+
+    @pytest.mark.parametrize("value", [
+        "Ann", "Mary Ann", "J. Smith", "Smith, Jane", "O'Brien",
+        "Jean-Paul", "Élodie Marchbank", "张伟", "Ann_", "Room 4"])
+    def test_names_3_8_2s_replacement_finds_are_not_flagged(self, value):
+        assert not server._read_as_a_pattern(value)
+        assert re.sub(rf"\b{value}\b", "P", f"said {value} today") == \
+            "said P today"
+
+    def test_no_warning_on_a_clean_list_of_ordinary_names(self, selected):
+        _write_names(selected, GOOD, "Jean-Paul O'Brien = Participant J",
+                     "Smith, Jane = Participant S")
+        answer = _preview(selected)
+        assert answer["preview"]["real_names_read_as_patterns"] == {
+            "count": 0, "lines": []}
+        assert answer["preview"]["kept_entries_with_a_backslash"] == 0
+        assert "warnings" not in answer
 
 
 # ---------------------------------------------------------------------------
@@ -926,6 +1159,13 @@ class TestTheToken:
         assert answer["reason"] == "project_changed"
         assert answer["nothing_changed"] is True
         assert not (selected / "pseudonyms.json").exists()
+        # fix round 1: in the names file's words, not of rows
+        assert answer["error"].startswith(TOKEN_CHANGED)
+        assert answer["error"].endswith(
+            "call save_names_list without preview_token for a fresh "
+            "preview, show the researcher what it says, then save on their "
+            "word. Nothing was changed.")
+        assert "rows" not in answer["error"]
 
     def test_refused_after_the_list_changes(self, selected):
         _write_names(selected, GOOD)
@@ -1107,6 +1347,9 @@ class TestTheSave:
         assert "QualCoder" in answer["error"] and "open" in answer["error"]
         assert not (selected / "pseudonyms.json").exists()
         assert _backups(selected) == []
+        # fix round 1: a reason, as every other refusal of the tool has
+        assert answer["reason"] == "project_locked"
+        assert answer["nothing_changed"] is True
 
     def test_no_backup_no_save(self, selected, monkeypatch):
         _write_names(selected, GOOD)
@@ -1153,6 +1396,8 @@ class TestBetweenTheTokenAndTheWrite:
         assert answer["error"].endswith(
             " A backup had already been taken before the change was "
             "detected; it is unchanged and can be pruned.")
+        # fix round 1: in the names file's words, not of rows
+        assert answer["error"].startswith(TOKEN_CHANGED_UNDER_THE_LOCK)
         assert _backups(selected) == [answer["backup"]]
         assert _list_bytes(selected) == before
         assert _no_temporary_file(selected)
@@ -1231,6 +1476,8 @@ class TestBetweenTheTokenAndTheWrite:
             f"The names list was not saved; the backup made first is kept: "
             f"{answer['backup']}.")
         assert answer["nothing_changed"] is True
+        # fix round 1: a reason, as every other refusal of the tool has
+        assert answer["reason"] == "project_locked"
         assert not (selected / "pseudonyms.json").exists()
 
 
@@ -1242,6 +1489,9 @@ REAL = ("Quillon Vantreese", "Élodie Marchbank", "Brisemar Tullaway",
         "Ottoline Faverdy")
 PSEUDONYMS = ("Participant Kestrel", "Participant Héron",
               "Participant Wrenlow", "Participant Larkspur")
+# Fix round 1: an entry of the list the names file cannot hold (its real
+# name holds =), kept through the loop
+KEPT = ("Wendeline = Corrabay", "Participant Sorrelby")
 
 
 class TestNoNameAnywhere:
@@ -1253,7 +1503,7 @@ class TestNoNameAnywhere:
         document that holds the names; every answer."""
         from exegete import import_paths
         answers = {"prepare": [], "save": [], "other": []}
-        _write_list(selected, [(REAL[3], PSEUDONYMS[3])])
+        _write_list(selected, [(REAL[3], PSEUDONYMS[3]), KEPT])
         answers["prepare"].append(server.prepare_names_list())
         made = _names(selected).read_text(encoding="utf-8-sig")
         assert REAL[3] in made
@@ -1312,16 +1562,17 @@ class TestNoNameAnywhere:
         logs = "\n".join([caplog.text, printed.err, printed.out,
                           stream.getvalue()]
                          + [r.getMessage() for r in caplog.records])
-        assert "save_names_list saved the project's names list (4 " \
+        assert "save_names_list saved the project's names list (5 " \
                "entries)." in stream.getvalue()
         everything = "\n".join(sum(answers.values(), [])) + "\n" + logs
-        for name in REAL:
+        for name in REAL + KEPT[:1]:
             assert name not in everything, name
             assert json.dumps(name)[1:-1] not in everything, name
             for part in name.split():
-                assert part not in everything, part
+                if len(part) >= 3:
+                    assert part not in everything, part
         own = "\n".join(answers["prepare"] + answers["save"])
-        for pseudonym in PSEUDONYMS:
+        for pseudonym in PSEUDONYMS + KEPT[1:]:
             assert pseudonym not in own, pseudonym
             assert json.dumps(pseudonym)[1:-1] not in own, pseudonym
         # the import's preview did see the names, by count
@@ -1431,10 +1682,53 @@ class TestWhatItSays:
             assert "—" not in text
             assert "the server" not in text
             assert "better than" not in text
-        # QualCoder named only for its format and its import
-        assert [t for t in own if "QualCoder" in t] == []
+        # QualCoder named only for its format, in sentences about its
+        # imports and dialog (fix round 1, beside pseudonymise_source's
+        # words for the same list), and in the hint given on its window's
+        # signs
+        naming = sorted(key for key, value in vars(server).items()
+                        if isinstance(value, str) and value in own
+                        and "QualCoder" in value)
+        assert naming == [
+            "SAVE_NAMES_LIST_GUI_HINT", "SAVE_NAMES_LIST_KEPT_BACKSLASH",
+            "SAVE_NAMES_LIST_NOTE", "SAVE_NAMES_LIST_PATTERN",
+            "SAVE_NAMES_LIST_PUT_BACK"]
+        assert "QualCoder's text and transcript imports, for those who use " \
+            "them," in server.SAVE_NAMES_LIST_NOTE
+        assert "for those who use them" in server.SAVE_NAMES_LIST_PATTERN
+        assert server.SAVE_NAMES_LIST_GUI_HINT.startswith(
+            "This project appears to be open in QualCoder ({signs}).")
         assert DESCRIPTION.count("QualCoder") == 1
         assert "in QualCoder's format" in DESCRIPTION
+
+    def test_the_window_signs_are_passed_on_outside_the_token(
+            self, selected, monkeypatch):
+        """Fix round 1: QualCoder 4.0's window signs in the preview, with a
+        hint naming its Pseudonyms dialog, never a refusal, and outside
+        the state the token signs."""
+        signs = ["a QualCoder 4.0 file beside the project changed recently"]
+        monkeypatch.setattr(server, "qualcoder_gui_signals",
+                            lambda folder, **kwargs: list(signs))
+        _write_names(selected, GOOD, "Quorvin")
+        blocked = _save()["preview"]
+        assert blocked["qualcoder_gui_signals"] == signs
+        _write_names(selected, GOOD)
+        answer = _preview(selected)
+        assert answer["preview"]["qualcoder_gui_signals"] == signs
+        hint = answer["preview"]["qualcoder_gui_hint"]
+        assert hint == server.SAVE_NAMES_LIST_GUI_HINT.format(
+            signs=signs[0])
+        assert "QualCoder's Pseudonyms dialog keeps the list it read" in hint
+        signs.clear()
+        assert _save(answer["preview_token"])["success"] is True
+
+    def test_no_window_signs_no_hint(self, selected, monkeypatch):
+        monkeypatch.setattr(server, "qualcoder_gui_signals",
+                            lambda folder, **kwargs: [])
+        _write_names(selected, GOOD)
+        preview = _preview(selected)["preview"]
+        assert preview["qualcoder_gui_signals"] == []
+        assert "qualcoder_gui_hint" not in preview
 
     def test_in_full_not_in_core(self):
         server._apply_toolset("full")
@@ -1509,6 +1803,10 @@ GUARDED = [
      [K1, ("Ottoline -> Faverdy", "Brisemar = Tull")]),
     ("a kept entry its own pseudonym", (GOOD,),
      [("Brisemar = Tull", "Brisemar = Tull")]),
+    # fix round 1: the emoji's rule before the backslash's, which a kept
+    # entry may break
+    ("a kept entry holding an emoji and a backslash", (GOOD,),
+     [("Brisemar = Tull", "P\U0001f600\\B")]),
 ]
 
 
@@ -1619,14 +1917,40 @@ class TestTheDocuments:
         part = unreleased[unreleased.index(heading):]
         part = _flat(part[:part.index("\n### ", 5)]).replace("**", "")
         for words in (
+                # fix round 1: what the list is for, the two counted
+                # blocks, the warnings added, the departures named
                 "`save_names_list` saves the names file as the project's "
-                "names list (in `full`, not in `core`), in two calls; "
-                "Claude Code asks before both "
+                "names list (in `full`, not in `core`): the list "
+                "`import_documents` applies as documents come in. It takes "
+                "two calls; Claude Code asks before both "
                 "(`anthropic/requiresUserInteraction`).",
                 "a preview of counts and line numbers, never a name",
-                "While a line needs correcting, nothing can be saved",
-                "A pseudonym holding a backslash is refused, which "
-                "QualCoder's Pseudonyms dialog accepts",
+                "and, as counts, more than 500 entries, or entries kept "
+                "from the list that clash with the lines.",
+                "While any of these needs correcting, nothing can be saved",
+                "entries the save would remove from the list or give "
+                "another pseudonym (the file may be older than the list), "
+                "entries kept from the list whose pseudonym holds a "
+                "backslash, and real names that some of QualCoder's imports "
+                "read as a pattern",
+                "it passes on the signs that QualCoder 4.0 may have the "
+                "project open.",
+                "A pseudonym on a line holding a backslash is refused, "
+                "which QualCoder's Pseudonyms dialog accepts",
+                "One pseudonym on several lines is written, with its "
+                "warning, where the dialog refuses a second entry with a "
+                "pseudonym already in use: forms of one person's name share "
+                "one, and QualCoder reads such a list as it reads its own.",
+                "there two names that overlap without either containing the "
+                "other (Mary Ann and Ann Lee, in Mary Ann Lee) can still "
+                "come out differently from Exegete's import",
+                "QualCoder 3.8.2's text and survey imports, and QualCoder "
+                "4.0's survey import and its replacement of a document with "
+                "a newer file, put each real name into a pattern as it is "
+                "written",
+                "Documents already in the project keep their text: "
+                "`pseudonymise_source` with `use_project_pseudonyms` "
+                "replaces the names in them, a file at a time.",
                 "the second call makes a backup of the project, then writes "
                 "`pseudonyms.json` in QualCoder's format, the longest real "
                 "name first,",
@@ -1634,7 +1958,25 @@ class TestTheDocuments:
                 "place to change the list."):
             assert words in part, words
         assert part.index("Then Exegete shows the file") < part.index(
-            "`save_names_list` saves") < part.index("Exports are not")
+            "`save_names_list` saves") < part.index(
+            "What the save writes.") < part.index("Exports are not")
+        # fix round 1: what upgrading means for a list already there
+        upgrading = _flat(log[log.index("### Upgrading from 0.14.3"):
+                              log.index("### Changed: one tool set")])
+        assert ("- **Saving the names list replaces `pseudonyms.json`.** "
+                "When you save the names file as the list "
+                "(`save_names_list`), a backup of the project is made "
+                "first; then the list holds what the file holds: entries on "
+                "no line of the file are removed and a pseudonym the file "
+                "gives otherwise is changed (the preview warns of both, and "
+                "the backup keeps the list as it was), the longest real name "
+                "comes first, and a pseudonym holding a backslash, which an "
+                "earlier list may have and `prepare_names_list` copies into "
+                "the file as a line, is refused until you change it in the "
+                "file.") in upgrading
+        assert upgrading.index("A names file stays with the project") < \
+            upgrading.index("Saving the names list replaces") < \
+            upgrading.index("Not in this release")
         assert "—" not in part and "better than QualCoder" not in part
         brief = _flat(unreleased)
         assert ("its section on how changes happen names importing "
@@ -1646,8 +1988,8 @@ class TestTheDocuments:
         measured = log[log.index("### Measured"):log.index(
             "## [0.14.3-alpha]")]
         assert ("And `save_names_list`, which saves the names file as the "
-                "list, adds its entry and its separator: 1,272 characters in "
-                "`full`, 1,336 on 3.11; `core` does not serve it. No other "
+                "list, adds its entry and its separator: 1,294 characters in "
+                "`full`, 1,358 on 3.11; `core` does not serve it. No other "
                 "tool's entry changed.") in measured
         assert "eighteen changes moved them" in measured
         server._apply_toolset("full")
@@ -1657,9 +1999,9 @@ class TestTheDocuments:
                                 "description": tool.description or "",
                                 "inputSchema": tool.inputSchema}))
         if sys.version_info[:2] == (3, 13):
-            assert entry + len(", ") == 1272
+            assert entry + len(", ") == 1294
         elif sys.version_info[:2] == (3, 11):
-            assert entry + len(", ") == 1336
+            assert entry + len(", ") == 1358
         brief = len(server.read_brief())
         assert f"the full brief {brief:,}." in measured
 
@@ -1671,14 +2013,38 @@ class TestTheDocuments:
                 "the file to check it: its preview gives counts, which "
                 "compare the list with the file in the same way, and the "
                 "numbers of the lines to correct, never a name; on your "
-                "word, after a backup, it copies the file's names into "
-                "`pseudonyms.json`, and the file itself stays as it is.") \
-            in privacy
+                "word, after a backup, it replaces the list in "
+                "`pseudonyms.json` with the file's names, keeping only the "
+                "list's entries the file cannot hold as a line, and the file "
+                "itself stays as it is.") in privacy
 
     def test_install_names_it_among_the_tools_carrying_the_mark(self):
         install = _flat(_read("INSTALL.md"))
         assert ("mark Codex does not read (`import_documents` and "
                 "`save_names_list` carry it too).") in install
+        # fix round 1: the three marked tools in Claude Code's bullet, and
+        # Codex asking before the save, which changes what exists
+        assert ("a tool marked `anthropic/requiresUserInteraction` (here, "
+                "`read_pseudonym_list`, `import_documents` and "
+                "`save_names_list`) is asked about in every one of these "
+                "modes but `dontAsk`, which refuses it.") in install
+        assert ("`save_names_list` is also marked as changing what exists, "
+                "so Codex asks before it under `auto` too.") in install
+        marked = sorted(name for name, meta in server.TOOL_META.items()
+                        if meta.get("anthropic/requiresUserInteraction"))
+        assert marked == ["import_documents", "read_pseudonym_list",
+                          "save_names_list"]
+
+    def test_tools_says_what_3_8_2_does_with_such_names(self):
+        tools = _flat(_read("TOOLS.md"))
+        assert ("the names list is applied with each name written "
+                "literally, where 3.8.2 read it as a pattern: there a real "
+                "name holding a bracket, a question mark or another sign a "
+                "pattern reads, or beginning or ending with a character "
+                "that is not a letter or a digit, may be left in the text, "
+                "stop the import, or replace other words; "
+                "`save_names_list`'s preview warns of such names by line "
+                "number.") in tools
 
     def test_ci_runs_the_qualcoder_check_in_the_parity_job(self):
         ci = _read(".github/workflows/ci.yml")

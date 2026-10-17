@@ -534,8 +534,9 @@ names file; it learns nothing of names it does not already have. When
 you say the list is ready, `save_names_list` reads the file to check
 it: its preview gives counts, which compare the list with the file in
 the same way, and the numbers of the lines to correct, never a name;
-on your word, after a backup, it copies the file's names into
-`pseudonyms.json`, and the file itself stays as it is. The export tools
+on your word, after a backup, it replaces the list in `pseudonyms.json`
+with the file's names, keeping only the list's entries the file cannot
+hold as a line, and the file itself stays as it is. The export tools
 refuse to write in any project's `Exegete` folder, so an export cannot
 replace a file you filled in. The names file opens in the app your
 computer uses for text files: if that app has an AI assistant of its
@@ -1258,8 +1259,8 @@ Two further rules touch files on your disk:
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
   get_current_project, start_coding_session, also under its earlier
-  name, and the restore_backup and import_documents previews, each the
-  call without a preview_token)
+  name, and the restore_backup, import_documents and save_names_list
+  previews, each the call without a preview_token)
   also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for

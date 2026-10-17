@@ -846,8 +846,9 @@ class TestTheDocuments:
         listing = flat[flat.index("**Process listing.**"):]
         assert ("(today: select_project, get_current_project, "
                 "start_coding_session, also under its earlier name, and the "
-                "restore_backup and import_documents previews, each the "
-                "call without a preview_token)") in listing[:400]
+                "restore_backup, import_documents and save_names_list "
+                "previews, each the call without a preview_token)") in \
+            listing[:400]
 
     def test_a_coding_session_by_one_name(self):
         """The tool starts a coding session: the documents call it that,

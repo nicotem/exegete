@@ -17,6 +17,15 @@ a comma inside a name, and finds the text Exegete's own import stores.
 A pseudonym holding a backslash, which the preview refuses, fails or
 changes the text in QualCoder's replacement.
 
+Fix round 1: two names that overlap without either containing the other
+come out differently in QualCoder's import (the save's note says so, as
+pseudonymise_source's does), pinned here as known; and QualCoder 3.8.2's
+text import, which puts the real name into its pattern unescaped
+(`manage_files.py`, line 2039 at 3.8.2), is mirrored beside 4.0's, for
+the real names the preview now warns of. Its line is checked against
+3.8.2's source when QUALCODER_382_SOURCE names one (CI's gate fetches
+4.0 alone).
+
 Run in CI's parity job, where QUALCODER_SOURCE names QualCoder's source
 checked out read only; skipped elsewhere. QualCoder is never run: its
 source is read as text, nothing in it is imported or executed.
@@ -40,6 +49,8 @@ from exegete import private_files  # noqa: E402
 from exegete.names_file import HEADER  # noqa: E402
 
 SOURCE = os.environ.get("QUALCODER_SOURCE")
+# QualCoder 3.8.2's source, when given (fix round 1)
+SOURCE_382 = os.environ.get("QUALCODER_382_SOURCE")
 # The release the provenance names (CI's gate)
 GATE = bool(os.environ.get("EXEGETE_PARITY_GATE"))
 
@@ -57,6 +68,13 @@ APPLY = [
     (3383, "pseudonymised = re.sub(rf\"(?<!\\w){re.escape(pseudonym"
            "['original'])}(?!\\w)\", pseudonym['pseudonym'], text_)"),
     (3384, "text_ = pseudonymised"),
+]
+# QualCoder 3.8.2's text import, the release's lines (fix round 1)
+APPLY_382 = [
+    (2038, "for pseudonym in pseudonyms:"),
+    (2039, "pseudonymised = re.sub(rf\"\\b{pseudonym['original']}\\b\", "
+           "pseudonym['pseudonym'], text_)"),
+    (2040, "text_ = pseudonymised"),
 ]
 DIALOG = [
     (84, "if any(d['original'] == original for d in self.data):"),
@@ -87,6 +105,16 @@ def _apply(pseudonyms, text_):
     return text_
 
 
+def _apply_382(pseudonyms, text_):
+    """QualCoder 3.8.2's lines 2038 to 2040, mirrored: the real name into
+    the pattern as it is written."""
+    for pseudonym in pseudonyms:
+        pseudonymised = re.sub(rf"\b{pseudonym['original']}\b",
+                               pseudonym['pseudonym'], text_)
+        text_ = pseudonymised
+    return text_
+
+
 class TestQualCodersSource:
 
     @pytest.mark.parametrize("name, lines", [
@@ -98,6 +126,14 @@ class TestQualCodersSource:
             assert text in stripped, (name, text)
             if GATE:
                 assert source[number - 1].strip() == text, (name, number)
+
+    @pytest.mark.skipif(not SOURCE_382,
+                        reason="QUALCODER_382_SOURCE names no 3.8.2 tree")
+    def test_3_8_2s_lines_mirrored_are_in_its_source(self):
+        source = (Path(SOURCE_382) / "src" / "qualcoder" /
+                  "manage_files.py").read_text(encoding="utf-8").splitlines()
+        for number, text in APPLY_382:
+            assert source[number - 1].strip() == text, number
 
 
 TEXT = ("Mary Ann met Ann at the café. Élodie Marchbank wrote to Smith, "
@@ -183,3 +219,57 @@ class TestTheSavedListInQualCodersImport:
         changed = _apply([{"original": "Ann", "pseudonym": "P\\n2"}],
                          "Ann spoke.")
         assert changed != "P\\n2 spoke." and changed == "P\n2 spoke."
+
+
+class TestWhatTheSaveSaysOfQualCodersImports:
+    """Fix round 1: differences the save's texts name, pinned as known."""
+
+    def test_overlapping_names_come_out_differently(self, selected,
+                                                    tmp_path):
+        preview = _save_names(selected, "Mary Ann = Participant M",
+                              "Ann Smith = Participant S")
+        assert "warnings" not in preview
+        saved = json.loads(server.save_names_list(
+            preview_token=preview["preview_token"]))
+        assert ("two names that overlap without either containing the "
+                "other (Mary Ann and Ann Lee, in Mary Ann Lee) can come out "
+                "differently") in saved["note"]
+        text = "Mary Ann Smith spoke.\n"
+        document = tmp_path / "overlap.txt"
+        document.write_text(text, encoding="utf-8")
+        assert _import(selected, document) == "Participant M Smith spoke.\n"
+        pseudonyms = _load_pseudonyms(selected)
+        assert _apply(pseudonyms, text) == "Mary Participant S spoke.\n"
+        assert _apply_382(pseudonyms, text) == "Mary Participant S spoke.\n"
+
+    def test_a_pseudonym_holding_a_name_is_replaced_again_there(
+            self, selected, tmp_path):
+        preview = _save_names(selected, "Mary Ann = Ann Bee",
+                              "Ann = Participant A")
+        assert server.SAVE_NAMES_LIST_PUT_BACK in preview["warnings"]
+        assert json.loads(server.save_names_list(
+            preview_token=preview["preview_token"]))["success"] is True
+        document = tmp_path / "again.txt"
+        document.write_text("Mary Ann spoke.\n", encoding="utf-8")
+        assert _import(selected, document) == "Ann Bee spoke.\n"
+        assert _apply(_load_pseudonyms(selected), "Mary Ann spoke.\n") == \
+            "Participant A Bee spoke.\n"
+
+    def test_real_names_3_8_2_reads_as_a_pattern(self, selected, tmp_path):
+        preview = _save_names(selected, "Ann Lee Jr. = Participant J",
+                              "Smith (Jr) = Participant S")
+        assert preview["preview"]["real_names_read_as_patterns"] == {
+            "count": 2, "lines": [6, 7]}
+        assert server.SAVE_NAMES_LIST_PATTERN in preview["warnings"]
+        assert json.loads(server.save_names_list(
+            preview_token=preview["preview_token"]))["success"] is True
+        text = "Ann Lee Jr. met Smith (Jr) at noon.\n"
+        expected = "Participant J met Participant S at noon.\n"
+        document = tmp_path / "pattern.txt"
+        document.write_text(text, encoding="utf-8")
+        pseudonyms = _load_pseudonyms(selected)
+        # Exegete's import and QualCoder 4.0's text import replace both
+        assert _import(selected, document) == expected
+        assert _apply(pseudonyms, text) == expected
+        # QualCoder 3.8.2's leaves both in the text
+        assert _apply_382(pseudonyms, text) == text

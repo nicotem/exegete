@@ -1541,9 +1541,9 @@ What each host does, from Anthropic's pages as read on 27 September
   version 2.1.283, and before that on Pro, Max and Team plans.
   `bypassPermissions` runs everything, and `dontAsk` refuses anything
   that would ask. From 2.1.199, a tool marked
-  `anthropic/requiresUserInteraction` (here, `read_pseudonym_list`) is
-  asked about in every one of these modes but `dontAsk`, which refuses
-  it.
+  `anthropic/requiresUserInteraction` (here, `read_pseudonym_list`,
+  `import_documents` and `save_names_list`) is asked about in every one
+  of these modes but `dontAsk`, which refuses it.
 - **Cowork.** Each connector tool has its own setting (always allow,
   needs approval, blocked). In **Manual** mode, the default, a tool that
   needs approval is asked about. In **Auto**, a tool set to always allow
@@ -1586,7 +1586,8 @@ that is the 18 tools that only add (`import_text_file`,
 and `prepare_names_list` from 0.15.0)
 and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
 mark Codex does not read (`import_documents` and `save_names_list`
-carry it too). With
+carry it too). `save_names_list` is also marked as changing what
+exists, so Codex asks before it under `auto` too. With
 `default_tools_approval_mode = "writes"` in the server's entry, Codex asks before every tool not
 marked read-only; the recipe above sets it, and asks before
 `read_pseudonym_list` whichever of the server's approval modes is set.

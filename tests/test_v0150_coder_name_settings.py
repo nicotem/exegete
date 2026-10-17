@@ -925,14 +925,13 @@ class TestTheDocuments:
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = text[text.index("## [Unreleased]"):
+        unreleased = text[text.index("## [0.15.0-alpha]"):
                           text.index("## [0.14.3")]
-        assert "### Added: your coder name and the AI coder name as " \
-               "settings" in unreleased
         # the coder names, piece 3, renamed the heading for what the
-        # setting now does
-        assert "### Changed: the AI coder name in the settings, and the " \
-               "names the setter refuses" in unreleased
+        # setting now does; the release preparation made the three coder
+        # names' sections one
+        assert "### Your coder name and the AI coder name\n" in unreleased
+        assert "### Added: your coder name" not in unreleased
         flat = _flat(unreleased)
         assert ("**Projects that already exist keep their coder name, or "
                 "their lack of one**: Exegete gives the setting's name only "

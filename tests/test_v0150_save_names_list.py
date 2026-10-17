@@ -1913,9 +1913,9 @@ class TestTheDocuments:
 
     def test_the_changelog_says_what_was_added(self):
         log = _read("CHANGELOG.md")
-        unreleased = log[log.index("## [Unreleased]"):
+        unreleased = log[log.index("## [0.15.0-alpha]"):
                          log.index("## [0.14.3-alpha]")]
-        heading = "### Added: the names list, filled in on your computer"
+        heading = "### The names list, filled in on your computer, and what pseudonymisation is for"
         part = unreleased[unreleased.index(heading):]
         part = _flat(part[:part.index("\n### ", 5)]).replace("**", "")
         for words in (
@@ -1964,7 +1964,7 @@ class TestTheDocuments:
             "What the save writes.") < part.index("Exports are not")
         # fix round 1: what upgrading means for a list already there
         upgrading = _flat(log[log.index("### Upgrading from 0.14.3"):
-                              log.index("### Changed: one tool set")])
+                              log.index("### One tool set, two tools renamed")])
         assert ("- **Saving the names list replaces `pseudonyms.json`.** "
                 "When you save the names file as the list "
                 "(`save_names_list`), a backup of the project is made "

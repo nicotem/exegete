@@ -49,7 +49,7 @@ def _flat(text):
 
 def _unreleased():
     text = _read("CHANGELOG.md")
-    return text[text.index("## [Unreleased]"):text.index("## [0.14.3-alpha]")]
+    return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3-alpha]")]
 
 
 def _served():

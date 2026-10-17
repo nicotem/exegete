@@ -222,7 +222,7 @@ class TestTheOtherDocuments:
 
     def test_the_upgrading_part_names_a_folder_already_called_exegete(self):
         changelog = _read("CHANGELOG.md")
-        entry = _flat(changelog[changelog.index("## [Unreleased]"):
+        entry = _flat(changelog[changelog.index("## [0.15.0-alpha]"):
                                 changelog.index("## [0.14.3-alpha]")])
         upgrading = entry[entry.index("### Upgrading from 0.14.3"):]
         upgrading = upgrading[:upgrading.index("### ", 5)]

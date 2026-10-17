@@ -772,10 +772,10 @@ class TestTheDocuments:
 
     def test_the_changelog(self):
         text = _read("CHANGELOG.md")
-        entry = _flat(text[text.index("## [Unreleased]"):
+        entry = _flat(text[text.index("## [0.15.0-alpha]"):
                            text.index("## [0.14.3")])
         section = entry[entry.index(
-            "### Changed: two tools renamed, and Exegete's backups"):]
+            "### One tool set, two tools renamed, and the extension's folder for projects"):]
         section = section[:section.index("###", 5)]
         for words in ("`analyze_for_coding` is now `start_coding_session`",
                       "`analyze_file_with_coding` is now "
@@ -799,10 +799,10 @@ class TestTheDocuments:
         tool set and name neither earlier name outside the renames' own
         section (fix round 1)."""
         text = _read("CHANGELOG.md")
-        entry = _flat(text[text.index("## [Unreleased]"):
+        entry = _flat(text[text.index("## [0.15.0-alpha]"):
                            text.index("## [0.14.3")])
         start = entry.index(
-            "### Changed: two tools renamed, and Exegete's backups")
+            "### One tool set, two tools renamed, and the extension's folder for projects")
         end = entry.index("###", start + 5)
         others = entry[:start] + entry[end:]
         # the Upgrading part's renames bullet names both, so that it can
@@ -814,8 +814,9 @@ class TestTheDocuments:
         assert ("`select_project`'s warning, `get_current_project`'s note "
                 "and `start_coding_session`'s request and banner say the "
                 "same.") in others
-        sets = others[others.index("### Changed: one tool set called full"):]
-        sets = sets[:sets.index("###", 5)]
+        # since the release preparation the tool set and the renames are
+        # one section, the one left out of `others` above
+        sets = entry[start:end]
         # one count for `full`: set_project_coder_name included
         # (whole-branch review, round 1)
         # one tool more since the names file (the files design, piece 3),

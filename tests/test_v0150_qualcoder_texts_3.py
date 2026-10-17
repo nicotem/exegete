@@ -736,7 +736,7 @@ class TestTheWords:
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
         unreleased = changelog[:changelog.index("\n## [0.14.3-alpha]")]
         section = _collapsed(_section(
-            unreleased, "### Changed: a project's history with QualCoder"))
+            unreleased, "### What Exegete finds of QualCoder in a project"))
         assert "—" not in section
         # piece 11, fix round 1: once for each project, at selection or
         # at the first answer that reads it
@@ -1180,7 +1180,7 @@ class TestTheWordsAfterReview:
         from Python, and the words are a researcher's."""
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
         section = _collapsed(_section(
-            changelog, "### Changed: a project's history with QualCoder"))
+            changelog, "### What Exegete finds of QualCoder in a project"))
         assert ("cannot see a QualCoder started from Python (Windows "
                 "without psutil, which lists program names only; a running "
                 "Python program whose command line could not be read), "
@@ -1208,7 +1208,7 @@ class TestTheWordsAfterReview:
             "32 words.")
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
         section = _collapsed(_section(
-            changelog, "### Changed: a project's history with QualCoder"))
+            changelog, "### What Exegete finds of QualCoder in a project"))
         assert still_missed in self._privacy_bullet()
         assert still_missed in section
 
@@ -1243,7 +1243,7 @@ class TestTheWordsAfterReview:
     def test_the_changelog_gives_the_locks_caveat(self):
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
         section = _collapsed(_section(
-            changelog, "### Changed: a project's history with QualCoder"))
+            changelog, "### What Exegete finds of QualCoder in a project"))
         assert ("a lock file left over, by QualCoder 3.8.2 or by an "
                 "interrupted write of Exegete's") in section
 

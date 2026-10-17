@@ -234,7 +234,7 @@ PARAGRAPH = (
 # (removed in v0.15.1 since the whole-branch review, round 1)
 DEPRECATION = "Deprecated, removed in v0.15.1: overlap_policy"
 # The CHANGELOG entry's heading
-ENTRY = "### Changed: what pseudonymisation is for"
+ENTRY = "### The names list, filled in on your computer, and what pseudonymisation is for"
 
 
 def _flat(text):
@@ -547,7 +547,7 @@ class TestTheDescription:
 
 def test_the_changelog_says_so():
     changelog = _flat(_doc("CHANGELOG.md"))
-    unreleased = changelog[changelog.index("## [Unreleased]"):
+    unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                            changelog.index("## [0.14.3-alpha]")]
     entry = unreleased[unreleased.index(ENTRY):]
     entry = entry[:entry.index("### ", len(ENTRY))]

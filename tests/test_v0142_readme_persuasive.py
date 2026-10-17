@@ -666,7 +666,7 @@ def _measured():
     # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
     # carries them (test_toolset_modes.py pins them)
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [Unreleased]",
+    entry = _flat(_between(changelog, "## [0.15.0-alpha]",
                            "## [0.14.3-alpha]"))
     measured = entry[entry.index("### Measured"):]
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",

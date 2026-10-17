@@ -1134,7 +1134,7 @@ class TestTheTool:
     def test_the_changelog_says_what_was_added(self):
         log = _flat((REPO / "CHANGELOG.md").read_text(
             encoding="utf-8").replace("`", ""))
-        unreleased = log[log.index("## [Unreleased]"):log.index(
+        unreleased = log[log.index("## [0.15.0-alpha]"):log.index(
             "## [0.14.3-alpha]")]
         assert (
             "set_project_coder_name corrects the researcher's own coder "

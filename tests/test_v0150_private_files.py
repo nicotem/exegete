@@ -1129,10 +1129,10 @@ class TestTheDocuments:
         assert ("the project and Exegete's own folders, any project's "
                 "`Exegete` folder, other formats") in tools
         changelog = _read("CHANGELOG.md")
-        unreleased = changelog[changelog.index("## [Unreleased]"):
+        unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                                changelog.index("## [0.14.3-alpha]")]
         part = _flat(unreleased[unreleased.index(
-            "### Added: the files Exegete keeps for a project"):])
+            "### The files Exegete keeps on your computer"):])
         part = part[:part.index(" ### ")].replace("**", "")
         for words in ("Four kinds of file, each with its own place.",
                       "The project's `Exegete` folder",

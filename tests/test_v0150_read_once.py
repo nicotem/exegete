@@ -1149,7 +1149,7 @@ def test_install_lists_them_in_exegete_s_own_folder():
 
 def test_the_changelog_says_it():
     changelog = _flat("CHANGELOG.md")
-    unreleased = changelog[changelog.index("## [Unreleased]"):]
+    unreleased = changelog[changelog.index("## [0.15.0-alpha]"):]
     unreleased = unreleased[:unreleased.index("## [0.14.3-alpha]")]
     for said in ("An import reads each document once",
                  "byte for byte the one previewed (its size and SHA-256",

@@ -755,9 +755,9 @@ class TestNoNameFromTheList:
 
 def test_the_changelog_says_what_changed():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = _flat(text.split("## [Unreleased]", 1)[1].split(
+    unreleased = _flat(text.split("## [0.15.0-alpha]", 1)[1].split(
         "\n## [", 1)[0])
-    heading = "### Changed: the names list and pseudonymisation's messages"
+    heading = "### The names list and pseudonymisation's messages"
     assert heading in unreleased
     section = unreleased.split(heading, 1)[1].split("### ", 1)[0]
     for phrase in (
@@ -787,7 +787,7 @@ def test_the_changelog_says_what_changed():
 def test_the_changelog_section_wraps_at_72():
     """Fix round 1: the section's lines wrap as the file's do."""
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    heading = "### Changed: the names list and pseudonymisation's messages"
+    heading = "### The names list and pseudonymisation's messages"
     # to the next heading of any level: since the whole-branch review the
     # texts' parts are sub-parts of one section
     section = text.split(heading, 1)[1].split("\n#", 1)[0]

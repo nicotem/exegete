@@ -520,9 +520,9 @@ class TestANameThatClashesInTheDocumentsFolder:
 
 def test_the_changelog_says_so():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = _flat(text.split("## [Unreleased]")[1].split("\n## [")[0])
-    assert ("### Changed: refusals about the database and the format, and "
-            "about what Exegete does not do yet") in unreleased
+    unreleased = _flat(text.split("## [0.15.0-alpha]")[1].split("\n## [")[0])
+    assert ("### Refusals about the database, the format and older "
+            "projects, and what Exegete does not do yet") in unreleased
     for words in ("another conversation using Exegete, or QualCoder if the "
                   "researcher uses it",
                   "where a project keeps it",

@@ -562,9 +562,10 @@ class TestTheDocuments:
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = text.split("## [Unreleased]")[1].split("\n## [")[0]
+        unreleased = text.split("## [0.15.0-alpha]")[1].split("\n## [")[0]
         older = _flat_text(unreleased.split(
-            "### Changed: a project from a QualCoder older than 3.8")[1]
+            "- **The refusal of a project from a QualCoder older than "
+            "3.8**")[1]
             .split("\n### ")[0])
         for words in (
                 "no longer asks for it to be opened and saved in QualCoder "

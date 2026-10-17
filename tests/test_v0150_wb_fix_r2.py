@@ -54,7 +54,7 @@ def _flat(text):
 
 def _unreleased():
     text = _read("CHANGELOG.md")
-    return text[text.index("## [Unreleased]"):text.index("## [0.14.3-alpha]")]
+    return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3-alpha]")]
 
 
 def _served(mode):
@@ -314,7 +314,7 @@ class TestTheSmallerPoints:
         upgrading = upgrading[:upgrading.index("### ", 5)]
         assert BLOCK_BOTH in upgrading
         renames = entry[entry.index(
-            "### Changed: two tools renamed, and Exegete's backups"):]
+            "### One tool set, two tools renamed, and the extension's folder for projects"):]
         assert BLOCK_BOTH in renames[:renames.index("### ", 5)]
 
     def test_quickstart_s_example_path(self):

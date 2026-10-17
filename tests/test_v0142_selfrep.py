@@ -211,7 +211,7 @@ def _messages():
 
 def _changelog_entry():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    return text[text.index("## [Unreleased]"):text.index(
+    return text[text.index("## [0.15.0-alpha]"):text.index(
         "## [0.14.1-alpha]")]
 
 

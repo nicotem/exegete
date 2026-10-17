@@ -61,7 +61,7 @@ def _flat(text):
 
 def _unreleased():
     text = _read("CHANGELOG.md")
-    return text[text.index("## [Unreleased]"):text.index("## [0.14.3-alpha]")]
+    return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3-alpha]")]
 
 
 def _served(mode):
@@ -241,7 +241,7 @@ class TestTheEntryIsOneAccount:
 
     def test_an_opening_before_the_first_section(self):
         entry = _unreleased()
-        opening = entry[len("## [Unreleased]"):entry.index("\n### ")]
+        opening = entry[entry.index("\n\n"):entry.index("\n### ")]
         assert _flat(opening).startswith(
             "v0.15.0, the first of three v0.15 releases:")
         assert "The maintainer decided" in _flat(opening)
@@ -272,33 +272,32 @@ class TestTheEntryIsOneAccount:
             assert f"`{old}` is now `{new}`" in renames, old
 
     def test_the_parts_follow_what_a_researcher_meets(self):
+        # At the release preparation the entry became one account: the
+        # pieces' sections merged by what a researcher meets, in the order
+        # the lead asked for, with no "Changed:" or "Added:" pile
         entry = _unreleased()
         headings = re.findall(r"(?m)^### .*$", entry)
         assert headings == [
             "### Upgrading from 0.14.3",
-            "### Changed: one tool set called full",
-            "### Changed: two tools renamed, and Exegete's backups",
-            "### Changed: the extension's folder for projects",
-            "### Added: your coder name and the AI coder name as settings",
-            "### Changed: the AI coder name in the settings, and the names "
-            "the setter refuses",
-            "### Added: correcting your own coder name in a project",
-            "### Changed: an import reads each document once",
-            "### Changed: the time for one import call",
-            "### Changed: Exegete's texts about QualCoder",
-            "### Changed: a project from a QualCoder older than 3.8",
-            # the files design, piece 1 (tests/test_v0150_private_files.py)
-            "### Added: the files Exegete keeps for a project",
-            # the files design, piece 3 (tests/test_v0150_names_file.py)
-            "### Added: the names list, filled in on your computer",
-            "### Changed: the libraries the extension installs, brought up "
-            "to date",
+            "### One tool set, two tools renamed, and the extension's "
+            "folder for projects",
+            "### Your coder name and the AI coder name",
+            "### Not presuming that you use QualCoder",
+            "### The names list, filled in on your computer, and what "
+            "pseudonymisation is for",
+            "### An import reads each document once, within a time for "
+            "each call",
+            "### The files Exegete keeps on your computer",
+            "### Creating a project is no longer Experimental",
             "### Deprecated: the removals move to v0.15.1",
+            "### The libraries the extension installs, brought up to date",
             "### For contributors",
             "### Measured"]
-        texts = entry[entry.index("### Changed: Exegete's texts about"):]
+        texts = entry[entry.index("### Not presuming that you use QualCoder"):]
         texts = texts[:texts.index("\n### ")]
-        assert len(re.findall(r"(?m)^#### ", texts)) == 13
+        assert len(re.findall(r"(?m)^#### ", texts)) == 11
+        # no heading of the entry reads as a piece's own entry any more
+        assert not re.findall(r"(?m)^#{3,4} (?:Changed|Added): ", entry)
 
     def test_one_count_and_one_size(self):
         entry = _flat(_unreleased())

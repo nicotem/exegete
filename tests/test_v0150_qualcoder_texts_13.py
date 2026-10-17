@@ -526,8 +526,8 @@ class TestTheDocuments:
         """This piece's section of the CHANGELOG, and the Measured section
         after it, each with white space collapsed."""
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        start = text.index("### Changed: the brief, the help and the methods "
-                           "notes, without presuming QualCoder")
+        start = text.index("### The brief, the help and the methods "
+                           "notes")
         measured = text.index("### Measured", start)
         end = text.index("## [0.14.3-alpha]", measured)
         return _flat(text[start:measured]), _flat(text[measured:end])

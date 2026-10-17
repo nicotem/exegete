@@ -789,7 +789,7 @@ def test_the_lengths_the_documents_give_are_the_briefs():
     # rule 9 (not presuming QualCoder, piece 5) took it from 1,988 to
     # 2,034, which the release's own entry states
     assert [int(s.replace(",", "")) for s in stated] == [1988]
-    unreleased = changelog[changelog.index("## [Unreleased]"):
+    unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                            changelog.index("## [0.14.3-alpha]")]
     assert re.findall(r"Exegete's opening text is now ([\d,]+) characters",
                       unreleased) == [f"{short:,}"]

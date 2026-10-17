@@ -770,8 +770,8 @@ def _doc(name):
 def _changelog_section():
     """This piece's CHANGELOG section, flattened."""
     text = _doc("CHANGELOG.md")
-    start = text.index("### Changed: renames, exports, the reading copy "
-                       "and coder names, without presuming QualCoder")
+    start = text.index("### Renames, exports, the reading copy and "
+                       "hidden coders")
     return text[start:text.index("### ", start + 4)]
 
 

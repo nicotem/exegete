@@ -54,7 +54,7 @@ def _flat(text):
 
 def _unreleased():
     text = _read("CHANGELOG.md")
-    start = text.index("## [Unreleased]")
+    start = text.index("## [0.15.0-alpha]")
     return text[start:text.index("\n## [", start + 1)]
 
 
@@ -195,9 +195,11 @@ def test_the_other_marks_stay(name, words, times):
     assert _flat(_read(name)).count(words) == times
 
 
-# 3. The sentence in "Upgrading from 0.14.3"
+# 3. What the acceptance run checked: a bullet in "Upgrading from 0.14.3"
+# until the release preparation, which gave it a section of its own in
+# the one account and left Upgrading a short bullet with the suggestion
+SECTION = "### Creating a project is no longer Experimental"
 SENTENCE = [
-    "**Creating a project is no longer Experimental**",
     "what Exegete then wrote to them",
     "QualCoder 4.0, as released, and by 3.8.2",
     "Not checked:",
@@ -209,9 +211,16 @@ SENTENCE = [
 
 
 @pytest.mark.parametrize("words", SENTENCE)
-def test_the_upgrading_part_says_what_was_checked(words):
+def test_the_entry_says_what_was_checked(words):
+    assert words in _flat(_section(_unreleased(), SECTION))
+
+
+def test_the_upgrading_part_keeps_the_mark_and_the_suggestion():
     upgrading = _flat(_section(_unreleased(), "### Upgrading from 0.14.3"))
-    assert words in upgrading
+    for words in ("**Creating a project is no longer Experimental**",
+                  "letting QualCoder open a project made in Exegete once",
+                  SECTION[len("### "):]):
+        assert words in upgrading, words
 
 
 # 4. What Exegete says: no "experimental" (held before the change too)
@@ -285,9 +294,9 @@ def test_the_tool_sets_texts(monkeypatch, _settings_empty):
 # 5. Fix round 1: the review's wording
 
 def _bullet():
-    upgrading = _flat(_section(_unreleased(), "### Upgrading from 0.14.3"))
-    start = upgrading.index("**Creating a project is no longer Experimental**")
-    return upgrading[start:upgrading.index("- **Two tools renamed.**", start)]
+    # the section of its own since the release preparation (above)
+    section = _flat(_section(_unreleased(), SECTION))
+    return section[len(SECTION):]
 
 
 BULLET_GONE = [

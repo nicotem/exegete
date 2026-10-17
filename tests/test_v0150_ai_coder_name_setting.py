@@ -692,10 +692,10 @@ class TestTheDocuments:
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = _flat(text[text.index("## [Unreleased]"):
+        unreleased = _flat(text[text.index("## [0.15.0-alpha]"):
                                 text.index("## [0.14.3")])
-        assert ("### Changed: the AI coder name in the settings, and the "
-                "names the setter refuses") in unreleased
+        # one section for both coder names since the release preparation
+        assert "### Your coder name and the AI coder name" in unreleased
         assert ("**The AI coder name in Exegete's settings is given to each "
                 "new project without asking.**") in unreleased
         assert ("A project that already has an AI coder name keeps it, and "

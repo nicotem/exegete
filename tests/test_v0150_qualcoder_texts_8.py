@@ -646,9 +646,9 @@ class TestCreateProjectsMemoStep:
 
 def test_the_changelog_says_so():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = _flat(text.split("## [Unreleased]")[1].split("\n## [")[0])
-    assert "### Changed: the codebook, searching and coder names" in \
-        unreleased
+    unreleased = _flat(text.split("## [0.15.0-alpha]")[1].split("\n## [")[0])
+    assert ("### The codebook, searching, coder names and Exegete's "
+            "earlier name") in unreleased
     for words in ("without measuring it against QualCoder",
                   "Exegete's earlier name is mentioned only where an "
                   "earlier copy's file is found",

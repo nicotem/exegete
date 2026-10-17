@@ -646,12 +646,12 @@ class TestTheDocuments:
         written (earlier entries are records)."""
         titles = self._install_titles()
         changelog = _flat("CHANGELOG.md")
-        unreleased = changelog[changelog.index("## [Unreleased]"):
+        unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                                changelog.index("## [0.14.3")]
         texts = {name.name: _flat(name.name)
                  for name in sorted(REPO.glob("*.md"))
                  if name.name != "CHANGELOG.md"}
-        texts["CHANGELOG.md, [Unreleased]"] = unreleased
+        texts["CHANGELOG.md, [0.15.0-alpha]"] = unreleased
         quoted = {where: self._quoted_titles(text)
                   for where, text in texts.items()}
         unknown = [(where, title) for where, found in quoted.items()
@@ -661,7 +661,7 @@ class TestTheDocuments:
         assert unknown == []
         # the three pointers to the advice on synced folders, by name
         for where in ("QUICKSTART.md", "PRIVACY.md",
-                      "CHANGELOG.md, [Unreleased]"):
+                      "CHANGELOG.md, [0.15.0-alpha]"):
             assert "What You'll Need" in quoted[where], where
             assert "What you need" not in quoted[where], where
 
@@ -682,7 +682,7 @@ class TestTheDocuments:
         assert earlier == ["lifecycle (the earlier name of full)"]
         changelog = _flat("CHANGELOG.md")
         entry = changelog[changelog.index(
-            "### Changed: one tool set called full"):]
+            "### One tool set, two tools renamed, and the extension's folder for projects"):]
         entry = entry[:entry.index("### Measured")]
         assert (f"the bug report offers `full`, `core` and "
                 f"`{earlier[0]}`.") in entry

@@ -629,12 +629,12 @@ def test_guard_the_texts_the_audit_keeps():
 # The CHANGELOG
 # ---------------------------------------------------------------------------
 
-HEADING = "### Changed: messages about emoji, PDFs and imported documents"
+HEADING = "### Messages about emoji, PDFs and imported documents"
 
 
 def test_the_changelog_says_what_changed():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = _flat(text.split("## [Unreleased]", 1)[1].split(
+    unreleased = _flat(text.split("## [0.15.0-alpha]", 1)[1].split(
         "\n## [", 1)[0])
     assert HEADING in unreleased
     section = unreleased.split(HEADING, 1)[1].split("### ", 1)[0]

@@ -696,17 +696,18 @@ class TestTheChangelog:
     selected."""
 
     def test_this_entry_names_the_scan(self):
+        # one note since the release preparation, for the backups, the
+        # pseudonymisation run and the rename alike
         entry = _changelog_section(
-            "### Changed: notes about QualCoder's backups, windows, AI files "
-            "and saved places, on a sign")
+            "### What Exegete finds of QualCoder in a project")
         assert ("After `create_project` or `restore_backup`, or for a "
                 "project set in the host's configuration, the first "
-                "`list_backups` or pseudonymisation run can be what looks "
-                "for a running QualCoder") in entry
+                "`list_backups`, pseudonymisation run or rename can be what "
+                "looks for a running QualCoder") in entry
 
     def test_the_history_section(self):
         section = _changelog_section(
-            "### Changed: a project's history with QualCoder")
+            "### What Exegete finds of QualCoder in a project")
         assert "worked out once, when a project is selected" not in section
         assert ("**What Exegete finds of QualCoder is worked out once for "
                 "each project**") in section

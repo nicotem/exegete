@@ -451,10 +451,9 @@ class TestCreateProjectsGuards:
 
 def test_the_changelog_says_so():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = _flat(text[text.index("## [Unreleased]"):
+    unreleased = _flat(text[text.index("## [0.15.0-alpha]"):
                             text.index("## [0.14.3")])
-    heading = ("### Changed: selecting or creating a project says more "
-               "about QualCoder only where there is a sign of it")
+    heading = "### Selecting and creating a project"
     assert heading in unreleased
     entry = unreleased[unreleased.index(heading):]
     entry = entry[:entry.index("### ", len(heading))]

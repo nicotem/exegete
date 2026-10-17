@@ -453,10 +453,10 @@ class TestTheDocuments:
 
     def test_the_changelog_says_it(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        entry = text[text.index("## [Unreleased]"):
+        entry = text[text.index("## [0.15.0-alpha]"):
                      text.index("## [0.14.3-alpha]")]
         entry = entry[entry.index(
-            "### Changed: the extension's folder for projects"):]
+            "### One tool set, two tools renamed, and the extension's folder for projects"):]
         entry = " ".join(entry[:entry.index("\n### ", 4)].split())
         for words in ("New installs of the Claude Desktop extension keep "
                       "projects in `~/Exegete projects`",

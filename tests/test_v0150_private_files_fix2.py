@@ -563,7 +563,7 @@ class TestTheTexts:
 
     def test_the_changelog(self):
         changelog = _read("CHANGELOG.md")
-        entry = _flat(changelog[changelog.index("## [Unreleased]"):
+        entry = _flat(changelog[changelog.index("## [0.15.0-alpha]"):
                                 changelog.index("## [0.14.3-alpha]")])
         assert ("four kinds, each in its own place, with the files you fill "
                 "in for a project in the project's new `Exegete` folder."

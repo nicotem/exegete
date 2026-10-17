@@ -543,10 +543,11 @@ class TestThePublishedSchemaBudget:
         of the names list changes in three descriptions, the first of
         the pieces that stop presuming QualCoder), so the current entry
         is the Unreleased one alone, and 0.14.3's figure is history
-        (`_v0143_entry`).
+        (`_v0143_entry`). From the release on, the current entry is
+        0.15.0's, under an Unreleased heading that says nothing yet.
         """
         text = cls._read("CHANGELOG.md")
-        return text[text.index("## [Unreleased]"):text.index("## [0.14.3")]
+        return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3")]
 
     @classmethod
     def _v0143_entry(cls):

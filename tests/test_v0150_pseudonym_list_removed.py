@@ -473,7 +473,7 @@ class TestChangelog:
     @staticmethod
     def _unreleased():
         log = _read("CHANGELOG.md")
-        return log[log.index("## [Unreleased]"):log.index(
+        return log[log.index("## [0.15.0-alpha]"):log.index(
             "## [0.14.3-alpha]")]
 
     def test_the_opening_and_upgrading(self):
@@ -484,7 +484,7 @@ class TestChangelog:
         assert ("and a names list you fill in on your own computer, so the "
                 "names do not pass through the conversation.") in log
         upgrading = log[log.index("### Upgrading from 0.14.3"):
-                        log.index("### Changed: one tool set called full")]
+                        log.index("### One tool set, two tools renamed, and the extension's folder for projects")]
         # Fix round 1: "see", the older names file, and the table named
         assert ("- **`read_pseudonym_list` is gone.** It sent every real "
                 "name in the project's list to the AI provider. You now see "
@@ -502,7 +502,7 @@ class TestChangelog:
                 "for v0.15 (TOOLS.md names each), except "
                 "`read_pseudonym_list`, removed now (above), come in "
                 "v0.15.1,") in upgrading
-        sets = log[log.index("### Changed: one tool set called full"):]
+        sets = log[log.index("### One tool set, two tools renamed, and the extension's folder for projects"):]
         assert ("(the maintainer's decision of 12 October 2026): 80 tools (82 "
                 "with the earlier names of the two tools renamed below)"
                 ) in sets[:sets.index("### ", 5)]

@@ -1320,7 +1320,7 @@ class TestTheTexts:
     def test_the_changelog(self):
         changelog = _flat(_read("CHANGELOG.md"))
         entry = changelog[changelog.index(
-            "### Added: the files Exegete keeps for a project"):]
+            "### The files Exegete keeps on your computer"):]
         entry = entry[:entry.index(" ### ", 4)]
         assert ("(`skipped_symlinks_in_exegete_folder`), never named. A "
                 "restore keeps the project's `Exegete` folder as it is, with "

@@ -550,7 +550,7 @@ def _comment_above(source, line):
 
 def _unreleased():
     changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    start = changelog.index("## [Unreleased]")
+    start = changelog.index("## [0.15.0-alpha]")
     return _flat(changelog[start:changelog.index("\n## [", start + 1)])
 
 

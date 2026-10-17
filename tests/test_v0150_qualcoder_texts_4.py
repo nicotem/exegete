@@ -501,7 +501,7 @@ class TestTheDocuments:
     def test_the_changelog(self):
         changelog = _doc("CHANGELOG.md")
         unreleased = changelog[:changelog.index("## [0.14.3")]
-        assert "### Added: \"Do you also use QualCoder on this computer?\"" \
+        assert "### \"Do you also use QualCoder on this computer?\"" \
             in unreleased
         assert ("Installed any other way, it is `EXEGETE_USES_QUALCODER`, "
                 "new, with one spelling.") in unreleased
@@ -530,7 +530,7 @@ def _install_entry():
 def _changelog_section():
     changelog = _doc("CHANGELOG.md")
     start = changelog.index(
-        "### Added: \"Do you also use QualCoder on this computer?\"")
+        "### \"Do you also use QualCoder on this computer?\"")
     return changelog[start:changelog.index("### ", start + 4)]
 
 

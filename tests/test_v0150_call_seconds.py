@@ -369,12 +369,12 @@ def test_install_says_the_figures():
 def test_the_changelog_says_the_figures():
     e, t, least, most = _figures()
     changelog = _flat("CHANGELOG.md")
-    unreleased = changelog[changelog.index("## [Unreleased]"):]
+    unreleased = changelog[changelog.index("## [0.15.0-alpha]"):]
     unreleased = unreleased[:unreleased.index("## [0.14.3-alpha]")]
     # One figure for now, not called measured (whole-branch review,
     # round 1)
     assert e == t
-    assert "### Changed: the time for one import call " in unreleased
+    assert "### An import reads each document once, within a time for each call " in unreleased
     assert "by the way Exegete runs" not in unreleased
     assert (f"for now {e} seconds on every route, counted from the call's "
             f"start, until a measurement of how long Claude Desktop waits "

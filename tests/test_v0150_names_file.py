@@ -1388,16 +1388,18 @@ class TestTheDocuments:
         """Fix round 1: the introduction, its map of sections, and what
         stays with a project you upgrade and share."""
         log = _flat(_read("CHANGELOG.md"))
-        unreleased = log[log.index("## [Unreleased]"):
+        unreleased = log[log.index("## [0.15.0-alpha]"):
                          log.index("### Upgrading from 0.14.3")]
         assert ("an import that reads each document once, so that it "
                 "usually takes seconds; and a names list you fill in on "
                 "your own computer, so the names do not pass through the "
                 "conversation.") in unreleased
-        assert ("the files Exegete keeps for a project, the names list, "
-                "what is deprecated;") in unreleased
+        # the map of the one account since the release preparation
+        assert ("Exegete's texts about QualCoder, the names list, imports, "
+                "the files Exegete keeps, creating a project, what is "
+                "deprecated") in unreleased
         upgrading = log[log.index("### Upgrading from 0.14.3"):
-                        log.index("### Changed: one tool set called full")]
+                        log.index("### One tool set, two tools renamed, and the extension's folder for projects")]
         assert ("- **A names file stays with the project.** If you make one "
                 "(`prepare_names_list`), `Names to replace.txt` stays in the "
                 "project's `Exegete` folder with the real names in it, in "
@@ -1413,14 +1415,16 @@ class TestTheDocuments:
 
     def test_the_changelog_says_what_was_added(self):
         log = _read("CHANGELOG.md")
-        unreleased = log[log.index("## [Unreleased]"):
+        unreleased = log[log.index("## [0.15.0-alpha]"):
                          log.index("## [0.14.3-alpha]")]
-        heading = "### Added: the names list, filled in on your computer"
+        heading = "### The names list, filled in on your computer, and what pseudonymisation is for"
         assert unreleased.count(heading) == 1
-        assert unreleased.index(
-            "### Added: the files Exegete keeps for a project") < \
-            unreleased.index(heading) < unreleased.index(
-                "### Changed: the libraries the extension installs")
+        # the release preparation's order: the names list, imports, then
+        # the files Exegete keeps, before the libraries
+        assert unreleased.index(heading) < unreleased.index(
+            "### The files Exegete keeps on your computer") < \
+            unreleased.index(
+                "### The libraries the extension installs")
         part = unreleased[unreleased.index(heading):]
         part = _flat(part[:part.index("\n### ", 5)]).replace("**", "")
         for words in (

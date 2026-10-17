@@ -145,8 +145,10 @@ SECTION = (
     "what you disclose to other people: a colleague or second coder you "
     "share the project with, a supervisor, or whoever receives an export. "
     + SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN + " "
-    "For what reaches the AI assistant, they help, but they should not be "
-    "trusted blindly. "
+    # the files design, piece 5, fix round 1: the subject named, after
+    # the paragraph on the names file
+    "For what reaches the AI assistant, the list and `pseudonymise_source` "
+    "help, but they should not be trusted blindly. "
     + NOT_EVERYTHING + " "
     "And depending on how your assistant is set up, an assistant that "
     "meets a problem may work round it by a route outside Exegete, and "
@@ -173,7 +175,7 @@ SECTION = (
 # The phrases the design names, each looked for on its own as well
 SECTION_PHRASES = (
     "replaces participants' names as documents are imported",
-    "they help, but they should not be trusted blindly",
+    "help, but they should not be trusted blindly",
     "Nothing in Exegete saw that read",
     "a safer way is to replace them before the documents come to the "
     "computer where the assistant works",
@@ -208,13 +210,16 @@ README_SENTENCES = (
     # the files design, piece 5
     "The list can be one you fill in on your own computer, in a file "
     "Exegete prepares, so the names do not pass through the conversation. "
-    "That helps you "
+    # and its fix round 1: the subject named, and the names file among
+    # what an assistant can reach
+    "Replacing names helps you "
     "manage what you share with other people, though the project's folder "
     "still holds the originals and any names list. For what the assistant "
     "reads, the replacement should not be trusted blindly: Exegete's tools "
     "return the pseudonyms where names were replaced (PRIVACY.md says what "
     "is not replaced), but an assistant that opens files by itself can "
-    "reach the originals outside Exegete. To keep real names from the "
+    "reach the originals, and the names file, outside Exegete. To keep "
+    "real names from the "
     "assistant altogether, a safer way is to replace them before the "
     "documents reach the computer where the assistant works ([PRIVACY.md, "
     "\"What pseudonymisation is for\"](https://github.com/nicotem/exegete/"

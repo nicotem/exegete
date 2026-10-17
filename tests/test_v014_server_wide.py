@@ -239,7 +239,7 @@ class TestToolAnnotations:
         """Fix round 2 made PRIVACY.md say when a host asked before the
         name list ran; v0.15.0 removed the tool (the files design, piece
         5), so PRIVACY.md says that no tool returns the names, and where
-        the researcher reads the list instead."""
+        the researcher sees the list instead."""
         privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md")
                            .read_text(encoding="utf-8").split())
         assert "so a host asks the researcher's approval for it" \
@@ -247,7 +247,7 @@ class TestToolAnnotations:
         assert "Each call writes one line to the server's log" \
             not in privacy
         assert ("No tool returns the names (`read_pseudonym_list` was "
-                "removed in 0.15.0): you read and change the list in the "
+                "removed in 0.15.0): you see and change the list in the "
                 "names file on your own computer (`prepare_names_list`, "
                 "then `save_names_list`), whose preview gives counts and "
                 "line numbers, never a name.") in privacy

@@ -596,10 +596,11 @@ Exegete prepares, so that the names do not pass through the
 conversation; an assistant that opens files by itself could still read
 that file ("Files Exegete keeps on your computer").
 
-For what reaches the AI assistant, they help, but they should not be
-trusted blindly. Once the names are replaced, what Exegete's tools
-return of the replaced text carries the pseudonyms. Not everything is
-replaced, though; among what still reaches the assistant through
+For what reaches the AI assistant, the list and `pseudonymise_source`
+help, but they should not be trusted blindly. Once the names are
+replaced, what Exegete's tools return of the replaced text carries the
+pseudonyms. Not everything is replaced, though; among what still
+reaches the assistant through
 Exegete: a PDF's text, file and case names, attribute values, any name,
 or form of a name, that the list or the mapping does not match, and
 notes and journal entries unless you ask for them to be rewritten.
@@ -2043,14 +2044,17 @@ will ask, and the summary above depends on them:
     which confirms an exact pair. Neither writes anything or takes a
     backup. `get_current_project` reports whether the file is present
     and how many entries it has, never a name. No tool returns the
-    names (`read_pseudonym_list` was removed in 0.15.0): you read and
+    names (`read_pseudonym_list` was removed in 0.15.0): you see and
     change the list in the names file on your own computer
     (`prepare_names_list`, then `save_names_list`), whose preview gives
-    counts and line numbers, never a name. QualCoder's own
-    guidance is to remove it and store it securely once the import is
-    done (`manage_files.py` at the 9bddf17 pin), and that applies here
-    too. `speakers.json` and `speaker_regex.json` can hold names as
-    well; the preview reports whether they are present and never reads
+    counts and line numbers, never a name. A names file made before the
+    list last changed can lack some of its entries, which
+    `prepare_names_list` says, and entries that cannot be written as one
+    line of the file stay in `pseudonyms.json`, where you can see them.
+    QualCoder's own guidance is to remove `pseudonyms.json` and store it
+    securely once the import is done (`manage_files.py` at the 9bddf17
+    pin), and that applies here too. `speakers.json` and
+    `speaker_regex.json` can hold names as well; the preview reports whether they are present and never reads
     them.
   - **The names file** (`Names to replace.txt`), if you made one with
     `prepare_names_list`. It sits in the project's `Exegete` folder and

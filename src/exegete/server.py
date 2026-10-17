@@ -5261,15 +5261,22 @@ def _pseudonyms_json_read() -> Tuple[Dict[str, Any], Optional[List[Dict]]]:
             "encoding": encoding}, entries
 
 
-# Where get_current_project's note sends the researcher to read or change
+# Where get_current_project's note sends the researcher to see or change
 # the names list (v0.15.0, the files design, piece 5): the names file in
 # `full`, which serves its two tools; in `core`, which serves neither, the
-# file in the project folder, as before.
+# file in the project folder, as before. Fix round 1: a names file already
+# there is kept, so it can be older than the list (prepare_names_list
+# says so), and entries it cannot hold as one line are seen only in
+# pseudonyms.json.
 PSEUDONYMS_JSON_NOTE_FULL = (
     "Its contents are the researcher's reverse key and are never returned. "
-    "To read or change the list, the researcher fills in the names file on "
-    "their own computer: prepare_names_list shows and opens it, and "
-    "save_names_list saves it as the list.")
+    "To see or change the list, the researcher uses the names file on "
+    "their own computer: prepare_names_list makes it from the list (or "
+    "keeps one already there, and says if the list holds entries it "
+    "lacks), shows and opens it, and save_names_list saves it as the list. "
+    "Entries that cannot be written as one line of the names file stay in "
+    "pseudonyms.json, in the project folder, where the researcher can see "
+    "them.")
 PSEUDONYMS_JSON_NOTE_CORE = (
     "Its contents are the researcher's reverse key and are not returned "
     "here; the researcher can read the file in the project folder, or in "
@@ -5282,10 +5289,11 @@ def _pseudonyms_json_report() -> Dict[str, Any]:
     No name enters the conversation by this route (ruling 14b), nor by
     any other since the tool that returned the list was removed in
     v0.15.0 (ruling 78): whether the file is present, how many entries it
-    has, which encoding it read as, and where the researcher reads and
+    has, which encoding it read as, and where the researcher sees and
     changes the list. In `full`, that is the names file, which
-    prepare_names_list shows and opens and save_names_list saves as the
-    list; in `core`, which serves neither, the file itself in the project
+    prepare_names_list makes or keeps, shows and opens and save_names_list
+    saves as the list, with the entries it cannot hold seen in the file
+    itself; in `core`, which serves neither, the file itself in the project
     folder, or
     QualCoder's Pseudonyms dialog (the button in Manage Files,
     `manage_files.py:285`, `:733-743` at the pin) if they use QualCoder.

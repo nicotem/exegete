@@ -272,8 +272,11 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
         deprecated = entry[entry.index(
             "### Deprecated: the removals move to v0.15.1"):]
         deprecated = deprecated[:deprecated.index("### ", 10)]
-        assert ("**Three more notes no longer send the researcher to "
+        # read_pseudonym_list's note went with the tool (the files
+        # design, piece 5, fix round 1), so no "more"
+        assert ("**Three notes no longer send the researcher to "
                 "QualCoder as the only way**") in deprecated
+        assert "Three more notes" not in deprecated
 
     def test_the_coding_guide_on_older_projects(self):
         guide = _flat(_read("AI_CODING_GUIDE.md"))

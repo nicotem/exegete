@@ -23,15 +23,24 @@ in v0.15.1, with its deprecation sentence, its mark and its metadata.
    only as a choice for a researcher who uses it.
 6. The brief's section 3 no longer offers to show the list.
 7. No shipped text names the tool, but PRIVACY's sentence saying that it
-   was removed, and the CHANGELOG.
+   was removed, INSTALL's saying that an older Codex entry can drop its
+   table (fix round 1), and the CHANGELOG.
 8. `full` has 82 tools.
 9. The documents: INSTALL, TOOLS, README, PRIVACY and the CHANGELOG, as
    designed.
+10. Fix round 1 (GATE_names-list-removal_*_R1.md): imports apply the names
+    file only once save_names_list has saved it as the list, and the texts
+    say so; the full note says the names file may be older than the list
+    and where the entries it cannot hold are seen; INSTALL says an older
+    Codex entry can drop the removed tool's table; the documents' pronouns
+    name what they refer to; the release notes describe no text of the
+    removed tool as changed.
 """
 
 import asyncio
 import json
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -43,7 +52,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
-from exegete import doc_import, import_paths  # noqa: E402
+from exegete import doc_import, import_paths, names_file  # noqa: E402
 from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 
 GONE = "read_pseudonym_list"
@@ -53,22 +62,32 @@ ENTRIES = [{"original": "Thomas Hardy", "pseudonym": "Participant A"},
 OPENING = ("The project's pseudonyms.json (its list of real names and their "
            "pseudonyms, applied when files are imported) is present with 2 "
            "entr(ies). ")
+# Fix round 1: "see" rather than "read", the names file made from the list
+# or kept (and so perhaps older than it), and where the entries the file
+# cannot hold are seen
 NOTE_FULL = OPENING + (
     "Its contents are the researcher's reverse key and are never returned. "
-    "To read or change the list, the researcher fills in the names file on "
-    "their own computer: prepare_names_list shows and opens it, and "
-    "save_names_list saves it as the list.")
+    "To see or change the list, the researcher uses the names file on "
+    "their own computer: prepare_names_list makes it from the list (or "
+    "keeps one already there, and says if the list holds entries it "
+    "lacks), shows and opens it, and save_names_list saves it as the list. "
+    "Entries that cannot be written as one line of the names file stay in "
+    "pseudonyms.json, in the project folder, where the researcher can see "
+    "them.")
 # `core`, which serves neither names list tool: the words of 0.15.0 before
 # this piece, unchanged
 NOTE_CORE = OPENING + (
     "Its contents are the researcher's reverse key and are not returned "
     "here; the researcher can read the file in the project folder, or in "
     "QualCoder's Pseudonyms dialog if they use QualCoder.")
+# Fix round 1 (the major): imports read pseudonyms.json, never the names
+# file, so the note names the save that makes the file the list
 IMPORT_NOTE = (
     "This project has no names list. If these documents name participants "
     "or places, ask the assistant to prepare the names file: you fill it in "
     "on your own computer, so the names do not pass through the "
-    "conversation, and later imports replace them as the text comes in. "
+    "conversation, and once it is saved as the project's names list "
+    "(save_names_list), later imports replace them as the text comes in. "
     "pseudonymise_source can also replace names in a file already in the "
     "project. QualCoder, if you use it, can also make the list before "
     "importing (the Pseudonyms button in Manage Files).")
@@ -252,11 +271,19 @@ class TestTheTexts:
 SHIPPED = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md", "SUPPORT.md",
            "AI_CODING_GUIDE.md")
 # The one sentence a shipped document keeps, which says the tool was removed
+# (fix round 1: "see" rather than "read")
 PRIVACY_REMOVED = (
     "No tool returns the names (`read_pseudonym_list` was removed in "
-    "0.15.0): you read and change the list in the names file on your own "
+    "0.15.0): you see and change the list in the names file on your own "
     "computer (`prepare_names_list`, then `save_names_list`), whose preview "
     "gives counts and line numbers, never a name.")
+# Fix round 1: the sentence INSTALL keeps for a Codex entry written before
+# 0.15.0, which names the removed tool's table so it can be deleted
+INSTALL_OLDER_ENTRY = (
+    "An entry written from the steps before 0.15.0 may end with two more "
+    "lines, `[mcp_servers.exegete.tools.read_pseudonym_list]` and "
+    "`approval_mode = \"prompt\"` under it: that tool was removed in "
+    "0.15.0, so you can delete both lines.")
 
 
 class TestNoShippedTextNamesIt:
@@ -287,6 +314,9 @@ class TestNoShippedTextNamesIt:
         if name == "PRIVACY.md":
             assert text.count(PRIVACY_REMOVED) == 1
             text = text.replace(PRIVACY_REMOVED, "")
+        if name == "INSTALL.md":
+            assert text.count(INSTALL_OLDER_ENTRY) == 1
+            text = text.replace(INSTALL_OLDER_ENTRY, "")
         assert GONE not in text, name
 
 
@@ -312,9 +342,15 @@ class TestInstall:
         block = block[:block.index("\n```", 4)]
         assert block.rstrip().endswith(
             'EXEGETE_WORKSPACE = "~/Exegete projects"')
-        assert "[mcp_servers.exegete.tools." not in raw
-        assert 'approval_mode = "prompt"' not in raw
+        assert "[mcp_servers.exegete.tools." not in block
+        assert "approval_mode = " not in block.replace(
+            "default_tools_approval_mode = ", "")
         install = _flat(raw)
+        # Fix round 1: the table is named once, in the sentence that says
+        # an older entry can drop it
+        rest = install.replace(INSTALL_OLDER_ENTRY, "")
+        assert "[mcp_servers.exegete.tools." not in rest
+        assert 'approval_mode = "prompt"' not in rest
         assert ("`default_tools_approval_mode = \"writes\"` on the line "
                 "straight after `[mcp_servers.exegete]`; and, if the "
                 "settings screen had no place for them, the "
@@ -390,7 +426,8 @@ class TestToolsReadmePrivacy:
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "
-                "conversation. That helps") in readme
+                "conversation. Replacing names helps you manage what you "
+                "share with other people,") in readme
         assert ("- the files you fill in for a project, such as the names "
                 "file (`Names to replace.txt`, in the project's `Exegete` "
                 "folder), which Exegete never shows to the assistant;"
@@ -400,7 +437,13 @@ class TestToolsReadmePrivacy:
         privacy = _read("PRIVACY.md")
         assert ("`get_current_project` reports whether the file is present "
                 "and how many entries it has, never a name. "
-                + PRIVACY_REMOVED + " QualCoder's own guidance") in privacy
+                + PRIVACY_REMOVED + " A names file made before the list last "
+                "changed can lack some of its entries, which "
+                "`prepare_names_list` says, and entries that cannot be "
+                "written as one line of the file stay in `pseudonyms.json`, "
+                "where you can see them. QualCoder's own guidance is to "
+                "remove `pseudonyms.json` and store it securely once the "
+                "import is done") in privacy
         # "What pseudonymisation is for": the new paragraph after the first
         section = (REPO / "PRIVACY.md").read_text(encoding="utf-8").split(
             "\n## What pseudonymisation is for\n")[1]
@@ -412,6 +455,11 @@ class TestToolsReadmePrivacy:
             "the conversation; an assistant that opens files by itself "
             "could still read that file (\"Files Exegete keeps on your "
             "computer\").")
+        # Fix round 1: the next paragraph names its subject
+        assert _flat(paragraphs[2]).startswith(
+            "For what reaches the AI assistant, the list and "
+            "`pseudonymise_source` help, but they should not be trusted "
+            "blindly.")
         assert "\n## Files Exegete keeps on your computer\n" in (
             REPO / "PRIVACY.md").read_text(encoding="utf-8")
 
@@ -433,14 +481,19 @@ class TestChangelog:
                 "names do not pass through the conversation.") in log
         upgrading = log[log.index("### Upgrading from 0.14.3"):
                         log.index("### Changed: one tool set called full")]
+        # Fix round 1: "see", the older names file, and the table named
         assert ("- **`read_pseudonym_list` is gone.** It sent every real "
-                "name in the project's list to the AI provider. The list is "
-                "now read and changed in the names file on your own "
+                "name in the project's list to the AI provider. You now see "
+                "and change the list in the names file on your own "
                 "computer (`prepare_names_list`, then `save_names_list`), "
-                "and its contents do not pass through the conversation. A "
+                "and its contents do not pass through the conversation; a "
+                "names file made before the list last changed can lack "
+                "some of its entries, which `prepare_names_list` says. A "
                 "choice your assistant app saved for `read_pseudonym_list` "
-                "no longer applies; in Codex, remove its table from the "
-                "configuration (INSTALL.md).") in upgrading
+                "no longer applies; in Codex, you can delete its table, the "
+                "`[mcp_servers.exegete.tools.read_pseudonym_list]` line and "
+                "the `approval_mode = \"prompt\"` line under it "
+                "(INSTALL.md, Codex, step 2, says where).") in upgrading
         assert ("- **Not in this release.** The removals announced in 0.14 "
                 "for v0.15 (TOOLS.md names each), except "
                 "`read_pseudonym_list`, removed now (above), come in "
@@ -460,6 +513,14 @@ class TestChangelog:
         assert ("- **`read_pseudonym_list` is removed now**, not in v0.15.1: "
                 "\"Upgrading from 0.14.3\" says why, and what replaces it."
                 ) in part
+        # Fix round 1: "every" no longer contradicted by the next bullet,
+        # and no "more" after the removed bullet on the tool's note
+        assert ("- **Every other removal announced in 0.14 for v0.15 now "
+                "comes in v0.15.1**,") in part
+        assert "**Every removal announced" not in part
+        assert ("- **Three notes no longer send the researcher to "
+                "QualCoder as the only way**") in part
+        assert "Three more notes" not in part
         assert "note leads with the file itself" not in part
 
     def test_measured(self):
@@ -485,13 +546,129 @@ class TestChangelog:
         assert ("- **Importing into a project with no names list**: the "
                 "preview suggests asking the assistant to prepare the names "
                 "file, which you fill in on your own computer, so the names "
-                "do not pass through the conversation, and which later "
-                "imports then apply; that `pseudonymise_source` can also "
+                "do not pass through the conversation, and which, once "
+                "saved as the list (`save_names_list`), later imports then "
+                "apply; that `pseudonymise_source` can also "
                 "replace names in a file already in the project; and that "
                 "QualCoder, if you use it, can also make the list before "
                 "importing;") in log
         assert ("in `get_current_project`'s answer (which also says where "
-                "the researcher reads and changes the list: in the names "
-                "file, or, in `core`, in the file in the project folder)"
-                ) in log
+                "the researcher sees and changes the list: in the names "
+                "file, the entries it cannot hold as one line staying in "
+                "the file in the project folder, or, in `core`, in that "
+                "file) and description, in `pseudonymise_source`'s "
+                "`use_project_pseudonyms`, and in PRIVACY.md,") in log
+        # Fix round 1: no change to a description 0.15.0 does not serve
+        assert "in `read_pseudonym_list`'s description" not in log
+        assert "The two descriptions are shorter than before." in log
+        assert "The three descriptions are shorter" not in log
+        assert "which later imports then apply" not in log
         assert "the preview suggests running `pseudonymise_source`" not in log
+
+
+# ---------------------------------------------------------------------------
+# 10. Fix round 1
+# ---------------------------------------------------------------------------
+
+def _stored_text(name):
+    """The text the project stores for the file `name`, read after the
+    import, as the assistant's tools would read it."""
+    database = Path(server.current_project_path) / "data.qda"
+    with sqlite3.connect(str(database)) as conn:
+        row = conn.execute("SELECT fulltext FROM source WHERE name = ?",
+                           (name,)).fetchone()
+    return row[0]
+
+
+class TestFixRound1:
+
+    def test_a_names_file_is_applied_only_once_saved(self, setup_server,
+                                                     tmp_path):
+        """The major: imports read pseudonyms.json, never the names file.
+        A names file filled in but not saved leaves the next import with
+        no names list, as the note says; once save_names_list has saved
+        it as the list, the next import replaces the name."""
+        folder = server._current_project_folder()
+        made = json.loads(server.prepare_names_list())
+        assert made["created"] is True, made
+        Path(made["names_file"]).write_text(
+            names_file.HEADER + "Quorvin Ashdale = Participant Q\n",
+            encoding="utf-8")
+        source = tmp_path / "P01.txt"
+        source.write_bytes(b"Quorvin Ashdale said she lives in Exeter.\n")
+        preview = json.loads(server.import_documents(paths=[str(source)]))
+        assert preview["names_list"] == IMPORT_NOTE
+        assert not (folder / "pseudonyms.json").exists()
+        # saved as the list, after its preview
+        asked = json.loads(server.save_names_list())
+        saved = json.loads(server.save_names_list(
+            preview_token=asked["preview_token"]))
+        assert "error" not in saved, saved
+        assert (folder / "pseudonyms.json").exists()
+        preview = json.loads(server.import_documents(paths=[str(source)]))
+        assert preview["names_list"] != IMPORT_NOTE
+        done = json.loads(server.import_documents(
+            paths=[str(source)], preview_token=preview["preview_token"]))
+        assert "error" not in done, done
+        stored = _stored_text("P01.txt")
+        assert "Participant Q" in stored
+        assert "Quorvin Ashdale" not in stored
+
+    def test_the_imports_note_names_the_save_before_the_imports(self):
+        ctx = doc_import.Context(project_folder=Path("."), source_names={},
+                                 documents_listing=[], refused_places=[],
+                                 names_list="none")
+        line = doc_import.names_list_line(ctx)
+        assert line.index("prepare the names file") < line.index(
+            "once it is saved as the project's names list "
+            "(save_names_list)") < line.index("later imports replace them")
+
+    def test_the_full_note_says_what_prepare_names_list_does(
+            self, setup_server):
+        """Made from the list, an entry that cannot be one line left out
+        and kept in pseudonyms.json; a file already there kept, with a
+        word when the list holds entries it lacks."""
+        server._apply_toolset("full")
+        folder = _with_list(ENTRIES + [{"original": "Ann = Lee",
+                                        "pseudonym": "Participant C"}])
+        note = json.loads(
+            server.get_current_project())["pseudonyms_json"]["note"]
+        assert note == NOTE_FULL.replace("with 2 entr", "with 3 entr")
+        made = json.loads(server.prepare_names_list())
+        assert (made["created"], made["entries_not_written"]) == (True, [3])
+        assert "prepare_names_list makes it from the list" in note
+        listed = json.loads((folder / "pseudonyms.json").read_text(
+            encoding="utf-8"))
+        assert listed[2]["original"] == "Ann = Lee"
+        assert ("Entries that cannot be written as one line of the names "
+                "file stay in pseudonyms.json, in the project folder, where "
+                "the researcher can see them.") in note
+        _with_list(ENTRIES + [{"original": "Quorvin Ashdale",
+                               "pseudonym": "Participant Q"}])
+        kept = json.loads(server.prepare_names_list())
+        assert kept["created"] is False
+        assert server.LIST_ENTRIES_NOT_IN_FILE_STEP in kept["next_step"]
+        assert ("(or keeps one already there, and says if the list holds "
+                "entries it lacks)") in note
+        assert "fills in the names file" not in note
+
+    def test_install_says_an_older_codex_entry_can_drop_the_table(self):
+        install = _flat(_read("INSTALL.md"))
+        step_2 = install[install.index("**Step 2. Add Exegete to Codex's "
+                                       "settings file.**"):
+                         install.index("**Step 3. Give Codex a folder")]
+        assert ("Add the lines it lacks to the entry that is there instead. "
+                + INSTALL_OLDER_ENTRY) in step_2
+
+    def test_the_readme_names_the_subject_and_the_names_file(self):
+        readme = _read("README.md")
+        assert "That helps you manage" not in readme
+        assert ("but an assistant that opens files by itself can reach the "
+                "originals, and the names file, outside Exegete.") in readme
+
+    def test_privacy_names_the_subject_and_the_file(self):
+        privacy = _read("PRIVACY.md")
+        assert "For what reaches the AI assistant, they help" not in privacy
+        assert "remove it and store it securely" not in privacy
+        assert ("QualCoder's own guidance is to remove `pseudonyms.json` and "
+                "store it securely once the import is done") in privacy

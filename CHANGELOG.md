@@ -152,12 +152,16 @@ contributors, and the measurements.
   stay in the list as they are. Claude Code 2.1.199 and later asks
   before both calls, and refuses them in `dontAsk`.
 - **`read_pseudonym_list` is gone.** It sent every real name in the
-  project's list to the AI provider. The list is now read and changed
+  project's list to the AI provider. You now see and change the list
   in the names file on your own computer (`prepare_names_list`, then
   `save_names_list`), and its contents do not pass through the
-  conversation. A choice your assistant app saved for
-  `read_pseudonym_list` no longer applies; in Codex, remove its table
-  from the configuration (INSTALL.md).
+  conversation; a names file made before the list last changed can
+  lack some of its entries, which `prepare_names_list` says. A choice
+  your assistant app saved for `read_pseudonym_list` no longer applies;
+  in Codex, you can delete its table, the
+  `[mcp_servers.exegete.tools.read_pseudonym_list]` line and the
+  `approval_mode = "prompt"` line under it (INSTALL.md, Codex, step 2,
+  says where).
 - **Not in this release.** The removals announced in 0.14 for v0.15
   (TOOLS.md names each), except `read_pseudonym_list`, removed now
   (above), come in v0.15.1, with the safety net; until then the
@@ -499,12 +503,12 @@ comes with v0.15.2.
 - **The names list** (`pseudonyms.json`) is described as the project's
   own, applied when files are imported, rather than as QualCoder's
   import-time list: in `get_current_project`'s answer (which also says
-  where the researcher reads and changes the list: in the names file, or,
-  in `core`, in the file in the project folder) and
-  description, in `read_pseudonym_list`'s description, in
+  where the researcher sees and changes the list: in the names file,
+  the entries it cannot hold as one line staying in the file in the
+  project folder, or, in `core`, in that file) and description, in
   `pseudonymise_source`'s `use_project_pseudonyms`, and in PRIVACY.md,
   which also names the backups the file travels into (Exegete's, and
-  QualCoder's if you use it). The three descriptions are shorter than
+  QualCoder's if you use it). The two descriptions are shorter than
   before.
 - **The warning about a shorter name already in `pseudonyms.json`**,
   given by `pseudonymise_source`'s preview when a mapping is to be
@@ -699,8 +703,9 @@ When each is given, what it refuses and its counts have not changed.
 - **Importing into a project with no names list**: the preview suggests
   asking the assistant to prepare the names file, which you fill in on
   your own computer, so the names do not pass through the conversation,
-  and which later imports then apply; that `pseudonymise_source` can
-  also replace names in a file already in the project; and that
+  and which, once saved as the list (`save_names_list`), later imports
+  then apply; that `pseudonymise_source` can also replace names in a
+  file already in the project; and that
   QualCoder, if you use it, can also make the list before importing;
   after the import, the
   answer says to replace the names with `pseudonymise_source` before the
@@ -1156,8 +1161,9 @@ for the four labels stays in NOTICE.
 
 ### Deprecated: the removals move to v0.15.1
 
-- **Every removal announced in 0.14 for v0.15 now comes in v0.15.1**,
-  with the safety net, as the plan for v0.15 in three releases has it:
+- **Every other removal announced in 0.14 for v0.15 now comes in
+  v0.15.1**, with the safety net, as the plan for v0.15 in three
+  releases has it:
   the REFI-QDA export, `export_code_report`, `cleanup_old_sessions`,
   `merge_proposals`, four help topics, and the arguments and options
   TOOLS.md names. Until then each works, and its
@@ -1167,7 +1173,7 @@ for the four labels stays in NOTICE.
   lists v0.15.1 and v0.15.2.
 - **`read_pseudonym_list` is removed now**, not in v0.15.1: "Upgrading
   from 0.14.3" says why, and what replaces it.
-- **Three more notes no longer send the researcher to QualCoder as the
+- **Three notes no longer send the researcher to QualCoder as the
   only way**, in the descriptions and the answers that give them: the
   REFI-QDA export's says that Exegete has no other REFI-QDA export yet,
   and that QualCoder's own export, for researchers who have QualCoder,

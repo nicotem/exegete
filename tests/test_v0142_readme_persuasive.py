@@ -243,7 +243,11 @@ def _tools(mode="full"):
 # computer" names the files you fill in for a project, such as the names
 # file. That takes 304 characters, and the limit is raised by that and
 # no more: 38,442.
-README_LIMIT = 38_442
+# Its fix round 1: "Replacing names helps" for "That helps", and the
+# names file among what an assistant that opens files can reach. That
+# takes 32 characters, and the limit is raised by that and no more:
+# 38,474.
+README_LIMIT = 38_474
 
 
 def test_the_readme_stays_short():

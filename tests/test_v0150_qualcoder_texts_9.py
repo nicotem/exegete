@@ -133,12 +133,14 @@ CORRECT_UNREADABLE = (" Correct the list (open pseudonyms.json in the "
 # The files design, piece 5, leads it with the names file, which every
 # researcher has, then pseudonymise_source; QualCoder's button stays a
 # choice for a researcher who uses it
-# (tests/test_v0150_pseudonym_list_removed.py)
+# (tests/test_v0150_pseudonym_list_removed.py); its fix round 1: imports
+# apply the names file once save_names_list has saved it as the list
 PREVIEW_NO_LIST = (
     "This project has no names list. If these documents name participants "
     "or places, ask the assistant to prepare the names file: you fill it in "
     "on your own computer, so the names do not pass through the "
-    "conversation, and later imports replace them as the text comes in. "
+    "conversation, and once it is saved as the project's names list "
+    "(save_names_list), later imports replace them as the text comes in. "
     "pseudonymise_source can also replace names in a file already in the "
     "project. QualCoder, if you use it, can also make the list before "
     "importing (the Pseudonyms button in Manage Files).")

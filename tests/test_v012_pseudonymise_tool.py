@@ -5614,7 +5614,7 @@ class TestTheInspectionRoutes:
     not invite a call that returns them. The tool that returned the list,
     read_pseudonym_list, was removed in v0.15.0 (ruling 78; the files
     design, piece 5): no tool returns the names now, and the researcher
-    reads and changes the list in the names file."""
+    sees and changes the list in the names file."""
 
     ENTRIES = [{"original": "Thomas", "pseudonym": "Alex"},
                {"original": "Mary Ann", "pseudonym": "Sam"}]
@@ -5651,10 +5651,15 @@ class TestTheInspectionRoutes:
                 "The project's pseudonyms.json (its list of real names and "
                 "their pseudonyms, applied when files are imported) is "
                 "present with 2 entr(ies). Its contents are the "
-                "researcher's reverse key and are never returned. To read "
-                "or change the list, the researcher fills in the names file "
-                "on their own computer: prepare_names_list shows and opens "
-                "it, and save_names_list saves it as the list.")}
+                "researcher's reverse key and are never returned. To see "
+                "or change the list, the researcher uses the names file on "
+                "their own computer: prepare_names_list makes it from the "
+                "list (or keeps one already there, and says if the list "
+                "holds entries it lacks), shows and opens it, and "
+                "save_names_list saves it as the list. Entries that cannot "
+                "be written as one line of the names file stay in "
+                "pseudonyms.json, in the project folder, where the "
+                "researcher can see them.")}
         serialised = json.dumps(out)
         for name in ("Thomas", "Mary Ann", "Alex", "Sam"):
             assert name not in serialised, name
@@ -8752,9 +8757,17 @@ class TestTheDocumentsTellTheTruth:
         # v0.15.0, the files design, piece 5: the tool that returned the
         # names was removed
         "No tool returns the names (`read_pseudonym_list` was removed in "
-        "0.15.0): you read and change the list in the names file on your "
+        "0.15.0): you see and change the list in the names file on your "
         "own computer (`prepare_names_list`, then `save_names_list`), whose "
         "preview gives counts and line numbers, never a name.",
+        # its fix round 1: an older names file, the entries it cannot
+        # hold, and which file QualCoder's guidance is about
+        "A names file made before the list last changed can lack some of "
+        "its entries, which `prepare_names_list` says, and entries that "
+        "cannot be written as one line of the file stay in "
+        "`pseudonyms.json`, where you can see them. QualCoder's own "
+        "guidance is to remove `pseudonyms.json` and store it securely once "
+        "the import is done",
         "each is an audit record of which rows a run changed and where the "
         "pseudonyms now sit, kept so a run can be accounted for afterwards. "
         "It is not a way back; the backup taken before the run is.",

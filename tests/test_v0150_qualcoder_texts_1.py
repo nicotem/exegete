@@ -133,11 +133,16 @@ def names_note(count, core=False):
             "returned here; the researcher can read the file in the "
             "project folder, or in QualCoder's Pseudonyms dialog if they "
             "use QualCoder.")
+    # the files design, piece 5, and its fix round 1
     return opening + (
         "Its contents are the researcher's reverse key and are never "
-        "returned. To read or change the list, the researcher fills in the "
-        "names file on their own computer: prepare_names_list shows and "
-        "opens it, and save_names_list saves it as the list.")
+        "returned. To see or change the list, the researcher uses the "
+        "names file on their own computer: prepare_names_list makes it "
+        "from the list (or keeps one already there, and says if the list "
+        "holds entries it lacks), shows and opens it, and save_names_list "
+        "saves it as the list. Entries that cannot be written as one line "
+        "of the names file stay in pseudonyms.json, in the project folder, "
+        "where the researcher can see them.")
 
 
 def pre_empted(entries):

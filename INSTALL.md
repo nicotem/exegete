@@ -1315,7 +1315,10 @@ If the file already has an entry named `exegete` (because you added it
 in the app's settings screen or with `codex mcp add`, below), do not
 paste a second one: a second `[mcp_servers.exegete]` line makes the
 whole file unreadable. Add the lines it lacks to the entry that is
-there instead.
+there instead. An entry written from the steps before 0.15.0 may end
+with two more lines, `[mcp_servers.exegete.tools.read_pseudonym_list]`
+and `approval_mode = "prompt"` under it: that tool was removed in
+0.15.0, so you can delete both lines.
 
 **Other ways to add it.** The desktop app has a settings screen for
 this (Settings, MCP servers, Add server: the name `exegete`, STDIO, and

@@ -28,6 +28,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server                   # noqa: E402
+from tool_counts import FULL_TOOLS  # noqa: E402
 from exegete import database, env_settings, names  # noqa: E402
 
 SETTINGS = names.SETTINGS
@@ -280,7 +281,8 @@ class TestTheExtensionSetsBothSpellings:
         proc = _run_server(home, {**stray, **config["env"]})
         assert proc.returncode == 0, proc.stderr
         # v0.15.0: the extension's default is `full`, every tool
-        assert "Toolset mode: full (81 tools registered)" in proc.stderr
+        assert f"Toolset mode: full ({FULL_TOOLS} tools registered)" in \
+            proc.stderr
         assert "earlier spelling" not in proc.stderr
 
 

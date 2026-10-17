@@ -512,8 +512,10 @@ class TestCodexAsksBeforeEveryChange:
         # Codex's default mode runs them unasked too, which INSTALL.md
         # says (allow the import once elsewhere); 0.15.0: and
         # analyze_for_coding, the earlier name of start_coding_session,
-        # listed with its annotations
-        assert len(adding) == 17
+        # listed with its annotations; and prepare_names_list, which
+        # makes the names file once (the files design, piece 3)
+        assert len(adding) == 18
+        assert "prepare_names_list" in adding
         assert {"start_coding_session", "analyze_for_coding"} <= set(adding)
         assert "import_documents" in adding
         for name in ("import_text_file", "apply_codings",
@@ -524,11 +526,12 @@ class TestCodexAsksBeforeEveryChange:
             assert codex_asks(tools[name].annotations, "auto"), name
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("Here that is the 17 tools that only add "
+        assert ("Here that is the 18 tools that only add "
                 "(`import_text_file`, `apply_codings`, "
                 "`create_proposed_codes`, `create_code` and the rest, "
                 "`open_file_for_reading` and `import_documents` among them "
-                "from 0.14.3) and `read_pseudonym_list`") in marks
+                "from 0.14.3, and `prepare_names_list` from 0.15.0) and "
+                "`read_pseudonym_list`") in marks
 
     def test_the_rule_would_notice(self):
         from mcp.types import ToolAnnotations

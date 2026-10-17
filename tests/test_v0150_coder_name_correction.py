@@ -41,6 +41,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server                       # noqa: E402
+from tool_counts import FULL_TOOLS  # noqa: E402
 from exegete import database, names                  # noqa: E402
 
 OLD, NEW = "NT", "Niccolò Tempini"
@@ -1126,7 +1127,7 @@ class TestTheTool:
         assert ("It is refused too while the project's AI coder name file "
                 "or its coder list cannot be read.") in tools
         assert "Exegete cannot change it" not in tools
-        assert "registers 81 tools" in tools
+        assert "registers 82 tools" in tools
 
     def test_the_changelog_says_what_was_added(self):
         log = _flat((REPO / "CHANGELOG.md").read_text(
@@ -1158,5 +1159,5 @@ class TestTheTool:
             "### Measured")]
 
     def test_the_counts(self):
-        assert len(server.STANDARD_TOOL_NAMES) == 81
+        assert len(server.STANDARD_TOOL_NAMES) == FULL_TOOLS
         assert len(server.CORE_TOOLSET) == 25

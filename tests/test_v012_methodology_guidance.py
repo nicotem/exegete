@@ -26,6 +26,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 EM_DASH = "—"
 CURLY = ("‘", "’", "“", "”")
@@ -118,7 +119,7 @@ class TestPlacement:
         carriers = [n for n, t in server.mcp._tool_manager._tools.items()
                     if "reframe_and_ask" in (t.description or "")]
         assert carriers == ["start_coding_session"]
-        assert len(server.mcp._tool_manager._tools) == 81  # B1 setter, B3 compare, the flagship, the name list, the two renames, read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0), set_project_coder_name (0.15.0)
+        assert len(server.mcp._tool_manager._tools) == FULL_TOOLS    # tests/tool_counts.py
 
     def test_docstring_of_the_function_object_matches_the_registration(self):
         # _tool_guard uses functools.wraps, so the amended __doc__ travels

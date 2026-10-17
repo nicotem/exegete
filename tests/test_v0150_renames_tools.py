@@ -35,6 +35,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server  # noqa: E402
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).parent))
 from test_v0150_qualcoder_texts_5 import (  # noqa: E402
@@ -142,7 +143,8 @@ class TestTheRegistry:
         for old in RENAMED:
             assert not hasattr(server, old), old
 
-    @pytest.mark.parametrize("mode, count", [("full", 81), ("core", 25)])
+    @pytest.mark.parametrize("mode, count", [("full", FULL_TOOLS),
+                                             ("core", 25)])
     def test_each_earlier_name_beside_its_new_one(self, mode, count):
         tools = _listed(mode)
         assert len(tools) == count
@@ -728,21 +730,21 @@ class TestTheDocuments:
 
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
-        assert ("registers 81 tools, two of them the earlier names of two "
+        assert ("registers 82 tools, two of them the earlier names of two "
                 "renamed tools (see \"Earlier names\" below)") in tools
         assert ("only the 25-tool supervised coding set is registered: "
                 "read_brief,") in tools.replace("> ", "")
         assert ("copy_project_to_workspace, delete_coding, list_backups, and "
                 "the two earlier names below.") in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
-        assert "`full` (default) registers 81 tools, every tool," in install
+        assert "`full` (default) registers 82 tools, every tool," in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
         assert "`core` registers the 25-tool supervised coding set" in install
-        assert "Exegete offers 81 tools by default" in install
+        assert "Exegete offers 82 tools by default" in install
         assert "register only the 25-tool supervised coding set" in install
         readme = _read("README.md")
-        assert ("| `full` | 81: all, creating a project and two renamed "
+        assert ("| `full` | 82: all, creating a project and two renamed "
                 "tools' earlier names included |") in readme
         assert "| `core` | 25: the coding loop and its safety tools |" \
             in readme
@@ -814,7 +816,8 @@ class TestTheDocuments:
         sets = sets[:sets.index("###", 5)]
         # one count for `full`: set_project_coder_name included
         # (whole-branch review, round 1)
-        assert ("79 tools (81 with the earlier names of the two tools "
+        # one tool more since the names file (the files design, piece 3)
+        assert ("80 tools (82 with the earlier names of the two tools "
                 "renamed below), creating a project") in sets
         assert "78 tools (80" not in sets
         assert ("`core` keeps its 23 tools (25 with the two earlier names "

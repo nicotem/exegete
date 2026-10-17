@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 from exegete.database import QualcoderDatabase
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     execute_from, preview_of, project, query)
@@ -162,7 +163,7 @@ def test_the_documents_count_the_tools_the_server_registers():
     before, so a tool added without them would have left both stale."""
     import asyncio
     count = len(asyncio.run(server.mcp.list_tools()))
-    assert count == 81                 # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0), set_project_coder_name (0.15.0)
+    assert count == FULL_TOOLS    # tests/tool_counts.py
     # v0.15.0: one set, `full`, the default everywhere ("Exegete", not
     # "the server", in a line new in 0.15.0: whole-branch review, round 2)
     assert f"(`EXEGETE_TOOLSET=full`, the default everywhere: in the " \

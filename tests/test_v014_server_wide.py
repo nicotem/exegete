@@ -95,6 +95,8 @@ EXPECTED_HINTS = {
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
+    # v0.15.0: makes the names file once; a repeat keeps it as it is
+    "prepare_names_list": A1,
     # 0.14.3: a repeat of the preview reads again, and a
     # repeat of the import finds its files there and its token spent
     "import_documents": A1,
@@ -848,6 +850,8 @@ async def call_every_tool(client, root, lock_check=False):
     await run("get_cases_by_code", {"code_id": 2})
     await run("explain_ai_coding_tools", {"tool_name": "apply_codings"})
     await run("read_pseudonym_list", {})
+    # v0.15.0: the names file, made, shown and opened (the recorders)
+    await run("prepare_names_list", {})
     # exports
     await run("export_refi_qda", {"output_path": str(exports / "s.qdpx")})
     await run("export_codebook", {"output_path": str(exports / "c.csv")})
@@ -2022,6 +2026,9 @@ NOT_PROJECT_WRITES = {
     "export_codebook": "file", "export_coded_segments_report": "file",
     "export_frequencies_csv": "file", "export_case_code_matrix_csv": "file",
     "read_pseudonym_list": "reads only (marked so that hosts ask)",
+    "prepare_names_list": "writes the names file in the project's "
+                          "Exegete folder, which the project's format "
+                          "never reads, and never touches the database",
     "open_file_for_reading": "writes a page or a copy in the reading "
                              "folder, outside the project, and works "
                              "while QualCoder has it open, as reads do",

@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -178,4 +179,4 @@ class TestTtyNotice:
     def test_registry_intact_after_main_in_process(self, monkeypatch, capsys, stub_run):
         monkeypatch.setattr(sys, "stdin", _FakeStdin(tty=False))
         server.main([])
-        assert len(server.mcp._tool_manager._tools) == 81   # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3), create_project (0.15.0, in `full`), the two earlier names (0.15.0), set_project_coder_name (0.15.0)
+        assert len(server.mcp._tool_manager._tools) == FULL_TOOLS    # tests/tool_counts.py

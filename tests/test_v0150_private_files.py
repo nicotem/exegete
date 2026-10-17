@@ -131,7 +131,9 @@ class TestPlacesAndNames:
         assert not (project / "Exegete").exists()          # not created
         assert FOLDER_NAME == "Exegete"
         assert NOTE_NAME == reading_folder.NOTE_NAME == "About this folder.txt"
-        assert KINDS == {NOTE_NAME: "about this folder"}
+        # the names file joined in piece 3 (test_v0150_names_file.py)
+        assert KINDS == {NOTE_NAME: "about this folder",
+                         "Names to replace.txt": "names file"}
         assert (MAX_LISTED, MAX_READ) == (200, 1024 * 1024)
         assert private_files.place(project, NOTE_NAME) == \
             project / "Exegete" / NOTE_NAME
@@ -1077,7 +1079,10 @@ class TestTheDocuments:
                 "whole file\" says, so they can stay longer while Exegete is "
                 "not running;",
                 "| Files you fill in | the `Exegete` folder inside the "
-                "project | files you fill in for the project, and a short "
+                # the names file (piece 3, test_v0150_names_file.py)
+                "project | files you fill in for the project, such as the names "
+                "file (`Names to replace.txt`: real names in plain "
+                "text, as in `pseudonyms.json`), and a short "
                 # the files design, piece 2: a restore keeps the folder
                 # (tests/test_v0150_restore_keeps_folder.py)
                 "note | you: Exegete never deletes them, and a restore "

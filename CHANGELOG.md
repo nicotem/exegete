@@ -136,7 +136,7 @@ measurements.
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the
-  maintainer's decision of 12 October 2026): 79 tools (81 with the
+  maintainer's decision of 12 October 2026): 80 tools (82 with the
   earlier names of the two tools renamed below), creating a project
   and correcting your own coder name included, the default on every
   route, in the Claude Desktop extension and wherever Exegete is
@@ -1024,6 +1024,32 @@ for the four labels stays in NOTICE.
   searched leads, and `select_project` and `copy_project_to_workspace`
   refuse a project kept there.
 
+### Added: the names list, filled in on your computer
+
+- **`prepare_names_list` makes the names file** (in `full`, not in
+  `core`): `Names to replace.txt`, in the project's `Exegete` folder,
+  where you write each real name and its pseudonym on your own
+  computer, one line per name (`Jane Doe = Participant A`), so that the
+  real names do not pass through the conversation. `=>`, `->`, `→`, a
+  tab or a single comma also separate a name from its pseudonym. The
+  file opens with five lines of instructions; when the project has a
+  names list (`pseudonyms.json`), its entries are already in the file,
+  one line each, in the list's order. An entry the file cannot hold as
+  one line (a name holding `=`, `=>`, `->`, `→`, a tab or a line break,
+  a real name starting with `#`, or white space at either end) is left
+  out, and the answer gives its number in the list, never the name; it
+  stays in the list. Exegete never fills in a name from the documents.
+- **A names file already there is kept as it is**, never replaced or
+  rewritten. Exegete reads it only to count: the lines it read, the
+  lines it could not read, and the list's entries whose real name is on
+  no line; it says when it cannot read the file (a link, not an
+  ordinary file, larger than 1 MB, or not saved as UTF-8 text).
+- **Then Exegete shows the file in its folder and opens it in your text
+  editor**, and its answer tells the assistant to leave the file to
+  you: never to open or read it, and never to return what it holds. An
+  assistant that opens files by itself could still read it (PRIVACY.md,
+  "Files Exegete keeps on your computer").
+
 ### Changed: the libraries the extension installs, brought up to date
 
 - **The locked libraries are brought up to date** (`uv.lock`, which the
@@ -1092,16 +1118,16 @@ for the four labels stays in NOTICE.
 
 ### Measured
 
-- Serialised tool JSON: full = 205,741 characters (about 51.4k tokens
-  at chars/4) over 81 tools, and core = 68,258 (about 17.1k) over 25,
+- Serialised tool JSON: full = 206,613 characters (about 51.7k tokens
+  at chars/4) over 82 tools, and core = 68,258 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 216,145 and
+  which also gives exactly 0.14.3's figures for its tree), 217,061 and
   71,690. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
-  3.13), sixteen changes moved them; for most researchers, on the
+  3.13), seventeen changes moved them; for most researchers, on the
   extension, the change is from `lifecycle` to `full`: 1,497 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
@@ -1167,6 +1193,9 @@ for the four labels stays in NOTICE.
   `rename_case` and `rename_file` 11 each, `import_documents` 8,
   `start_coding_session` 4 and `get_current_project` 1) and 17 fewer in
   `core`, on both interpreters.
+  And `prepare_names_list`, the names file's tool, adds its entry and
+  its separator: 872 characters in `full`, 916 on 3.11; `core` does
+  not serve it.
   No other tool's entry changed.
 - Claude Code now keeps 4,096 characters of a tool's description, and
   16,384 through its tool search (2,048 before its version 2.1.296):

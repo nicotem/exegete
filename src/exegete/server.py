@@ -100,7 +100,7 @@ from .database import (
 )
 from . import pseudonymise as pseudo
 from . import new_project
-from . import parts, private_files, reading, reading_folder
+from . import names_file, parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
 from . import doc_import, doc_readers, kept_texts
 from . import qualcoder_history
@@ -5449,6 +5449,138 @@ def get_current_project() -> str:
     except Exception as e:
         return json.dumps(
             {"error": f"Failed to get project info: {error_text(e)}"})
+
+
+# ---------------------------------------------------------------------------
+# The names file (v0.15.0, the files design, piece 3): the researcher fills
+# in the project's names list on their own computer, so that the real
+# names do not pass through the conversation (ruling 73, item 9; ruling 78)
+# ---------------------------------------------------------------------------
+
+PREPARE_NAMES_LIST_NEXT_STEP = (
+    "Tell the researcher that the names file is open on their computer "
+    "(or, when it could not be opened, where it is). They write each real "
+    "name and its pseudonym on a line of their own, save the file, and "
+    "tell you when the list is ready. Never open or read the file "
+    "yourself, even when a file tool could.")
+NAMES_FILE_NOT_UTF8_STEP = (
+    "The names file there is not saved as UTF-8 text: ask the researcher "
+    "to save it again as plain text in UTF-8; most text editors offer the "
+    "encoding when saving a file.")
+# The lead's answer to the design's open point 3 (17 October 2026): an
+# entry the names file cannot hold as one line is left out, by its number
+# in the list, with a suggestion; it stays in the list
+ENTRIES_NOT_WRITTEN_NOTE = (
+    "These entries of the project's names list (numbered from 1, in the "
+    "order of pseudonyms.json) cannot be written as one line of the names "
+    "file: a name holds =, =>, ->, →, a tab or a line break, the real "
+    "name starts with #, a name is empty, or a name has white space at "
+    "either end. They were left out of the names file and stay in the "
+    "list as they are. Tell the researcher so; they can see these entries "
+    "in pseudonyms.json, in the project folder, on their own computer.")
+
+
+def _names_file_counts(folder: Path, entries: Optional[List[Dict]]
+                       ) -> Dict[str, Any]:
+    """The names file already there, read for counts only: lines read,
+    lines not read (an empty side among them), and the list's entries
+    whose real name, compared exactly, is on no line; or, when it cannot
+    be read, why (`existing_file_not_read`). Never a name."""
+    try:
+        text = names_file.decode(private_files.read_bytes(
+            folder, private_files.NAMES_FILE))
+    except names_file.NotUtf8:
+        return {"existing_file_not_read": "not_utf8"}
+    except private_files.PrivateFilesError as e:
+        return {"existing_file_not_read": e.code}
+    except FileNotFoundError:
+        # removed in the instant between the look and the read
+        return {"existing_file_not_read": "not_there"}
+    parsed = names_file.parse(text)
+    counts: Dict[str, Any] = {
+        "lines_read": len(parsed.pairs),
+        "lines_not_read": len(parsed.not_read) + len(parsed.empty_side)}
+    if entries is not None:
+        on_a_line = {real_name for _, real_name, _ in parsed.pairs}
+        counts["list_entries_not_in_file"] = sum(
+            1 for entry in entries if entry["original"] not in on_a_line)
+    return counts
+
+
+@mcp.tool(annotations=TOOL_ADDS_ONCE)
+@_tool_guard
+def prepare_names_list() -> str:
+    """Make the names file for the researcher to fill in on their own
+    computer, so that the real names do not pass through this
+    conversation. Writes Names to replace.txt in the project's Exegete
+    folder (a few lines of instructions, then one line per name: Real
+    name = Pseudonym), with the entries of the project's names list
+    (pseudonyms.json) already in it when there is one; a names file
+    already there is kept as it is. Then shows it in its folder and opens
+    it in the computer's text editor. Exegete never fills in names from
+    the documents and never returns the file's contents. Tell the
+    researcher to fill it in, save it and say when the list is ready.
+    Never open or read the file yourself.
+    """
+    _adopt_configured_project()
+    if current_project_path is None:
+        return json.dumps({"error": _no_project_message()}, indent=2)
+    folder = _current_project_folder()
+    try:
+        private_files.ensure_folder(folder)
+    except private_files.PrivateFilesError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    place = private_files.place(folder, private_files.NAMES_FILE)
+    # The list, read once: absent, no entries; unreadable, no entries and
+    # its reader's value-free message
+    block, entries = _pseudonyms_json_read()
+    list_error = block.get("error") if entries is None else None
+    created, written, not_written = False, 0, []
+    found: Dict[str, Any] = {}
+    if not os.path.lexists(str(place)):
+        rows = []
+        for number, entry in enumerate(entries or [], start=1):
+            line = names_file.format_entry(entry["original"],
+                                           entry["pseudonym"])
+            if line is None:
+                not_written.append(number)
+            else:
+                rows.append(line + "\n")
+        try:
+            private_files.write_new(folder, private_files.NAMES_FILE,
+                                    names_file.HEADER + "".join(rows))
+            created, written = True, len(rows)
+        except FileExistsError:
+            # another call wrote it first: it is kept and read as found
+            not_written = []
+        except private_files.PrivateFilesError as e:
+            return json.dumps({"error": str(e)}, indent=2)
+    if not created:
+        found = _names_file_counts(folder, entries)
+    shown = private_files.show(folder, private_files.NAMES_FILE)
+    opened = private_files.open_in_app(folder, private_files.NAMES_FILE)
+    answer: Dict[str, Any] = {"names_file": str(place), "created": created,
+                              "entries_written": written}
+    if not_written:
+        answer["entries_not_written"] = not_written
+        answer["entries_not_written_note"] = ENTRIES_NOT_WRITTEN_NOTE
+    if list_error:
+        answer["names_list_not_read"] = list_error
+    answer.update(found)
+    answer["shown_in_folder"] = shown.done
+    answer["opened"] = opened.done
+    if not opened.done:
+        answer["not_opened_because"] = opened.reason
+    step = PREPARE_NAMES_LIST_NEXT_STEP
+    if found.get("existing_file_not_read") == "not_utf8":
+        step += " " + NAMES_FILE_NOT_UTF8_STEP
+    answer["next_step"] = step
+    if created:
+        logger.info("prepare_names_list made the names file (%d entries).",
+                    written)
+    else:
+        logger.info("prepare_names_list kept the names file that was there.")
+    return json.dumps(answer, indent=2)
 
 
 @mcp.tool(annotations=TOOL_DISCLOSES)

@@ -19,6 +19,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 RESERVED_ARGUMENT_NAMES = {"session_id", "request_id", "conversation_id",
                            "user_id", "context", "metadata"}
@@ -87,7 +88,7 @@ class TestSessionIdDuplicateRemoved:
 # the live registry so a tool added later is covered without an edit here.
 # ===========================================================================
 
-TOOL_COUNT = 81          # pinned in tests/test_v012_cli.py too (check_for_updates, v0.14.2; open_file_for_reading and import_documents, v0.14.3; create_project, in `full` from 0.15.0; the two earlier names and set_project_coder_name, 0.15.0)
+TOOL_COUNT = FULL_TOOLS  # tests/tool_counts.py
 
 
 def _count(toolset):

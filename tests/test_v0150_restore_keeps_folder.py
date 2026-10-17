@@ -1277,8 +1277,11 @@ class TestTheTexts:
         files = _flat(privacy[privacy.index(
             "\n## Files Exegete keeps on your computer\n"):])
         files = files[:files.index(" ## ")]
+        # the names file (the files design, piece 3)
         assert ("| Files you fill in | the `Exegete` folder inside the "
-                "project | files you fill in for the project, and a short "
+                "project | files you fill in for the project, such as the names "
+                "file (`Names to replace.txt`: real names in plain "
+                "text, as in `pseudonyms.json`), and a short "
                 "note | you: Exegete never deletes them, and a restore keeps "
                 "them as they are (and leaves the backup's copy in the "
                 "backup) |") in files

@@ -62,9 +62,12 @@ from .path_identity import is_same
 FOLDER_NAME = "Exegete"
 # The name of the reading folder's note too.
 NOTE_NAME = "About this folder.txt"
+# The names file, which the researcher fills in with each real name and
+# its pseudonym (names_file; prepare_names_list, v0.15.0)
+NAMES_FILE = "Names to replace.txt"
 # The files Exegete names in the folder, each with its kind. Only these
 # are written, read, listed by name, shown or opened.
-KINDS = {NOTE_NAME: "about this folder"}
+KINDS = {NOTE_NAME: "about this folder", NAMES_FILE: "names file"}
 MAX_LISTED = 200
 MAX_READ = 1024 * 1024
 

@@ -39,9 +39,9 @@ EXPECTED_TOOLS = {
     # project management (5)
     "list_available_projects", "select_project", "get_current_project",
     "copy_project_to_workspace",
-    # v0.13 Brief 2 fix round 1 (the owner's ruling): the project's
-    # pseudonym list, a tool of its own, full toolset only
-    "read_pseudonym_list",
+    # (v0.13 Brief 2 fix round 1 gave the project's pseudonym list a tool
+    # of its own, read_pseudonym_list; v0.15.0 removed it: the names
+    # file below replaces it)
     # v0.12 B1: the project's AI coder name, asked for once and stored
     # beside data.qda
     "set_project_ai_coder_name",

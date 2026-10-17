@@ -29,6 +29,7 @@ suite that builds one is testing its own invention.
 """
 
 import ast
+import asyncio
 import collections
 import itertools
 import json
@@ -5610,10 +5611,10 @@ class TestQualCoderAppliesTheSavedFileAsThisRunDid:
 class TestTheInspectionRoutes:
     """Ruling 14b, and the owner's ruling of 2026-09-24 (Brief 2 fix round
     1): get_current_project reports the count and never a name, and does
-    not invite the call that returns them; the list has a tool of its
-    own, read_pseudonym_list, whose description says first that it sends
-    the real names to the AI provider, which is in the full toolset only,
-    and which leaves one value-free line in the log each time."""
+    not invite a call that returns them. The tool that returned the list,
+    read_pseudonym_list, was removed in v0.15.0 (ruling 78; the files
+    design, piece 5): no tool returns the names now, and the researcher
+    sees and changes the list in the names file."""
 
     ENTRIES = [{"original": "Thomas", "pseudonym": "Alex"},
                {"original": "Mary Ann", "pseudonym": "Sam"}]
@@ -5623,30 +5624,46 @@ class TestTheInspectionRoutes:
         return json.loads(server.get_current_project(**kwargs))
 
     @staticmethod
-    def _list():
-        # v0.14's coding-loop fix round 2 (owner ruling 25, question 3):
-        # every answer carries the deprecation sentence
-        out = json.loads(server.read_pseudonym_list())
-        assert out.pop("deprecated") == server.DEPRECATED_PSEUDONYM_LIST
-        return out
+    def _refused_as_unknown():
+        """A host's call of the removed tool: refused, with no list."""
+        from mcp.shared.memory import (
+            create_connected_server_and_client_session)
+
+        async def run():
+            async with create_connected_server_and_client_session(
+                    server.mcp._mcp_server) as client:
+                return await client.call_tool("read_pseudonym_list", {})
+        result = asyncio.run(run())
+        text = "\n".join(getattr(b, "text", "") for b in result.content)
+        assert result.isError is True
+        assert "Unknown tool: read_pseudonym_list" in text
+        return text
 
     def test_get_current_project_reports_presence_and_count_without_a_name(
             self, project):
         _sidecar_file(project, self.ENTRIES)
         out = self._report()
+        # v0.15.0, piece 5: in the full set the note sends the researcher
+        # to the names file
         assert out["pseudonyms_json"] == {
             "present": True, "entries": 2, "encoding": "utf-8",
             "note": (
                 "The project's pseudonyms.json (its list of real names and "
                 "their pseudonyms, applied when files are imported) is "
                 "present with 2 entr(ies). Its contents are the "
-                "researcher's reverse key and are not returned here; the "
-                "researcher can read the file in the project folder, or in "
-                "QualCoder's Pseudonyms dialog if they use QualCoder.")}
+                "researcher's reverse key and are never returned. To see "
+                "or change the list, the researcher uses the names file on "
+                "their own computer: prepare_names_list makes it from the "
+                "list (or keeps one already there, and says if the list "
+                "holds entries it lacks), shows and opens it, and "
+                "save_names_list saves it as the list. Entries that cannot "
+                "be written as one line of the names file stay in "
+                "pseudonyms.json, in the project folder, where the "
+                "researcher can see them.")}
         serialised = json.dumps(out)
         for name in ("Thomas", "Mary Ann", "Alex", "Sam"):
             assert name not in serialised, name
-        # It does not invite the call that returns the names.
+        # It does not invite a call that returns the names.
         assert "read_pseudonym_list" not in serialised
         assert "include_pseudonyms" not in serialised
         _house_rules([out["pseudonyms_json"]["note"]])
@@ -5660,7 +5677,7 @@ class TestTheInspectionRoutes:
 
     def test_it_reports_absence(self, project):
         assert self._report()["pseudonyms_json"] == {"present": False}
-        assert self._list() == {"pseudonyms_json": {"present": False}}
+        self._refused_as_unknown()
 
     def test_it_reports_an_unreadable_file_value_free(self, project):
         (project / "pseudonyms.json").write_text(
@@ -5670,45 +5687,38 @@ class TestTheInspectionRoutes:
             "{original, pseudonym} entries in QualCoder's format) could not "
             "be read: the file holds a dict, not a list.")}
         assert self._report()["pseudonyms_json"] == expected
-        assert self._list() == {"pseudonyms_json": expected}
+        assert "Thomas" not in self._refused_as_unknown()
 
-    def test_read_pseudonym_list_returns_the_list_and_logs_a_count(
-            self, project, caplog):
+    def test_no_tool_returns_the_list_and_none_logs_it(self, project,
+                                                       caplog):
+        """The route that returned the list, and logged a count each time,
+        is gone: a host's call is refused, and no name reaches the answer
+        or the log."""
         import logging
         _sidecar_file(project, self.ENTRIES)
         caplog.set_level(logging.DEBUG)
-        out = self._list()
-        assert out == {"pseudonyms_json": {
-            "present": True, "entries": 2, "encoding": "utf-8",
-            "entries_list": self.ENTRIES}}
-        lines = [r for r in caplog.records
-                 if "pseudonyms.json list" in r.getMessage()]
-        assert [(r.levelname, r.getMessage()) for r in lines] == [
-            ("INFO", "read_pseudonym_list returned the project's "
-                     "pseudonyms.json list (2 entries) to the "
-                     "conversation.")]
+        text = self._refused_as_unknown()
         logged = "\n".join(r.getMessage() for r in caplog.records)
-        for name in ("Thomas", "Mary Ann", "Alex", "Sam", "study"):
+        for name in ("Thomas", "Mary Ann", "Alex", "Sam"):
+            assert name not in text, name
             assert name not in logged, name
+        assert "pseudonyms.json list" not in logged
 
-    def test_its_description_says_first_that_it_sends_the_names(self):
-        tool = server.mcp._tool_manager._tools["read_pseudonym_list"]
-        assert tool.description.split("\n")[0] == (
-            "This sends every real name in the project's pseudonyms.json, "
-            "with its pseudonym, to the AI provider.")
-        flat = " ".join(tool.description.split())
-        assert ("Call it only when the researcher has asked, in this "
-                "conversation, to see or check the project's pseudonym "
-                "list." in flat)
-        _house_rules([tool.description])
+    def test_no_description_offers_the_names(self):
+        for name, tool in server.mcp._tool_manager._tools.items():
+            assert "read_pseudonym_list" not in (tool.description or ""), \
+                name
+            assert not (tool.description or "").startswith(
+                "This sends every real name"), name
 
-    def test_it_is_in_the_full_toolset_only(self):
+    def test_it_is_in_no_toolset(self):
         assert "read_pseudonym_list" not in server.CORE_TOOLSET
-        assert "read_pseudonym_list" in server.mcp._tool_manager._tools
+        assert "read_pseudonym_list" not in server.mcp._tool_manager._tools
+        assert not hasattr(server, "read_pseudonym_list")
 
-    def test_it_needs_an_open_project(self, project):
+    def test_it_is_refused_without_a_project_too(self, project):
         server.current_project_path = None
-        assert "error" in self._list()
+        self._refused_as_unknown()
 
 
 class TestTheSafeNameHelperOnWhatIsNotAName:
@@ -7728,11 +7738,12 @@ class TestProjectPseudonyms:
 
     @POSIX_ONLY
     def test_a_directory_is_refused_value_free(self, project):
+        # get_current_project's report since the tool that returned the
+        # list was removed (v0.15.0, the files design, piece 5)
         (project / "pseudonyms.json").mkdir()
-        assert json.loads(server.read_pseudonym_list()) == {
-            "pseudonyms_json": {"present": True, "entries": None,
-                                "error": self.NOT_REGULAR},
-            "deprecated": server.DEPRECATED_PSEUDONYM_LIST}
+        assert json.loads(server.get_current_project())[
+            "pseudonyms_json"] == {"present": True, "entries": None,
+                                   "error": self.NOT_REGULAR}
 
     def test_a_huge_file_is_refused_value_free(self, project):
         """A 64 MB file at that name is refused with the size message;
@@ -8612,11 +8623,12 @@ class TestTheDocumentsTellTheTruth:
         "`pseudonyms.json` in QualCoder's own format",
         "an audit record of which rows the run changed and not a way back "
         "(the backup is)",
-        # Brief 2 fix round 1, the owner's ruling: the list has a tool of
-        # its own.
-        "`read_pseudonym_list()` - **Sends real names to the AI "
-        "provider**: returns the entries of the project's own "
-        "`pseudonyms.json`",
+        # Brief 2 fix round 1, the owner's ruling, gave the list a tool
+        # of its own; v0.15.0 removed it (the files design, piece 5), and
+        # the brief list names the names file
+        "replace the names you list, or a list you fill in on your own "
+        "computer (`prepare_names_list`, `save_names_list`), as whole "
+        "words,",
         "`qualcoder_edit_parity` reproduces the walk QualCoder's "
         "coding-view editor applies, fed this tool's exact edit list (the "
         "editor's own diff may factor a shared prefix or suffix out of a "
@@ -8742,11 +8754,20 @@ class TestTheDocumentsTellTheTruth:
         "file holds every typed name under its typed pseudonym, which "
         "confirms an exact pair. Neither writes anything or takes a "
         "backup.",
-        "The names themselves reach the conversation only through a tool "
-        "of their own, `read_pseudonym_list` (in the full tool set, the "
-        "default, and not in core; deprecated, and removed in v0.15.1), "
-        "whose description says "
-        "first that it sends the real names to the AI provider",
+        # v0.15.0, the files design, piece 5: the tool that returned the
+        # names was removed
+        "No tool returns the names (`read_pseudonym_list` was removed in "
+        "0.15.0): you see and change the list in the names file on your "
+        "own computer (`prepare_names_list`, then `save_names_list`), whose "
+        "preview gives counts and line numbers, never a name.",
+        # its fix round 1: an older names file, the entries it cannot
+        # hold, and which file QualCoder's guidance is about
+        "A names file made before the list last changed can lack some of "
+        "its entries, which `prepare_names_list` says, and entries that "
+        "cannot be written as one line of the file stay in "
+        "`pseudonyms.json`, where you can see them. QualCoder's own "
+        "guidance is to remove `pseudonyms.json` and store it securely once "
+        "the import is done",
         "each is an audit record of which rows a run changed and where the "
         "pseudonyms now sit, kept so a run can be accounted for afterwards. "
         "It is not a way back; the backup taken before the run is.",

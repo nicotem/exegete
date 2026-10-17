@@ -591,10 +591,16 @@ included. An export from Exegete carries the replaced text, but
 file and case names as they are, and notes in full, private parts
 included; an export made in QualCoder carries the unchanged originals.
 
-For what reaches the AI assistant, they help, but they should not be
-trusted blindly. Once the names are replaced, what Exegete's tools
-return of the replaced text carries the pseudonyms. Not everything is
-replaced, though; among what still reaches the assistant through
+The list can be filled in on your own computer, in the names file
+Exegete prepares, so that the names do not pass through the
+conversation; an assistant that opens files by itself could still read
+that file ("Files Exegete keeps on your computer").
+
+For what reaches the AI assistant, the list and `pseudonymise_source`
+help, but they should not be trusted blindly. Once the names are
+replaced, what Exegete's tools return of the replaced text carries the
+pseudonyms. Not everything is replaced, though; among what still
+reaches the assistant through
 Exegete: a PDF's text, file and case names, attribute values, any name,
 or form of a name, that the list or the mapping does not match, and
 notes and journal entries unless you ask for them to be rewritten.
@@ -2037,26 +2043,18 @@ will ask, and the summary above depends on them:
     when the file holds every typed name under its typed pseudonym,
     which confirms an exact pair. Neither writes anything or takes a
     backup. `get_current_project` reports whether the file is present
-    and how many entries it has, never a name. The names themselves
-    reach the conversation only through a tool of their own,
-    `read_pseudonym_list` (in the full tool set, the default, and not
-    in core; deprecated, and removed in v0.15.1), whose description says
-    first that it sends the
-    real names to the AI provider. It
-    carries `anthropic/requiresUserInteraction`, so Claude Code (2.1.199
-    and later) asks the researcher before every call of it, in every
-    permission mode but `dontAsk`, which refuses it. Earlier Claude
-    Code, and another host in an auto mode or with approvals skipped,
-    can run it without asking (whether Cowork or Claude Desktop's
-    ordinary chat honours the mark is not documented, and this project
-    has not yet checked either in use), so for a project with a pseudonyms file keep the host
-    in its asking mode (INSTALL.md, "What hosts do with the tools' read
-    and write marks"). Each call writes one line to the server's log
-    with the count and no name. QualCoder's own
-    guidance is to remove it and store it securely once the import is
-    done (`manage_files.py` at the 9bddf17 pin), and that applies here
-    too. `speakers.json` and `speaker_regex.json` can hold names as
-    well; the preview reports whether they are present and never reads
+    and how many entries it has, never a name. No tool returns the
+    names (`read_pseudonym_list` was removed in 0.15.0): you see and
+    change the list in the names file on your own computer
+    (`prepare_names_list`, then `save_names_list`), whose preview gives
+    counts and line numbers, never a name. A names file made before the
+    list last changed can lack some of its entries, which
+    `prepare_names_list` says, and entries that cannot be written as one
+    line of the file stay in `pseudonyms.json`, where you can see them.
+    QualCoder's own guidance is to remove `pseudonyms.json` and store it
+    securely once the import is done (`manage_files.py` at the 9bddf17
+    pin), and that applies here too. `speakers.json` and
+    `speaker_regex.json` can hold names as well; the preview reports whether they are present and never reads
     them.
   - **The names file** (`Names to replace.txt`), if you made one with
     `prepare_names_list`. It sits in the project's `Exegete` folder and

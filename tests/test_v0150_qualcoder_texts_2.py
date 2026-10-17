@@ -82,6 +82,14 @@ EXPORTS = (
     "An export from Exegete carries the replaced text, but file and case "
     "names as they are, and notes in full, private parts included; an "
     "export made in QualCoder carries the unchanged originals.")
+# The files design, piece 5 (read_pseudonym_list removed): the list can
+# be filled in on the researcher's own computer, a paragraph after the
+# first (tests/test_v0150_pseudonym_list_removed.py)
+FILLED_IN = (
+    "The list can be filled in on your own computer, in the names file "
+    "Exegete prepares, so that the names do not pass through the "
+    "conversation; an assistant that opens files by itself could still read "
+    "that file (\"Files Exegete keeps on your computer\").")
 # Fix round 2: the list is a selection, a name in another form is
 # named, the condition is on the last item alone, and the long sentence
 # is three
@@ -136,9 +144,11 @@ SECTION = (
     "them in a file already in the project. They are useful for managing "
     "what you disclose to other people: a colleague or second coder you "
     "share the project with, a supervisor, or whoever receives an export. "
-    + SHARING_THE_FOLDER + " " + EXPORTS + " "
-    "For what reaches the AI assistant, they help, but they should not be "
-    "trusted blindly. "
+    + SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN + " "
+    # the files design, piece 5, fix round 1: the subject named, after
+    # the paragraph on the names file
+    "For what reaches the AI assistant, the list and `pseudonymise_source` "
+    "help, but they should not be trusted blindly. "
     + NOT_EVERYTHING + " "
     "And depending on how your assistant is set up, an assistant that "
     "meets a problem may work round it by a route outside Exegete, and "
@@ -165,7 +175,7 @@ SECTION = (
 # The phrases the design names, each looked for on its own as well
 SECTION_PHRASES = (
     "replaces participants' names as documents are imported",
-    "they help, but they should not be trusted blindly",
+    "help, but they should not be trusted blindly",
     "Nothing in Exegete saw that read",
     "a safer way is to replace them before the documents come to the "
     "computer where the assistant works",
@@ -196,13 +206,20 @@ MITIGATION = (
 README_SENTENCES = (
     "Replacing names reduces the risk; it does not make anyone anonymous. "
     "Exegete can replace them, with the project's names list as documents "
-    "come in or with `pseudonymise_source` afterwards. That helps you "
+    "come in or with `pseudonymise_source` afterwards. "
+    # the files design, piece 5
+    "The list can be one you fill in on your own computer, in a file "
+    "Exegete prepares, so the names do not pass through the conversation. "
+    # and its fix round 1: the subject named, and the names file among
+    # what an assistant can reach
+    "Replacing names helps you "
     "manage what you share with other people, though the project's folder "
     "still holds the originals and any names list. For what the assistant "
     "reads, the replacement should not be trusted blindly: Exegete's tools "
     "return the pseudonyms where names were replaced (PRIVACY.md says what "
     "is not replaced), but an assistant that opens files by itself can "
-    "reach the originals outside Exegete. To keep real names from the "
+    "reach the originals, and the names file, outside Exegete. To keep "
+    "real names from the "
     "assistant altogether, a safer way is to replace them before the "
     "documents reach the computer where the assistant works ([PRIVACY.md, "
     "\"What pseudonymisation is for\"](https://github.com/nicotem/exegete/"
@@ -346,7 +363,9 @@ class TestPrivacy:
         # where an export is offered as a use
         section = _flat(_section(_doc("PRIVACY.md"),
                                  "What pseudonymisation is for"))
-        assert (SHARING_THE_FOLDER + " " + EXPORTS
+        # (the files design, piece 5: then the paragraph on a list filled
+        # in on the researcher's own computer)
+        assert (SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN
                 + " For what reaches the AI assistant") in section
 
     def test_the_list_is_a_selection_with_its_condition_last(self):

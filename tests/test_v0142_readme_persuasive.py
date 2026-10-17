@@ -237,7 +237,17 @@ def _tools(mode="full"):
 # own coder name among the previews, set_project_coder_name among the
 # guarded changes, and "More than 8,000" tests. That takes 526
 # characters, and the limit is raised by that and no more: 38,138.
-README_LIMIT = 38_138
+# The files design, piece 5 (read_pseudonym_list removed): "Private
+# notes and names" says the list can be one filled in on your own
+# computer, in a file Exegete prepares, and "What stays on your
+# computer" names the files you fill in for a project, such as the names
+# file. That takes 304 characters, and the limit is raised by that and
+# no more: 38,442.
+# Its fix round 1: "Replacing names helps" for "That helps", and the
+# names file among what an assistant that opens files can reach. That
+# takes 32 characters, and the limit is raised by that and no more:
+# 38,474.
+README_LIMIT = 38_474
 
 
 def test_the_readme_stays_short():
@@ -618,9 +628,13 @@ def test_the_assistants_table():
             "written, the backups) do not apply to it.") in flat
     assert flat.index("**Assistants that open files by themselves.**") < \
         flat.index("| Assistant |")
-    # (the review of the redraft: the real names behind pseudonyms are not
-    # held back while a tool of the extension's default set sends them)
-    assert "read_pseudonym_list" in _tools("full")
+    # (the review of the redraft: the real names behind pseudonyms were
+    # not held back while a tool of the extension's default set sent
+    # them; v0.15.0 removed that tool (the files design, piece 5), and
+    # the paragraph still claims nothing for them, since an assistant
+    # that opens files by itself can read the project's list and the
+    # names file)
+    assert "read_pseudonym_list" not in _tools("full")
     assert "pseudonym" not in _between(
         flat, "**Assistants that open files by themselves.**",
         "| Assistant |")

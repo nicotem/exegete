@@ -437,9 +437,11 @@ class TestTheSettingsEntry:
     def test_the_approval_lines(self):
         entry = _entry()
         assert entry["default_tools_approval_mode"] == "writes"
-        assert entry["tools"] == {"read_pseudonym_list":
-                                  {"approval_mode": "prompt"}}
-        assert "read_pseudonym_list" in _full_tools()
+        # v0.15.0: no table for one tool; the one the recipe asked about
+        # whatever the server's mode, read_pseudonym_list, was removed
+        # (the files design, piece 5)
+        assert "tools" not in entry
+        assert "read_pseudonym_list" not in _full_tools()
         for key in ("startup_timeout_sec", "tool_timeout_sec"):
             assert isinstance(entry[key], int) and entry[key] > 0, key
 
@@ -495,7 +497,8 @@ class TestCodexAsksBeforeEveryChange:
         entry = _entry()
         mode = entry["default_tools_approval_mode"]
         per_tool = {name: settings["approval_mode"]
-                    for name, settings in entry["tools"].items()}
+                    for name, settings in entry.get("tools", {}).items()}
+        assert per_tool == {}
         for name, tool in _full_tools().items():
             asks = codex_asks(tool.annotations, per_tool.get(name, mode))
             assert asks == (not tool.annotations.readOnlyHint), name
@@ -506,8 +509,11 @@ class TestCodexAsksBeforeEveryChange:
         unasked = sorted(name for name, tool in tools.items()
                          if not tool.annotations.readOnlyHint
                          and not codex_asks(tool.annotations, "auto"))
-        assert "read_pseudonym_list" in unasked
-        adding = [n for n in unasked if n != "read_pseudonym_list"]
+        # v0.15.0: every tool Codex runs unasked by default adds; the one
+        # that changed nothing yet was marked not read-only,
+        # read_pseudonym_list, was removed (the files design, piece 5)
+        assert "read_pseudonym_list" not in tools
+        adding = unasked
         # 0.14.3: open_file_for_reading and import_documents add, so
         # Codex's default mode runs them unasked too, which INSTALL.md
         # says (allow the import once elsewhere); 0.15.0: and
@@ -530,8 +536,10 @@ class TestCodexAsksBeforeEveryChange:
                 "(`import_text_file`, `apply_codings`, "
                 "`create_proposed_codes`, `create_code` and the rest, "
                 "`open_file_for_reading` and `import_documents` among them "
-                "from 0.14.3, and `prepare_names_list` from 0.15.0) and "
-                "`read_pseudonym_list`") in marks
+                "from 0.14.3, and `prepare_names_list` from 0.15.0). Codex "
+                "does not read the `anthropic/requiresUserInteraction` mark "
+                "that `import_documents` and `save_names_list` carry."
+                ) in marks
 
     def test_the_rule_would_notice(self):
         from mcp.types import ToolAnnotations
@@ -552,8 +560,8 @@ class TestCodexAsksBeforeEveryChange:
                       "sends each request that needs approval to an "
                       "automatic reviewer, an AI, instead of you",
                       "**Full access** runs every tool call without asking",
-                      "for the tools that write, and for "
-                      "`read_pseudonym_list`, answer each time",
+                      # v0.15.0: no exception for the removed tool
+                      "for the tools that write, answer each time",
                       "This project has not yet run Exegete in any OpenAI "
                       "app",
                       "This project does not recommend it for a project "

@@ -137,8 +137,9 @@ class TestClaudeCodesLimitsOnEveryPython:
                        if len(d) > 4096), reverse=True)
         lengths = {name: length for length, name in over}
         long = _long_paragraph()
-        # 83 since save_names_list (the files design, piece 4)
-        said = re.search(r"On Python 3\.13, 4 of `full`'s 83 descriptions "
+        # 83 since save_names_list (the files design, piece 4), 82 since
+        # read_pseudonym_list was removed (piece 5)
+        said = re.search(r"On Python 3\.13, 4 of `full`'s 82 descriptions "
                          r"are longer than 4,096 characters \(([^)]*)\)",
                          long).group(1)
         four = re.findall(r"`(\w+)`", said)
@@ -271,8 +272,11 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
         deprecated = entry[entry.index(
             "### Deprecated: the removals move to v0.15.1"):]
         deprecated = deprecated[:deprecated.index("### ", 10)]
-        assert ("**Three more notes no longer send the researcher to "
+        # read_pseudonym_list's note went with the tool (the files
+        # design, piece 5, fix round 1), so no "more"
+        assert ("**Three notes no longer send the researcher to "
                 "QualCoder as the only way**") in deprecated
+        assert "Three more notes" not in deprecated
 
     def test_the_coding_guide_on_older_projects(self):
         guide = _flat(_read("AI_CODING_GUIDE.md"))

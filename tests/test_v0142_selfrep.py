@@ -712,6 +712,8 @@ class TestQualCoderIsOptional:
 # it): its length on Python 3.13, its length on 3.11 (3.10 to 3.12 keep a
 # docstring's indentation alike), and its characters that are not white
 # space. Taken from the descriptions as registered, in the lifecycle set.
+# (read_pseudonym_list's row went with the tool, removed in v0.15.0: the
+# files design, piece 5.)
 BEFORE = {
     "add_annotation": (1697, 1781, 1406),
     "add_journal_entry": (1137, 1193, 943),
@@ -766,7 +768,6 @@ BEFORE = {
     "prune_backups": (2994, 3198, 2430),
     "pseudonymise_source": (17365, 18449, 12728),
     "query_by_attribute": (2683, 2871, 1899),
-    "read_pseudonym_list": (1041, 1093, 861),
     "recolor_code": (1355, 1427, 1139),
     "record_suggestions": (4458, 4694, 3577),
     "rename_case": (2201, 2313, 1825),
@@ -859,8 +860,8 @@ class TestNoDescriptionGrew:
         "apply_codings", "cleanup_old_sessions", "create_attribute_type",
         "delete_code", "explain_ai_coding_tools", "export_code_report",
         "export_refi_qda", "import_text_file", "merge_proposals",
-        "pseudonymise_source", "read_pseudonym_list", "rename_file",
-        "search_files", "set_attribute"}
+        "pseudonymise_source", "rename_file", "search_files",
+        "set_attribute"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
@@ -900,8 +901,13 @@ class TestNoDescriptionGrew:
                             f"3.10 to 3.12")
         assert not grew, grew
 
+    # Reworded by 0.14.2 and removed in v0.15.0 (the files design, piece
+    # 5), with its rows in tests/test_v0142_description_cut.py
+    REMOVED_IN_0150 = {"read_pseudonym_list"}
+
     def test_the_reworded_ones_are_the_ones_the_changelog_counts(self):
-        """40 of the 74 tools 0.14.1 had, and read_brief."""
+        """40 of the 74 tools 0.14.1 had, and read_brief; one of the 40,
+        read_pseudonym_list, was removed in v0.15.0."""
         server._apply_toolset("full")
         sys.path.insert(0, str(Path(__file__).parent))
         import test_v0142_description_cut as cut
@@ -915,7 +921,9 @@ class TestNoDescriptionGrew:
                     if (name in cut.REWORDED_0142 if name in later
                         else cut._fingerprint(registered[name])[1:]
                         != (solid, digest))}
-        assert len(reworded) == 40, sorted(reworded)
+        assert not reworded & self.REMOVED_IN_0150
+        assert not self.REMOVED_IN_0150 & set(registered)
+        assert len(reworded | self.REMOVED_IN_0150) == 40, sorted(reworded)
         assert reworded == set(cut.REWORDED_0142)
         entry = _flat(_changelog_entry())
         assert ("rewritten in 40 of the 74 tools 0.14.1 had, each no longer "

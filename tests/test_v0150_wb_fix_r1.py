@@ -80,7 +80,10 @@ def _served(mode):
 class TestTheRemovalsInV0151:
 
     def test_there_are_deprecation_sentences(self):
-        assert len(DEPRECATIONS) >= 13, DEPRECATIONS
+        # 12 since read_pseudonym_list, and its sentence, were removed in
+        # v0.15.0 (the files design, piece 5)
+        assert len(DEPRECATIONS) >= 12, DEPRECATIONS
+        assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
 
     @pytest.mark.parametrize("name", DEPRECATIONS)
     def test_each_sentence_names_v0151(self, name):
@@ -143,28 +146,24 @@ def before_the_review(description):
 
 
 class TestTheNamesListsDeprecation:
+    """This round led the names list's deprecation with pseudonyms.json;
+    v0.15.0 then removed the tool rather than deprecate it (the files
+    design, piece 5), so the sentence, in either form, is in no
+    description, answer constant or document."""
 
     def test_the_sentence(self):
-        assert server.DEPRECATED_PSEUDONYM_LIST == NAMES_LIST
-        # what before_the_review puts back is what this round changed
-        description = server.mcp.original_descriptions["read_pseudonym_list"]
-        assert before_the_review(description) != description
-        description = _flat(_served("full")["read_pseudonym_list"])
-        assert NAMES_LIST in description
+        assert not hasattr(server, "DEPRECATED_PSEUDONYM_LIST")
+        assert "read_pseudonym_list" not in server.mcp.original_descriptions
+        for name, description in _served("full").items():
+            for sentence in (NAMES_LIST, OLD_NAMES_LIST):
+                assert _flat(sentence) not in _flat(description), name
 
     def test_install_and_tools(self):
         install = _flat(_read("INSTALL.md"))
-        assert ("and v0.15.1 removes it: the list stays in "
-                "`pseudonyms.json` in the project folder, which you can "
-                "open in a text editor without sending it anywhere "
-                "(QualCoder's Pseudonyms dialog, if you use it, shows it "
-                "too).") in install
         tools = _flat(_read("TOOLS.md"))
-        assert ("The list stays in `pseudonyms.json` in the project folder, "
-                "which the researcher can read in a text editor without "
-                "sending it anywhere (QualCoder's Pseudonyms dialog, the "
-                "button in Manage Files, shows it too).") in tools
         for text in (install, tools):
+            assert "v0.15.1 removes it: the list stays in" not in text
+            assert "The list stays in `pseudonyms.json`" not in text
             assert "shows the list without sending it anywhere" not in text
             assert "shows the same list without sending" not in text
 
@@ -258,8 +257,12 @@ class TestTheEntryIsOneAccount:
                       "**The extension's folder for projects.**",
                       "**New settings, all optional**", "**Imports.**",
                       "**A write now refused.**",
+                      # v0.15.0: all but read_pseudonym_list, removed
+                      # now (the files design, piece 5)
                       "**Not in this release.** The removals announced in "
-                      "0.14 for v0.15 (TOOLS.md names each) come in v0.15.1"):
+                      "0.14 for v0.15 (TOOLS.md names each), except "
+                      "`read_pseudonym_list`, removed now (above), come in "
+                      "v0.15.1"):
             assert words in upgrading, words
         # the earlier tool names in the renames' bullet, so it can be
         # used alone (whole-branch review, round 2; it kept them out)
@@ -300,8 +303,9 @@ class TestTheEntryIsOneAccount:
     def test_one_count_and_one_size(self):
         entry = _flat(_unreleased())
         assert "78 tools (80" not in entry and "80 with" not in entry
-        # 81 (83) since save_names_list (the files design, piece 4)
-        assert "81 tools (83 with the earlier names" in entry
+        # 81 (83) since save_names_list (the files design, piece 4), 80
+        # (82) since read_pseudonym_list was removed (piece 5)
+        assert "80 tools (82 with the earlier names" in entry
         sizes = re.findall(r"about (1[23],\d00) characters", entry)
         assert sizes == [f"{round(len(server.BRIEF_FULL), -2):,}"]
         assert "12,500" not in entry and "12,900" not in entry
@@ -325,9 +329,10 @@ class TestTheEntryIsOneAccount:
         # 1,497 since its fix round 1 (the renames' "may miss a 4.0 window"),
         # 2,369 since prepare_names_list (the files design, piece 3),
         # 3,668 since save_names_list (piece 4), 3,690 since its fix
-        # round 1 (the description names import_documents)
+        # round 1 (the description names import_documents), 2,380 since
+        # read_pseudonym_list was removed (piece 5)
         assert ("for most researchers, on the extension, the change is from "
-                "`lifecycle` to `full`: 3,690 characters more") in measured
+                "`lifecycle` to `full`: 2,380 characters more") in measured
         # and the figure is the difference of the two the paragraph gives,
         # so a piece that moves `full` moves it too
         full = re.search(r"full = ([\d,]+) characters", measured)

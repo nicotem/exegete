@@ -247,15 +247,18 @@ memos, annotations and journal entries, not in the text of a
 transcript, and exported files keep the whole memo, private part
 included. Replacing names reduces the risk; it does not make anyone
 anonymous. Exegete can replace them, with the project's names list as
-documents come in or with `pseudonymise_source` afterwards. That helps
-you manage what you share with other people, though the project's
-folder still holds the originals and any names list. For what the
-assistant reads, the replacement should not be trusted blindly:
-Exegete's tools return the pseudonyms where names were replaced
-(PRIVACY.md says what is not replaced), but an assistant that opens
-files by itself can reach the originals outside Exegete. To keep real
-names from the assistant altogether, a safer way is to replace them
-before the documents reach the computer where the assistant works
+documents come in or with `pseudonymise_source` afterwards. The list
+can be one you fill in on your own computer, in a file Exegete
+prepares, so the names do not pass through the conversation. Replacing
+names helps you manage what you share with other people, though the
+project's folder still holds the originals and any names list. For
+what the assistant reads, the replacement should not be trusted
+blindly: Exegete's tools return the pseudonyms where names were
+replaced (PRIVACY.md says what is not replaced), but an assistant that
+opens files by itself can reach the originals, and the names file,
+outside Exegete. To keep real names from the assistant altogether, a
+safer way is to replace them before the documents reach the computer
+where the assistant works
 ([PRIVACY.md, "What pseudonymisation is for"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#what-pseudonymisation-is-for)).
 
 **What stays on your computer**, unless a sync service such as iCloud
@@ -268,6 +271,9 @@ says where):
   opened in Apple Books joins its library, and iCloud if Books syncs);
 - the texts an import's preview read, kept in Exegete's own folder
   until the import (PRIVACY.md says for how long);
+- the files you fill in for a project, such as the names file
+  (`Names to replace.txt`, in the project's `Exegete` folder), which
+  Exegete never shows to the assistant;
 - Claude Desktop's log of the extension, with every request and answer;
 - Codex's session files, with what Codex read by itself.
 
@@ -532,7 +538,7 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 83: all, creating a project and two renamed tools' earlier names included | about 208,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `full` | 82: all, creating a project and two renamed tools' earlier names included | about 207,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every

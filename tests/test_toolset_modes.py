@@ -459,9 +459,13 @@ class TestThePublishedSchemaBudget:
     # serves neither. Its fix round 1: the description names
     # import_documents as the import that applies the list, 22 more in
     # `full` on both interpreters.
-    FULL_MEASURED = 207_934          # 83 tools, Python 3.13.5, mcp 1.30.0
+    # The files design, piece 5: read_pseudonym_list removed, its entry
+    # and separator, 1,310 characters fewer in `full` (1,362 on 3.11);
+    # `core` did not serve it, and get_current_project's description is
+    # unchanged (its answer's note changed).
+    FULL_MEASURED = 206_624          # 82 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 68_258           # 25 tools, same environment
-    FULL_MEASURED_310 = 218_446      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 217_084      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 71_690
 
     # Why two per cent, away from the reference environment.
@@ -489,9 +493,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "207,934"
+    FULL_CHARS = "206,624"
     CORE_CHARS = "68,258"
-    FULL_ROUNDED = "208,000"
+    FULL_ROUNDED = "207,000"
     CORE_ROUNDED = "68,000"
     FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"

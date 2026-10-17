@@ -1906,7 +1906,9 @@ class TestTheDocuments:
         at = lines.index(TOOLS_ENTRY)
         assert lines[at - 1].startswith("- `prepare_names_list()` - ")
         assert lines[at + 1].startswith("- `create_project(")
-        assert "registers 83 tools, two of them the earlier names" in \
+        # 82 since read_pseudonym_list was removed (the files design,
+        # piece 5)
+        assert "registers 82 tools, two of them the earlier names" in \
             _flat(tools)
 
     def test_the_changelog_says_what_was_added(self):
@@ -1987,11 +1989,14 @@ class TestTheDocuments:
         log = _flat(_read("CHANGELOG.md"))
         measured = log[log.index("### Measured"):log.index(
             "## [0.14.3-alpha]")]
+        # (piece 5's sentence on read_pseudonym_list's removal follows)
         assert ("And `save_names_list`, which saves the names file as the "
                 "list, adds its entry and its separator: 1,294 characters in "
-                "`full`, 1,358 on 3.11; `core` does not serve it. No other "
-                "tool's entry changed.") in measured
-        assert "eighteen changes moved them" in measured
+                "`full`, 1,358 on 3.11; `core` does not serve it. And "
+                "`read_pseudonym_list` was removed,") in measured
+        assert measured.count("No other tool's entry changed.") == 1
+        # nineteen since read_pseudonym_list was removed (piece 5)
+        assert "nineteen changes moved them" in measured
         server._apply_toolset("full")
         tool = next(t for t in asyncio.run(server.mcp.list_tools())
                     if t.name == "save_names_list")
@@ -2020,20 +2025,23 @@ class TestTheDocuments:
 
     def test_install_names_it_among_the_tools_carrying_the_mark(self):
         install = _flat(_read("INSTALL.md"))
-        assert ("mark Codex does not read (`import_documents` and "
-                "`save_names_list` carry it too).") in install
+        # (piece 5: the sentence names the two marked tools alone)
+        assert ("Codex does not read the `anthropic/requiresUserInteraction` "
+                "mark that `import_documents` and `save_names_list` carry."
+                ) in install
         # fix round 1: the three marked tools in Claude Code's bullet, and
         # Codex asking before the save, which changes what exists
+        # (and no longer read_pseudonym_list, removed: the files design,
+        # piece 5)
         assert ("a tool marked `anthropic/requiresUserInteraction` (here, "
-                "`read_pseudonym_list`, `import_documents` and "
-                "`save_names_list`) is asked about in every one of these "
-                "modes but `dontAsk`, which refuses it.") in install
+                "`import_documents` and `save_names_list`) is asked about in "
+                "every one of these modes but `dontAsk`, which refuses it."
+                ) in install
         assert ("`save_names_list` is also marked as changing what exists, "
                 "so Codex asks before it under `auto` too.") in install
         marked = sorted(name for name, meta in server.TOOL_META.items()
                         if meta.get("anthropic/requiresUserInteraction"))
-        assert marked == ["import_documents", "read_pseudonym_list",
-                          "save_names_list"]
+        assert marked == ["import_documents", "save_names_list"]
 
     def test_tools_says_what_3_8_2_does_with_such_names(self):
         tools = _flat(_read("TOOLS.md"))

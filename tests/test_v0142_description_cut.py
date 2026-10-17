@@ -486,7 +486,6 @@ WORDS_0141 = {
     "prune_backups": (2994, 2430, "b8ae6944043c1e4f"),
     "pseudonymise_source": (17365, 12728, "b6893aa71b9265ec"),
     "query_by_attribute": (2683, 1899, "ee3b00a292d0da3f"),
-    "read_pseudonym_list": (1041, 861, "ef606baddb82d7dd"),
     "recolor_code": (1355, 1139, "0fe80dae7a62d909"),
     "record_suggestions": (4458, 3577, "1ba15cb053d569d9"),
     "rename_case": (2201, 1825, "086ef404a0973106"),
@@ -543,7 +542,6 @@ REWORDED_0142 = {
     "propose_codes": (2692, 2141, "8ad7a5689cff30b5"),
     "prune_backups": (2990, 2427, "4ee76d2c6af4ce09"),
     "pseudonymise_source": (17353, 12719, "285a3cafd81577fe"),
-    "read_pseudonym_list": (1040, 860, "007d46e6ea19c2bf"),
     "record_suggestions": (4447, 3566, "0f2d93c94c263b3d"),
     "rename_case": (2197, 1822, "6de3b8bd6d406a77"),
     "rename_file": (3504, 2916, "b5af58742c3ce775"),
@@ -603,7 +601,9 @@ CHANGED_0143 = {
 # word, in every description that names them; explain_ai_coding_tools
 # drops its example "How do I use analyze_for_coding?"; list_backups and
 # prune_backups say "Exegete's backups" and the kind 'exegete'. Later
-# v0.15.0 pieces add their lines here.
+# v0.15.0 pieces add their lines here. The files design, piece 5, removes
+# read_pseudonym_list (ruling 78): its rows, here and in the 0.14.1 and
+# 0.14.2 tables above, went with it.
 CHANGED_0150 = {
     # the files design, piece 1: get_current_project lists the files
     # Exegete keeps for the project in its Exegete folder
@@ -611,7 +611,6 @@ CHANGED_0150 = {
     # to 2,067 characters on 3.13 (tests/test_v0150_private_files.py)
     "get_current_project": (2066, 1686, "eb39266c8cb70989"),
     "list_available_projects": (904, 716, "0117f9141c0b48ea"),
-    "read_pseudonym_list": (1114, 921, "a12932a8639d99f9"),
     # the renames, piece 3
     "compare_coders": (3004, 2458, "d2d2e9480ae8fbae"),
     "edit_suggestion": (3389, 2721, "8b47aab19f6e5052"),

@@ -188,8 +188,8 @@ class TestCanonicalJson:
             # 0.14.3: one row, as H1 promised
             "import_documents",
             # 0.15.0: and one more, correcting the researcher's own
-            # coder name
-            "set_project_coder_name"}
+            # coder name, and one more, saving the names list
+            "set_project_coder_name", "save_names_list"}
         assert pt.canonical_args("delete_code", code_id=7) == {"code_id": 7}
         with pytest.raises(KeyError):
             pt.canonical_args("set_memo", target_id=1)

@@ -524,13 +524,19 @@ SQLite's side files, and in QualCoder's backups, audio and video when
 its settings say so), and to any service that syncs the project's
 folder.
 
-When a names file is already there, Exegete reads it for counts only:
-the lines it read, the lines it could not read, and how many entries
-of the project's names list are on no line of it. Because those counts
-compare the list with the file, an assistant that adds a name to the
-list (with a typed mapping saved to it, for instance) can tell from the
-next count whether that name is in your names file; it learns nothing
-of names it does not already have. The export tools
+When a names file is already there, `prepare_names_list` reads it for
+counts only: the lines it read, the lines it could not read, and how
+many entries of the project's names list are on no line of it.
+Because those counts compare the list with the file, an assistant that
+adds a name to the list (with a typed mapping saved to it, for
+instance) can tell from the next count whether that name is in your
+names file; it learns nothing of names it does not already have. When
+you say the list is ready, `save_names_list` reads the file to check
+it: its preview gives counts, which compare the list with the file in
+the same way, and the numbers of the lines to correct, never a name;
+on your word, after a backup, it replaces the list in `pseudonyms.json`
+with the file's names, keeping only the list's entries the file cannot
+hold as a line, and the file itself stays as it is. The export tools
 refuse to write in any project's `Exegete` folder, so an export cannot
 replace a file you filled in. The names file opens in the app your
 computer uses for text files: if that app has an AI assistant of its
@@ -1253,8 +1259,8 @@ Two further rules touch files on your disk:
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
   get_current_project, start_coding_session, also under its earlier
-  name, and the restore_backup and import_documents previews, each the
-  call without a preview_token)
+  name, and the restore_backup, import_documents and save_names_list
+  previews, each the call without a preview_token)
   also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for

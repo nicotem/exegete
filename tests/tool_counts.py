@@ -9,9 +9,9 @@ files. A document's own sentence is still read word for word where a
 test reads it.
 """
 
-# Every tool, `create_project`, the two earlier names and
-# prepare_names_list included
-FULL_TOOLS = 82
+# Every tool, `create_project`, the two earlier names,
+# prepare_names_list and save_names_list included
+FULL_TOOLS = 83
 # The supervised coding set for local models, the two earlier names
 # included
 CORE_TOOLS = 25

@@ -633,7 +633,11 @@ class TestProcessScanCallersAreDocumented:
                 "list_backups", "pseudonymise_source",
                 # v0.15.0, piece 12: whether their note says what
                 # QualCoder's imports and Merge Projects can bring back
-                "rename_case", "rename_file"}
+                "rename_case", "rename_file",
+                # v0.15.0, the names list's save (its fix round 1): the
+                # preview, the call without a token, passes on the signs
+                # as restore_backup's and import_documents' do
+                "save_names_list"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's

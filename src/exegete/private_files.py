@@ -121,11 +121,15 @@ _BYTE_ORDER_MARK = b"\xef\xbb\xbf"
 class PrivateFilesError(Exception):
     """A refusal in the project's Exegete folder: `code` says which, and
     the message says why in plain words, naming no path and nothing a
-    file holds."""
+    file holds. `about_folder` says that the refusal is the folder's
+    (a link, not a folder, changed or unreadable), not the file's, which
+    shares some of its codes (v0.15.0, piece 4: save_names_list's
+    preview says which of the two it could not read)."""
 
-    def __init__(self, code: str, message: str):
+    def __init__(self, code: str, message: str, about_folder: bool = False):
         super().__init__(message)
         self.code = code
+        self.about_folder = about_folder
 
 
 def _folds_case(platform: Optional[str] = None) -> bool:
@@ -235,7 +239,8 @@ def _folder_is_a_link() -> PrivateFilesError:
         "link",
         "The project's Exegete folder is a link (a shortcut, symbolic "
         "link or junction), which Exegete does not follow. If the link "
-        "is removed, Exegete makes the folder when it is next needed.")
+        "is removed, Exegete makes the folder when it is next needed.",
+        about_folder=True)
 
 
 def _not_a_folder() -> PrivateFilesError:
@@ -244,7 +249,8 @@ def _not_a_folder() -> PrivateFilesError:
         "Something other than a folder has the name of the project's "
         "Exegete folder, so Exegete cannot keep files there. If it is "
         "moved or renamed, Exegete makes the folder when it is next "
-        "needed.")
+        "needed.",
+        about_folder=True)
 
 
 def _folder_changed() -> PrivateFilesError:
@@ -252,14 +258,16 @@ def _folder_changed() -> PrivateFilesError:
         "changed",
         "The project's Exegete folder changed while Exegete was using it "
         "(it was moved, replaced or made a link). Nothing was written or "
-        "read; asking again uses the folder as it is now.")
+        "read; asking again uses the folder as it is now.",
+        about_folder=True)
 
 
 def _folder_unreadable(exc: OSError) -> PrivateFilesError:
     return PrivateFilesError(
         "unreadable",
         "The project's Exegete folder could not be read "
-        f"({exc.strerror or 'it cannot be read'}).")
+        f"({exc.strerror or 'it cannot be read'}).",
+        about_folder=True)
 
 
 def _check_folder(top: Path) -> os.stat_result:

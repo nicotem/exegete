@@ -140,6 +140,17 @@ contributors, and the measurements.
   out of the `Exegete` folder, Exegete no longer refuses to import it,
   so you may prefer to keep it in a folder you do not ask the assistant
   to bring documents from.
+- **Saving the names list replaces `pseudonyms.json`.** When you save
+  the names file as the list (`save_names_list`), a backup of the
+  project is made first; then the list holds what the file holds:
+  entries on no line of the file are removed and a pseudonym the file
+  gives otherwise is changed (the preview warns of both, and the backup
+  keeps the list as it was), the longest real name comes first, and a
+  pseudonym holding a backslash, which an earlier list may have and
+  `prepare_names_list` copies into the file as a line, is refused until
+  you change it in the file. Entries the file cannot hold as one line
+  stay in the list as they are. Claude Code 2.1.199 and later asks
+  before both calls, and refuses them in `dontAsk`.
 - **Not in this release.** The removals announced in 0.14 for v0.15
   (TOOLS.md names each) come in v0.15.1, with the safety net; until
   then the deprecated tools and arguments work, and say so
@@ -148,7 +159,7 @@ contributors, and the measurements.
 ### Changed: one tool set called full
 
 - **`full` and `lifecycle` are one tool set, called `full`** (the
-  maintainer's decision of 12 October 2026): 80 tools (82 with the
+  maintainer's decision of 12 October 2026): 81 tools (83 with the
   earlier names of the two tools renamed below), creating a project
   and correcting your own coder name included, the default on every
   route, in the Claude Desktop extension and wherever Exegete is
@@ -934,11 +945,11 @@ for the four labels stays in NOTICE.
   answer ascribes to QualCoder, signs of a window). QualCoder merely
   installed is not a sign once that answer is no. Otherwise the
   assistant says what Exegete does and what it does not do yet. The
-  full brief is now about 13,200 characters; the opening text has not
+  full brief is now about 13,300 characters; the opening text has not
   changed.
 - **The brief's other points**: its section on how changes happen
-  names importing documents and correcting the researcher's coder name
-  among the changes that take a preview and then the preview's token;
+  names importing documents, saving the names list and correcting the
+  researcher's coder name among the changes that take a preview and then the preview's token;
   its section on QualCoder says that Exegete refuses to write while the
   project's lock file is active (QualCoder 3.8.2 has the project open,
   or another conversation is writing to it); and its help section
@@ -1053,7 +1064,7 @@ for the four labels stays in NOTICE.
   the answer gives its number in the list, never the name; it stays in
   the list. Exegete never fills in a name from the documents.
 - **A names file already there is kept as it is**, never replaced or
-  rewritten. Exegete reads it only to count: the lines it read, the
+  rewritten. `prepare_names_list` reads it only to count: the lines it read, the
   lines it could not read, and the list's entries whose real name is on
   no line (those the file cannot hold counted apart). It says when it
   cannot read the file (a link, not an ordinary file, larger than 1 MB,
@@ -1065,6 +1076,52 @@ for the four labels stays in NOTICE.
   the file holds. An assistant that opens files by itself could still
   read it, and so could an AI assistant built into the app that opens
   it (PRIVACY.md, "Files Exegete keeps on your computer").
+- **`save_names_list` saves the names file as the project's names
+  list** (in `full`, not in `core`): the list `import_documents`
+  applies as documents come in. It takes two calls; Claude Code asks
+  before both (`anthropic/requiresUserInteraction`). The first reads
+  the file and the list and gives a preview of counts and line
+  numbers, never a name: the lines it read; by line number, the lines
+  it could not read, those with an empty side, a real name listed
+  twice, a pseudonym that is also a listed real name, and a line
+  breaking one of Exegete's rules for names lists; and, as counts, more
+  than 500 entries, or entries kept from the list that clash with the
+  lines. While any of these needs correcting, nothing can be saved: you
+  correct the file, save it, and the assistant previews again. As
+  warnings that do not stop the save, it gives a pseudonym that would
+  put a listed name back, one pseudonym on several lines, entries the
+  save would remove from the list or give another pseudonym (the file
+  may be older than the list), entries kept from the list whose
+  pseudonym holds a backslash, and real names that some of QualCoder's
+  imports read as a pattern (below); and how many entries the list
+  gains, changes and loses. Like the import's preview, it passes on
+  the signs that QualCoder 4.0 may have the project open.
+- **What the save writes.** A pseudonym on a line holding a backslash
+  is refused, which QualCoder's Pseudonyms dialog accepts: a program
+  that applies the list with Python's `re.sub`, QualCoder's import
+  among them, reads a backslash as an instruction rather than a letter.
+  One pseudonym on several lines is written, with its warning, where
+  the dialog refuses a second entry with a pseudonym already in use:
+  forms of one person's name share one, and QualCoder reads such a list
+  as it reads its own. On your word, the second call makes a backup of
+  the project, then writes `pseudonyms.json` in QualCoder's format, the
+  longest real name first, so that an import applying the list entry by
+  entry, as QualCoder's text and transcript imports do, replaces "Mary
+  Ann" before "Ann"; there two names that overlap without either
+  containing the other (Mary Ann and Ann Lee, in Mary Ann Lee) can
+  still come out differently from Exegete's import, and a pseudonym
+  that contains a listed name is rewritten again. QualCoder 3.8.2's
+  text and survey imports, and QualCoder 4.0's survey import and its
+  replacement of a document with a newer file, put each real name into
+  a pattern as it is written, so a real name holding a bracket, a
+  question mark or another sign a pattern reads, or beginning or ending
+  with a character that is not a letter or a digit, may be left in the
+  text there; the preview warns of such names by line number. Entries
+  the names file cannot hold stay in the list as they are. The names
+  file itself is never changed, and stays the place to change the list.
+  Documents already in the project keep their text:
+  `pseudonymise_source` with `use_project_pseudonyms` replaces the
+  names in them, a file at a time.
 - **Exports are not written in a project's `Exegete` folder**, any
   project's: the export tools refuse such a place, as the import
   refuses to read from one, so an export cannot replace a names file.
@@ -1137,17 +1194,17 @@ for the four labels stays in NOTICE.
 
 ### Measured
 
-- Serialised tool JSON: full = 206,613 characters (about 51.7k tokens
-  at chars/4) over 82 tools, and core = 68,258 (about 17.1k) over 25,
+- Serialised tool JSON: full = 207,934 characters (about 52.0k tokens
+  at chars/4) over 83 tools, and core = 68,258 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.14.3's tree it gives exactly
   0.14.3's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.14.3's figures for its tree), 217,061 and
+  which also gives exactly 0.14.3's figures for its tree), 218,446 and
   71,690. Against 0.14.3's figures (201,739 over 77 tools, 67,225, and
   the `lifecycle` set's, the extension's default, 204,244 over 78, on
-  3.13), seventeen changes moved them; for most researchers, on the
-  extension, the change is from `lifecycle` to `full`: 2,369 characters
+  3.13), eighteen changes moved them; for most researchers, on the
+  extension, the change is from `lifecycle` to `full`: 3,690 characters
   more. `full` and `lifecycle` became one set of 78 tools, so
   `full` starts from what `lifecycle` measured: the same 78
   descriptions, none marked, listed in another order. And three
@@ -1213,8 +1270,11 @@ for the four labels stays in NOTICE.
   `start_coding_session` 4 and `get_current_project` 1) and 17 fewer in
   `core`, on both interpreters.
   And `prepare_names_list`, the names file's tool, adds its entry and
-  its separator: 872 characters in `full`, 916 on 3.11; `core` does
-  not serve it.
+  its separator: 899 characters in `full`, 943 on 3.11, its pointer to
+  `save_names_list` included; `core` does not serve it.
+  And `save_names_list`, which saves the names file as the list, adds
+  its entry and its separator: 1,294 characters in `full`, 1,358 on
+  3.11; `core` does not serve it.
   No other tool's entry changed.
 - Claude Code now keeps 4,096 characters of a tool's description, and
   16,384 through its tool search (2,048 before its version 2.1.296):
@@ -1226,7 +1286,7 @@ for the four labels stays in NOTICE.
   how to set one). The rules the
   tests hold within the first 2,048 characters are kept there as a
   margin; the shortening of the descriptions comes with v0.15.2. The
-  opening text is 2,034 characters and the full brief 13,240.
+  opening text is 2,034 characters and the full brief 13,263.
 
 ## [0.14.3-alpha] - 2026-10-12
 

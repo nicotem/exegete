@@ -575,10 +575,10 @@ for a way round it.
   you call the tool at the researcher's request, with a backup of the
   project first, unless the researcher asks for none.
 - Deleting or merging codes and categories, restoring or pruning
-  backups, pseudonymising a file, importing documents and correcting
-  the researcher's coder name take two steps: a preview, which you show
-  the researcher in plain words, then the call with the preview's token
-  once they agree.
+  backups, pseudonymising a file, importing documents, saving the names
+  list and correcting the researcher's coder name take two steps: a
+  preview, which you show the researcher in plain words, then the call
+  with the preview's token once they agree.
 - To undo: delete_coding removes one coding; restore_backup returns the
   project to an earlier state.
 - Rows you write carry the project's AI coder name, which the
@@ -883,6 +883,10 @@ TOOL_META = {
     # import, the preview and then the import; Claude Code asks before
     # both calls (the design's "Asking every time").
     "import_documents": {"anthropic/requiresUserInteraction": True},
+    # save_names_list (v0.15.0): the list it saves changes every later
+    # import, so the researcher approves both calls (the lead's answer to
+    # the design's open point 1)
+    "save_names_list": {"anthropic/requiresUserInteraction": True},
 }
 
 def _argument_name_for_display(name: Any) -> str:
@@ -5464,7 +5468,8 @@ PREPARE_NAMES_LIST_WHERE = (
     "(or, when it could not be opened, where it is).")
 PREPARE_NAMES_LIST_FILL_IN = (
     "They write each real name and its pseudonym on a line of their own, "
-    "save the file, and tell you when the list is ready.")
+    "save the file, and tell you when the list is ready; then call "
+    "save_names_list.")
 PREPARE_NAMES_LIST_NEVER_OPEN = (
     "Never open or read the file yourself, even when a file tool could.")
 PREPARE_NAMES_LIST_NEXT_STEP = " ".join((
@@ -5592,8 +5597,8 @@ def prepare_names_list() -> str:
     already there is kept as it is. Then shows it in its folder and opens
     it in the computer's text editor. Exegete never fills in names from
     the documents and never returns the file's contents. Tell the
-    researcher to fill it in, save it and say when the list is ready.
-    Never open or read the file yourself.
+    researcher to fill it in, save it and say when the list is ready;
+    then call save_names_list. Never open or read the file yourself.
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -5671,6 +5676,647 @@ def prepare_names_list() -> str:
     else:
         logger.info("prepare_names_list kept the names file that was there.")
     return json.dumps(answer, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Saving the names list (v0.15.0, the files design, piece 4): the names
+# file checked, then saved as the project's pseudonyms.json, after a
+# backup; a preview of counts and line numbers, never a name (ruling 73,
+# item 9; ruling 78; the lead's answers of 17 October 2026)
+# ---------------------------------------------------------------------------
+
+NO_NAMES_FILE = (
+    "There is no names file in this project's Exegete folder. Call "
+    "prepare_names_list to make one.")
+# The design's words for a names file not read, by the reader's code
+NAMES_FILE_NOT_READABLE = {
+    "link": "The names file is a link, which Exegete does not follow, so "
+            "it was not read.",
+    "not_a_file": "The names file is not an ordinary file, so it was not "
+                  "read.",
+    "too_large": "The names file is larger than 1 MB, so it was not read.",
+}
+# Where the design was silent: the reader's two other refusals of the
+# file, and any of the folder's, which carries its own words
+NAMES_FILE_CHANGED = (
+    "The names file changed while Exegete was reading it, so it was not "
+    "read. Preview again to read it as it is now.")
+# Fix round 1: the refusals that ask the researcher to act on the file
+# end with piece 3's sentence on never opening it (a small departure from
+# the design's words for the last two, the lead's call), and the UTF-8
+# refusal gains piece 3's clause on choosing the encoding
+NAMES_FILE_UNREADABLE = (
+    "The system refused to read the names file, so it was not read. The "
+    "researcher can check that they can open it in their text editor; "
+    "then preview again. " + PREPARE_NAMES_LIST_NEVER_OPEN)
+NAMES_FILE_IN_FOLDER_NOT_READ = "So the names file was not read."
+NAMES_FILE_NOT_UTF8 = (
+    "The names file is not saved as UTF-8 text. Ask the researcher to save "
+    "it again as plain text in UTF-8 (most text editors offer the encoding "
+    "when saving a file), then preview again. "
+    + PREPARE_NAMES_LIST_NEVER_OPEN)
+NAMES_FILE_EMPTY = (
+    "The names file holds no names yet, only notes or blank lines. Ask the "
+    "researcher to fill it in and save it, then preview again. "
+    + PREPARE_NAMES_LIST_NEVER_OPEN)
+NAMES_LIST_UNREADABLE_ADVICE = (
+    "Exegete does not replace a names list it cannot read. The researcher "
+    "can correct pseudonyms.json in a text editor, or move it out of the "
+    "project folder, then preview again.")
+NAMES_LIST_CANNOT_BE_SAVED = "The names list cannot be saved: {detail}."
+# Fix round 1: what the researcher can do, by the refusal's reason; the
+# detail itself is the merge's, words unchanged
+NAMES_LIST_CANNOT_BE_SAVED_ADVICE = {
+    "pseudonyms_json_is_a_link": (
+        "If the researcher wants the list saved, they can replace the link "
+        "with the file it points to, then preview again."),
+    "pseudonyms_json_read_only": (
+        "If the researcher wants the list saved, they can make the file "
+        "writable again, then preview again."),
+}
+RULE_NOT_DESCRIBED = (
+    "The list breaks a rule of Exegete's for names lists that this preview "
+    "does not describe, so it cannot be saved.")
+SAVE_NAMES_LIST_HINT = (
+    "Show the researcher these counts; call again with preview_token only "
+    "on their word.")
+# Where the design was silent: what the assistant does with a preview
+# that holds lines to correct, and a sentence for each kind of problem
+SAVE_NAMES_LIST_CORRECT = (
+    "Nothing was saved. Show the researcher these counts and line numbers "
+    "(counted from the first line of the file, the lines of instructions "
+    "at the top included; many text editors show a line's number or can "
+    "go to one, and in one that shows none, such as TextEdit, count from "
+    "the top). They correct those lines in the names file, save it and "
+    "tell you; then call save_names_list again for a fresh preview.")
+SAVE_NAMES_LIST_NOT_READ = (
+    "A line not read has no separator, or more than one: =, =>, ->, →, a "
+    "tab, or a single comma on a line with none of the others; a tab "
+    "cannot be seen, and one at the end of a line counts.")
+SAVE_NAMES_LIST_TOO_MANY = (
+    f"Exegete saves at most {pseudo.MAX_ENTRIES} entries in a names list "
+    f"(entries_after counts them): the researcher can take out lines they "
+    f"do not need.")
+SAVE_NAMES_LIST_KEPT_CONFLICT = (
+    "Some entries of the project's names list cannot be written as a line "
+    "of the names file, so they are kept in the list as they are; those "
+    "counted in kept_entries_in_conflict cannot be saved beside the lines: "
+    "the real name of one is a pseudonym on a line, its pseudonym is a "
+    "real name on a line, it repeats a real name of another such entry or "
+    "uses one as its pseudonym, or it breaks one of Exegete's rules for "
+    "names lists. The researcher can change the lines whose names those "
+    "entries use, or correct or remove those entries in pseudonyms.json, "
+    "in the project folder, in a text editor (changing it by hand can make "
+    "the list unreadable).")
+# Fix round 1: what Exegete's imports do and what an import applying the
+# list entry by entry does (pseudonymise_source's note says the same of a
+# list it saves), and a sentence for entries that are on no line
+SAVE_NAMES_LIST_PUT_BACK = (
+    "Warning: a pseudonym on the lines in pseudonyms_putting_a_name_back "
+    "contains a name from the list, so where Exegete applies the list it "
+    "puts that name back; an import that applies the list one entry at a "
+    "time, as QualCoder's does, can replace it again, so the two store "
+    "different text. A pseudonym that puts a name back inside a longer "
+    "word is not caught by this check. The researcher may mean it; "
+    "otherwise they can choose a pseudonym that contains no name from the "
+    "list.")
+SAVE_NAMES_LIST_PUT_BACK_KEPT = (
+    "Those counted in kept_entries are entries of the project's names "
+    "list, on no line of the names file: the researcher can change them in "
+    "pseudonyms.json, in the project folder, in a text editor (changing it "
+    "by hand can make the list unreadable).")
+# A named departure from QualCoder's Pseudonyms dialog, which refuses a
+# second entry with a pseudonym already in use (`pseudonyms.py:87-89` in
+# the 4.0 sources): the save writes one pseudonym on several lines, with
+# this warning, since forms of one person's name share one; QualCoder's
+# import and dialog read such a list as they read their own
+SAVE_NAMES_LIST_SHARED = (
+    "The same pseudonym on more than one line: right for forms of one "
+    "person's name, wrong for two people.")
+# The lead's answer of 17 October 2026: a names file older than the
+# project's list makes the preview warn, and the researcher decides
+SAVE_NAMES_LIST_REMOVES = (
+    "Warning: saving removes entries from the project's names list "
+    "(effect.removed counts them): they are in pseudonyms.json and on no "
+    "line of the names file. "
+    "That is right if the researcher took those lines out. If the names "
+    "file is older than the list (names were added to the list since the "
+    "file was made), those entries would be lost from it: ask the "
+    "researcher which. To keep them, they add them to the names file and "
+    "you preview again. To find them, they can compare the file with "
+    "pseudonyms.json, in the project folder, in a text editor (looking at "
+    "it changes nothing; changing it by hand can make the list "
+    "unreadable); or they can rename the names file, leaving it in the "
+    "project's Exegete folder, and you call prepare_names_list for a new "
+    "one made from the list, into which they copy their own lines from "
+    "the renamed file. The backup made before the save keeps the list as "
+    "it was.")
+# Fix round 1: the same for a pseudonym the save would change, which an
+# older names file gives too
+SAVE_NAMES_LIST_CHANGES = (
+    "Warning: saving gives some real names another pseudonym than the "
+    "project's names list gives them now (effect.changed counts them). "
+    "That is right if the researcher changed those pseudonyms in the names "
+    "file. If the names file is older than the list (pseudonyms were "
+    "changed in the list since the file was made), the older pseudonyms "
+    "would come back: ask the researcher which. Documents already in the "
+    "project keep their text, so documents imported later would give "
+    "those people other pseudonyms than earlier ones.")
+# Fix round 1: entries kept from the list whose pseudonym holds a
+# backslash, which the rule refuses on a line, said rather than kept
+# without a word
+SAVE_NAMES_LIST_KEPT_BACKSLASH = (
+    "Warning: some entries of the project's names list that the names file "
+    "cannot hold (kept_entries_with_a_backslash counts them) have a "
+    "pseudonym holding a backslash. They are kept as they are, since they "
+    "are on no line of the file. A program that applies the list with "
+    "Python's re.sub, QualCoder's import among them, reads a backslash as "
+    "an instruction rather than a letter, so there it may fail or write "
+    "something else. The researcher can change those pseudonyms in "
+    "pseudonyms.json, in the project folder, in a text editor (changing it "
+    "by hand can make the list unreadable).")
+# Fix round 1: real names that QualCoder 3.8.2's text and survey imports,
+# and 4.0's survey import and replacement of a document, put into a
+# pattern as written (`manage_files.py:2039` and `import_survey.py:137` at
+# 3.8.2; `import_survey.py:138` and `text_file_replacement.py:356` at
+# 4.0), where Exegete's imports and 4.0's text and transcript imports
+# escape them
+SAVE_NAMES_LIST_PATTERN = (
+    "Warning: the real names on the lines in real_names_read_as_patterns "
+    "hold a sign that a pattern reads as an instruction (one of \\ [ ] ( ) "
+    "{ } ^ $ | ? * +), or begin or end with a character that is not a "
+    "letter or a digit. Exegete's imports replace them as written. "
+    "QualCoder 3.8.2's text and survey imports, and QualCoder 4.0's survey "
+    "import and its replacement of a document with a newer file, put each "
+    "real name into a pattern as it is written: for those who use them, "
+    "such a name may be left in the text, stop the import with an error, "
+    "or replace other words. The researcher may want to check what those "
+    "imports store.")
+# Fix round 1: QualCoder 4.0's window signs, passed on as the import's and
+# the restore's previews pass them on, never a refusal
+SAVE_NAMES_LIST_GUI_HINT = (
+    "This project appears to be open in QualCoder ({signs}). That is a "
+    "heuristic (QualCoder 4.0 writes no lock file), so ask the researcher "
+    "whether a QualCoder window has this project open, and save only once "
+    "it is closed: QualCoder's Pseudonyms dialog keeps the list it read "
+    "when it opened and, at its next change, writes that copy over "
+    "pseudonyms.json, so the entries this save writes would be lost from "
+    "it.")
+NO_BACKUP_NAMES_LIST = (
+    "No backup could be made, so the names list was not saved. The "
+    "researcher can check that the disk has free space and that the "
+    "project folder can be written to, then preview again.")
+# restore_backup's words for a backup taken before a change was found
+BACKUP_KEPT_ANYWAY = (
+    " A backup had already been taken before the change was detected; it "
+    "is unchanged and can be pruned.")
+NAMES_LIST_NOT_WRITTEN = (
+    "pseudonyms.json could not be written ({kind}), so the names list was "
+    "not saved and is as it was. The backup made first is kept: {backup}.")
+# Fix round 1: which import applies the list and to what, and what an
+# import applying it entry by entry does with names that overlap
+# (pseudonymise_source's words for a list it saves)
+SAVE_NAMES_LIST_NOTE = (
+    "The names list is saved as pseudonyms.json. import_documents applies "
+    "it to the documents it brings in from now on, unless asked not to; "
+    "documents already in the project keep their text, and "
+    "pseudonymise_source with use_project_pseudonyms replaces the names in "
+    "them, a file at a time. Exegete applies the list in one pass, longest "
+    "name first, so nothing it writes is replaced again; QualCoder's text "
+    "and transcript imports, for those who use them, apply it one entry at "
+    "a time in the file's order, which is why it is saved longest real "
+    "name first; there two names that overlap without either containing "
+    "the other (Mary Ann and Ann Lee, in Mary Ann Lee) can come out "
+    "differently, and a pseudonym that contains a name from the list is "
+    "rewritten again. The names file stays as the place to change the "
+    "list: edit it, save it, and call save_names_list again.")
+# The words for a line not read, by the reader's reason
+_NOT_READ_WORDS = {
+    names_file.NO_SEPARATOR: "no separator",
+    names_file.MORE_THAN_ONE_SEPARATOR: "more than one separator",
+}
+# Each list of line numbers the preview gives stops here, with its count
+MAX_PREVIEW_LINES = 200
+
+
+class _NamesListReview(NamedTuple):
+    """One reading of the names file and the project's list: a refusal
+    (`refusal`), or the preview, the state its token signs, whether
+    anything blocks, and what a save writes. Never quoted whole."""
+    refusal: Optional[Dict[str, Any]]
+    preview: Optional[Dict[str, Any]] = None
+    rows: Optional[Dict[str, Any]] = None
+    blocking: bool = False
+    warnings: Optional[List[str]] = None
+    data: Optional[List[Any]] = None
+    existing_mode: Optional[int] = None
+
+
+def _names_review_refusal(reason: str, text: str) -> _NamesListReview:
+    return _NamesListReview({"error": text, "reason": reason,
+                             "nothing_changed": True})
+
+
+def _capped(lines: List[Any]) -> Dict[str, Any]:
+    """A list of line numbers (or of {line, ...}) as the preview gives it:
+    its full count, and at most MAX_PREVIEW_LINES of it."""
+    return {"count": len(lines), "lines": lines[:MAX_PREVIEW_LINES]}
+
+
+# The signs a pattern reads as an instruction, which QualCoder 3.8.2's text
+# import (and 4.0's survey import and replacement of a document) leave
+# unescaped in a real name; the full stop is left out, since such a name is
+# still replaced (with others beside it)
+_PATTERN_SIGNS = frozenset("\\[](){}^$|?*+")
+_WORD_CHARACTER = re.compile(r"\w")
+
+
+def _read_as_a_pattern(real_name: str) -> bool:
+    """Whether `rf"\\b{real_name}\\b"`, as those imports build it, fails
+    to find `real_name` as written: a sign a pattern reads, or a first or
+    last character for which `\\b` needs a letter or digit beside it."""
+    return bool(real_name) and (
+        any(c in _PATTERN_SIGNS for c in real_name)
+        or not _WORD_CHARACTER.match(real_name[0])
+        or not _WORD_CHARACTER.match(real_name[-1]))
+
+
+def _names_file_not_readable(e: "private_files.PrivateFilesError") -> str:
+    if e.about_folder:
+        return f"{e} {NAMES_FILE_IN_FOLDER_NOT_READ}"
+    if e.code == "changed":
+        return NAMES_FILE_CHANGED
+    return NAMES_FILE_NOT_READABLE.get(e.code, NAMES_FILE_UNREADABLE)
+
+
+def _names_list_review(folder: Path) -> _NamesListReview:
+    """The names file and the project's list, each read once, checked and
+    compared (the design's steps 1 to 7): a refusal, or the preview with
+    what a save would write. Never a name in what it returns but `data`,
+    which goes to the file and nowhere else."""
+    # 1. The names file
+    try:
+        raw_file = private_files.read_bytes(folder, private_files.NAMES_FILE)
+    except FileNotFoundError:
+        return _names_review_refusal("no_names_file", NO_NAMES_FILE)
+    except private_files.PrivateFilesError as e:
+        return _names_review_refusal("names_file_not_readable",
+                                     _names_file_not_readable(e))
+    # 2. UTF-8, and 3. its lines. A file with only notes or blank lines
+    # is empty; one with lines not read goes on, for their numbers
+    try:
+        text = names_file.decode(raw_file)
+    except names_file.NotUtf8:
+        return _names_review_refusal("names_file_not_utf8",
+                                     NAMES_FILE_NOT_UTF8)
+    parsed = names_file.parse(text)
+    if not (parsed.pairs or parsed.not_read or parsed.empty_side):
+        return _names_review_refusal("names_file_empty", NAMES_FILE_EMPTY)
+    # 4. The list now: the save's two refusals first, then one read
+    path = folder / PSEUDONYMS_JSON_NAME
+    try:
+        _pseudonyms_json_check_writable(path)
+    except _SaveRefused as e:
+        return _names_review_refusal(
+            e.reason, " ".join(filter(None, (
+                NAMES_LIST_CANNOT_BE_SAVED.format(detail=e.detail),
+                NAMES_LIST_CANNOT_BE_SAVED_ADVICE.get(e.reason)))))
+    existing: List[Dict[str, str]] = []
+    raw_list: List[Any] = []
+    existing_mode: Optional[int] = None
+    if os.path.lexists(str(path)):
+        try:
+            existing, _encoding, raw_list, existing_mode = \
+                read_project_pseudonyms_with_raw(folder)
+        except (ValueError, OSError, LookupError, RuntimeError) as e:
+            return _names_review_refusal(
+                "pseudonyms_json_unreadable",
+                f"{_pseudonyms_json_error(e)} {NAMES_LIST_UNREADABLE_ADVICE}")
+    # 5. The checks, by line number
+    pairs = parsed.pairs
+    first_line: Dict[str, Tuple[int, str]] = {}
+    lines_of: Dict[str, List[int]] = {}
+    users_of: Dict[str, List[int]] = {}
+    for line, real_name, pseudonym in pairs:
+        first_line.setdefault(real_name, (line, pseudonym))
+        lines_of.setdefault(real_name, []).append(line)
+        users_of.setdefault(pseudonym, []).append(line)
+    twice = sorted(line for lines in lines_of.values() if len(lines) > 1
+                   for line in lines)
+    also_real = [line for line, _, pseudonym in pairs
+                 if pseudonym in lines_of]
+    breaking: List[Dict[str, Any]] = []
+    breaking_lines = set()
+    for line, real_name, pseudonym in pairs:
+        for value, kind in ((real_name, "name"), (pseudonym, "pseudonym")):
+            rule = pseudo.rule_broken(value, kind)
+            if rule is not None:
+                breaking.append({"line": line,
+                                 "rule": pseudo.RULE_WORDS[rule]})
+                breaking_lines.add(line)
+    # The list's entries the names file cannot hold as one line, kept as
+    # they are unless a line gives the same real name (piece 3's open
+    # point 3); those that cannot be saved beside the lines are counted
+    first: Dict[str, int] = {}
+    for index, entry in enumerate(existing):
+        first.setdefault(entry["original"], index)
+    kept = [index for index, entry in enumerate(existing)
+            if entry["original"] not in lines_of
+            and names_file.format_entry(entry["original"],
+                                        entry["pseudonym"]) is None]
+    kept_names = [existing[index]["original"] for index in kept]
+    in_conflict = 0
+    clean_kept = []
+    for index in kept:
+        original = existing[index]["original"]
+        pseudonym = existing[index]["pseudonym"]
+        rules = (pseudo.rule_broken(original, "name"),
+                 pseudo.rule_broken(pseudonym, "pseudonym"))
+        if (pseudonym in lines_of or original in users_of
+                or kept_names.count(original) > 1
+                or pseudonym in kept_names
+                or any(rule not in (None, "pseudonym_backslash")
+                       for rule in rules)):
+            in_conflict += 1
+        else:
+            clean_kept.append(index)
+    # Fix round 1: the entries a save writes, as entries_after counts them
+    # (one per real name, and the kept entries); a name on two lines
+    # blocks the save on its own
+    too_many = len(first_line) + len(kept) > pseudo.MAX_ENTRIES
+    not_read = [{"line": line, "reason": _NOT_READ_WORDS[reason]}
+                for line, reason in parsed.not_read]
+    blocking = bool(not_read or parsed.empty_side or twice or also_real
+                    or breaking or too_many or in_conflict)
+    # The two warnings: a pseudonym holding a name, checked on the lines
+    # and kept entries that need no correcting, and one pseudonym on
+    # several lines
+    flagged = set(twice) | set(also_real) | breaking_lines
+    clean = [pair for pair in pairs if pair[0] not in flagged]
+    subset = ([{"original": real_name, "pseudonym": pseudonym}
+               for _, real_name, pseudonym in clean]
+              + [{"original": existing[index]["original"],
+                  "pseudonym": existing[index]["pseudonym"]}
+                 for index in clean_kept])
+    put_back: List[int] = []
+    put_back_kept = 0
+    if subset and len(subset) <= pseudo.MAX_ENTRIES:
+        try:
+            compiled = pseudo.Compiled(pseudo.validate_mapping(
+                subset, case_mode="exact", may_echo_names=False))
+        except pseudo.MappingError:
+            compiled = None
+        if compiled is not None:
+            for entry in sorted({item["entry"] for item in
+                                 pseudo.pseudonyms_containing_a_name(
+                                     compiled)}):
+                if entry < len(clean):
+                    put_back.append(clean[entry][0])
+                else:
+                    put_back_kept += 1
+    shared = sorted(line for lines in users_of.values() if len(lines) > 1
+                    for line in lines)
+    # Fix round 1: two warnings that do not block, real names some of
+    # QualCoder's imports read as a pattern, and kept entries holding a
+    # backslash
+    patterns = [line for line, real_name, _ in pairs
+                if _read_as_a_pattern(real_name)]
+    kept_backslash = sum(1 for index in kept
+                         if "\\" in existing[index]["pseudonym"])
+    # 6. The guard: the engine's own check of the list a save would write
+    if not blocking:
+        to_save = ([{"original": real_name, "pseudonym": pseudonym}
+                    for _, real_name, pseudonym in pairs]
+                   + [{"original": existing[index]["original"],
+                       "pseudonym": existing[index]["pseudonym"]}
+                      for index in kept])
+        try:
+            pseudo.validate_mapping(to_save, case_mode="exact",
+                                    may_echo_names=False)
+        except pseudo.MappingError:
+            return _names_review_refusal("rule_not_described",
+                                         RULE_NOT_DESCRIBED)
+    # 7. The effect against the list now, keyed by the real name compared
+    # exactly; the list a save writes, longest real name first
+    items: List[Tuple[str, Any]] = []
+    added = changed = unchanged = 0
+    for real_name, (_line, pseudonym) in first_line.items():
+        index = first.get(real_name)
+        if index is None:
+            added += 1
+        elif existing[index]["pseudonym"] == pseudonym:
+            unchanged += 1
+            items.append((real_name, raw_list[index]))
+            continue
+        else:
+            changed += 1
+        items.append((real_name, {"original": real_name,
+                                  "pseudonym": pseudonym}))
+    kept_set = set(kept)
+    removed = sum(1 for index, entry in enumerate(existing)
+                  if index not in kept_set
+                  and not (entry["original"] in lines_of
+                           and first[entry["original"]] == index))
+    items.extend((existing[index]["original"], raw_list[index])
+                 for index in kept)
+    # A stable sort: equal lengths keep the names file's order, then the
+    # kept entries in the list's order
+    ordered = sorted(items, key=lambda item: -len(item[0]))
+    both = {real_name for real_name, _ in items} & set(first)
+    now = [entry["original"] for index, entry in enumerate(existing)
+           if entry["original"] in both and first[entry["original"]] == index]
+    after = [real_name for real_name, _ in ordered if real_name in both]
+    put_back_block = _capped(put_back)
+    if put_back_kept:
+        put_back_block["kept_entries"] = put_back_kept
+    preview = {
+        "lines_read": len(pairs),
+        "lines_not_read": _capped(not_read),
+        "empty_sides": _capped(parsed.empty_side),
+        "real_names_listed_twice": _capped(twice),
+        "pseudonyms_also_real_names": _capped(also_real),
+        "lines_breaking_a_rule": {"count": len(breaking_lines),
+                                  "lines": breaking[:MAX_PREVIEW_LINES]},
+        "too_many_names": too_many,
+        "kept_entries_in_conflict": in_conflict,
+        "pseudonyms_putting_a_name_back": put_back_block,
+        "pseudonyms_on_more_than_one_line": _capped(shared),
+        "real_names_read_as_patterns": _capped(patterns),
+        "kept_entries_with_a_backslash": kept_backslash,
+        "effect": {
+            "entries_after": len(items),
+            "added": added,
+            "changed": changed,
+            "removed": removed,
+            "unchanged": unchanged,
+            "kept_entries_the_file_cannot_hold": len(kept),
+            "order_changed": now != after,
+        },
+    }
+    warnings = []
+    if put_back or put_back_kept:
+        warnings.append(SAVE_NAMES_LIST_PUT_BACK + (
+            " " + SAVE_NAMES_LIST_PUT_BACK_KEPT if put_back_kept else ""))
+    if shared:
+        warnings.append(SAVE_NAMES_LIST_SHARED)
+    if removed:
+        warnings.append(SAVE_NAMES_LIST_REMOVES)
+    if changed:
+        warnings.append(SAVE_NAMES_LIST_CHANGES)
+    if kept_backslash:
+        warnings.append(SAVE_NAMES_LIST_KEPT_BACKSLASH)
+    if patterns:
+        warnings.append(SAVE_NAMES_LIST_PATTERN)
+    rows = {"names_file": hashlib.sha256(raw_file).hexdigest(),
+            "list": pseudonyms_json_fingerprint(folder)}
+    return _NamesListReview(None, preview, rows, blocking, warnings,
+                            [item for _, item in ordered], existing_mode)
+
+
+def _names_list_correct_step(preview: Dict[str, Any]) -> str:
+    """What the assistant does with a preview that holds lines to
+    correct, with a sentence for each kind of problem it holds."""
+    step = [SAVE_NAMES_LIST_CORRECT]
+    if preview["lines_not_read"]["count"]:
+        step.append(SAVE_NAMES_LIST_NOT_READ)
+    if preview["too_many_names"]:
+        step.append(SAVE_NAMES_LIST_TOO_MANY)
+    if preview["kept_entries_in_conflict"]:
+        step.append(SAVE_NAMES_LIST_KEPT_CONFLICT)
+    # Fix round 1: the moment an assistant with file tools of its own is
+    # most tempted to look, so the step ends as prepare_names_list's do
+    step.append(PREPARE_NAMES_LIST_NEVER_OPEN)
+    return " ".join(step)
+
+
+@mcp.tool(annotations=TOOL_CHANGES)
+@_tool_guard
+def save_names_list(preview_token: Optional[str] = None) -> str:
+    """Check the names file the researcher filled in on their own computer
+    (see prepare_names_list) and save it as the project's names list,
+    pseudonyms.json, in QualCoder's format, which import_documents applies
+    to later imports. Two calls. Without preview_token: a preview of counts and line
+    numbers, never a name: lines read, lines it could not read, lines
+    with an empty side, a real name listed twice, a pseudonym that is
+    also a listed real name, a line breaking one of Exegete's rules, a
+    pseudonym that would put a listed name back, and how many entries the
+    list gains, changes and loses. Show the researcher the preview. When
+    lines need correcting, they correct them in the file and you preview
+    again; with nothing to correct, the preview gives a token. Only on the
+    researcher's word, call again with preview_token. A backup of the
+    project is made first. Never open or read the file yourself.
+
+    Args:
+        preview_token: the token from this save's preview; omit it to get
+                       the preview
+    """
+    _adopt_configured_project()
+    if current_project_path is None:
+        return json.dumps({"error": _no_project_message()}, indent=2)
+    folder = _current_project_folder()
+    review = _names_list_review(folder)
+    if review.refusal is not None:
+        return json.dumps(review.refusal, indent=2)
+    token_args = canonical_args("save_names_list")
+    if preview_token is None:
+        # Fix round 1: QualCoder 4.0's window signs, outside the signed
+        # state, as restore_backup's preview passes them on
+        signals = qualcoder_gui_signals(folder)
+        shown = dict(review.preview)
+        shown["qualcoder_gui_signals"] = signals
+        if signals:
+            shown["qualcoder_gui_hint"] = SAVE_NAMES_LIST_GUI_HINT.format(
+                signs="; ".join(signals))
+        if review.blocking:
+            answer: Dict[str, Any] = {"preview": shown}
+            if review.warnings:
+                answer["warnings"] = review.warnings
+            answer.update({
+                "nothing_changed": True, "reason": "corrections_needed",
+                "next_step": _names_list_correct_step(review.preview)})
+            return json.dumps(answer, indent=2)
+        try:
+            payload = _issue_preview(
+                "save_names_list", token_args, shown, review.rows,
+                SAVE_NAMES_LIST_HINT, {}, warnings=review.warnings or None,
+                state_preview=review.preview)
+        except PreviewSecretUnavailable:
+            return json.dumps(
+                _token_error("preview_secret_unavailable", "save_names_list"))
+        return json.dumps(payload, indent=2)
+
+    # The save, as restore_backup's: the token, the lock file, a backup,
+    # then everything read again under the lock
+    state = fingerprint_rows(review.preview, review.rows)
+    try:
+        outcome = verify(preview_token, "save_names_list", token_args,
+                         _token_project(), state)
+    except PreviewSecretUnavailable:
+        return json.dumps(
+            _token_error("preview_secret_unavailable", "save_names_list"))
+    if outcome != OK:
+        return json.dumps(_token_error(outcome, "save_names_list"))
+    lock_error = _qualcoder_open_error()
+    if lock_error is not None:
+        return json.dumps({**lock_error, "reason": "project_locked",
+                           "nothing_changed": True})
+    try:
+        backup = backup_project(folder)
+    except Exception as e:                              # noqa: BLE001
+        logger.error("save_names_list made no backup: %s", error_label(e))
+        return json.dumps({"error": NO_BACKUP_NAMES_LIST,
+                           "reason": "no_backup",
+                           "nothing_changed": True}, indent=2)
+    kept_backup = {"nothing_changed": True, "backup": backup.name}
+    try:
+        with hold_project_lock(folder):
+            again = _names_list_review(folder)
+            if again.refusal is not None:
+                # A refusal found only now, after the backup: its own
+                # words, and the backup named
+                return json.dumps({
+                    **again.refusal,
+                    "error": again.refusal["error"] + BACKUP_KEPT_ANYWAY,
+                    **kept_backup}, indent=2)
+            if again.blocking or \
+                    fingerprint_rows(again.preview, again.rows) != state:
+                return json.dumps({
+                    "error": TOKEN_ERROR_TEXTS_BY_TOOL[(
+                        "save_names_list", "project_changed")]
+                    + BACKUP_KEPT_ANYWAY,
+                    "reason": "project_changed", **kept_backup}, indent=2)
+            tmp: Optional[Path] = None
+            try:
+                tmp = _write_pseudonyms_json_data_tmp(folder, again.data,
+                                                      again.existing_mode)
+                os.replace(str(tmp), str(folder / PSEUDONYMS_JSON_NAME))
+            except Exception as e:                      # noqa: BLE001
+                if tmp is not None:
+                    try:
+                        tmp.unlink()
+                    except OSError:
+                        pass
+                logger.error("save_names_list did not save the names list: "
+                             "%s", error_label(e))
+                return json.dumps({
+                    "error": NAMES_LIST_NOT_WRITTEN.format(
+                        kind=type(e).__name__, backup=backup.name),
+                    "reason": "not_saved", **kept_backup}, indent=2)
+    except DatabaseLockedError as e:
+        # The lock file appeared between the check and the lock
+        return json.dumps({
+            "error": f"{e} The names list was not saved; the backup made "
+                     f"first is kept: {backup.name}.",
+            "reason": "project_locked", **kept_backup}, indent=2)
+    logger.info("save_names_list saved the project's names list "
+                "(%d entries).", len(again.data))
+    return json.dumps({
+        "success": True,
+        "entries": len(again.data),
+        "backup": backup.name,
+        "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "note": SAVE_NAMES_LIST_NOTE,
+    }, indent=2)
 
 
 @mcp.tool(annotations=TOOL_DISCLOSES)
@@ -15673,6 +16319,23 @@ TOKEN_ERROR_TEXTS = {
 # does not have is worse than saying nothing, so the flagship carries D1
 # 3.7's own wording (QA F-4, Security S10).
 TOKEN_ERROR_TEXTS_BY_TOOL = {
+    # save_names_list signs the names file and the list, not rows (fix
+    # round 1): its token is refused in their words, before the save and
+    # under the lock
+    ("save_names_list", "project_changed_or_rotated"): (
+        "preview_token did not verify for this save. The likeliest reason "
+        "is that the names file or the project's names list changed since "
+        "the preview, so the token no longer applies. It also happens when "
+        "Exegete's preview secret has been rotated since the preview, and "
+        "when the token was not one Exegete issued for this state. The "
+        "remedy is the same for all of them: call save_names_list without "
+        "preview_token for a fresh preview, show the researcher what it "
+        "says, then save on their word. Nothing was changed."),
+    ("save_names_list", "project_changed"): (
+        "The names file or the project's names list changed since the "
+        "preview, so the token no longer applies. Call save_names_list "
+        "without preview_token for a fresh preview, show the researcher "
+        "what it says, then save on their word. Nothing was changed."),
     ("pseudonymise_source", "hidden_coder_override_required"): (
         "Some spans that this run would snap, delete or clamp belong to "
         "a coder currently hidden in QualCoder (hidden_coder_rows in the "
@@ -16573,6 +17236,29 @@ def _pseudonyms_json_new_entries(validated
     return sorted(out, key=lambda item: -len(item[1]))
 
 
+def _pseudonyms_json_check_writable(path: Path) -> None:
+    """The two refusals before anything is saved into pseudonyms.json, at
+    `path`: a symbolic link, which the save's rename into place would
+    replace, leaving what it points to as it was; and a file this
+    account cannot write. Factored out of `_pseudonyms_json_merge`
+    (v0.15.0, piece 4), words and reasons unchanged, for save_names_list
+    too. Raises `_SaveRefused` with a value-free detail."""
+    if path.is_symlink():
+        raise _SaveRefused(
+            "pseudonyms_json_is_a_link",
+            f"{PSEUDONYMS_JSON_NAME} in the project folder is a symbolic "
+            f"link, and this tool saves by renaming a new file into place, "
+            f"which would replace the link and leave the file it points to "
+            f"as it was")
+    if os.path.lexists(str(path)) and not os.access(str(path), os.W_OK):
+        # A reverse key the researcher made read-only stays so (Security's
+        # ruling, S-1; QualCoder's own `open(path, "w")` fails on it too).
+        raise _SaveRefused(
+            "pseudonyms_json_read_only",
+            f"{PSEUDONYMS_JSON_NAME} in the project folder is read-only for "
+            f"this account, and Exegete leaves it so")
+
+
 def _pseudonyms_json_merge(folder: Path, validated) -> Dict[str, Any]:
     """What saving the typed mapping into pseudonyms.json would do.
 
@@ -16595,24 +17281,11 @@ def _pseudonyms_json_merge(folder: Path, validated) -> Dict[str, Any]:
     out of the file.
     """
     path = folder / PSEUDONYMS_JSON_NAME
-    if path.is_symlink():
-        raise _SaveRefused(
-            "pseudonyms_json_is_a_link",
-            f"{PSEUDONYMS_JSON_NAME} in the project folder is a symbolic "
-            f"link, and this tool saves by renaming a new file into place, "
-            f"which would replace the link and leave the file it points to "
-            f"as it was")
+    _pseudonyms_json_check_writable(path)
     existing: List[Dict[str, str]] = []
     raw: List[Any] = []
     encoding: Optional[str] = None
     existing_mode: Optional[int] = None
-    if os.path.lexists(str(path)) and not os.access(str(path), os.W_OK):
-        # A reverse key the researcher made read-only stays so (Security's
-        # ruling, S-1; QualCoder's own `open(path, "w")` fails on it too).
-        raise _SaveRefused(
-            "pseudonyms_json_read_only",
-            f"{PSEUDONYMS_JSON_NAME} in the project folder is read-only for "
-            f"this account, and Exegete leaves it so")
     if os.path.lexists(str(path)):
         try:
             # One read: the entries for the checks and the list exactly as
@@ -16731,6 +17404,43 @@ def _pseudonyms_json_conflict(merge: Dict[str, Any]) -> Dict[str, Any]:
         "reason": "pseudonyms_json_conflict", "nothing_changed": True}
 
 
+def _write_pseudonyms_json_data_tmp(folder: Path, data: List[Any],
+                                    existing_mode: Optional[int] = None
+                                    ) -> Path:
+    """`data` written in QualCoder's format to a temporary file beside
+    pseudonyms.json, for the caller to rename into place: `json.dump(data,
+    f, indent=2)` with the defaults, so ASCII whatever the handle, fsynced;
+    a new file keeps mkstemp's 0600, and an existing file's permission
+    bits (`existing_mode`) are put on it through the open descriptor.
+    Factored out of `_write_pseudonyms_json_tmp` (v0.15.0, piece 4), whose
+    docstring gives the reasons, for save_names_list too. A failure
+    removes the temporary file and raises the error as it came."""
+    tmp: Optional[Path] = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(
+            dir=str(folder), prefix=f"{PSEUDONYMS_JSON_NAME}.", suffix=".tmp")
+        tmp = Path(tmp_name)
+        try:
+            handle = os.fdopen(fd, "w", encoding="utf-8")
+        except BaseException:
+            os.close(fd)
+            raise
+        with handle as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+            if existing_mode is not None and os.name != "nt":
+                os.fchmod(f.fileno(), existing_mode)
+        return tmp
+    except Exception:
+        if tmp is not None:
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+        raise
+
+
 def _write_pseudonyms_json_tmp(folder: Path, merged: List[Any],
                                existing_mode: Optional[int] = None) -> Path:
     """The merged list, written to a temporary file beside the target.
@@ -16753,29 +17463,9 @@ def _write_pseudonyms_json_tmp(folder: Path, merged: List[Any],
     A failure removes the temporary file and raises RuntimeError, which
     rolls the run back.
     """
-    tmp: Optional[Path] = None
     try:
-        fd, tmp_name = tempfile.mkstemp(
-            dir=str(folder), prefix=f"{PSEUDONYMS_JSON_NAME}.", suffix=".tmp")
-        tmp = Path(tmp_name)
-        try:
-            handle = os.fdopen(fd, "w", encoding="utf-8")
-        except BaseException:
-            os.close(fd)
-            raise
-        with handle as f:
-            json.dump(merged, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-            if existing_mode is not None and os.name != "nt":
-                os.fchmod(f.fileno(), existing_mode)
-        return tmp
+        return _write_pseudonyms_json_data_tmp(folder, merged, existing_mode)
     except Exception as e:
-        if tmp is not None:
-            try:
-                tmp.unlink()
-            except OSError:
-                pass
         raise RuntimeError(
             f"The mapping could not be written into this project's folder "
             f"for saving ({type(e).__name__}); the rewrite was rolled back "

@@ -615,7 +615,7 @@ within each description's first 2,048 characters, a few named
 exceptions apart, which reach the model through `read_brief` or the
 tools' answers. Measured for 0.15.0, the descriptions are longer on
 Python 3.10 to 3.12 than on 3.13, which strips the indentation they are
-written with. On Python 3.13, 4 of `full`'s 82 descriptions are longer
+written with. On Python 3.13, 4 of `full`'s 83 descriptions are longer
 than 4,096 characters (`pseudonymise_source`, 17,791;
 `start_coding_session`, 6,038; `search_files`, 4,802;
 `record_suggestions`, 4,455); on 3.10 to 3.12, 5 are (the same four, at
@@ -671,7 +671,7 @@ and `EXEGETE_USES_QUALCODER`, all below.
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 82 tools, every tool,
+- `EXEGETE_TOOLSET`: `full` (default) registers 83 tools, every tool,
   creating a project included, so that a study can be started from the
   conversation (TOOLS.md, "Starting a project from the conversation");
   two of them are the earlier names of two renamed tools (TOOLS.md,
@@ -1013,9 +1013,9 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 82 tools by
+**Step 3. Use the core toolset.** Exegete offers 83 tools by
 default, and the serialised tool definitions alone measure about
-207,000 characters, roughly 52k tokens (measured for 0.15.0 under
+208,000 characters, roughly 52k tokens (measured for 0.15.0 under
 Python 3.13.5 with mcp 1.30.0, in an environment installed from the
 repository's lock file; `pseudonymise_source`, the 0.12 flagship,
 accounts for about 20,000 characters of that on its own, because a tool
@@ -1484,7 +1484,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 207,000 characters with `full`; TOOLS.md says how that
+  (about 208,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1541,9 +1541,9 @@ What each host does, from Anthropic's pages as read on 27 September
   version 2.1.283, and before that on Pro, Max and Team plans.
   `bypassPermissions` runs everything, and `dontAsk` refuses anything
   that would ask. From 2.1.199, a tool marked
-  `anthropic/requiresUserInteraction` (here, `read_pseudonym_list`) is
-  asked about in every one of these modes but `dontAsk`, which refuses
-  it.
+  `anthropic/requiresUserInteraction` (here, `read_pseudonym_list`,
+  `import_documents` and `save_names_list`) is asked about in every one
+  of these modes but `dontAsk`, which refuses it.
 - **Cowork.** Each connector tool has its own setting (always allow,
   needs approval, blocked). In **Manual** mode, the default, a tool that
   needs approval is asked about. In **Auto**, a tool set to always allow
@@ -1585,7 +1585,9 @@ that is the 18 tools that only add (`import_text_file`,
 `open_file_for_reading` and `import_documents` among them from 0.14.3,
 and `prepare_names_list` from 0.15.0)
 and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
-mark Codex does not read (`import_documents` carries it too). With
+mark Codex does not read (`import_documents` and `save_names_list`
+carry it too). `save_names_list` is also marked as changing what
+exists, so Codex asks before it under `auto` too. With
 `default_tools_approval_mode = "writes"` in the server's entry, Codex asks before every tool not
 marked read-only; the recipe above sets it, and asks before
 `read_pseudonym_list` whichever of the server's approval modes is set.

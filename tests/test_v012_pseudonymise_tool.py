@@ -4744,16 +4744,27 @@ class TestSavingTheMappingIntoPseudonymsJson:
         _house_rules([refused["error"]])
 
     def test_the_writer_sets_a_mode_on_the_descriptor_only(self):
-        """Read as syntax: no chmod by path (S-3) and no umask read."""
+        """Read as syntax: no chmod by path (S-3) and no umask read.
+        v0.15.0, piece 4: the writing is factored into
+        `_write_pseudonyms_json_data_tmp`, which the writer calls and
+        save_names_list shares; the same holds of both."""
         tree = ast.parse(Path(server.__file__).read_text(encoding="utf-8"))
-        node = next(n for n in ast.walk(tree)
-                    if isinstance(n, ast.FunctionDef)
-                    and n.name == "_write_pseudonyms_json_tmp")
-        called = {c.func.attr for c in ast.walk(node)
-                  if isinstance(c, ast.Call)
-                  and isinstance(c.func, ast.Attribute)}
-        assert "chmod" not in called and "umask" not in called
-        assert "fchmod" in called
+
+        def calls(name):
+            node = next(n for n in ast.walk(tree)
+                        if isinstance(n, ast.FunctionDef) and n.name == name)
+            return ({c.func.attr for c in ast.walk(node)
+                     if isinstance(c, ast.Call)
+                     and isinstance(c.func, ast.Attribute)},
+                    {c.func.id for c in ast.walk(node)
+                     if isinstance(c, ast.Call)
+                     and isinstance(c.func, ast.Name)})
+        writer, writer_names = calls("_write_pseudonyms_json_tmp")
+        data, _ = calls("_write_pseudonyms_json_data_tmp")
+        assert "_write_pseudonyms_json_data_tmp" in writer_names
+        for called in (writer, data):
+            assert "chmod" not in called and "umask" not in called
+        assert "fchmod" in data
 
     def test_a_variant_the_file_already_maps_is_a_conflict(self, project):
         """QA's Q4: QualCoder's check is on every original in the file,

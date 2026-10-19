@@ -68,7 +68,8 @@ DESCRIPTION = (
     "signs that QualCoder 4.0 may have one open: an answer can be out of "
     "date (a colleague's project, QualCoder installed later), and a write "
     "into a project open in QualCoder can lose work. Any other word is "
-    "read as not sure.")
+    "read as not sure."
+    " After changing a setting, quit Claude Desktop and open it again.")
 LONG_DESCRIPTION_END = (
     "The settings choose the tool set (every tool, or a smaller set for "
     "local models), the folder where new projects and working copies are "

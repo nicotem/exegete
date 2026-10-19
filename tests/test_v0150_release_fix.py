@@ -68,9 +68,12 @@ def test_upgrading_sets_the_calls_time_on_the_terminal_routes():
             "\"Imports\", next).") in upgrading
     assert ("`EXEGETE_CALL_SECONDS`, a whole number of seconds from 30 to "
             "600, sets the time on the Terminal routes (the desktop "
-            "extension's settings do not offer it); the extension's own "
-            "figure waits for a measurement of how long Claude Desktop "
-            "waits.") in upgrading
+            "extension's settings do not offer it). The extension keeps 30 "
+            "seconds: Cowork stops waiting for an extension's call after 60 "
+            "seconds, and Claude Desktop's ordinary chat after 4 minutes, "
+            "as measured on 19 October 2026, so a large batch comes in over "
+            "a few short previews.") in upgrading
+    assert "waits for a measurement" not in upgrading
     assert "any route" not in upgrading
 
 

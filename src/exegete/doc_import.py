@@ -47,9 +47,10 @@ MAX_MEMO = 10_000
 # a host can stop a tool call that runs long, and a call stopped so loses
 # its answer. The desktop extension's figure comes from the owner's timing
 # of Claude Desktop (T, the earlier cut-off of his two runs, less the
-# larger of 30 seconds and a sixth of T, rounded down to a multiple of 10:
-# 180 gives 150); 30 until he reports. Every other way of installing keeps
-# 30. EXEGETE_CALL_SECONDS, a whole number from CALL_SECONDS_LEAST to
+# larger of 30 seconds and a sixth of T, rounded down to a multiple of 10).
+# Measured on 19 October 2026: Cowork cuts an extension's call at 60
+# seconds and the ordinary chat at 240, so T is 60 and the figure 30, the
+# same as every other way of installing. EXEGETE_CALL_SECONDS, a whole number from CALL_SECONDS_LEAST to
 # CALL_SECONDS_MOST, sets it on any route. The preview reads within it;
 # the import, which uses the text the preview read (kept_texts), works
 # within the same time and reads a file again only when it must.

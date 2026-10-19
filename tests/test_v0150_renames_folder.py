@@ -49,7 +49,8 @@ SETTING_DESCRIPTION = (
     "that no sync service keeps. If this shows QualCoder projects, the "
     "earlier default, it keeps working, and Exegete finds the projects "
     "there whichever folder you choose. Leaving it empty stops the "
-    "extension from starting.")
+    "extension from starting."
+    " After changing a setting, quit Claude Desktop and open it again.")
 
 MANIFEST = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))

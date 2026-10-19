@@ -49,7 +49,8 @@ SETTING_DESCRIPTION = (
     "Type one of two words. full: every tool, creating a new project "
     "included (recommended). core: a smaller set for local models. If "
     "this shows lifecycle, the earlier name of full, it works as full. Any "
-    "other word stops the extension from starting.")
+    "other word stops the extension from starting."
+    " After changing a setting, quit Claude Desktop and open it again.")
 
 SETTINGS_CLAUSE = ("The settings choose the tool set (every tool, or a "
                    "smaller set for local models)")

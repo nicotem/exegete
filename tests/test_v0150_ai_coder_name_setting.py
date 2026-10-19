@@ -145,7 +145,8 @@ AI_DESCRIPTION = (
     "you once whether to switch. It must differ from your coder name. At "
     "most 80 characters; a line break or tab, an invisible formatting "
     "character (the joiners some scripts need are allowed) or ##### stops "
-    "the extension from starting.")
+    "the extension from starting."
+    " After changing a setting, quit Claude Desktop and open it again.")
 
 ASK_WITH_SETTING = (
     "No AI coder name is set for this project yet, so nothing was written. "

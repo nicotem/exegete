@@ -318,18 +318,36 @@ def _figures():
             doc_import.CALL_SECONDS_LEAST, doc_import.CALL_SECONDS_MOST)
 
 
+# The owner's timing session of 19 October 2026: Cowork stops waiting for
+# an extension's call after 60 seconds, and Claude Desktop's ordinary chat
+# after 4 minutes. The extension cannot tell which is calling, and a call
+# can run past its time while it finishes the file it is reading, so its
+# figure stays 30, the same as every other route's (the code unchanged).
+COWORK_SECONDS = 60
+CHAT_MINUTES = 4
+WAITING_FOR_A_MEASUREMENT = ("follows a measurement", "until a measurement",
+                             "waits for a measurement", "for now",
+                             "provisional", "near 180")
+
+
+def test_the_extension_s_figure_answers_the_measurement():
+    e, t, _least, _most = _figures()
+    assert e == t == 30
+    # the preview's time and one file's whole time stay within Cowork's
+    assert e + int(import_reading.READ_TIMEOUT_SECONDS) <= COWORK_SECONDS
+
+
 def test_tools_says_the_figures():
     e, t, least, most = _figures()
     tools = _flat("TOOLS.md")
-    # One figure on every route until the owner's timing gives the
-    # extension its own; a figure not yet measured is not called measured
-    # (whole-branch review, round 1). A change to either constant moves
-    # these sentences with it.
+    # One figure on every route, the extension's measured on 19 October
+    # 2026. A change to either constant moves these sentences with it.
     assert e == t
     assert (f"Each call stops between files within its time, counted from "
-            f"the call's start: {e} seconds on every route for now (the "
-            f"Claude Desktop extension's own figure follows a measurement "
-            f"of how long it waits), or the "
+            f"the call's start: {e} seconds on every route, the Claude "
+            f"Desktop extension included (Cowork stops waiting for an "
+            f"extension's call after {COWORK_SECONDS} seconds, and Claude "
+            f"Desktop's ordinary chat after {CHAT_MINUTES} minutes), or the "
             f"whole number of seconds from {least} to {most} set in "
             f"`{SETTING}` (INSTALL.md); the preview reads for that long "
             f"and the import works within the same time; the files not "
@@ -344,10 +362,16 @@ def test_install_says_the_figures():
             f"`import_documents` may take, counted from its start, before "
             f"it stops between files and leaves the rest for the next "
             f"call, whose answer says how to go on: a whole number from "
-            f"{least} to {most}. Unset, it is {e} seconds on every route; "
-            f"the desktop extension's own figure follows a measurement of "
-            f"how long Claude Desktop waits.") in install
+            f"{least} to {most}. Unset, it is {e} seconds on every route, "
+            f"the desktop extension included: Claude Desktop's Cowork stops "
+            f"waiting for an extension's call after {COWORK_SECONDS} "
+            f"seconds, and its ordinary chat after {CHAT_MINUTES} minutes "
+            f"(measured on 19 October 2026).") in install
     assert e == t
+    section = install[install.index(f"- `{SETTING}` (0.15.0)"):]
+    section = section[:section.index("- `EXEGETE_INSTALLED_AS`")]
+    for words in WAITING_FOR_A_MEASUREMENT:
+        assert words not in section, words
     assert "a figure measured against" not in install
     # How far past the figure a call can run, and what waits meanwhile
     # (fix round 1): the import gives a file read again 40 seconds, and
@@ -371,14 +395,32 @@ def test_the_changelog_says_the_figures():
     changelog = _flat("CHANGELOG.md")
     unreleased = changelog[changelog.index("## [0.15.0-alpha]"):]
     unreleased = unreleased[:unreleased.index("## [0.14.3-alpha]")]
-    # One figure for now, not called measured (whole-branch review,
-    # round 1)
+    # One figure on every route, the extension's measured on 19 October
+    # 2026, in the opening, in Upgrading and in the imports' part
     assert e == t
     assert "### An import reads each document once, within a time for each call " in unreleased
     assert "by the way Exegete runs" not in unreleased
-    assert (f"for now {e} seconds on every route, counted from the call's "
-            f"start, until a measurement of how long Claude Desktop waits "
-            f"gives the extension its own figure.") in unreleased
+    assert (f"{e} seconds on every route, counted from the call's start, "
+            f"the desktop extension included. For the extension the figure "
+            f"was measured in the maintainer's sitting of 19 October 2026: "
+            f"Cowork stops waiting for an extension's call after "
+            f"{COWORK_SECONDS} seconds (Cowork's own limit, not Exegete's), "
+            f"and Claude Desktop's ordinary chat after {CHAT_MINUTES} "
+            f"minutes.") in unreleased
+    assert (f"How long one import call may take in the desktop extension "
+            f"was measured in the maintainer's sitting of 19 October 2026: "
+            f"Cowork stops waiting for an extension's call after "
+            f"{COWORK_SECONDS} seconds, and the ordinary chat after "
+            f"{CHAT_MINUTES} minutes, so the extension keeps the {e} "
+            f"seconds a call that every route has, and a large batch comes "
+            f"in over a few short previews.") in unreleased
+    assert (f"The extension keeps {e} seconds: Cowork stops waiting for an "
+            f"extension's call after {COWORK_SECONDS} seconds, and Claude "
+            f"Desktop's ordinary chat after {CHAT_MINUTES} minutes, as "
+            f"measured on 19 October 2026") in unreleased
+    for words in WAITING_FOR_A_MEASUREMENT[:3] + ("stays provisional",
+                                                  "near 180"):
+        assert words not in unreleased, words
     # the release review: the extension's settings do not offer it
     assert (f"A new setting, `{SETTING}`, a whole number of seconds from "
             f"{least} to {most}, sets the time on the Terminal routes, for "

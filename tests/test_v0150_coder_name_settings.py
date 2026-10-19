@@ -128,7 +128,8 @@ CODER_DESCRIPTION = (
     "there. At most 80 "
     "characters; a line break or tab, an invisible formatting character "
     "(the joiners some scripts need are allowed) or ##### stops the "
-    "extension from starting.")
+    "extension from starting."
+    " After changing a setting, quit Claude Desktop and open it again.")
 # The coder names, piece 3: the AI coder name in the settings is given
 # to each project Exegete creates (tests/test_v0150_ai_coder_name_setting.py)
 AI_DESCRIPTION = (
@@ -141,7 +142,8 @@ AI_DESCRIPTION = (
     "you once whether to switch. It must differ from your coder name. At "
     "most 80 characters; a line break or tab, an invisible formatting "
     "character (the joiners some scripts need are allowed) or ##### stops "
-    "the extension from starting.")
+    "the extension from starting."
+    " After changing a setting, quit Claude Desktop and open it again.")
 
 
 class TestTheExtensionsSettings:

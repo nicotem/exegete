@@ -93,6 +93,12 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      assistant uses Exegete it is told to say so. Switched off,
      Exegete itself makes no connection
      ([PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)).
+
+   **After changing a setting, quit Claude Desktop and open it again.**
+   Exegete reads its settings when Claude Desktop starts it, so a
+   change reaches Exegete only at its next start. Until then Exegete
+   works with the settings it started with: a coder name filled in just
+   now is not yet given to a new project, for example.
 5. **Check it works**: in a new conversation, the "+" button, then
    Connectors, lists Exegete with its tools switched on. Ask
    "Using the Exegete tools, is a project open?" and allow the
@@ -821,8 +827,10 @@ and `EXEGETE_USES_QUALCODER`, all below.
   `import_documents` may take, counted from its start, before it stops
   between files and leaves the rest for the next call, whose answer
   says how to go on: a whole number from 30 to 600. Unset, it is 30
-  seconds on every route; the desktop extension's own figure follows a
-  measurement of how long Claude Desktop waits. A host stops a tool
+  seconds on every route, the desktop extension included: Claude
+  Desktop's Cowork stops waiting for an extension's call after 60
+  seconds, and its ordinary chat after 4 minutes (measured on 19
+  October 2026). A host stops a tool
   call that runs past its own limit, and a call stopped so loses its
   answer while Exegete reads on to the end; until a call has finished,
   Exegete answers no other call, from any chat. So a higher figure

@@ -38,11 +38,14 @@ project's new `Exegete` folder.
 The maintainer decided the questions behind these on 11 and 12 October
 2026, on 14 October that a project's format value is repeated only in
 QualCoder's form, and on 16 October that creating a project is no longer
-Experimental. One thing stays provisional: how long one import call may
-take in the desktop extension, 30 seconds until the time Claude Desktop
-waits has been measured. "Upgrading from 0.14.3" comes first: what
-changes for you, and what you may want to do. The account then follows
-what a researcher meets: the tool set and the renames, the coder names,
+Experimental. How long one import call may take in the desktop
+extension was measured in the maintainer's sitting of 19 October 2026:
+Cowork stops waiting for an extension's call after 60 seconds, and the
+ordinary chat after 4 minutes, so the extension keeps the 30 seconds a
+call that every route has, and a large batch comes in over a few short
+previews. "Upgrading from 0.14.3" comes first: what changes for you,
+and what you may want to do. The account then follows what a
+researcher meets: the tool set and the renames, the coder names,
 Exegete's texts about QualCoder, the names list, imports, the files
 Exegete keeps, creating a project, what is deprecated and the libraries
 the extension installs; then a part for contributors, and the
@@ -86,10 +89,12 @@ measurements.
   `prune_backups` removes what it removed before; a script or a saved
   instruction that looks for `mcp` should look for `exegete`.
 - **The extension's folder for projects.** New installs use
-  `~/Exegete projects`. An install whose setting shows
-  `~/QualCoder projects` keeps it; nothing is moved, and both folders
-  are searched on every route. To use the new folder, change the
-  setting: the projects in the earlier one are still found.
+  `~/Exegete projects`. On the maintainer's Mac, where "Folder for
+  projects" had been left at the earlier default,
+  `~/QualCoder projects`, the update moved it to `~/Exegete projects`;
+  a folder you chose yourself is kept. Nothing is moved, and both folders are
+  searched on every route, so the projects in the earlier one are still
+  found. To use the other folder, change the setting.
 - **New settings, all optional** (INSTALL.md, step 4, and
   "Environment variables the server reads"): "Your coder name"
   (`EXEGETE_CODER_NAME`), "Do you also use QualCoder on this
@@ -104,15 +109,22 @@ measurements.
   keep their coder names: Exegete never changes them silently, and
   `set_project_coder_name` corrects your own while nothing is recorded
   under it.
+- **After changing a setting, quit Claude Desktop and open it again.**
+  In the desktop extension a changed setting reaches Exegete only when
+  Claude Desktop next starts it: at the maintainer's sitting, a coder
+  name filled in and saved was given to new projects only after Claude
+  Desktop had been quit and opened again (INSTALL.md, step 4).
 - **Imports.** One `import_documents` call is now given 30 seconds on
   every route (45 in 0.14.3), and usually takes a few, since the
   import reuses the text its preview read; a large batch may take
   more calls, each of which says how to go on. For a host known to
   wait longer, `EXEGETE_CALL_SECONDS`, a whole number of seconds from
   30 to 600, sets the time on the Terminal routes (the desktop
-  extension's settings do not offer it); the extension's own figure
-  waits for a measurement of how long Claude Desktop waits. The
-  preview keeps those
+  extension's settings do not offer it). The extension keeps 30
+  seconds: Cowork stops waiting for an extension's call after 60
+  seconds, and Claude Desktop's ordinary chat after 4 minutes, as
+  measured on 19 October 2026, so a large batch comes in over a few
+  short previews. The preview keeps those
   texts, whole and before your names list is applied, in
   `~/.exegete/import-texts.noindex` until the import, or for an hour
   or more (PRIVACY.md, "How your data flows", says for how long).
@@ -1064,11 +1076,16 @@ for the four labels stays in NOTICE.
   left out, so that one failed request is not final.
 - **The time one `import_documents` call may take is chosen for each
   way Exegete runs** (the maintainer's decision of 12 October 2026):
-  for now 30 seconds on every route, counted from the call's start,
-  until a measurement of how long Claude Desktop waits gives the
-  extension its own figure. The preview
-  reads for that long; the import, which now usually reads nothing
-  again, works within the same time instead of 0.14.3's 45 seconds.
+  30 seconds on every route, counted from the call's start, the
+  desktop extension included. For the extension the figure was
+  measured in the maintainer's sitting of 19 October 2026: Cowork stops
+  waiting for an extension's call after 60 seconds (Cowork's own limit,
+  not Exegete's), and Claude Desktop's ordinary chat after 4 minutes.
+  The extension cannot tell which of the two is calling, and a call can
+  run past its time while it finishes the file it is reading, so 30
+  seconds leaves that room within Cowork's 60, and a large batch comes
+  in over a few short previews. The preview reads for that long; the
+  import, which now usually reads nothing again, works within the same time instead of 0.14.3's 45 seconds.
   One file still has 30 seconds to be read at the preview, and 40 when
   the import reads it again. A new setting, `EXEGETE_CALL_SECONDS`, a
   whole number of seconds from 30 to 600, sets the time on the

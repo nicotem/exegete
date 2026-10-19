@@ -389,11 +389,17 @@ class TestTheDocuments:
         item = item[:item.index("- **Tell me when a new version is out**")]
         assert ("The default, `~/Exegete projects` (a folder called "
                 "\"Exegete projects\" in your home folder)") in item
-        assert ("Installed before 0.15.0, the setting may still show "
-                "`~/QualCoder projects`, the earlier default: it keeps "
-                "working. To use the new folder, change the setting; the "
-                "projects already in the earlier folder stay there and are "
-                "still found.") in item
+        # the maintainer's sitting of 19 October 2026: the update moved a
+        # setting left at the earlier default
+        assert ("Installed before 0.15.0, a setting left at the earlier "
+                "default, `~/QualCoder projects`, is moved to "
+                "`~/Exegete projects` by the update. No project is moved, and "
+                "both folders are searched, so the projects "
+                "in the earlier one are still found. To keep new projects "
+                "beside the earlier ones, set it back to "
+                "`~/QualCoder projects`.") in item
+        assert "may still show" not in item
+        assert "it keeps working" not in item
 
     def test_the_codex_recipe_names_the_new_folder(self):
         install = (REPO / "INSTALL.md").read_text(encoding="utf-8")

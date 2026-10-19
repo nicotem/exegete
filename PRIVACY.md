@@ -491,9 +491,11 @@ Nowhere else. Some of these had other names in earlier versions. The
 state folder was `~/.qualcoder_mcp` before 0.14.1: since then Exegete
 keeps a link under that name pointing at `~/.exegete`, as "How your
 data flows" says. The folder for projects was
-`~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was; an
-extension installed before 0.15.0 keeps its earlier folder,
-`~/QualCoder projects`, until you change its setting.
+`~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was; the
+extension's was `~/QualCoder projects` before 0.15.0, and an update
+moves a setting left at that default to `~/Exegete projects`. No
+project is moved, both folders are searched, and setting it back to
+`~/QualCoder projects` keeps new projects beside the earlier ones.
 
 | Kind | Where | What | Who deletes it |
 |---|---|---|---|

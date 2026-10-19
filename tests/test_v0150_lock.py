@@ -17,7 +17,13 @@ These tests pin what the refresh of 13 October 2026 brought:
   settles the state folder, tidies and runs the stdio loop) loads neither
   pyjwt nor cryptography (both come with the `mcp` library), so a
   scanner's flag on the cryptography releases kept for Intel Macs and
-  Windows on Arm concerns code Exegete does not load at start-up.
+  Windows on Arm concerns code Exegete does not load at start-up;
+- PyMuPDF held below 2 in the optional part `pdf-epub` (the lead's
+  decision for 0.15.0, 19 October 2026): CI's suite installs with pip,
+  not from the lock, and had begun to get PyMuPDF 2.0, which brings
+  libraries of its own and has not been looked at, while the lock and
+  the parity record hold 1.28.2; so every route reads PDFs with the 1.x
+  the checks passed with, and the lock records the same bound.
 """
 
 import json
@@ -27,6 +33,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 REPO = Path(__file__).resolve().parent.parent
@@ -154,6 +162,52 @@ class TestEveryPackageComesFromPyPI:
             ("mirror", "2"), ("fromgit", "3"), ("elsewhere", "4"),
             ("elsewhere", "4"), ("other", "5")]
         assert not_from_pypi({"package": lock["package"][:2]}, "root") == []
+
+
+def _extra_pymupdf():
+    """PyMuPDF's requirement in the optional part `pdf-epub`."""
+    found = [Requirement(line) for line in
+             PYPROJECT["project"]["optional-dependencies"]["pdf-epub"]
+             if Requirement(line).name == "pymupdf"]
+    assert len(found) == 1, found
+    return found[0]
+
+
+class TestPyMuPDFHeldBelowTwo:
+
+    def test_the_extra_asks_for_a_release_below_2(self):
+        spec = _extra_pymupdf().specifier
+        for release in ("2.0", "2.0.1", "2.1"):
+            assert not spec.contains(release), release
+        # the release the lock and the parity record hold is allowed
+        assert spec.contains(PARITY["pymupdf"])
+        assert spec.contains("1.28.2")
+        # the floor that fixed PyMuPDF's advisory stays
+        assert not spec.contains("1.26.6")
+        assert spec.contains("1.26.7")
+
+    def test_the_lock_records_the_same_bound(self):
+        """`uv lock --check` compares these; the locked release keeps
+        within the bound."""
+        lock = _lock()
+        ours = [p for p in lock["package"] if p["name"] == ROOT]
+        locked = [d for d in ours[0]["metadata"]["requires-dist"]
+                  if d["name"] == "pymupdf"]
+        assert len(locked) == 1, locked
+        assert locked[0]["marker"] == "extra == 'pdf-epub'"
+        assert SpecifierSet(locked[0]["specifier"]) == \
+            _extra_pymupdf().specifier
+        for version in _versions(lock, "pymupdf"):
+            assert _extra_pymupdf().specifier.contains(version), version
+
+    def test_the_changelog_says_so(self):
+        text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        entry = " ".join(text[text.index("## [0.15.0-alpha]"):
+                              text.index("## [0.14.3-alpha]")].split())
+        assert ("PDF reading is held to PyMuPDF 1.x for now on every route, "
+                "installs from PyPI included (the optional part `pdf-epub` "
+                "asks for a release below 2), with PyMuPDF 2.0 to be looked "
+                "at in a later release.") in entry
 
 
 def _child_env(home, mode):

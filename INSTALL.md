@@ -47,10 +47,12 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      folder).
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
-     Installed before 0.15.0, the setting may still show
-     `~/QualCoder projects`, the earlier default: it keeps working. To
-     use the new folder, change the setting; the projects already in
-     the earlier folder stay there and are still found.
+     Installed before 0.15.0, a setting left at the earlier default,
+     `~/QualCoder projects`, is moved to `~/Exegete projects` by the
+     update. No project is moved, and both folders are searched, so
+     the projects in the earlier one are still found. To
+     keep new projects beside the earlier ones, set it back to
+     `~/QualCoder projects`.
    - **Your coder name**: empty by default. It is the name your own
      codings carry in a project, kept apart from the AI's. Filled in,
      Exegete gives it to each new project it makes, without asking, and
@@ -700,9 +702,12 @@ and `EXEGETE_USES_QUALCODER`, all below.
   `~/Documents/Qualcoder MCP Projects`, which is never moved or emptied,
   and whose projects the listing still finds). The desktop extension
   sets it from its "Folder for projects" setting,
-  whose default is `~/Exegete projects` (the earlier default,
-  `~/QualCoder projects`, is kept by an install that has it), because
-  iCloud (Desktop and Documents) and OneDrive may sync `~/Documents`.
+  whose default is `~/Exegete projects` (an update moves a setting left
+  at the earlier default, `~/QualCoder projects`, to it; no project is
+  moved, both folders are searched, and setting it back to
+  `~/QualCoder projects` keeps new projects beside the earlier ones),
+  because iCloud (Desktop and Documents) and OneDrive may sync
+  `~/Documents`.
   A relative path, or a folder inside `~/.exegete` (or
   `~/.qualcoder_mcp`, its earlier name), QualCoder's settings folder
   `~/.qualcoder`, a `.qda` project or the folder the server itself is
@@ -2069,9 +2074,11 @@ yet, and the first start after the update moves the server's own folder
   copies and new projects go there. `~/Documents/Qualcoder MCP Projects`
   is never moved or emptied, and `list_available_projects` still finds
   the projects in it; the first answer that names the workspace says so
-  once. The extension's folder, `~/QualCoder projects`, is unchanged;
-  from 0.15.0 it is the earlier default, and new installs use
-  `~/Exegete projects`.
+  once. The extension's folder was `~/QualCoder projects` until
+  0.15.0; new installs use `~/Exegete projects`, and an update moves a
+  setting left at the earlier default to it. No project is moved, both
+  folders are searched, and to keep new projects beside the earlier
+  ones, set it back to `~/QualCoder projects`.
 - **Your projects** are unchanged, except for one small file. Exegete
   keeps the AI coder name in `exegete.json` in the project folder. A
   project from before still has `qualcoder_mcp.json`, which is read as

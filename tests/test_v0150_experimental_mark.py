@@ -219,7 +219,16 @@ def test_the_upgrading_part_keeps_the_mark_and_the_suggestion():
     upgrading = _flat(_section(_unreleased(), "### Upgrading from 0.14.3"))
     for words in ("**Creating a project is no longer Experimental**",
                   "letting QualCoder open a project made in Exegete once",
-                  SECTION[len("### "):]):
+                  SECTION[len("### "):],
+                  # the reader of this part is the one whose project can
+                  # stop once at QualCoder 4.0's first open (the final
+                  # check of 19 October 2026)
+                  "close it there before the conversation writes again. A "
+                  "project made in Exegete before 0.15.0 and not yet opened "
+                  "in QualCoder 4.0 can stop once at its first open there "
+                  "with an error about its `ai_data` folder; opening it "
+                  "again works, and projects made from 0.15.0 on hold the "
+                  "folder already."):
         assert words in upgrading, words
 
 

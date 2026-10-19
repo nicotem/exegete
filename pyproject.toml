@@ -87,9 +87,11 @@ Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 # Exegete's own code stays LGPL, and a PyPI install without the part is
 # untouched. lxml (which EbookLib needs) at 6.1.0 or newer, the release
 # that fixed its latest advisory; PyMuPDF at 1.26.7 or newer, for the
-# same reason.
+# same reason, and below 2 (0.15.0): PyMuPDF 2.0 brings new libraries of
+# its own and has not been looked at yet, so every route (pip, PyPI and
+# the extension's lock) reads PDFs with the 1.x the checks passed with.
 pdf-epub = [
-    "pymupdf>=1.26.7",
+    "pymupdf>=1.26.7,<2",
     "ebooklib>=0.20",
     "lxml>=6.1.0",
 ]

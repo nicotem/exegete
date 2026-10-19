@@ -156,9 +156,14 @@ class TestThePlacesAndTheTable:
                 "state folder was `~/.qualcoder_mcp` before 0.14.1: since "
                 "then Exegete keeps a link under that name pointing at "
                 "`~/.exegete`, as \"How your data flows\" says.") in section
-        assert ("an extension installed before 0.15.0 keeps its earlier "
-                "folder, `~/QualCoder projects`, until you change its "
-                "setting.") in section
+        # the maintainer's sitting of 19 October 2026: the update moved a
+        # setting left at the earlier default
+        assert ("the extension's was `~/QualCoder projects` before 0.15.0, "
+                "and an update moves a setting left at that default to "
+                "`~/Exegete projects`. No project is moved, both folders are "
+                "searched, and setting it back to `~/QualCoder projects` "
+                "keeps new projects beside the earlier ones.") in section
+        assert "until you change its setting" not in section
 
     def test_the_rows_say_what_exegete_really_removes(self):
         section = _files_section()

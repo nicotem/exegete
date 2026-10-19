@@ -72,6 +72,10 @@ measurements.
   QualCoder open a project made in Exegete once, before much work goes
   into it, is a quick check: it should open without an error and show
   what you did; close it there before the conversation writes again.
+  A project made in Exegete before 0.15.0 and not yet opened in
+  QualCoder 4.0 can stop once at its first open there with an error
+  about its `ai_data` folder; opening it again works, and projects made
+  from 0.15.0 on hold the folder already.
 - **Two tools renamed.** `analyze_for_coding` is now
   `start_coding_session`, and `analyze_file_with_coding` is now
   `read_file_with_codings`: the tools that start a coding session and
@@ -92,7 +96,8 @@ measurements.
   `~/Exegete projects`. On the maintainer's Mac, where "Folder for
   projects" had been left at the earlier default,
   `~/QualCoder projects`, the update moved it to `~/Exegete projects`;
-  a folder you chose yourself is kept. Nothing is moved, and both folders are
+  a folder you chose yourself should be kept (not yet checked); after
+  updating, look at the setting. Nothing is moved, and both folders are
   searched on every route, so the projects in the earlier one are still
   found. To use the other folder, change the setting.
 - **New settings, all optional** (INSTALL.md, step 4, and
@@ -1082,10 +1087,12 @@ for the four labels stays in NOTICE.
   waiting for an extension's call after 60 seconds (Cowork's own limit,
   not Exegete's), and Claude Desktop's ordinary chat after 4 minutes.
   The extension cannot tell which of the two is calling, and a call can
-  run past its time while it finishes the file it is reading, so 30
-  seconds leaves that room within Cowork's 60, and a large batch comes
-  in over a few short previews. The preview reads for that long; the
-  import, which now usually reads nothing again, works within the same time instead of 0.14.3's 45 seconds.
+  run past its 30 seconds while it finishes the file it is reading: at
+  most about 60 seconds, Cowork's limit, so a rare preview there may
+  still be cut off. A large batch comes in over a few short previews.
+  The preview reads for that long; the import, which now usually reads
+  nothing again, works within the same time instead of 0.14.3's 45
+  seconds.
   One file still has 30 seconds to be read at the preview, and 40 when
   the import reads it again. A new setting, `EXEGETE_CALL_SECONDS`, a
   whole number of seconds from 30 to 600, sets the time on the
@@ -1235,7 +1242,10 @@ the project: only one with something in it is.
   last releases with a ready-made package for those computers; Exegete
   does not load `cryptography` or pyjwt when it starts and sets up its
   tools, and a test now checks that. PyMuPDF, EbookLib and lxml are
-  unchanged, so PDFs and EPUBs are read as before.
+  unchanged, so PDFs and EPUBs are read as before. PDF reading is held
+  to PyMuPDF 1.x for now on every route, installs from PyPI included
+  (the optional part `pdf-epub` asks for a release below 2), with
+  PyMuPDF 2.0 to be looked at in a later release.
 
 ### For contributors
 

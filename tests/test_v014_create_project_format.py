@@ -92,11 +92,16 @@ class TestStructureMatchesFourPointZero:
         assert "hid" not in ours["code_text"]
 
     def test_the_four_subfolders_and_nothing_else(self, tmp_path):
+        """QualCoder 4.0's four, and one named departure (v0.15.0): an
+        empty ai_data, which QualCoder makes at the first open, made at
+        creation so that 4.0's first open cannot race itself making it
+        (database.AI_DATA_FOLDER)."""
         folder = _make(tmp_path, "carol")
+        assert "ai_data" not in ORACLE["subfolders"]
         assert sorted(p.name for p in folder.iterdir()) == sorted(
-            ORACLE["subfolders"] + ["data.qda"])
+            ORACLE["subfolders"] + ["ai_data", "data.qda"])
         assert all(not any((folder / s).iterdir())
-                   for s in new_project.SUBFOLDERS)
+                   for s in new_project.CREATED_FOLDERS)
 
 
 class TestFirstRows:

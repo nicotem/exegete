@@ -12,13 +12,21 @@ lock file, `database.qualcoder_gui_signals`), and nothing here changes
 it.
 
 What is looked at, and nothing else:
-1. `<project>/ai_data`, by `is_dir()`: QualCoder 3.8.2 and 4.0 make it
-   when they first open a project (3.8.2 ai_chat.py:181-214 from
-   __main__.py:3034; 4.0 ai_chat.py:1693-1697 from __main__.py:2894-2895,
-   at the tag 4.0); Exegete never makes one. Then, each by `is_file()`
-   of its own path, the AI chat history (`ai_data/chat_history.sqlite`,
-   made there) and QualCoder 4.0's AI search index
-   (`ai_data/search.sqlite`, 4.0 ai_vectorstore.py:582).
+1. `<project>/ai_data`, by `is_dir()`, and then whether it holds an
+   entry whose name does not begin with a dot (the listing stops at the
+   first; no name is kept). QualCoder 3.8.2 and 4.0 make the folder
+   when they first open a project and write their AI chat history in it
+   at once (3.8.2 ai_chat.py:181-214 from __main__.py:3034; 4.0
+   ai_chat.py:1693-1697 from __main__.py:2894-2895, at the tag 4.0).
+   Since v0.15.0 Exegete makes it too, empty, when it creates a project
+   or copies one that has none into the workspace
+   (database.AI_DATA_FOLDER), and never writes in it: so the folder
+   alone is no sign; something in it is. A name with a leading dot
+   (such as the .DS_Store macOS's Finder leaves) is not counted, since
+   QualCoder writes none there. Then, each by `is_file()` of its own
+   path, the AI chat history (`ai_data/chat_history.sqlite`, made there)
+   and QualCoder 4.0's AI search index (`ai_data/search.sqlite`, 4.0
+   ai_vectorstore.py:582).
 2. QualCoder's own backups beside the project: the names in the
    project's parent folder that match `<stem>_BKUP_*.qda`, the stem
    escaped for glob as `earlier_name` reads them, stopping at the first
@@ -53,11 +61,12 @@ signs of a QualCoder 4.0 window never consult this module.
 
 import glob
 import logging
+import os
 from pathlib import Path
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Union
 
 from . import database, names
-from .database import error_label
+from .database import AI_DATA_FOLDER, error_label
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +83,9 @@ SETTING_NOT_RECOGNISED = (
     f"sure; it is read as not sure.")
 
 AI_DATA_SIGN = (
-    "an ai_data folder, which QualCoder 3.8.2 and 4.0 make when they "
-    "first open a project (Exegete never makes one)")
+    "an ai_data folder with something in it, which QualCoder 3.8.2 and "
+    "4.0 fill when they first open a project (Exegete makes the folder "
+    "empty when it creates a project, and never writes in it)")
 CHAT_HISTORY_SIGN = (
     "QualCoder's AI chat history (ai_data/chat_history.sqlite)")
 SEARCH_INDEX_SIGN = (
@@ -177,8 +187,17 @@ def _checked(check: Callable[[], Any]) -> bool:
 
 
 def ai_data_found(project_folder: PathLike) -> bool:
-    """The project folder holds an `ai_data` folder."""
-    return _checked(lambda: (Path(project_folder) / "ai_data").is_dir())
+    """The project folder holds an `ai_data` folder with something in it:
+    an entry whose name does not begin with a dot. An empty one, as
+    Exegete makes at creation, is not found (point 1 above). The
+    listing stops at the first such entry, and no name is kept."""
+    def look() -> bool:
+        folder = Path(project_folder) / AI_DATA_FOLDER
+        if not folder.is_dir():
+            return False
+        with os.scandir(folder) as listing:
+            return any(not entry.name.startswith(".") for entry in listing)
+    return _checked(look)
 
 
 def _ai_data_file_found(project_folder: PathLike, name: str) -> bool:

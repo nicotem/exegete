@@ -273,7 +273,11 @@ class TestQualCoder38:
         elif sign == "settings folder":
             (home / ".qualcoder").mkdir()
         elif sign == "ai_data":
-            (folder / "ai_data").mkdir()
+            # v0.15.0: something in it; an empty ai_data, as Exegete
+            # makes at creation, is no sign of QualCoder
+            (folder / "ai_data").mkdir(exist_ok=True)
+            (folder / "ai_data" / "ai_prompts.yaml").write_bytes(
+                b"prompts: []\n")
         else:
             _qualcoder_backup(folder)
         notes = _notes()
@@ -314,7 +318,11 @@ class TestTheAiDataFolder:
     the project holds that folder, checked as the answer is built."""
 
     def test_with_the_folder(self, setup_server, qualcoder_db_path, home):
-        (Path(qualcoder_db_path) / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (Path(qualcoder_db_path) / "ai_data").mkdir(exist_ok=True)
+        (Path(qualcoder_db_path) / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         assert BACKUPS_HOLD + " " + AI_DATA in _notes()
 
     def test_without_it(self, setup_server, qualcoder_db_path, home):
@@ -322,6 +330,11 @@ class TestTheAiDataFolder:
         notes = _notes()
         assert AI_DATA not in notes
         assert not any("ai_data" in note for note in notes)
+        # v0.15.0: an empty folder, as Exegete makes at creation, is not
+        # the folder QualCoder fills
+        (folder / "ai_data").mkdir()
+        assert not any("ai_data" in note for note in _notes())
+        (folder / "ai_data").rmdir()
         # a file of that name is not the folder
         (folder / "ai_data").write_bytes(b"not a folder")
         notes = _notes()
@@ -488,13 +501,20 @@ class TestThePreviewsAiDataNote:
     is there."""
 
     def test_with_the_folder(self, project, home):
-        (project / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (project / "ai_data").mkdir(exist_ok=True)
+        (project / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         assert _residue()["ai_data_note"] == AI_DATA_PREVIEW
 
     def test_without_it(self, project, home):
         residue = _residue()
         assert "ai_data_note" not in residue
         assert "reading_note" in residue and "scope_note" in residue
+        # v0.15.0: nor with an empty one, as Exegete makes at creation
+        (project / "ai_data").mkdir()
+        assert "ai_data_note" not in _residue()
 
 
 class TestTheScopeNote:

@@ -462,7 +462,11 @@ class TestResidue:
         con.close()
         # v0.15.0, not presuming QualCoder, piece 11: the note on the
         # ai_data folder is given only when the project holds one
-        (project / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (project / "ai_data").mkdir(exist_ok=True)
+        (project / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         server.db.close()
         server.db = QualcoderDatabase(str(project))
         residue = preview_of()["preview"]["residue"]

@@ -228,7 +228,11 @@ def _built(tmp_path, sign, installed):
     folder = tmp_path / "Interviews.qda"
     folder.mkdir()
     if sign:
-        (folder / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (folder / "ai_data").mkdir(exist_ok=True)
+        (folder / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
     return folder, home
 
 
@@ -318,7 +322,11 @@ class TestTheField:
     def test_with_a_sign_it_gives_the_answer_too(
             self, setup_server, qualcoder_db_path, monkeypatch):
         monkeypatch.setenv(SETTING, "no")
-        (Path(qualcoder_db_path) / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (Path(qualcoder_db_path) / "ai_data").mkdir(exist_ok=True)
+        (Path(qualcoder_db_path) / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         for answer in _both(qualcoder_db_path):
             field = answer["qualcoder_history"]
             assert field["signs_on_this_project"] == [AI_DATA_SIGN]

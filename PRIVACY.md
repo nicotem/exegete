@@ -1176,8 +1176,10 @@ retrieval), which matters to anyone sharing or syncing project
 folders.
 
 Exegete never writes into `ai_data/` (it is QualCoder's own
-territory). Its backups and workspace copies include `ai_data/` whole,
-minus exactly the files QualCoder 4.0's own backups skip
+territory). Since 0.15.0 it makes the folder, empty, when it creates a
+project or copies one that has none into the workspace, so that
+QualCoder 4.0's first open finds it. Its backups and workspace copies
+include `ai_data/` whole, minus exactly the files QualCoder 4.0's own backups skip
 (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`, `*.sqlite-wal` and
 `*.sqlite-journal`) and, in addition, any `*.lock` file (QualCoder 3.8's
 backups skipped those too, and a copied lock file would make QualCoder
@@ -1320,10 +1322,13 @@ Two further rules touch files on your disk:
   project's history with QualCoder (`qualcoder_history`, v0.15.0),
   worked out once when the project is selected and kept in memory for
   the session, never on disk: whether the project folder holds
-  `ai_data/`, and in it `chat_history.sqlite` or `search.sqlite`;
-  whether QualCoder's own `_BKUP_` backups sit beside the project (the
-  names, in the folder that holds it, that begin with the project's
-  name, as `list_backups` reads them); whether its lock file is a
+  `ai_data/` with anything in it whose name does not begin with a dot
+  (its listing is read only until one is found, and no name in it is
+  kept; an empty one, as Exegete makes, does not count), and in it
+  `chat_history.sqlite` or `search.sqlite`; whether QualCoder's own
+  `_BKUP_` backups sit beside the project (the names, in the folder
+  that holds it, that begin with the project's name, as `list_backups`
+  reads them); whether its lock file is a
   leftover; whether QualCoder's settings folder (`~/.qualcoder`)
   exists; and whether the process scan found QualCoder. The field also
   gives, as `setting`, the researcher's answer to "Do you also use
@@ -1350,7 +1355,8 @@ Two further rules touch files on your disk:
   QualCoder's imports and Merge Projects can bring back.
 - **Creating a project** (`create_project`, in the full tool set, the
   default on every route, and not in `core`; v0.14). It writes a new
-  folder with four empty subfolders and a new `data.qda`, and records
+  folder with four empty subfolders, an empty `ai_data` folder (since
+  0.15.0) and a new `data.qda`, and records
   the new project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
   selects a project); nothing else: no backup and no entry in

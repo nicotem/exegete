@@ -2,8 +2,9 @@
 """An empty QualCoder project in QualCoder 4.0's format (v0.14).
 
 What `create_project` writes: the project folder with its four
-subfolders, and a `data.qda` holding the tables, views and first rows
-that QualCoder 4.0's own New Project writes (schema v17), built from the
+subfolders and an empty `ai_data` (a named departure: CREATED_FOLDERS),
+and a `data.qda` holding the tables, views and first rows that
+QualCoder 4.0's own New Project writes (schema v17), built from the
 column table below in ONE explicit transaction, so that a crash leaves
 no committed table.
 
@@ -37,6 +38,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from . import names
 from .database import (
+    AI_DATA_FOLDER,
     MAX_FILE_NAME_BYTES,
     VERIFIED_QUALCODER_COMMIT,
     _sqlite_ro_uri,
@@ -51,6 +53,12 @@ FORMAT_COMMIT = VERIFIED_QUALCODER_COMMIT
 # The project folder's contents, in the order QualCoder makes them.
 DATABASE_FILE = "data.qda"
 SUBFOLDERS = ("images", "audio", "video", "documents")
+# What creation makes: QualCoder's four, then an empty ai_data, which
+# QualCoder makes at a project's first open, not at its creation. A
+# departure, named (v0.15.0): made here so that QualCoder 4.0's first
+# open finds it and cannot race itself making it (database.AI_DATA_FOLDER
+# gives QualCoder's lines).
+CREATED_FOLDERS = SUBFOLDERS + (AI_DATA_FOLDER,)
 
 # QualCoder's speaker coder, which every new project lists among its
 # coder names (a system coder, never a person).
@@ -412,7 +420,7 @@ def remove_what_was_made(folder: Path,
         if journal is not None and stat.S_ISREG(journal.st_mode):
             _remove(folder / _JOURNAL, False, _JOURNAL, leftovers)
         _remove(database, False, DATABASE_FILE, leftovers)
-    for name in reversed(SUBFOLDERS):
+    for name in reversed(CREATED_FOLDERS):
         entry = folder / name
         if name in made and _identity(entry) == made[name]:
             _remove(entry, True, name, leftovers)
@@ -426,7 +434,8 @@ def remove_what_was_made(folder: Path,
 def write_project(folder: Union[str, Path],
                   statements: Sequence[Statement]) -> Path:
     """Make a new project at `folder`: claim it, make the four
-    subfolders, and build its database in one transaction.
+    subfolders and an empty `ai_data` (CREATED_FOLDERS), and build its
+    database in one transaction.
 
     The claim is an atomic `mkdir`: a folder, file or link of that name
     raises FileExistsError and nothing is touched. The database file is
@@ -440,7 +449,7 @@ def write_project(folder: Union[str, Path],
     made: Dict[str, Optional[Identity]] = {".": _identity(folder)}
     stage = "subfolder"
     try:
-        for name in SUBFOLDERS:
+        for name in CREATED_FOLDERS:
             (folder / name).mkdir()
             made[name] = _identity(folder / name)
         stage = "database"
@@ -674,7 +683,7 @@ NOT_A_FOLDER = "not_a_folder"
 
 # What a creation writes into its folder that may be left when it stops:
 # the database (empty until COMMIT) and SQLite's rollback journal. The
-# four subfolders are allowed too, each empty.
+# four subfolders and ai_data are allowed too, each empty.
 _LEFTOVER_FILES = (DATABASE_FILE, "data.qda-journal")
 _ICLOUD_SUFFIX = ".icloud"
 
@@ -693,8 +702,9 @@ def is_unfinished(path: Path) -> bool:
     enough, since a real project whose database went missing (moved, a
     failed copy, evicted by a sync service, or recreated empty by
     QualCoder's own open) keeps the researcher's recordings and
-    documents. Only a folder holding nothing but the four subfolders,
-    each empty, a missing or empty `data.qda` and its journal counts.
+    documents. Only a folder holding nothing but the four subfolders and
+    `ai_data` (CREATED_FOLDERS), each empty, a missing or empty `data.qda`
+    and its journal counts.
     Every entry is read with `lstat`, and no link is followed: a link
     anywhere makes the answer no. The database is never opened.
     """
@@ -710,7 +720,7 @@ def is_unfinished(path: Path) -> bool:
         entry = _lstat(Path(entry_path))
         if entry is None:
             return False
-        if name in SUBFOLDERS:
+        if name in CREATED_FOLDERS:
             if not stat.S_ISDIR(entry.st_mode):
                 return False
             try:
@@ -941,7 +951,7 @@ WINDOWS_MAX_FILE_PATH = 259
 # The room a file name inside documents/ should have (file names may be
 # up to 200 bytes; 100 characters holds most real ones).
 FILE_NAME_ROOM = 100
-_LONGEST_SUBFOLDER = max(SUBFOLDERS, key=len)
+_LONGEST_SUBFOLDER = max(CREATED_FOLDERS, key=len)
 _LONGEST_DATABASE_FILE = max(_DATABASE_SIDE_FILES + (DATABASE_FILE,),
                              key=len)
 

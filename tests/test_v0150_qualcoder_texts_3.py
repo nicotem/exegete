@@ -88,6 +88,15 @@ def _chat_changed(folder: Path, seconds_ago: float = 60) -> Path:
     return chat
 
 
+def _ai_data_used(folder: Path) -> Path:
+    """An ai_data folder with something in it, as QualCoder leaves one
+    (v0.15.0: an empty one, as Exegete makes at creation, is no sign)."""
+    ai_data = folder / "ai_data"
+    ai_data.mkdir(exist_ok=True)
+    (ai_data / "ai_prompts.yaml").write_bytes(b"prompts: []\n")
+    return ai_data
+
+
 def _starts(signals):
     return [s for s in signals if s.startswith((CHAT_SIGN, PROCESS_SIGN))]
 
@@ -381,7 +390,7 @@ class TestWorkOut:
         assert history.level == "none"
 
     @pytest.mark.parametrize("make, signs", [
-        (lambda f: (f / "ai_data").mkdir(), (AI_DATA_SIGN,)),
+        (lambda f: _ai_data_used(f), (AI_DATA_SIGN,)),
         (lambda f: _chat_changed(f, 3600 * 24 * 30),
          (AI_DATA_SIGN, CHAT_HISTORY_SIGN)),
         (lambda f: ((f / "ai_data").mkdir(),
@@ -600,8 +609,8 @@ class TestTheField:
         return out, json.loads(server.get_current_project())
 
     @pytest.mark.parametrize("make, on_computer", [
-        (lambda d: (d / "ai_data").mkdir(), False),
-        (lambda d: ((d / "ai_data").mkdir(),
+        (lambda d: _ai_data_used(d), False),
+        (lambda d: (_ai_data_used(d),
                     (Path.home() / ".qualcoder").mkdir()), True),
     ], ids=["project only", "project and computer"])
     def test_on_the_project_level(self, setup_server, qualcoder_db_path,
@@ -684,7 +693,11 @@ class TestOncePerSelection:
         folder = Path(qualcoder_db_path)
         backup = folder.parent / f"{folder.stem}_backup_20260101_000002.qda"
         shutil.copytree(folder, backup)
-        (backup / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (backup / "ai_data").mkdir(exist_ok=True)
+        (backup / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         server.select_project(qualcoder_db_path)
         before = json.loads(server.get_current_project())
         assert "qualcoder_history" not in before

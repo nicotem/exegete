@@ -2677,8 +2677,9 @@ def _ask_quick_picks(existing: List[str], declared: Optional[str],
 def _offers_ai_agent(existing: List[str]) -> bool:
     """Whether the ask offers "AI Agent", the name QualCoder 4.0's own
     assistant writes under (v0.15.0, not presuming QualCoder, piece 12):
-    the project already holds rows under it, or holds an ai_data folder,
-    which QualCoder 3.8.2 and 4.0 make and Exegete never does. A folder
+    the project already holds rows under it, or holds an ai_data folder
+    with something in it, which QualCoder 3.8.2 and 4.0 fill (Exegete
+    makes the folder empty at creation and never writes in it). A folder
     that cannot be checked counts as none."""
     if KNOWN_AI_ASSISTANT_OWNER in existing:
         return True
@@ -4168,10 +4169,10 @@ PIPE_PATH_WARNING = (
     "to open it in QualCoder, move or rename the folder so that its path "
     "has no '|'. Exegete works with it as usual.")
 # For a folder holding only what a project creation that did not finish
-# leaves (new_project.is_unfinished: the four subfolders, each empty, and
-# an empty or missing data.qda with its journal). Any other folder with
-# no usable database gets new_project.no_database_note, with no advice to
-# delete (fix round 1 of brief C).
+# leaves (new_project.is_unfinished: the four subfolders and ai_data,
+# each empty, and an empty or missing data.qda with its journal). Any
+# other folder with no usable database gets new_project.no_database_note,
+# with no advice to delete (fix round 1 of brief C).
 NO_USABLE_DATABASE = (
     "This folder holds no usable project database, and nothing else but "
     "empty folders: it is what a project creation that did not finish "
@@ -12616,9 +12617,11 @@ QUALCODER_38_BACKUPS_NOTE = (
     "backups in the folder set in its settings; those are not listed "
     "here.")
 # What a backup holds is a fact about Exegete's backups, said always;
-# what it adds on ai_data/ only when the project holds that folder (fix
-# round 1). QualCoder 3.8.2 makes the folder too, with the prompt library
-# (ai_prompts.py:465) and the chat history (ai_chat.py:185-187) in it and
+# what it adds on ai_data/ only when the project holds that folder with
+# something in it (fix round 1; v0.15.0: Exegete makes it empty at
+# creation, qualcoder_history.ai_data_found). QualCoder 3.8.2 makes the
+# folder too, with the prompt library (ai_prompts.py:465) and the chat
+# history (ai_chat.py:185-187) in it and
 # its own search index under ai_data/vectorstore (ai_vectorstore.py:297),
 # at the tag 3.8.2, which backups keep; only 4.0's ai_data/search.sqlite
 # is left out (BACKUP_IGNORE_PATTERNS).
@@ -12642,7 +12645,7 @@ def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
     history with QualCoder, `History.level`, "none" when there is none
     (the note on QualCoder 3.8.0 to 3.8.2). The note on what backups
     hold always, with what it adds on ai_data/ when the project holds
-    that folder, checked now."""
+    that folder with something in it, checked now."""
     notes = []
     if qualcoder_listed:
         notes.append(QUALCODER_BACKUPS_NOTE)

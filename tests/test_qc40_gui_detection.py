@@ -358,7 +358,11 @@ class TestLadderWiring:
         # v0.15.0 (not presuming QualCoder, piece 6): the note comes only
         # when the project or this computer shows QualCoder has been
         # used; an ai_data folder shows the project has been opened in it
-        (dest / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (dest / "ai_data").mkdir(exist_ok=True)
+        (dest / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         out = json.loads(server.select_project(str(dest)))
         assert out["qualcoder_gui_signals"] == []
         assert "QualCoder 4.0 leaves no lock file" in out["warning"]

@@ -191,7 +191,8 @@ Quick picks if you have no preference: `AI Coding Assistant`
 (Exegete's built-in default, and what every project coded with v0.11 and
 earlier already holds), or a name of your own. When the project shows
 that QualCoder's AI may have been used (it already holds rows under
-`AI Agent`, or has an `ai_data` folder), the picks also include
+`AI Agent`, or has an `ai_data` folder with something in it), the
+picks also include
 `AI Agent`, the exact name QualCoder 4.0's built-in assistant writes
 under, which groups Exegete's work and the built-in assistant's under
 one coder in QualCoder's per-coder visibility toggle, undo and reports.
@@ -278,7 +279,16 @@ default on every route; the `core` set for local models leaves it out.
   anything fails, nothing committed is left, and what this call made is
   removed; if the process is killed part way, the folder it leaves (empty
   subfolders, an empty database and its journal) is recognised as such
-  next time, and the name refused. Its "about" line reads
+  next time, and the name refused. One departure, named: Exegete also
+  makes an empty `ai_data` folder (since 0.15.0). QualCoder's New
+  Project makes only `images`, `audio`, `video` and `documents`, and
+  QualCoder makes `ai_data` when it first opens a project; QualCoder
+  4.0 makes it twice at once there, and on a project with no `ai_data`
+  yet the two can collide, so that the first open stops with an error
+  about the folder (opening again works). Made at creation, the folder
+  is there when QualCoder 4.0 first opens the project. Exegete never
+  writes in it, and an empty `ai_data` is not taken as a sign that
+  QualCoder has opened the project; one with something in it is. Its "about" line reads
   `Exegete <version> (QualCoder schema v17)` (projects created before
   0.14.1 keep `Exegete <version> ...`, the program's earlier name;
   nothing rewrites it).
@@ -428,7 +438,8 @@ only. The refusal confirms that the row belongs to a hidden coder
 `ai_data/` (the 4.0 prompt library and chat history are user data),
 minus QualCoder's own backup ignore set (`search.sqlite`,
 `search.sqlite-*`, `*.sqlite-shm`, `*.sqlite-wal`, `*.sqlite-journal`)
-and lock files. `search.sqlite` is the regenerable AI search index and
+and lock files. A workspace copy of a project with no `ai_data/` gets
+an empty one, as a new project does (since 0.15.0). `search.sqlite` is the regenerable AI search index and
 holds a plaintext copy of every text source; QualCoder rebuilds it on
 project open, so a restored project without one is normal. The project
 database itself is copied with SQLite's own online backup (since

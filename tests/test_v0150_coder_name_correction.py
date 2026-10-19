@@ -955,7 +955,11 @@ class TestTheNotesAfterTheChange:
         QualCoder, worked out when it is selected."""
         folder = _make(tmp_path)
         if sign == "project":
-            (folder / "ai_data").mkdir()
+            # v0.15.0: something in it; an empty ai_data, as Exegete
+            # makes at creation, is no sign of QualCoder
+            (folder / "ai_data").mkdir(exist_ok=True)
+            (folder / "ai_data" / "ai_prompts.yaml").write_bytes(
+                b"prompts: []\n")
         else:
             (Path.home() / ".qualcoder").mkdir()
         assert json.loads(server.select_project(str(folder)))["success"]

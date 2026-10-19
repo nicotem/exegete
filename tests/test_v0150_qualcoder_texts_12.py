@@ -676,7 +676,11 @@ class TestTheQuickPicks:
         assert server._import_owner_stop() == out["error"]
 
     def test_an_ai_data_folder(self, unset):
-        (unset / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (unset / "ai_data").mkdir(exist_ok=True)
+        (unset / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         out = _asked()
         assert out["error"] == ASK_HEAD + AI_AGENT + "." + ASK_TAIL
         assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME,
@@ -723,7 +727,11 @@ class TestTheQuickPicks:
                                 + ASK_TAIL)
         assert out["quick_picks"] == ["Qwen 3.8 6bit",
                                       server.DEFAULT_AI_CODER_NAME]
-        (unset / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (unset / "ai_data").mkdir(exist_ok=True)
+        (unset / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         out = _asked()
         assert out["error"] == (ASK_HEAD + AI_AGENT + setting + "."
                                 + ASK_TAIL)
@@ -798,7 +806,8 @@ class TestTheDocuments:
             "with v0.11 and earlier already holds), or a name of your own. "
             "When the project shows that QualCoder's AI may have been used "
             "(it already holds rows under `AI Agent`, or has an `ai_data` "
-            "folder), the picks also include `AI Agent`, the exact name "
+            "folder with something in it), the picks also include "
+            "`AI Agent`, the exact name "
             "QualCoder 4.0's built-in assistant writes under") in flat
         assert "already holds) and `AI Agent`" not in flat
 

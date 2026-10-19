@@ -671,8 +671,9 @@ class TestAfterCreation:
         workspace holds the one folder."""
         answer = create("Bare")
         folder = Path(answer["project_path"])
+        # v0.15.0: and an empty ai_data (new_project.CREATED_FOLDERS)
         assert sorted(p.name for p in folder.iterdir()) == [
-            "audio", "data.qda", "documents", "images", "video"]
+            "ai_data", "audio", "data.qda", "documents", "images", "video"]
         assert [p.name for p in folder.parent.iterdir()] == ["Bare.qda"]
         conn = sqlite3.connect(str(folder / "data.qda"))
         try:
@@ -696,8 +697,8 @@ class TestAfterCreation:
         answer = create("Two")
         folder = Path(answer["project_path"])
         assert sorted(p.name for p in folder.iterdir()) == [
-            "audio", "data.qda", "documents", "exegete.json", "images",
-            "qualcoder_mcp.json", "video"]
+            "ai_data", "audio", "data.qda", "documents", "exegete.json",
+            "images", "qualcoder_mcp.json", "video"]
         assert [p.name for p in folder.parent.iterdir()] == ["Two.qda"]
         stored = json.loads((folder / "exegete.json").read_text(
             encoding="utf-8"))
@@ -1302,7 +1303,7 @@ class TestCleanUpRemovesOnlyItsOwn:
         assert caught.value.leftovers.replaced
         assert (victim / "data.qda").read_bytes() == before
         assert sorted(p.name for p in victim.iterdir()) == [
-            "audio", "data.qda", "documents", "images", "video"]
+            "ai_data", "audio", "data.qda", "documents", "images", "video"]
 
     def test_the_folder_swapped_for_a_link_after_the_claim(
             self, tmp_path, monkeypatch):

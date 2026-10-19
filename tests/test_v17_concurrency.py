@@ -201,7 +201,11 @@ class TestT17DocsPosture:
         # limitation is named only when the project or this computer
         # shows QualCoder has been used; an ai_data folder shows the
         # project has been opened in it
-        (dest / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (dest / "ai_data").mkdir(exist_ok=True)
+        (dest / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         out = json.loads(server.select_project(str(dest)))
         warning = out.get("warning", "")
         # With no heuristic signals the limitation is named; with

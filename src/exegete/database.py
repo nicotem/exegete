@@ -2538,6 +2538,23 @@ QUALCODER_BACKUP_IGNORE_PATTERNS = (
 )
 BACKUP_IGNORE_PATTERNS = ("*.lock",) + QUALCODER_BACKUP_IGNORE_PATTERNS
 
+# The folder QualCoder 3.8.2 and 4.0 keep their AI state in. QualCoder's
+# own New Project makes only images, audio, video and documents (4.0
+# __main__.py:2193-2201, at the tag 4.0); its open makes ai_data, and in
+# 4.0 makes it twice at once: open_project starts the vector store's
+# background loading (__main__.py:2893), which makes the folder for
+# search.sqlite (ai_vectorstore.py:576-577), then calls init_ai_chat
+# (__main__.py:2895), which checks for the folder and makes it without
+# exist_ok on the main thread (ai_chat.py:1693-1695). On a project with
+# no ai_data yet the two race and the open can end in FileExistsError.
+# A departure, named (v0.15.0): Exegete makes an empty ai_data when it
+# creates a project (new_project.write_project), and when a copy into
+# the workspace has none (copy_project_to_workspace), so that QualCoder
+# 4.0's first open finds it. Exegete never writes in the folder, so an
+# empty one is no sign that QualCoder has opened the project
+# (qualcoder_history.ai_data_found).
+AI_DATA_FOLDER = "ai_data"
+
 
 def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
                  database_copied: bool = False,
@@ -3072,7 +3089,8 @@ def copy_project_to_workspace(
     project_in_use.lock would trigger QualCoder's "not properly
     closed" prompt on the copy). Symlinks pointing outside the project
     folder, dangling symlinks, and in-project symlink loops are skipped
-    rather than followed (S-P1, see _copy_ignore).
+    rather than followed (S-P1, see _copy_ignore). A copy that holds no
+    ai_data then gets an empty one (v0.15.0, AI_DATA_FOLDER).
 
     Args:
         source_path: Path to the source .qda project
@@ -3161,6 +3179,11 @@ def copy_project_to_workspace(
         # The database consistently, as a backup is made (v0.14): a copy
         # taken while QualCoder writes holds what was last committed
         _copy_project_tree(source_path, dest_path, skipped, report)
+        # A copy with no ai_data gets an empty one, as create_project
+        # makes (AI_DATA_FOLDER: spares QualCoder 4.0 a race on its first
+        # open); one the copy carries is left as it is
+        if not os.path.lexists(dest_path / AI_DATA_FOLDER):
+            (dest_path / AI_DATA_FOLDER).mkdir()
         logger.info("Project copied successfully (folder name withheld)")
         if report is not None:
             report["skipped_symlinks"] = skipped
@@ -12859,7 +12882,8 @@ class QualcoderDatabase:
             "names, which rename_case and rename_file change. A rename "
             "does not reach, and this block does not read, "
             f"{listed}.")
-        # Only when the project holds the folder (piece 11), by the
+        # Only when the project holds the folder with something in it
+        # (piece 11; v0.15.0: not the empty one Exegete makes), by the
         # history's own check; imported here, as that module imports
         # this one
         from . import qualcoder_history

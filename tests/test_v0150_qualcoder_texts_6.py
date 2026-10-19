@@ -195,7 +195,11 @@ def _selected(tmp_path, home, monkeypatch, ai_data, settings_folder,
     then select_project's answer."""
     folder = Path(_create(name, tmp_path / "work")["project_path"])
     if ai_data:
-        (folder / "ai_data").mkdir()
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (folder / "ai_data").mkdir(exist_ok=True)
+        (folder / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
     if settings_folder:
         (home / ".qualcoder").mkdir(exist_ok=True)
     if setting is not None:
@@ -285,7 +289,11 @@ class TestALeftoverLockFile:
             f"someone\n{time.time() - 3600}\n", encoding="utf-8")
         assert database.qualcoder_lock_state(folder)[0] == "stale"
         if other_sign == "ai_data":
-            (folder / "ai_data").mkdir()
+            # v0.15.0: something in it; an empty ai_data, as Exegete
+            # makes at creation, is no sign of QualCoder
+            (folder / "ai_data").mkdir(exist_ok=True)
+            (folder / "ai_data" / "ai_prompts.yaml").write_bytes(
+                b"prompts: []\n")
         elif other_sign == "backup":
             (folder.parent / f"{folder.stem}_BKUP_x.qda").mkdir()
         if setting is not None:
@@ -309,7 +317,8 @@ class TestSelectProjectsGuards:
             self, tmp_path, home, monkeypatch, restore_selection, setting,
             settings_folder):
         folder = Path(_create("Indexed", tmp_path / "work")["project_path"])
-        (folder / "ai_data").mkdir()
+        # v0.15.0: create_project has made it already
+        (folder / "ai_data").mkdir(exist_ok=True)
         (folder / "ai_data" / "search.sqlite-wal").write_bytes(b"w")
         if settings_folder:
             (home / ".qualcoder").mkdir()

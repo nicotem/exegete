@@ -382,9 +382,9 @@ comes with v0.15.2.
   `restore_backup` or for a project set in the host's configuration, at
   the first answer that reads it. It is kept in memory for the session:
   whether the project shows traces of QualCoder
-  (an `ai_data` folder, which QualCoder 3.8.2 and 4.0 make when they
-  first open a project and Exegete never makes; the AI chat history or
-  search index in it; QualCoder's own `_BKUP_` backups beside the
+  (an `ai_data` folder with something in it, which QualCoder 3.8.2 and
+  4.0 fill when they first open a project, while the one Exegete makes
+  at creation stays empty; the AI chat history or search index in it; QualCoder's own `_BKUP_` backups beside the
   project; a lock file left over, by QualCoder 3.8.2 or by an
   interrupted
   write of Exegete's), and whether QualCoder is installed
@@ -803,7 +803,7 @@ not changed.
   adds on the `ai_data` folder (QualCoder's AI prompt library and chat
   history, which backups keep, and QualCoder 4.0's search index,
   `ai_data/search.sqlite`, which they leave out) comes only when the
-  project has one. The note on how Exegete copies the database
+  project has one with something in it. The note on how Exegete copies the database
   speaks of a backup taken while "another program" is writing to the
   project.
 - **After a pseudonymisation run**: the note on an open QualCoder window
@@ -812,7 +812,7 @@ not changed.
   QualCoder's AI search index and chat history comes only when the
   project holds either file, and names the one or both it holds.
 - **The pseudonymisation preview**: its note on the `ai_data` folder
-  comes only when the folder is there; its note on what it reads speaks
+  comes only when the folder is there with something in it; its note on what it reads speaks
   of the notes of a coder the project hides (a visibility setting made
   in QualCoder) only when there is one, and, among what a rename does
   not reach, names saved graph labels, saved table displays and
@@ -871,7 +871,7 @@ and how hidden coders are handled have not changed.
   on QualCoder's versions and its own AI.
 - **The AI coder name**: when Exegete asks for it, "AI Agent" is
   offered only when the project already holds rows under that name or
-  has an `ai_data` folder, as "if the researcher also uses QualCoder
+  has an `ai_data` folder with something in it, as "if the researcher also uses QualCoder
   4.0's own assistant, this name puts both assistants' codings under
   one coder"; otherwise the picks are Exegete's default and a name the
   researcher chooses.
@@ -1162,6 +1162,22 @@ Linux, letting QualCoder open a project made in Exegete once, before
 much work goes into it, is a quick check: it should open without an
 error and show what you did; close it there before the conversation
 writes again.
+
+New projects also hold an empty `ai_data` folder, a named departure
+from QualCoder, whose own New Project makes only `images`, `audio`,
+`video` and `documents`. QualCoder makes `ai_data` when it first opens
+a project, and QualCoder 4.0 makes it twice at once there: on a project
+with no `ai_data` yet, as every project made in Exegete had until now,
+the two can collide, and the first open stops with an error about the
+folder (opening again works). The maintainer's sitting of 19 October
+2026 met this in QualCoder 4.0's window, which the run above could not
+see. Made at creation, the folder is there when QualCoder 4.0 first
+opens the project; a copy into the workspace of a project with no
+`ai_data` gets an empty one too. A project made in Exegete before
+0.15.0 and not yet opened in QualCoder 4.0 can still meet the error
+once, and opens the second time. Exegete never writes in the folder,
+and an empty `ai_data` is not taken as a sign that QualCoder has opened
+the project: only one with something in it is.
 
 ### Deprecated: the removals move to v0.15.1
 

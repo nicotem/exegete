@@ -441,7 +441,7 @@ class TestWithoutTheSetting:
         assert answer["next_steps"][0] == ASK_STEP
         assert _ai_warnings(answer) == []
         assert sorted(p.name for p in folder.iterdir()) == [
-            "audio", "data.qda", "documents", "images", "video"]
+            "ai_data", "audio", "data.qda", "documents", "images", "video"]
         out = json.loads(server.create_code("Asked", create_backup=False))
         assert out["action_required"] == "set_project_ai_coder_name"
         assert "(the AI coder name in Exegete's settings)" not in out["error"]

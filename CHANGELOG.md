@@ -69,12 +69,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   write to it at the same time. Both are now refused for the whole
   write. A write never commits a change to the project's database over
   another program's fresh lock: if the lock file no longer holds
-  Exegete's lines just before the change is saved, the change is
+  Exegete's lines just before the change is saved, Exegete checks it
+  again, and when another program's lock there is fresh, the change is
   refused and rolled back, and the answer names the backup taken before
-  it. At the end Exegete removes the file only if it still holds its
-  own lines, so it no longer removes a lock file another program has
-  written meanwhile. Saving the names list is kept fresh in the same
-  way, without that last check, since it changes no row of the
+  it. A lock file gone by then, or one not refreshed for over 30
+  seconds, lets the change through, as a lock file left over does when a
+  write begins. At the end Exegete removes the file only if it still
+  holds its own lines, so it no longer removes a lock file another
+  program has written meanwhile. Saving the names list is kept fresh in
+  the same way, without that last check, since it changes no row of the
   project's database. `get_current_project`'s note on a lock file not
   refreshed for over 30 seconds now says that Exegete leaves one when a
   write is cut short or its lock file could not be removed, and no

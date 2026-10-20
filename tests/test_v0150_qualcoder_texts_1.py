@@ -365,7 +365,8 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     both. Fix round 2: the note says what the file is, not why it was
     left. v0.15.1: Exegete keeps its lock file fresh for the whole
     write, so a long write no longer shows as a leftover (the guard
-    below), and the note no longer says it does."""
+    below), and the note no longer says it does; it still names both
+    programs as a source of the file (review round 1)."""
     lock = Path(qualcoder_db_path) / QUALCODER_LOCK_FILENAME
     lock.write_text(f"someone\n{time.time() - 3600}", encoding="utf-8")
     try:
@@ -375,7 +376,10 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     assert answer["qualcoder_open"] is False
     assert answer["qualcoder_lock"]["state"] == "stale"
     assert answer["qualcoder_lock"]["holder"] == "someone"
-    assert "while it runs" not in answer["qualcoder_lock"]["note"]
+    note = answer["qualcoder_lock"]["note"]
+    assert "while it runs" not in note
+    assert "Exegete" in note
+    assert "QualCoder" in note
 
 
 def test_guard_a_long_write_by_exegete_never_shows_as_a_leftover(

@@ -27,7 +27,8 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server  # noqa: E402
 from exegete import database  # noqa: E402
@@ -184,6 +185,63 @@ def test_a_lock_taken_over_mid_write_refuses_the_commit(
         assert server.db.read_only is True
     finally:
         _lock(qualcoder_db_path).unlink()
+
+
+@pytest.mark.parametrize("found", ["gone", "stale"])
+def test_a_lock_gone_or_stale_before_the_commit_lets_it_through(
+        setup_server, qualcoder_db_path, fast, captured, monkeypatch, found):
+    """Review round 1: the file no longer Exegete's just before the
+    commit, but no other program's fresh lock either: removed, or
+    holding another program's lines an hour old. Exegete checks it again
+    and the change is saved, the backup named, as over a leftover;
+    another program's lines are left. The fact the CHANGELOG states
+    (the next test)."""
+    lock = _lock(qualcoder_db_path)
+    stale = f"someone else\n{time.time() - 3600:.6f}"
+
+    def change(db):
+        with captured[-1]._mutex:
+            if found == "gone":
+                lock.unlink()
+            else:
+                lock.write_text(stale, encoding="utf-8")
+        time.sleep(3 * INTERVAL)
+    _during_add_code(monkeypatch, change)
+    try:
+        answer = json.loads(server.create_code(name="Through",
+                                               create_backup=True))
+        _assert_committed(answer, qualcoder_db_path, "Through")
+        if found == "gone":
+            assert not lock.exists()
+        else:
+            assert lock.read_text(encoding="utf-8") == stale
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def _sentences(text: str) -> list:
+    return [s for s in " ".join(text.split()).split(". ") if s]
+
+
+def test_the_changelog_says_when_a_change_is_refused():
+    """Review round 1: the CHANGELOG said that a change is refused
+    whenever the lock file no longer holds Exegete's lines before the
+    commit; only another program's fresh lock refuses it (the test
+    above, and the takeover's). Its claim on when a change is refused
+    is the fact: a refusal there is conditioned on a fresh lock, and a
+    file gone or not refreshed for over 30 seconds lets it through."""
+    text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    start = text.index("Exegete renews its lock file every five seconds")
+    entry = text[start:text.index("\n#", start)]
+    refusals = [s for s in _sentences(text) if "no longer holds" in s
+                and "Exegete's lines" in s and "refused" in s]
+    assert refusals
+    for sentence in refusals:
+        between = sentence[sentence.index("no longer holds"):
+                           sentence.index("refused")]
+        assert "fresh" in between, sentence
+    assert [s for s in _sentences(entry) if "gone" in s
+            and "30 seconds" in s and "through" in s], entry
 
 
 def test_another_programs_lines_at_the_end_are_left(tmp_path, caplog):

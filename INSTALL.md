@@ -2398,7 +2398,7 @@ Server" above).
 delete the old clone and its venv. Keeping them around breaks nothing.
 
 <details>
-<summary>Insisting on reusing the old venv? (works, but read this)</summary>
+<summary>Reusing the old venv instead? (read this first)</summary>
 
 The old venv holds the old name's package, qualcoder-mcp, installed
 from the clone, and a plain `pip install exegete` there puts Exegete

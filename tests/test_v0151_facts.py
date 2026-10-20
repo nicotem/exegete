@@ -1136,22 +1136,7 @@ def check_documents(facts: Facts, documents: List[Document]) -> Outcome:
 # its line. Every entry must still be found wrong, so it leaves in the
 # commit that fixes its words; the table is empty once they have all
 # merged.
-STALE_TEXTS = "the stale texts, first piece (its PDF and EPUB group)"
-KNOWN: Tuple[Tuple[str, str, str, str], ...] = (
-    ("README.md", "the install commands", "pipx install exegete",
-     STALE_TEXTS),
-    ("INSTALL.md", "the install commands", "pip install -e .", STALE_TEXTS),
-    ("INSTALL.md", "the install commands", "pip install exegete",
-     STALE_TEXTS),
-    ("INSTALL.md", "the install commands", "pipx install exegete",
-     STALE_TEXTS),
-    ("INSTALL.md", "the install commands", "uv tool install exegete",
-     STALE_TEXTS),
-    ("INSTALL.md", "the install commands", "pip install --upgrade exegete",
-     STALE_TEXTS),
-    ("CONTRIBUTING.md", "the install commands", 'pip install -e ".[dev]"',
-     STALE_TEXTS),
-)
+KNOWN: Tuple[Tuple[str, str, str, str], ...] = ()
 
 
 def _without_versions(words: str) -> str:

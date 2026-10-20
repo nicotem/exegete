@@ -234,7 +234,9 @@ def test_the_backup_before_a_database_change_is_never_copied_as_a_file():
     assert ("the backup Exegete takes before a change to the project's "
             "database is never copied as a file") in privacy
     readme = _flat("README.md")
-    assert ("a backup before each change to the project's database, taken "
+    # (the ignored argument, merged first: "every change", whatever
+    # create_backup says)
+    assert ("a backup before every change to the project's database, taken "
             "by Exegete itself") in readme
 
 

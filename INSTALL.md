@@ -2005,7 +2005,9 @@ before; Claude replaces the old one.
 
 **PyPI install**, one command, with your MCP client fully quit first
 (see "Tools missing or unchanged after an upgrade"; the ChatGPT desktop
-app: quit it; Codex on the command line: end the session):
+app: quit it; Codex on the command line: end the session); for an
+install with the optional part for PDF and EPUB, the commands just
+after these name it:
 
 ```bash
 ~/exegete-venv/bin/pip install --upgrade exegete
@@ -2404,8 +2406,9 @@ delete the old clone and its venv. Keeping them around breaks nothing.
 <summary>Reusing the old venv instead? (read this first)</summary>
 
 The old venv holds the old name's package, qualcoder-mcp, installed
-from the clone, and a plain `pip install exegete` there puts Exegete
-beside it (above). Take the old package out first, then install
+from the clone, and a plain `pip install exegete` there, with or
+without the optional part for PDF and EPUB, puts Exegete beside it
+(above). Take the old package out first, then install
 Exegete (the clone here is `~/Documents/qualcoder_mcp`, as in the entry
 above: put your clone's folder in its place):
 

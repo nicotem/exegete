@@ -1,0 +1,28 @@
+{
+  "upload_type": "software",
+  "title": "Exegete",
+  "description": "Exegete (formerly qualcoder-mcp): a qualitative data analysis application used in conversation with an AI assistant and compatible with QualCoder. The researcher works on their project through the conversation and approves what the assistant suggests before it is written; the project is kept in QualCoder's format, so it can be worked on in either program, one at a time. Technically, a Model Context Protocol server.",
+  "creators": [
+    {
+      "name": "Tempini, Niccolò",
+      "affiliation": "University of Exeter",
+      "orcid": "0000-0002-5100-5376"
+    }
+  ],
+  "license": "lgpl-3.0-or-later",
+  "keywords": [
+    "qualitative research",
+    "qualitative data analysis",
+    "CAQDAS",
+    "coding",
+    "AI assistant",
+    "MCP",
+    "QualCoder"
+  ],
+  "access_right": "open",
+  "communities": [
+    {
+      "identifier": "datastudies"
+    }
+  ]
+}

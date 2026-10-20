@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   their own (`external-links.yml`). The placeholder for a screenshot
   that was never added is gone from IMPORT_INSTRUCTIONS.md.
 
+### Citing Exegete
+
+- **Each release's record on Zenodo is submitted to the
+  [Exeter Data Studies](https://zenodo.org/communities/datastudies)
+  community**, from this release.
+
 ## [0.15.0-alpha] - 2026-10-20
 
 v0.15.0, the first of three v0.15 releases: v0.15.1 brings the safety

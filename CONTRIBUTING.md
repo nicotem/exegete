@@ -360,6 +360,15 @@ and that the release is out, and the deploy waits in the
 `github-pages` environment for the owner's approval: the last step of
 each release, and a hold switch for a bad file.
 
+## The record on Zenodo
+
+Zenodo archives each GitHub release, describes it from `.zenodo.json`
+alone and not from `CITATION.cff` (`tests/test_v0151_zenodo.py` keeps
+the two in step), and submits the record to the Exeter Data Studies
+community (`datastudies`), whose curators accept the request on
+Zenodo, unless the community's review policy lets its owners publish
+without review.
+
 ## Licence
 
 From v0.13, Exegete (then called qualcoder-mcp) is licensed under the GNU Lesser General

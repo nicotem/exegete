@@ -290,10 +290,12 @@ can reach you before Exegete has been tried with it, and could stop
 Exegete from starting or change what it reads from a document.
 
 If you would rather have the releases the tests ran with, the Claude
-Desktop extension above installs exactly those. If an update stops
-Exegete from starting, installing the release of that library you had
-before, in Exegete's own environment, can bring it back: with plain
-pip, `~/exegete-venv/bin/pip install "<library>==<release>"`; pipx and
+Desktop extension above installs exactly those. Each release's notes,
+from 0.15.1 on, list the releases the desktop extension installs. If an
+update stops Exegete from starting, installing the release of that
+library you had before, in Exegete's own environment, can bring it
+back: with plain pip,
+`~/exegete-venv/bin/pip install "<library>==<release>"`; pipx and
 `uv tool` have their own ways to add a library to a program's
 environment (`pipx inject`, and `uv tool install` with `--with`). An
 environment of its own, as above, also keeps these limits from clashing

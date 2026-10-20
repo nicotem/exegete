@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pdf-epub`, now asks for a release below 7. An install from PyPI takes
   the same releases as before; a new major release of one of these waits
   for a release of Exegete that has been tried with it.
+- **Each release's notes list what the desktop extension installs**,
+  from this release: each library and its release, and the computers
+  that take it where they differ (cryptography, and pywin32 on Windows),
+  so you can compare an install of your own with it. CI gives the table
+  for every commit, from the lock's dry run on six computers
+  (`scripts/extension_libraries.py`).
 - **Exegete takes one backup before every change, at the last moment.**
   After a tool's checks, Exegete copies the project into the backup,
   all but its database, while other programs can still save; then it
@@ -117,6 +123,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   library with an upper limit, the newest release on PyPI, so a new
   major release beyond a limit is seen without being installed. CI now
   runs twenty jobs.
+- **A weekly advisory check** (`scripts/check_advisories.py`, a workflow
+  of its own, `advisories.yml`, which also runs on a push that changes
+  the lock): every release from PyPI in `uv.lock` is asked of OSV's
+  database of advisories, in one request of names and releases. A new
+  advisory fails; one already read and accepted, listed in the script
+  with its date and reason (at this release, those against the two
+  cryptography releases kept for Intel Macs and Windows on Arm), is a
+  notice, and so is an accepted one no longer reported, whose entry can
+  then go.
 
 ### Citing Exegete
 

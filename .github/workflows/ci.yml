@@ -242,16 +242,29 @@ jobs:
       # computer (fix round 1: cryptography had no wheel for Intel Macs or
       # Windows on Arm). Asked of the shipped lock itself, for every
       # computer pyproject's [tool.uv] names, on the package's Python:
-      # nothing but the project may be built.
+      # nothing but the project may be built. v0.15.1: each computer's
+      # report is also kept, for the table below; uv writes it, the
+      # `+ name==version` lines included, to standard error, and bash runs
+      # this with pipefail, so a failing uv still fails the step.
       - name: Check the lock has a wheel for every computer
         if: runner.os == 'Linux'
         shell: bash
         run: |
+          mkdir -p "$RUNNER_TEMP/dry-run"
           cd dist/mcpb/exegete-*/
           for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             echo "== $target"
-            uv sync --frozen --dry-run --no-install-project --no-build --extra pdf-epub --python "$(cat .python-version)" --python-platform "$target"
+            uv sync --frozen --dry-run --no-install-project --no-build --extra pdf-epub --python "$(cat .python-version)" --python-platform "$target" 2>&1 | tee "$RUNNER_TEMP/dry-run/$target.txt"
           done
+
+      # v0.15.1: what the extension installs, one table in the run's
+      # summary, from the six reports above (scripts/extension_libraries.py
+      # fails on a report with no install line). Each release's notes copy
+      # the release commit's table under "What the extension installs".
+      - name: List what the extension installs
+        if: runner.os == 'Linux'
+        shell: bash
+        run: python scripts/extension_libraries.py "$RUNNER_TEMP"/dry-run/*.txt >> "$GITHUB_STEP_SUMMARY"
 
       # Installed and started the way Claude Desktop 2.9939.2 does it
       # (scripts/smoke_desktop_extension.py says how), with that uv, in a

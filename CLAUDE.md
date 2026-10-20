@@ -12,8 +12,12 @@ of a project from the conversation. It runs as an MCP server.
 
 ## Commands
 
-- **Install for development** (Python 3.10 or newer):
-  `pip install -e ".[dev]"`.
+- **Install for development** (Python 3.10 or newer) from the lock,
+  the releases CI tests with:
+  `uv sync --frozen --extra dev --extra pdf-epub`, which makes `.venv`
+  in the repository and installs the package there, editable.
+  `pip install -e ".[dev]"` takes the newest releases `pyproject.toml`
+  allows instead, as an install from PyPI does.
 - **Tests:** `python -m pytest -q` from the repository root. The full
   suite takes about twelve minutes on a Mac, longer on Windows CI; CI
   runs it on Ubuntu, Windows and macOS with Python 3.10 and 3.13. Every behaviour change needs a test that

@@ -378,8 +378,12 @@ together. The file, and the update page Exegete's notes point to
 each release updates both with `release.py` (`latest.json`'s version as
 PyPI spells it, its date, and the page's version, date, summary, links
 and commands); `tests/test_v0142_pages.py` holds them to `release.py`.
-The site is published by `.github/workflows/pages.yml`, deployed from
-GitHub Actions and never from a branch (the owner's decision of 5
+Each release's notes on GitHub list what the desktop extension
+installs, under "What the extension installs": the table in the summary
+of the Linux desktop extension job in the release commit's CI run
+(`scripts/extension_libraries.py`, from the lock's dry run on each
+computer). The site is published by `.github/workflows/pages.yml`,
+deployed from GitHub Actions and never from a branch (the owner's decision of 5
 October 2026, `docs/update-check/design.md`, D3): a branch would let
 any token that can push rewrite `latest.json` without a release. Once
 the release is published, with its extension file, and both packages

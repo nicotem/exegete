@@ -222,6 +222,8 @@ WORKFLOW_JOBS = {
     "pages.yml": {"check-site", "deploy-site"},
     # v0.15.1: the links to other sites, once a week
     "external-links.yml": {"external-links"},
+    # v0.15.1: the locked releases against the advisories, once a week
+    "advisories.yml": {"advisories"},
 }
 
 

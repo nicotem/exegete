@@ -48,9 +48,11 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
      Installed before 0.15.0, a setting left at the earlier default,
-     `~/QualCoder projects`, is moved to `~/Exegete projects` by the
-     update. No project is moved, and both folders are searched, so
-     the projects in the earlier one are still found. To
+     `~/QualCoder projects`, was moved to `~/Exegete projects` by the
+     update on the maintainer's Mac on 19 October 2026; a folder chosen
+     by hand should be kept (not yet checked). After updating, look at
+     the setting. No project is moved, and both folders are searched,
+     so the projects in the earlier one are still found. To
      keep new projects beside the earlier ones, set it back to
      `~/QualCoder projects`.
    - **Your coder name**: empty by default. It is the name your own
@@ -112,8 +114,9 @@ or Auto) and on each tool's own setting under "+", Connectors; "What
 hosts do with the tools' read and write marks", further down, says
 what each does. That is what Anthropic documents, for Cowork and
 Claude Code. What Claude Desktop's ordinary chat, where step 5 asks its
-question, does with the tools' marks is not documented, and this
-project has not yet checked it. In the version of Claude where chat
+question, does with the tools' marks is not documented: Claude Desktop
+2.9939.2 was seen to pass the read-only mark on with each tool (26
+September 2026), and what the chat then does with it is not known. In the version of Claude where chat
 and Cowork are one conversation, which Anthropic is rolling out to Pro
 and Max plans first, a permission setting in the message box has two
 modes
@@ -173,22 +176,24 @@ Exegete works with any MCP host that can run local servers over
 standard input and output.
 Which AI processes your data, and under which terms, is decided by the
 host you run and the account you sign into, not by Exegete. The terms
-attach to the account and product line, not to the client application. Three routes with Claude,
-from easiest to most private, and OpenAI's apps:
+attach to the account and product line, not to the client application. Two routes with Claude,
+from easiest to most private, one fully local, and OpenAI's apps:
 
 | Route | What it means | Where to read more |
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The easiest path. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. It is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls); do not assume a default. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team/Enterprise accounts) | Same Claude capability; different terms attach to the traffic. Institutions should prefer organisational accounts. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests an assistant without file access of its own, such as Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar MCP hosts) | Participant data is never sent to any AI provider. The trade is capability: local models are markedly weaker on many-tool work, and we have not yet evaluated any local model with Exegete (evaluation pending; that is why this is Experimental). Requires the reduced core toolset. | [PRIVACY.md](PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat, until a setting that stops Codex's reads has been tested with Exegete. Not yet tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. Not tried by this project. | [PRIVACY.md](PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
 tested at the server level, but not yet exercised end to end on every
 host and not capability-evaluated on local models. The recipes for
-OpenAI's apps and for LM Studio go step by step; a guide of that kind
-for Claude Code is considered on request: ask in
+OpenAI's apps, for LM Studio and for Claude Code with an Anthropic API
+key go step by step; Claude Code signed in with a Pro or Max plan
+follows "Alternative: Claude Code and other MCP clients". For another
+host, ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
 **What the assistant is told (provisional).** Exegete gives the
@@ -273,9 +278,11 @@ pipx install exegete
 uv tool install exegete
 ```
 
-This gives you an `exegete` command; get its absolute path with
-`which exegete` and use THAT as the `command` in the Claude
-configuration of Step 6 (no `args` needed). Everything else in this
+This gives you an `exegete` command; use its absolute path as the
+`command` in the Claude configuration of Step 6 (no `args` needed).
+For the plain virtual environment, `echo ~/exegete-venv/bin/exegete`
+prints it (in PowerShell, `echo "$HOME\exegete-venv\Scripts\exegete.exe"`);
+after pipx or uv, `which exegete` does (on Windows, `where.exe exegete`). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
 These commands leave out the optional part for PDF and EPUB ("PDF and
 EPUB: the optional part", below, adds it).
@@ -408,7 +415,10 @@ venv\Scripts\activate
 pip install -e .
 ```
 
-This will install all necessary components. You'll see several lines of output; this is normal.
+You'll see several lines of output; this is normal. This installs
+Exegete without the optional part for PDF and EPUB; to have it, with
+its licence ("PDF and EPUB: the optional part", above), run
+`pip install -e ".[pdf-epub]"` instead.
 
 To run the test suite as well, install the development extras and run
 pytest from the repository root:
@@ -418,8 +428,9 @@ pip install -e ".[dev]"
 python -m pytest
 ```
 
-With `pip install -e ".[dev,pdf-epub]"`, as the automated checks
-install it, the tests of PDF and EPUB import run too.
+With `pip install -e ".[dev,pdf-epub]"`, the tests of PDF and EPUB
+import run too, as they do in the automated checks, which install the
+releases in the repository's lock file with both parts.
 
 ---
 
@@ -461,9 +472,9 @@ Now we need to tell Claude Desktop about the MCP server. You have two options:
 ```
 
 With a **PyPI install** (pip, pipx or uv), point the client straight at
-the installed `exegete` command instead, using the absolute path
-from `which exegete` (Claude Desktop does not inherit your shell's
-PATH), and leave out `args`:
+the installed `exegete` command instead, using its absolute path
+("Recommended: Install from PyPI", above, says how to print it; Claude
+Desktop does not inherit your shell's PATH), and leave out `args`:
 
 ```json
 {
@@ -492,14 +503,20 @@ details.
    - **Important**: projects are **folders** ending in `.qda` (QualCoder's format), not single files
    - If you use QualCoder, its recent projects list shows where yours is
    - Each project folder contains a `data.qda` database file inside
-   - Common locations:
-     - `~/Documents/QualCoder_projects/MyProject/MyProject.qda/` (folder)
-     - `~/QualCoder/ProjectName/ProjectName.qda/` (folder)
+   - Common locations (each a folder):
+     - `~/Documents/Exegete projects/MyProject.qda/`, where Exegete
+       makes projects on this route unless `EXEGETE_WORKSPACE` names
+       another folder
+     - `~/Exegete projects/MyProject.qda/`, where the desktop extension
+       makes them
+     - if you use QualCoder, `~/Documents/QualCoder_projects/MyProject/MyProject.qda/`
+       or `~/QualCoder/ProjectName/ProjectName.qda/`
 
-   Or in Terminal:
+   Or in Terminal, searching your home folder four levels down, which
+   takes in every place Exegete's project listing searches:
    ```bash
    # Search for .qda project folders
-   find ~/Documents -name "*.qda" -type d 2>/dev/null
+   find ~ -maxdepth 4 -name "*.qda" -type d 2>/dev/null
    ```
 
 2. **Open Claude Desktop Configuration** (same as Option A, step 3)
@@ -513,7 +530,7 @@ details.
       "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
       "args": ["-m", "exegete.server"],
       "env": {
-        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/Exegete projects/MyProject.qda"
       }
     }
   }
@@ -607,8 +624,9 @@ server added this way only in the folder where it was added, so start
 claude mcp add exegete -- exegete
 ```
 
-(Claude Code resolves commands on your shell PATH; if in doubt, use the
-absolute path from `which exegete`.) With a source install, use
+(Claude Code resolves commands on your shell PATH, where pipx and uv
+tool put `exegete`; with the plain virtual environment, give its full
+path, `~/exegete-venv/bin/exegete`, instead.) With a source install, use
 the venv Python path from Step 5:
 
 ```bash
@@ -686,9 +704,12 @@ started `QUALCODER_MCP_` (and the first was `QUALCODER_PROJECT_PATH`):
 `QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`.
 Exegete still reads them until v1.0, and its log says once per start
 which new spelling to use instead. If a setting is given under both
-spellings with different values (after the usual tidying: spaces, the
-tool set's letter case and a leading `~` do not count), Exegete does
-not start, and says which two disagree; if either spelling of
+spellings with different values (after the tidying each setting is
+given when it is read: spaces around the tool set, the AI coder name
+and `EXEGETE_WORKSPACE_REQUIRED` do not count, nor the tool set's letter
+case, and a leading `~` in the workspace is read as your home folder;
+spaces in the workspace, the project path and
+`EXEGETE_ALLOW_UNKNOWN_SCHEMA` do count), Exegete does not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
 desktop extension sets both spellings of these four settings itself
 (the tool set, the two for the workspace and the AI coder name), always
@@ -729,9 +750,11 @@ and `EXEGETE_USES_QUALCODER`, all below.
   `~/Documents/Qualcoder MCP Projects`, which is never moved or emptied,
   and whose projects the listing still finds). The desktop extension
   sets it from its "Folder for projects" setting,
-  whose default is `~/Exegete projects` (an update moves a setting left
-  at the earlier default, `~/QualCoder projects`, to it; no project is
-  moved, both folders are searched, and setting it back to
+  whose default is `~/Exegete projects` (on the maintainer's Mac on 19
+  October 2026, the update moved a setting left at the earlier default,
+  `~/QualCoder projects`, to it; a folder chosen by hand should be kept,
+  not yet checked, so after updating, look at the setting; no project
+  is moved, both folders are searched, and setting it back to
   `~/QualCoder projects` keeps new projects beside the earlier ones),
   because iCloud (Desktop and Documents) and OneDrive may sync
   `~/Documents`.
@@ -778,9 +801,9 @@ and `EXEGETE_USES_QUALCODER`, all below.
   write asks once which to use there, rather than re-attributing
   anything. Up to 0.14.3 it was offered first and checked against a
   project's own AI coder name, but never stored by itself.
-  Give the model this host runs (`"Qwen 3.8 6bit"`), or `AI Agent` for
-  the exact name QualCoder 4.0's built-in assistant writes under, which
-  groups Exegete's work with the assistant's under one coder in
+  Give the model this host runs (`"Qwen 3.8 6bit"`). If you also use
+  QualCoder 4.0's own assistant, `AI Agent` is the exact name it writes
+  under, which groups Exegete's work with the assistant's under one coder in
   QualCoder's per-coder visibility toggle, undo and reports. `default`
   and QualCoder's speaker coder are never stored as an AI coder name:
   a new project is then made without one, and its answer says why; nor
@@ -835,12 +858,16 @@ and `EXEGETE_USES_QUALCODER`, all below.
 
 - `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release
-  is verified against (v14 through v17, up to QualCoder 4.0) are
-  refused to protect the data, and the refusal names this variable.
-  Setting it to `1` lets those writes proceed; every write result then
-  carries a warning. Exegete cannot know what a newer format changed, so
-  it is worth having backups you trust and checking the results in
-  QualCoder.
+  is verified against (v14 through v17, up to QualCoder 4.0), or whose
+  schema value is missing or not in QualCoder's form, are refused to
+  protect the data, and the refusal names this variable. Setting it to
+  `1` lets those writes proceed; every write result then carries a
+  warning. A missing or unreadable value is no sign of a newer
+  QualCoder: if it was changed by mistake, a backup from before has it,
+  which is the safer way back (`list_backups`, `restore_backup`). For a
+  newer schema, Exegete cannot know what the newer format changed, so
+  it is worth having backups you trust and, if you use QualCoder,
+  checking the results there.
 - `EXEGETE_UPDATE_CHECK`: whether Exegete checks for new versions, at
   most once a week on its own and at most once a day when asked
   ([PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)
@@ -877,8 +904,9 @@ and `EXEGETE_USES_QUALCODER`, all below.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
   was installed. It also makes checking on by default, as the
-  extension's setting is, and gives an import call the extension's
-  time (`EXEGETE_CALL_SECONDS`, above). Do not set it yourself.
+  extension's setting is, and would give an import call the extension's
+  time, today the same 30 seconds as on every route
+  (`EXEGETE_CALL_SECONDS`, above). Do not set it yourself.
 
 ---
 
@@ -909,7 +937,9 @@ set up with computer use off, no folder that holds your projects or
 transcripts connected to it, and no other extension that reads files.
 
 **1. Install Exegete** as described above (PyPI install
-recommended).
+recommended). After pipx or uv tool, the `exegete` command in step 2
+is found on your PATH; after the plain virtual environment, write its
+full path there instead, `~/exegete-venv/bin/exegete`.
 
 **2. In one Terminal window: a folder of its own, the key, the server,
 then Claude Code.** Get a key from the Console at
@@ -1040,7 +1070,9 @@ pipx install "exegete[pdf-epub]"
 
 Without that part, Exegete refuses to import PDF and EPUB files ("PDF
 and EPUB: the optional part", above, says what it adds and under which
-licence). Find the absolute path of the command (`which exegete`). LM
+licence). Find the absolute path of the command: after pipx,
+`which exegete`; after the virtual environment,
+`echo ~/exegete-venv/bin/exegete`. LM
 Studio launches MCP servers itself and may not see your shell's PATH,
 so the config below must use the absolute path.
 
@@ -1058,7 +1090,7 @@ Experimental.
 **Step 3. Use the core toolset.** Exegete offers 82 tools by
 default, and the serialised tool definitions alone measure about
 208,000 characters, roughly 52k tokens, against about 68,000
-characters, roughly 17k tokens, for the 25 tools of `core` (208,201
+characters, roughly 17k tokens, for the 25 tools of `core` (208,327
 and 68,483 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far
@@ -1118,8 +1150,8 @@ arguments and allow the call once or always. Keep confirmations on:
 they are your audit point for what the model is doing to your project.
 If your LM Studio build offers per-chat or per-tool toggles for MCP
 servers, disable the server in chats that do not need it (toggle
-granularity was not part of the 0.4.22 functional check; this sentence
-will be updated when it has been verified).
+granularity was not part of the 0.4.22 functional check, and has not
+been checked since).
 
 **Step 7. Verify offline (recommended for data-governance records).**
 Disconnect from the network and work. Model inference, chats, and all
@@ -1148,7 +1180,8 @@ overflow; lower the tool surface (core mode), raise the context, or
 shorten the chat. After editing mcp.json or upgrading the package,
 toggle the server off and on or restart LM Studio so the new process
 is the one in use. LM Studio may also restart the MCP server process
-between turns (observed with 0.4.12), which drops the in-memory
+between turns (observed with LM Studio 0.4.12, before the recipe was
+verified against 0.4.22 on 7 September 2026), which drops the in-memory
 project selection. Since 0.11 every "no project selected" error names
 the last project used on this machine, so recovery is one
 `select_project` call. If you work on a single project, set
@@ -1168,8 +1201,10 @@ corresponding care.
 > yet run Exegete in any OpenAI app; the steps may change after that
 > check. Codex reads files on your computer by itself, so for
 > participants' data this project suggests an assistant with no file
-> access of its own, such as Claude Desktop's chat, until a setting that
-> stops Codex's reads has been tested with Exegete; step 3 says more.
+> access of its own, such as Claude Desktop's chat. OpenAI documents a
+> setting, marked Beta, that can keep Codex's own commands from reading
+> outside the folder it works in; it has not been tested with Exegete.
+> Step 3 says more.
 
 **Which OpenAI apps can use Exegete.** OpenAI's page on MCP
 (<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
@@ -1266,17 +1301,20 @@ You'll Need", above). In the Terminal (macOS or Linux):
 
 ```bash
 python3 -m venv ~/exegete-venv
-~/exegete-venv/bin/pip install exegete
+~/exegete-venv/bin/pip install "exegete[pdf-epub]"
 ```
 
 or in PowerShell on Windows:
 
 ```powershell
 py -m venv $HOME\exegete-venv
-$HOME\exegete-venv\Scripts\pip install exegete
+$HOME\exegete-venv\Scripts\pip install "exegete[pdf-epub]"
 ```
 
-(`pipx install exegete` or `uv tool install exegete` also work.) The
+(`pipx install "exegete[pdf-epub]"` or
+`uv tool install "exegete[pdf-epub]"` also work.) The part in brackets
+reads PDF and EPUB, with libraries under the AGPL; without it, Exegete
+cannot read either ("PDF and EPUB: the optional part", above). The
 settings in step 2 need the full path of the `exegete` program, because
 an app started from the Dock or the Start menu may not look in the
 folders your Terminal does. After the lines above it is
@@ -1303,8 +1341,8 @@ mkdir -p ~/.codex && touch ~/.codex/config.toml && open -e ~/.codex/config.toml
 On Windows, in PowerShell: `mkdir -Force $HOME\.codex` and then
 `notepad $HOME\.codex\config.toml` (Notepad offers to create the file).
 Paste these lines at the end of the file. On a Mac or Linux, change
-only `YOUR_USERNAME` in the `command` line to your own (the full path
-from step 1), typing no quote marks: TextEdit can turn a typed quote
+`YOUR_USERNAME` in the `command` line to your own, and on Linux also
+`/Users` to `/home` (the full path from step 1), typing no quote marks: TextEdit can turn a typed quote
 mark into a curly one, which Codex cannot read. On Windows, replace the
 whole value after `command =`, its double quotes included, with your
 path between single quotes, as "What the lines do" shows below: a
@@ -1370,6 +1408,8 @@ line has one command:
 ```bash
 codex mcp add exegete --env EXEGETE_TOOLSET=full --env "EXEGETE_WORKSPACE=~/Exegete projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
 ```
+
+(On Linux, the path starts `/home/` instead of `/Users/`.)
 
 OpenAI does not document that either writes the approval line, so
 after either one, open the file as above and add what it lacks:
@@ -1484,8 +1524,8 @@ release of 29 September 2026) both let those commands read the whole
 disk (on Windows, at least everything in your home folder but a few
 folders that hold keys). That is why step 3 keeps
 study files out of Codex's folder, and why, for participants' data,
-this project suggests an assistant with no file access of its own for
-now (the box at the top of this section). Codex's sandbox
+this project suggests an assistant with no file access of its own
+(the box at the top of this section). Codex's sandbox
 settings govern the commands the model runs, not Exegete, which reads
 and writes your
 projects whichever sandbox you choose (Codex's source code). What
@@ -1584,8 +1624,18 @@ What each host does, from Anthropic's pages as read on 27 September
   The page does not say how a local server's tools are sorted into
   read-only and write or delete, nor whether Cowork honours
   `anthropic/requiresUserInteraction`.
+- **Claude, where chat and Cowork are one conversation** (rolling out
+  to Pro and Max plans first; "Claude Cowork and chat are one Claude"
+  on support.claude.com, read 1 October 2026): a permission setting in
+  the message box has two modes, **Manual**, the default, in which
+  Claude asks before it takes actions, and **Auto**, in which automated
+  safety checks run instead of asking ("Approvals", in the extension's
+  steps above, quotes the page). The page does not say what either does
+  with the marks.
 - **Claude Desktop's chat.** Anthropic's pages do not say what it does
-  with the marks, and this project has not yet checked it.
+  with the marks. Claude Desktop 2.9939.2 was seen to pass the
+  read-only mark on with each tool (26 September 2026, below); what
+  the chat then does with it is not known.
 - **Connectors added on claude.ai** group their tools into read-only and
   write or delete, each with its own "always allow", "needs approval" or
   "blocked" setting ("Use connectors to extend Claude's capabilities"
@@ -1635,10 +1685,14 @@ Code 2.1.199 and later, `import_documents` and `save_names_list`.
 Bringing documents in (`import_documents`, 0.14.3) takes
 two calls: the first only looks and changes nothing in the project (if
 letters look garbled, it can open a page on your screen to check them
-on); the second brings the files in. Set to "always allow", the
-import would run without asking, and a document's hidden instructions
-could then have an assistant bring in another file unasked; allowing
-it once, after reading the preview, keeps you asked each time. PRIVACY.md, "Bringing documents in", says what reaches the AI
+on); the second brings the files in. Claude Code from 2.1.199 asks
+before every import whatever is set, since the import carries the mark
+above. In a host that does not read that mark (Codex; perhaps LM
+Studio and Claude Desktop's chat, whose makers do not say), set to
+"always allow", the import would run without asking, and a document's
+hidden instructions could then have an assistant bring in another file
+unasked; allowing it once, after reading the preview, keeps you asked
+each time. PRIVACY.md, "Bringing documents in", says what reaches the AI
 provider. The Claude Desktop extension switches on the optional part
 for PDF and EPUB (PyMuPDF 1.28.2 and EbookLib 0.20, the releases it
 pins, with which Exegete's text is checked against QualCoder's; about
@@ -1646,7 +1700,9 @@ pins, with which Exegete's text is checked against QualCoder's; about
 download at the first start, AGPL-licensed); installed from PyPI
 without it (`pip install exegete`), Exegete imports the other formats
 and says it cannot read PDF or EPUB yet ("PDF and EPUB: the optional
-part", above, says how to add it for each way of installing). A PDF's
+part", above, says how to add it with pip, pipx and uv tool; for a copy
+of the source, "Step 5: Install the Package" does; for uvx, the entry
+becomes `uvx --from "exegete[pdf-epub]" exegete`). A PDF's
 text is QualCoder 4.0's only at
 the same PyMuPDF release: with another, QualCoder may report a text
 mismatch and offer to restructure, which moves codings, so take a
@@ -1658,9 +1714,9 @@ release it used.
 ## Other MCP hosts
 
 Any MCP host that can run local stdio servers can host Exegete
-with the same command/env pattern shown above. Recipes for other
-open-source hosts are planned once they have been tested hands-on;
-technically comfortable users can adapt the pattern today.
+with the same command/env pattern shown above. No other open-source
+host has been tried with Exegete, and this guide gives no recipe for
+one; technically comfortable users can adapt the pattern.
 
 ---
 
@@ -1676,7 +1732,7 @@ technically comfortable users can adapt the pattern today.
 
 It prints `exegete` and the installed version, then exits. If you
 start the server itself by hand (the same command without `--version`),
-it prints three start-up lines and one paragraph saying that it
+it prints its start-up lines and a paragraph saying that it
 expects an MCP host on its standard input and output, and then waits; that is the expected
 behaviour, not an error. Press Ctrl+C to stop it.
 
@@ -1728,8 +1784,10 @@ Analyse the transcript for file 1 with all its coding
 
 1. **Check your paths**:
    - Make sure the command path is correct in your config
-   - With a PyPI install, type `which exegete` in Terminal; with
-     a source install, activate the venv and type `which python`
+   - With a PyPI install, type `echo ~/exegete-venv/bin/exegete` in
+     Terminal for the plain virtual environment, or `which exegete`
+     after pipx or uv tool; with a source install, activate the venv
+     and type `which python`
    - Use that full path in your Claude config
    - After any change to the configuration, fully quit and reopen
      Claude Desktop (Step 7)
@@ -1774,11 +1832,13 @@ list projects without naming a folder searches the usual places again.
 ### "No project selected" (Option A)
 
 With dynamic project selection this is normal at the start of a
-session: Exegete has no project open until one is selected. The
-error reads "No project selected. Use 'list_available_projects'
+session: Exegete has no project open until one is selected. For most
+tools the error reads "No project selected. Use 'list_available_projects'
 to discover projects, then 'select_project' to choose one. Or set
 EXEGETE_PROJECT_PATH in the host's configuration." (`get_current_project`
-says "No project currently open" instead.) Just select a project:
+says "No project currently open" instead, and `list_backups`,
+`prune_backups`, `restore_backup` and the coding-session tools end
+after "'select_project' to open one", without the setting.) Just select a project:
 ```
 List my available projects
 Select the "ProjectName" project
@@ -1956,6 +2016,15 @@ or in PowerShell on Windows:
 $HOME\exegete-venv\Scripts\pip install --upgrade exegete
 ```
 
+An install with the optional part for PDF and EPUB is updated with
+the part named, so that its libraries are brought up too:
+`~/exegete-venv/bin/pip install --upgrade "exegete[pdf-epub]"` (in
+PowerShell, `$HOME\exegete-venv\Scripts\pip install --upgrade
+"exegete[pdf-epub]"`), `pipx install --force "exegete[pdf-epub]"` or
+`uv tool install --force "exegete[pdf-epub]"`. A plain
+`pip install --upgrade exegete` updates Exegete and leaves PyMuPDF,
+EbookLib and lxml at the releases they had.
+
 `uv tool upgrade exegete` keeps a version that was pinned when Exegete
 was installed, as the steps Exegete gives pin one (`uv tool install
 --force "exegete==<version>"`); to move on from such a pin, run those
@@ -1988,13 +2057,19 @@ cd ~/Documents/exegete
 # Activate the virtual environment
 source venv/bin/activate
 
-# Pull the latest changes
-git pull
+# Fetch the releases, then move to the new one by its tag
+# (for example v0.15.1-alpha)
+git fetch --tags
+git merge --ff-only v<version>
 
 # Reinstall (with the optional part for PDF and EPUB, if you use it:
 # pip install -e ".[pdf-epub]")
 pip install -e .
 ```
+
+`git merge --ff-only` stays on the copy's branch, and refuses if the
+copy has changes of its own. With the check for new versions on, "How
+do I update Exegete?" gives these steps with the version filled in.
 
 Then **reopen your MCP client** (Claude Desktop: reopen it; Claude
 Code: start a new session; LM Studio: toggle the server on again, or
@@ -2019,8 +2094,10 @@ convenience, not proof. The
 [Releases page](https://github.com/nicotem/exegete/releases) and
 [CHANGELOG.md](CHANGELOG.md) say what each release changed.
 
-Updating never touches your data: the server is code-only, and your
-projects and backups stay exactly where they are.
+Updating never changes your projects or backups, which stay exactly
+where they are. Exegete's own folder, `~/.exegete`, stays as it is (an
+update from 0.14.0 or earlier moves it there once, from
+`~/.qualcoder_mcp`).
 
 ---
 
@@ -2114,10 +2191,12 @@ yet, and the first start after the update moves the server's own folder
   is never moved or emptied, and `list_available_projects` still finds
   the projects in it; the first answer that names the workspace says so
   once. The extension's folder was `~/QualCoder projects` until
-  0.15.0; new installs use `~/Exegete projects`, and an update moves a
-  setting left at the earlier default to it. No project is moved, both
-  folders are searched, and to keep new projects beside the earlier
-  ones, set it back to `~/QualCoder projects`.
+  0.15.0; new installs use `~/Exegete projects`. On the maintainer's
+  Mac on 19 October 2026, the update moved a setting left at the
+  earlier default to it; a folder chosen by hand should be kept (not
+  yet checked). After updating, look at the setting. No project is
+  moved, both folders are searched, and to keep new projects beside
+  the earlier ones, set it back to `~/QualCoder projects`.
 - **Your projects** are unchanged, except for one small file. Exegete
   keeps the AI coder name in `exegete.json` in the project folder. A
   project from before still has `qualcoder_mcp.json`, which is read as
@@ -2233,7 +2312,8 @@ your setup.
 
 ### Path B: switch to the PyPI install (recommended going forward)
 
-*Available from v0.9.0 (the first release published to PyPI).*
+*On PyPI as `exegete` from 0.14.1 (it was called qualcoder-mcp until
+0.14.0; 0.9.0 was the first release published there).*
 
 **Use a FRESH environment. Do not install into the old clone's venv.**
 (If you run `pip install exegete` inside the old venv, with or without
@@ -2320,25 +2400,22 @@ delete the old clone and its venv. Keeping them around breaks nothing.
 <details>
 <summary>Insisting on reusing the old venv? (works, but read this)</summary>
 
-The plain install silently no-ops (above), so you must either upgrade
-explicitly:
+The old venv holds the old name's package, qualcoder-mcp, installed
+from the clone, and a plain `pip install exegete` there puts Exegete
+beside it (above). Take the old package out first, then install
+Exegete:
 
 ```bash
-~/Documents/exegete/venv/bin/pip install --upgrade exegete
-# for PDF and EPUB as well: "exegete[pdf-epub]" in place of exegete
-```
-
-or uninstall the editable first:
-
-```bash
-~/Documents/exegete/venv/bin/pip uninstall exegete
+~/Documents/exegete/venv/bin/pip uninstall qualcoder-mcp
 ~/Documents/exegete/venv/bin/pip install exegete
 # for PDF and EPUB as well: "exegete[pdf-epub]" in place of exegete
 ```
 
-Both verified: pip cleanly removes the editable hooks and the wheel
-takes over (your existing `venv/bin/python -m exegete.server`
-config even keeps working). The catch, and why the fresh venv is
+Then change the entry to start the `exegete` command, by its full path
+(`~/Documents/exegete/venv/bin/exegete` written out) and with no
+`args`, as in step 3 above: Exegete's package does not hold the module
+the old entry runs (`-m qualcoder_mcp.server`). These steps have not
+been run in this form. The catch, and why the fresh venv is
 recommended instead: from that moment `git pull` in the clone no
 longer affects what runs, which is a confusing state to leave lying
 around.
@@ -2357,7 +2434,7 @@ around.
   Exegete version, your QualCoder version if you use it, your host (Claude Desktop,
   Claude Code, LM Studio) and the toolset mode (full or core).
 - **MCP Documentation**: https://modelcontextprotocol.io/
-- **QualCoder Help**: https://github.com/ccbogel/QualCoder/wiki
+- **QualCoder's own help**, if you also use QualCoder: https://github.com/ccbogel/QualCoder/wiki
 - **Claude Desktop**: https://claude.ai/help
 
 ---
@@ -2369,18 +2446,22 @@ If you want to remove the MCP server:
 1. **Remove it from your client**:
    - Claude Desktop with the extension: Settings > Extensions,
      Exegete, Uninstall (Claude removes its own copy of the
-     server; skip step 2). Two things stay: the Python and the download
-     cache uv keeps for every program that uses it (about 80 MB; on
-     macOS `~/.local/share/uv` and `~/.cache/uv`, on Windows
+     server; skip step 2). Three things stay: the Python and the
+     download cache uv keeps for every program that uses it (about 80 MB;
+     on macOS `~/.local/share/uv` and `~/.cache/uv`, on Windows
      `%APPDATA%\uv` and `%LOCALAPPDATA%\uv\cache`; `uv cache clean`
-     empties the cache, if uv is on your computer), and the server's
-     own state in `~/.exegete` (step 3)
+     empties the cache, if uv is on your computer), Exegete's own state
+     in `~/.exegete` (step 3), and its reading folder (step 4)
    - Claude Desktop configured by hand: Settings > Developer > Edit Config, delete the
      "exegete" section (or "qualcoder", from an earlier version of this
      guide), save, then fully quit and reopen Claude Desktop
    - Claude Code: `claude mcp remove exegete` (or `qualcoder`), in
      the folder where it was added, the one you start Claude Code in
    - LM Studio: delete the "exegete" (or "qualcoder") block from mcp.json
+   - Codex (the ChatGPT desktop app, Codex's command line and editor
+     extension): with the app quit, delete the `[mcp_servers.exegete]`
+     table from `~/.codex/config.toml`, with the tables under it whose
+     names start `[mcp_servers.exegete.`
 
 2. **Remove the package**:
    ```bash
@@ -2401,10 +2482,11 @@ If you want to remove the MCP server:
    as read, before the names list; removed after the import), the
    AI-coding session files (`sessions/`), the last-used
    project pointer (`mru_project.json`), the preview-token secret
-   (`preview_secret`, which signs the tokens that authorise a destructive
-   operation and keys the digests in the run manifests; deleting it
-   invalidates outstanding previews, and those digests can then no
-   longer be checked, as when the server replaces a secret it finds
+   (`preview_secret`, which signs the tokens that approve a two-step
+   operation, keys the digests in the run manifests, and names and signs
+   the texts an import's preview keeps; deleting it invalidates
+   outstanding previews and those kept texts, and those digests can then
+   no longer be checked, as when Exegete replaces a secret it finds
    malformed or readable by other accounts) and the
    run manifests `pseudonymise_source` writes (`pseudonymisation/`, one
    JSON file per run: the pseudonyms applied, the replacement spans, the
@@ -2421,10 +2503,21 @@ If you want to remove the MCP server:
    under the earlier name, `old_folder_noted`, one line that lets the
    log say so only once.
 
+4. **Optionally remove the reading folder**, where Exegete writes the
+   pages you read on your own computer: reading pages with a file's
+   whole text and its codings, read-only copies of originals, and the
+   pages for checking letters that look garbled before an import.
+   Exegete tidies it only while it runs, so after an uninstall it
+   stays until you delete it: `~/Library/Caches/Exegete/Reading.noindex`
+   on macOS, `%LOCALAPPDATA%\Exegete\Reading` on Windows, and
+   `~/.cache/exegete/reading` on Linux (`exegete/reading` under
+   `$XDG_CACHE_HOME`, if you set it).
+
 Uninstalling does not touch your projects. Note that Exegete does
 write to projects when you use its coding tools (after
-taking a backup, as before every change), so the changes you approved
-during use, and the backup folders it created next to each project
+taking a backup, which Exegete takes itself before every change), so
+the changes you approved during use, and the backup folders it created
+next to each project
 (`<project>_backup_<timestamp>.qda`), stay where they are. Remove
 backups you no longer need with the `prune_backups` tool before
 uninstalling, or by hand afterwards. Workspace copies made with

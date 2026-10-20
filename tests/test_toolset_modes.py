@@ -463,9 +463,19 @@ class TestThePublishedSchemaBudget:
     # and separator, 1,310 characters fewer in `full` (1,362 on 3.11);
     # `core` did not serve it, and get_current_project's description is
     # unchanged (its answer's note changed).
-    FULL_MEASURED = 208_201          # 82 tools, Python 3.13.5, mcp 1.30.0
+    # v0.15.1, the ignored argument: create_backup accepted and ignored,
+    # its line in 22 descriptions and its schema's default, and the texts
+    # that offered to skip a backup, 1,577 characters more in `full` and
+    # 225 in `core` (1,645 and 233 on 3.11). The first change of v0.15.1
+    # to move the figure, so the current entry is the Unreleased one and
+    # 0.15.0's figure is history (`_v0150_entry`).
+    # v0.15.1, the stale texts: export_refi_qda's sentence names its
+    # known faults instead of its removal (the owner's decision of 20
+    # October 2026: the export is kept, to be fixed), 126 characters more
+    # in `full` on both interpreters; `core` does not serve the tool.
+    FULL_MEASURED = 208_327          # 82 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 68_483           # 25 tools, same environment
-    FULL_MEASURED_310 = 218_729      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 218_855      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 71_923
 
     # Why two per cent, away from the reference environment.
@@ -493,7 +503,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "208,201"
+    FULL_CHARS = "208,327"
     CORE_CHARS = "68,483"
     FULL_ROUNDED = "208,000"
     CORE_ROUNDED = "68,000"
@@ -547,9 +557,9 @@ class TestThePublishedSchemaBudget:
         0.15.0's, under an Unreleased heading that says nothing yet.
         v0.15.1 moves it again (create_backup accepted and ignored, its
         line in 22 descriptions and its schema's default, and the texts
-        that offered to skip a backup), so the current entry is the
-        Unreleased one alone, and 0.15.0's figure is history
-        (`_v0150_entry`).
+        that offered to skip a backup; the REFI-QDA export's sentence
+        names its known faults), so the current entry is the Unreleased
+        one alone, and 0.15.0's figure is history (`_v0150_entry`).
         """
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [Unreleased]"):
@@ -558,7 +568,8 @@ class TestThePublishedSchemaBudget:
     @classmethod
     def _v0150_entry(cls):
         """The 0.15.0 entry, whose figure is history and stays put
-        (v0.15.1's ignored create_backup moves the figure, so the current
+        (v0.15.1's ignored create_backup and REFI-QDA sentence move the
+        figure, so the current
         entry is the Unreleased one, above the 0.15.0 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3")]
@@ -716,6 +727,9 @@ class TestThePublishedSchemaBudget:
         assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
         # 0.15.0's own figures, as history, taken the same way
         v0150 = " ".join(self._v0150_entry().split())
+        assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a "
+                "separate environment installed from the repository's lock "
+                "file, not the repository's own `venv/`") in v0150
         assert "for 0.14.3's tree it gives exactly 0.14.3's figures" in v0150
         assert ("Python 3.11.13 (likewise a separate environment, which "
                 "also gives exactly 0.14.3's figures for its tree)") in v0150

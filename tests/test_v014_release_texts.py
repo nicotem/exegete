@@ -76,10 +76,12 @@ def test_the_help_rules_are_exegetes_own():
 
 
 def test_the_refi_qda_warning_names_a_hidden_coders_codings():
+    # (v0.15.1: the export's known faults, the hidden coder's codings
+    # among them, ruling 85, item 2)
     warning = _flat(server.DEPRECATED_REFI_EXPORT)
-    assert "every coding under the AI coder name (a hidden coder's too)" \
-        in warning
-    assert "(a hidden coder's too)" in _description("export_refi_qda")
+    assert ("every coding under the AI coder name, the researcher's own "
+            "and a hidden coder's included") in warning
+    assert "a hidden coder's included" in _description("export_refi_qda")
 
 
 def test_the_numeric_note_names_the_digits():

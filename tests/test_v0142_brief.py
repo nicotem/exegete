@@ -585,7 +585,10 @@ class TestTheSizes:
     # delete_annotation, import_text_file, list_backups and
     # pseudonymise_source (1,577 characters more in `full`, 225 in
     # `core`; tests/test_v0142_description_cut.py pins their words).
-    NOW = {"full": 197_293, "core": 65_167}
+    # v0.15.1, the stale texts: export_refi_qda's sentence names its known
+    # faults instead of its removal (ruling 85, item 2), 126 characters
+    # more in `full`; `core` does not serve the tool.
+    NOW = {"full": 197_419, "core": 65_167}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

@@ -1112,16 +1112,20 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
                  "readable by your account only",
                  "not indexed by the computer's search",
                  "left out of Time Machine when Exegete could mark it so",
-                 "up to an hour after the preview and removes it after the "
-                 "import",
+                 # (the staleness audit of 20 October 2026: the token's
+                 # hour and its five minutes of skew, kept_texts.py, held
+                 # to the constant below)
+                 "up to an hour and five minutes after the preview",
+                 "and removes it after the import",
                  "goes at Exegete's next start, or the next time it "
-                 "prepares an import, once that hour has passed, so it can "
+                 "prepares an import, once that time has passed, so it can "
                  "stay longer in an app that keeps Exegete running",
                  "Deleting the folder changes nothing in any project",
                  "nothing in it is sent anywhere",
                  "Another backup of your home folder can copy it, as it "
                  "copies the documents themselves"):
         assert said in item, said
+    assert kept_texts.ENTRY_LIFETIME == 60 * 60 + 5 * 60
     section = privacy[privacy.index("## Bringing documents in"):]
     section = section[:section.index("## Backups, project copies")]
     assert ("The import uses the text its preview read, kept in Exegete's "

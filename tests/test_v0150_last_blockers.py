@@ -59,26 +59,50 @@ def test_upgrading_says_a_chosen_folder_is_not_yet_checked():
     assert "a folder you chose yourself is kept" not in _entry()
 
 
+# One account of the update and the folder setting, in every place that
+# tells it (the staleness audit of 20 October 2026): what was seen, where
+# and when, that a folder chosen by hand should be kept but is not yet
+# checked, and a look at the setting after updating; never a general
+# "an update moves" or "keeps it".
+ONE_ACCOUNT = ("on the maintainer's mac on 19 october 2026",
+               "a folder chosen by hand should be kept",
+               "not yet checked", "look at the setting")
+NOT_THE_ACCOUNT = ("an update moves a setting", "is kept by an install "
+                   "that has it", "keeps working")
+
+
+def _says_the_account(item):
+    lowered = item.lower()
+    for words in ONE_ACCOUNT:
+        assert words in lowered, words
+    for words in NOT_THE_ACCOUNT:
+        assert words not in lowered, words
+
+
 def test_install_s_workspace_item_says_what_an_update_does():
     item = _install_item("- `EXEGETE_WORKSPACE` (v0.14):", " - `")
-    assert ("whose default is `~/Exegete projects` (an update moves a "
-            "setting left at the earlier default, `~/QualCoder projects`, "
-            "to it; no project is moved, both folders are searched, and "
-            "setting it back to `~/QualCoder projects` keeps new projects "
-            "beside the earlier ones)") in item
-    assert "is kept by an install that has it" not in item
+    _says_the_account(item)
+    assert ("no project is moved, both folders are searched, and setting it "
+            "back to `~/QualCoder projects` keeps new projects beside the "
+            "earlier ones)") in item
 
 
 def test_install_s_coming_from_qualcoder_mcp_says_what_an_update_does():
     item = _install_item("- **The projects folder** for installs from PyPI",
                          " - **")
-    assert ("The extension's folder was `~/QualCoder projects` until "
-            "0.15.0; new installs use `~/Exegete projects`, and an update "
-            "moves a setting left at the earlier default to it. No project is "
-            "moved, both folders are searched, and to keep new projects "
-            "beside the earlier ones, set it back to "
+    _says_the_account(item)
+    assert ("No project is moved, both folders are searched, and to keep "
+            "new projects beside the earlier ones, set it back to "
             "`~/QualCoder projects`.") in item
     assert "is unchanged" not in item
+
+
+def test_install_s_step_four_and_privacy_tell_the_same_account():
+    _says_the_account(_install_item("- **Folder for projects**",
+                                    "- **Your coder name**"))
+    privacy = _flat(_read("PRIVACY.md"))
+    item = privacy[privacy.index("Nowhere else"):]
+    _says_the_account(item[:item.index("| Kind |")])
 
 
 # 2. The margin within Cowork's limit

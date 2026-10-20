@@ -256,7 +256,18 @@ def _tools(mode="full"):
 # with the `core` tool set, and links straight to it in INSTALL.md. That
 # takes 270 characters, and the limit is raised by that and no more:
 # 38,852.
-README_LIMIT = 38_852
+# v0.15.1, the stale texts (the staleness audit of 20 October 2026):
+# the REFI-QDA export kept with its known faults, in the table and the
+# interoperability paragraph; "What comes next" in three releases, undo
+# in v0.15.2 and method in v0.15.3; the Codex setting as OpenAI documents
+# it, untested; the backup Exegete takes itself; the install command with
+# the optional part for PDF and EPUB; a first project on `core`; the
+# exception for a project built to leak a private note; signs of an open
+# QualCoder 4.0 window; the names list among the previewed changes; the
+# exceptions past the cut; QualCoder's homepage and the protocol's
+# foundation. That takes 1,593 characters, and the limit is raised by
+# that and no more: 40,445.
+README_LIMIT = 40_445
 
 
 def test_the_readme_stays_short():
@@ -549,8 +560,10 @@ def test_the_assistants_table():
                         "and beyond", "**yes**"),
         "ChatGPT's desktop app and Codex": (
             "Codex: yes, well beyond its folder, without asking, even in "
-            "\"Ask for approval\" and read-only mode (a setting that stops "
-            "it has not yet been tested with Exegete)",
+            "\"Ask for approval\" and read-only mode (OpenAI documents a "
+            "setting, marked Beta, that can keep Codex's own commands from "
+            "reading outside the folder it works in; it has not been tested "
+            "with Exegete)",
             "**yes, without asking**"),
         "LM Studio": ("Its chat: no", "**not by itself.**"),
     }
@@ -558,11 +571,13 @@ def test_the_assistants_table():
         assert cells[name][REACH] == readme_words, name
         assert privacy_words in hosts, name
     # (the review of the redraft: Claude Code's folder and Codex's
-    # untested setting in PRIVACY.md's words, not shortened)
+    # untested setting in PRIVACY.md's words, not shortened; ruling 85,
+    # item 4: the setting named as OpenAI documents it, its test dropped)
     assert "Claude Code reads the folder it starts in without asking" \
         in hosts
-    assert "a setting that stops it has not yet been tested with Exegete" \
-        in hosts
+    assert ("OpenAI documents a setting, marked Beta, that can keep "
+            "Codex's own commands from reading outside the folder it works "
+            "in; it has not been tested with Exegete") in hosts
     # what each maker receives, and what this project suggests (v0.14.2,
     # the README's first round of checks: the commercial-terms route of
     # 0.14.0's table, and Cowork as PRIVACY.md's checklist puts it)
@@ -745,7 +760,10 @@ ARGUMENTS = {"get_coded_segments": ("cursor", "strategy", "max_chars",
              "find_cooccurring_codes": ("window_size",),
              "query_by_attribute": ("operator",)}
 GUARDED = ("merge_codes", "merge_category", "delete_code", "delete_category",
-           "pseudonymise_source", "restore_backup", "prune_backups")
+           "pseudonymise_source", "restore_backup", "prune_backups",
+           # (the staleness audit of 20 October 2026: the names list's
+           # save previews first too)
+           "set_project_coder_name", "save_names_list")
 
 
 def test_the_advanced_section_rests_on_the_code():
@@ -766,13 +784,17 @@ def test_the_advanced_section_rests_on_the_code():
                   "Each backup copies the whole project folder, with any "
                   "media stored in it, next to the project; `prune_backups` "
                   "clears old ones.",
+                  # (v0.15.1, the backup's moment: Exegete takes the
+                  # backup itself, whatever the call asks)
                   "It reads a project's SQLite database read-only; each "
                   "tool that writes opens its own connection, after a "
-                  "backup, and refuses while the project's "
-                  "lock file is active (QualCoder 3.8.2 has the project "
-                  "open, or another conversation using Exegete is writing "
-                  "to it).",
-                  "`pipx install exegete`"):
+                  "backup Exegete takes itself, and refuses while the "
+                  "project's lock file is active (QualCoder 3.8.2 has the "
+                  "project open, or another conversation using Exegete is "
+                  "writing to it).",
+                  # (the staleness audit of 20 October 2026: the command
+                  # carries the optional part, pyproject's extra)
+                  "`pipx install \"exegete[pdf-epub]\"`"):
         assert words in opening, words
     with open(REPO / "pyproject.toml", "rb") as handle:
         project = tomllib.load(handle)["project"]
@@ -817,8 +839,12 @@ def test_the_advanced_section_rests_on_the_code():
             "as it does by default, and the first 4,096 when it loads the "
             "tool at the start (2,048 before its version 2.1.296). So the "
             "rules that matter come first in each description, within "
-            "2,048 characters; the rest reach the model through "
-            "`read_brief` or the answers.") in beyond
+            "2,048 characters, a few named exceptions apart; the rest "
+            "reach the model through `read_brief` or the answers.") in beyond
+    # (the staleness audit of 20 October 2026: the exceptions are named,
+    # tests/test_v0142_description_cut.py, LEFT_PAST_THE_CUT)
+    import test_v0142_description_cut as cut
+    assert cut.LEFT_PAST_THE_CUT
     assert "Claude Code shows only the first 2,048" not in beyond
     assert "Claude Code shows the first 4,096" not in beyond
     assert ("`pseudonymise_source` (these five also say whose work is "
@@ -859,13 +885,16 @@ def test_what_comes_next_is_plans():
     # v0.14.3: bringing documents in and reading a whole
     # file yourself are in Exegete, so they are no longer the next plan
     # (the whole-branch review of v0.15.0, round 1: v0.15 in three
-    # releases, the safety net in v0.15.1 and method in v0.15.2)
+    # releases, the safety net in v0.15.1 and method in v0.15.2; the
+    # owner's decisions of 20 October 2026, ruling 85, item 1: the safety
+    # net in two releases, v0.15.1 and v0.15.2, with undo in the second,
+    # and method in v0.15.3)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15.1", "v0.15.2", "v0.16", "v0.17", "Later"]
+        "v0.15.1", "v0.15.2", "v0.15.3", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
-    for words in ("undo everything a session did",
+    for words in ("undo a session's changes",
                   "when replacing names, choose which mentions to keep",
                   "more of the analysis shown in the conversation, as tables",
                   # v0.14.2, the README's second round of checks: the rest

@@ -5,8 +5,9 @@ qualcoder-mcp), in the conversational workflow.
 
 > Codings are written directly to the project database after your
 > explicit approval; no import step is needed. (A REFI-QDA *export*
-> tool, `export_refi_qda`, is deprecated and goes in v0.15.1: it files
-> every coding under the AI coder name. Exegete has no other REFI-QDA
+> tool, `export_refi_qda`, has known faults, which a later release is
+> meant to fix: it files every coding under the AI coder name, yours
+> included. Exegete has no other REFI-QDA
 > export yet; QualCoder's own export, if you use QualCoder, keeps each
 > coder: Project, Export, REFI-QDA Project export.) For the
 > step-by-step walkthrough with example conversations, see
@@ -125,7 +126,7 @@ session. None of this replaces your approval of each suggestion.
 | `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` | **Write**: bring documents in from your computer by their paths or a folder's, their text never passing through the conversation; a preview first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
 | `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
-| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (deprecated, removed in v0.15.1; QualCoder's own export, if you use QualCoder, keeps each coder) |
+| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (known faults, which a later release is meant to fix: every coding under the AI coder name; QualCoder's own export, if you use QualCoder, keeps each coder) |
 | `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` / `cleanup_old_sessions` (deprecated) | Session management |
 | `copy_project_to_workspace(source_path, new_name)` | Copy a project into the safe workspace |
 

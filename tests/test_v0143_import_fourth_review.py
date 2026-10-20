@@ -428,8 +428,13 @@ class TestTheTexts:
 
     def test_install_points_to_the_section_and_gives_windows_form(self):
         install = _doc("INSTALL.md")
+        # (the staleness audit of 20 October 2026: the section gives pip,
+        # pipx and uv tool; a copy of the source and uvx are named here)
         assert ("\"PDF and EPUB: the optional part\", above, says how to add "
-                "it for each way of installing") in install
+                "it with pip, pipx and uv tool; for a copy of the source, "
+                "\"Step 5: Install the Package\" does; for uvx, the entry "
+                "becomes `uvx --from \"exegete[pdf-epub]\" exegete`") \
+            in install
         assert '(`pip install "exegete[pdf-epub]"` adds it)' not in install
         assert ('$HOME\\exegete-venv\\Scripts\\pip install '
                 '"exegete[pdf-epub]"') in install

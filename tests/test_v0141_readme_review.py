@@ -119,9 +119,14 @@ def test_the_private_part_is_stated_for_this_server_only():
     readme = _flat("README.md")
     data = readme[readme.index("## Where your data goes"):
                   readme.index("## Start here")]
+    # (the staleness audit of 20 October 2026: with the exception
+    # PRIVACY.md names, a project built to leak it)
     assert ("Exegete never passes the part of a memo from a `#####` "
             "mark onward (QualCoder's mark for a private note) to the "
-            "assistant, whichever program made the project.") in data
+            "assistant, whichever program made the project, unless the "
+            "project was built to leak it (PRIVACY.md, \"Error answers and "
+            "the server's log\").") in data
+    assert "**Error answers and the server's log.**" in _flat("PRIVACY.md")
     assert ("exported files keep the whole memo, private part "
             "included") in data
     privacy = _flat("PRIVACY.md")
@@ -324,10 +329,13 @@ def test_a_project_from_the_conversation_stays_in_one_qualcoder():
     assert ("Keep such a project in one QualCoder: moving it between 3.8.2 "
             "and 4.0 is what changes it.") in opening
     assert "Work on such a project in QualCoder 4.0." not in opening
+    # (the staleness audit of 20 October 2026: with 4.0, Exegete warns
+    # on signs of an open window, database.py, qualcoder_gui_signals)
     assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
-            "3.8.2 or 4.0. Exegete works with both, but can tell that "
-            "QualCoder has a project open only with 3.8.2 (below).") \
-        in _flat("README.md")
+            "3.8.2 or 4.0. Exegete works with both, but can tell for "
+            "certain that QualCoder has a project open only with 3.8.2; "
+            "with 4.0 it warns when it sees signs of an open window "
+            "(below).") in _flat("README.md")
 
 
 # ---------------------------------------------------------------------------

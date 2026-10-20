@@ -291,7 +291,10 @@ class TestInstallSaysHowToMove:
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         start = text.index(heading)
         passage = " ".join(text[start:start + 1800].split())
+        # (the staleness audit of 20 October 2026: a copy of the source
+        # moves by its release's tag, as Exegete's own steps say)
         pull = min(i for i in (passage.find("git pull"),
+                               passage.find("git fetch --tags"),
                                passage.find("pip install --upgrade"))
                    if i != -1)
         assert re.search(r"[Qq]uit", passage[:pull]), heading

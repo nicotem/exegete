@@ -45,13 +45,13 @@ Through these tools an AI assistant can:
 - **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
 - **Undo & restore**: delete a coding, list backups, and restore a whole project to an earlier state
 - **Bring in documents** from the computer (v0.14.3: Word, OpenDocument, RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part) and **transcripts** through the conversation, link files to cases, and **rename cases and files** the way QualCoder's Manage Cases and Manage Files do (`rename_case`, `rename_file`)
-- **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti, and MAXQDA: **deprecated, removed in v0.15.1**, because it files every coding under the AI coder name and leaves out cases, annotations, journals and media; Exegete has no other REFI-QDA export yet, and QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
+- **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti, and MAXQDA, with known faults (a later release is meant to fix them): it files every coding under the AI coder name, yours included, and leaves out cases, annotations, journals and media; Exegete has no other REFI-QDA export yet, and QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
 - **Report exports**: codebook, coded segments, code frequencies and case-code matrix as CSV, txt or Markdown files
 - **Pseudonymisation that keeps the coding** (`pseudonymise_source`): replace the names you list, or a list you fill in on your own computer (`prepare_names_list`, `save_names_list`), as whole words, in the stored text of one text source per call, moving every coding, annotation and case link with the text; a preview and a residue report come first, a mandatory backup is taken, and what the tool does not rewrite is counted rather than left to be discovered, and the names left in every file's text are counted, both readings; with `rewrite_memos` the public part of every note and journal entry is rewritten too, and a mapping you type must be saved into the project's own `pseudonyms.json` or attested as kept before a run goes ahead
 - **Coder comparison** (`compare_coders`): per-code agreement between two coders, with QualCoder's own coefficient and Cohen's kappa side by side
 - **QualCoder's conventions**: `#####` private memo sections are never sent to the AI through Exegete (an assistant that opens a project's files by itself reads every memo whole: [PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)), reads follow QualCoder's per-coder visibility (on projects with that capability: QualCoder 3.8.2 and 4.0, schema v14 and later), and AI work is written under one coder name that you choose per project (see "Working alongside QualCoder 4.0" below)
 
-You can work with read-only analysis OR use write-enabled tools. The database is opened read-only by default; every write is preceded by an automatic backup, verified against QualCoder's format, and refused while the project's lock file is active (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). QualCoder 4.0 writes no lock file, so for it Exegete can only report signs of an open window; if you also use QualCoder, make sure no window has the project open before a write (see "Supported QualCoder versions" below).
+You can work with read-only analysis OR use write-enabled tools. The database is opened read-only by default; every change to the project's database is preceded by an automatic backup, which Exegete takes itself, verified against QualCoder's format, and is refused while the project's lock file is active (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). Two writes outside the database are made without either: the AI coder name, into `exegete.json` in the project folder (`set_project_ai_coder_name`), and the names file, into the project's `Exegete` folder (`prepare_names_list`). QualCoder 4.0 writes no lock file, so for it Exegete can only report signs of an open window; if you also use QualCoder, make sure no window has the project open before a write (see "Supported QualCoder versions" below).
 
 ## Supported QualCoder versions
 
@@ -78,14 +78,17 @@ You can work with read-only analysis OR use write-enabled tools. The database is
 > seconds for the write to end (Exegete's writes usually take well under
 > a second); after that it says "The project database could not be
 > opened." and changes nothing, and trying again works. Not yet re-read:
-> the line citations into QualCoder's own MCP server, a file much changed
-> in the release. One known
+> the line citations into QualCoder's own MCP server in Exegete's code, a
+> file much changed in the release (this document's one citation into
+> it, under "The novelty filter and coder visibility", gives the
+> release's line too). One known
 > limitation: QualCoder 3.8.2 signals "project open" through a lock file,
 > which Exegete honours; QualCoder 4.0 uses no lock file, so Exegete
 > falls back to best-effort heuristics there (reported as
 > `qualcoder_gui_signals` by `select_project`, `get_current_project`,
-> `start_coding_session` and the `restore_backup`, `import_documents` and
-> `save_names_list` previews:
+> `start_coding_session`, `create_project` (without the process scan)
+> and the `restore_backup`, `import_documents` and `save_names_list`
+> previews:
 > database write sidecars, recent activity on the 4.0 AI search index, a
 > chat-history file changed recently (QualCoder 3.8.2 and 4.0 both create
 > it on a project's first open and change it when the chat is used; since
@@ -387,7 +390,8 @@ or a suggestion's reasoning is refused if it contains
 `#####`, before anything is written or backed up: QualCoder's own AI
 server drops the marker and what follows it silently, which here emptied
 notes that began with it ("make this note private"), so the private part
-stays the researcher's to write in QualCoder.
+stays the researcher's to write, outside the conversation (in QualCoder,
+for example).
 Deleting a coding or annotation whose memo carries a private note is
 refused unless `confirm_private_note_deletion=true`; with it the row is
 deleted after a backup, as every change is. The refusal
@@ -404,7 +408,8 @@ is not yet coded. The spans it excludes are the ones the caller can see:
 on a project that hides coders, a hidden coder's codings do not suppress
 a passage, so the filter cannot be used to find out that hidden work
 exists. QualCoder's own search reads the full table there
-(`ai_mcp_server.py:5228` at `9bddf17`); this is a deliberate difference.
+(`ai_mcp_server.py:5228` at `9bddf17`, line 6161 in the 4.0 release);
+this is a deliberate difference.
 
 **Coder visibility.** When a project with the coder-visibility
 capability (QualCoder 3.8.2 and 4.0, schema v14 and later) hides some
@@ -478,7 +483,7 @@ is heuristic (see "Supported QualCoder versions" above), and an open
 reopened there.
 
 **Recovery hint.** If a host restarts the server mid-conversation
-(observed with LM Studio), every "no project selected" error names the
+(observed with LM Studio in September 2026), every "no project selected" error names the
 last project used on this machine when it still exists, so one
 `select_project` call recovers. The selection is never restored
 automatically. The pointer lives in `~/.exegete/mru_project.json`.
@@ -511,7 +516,7 @@ Claude can help you code your qualitative data with a conversational approval wo
 
 ### Conversational Workflow
 
-**Important**: AI coding writes directly to the database. Always work on copies in the workspace folder: with the Claude Desktop extension its "Folder for projects" (by default `~/Exegete projects/`), otherwise `~/Documents/Exegete projects/` unless the host sets another with `EXEGETE_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. Automatic backups are created before every write, and **writes are refused while the project's lock file is active** (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). If you also use QualCoder, close the project there first: QualCoder 4.0 builds write no lock file, so for them Exegete can only warn on signs of an open window.
+**Important**: AI coding writes directly to the database. A project made in another program, such as QualCoder, or one you want kept as it is, is safest worked on as a copy in the workspace folder (`copy_project_to_workspace`): with the Claude Desktop extension its "Folder for projects" (by default `~/Exegete projects/`), otherwise `~/Documents/Exegete projects/` unless the host sets another with `EXEGETE_WORKSPACE`; `copy_project_to_workspace`'s answer gives the path. A project made with Exegete is already in the workspace. Exegete takes a backup itself before every change to the project's database, and **writes are refused while the project's lock file is active** (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). If you also use QualCoder, close the project there first: QualCoder 4.0 builds write no lock file, so for them Exegete can only warn on signs of an open window.
 
 ### Quick Start Example
 
@@ -520,7 +525,7 @@ Claude can help you code your qualitative data with a conversational approval wo
 Copy my project "Interview Study" to the workspace for AI coding
 ```
 
-(the `copy_project_to_workspace` tool does this; then open the copy with `select_project`)
+(the `copy_project_to_workspace` tool does this, for a project made in another program or one you want kept as it is; then open the copy with `select_project`. A project made with Exegete is already in the workspace: select it and go on to Step 2.)
 
 **Step 2: Analyse Files**
 ```
@@ -617,7 +622,7 @@ all but its `Exegete` folder, which a restore keeps.
   Nothing sorts or totals by the reading. An applied coding's memo says
   which, in words
 - **Session Persistence**: Resume work at any time, all sessions saved to disk
-- **Automatic Backups**: Exegete takes a timestamped backup before every change; `create_backup` no longer does anything (it is still accepted until the release on method, and a call that gives it is told so)
+- **Automatic Backups**: Exegete itself takes a timestamped backup before every change to the project's database; `create_backup` no longer does anything (it is still accepted until the release on method, and a call that gives it is told so)
 - **Workspace Isolation**: Work on copies in dedicated workspace folder
 - **Direct Database Writes**: No import/export step; codings are in the project at once: the next read shows them, and QualCoder shows them when it next opens the project (an open QualCoder 4.0 window does not show Exegete's changes until the project is reopened)
 - **Granular Control**: Approve, reject or reopen individual suggestions by GUID; a GUID the session does not hold is named, not passed over
@@ -649,11 +654,15 @@ Claude Desktop extension does, from its "Folder for projects" setting
 (by default `~/Exegete projects/`, outside Documents, which iCloud or
 OneDrive may sync).
 
-Never work on your original projects with AI coding! Always:
-1. Copy project to workspace first
-2. Let Claude work on the workspace copy
-3. Review the results, in the conversation or in QualCoder
-4. If good, replace original OR keep both versions
+A project made in another program, such as QualCoder, or one you want
+kept as it is, is safest worked on as a copy:
+1. Copy the project to the workspace (`copy_project_to_workspace`)
+2. Let the assistant work on the copy
+3. Review the results, in the conversation, or in QualCoder if you use it
+4. If they are good, replace the original or keep both versions
+
+A project made with Exegete is already in the workspace, and Exegete
+takes a backup before each change to it.
 
 For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md).
 
@@ -958,7 +967,7 @@ no longer listed, until v1.0.
 - `exegete://cases/{case_id}` - Case details; excerpts past one answer's size are cut, each saying where its text continues
 - `exegete://journal` - Journal entries
 - `exegete://guidance/methods` - Static methods notes: the grounding rules, the four-way methodological vocabulary (allow, allow_with_caveat, reframe_and_ask, refuse) and citations to method literature on prompting, for researchers who want to bring in a method; needs no project
-- `exegete://guidance/brief` - The assistant's brief (provisional), the text `read_brief()` returns; needs no project
+- `exegete://guidance/brief` - The assistant's brief (provisional), in full: the text `read_brief()` returns in the full tool set; needs no project
 
 ## Available Tools
 
@@ -1098,7 +1107,7 @@ still answers empty, and that answer is a finding.
 - `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused). The project's `Exegete` folder (files the researcher fills in) is kept as it is, never taken from the backup; the preview says when either has one
 
 **Interchange & Report Exports (exported files keep full memos, private sections included; give `output_path` as a full path or one starting with `~`: since 0.14 a relative one is refused and nothing is written):**
-- `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA. **Deprecated, removed in v0.15.1**: it files every coding under the AI coder name and leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions unmarked. Exegete has no other REFI-QDA export yet; QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
+- `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA. **Known faults** (a later release is meant to fix them): it files every coding under the AI coder name, yours included, and leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions, unmarked. Exegete has no other REFI-QDA export yet; QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
 - `export_codebook(output_path, format, include_memos, sanitize_formulas, overwrite)` - Codebook (codes and category tree) as CSV, txt or Markdown, matching QualCoder's Codebook export; in Markdown the codes without a category come first under their own heading, each category's codes directly under its heading, and a sub-code indented under its parent
 - `export_coded_segments_report(output_path, code_names, case_names, coder, file_ids, search_text, important, include_variables, format, sanitize_formulas, overwrite)` - QualCoder's Coding Report as a file
 - `export_frequencies_csv(output_path, sanitize_formulas, overwrite)` - Code frequencies table as CSV
@@ -1156,7 +1165,7 @@ narrower set (see its own entry).
 
 Two tools were renamed in 0.15.0. Their earlier names are still listed,
 and do exactly what the new ones do, until a later release (planned as
-v0.15.2) removes them: `analyze_for_coding` is now
+v0.15.3) removes them: `analyze_for_coding` is now
 `start_coding_session`, and `analyze_file_with_coding` is now
 `read_file_with_codings`. If your host remembers a choice to run one of
 the earlier names without asking, it may ask again for the new one.
@@ -1183,22 +1192,22 @@ For all standard analysis operations:
 - ✅ No writes to your project database
 - ✅ Your projects are never modified
 - ✅ All operations are queries only
-- ✅ Safe to use on original projects
+- ✅ Safe on any project, one made in another program included
 
 ### Write-Enabled Mode (the tools marked WRITES TO DATABASE)
 For AI-assisted coding with direct database writes:
 - ⚠️ **WRITES TO DATABASE** - Can modify project files
-- ✅ **Automatic backups** created before every write
-- ✅ **Workspace isolation** - Work on copies only
-- ✅ **Conversational approval** - You control what gets written
+- ✅ **Automatic backups**, taken by Exegete itself, before every change to the project's database
+- ✅ **Workspace** - New projects and copies are kept in the workspace folder; a project made in another program can be worked on as a copy
+- ✅ **Conversational approval** - Nothing is written until an item is marked approved; Exegete cannot tell who approved, so keep your host asking before each decision (see "Who approves")
 - ✅ **Session files** - AI coding sessions (suggestions, proposals and their statuses) are saved in `~/.exegete/sessions/`
 - ✅ **Rollback capability** - Backups allow full restoration
 
 **Best Practices for AI Coding:**
-1. 🔒 **NEVER work on original projects** - Always copy to workspace first
+1. 🔒 **A copy of a project made elsewhere** - A project made in another program, or one you want kept as it is, is safest copied to the workspace first (`copy_project_to_workspace`)
 2. 🔒 **Review backups** - Check backup was created before applying
 3. 🔒 **Test on copies** - Try workflow on test projects first
-4. 🔒 **Keep originals** - Maintain untouched versions of important projects
+4. 🔒 **An untouched copy** - Of an important project, kept beyond Exegete's backups
 5. 🔒 **Check the results** - read the applied codings back, in the conversation or in QualCoder
 
 **General Safety:**
@@ -1211,7 +1220,7 @@ For AI-assisted coding with direct database writes:
   [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)** for what this means for research data.
 - 🔒 Regular backups of your projects recommended, beyond Exegete's own
 - 🔒 Automatic backups: `<project>_backup_<timestamp>.qda` folders next to
-  the project, one per write (the whole project tree, `ai_data/`
+  the project, one per change to the project's database (the whole project tree, `ai_data/`
   included, minus QualCoder's backup ignore set and lock files, with the
   database copied by SQLite's own online backup and its journal or WAL
   file never copied; prune them with `prune_backups`)
@@ -1222,7 +1231,7 @@ For AI-assisted coding with direct database writes:
 - 🔒 Last-used project pointer: `~/.exegete/mru_project.json` (one
   project path and a timestamp, echoed only into the "no project selected"
   error as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md))
-- 🔒 Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the nine preview tools; never shown in a result, an error or the log)
+- 🔒 Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the ten tools that preview first; never shown in a result, an error or the log)
 
 ## Example requests
 

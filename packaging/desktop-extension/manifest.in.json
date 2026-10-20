@@ -55,7 +55,7 @@
     "projects_folder": {
       "type": "directory",
       "title": "Folder for projects",
-      "description": "Where new projects are created and working copies of projects are kept. The default, Exegete projects in your home folder (~), is outside Documents, which iCloud or OneDrive may sync; it is made when the first project needs it. If you choose another folder, choose one that no sync service keeps. If this shows QualCoder projects, the earlier default, it keeps working, and Exegete finds the projects there whichever folder you choose. Leaving it empty stops the extension from starting. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "Where new projects are created and working copies of projects are kept. The default, Exegete projects in your home folder (~), is outside Documents, which iCloud or OneDrive may sync; it is made when the first project needs it. If you choose another folder, choose one that no sync service keeps. QualCoder projects, the earlier default, works too, and Exegete finds the projects there whichever folder you choose; after an update from an earlier version, look at this setting, which the update may have changed from QualCoder projects to Exegete projects. Leaving it empty stops the extension from starting. After changing a setting, quit Claude Desktop and open it again.",
       "default": "~/Exegete projects",
       "required": false
     },

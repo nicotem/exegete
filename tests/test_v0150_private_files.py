@@ -1067,7 +1067,8 @@ class TestTheDocuments:
                 "and the reading folder",
                 "a link under that name pointing at `~/.exegete`",
                 "a working folder in the system's temporary folder, which "
-                "it removes when that reading ends. Nowhere else.",
+                "it removes when that reading ends. Nowhere else, apart "
+                "from one check you run yourself",
                 "| Kind | Where | What | Who deletes it |",
                 "| Exegete's working state | `~/.exegete`, hidden on macOS "
                 "and Linux |",

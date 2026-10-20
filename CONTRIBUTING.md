@@ -45,8 +45,12 @@ is looked at first.
    cd exegete
    python3 -m venv venv
    source venv/bin/activate   # Windows: venv\Scripts\activate
-   pip install -e ".[dev]"
+   pip install -e ".[dev,pdf-epub]"
    ```
+
+   `pdf-epub` is the optional part that reads PDF and EPUB; without it,
+   the tests of PDF and EPUB import are skipped. Its libraries are under
+   the AGPL (INSTALL.md, "PDF and EPUB: the optional part").
 
 4. **Run the test suite** from the repository root:
 

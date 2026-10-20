@@ -75,8 +75,11 @@ def test_the_documents_name_the_release_as_verified():
             "its code at commit `9bddf17` (see \"Supported QualCoder "
             "versions\").") in tools
     install = _flat("INSTALL.md")
+    # (the staleness audit of 20 October 2026: a missing or unreadable
+    # value is refused too, database.py, write_support)
     assert ("newer than the schemas this release is verified against (v14 "
-            "through v17, up to QualCoder 4.0) are refused to protect the "
+            "through v17, up to QualCoder 4.0), or whose schema value is "
+            "missing or not in QualCoder's form, are refused to protect the "
             "data") in install
     privacy = _flat("PRIVACY.md")
     assert ("What they say of QualCoder is verified against QualCoder 4.0, "

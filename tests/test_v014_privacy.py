@@ -990,8 +990,10 @@ class TestTheDocumentsSayWhatTheLogCarries:
                 "Desktop's server log") in privacy
         assert ("The rule closes one channel, SQLite's message; it does "
                 "not make a project built to leak safe to open.") in privacy
+        # (the staleness audit of 20 October 2026: the secret keys the
+        # kept texts too, kept_texts.py, so three effects)
         assert ("Exegete replaces the secret by itself, with the same "
-                "two effects") in privacy
+                "effects") in privacy
         assert ("they share one memory of it") in privacy
 
 

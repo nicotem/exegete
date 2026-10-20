@@ -116,6 +116,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before every change. PRIVACY.md no longer counts a forced backup
   among what tells the assistant that a row carries a private note:
   the refusal alone does.
+- **The documents read again against the code, and put right where they
+  were no longer true**: the REFI-QDA export is kept, and its
+  description and answers (still in the field `deprecated`) name its
+  known faults instead of its removal; the plans give undo to v0.15.2
+  and method to v0.15.3; the setting OpenAI documents for Codex is said
+  to be untested, with no test promised; PRIVACY.md names QualCoder
+  3.8's AI search store, which backups keep, what `compare_coders`
+  names and what stays on the computer, the reading folder included;
+  the install and update commands carry the optional part for PDF and
+  EPUB; and the account of the extension's folder setting after an
+  update says what was seen, and where.
 
 ### Fixed
 
@@ -242,24 +253,24 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (82 tools) | 208,201 | 206,624 | 218,729 | 217,084 |
+| `full` (82 tools) | 208,327 | 206,624 | 218,855 | 217,084 |
 | `core` (25 tools) | 68,483 | 68,258 | 71,923 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 208,201 characters (about 52.1k tokens
+- Serialised tool JSON: full = 208,327 characters (about 52.1k tokens
   at chars/4) over 82 tools, and core = 68,483 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 218,729 and
-  71,923. Against 0.15.0's figures (206,624 and 68,258 on 3.13), one
-  change moved them: `create_backup` accepted and ignored. In 18 of the
-  22 tools that take it, the argument's line in the description says
-  that it is no longer used and its schema's default is null rather
-  than true: 91 characters more in each entry (92 in
+  which also gives exactly 0.15.0's figures for its tree), 218,855 and
+  71,923. Against 0.15.0's figures (206,624 and 68,258 on 3.13), two
+  changes moved them. The first, `create_backup` accepted and ignored.
+  In 18 of the 22 tools that take it, the argument's line in the
+  description says that it is no longer used and its schema's default
+  is null rather than true: 91 characters more in each entry (92 in
   `link_file_to_case`'s, whose line was one character shorter; 95 and
   96 on 3.11). In the other four, the texts that offered to skip a
   backup changed with it: `apply_codings`' opening paragraph, 112
@@ -272,9 +283,12 @@ schemas together, as below; the brief as `read_brief` returns it):
   run that changes nothing takes none, 35 more (39). In all, 1,577
   characters more in `full` and 225 in `core`, whose `apply_codings`,
   `create_code`, `delete_coding`, `list_backups` and `set_memo` carry
-  them (1,645 and 233 on 3.11). No other tool's entry changed. The full
-  brief says that Exegete takes a backup before every change, rather
-  than "unless the researcher asks for none": 14 characters fewer.
+  them (1,645 and 233 on 3.11). The second, `export_refi_qda`'s
+  sentence, which names its known faults instead of its removal: 126
+  characters more in `full` on both interpreters (`core` does not serve
+  the tool). No other tool's entry changed. The full brief says that
+  Exegete takes a backup before every change, rather than "unless the
+  researcher asks for none": 14 characters fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
   16,384 through its tool search: in `full`, 32 descriptions pass 2,048
   (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096 (5 on

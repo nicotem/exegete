@@ -307,14 +307,19 @@ FREQUENCIES_COUNT_NOTE = (
 # researchers who use it, the gap said as Exegete's (whole-branch review,
 # round 2). The tool that returned the names list, deprecated in v0.14
 # too, was removed in v0.15.0 (ruling 78): the names file replaces it.
+# The REFI-QDA export is kept, to be fixed (ruling 85, item 2): its
+# sentence names its known faults and no removal, under the same name
+# and in the same answer field until the piece that fixes it.
 DEPRECATED_REFI_EXPORT = (
-    "Deprecated, removed in v0.15.1: this export files every coding under "
-    "the AI coder name (a hidden coder's too) and leaves out cases, "
-    "annotations, journals and media, and a session's export includes "
-    "rejected suggestions unmarked. Exegete has no other REFI-QDA export "
-    "yet; QualCoder's own export (Project, Export, REFI-QDA Project "
-    "export), for researchers who have QualCoder, keeps each coder, the "
-    "cases, notes and media.")
+    "Known faults (a later release is meant to fix them): this export "
+    "files every coding under the AI coder name, the researcher's own and "
+    "a hidden coder's included, so another program shows them as the "
+    "AI's; it leaves out cases, annotations, journals and media; and a "
+    "session's export includes every suggestion, rejected ones too, with "
+    "nothing to say which. Exegete has no other REFI-QDA export yet; "
+    "QualCoder's own export (Project, Export, REFI-QDA Project export), "
+    "for researchers who have QualCoder, keeps each coder, the cases, "
+    "notes and media.")
 DEPRECATED_CODE_REPORT = (
     "Deprecated, removed in v0.15.1: get_coded_segments(code_id=...) reads "
     "the same passages, page by page and without the 1,000 limit.")
@@ -23115,7 +23120,7 @@ async def check_for_updates() -> str:
 # nothing (it starts a coding session) and analyze_file_with_coding reads
 # a file with its codings, so each now has a name that says what it does.
 # The earlier names are still listed, with one sentence, until the release
-# on method (planned as v0.15.2) removes them, so that an instruction or a
+# on method (planned as v0.15.3) removes them, so that an instruction or a
 # conversation that names one still reaches the tool. Each runs the very
 # same function, with the same arguments, annotations and answer;
 # registered after the last tool, so the others keep their order. An

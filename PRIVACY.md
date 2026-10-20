@@ -7,7 +7,7 @@ an informed decision, which many AI tools do not. It is not legal
 advice.
 
 Two tools were renamed in 0.15.0, and their earlier names are still
-listed until a later release (planned as v0.15.2) removes them
+listed until a later release (planned as v0.15.3) removes them
 (TOOLS.md, "Earlier names"). What this document says of either tool
 holds under both its names.
 
@@ -21,9 +21,12 @@ by default. The one thing it fetches from the internet itself, while
 switched on, is a small public file that says whether a newer version
 of Exegete exists, and it sends nothing from your projects to get it
 ("Checking for new versions", below, says exactly what is sent, and
-how to switch it off).
+how to switch it off). Installing Exegete downloads it and the
+libraries it needs from PyPI; the desktop extension does so itself,
+through uv, when it first starts and after each update. Nothing from
+your projects is sent with those downloads either.
 
-**But the results of tool calls enter your Claude conversation.** That
+**But the results of tool calls enter the conversation.** That
 is the entire point of an MCP server, and it has a consequence you
 must understand:
 
@@ -107,10 +110,11 @@ What stays local, always, unless a sync service copies the folder it is in:
   the document holds. The folder is readable by your account only, is
   not indexed by the computer's search and, on a Mac, is left out of
   Time Machine when Exegete could mark it so. The import uses a file for
-  up to an hour after the preview and removes it after the import; a
-  file left by a preview that was not imported goes at Exegete's next
-  start, or the next time it prepares an import, once that hour has
-  passed, so it can stay longer in an app that keeps Exegete running. Deleting the
+  up to an hour and five minutes after the preview (the preview's hour,
+  and five minutes for a clock that differs) and removes it after the
+  import; a file left by a preview that was not imported goes at
+  Exegete's next start, or the next time it prepares an import, once
+  that time has passed, so it can stay longer in an app that keeps Exegete running. Deleting the
   folder changes nothing in any project (the next import reads the
   documents again), and nothing in it is sent anywhere. Another backup
   of your home folder can copy it, as it copies the documents
@@ -120,14 +124,16 @@ What stays local, always, unless a sync service copies the folder it is in:
   atomically and created owner-only on POSIX systems (mode 0600)
 - the preview-token secret (`~/.exegete/preview_secret`): 64
   random hex characters, created owner-only on POSIX systems, used to
-  sign the tokens that authorise a destructive operation and to key the
-  digests in the pseudonymisation run manifests. It never leaves your
-  machine, never appears in a result, a log line or an error, and holds
-  nothing about your project. Deleting it invalidates outstanding
-  preview tokens, which means the next execute asks for a fresh
-  preview, and the keyed digests in the run manifests already written
-  can then no longer be checked; nothing else. Exegete replaces the
-  secret by itself, with the same two effects, when it finds the file
+  sign the tokens that approve a two-step operation, to key the digests
+  in the pseudonymisation run manifests, and to name and sign the texts
+  an import's preview keeps. It never leaves your machine, never
+  appears in a result, a log line or an error, and holds nothing about
+  your project. Deleting it invalidates outstanding preview tokens,
+  which means the next execute asks for a fresh preview; the keyed
+  digests in the run manifests already written can then no longer be
+  checked; and the texts an import's preview kept can no longer be
+  used, so the next preview reads the documents again. Nothing else.
+  Exegete replaces the secret by itself, with the same effects, when it finds the file
   malformed or, on macOS and Linux, readable by other accounts (after a
   restore or a sync tool widened its mode), and logs that it did. The
   export tools refuse paths inside this folder, and inside the project
@@ -310,7 +316,9 @@ every memo after `#####` included (the database holds each memo in
 full), and none of Exegete's protections applies to it; Exegete cannot
 see such a read or stop it. Exegete's own answers tell the assistant
 where a project is (`list_available_projects`, `select_project`,
-`get_current_project` and `create_project` answer with its path).
+`get_current_project` and `create_project` answer with its path,
+`copy_project_to_workspace` with its copy's, and `list_backups` with
+each backup's, a whole copy of the project).
 
 What follows was checked on 30 September 2026 against each maker's
 documentation (and, for Codex, its source code), assistant by
@@ -415,8 +423,9 @@ assistant. These pages change often, and the linked pages govern.
   Claude can see any information visible on your screen or those apps,
   including personal data, sensitive documents, or private information
   belonging to you or others." (the article on computer use above, read
-  1 October 2026). So through any window on the screen, QualCoder's or a
-  file viewer's, it can see a project, the private part of memos
+  1 October 2026). So through any window on the screen, a file
+  viewer's, or QualCoder's if you use it, it can see a project, the
+  private part of memos
   included. With no other extension that reads files, computer use off,
   and no folder that holds your projects or transcripts connected (your
   home folder, Documents or a whole drive included), the assistant
@@ -459,8 +468,10 @@ file access of its own: Claude Desktop's chat with the extension, with
 computer use off, no folder that holds your projects or transcripts
 connected to it, and no other extension that reads files, or LM
 Studio's chat with Exegete and no other server or plugin that reads
-files. Codex reads well beyond its folder without asking, and a
-setting that stops it has not yet been tested with Exegete. Cowork
+files. Codex reads well beyond its folder without asking. OpenAI
+documents a setting, marked Beta, that can keep Codex's own commands
+from reading outside the folder it works in; it has not been tested
+with Exegete. Cowork
 reads every folder connected to it, so projects kept out of those
 folders, with computer use off and no other extension that reads files,
 stay out of its reach. Claude Code reads the
@@ -487,13 +498,23 @@ kinds, and it writes only into these places:
 - while an import reads a document, a working folder in the system's
   temporary folder, which it removes when that reading ends.
 
-Nowhere else. Some of these had other names in earlier versions. The
+Nowhere else, apart from one check you run yourself: `exegete
+--check-transition` reads the assistant apps' configuration files, to
+say what the change of name from qualcoder-mcp left behind, and never
+changes them; with `--tidy` it removes the link left at
+`~/.qualcoder_mcp` and, with `--tidy-old-logs` as well, Claude
+Desktop's log files under the extension's earlier name (INSTALL.md,
+"Coming from qualcoder-mcp"). Some of these had other names in earlier
+versions. The
 state folder was `~/.qualcoder_mcp` before 0.14.1: since then Exegete
 keeps a link under that name pointing at `~/.exegete`, as "How your
 data flows" says. The folder for projects was
 `~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was; the
-extension's was `~/QualCoder projects` before 0.15.0, and an update
-moves a setting left at that default to `~/Exegete projects`. No
+extension's was `~/QualCoder projects` before 0.15.0: on the
+maintainer's Mac on 19 October 2026, the update moved a setting left at
+that default to `~/Exegete projects`, and a folder chosen by hand
+should be kept (not yet checked), so after updating, look at the
+setting. No
 project is moved, both folders are searched, and setting it back to
 `~/QualCoder projects` keeps new projects beside the earlier ones.
 
@@ -772,9 +793,11 @@ Finder instead, without opening it.
 
 Three cautions:
 
-- **Assistants with file tools of their own** (Claude Code, Cowork,
-  Codex) can read any file your account can, the pages and copies
-  included. The page, the tool's description and the assistant's brief
+- **Assistants with file tools of their own** can read the pages and
+  copies: Claude Code and Codex, any file your account can; Cowork, any
+  file in a folder connected to it, so the reading folder too when
+  your home folder or its drive is connected ("Assistants that open
+  files by themselves", above). The page, the tool's description and the assistant's brief
   ask the assistant not to; nothing enforces it. In Claude Code, a
   permission rule that denies its file-reading tool on the reading
   folder narrows this, for example `"deny":
@@ -853,10 +876,13 @@ reports before anything is applied.
 
 `compare_coders` reports how much two named coders' text coding agrees.
 Its result carries counts, percentages and two agreement coefficients,
-and, from v0.14, the names of the files in scope that only one of the
-two coders coded (so that a reader knows where a "not coded" is not a
-decision); nothing else about the coding: no coded text, no memo, no
-character positions, no file paths. On a project that hides coders, naming a hidden
+the name of each code and of its category, and, from v0.14, the names
+of the files in scope that only one of the two coders coded (so that a
+reader knows where a "not coded" is not a decision); with
+`per_file=true`, it also names, under each code, every file either
+coder coded, and a file's name can hold a participant's name ("File
+names travel everywhere", in "Bringing documents in"). Nothing else about the coding: no coded text,
+no memo, no character positions, no file paths. On a project that hides coders, naming a hidden
 coder is refused unless you pass `allow_hidden_coder=true`, and the
 refusal says only that a named coder is hidden, never which of the two,
 and never how many coders are hidden; the lists of coders in its other
@@ -1124,17 +1150,24 @@ Seven cautions:
   a name typed with a separate accent mark (as some Mac programs write
   "é") is not replaced when the list has the accented letter, or the
   other way round.
-- **Hosts with file tools of their own** (Claude Code, Cowork, Codex)
-  can read any file your account can, originals included. Exegete's
+- **Hosts with file tools of their own** can read the originals:
+  Claude Code and Codex, any file your account can; Cowork, any file in
+  a folder connected to it. Exegete's
   descriptions ask the assistant to give paths and never to open a
   document with its own tools; nothing enforces that.
 - **Hidden instructions in a document** can try to steer an assistant
   into previewing and importing some other document. The short list of
   formats, the refusal of hidden places and links, the preview and your
-  approval stand against it. Set to "always allow", the import would
-  run without asking, and such instructions could then bring in another
-  file unasked; allowing it once, after reading the preview, keeps you
-  asked each time. Codex's default mode runs it without asking.
+  approval stand against it. Exegete marks the import as a tool to ask
+  about on every call (`anthropic/requiresUserInteraction`), and Claude
+  Code from version 2.1.199 asks before every import whatever is set
+  (INSTALL.md, "What hosts do with the tools' read and write marks").
+  In a host that does not read that mark (Codex; perhaps LM Studio and
+  Claude Desktop's chat, whose makers do not say), set to "always
+  allow", the import would run without asking, and such instructions
+  could then bring in another file unasked; allowing it once, after
+  reading the preview, keeps you asked each time. Codex's default mode
+  runs it without asking.
 - **A file imported by mistake** stays in every backup taken after it,
   since a backup copies the whole project. Restoring the backup taken
   just before the import takes it back while nothing else has changed.
@@ -1158,8 +1191,8 @@ Seven cautions:
 
 Each document is read in a separate, short-lived process with a time
 limit and a memory cap, handed the file's bytes rather than its path;
-it runs without a sandbox for now (one where the system offers it, on a
-Mac and on Linux, is planned; Windows offers none). Import and reading
+it runs without a sandbox (one, where the system offers it, is on the
+list of later work, with no release set). Import and reading
 use no network. A document converted with another tool, such as a pandoc
 server, should be converted file to file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).
@@ -1176,10 +1209,16 @@ while `search.sqlite` is a rebuildable search index. Be aware that
 **`ai_data/search.sqlite` contains a full plaintext copy of every text
 source in the project** (QualCoder chunks source fulltext into it for
 retrieval), which matters to anyone sharing or syncing project
-folders.
+folders. QualCoder 3.8, where its AI search was used, keeps the same
+kind of copy in a store of its own,
+`ai_data/vectorstore/faiss_store.bin`, which holds the sources' text
+in chunks beside its index (QualCoder 3.8.2's `ai_vectorstore.py`,
+lines 297 and 344-357).
 
-Exegete never writes into `ai_data/` (it is QualCoder's own
-territory). Since 0.15.0 it makes the folder, empty, when it creates a
+Exegete opens no file in `ai_data/` (it is QualCoder's own territory):
+it checks only which files are there and when they changed, and a
+restore puts back the backup's copy of the folder, chat history
+included. Since 0.15.0 it makes the folder, empty, when it creates a
 project or copies one that has none into the workspace, so that
 QualCoder 4.0's first open finds it. Its backups and workspace copies
 include `ai_data/` whole, minus exactly the files QualCoder 4.0's own backups skip
@@ -1188,8 +1227,12 @@ include `ai_data/` whole, minus exactly the files QualCoder 4.0's own backups sk
 backups skipped those too, and a copied lock file would make QualCoder
 report the copy as not properly closed). That mirrors QualCoder's own backups, keeps the
 non-regenerable prompt library and chat history safe in every backup,
-and avoids multiplying plaintext copies of your sources across backup
-folders. A restored or copied project without `search.sqlite` is
+and, for QualCoder 4.0's search index, avoids multiplying plaintext
+copies of your sources across backup folders. QualCoder 3.8's store,
+`faiss_store.bin`, matches none of those names, so Exegete's backups
+and workspace copies keep it, as QualCoder 3.8's own backups do: each
+backup of such a project holds one more plaintext copy of the text in
+it. A restored or copied project without `search.sqlite` is
 normal: QualCoder rebuilds it on project open. A restore keeps the
 project's `Exegete` folder as it is, with every file in it, those whose
 names backups leave out included: it leaves the folder where it is. It
@@ -1201,11 +1244,13 @@ into the project yourself.
 
 The project database is the one file not copied as a file (since
 0.14): `data.qda` is copied with SQLite's own online backup, from a
-read-only connection, so a backup or copy made while QualCoder is
-writing holds only what was last committed, and the database's journal
-and WAL files are not copied. Only a database SQLite cannot read that
-way (not a database, damaged, or left with a crash's journal) is
-copied as a file with its side files, and the result says so. QualCoder's ignore set does not match
+read-only connection, so a backup or copy made while another program,
+such as QualCoder, is writing holds only what was last committed, and
+the database's journal and WAL files are not copied. Only a database
+SQLite cannot read that way (not a database, damaged, or left with a
+crash's journal) is copied as a file with its side files, and the
+result says so; the backup Exegete takes before a change is never
+copied as a file: the change is refused instead. QualCoder's ignore set does not match
 them, and a journal copied mid-write holds pages of a write that was
 never committed, which some SQLite builds then show and others refuse
 to read. A backup that holds them (copied while a program was writing,
@@ -1226,8 +1271,14 @@ and keep that copy.
 
 Besides `restore_backup`, which checks that no journal or WAL file
 sits beside the database of the backup you choose, opens it to check
-it, reads its first bytes for the preview and copies it back,
-one tool reads the backups' contents: `rename_file`, to recognise a
+it, reads its first bytes for the preview and copies it back, and
+which compares a fingerprint of the bytes of the project's
+`pseudonyms.json` before and after (once restored, the backup's copy)
+to say whether that file appears, disappears or changes, and besides
+`prune_backups`, which reads the `pseudonyms.json` of each backup
+beside the project only to compare such fingerprints (no name in it is
+read out or returned; "Practical mitigations", on `pseudonyms.json`,
+says why), one tool reads the backups' contents: `rename_file`, to recognise a
 rename back (a name, or an ending, the file had before; deprecated:
 v0.14 says so when it happens, and v0.15.1 removes it). Only when one of
 its rules would refuse the new name, it opens the database of the
@@ -1250,7 +1301,9 @@ Two further rules touch files on your disk:
   and workspace copies do not follow a symlink that points outside the
   project folder, or that dangles: such entries are skipped, and the
   result reports how many (and which, up to twenty names) were
-  skipped, so a shared or
+  skipped, except that a link inside the project's `Exegete` folder is
+  counted and never named ("Files Exegete keeps on your computer"), so
+  a shared or
   untrusted project folder cannot pull files from elsewhere on your
   disk into a backup. Symlinks that resolve inside the project are
   copied as before, with one exception: a symlink loop (a link that
@@ -1403,8 +1456,9 @@ Which terms govern the AI processing is decided by the host you run and
 the account you sign into, not by Exegete. Four rungs, each with
 what changes and what to check. Discipline note: we quote official
 pages verbatim with their URLs and never characterise terms in our own
-voice; every quote below was pulled on 2026-08-17, terms change, and
-the linked pages govern. (The multi-host support itself is Experimental
+voice; the terms below were quoted on 17 August 2026 and the passages
+on feedback on 1 October 2026, terms change, and the linked pages
+govern. (The multi-host support itself is Experimental
 and not yet capability-evaluated; see the INSTALL.md recipes.)
 
 ### Rung 1: Claude consumer plans (Free/Pro/Max, including Claude Code signed in with them)
@@ -1552,7 +1606,8 @@ local)".
 - Commercial-terms coverage is not GDPR compliance. The DPA exists;
   controller/processor analysis and executing or relying on the DPA
   remain institution-level work.
-- All quotes above were pulled 2026-08-17. Terms change; the linked
+- The terms above were quoted on 17 August 2026, the passages on
+  feedback on 1 October 2026. Terms change; the linked
   pages govern. The Privacy Center now lives at privacy.claude.com
   (older privacy.anthropic.com links redirect there).
 
@@ -1649,7 +1704,7 @@ addresses, never characterised in our own voice, and the linked pages
 govern. OpenAI's Help Center and openai.com refuse automated reading, so
 those pages were read on 30 September 2026 from the Internet Archive's
 captures of them, named with each quote: open the live page before you
-rely on it. (The recipe itself is Experimental, and not yet tried by
+rely on it. (The recipe itself is Experimental, and not tried by
 this project. This project gives no steps for ChatGPT in a web browser,
 which could reach Exegete through OpenAI's Secure MCP Tunnel, or, in an
 enterprise workspace that switches on local computer access with Work
@@ -1729,14 +1784,15 @@ keeps a study's files out of the place Codex works in, so that it does
 not change them without asking, and does not keep Codex from reading
 them, or from searching other folders for them. Practising, too,
 leaves a real study on the same computer within its reach ("While you
-practise", above). OpenAI documents a setting, in beta, that can refuse
-Codex's reads outside its folder, a "permission profile"
-(<https://learn.chatgpt.com/docs/permissions>, read 30 September 2026:
-"Beta. Permission profiles are under active development and may
-change."). This project has not yet tested it with Exegete, and gives
-no steps for it until it has. Until then, for participants' data, it
-suggests an assistant with no file access of its own, such as Claude
-Desktop's chat.
+practise", above). OpenAI documents a setting, marked Beta, that can
+keep Codex's own commands from reading outside the folder it works in,
+a "permission profile" (<https://learn.chatgpt.com/docs/permissions>,
+read 30 September 2026: "Beta. Permission profiles are under active
+development and may change."); it has not been tested with Exegete,
+and this project gives no steps for it. If you try it, you may want to
+check what Codex can still read before bringing in participants' data;
+for participants' data, this project suggests an assistant with no
+file access of its own, such as Claude Desktop's chat.
 
 **Phones, through a connected computer.** OpenAI's Remote,
 <https://learn.chatgpt.com/docs/remote> (read 30 September 2026):
@@ -1914,7 +1970,7 @@ will ask, and the summary above depends on them:
 - **Your Claude plan's terms differ, and they matter.** For *your* account,
   verify whether inputs (a) may be used to train or improve models,
   (b) how long they are retained, and (c) whether they can be reviewed by
-  people. These differ materially between consumer plans (Free/Pro) and
+  people. These differ materially between consumer plans (Free, Pro and Max) and
   Team/Enterprise/API terms. Inputs being used for model training would
   almost never be covered by existing participant consent; an ethics
   board asks this first.
@@ -1964,8 +2020,9 @@ will ask, and the summary above depends on them:
   Claude Desktop's chat with the extension, with computer use off, no
   folder that holds your projects or transcripts connected to it, and
   no other extension that reads files. Codex reads well beyond its
-  folder without asking, and a setting that stops it has not yet been
-  tested. Practising, too, leaves a real study
+  folder without asking. OpenAI documents a setting, marked Beta, that
+  can keep Codex's own commands from reading outside the folder it
+  works in; it has not been tested with Exegete. Practising, too, leaves a real study
   on the same computer within reach of Codex and Claude Code ("While
   you practise", above).
 - **What stays on the computer, and for how long.** Copies stay on the
@@ -1973,8 +2030,15 @@ will ask, and the summary above depends on them:
   lists of suggestions waiting for review (`~/.exegete/sessions/`);
   the texts an import's preview read, until the import or, when none
   follows, until Exegete's next start, or the next import it prepares,
-  an hour or more later (`~/.exegete/import-texts.noindex`);
-  Claude Desktop's log of the extension, which keeps every request and
+  an hour or more later (`~/.exegete/import-texts.noindex`); the
+  reading folder's pages, with a file's whole text and its codings, its
+  read-only copies of originals and an import's pages for checking
+  letters, until Exegete's first tidy once they are a week old (an hour
+  for an import's page), and longer while Exegete is not running
+  (macOS `~/Library/Caches/Exegete/Reading.noindex`, Windows
+  `%LOCALAPPDATA%\Exegete\Reading`, Linux `~/.cache/exegete/reading`);
+  the pseudonymisation run records (`~/.exegete/pseudonymisation/`),
+  until you delete them; Claude Desktop's log of the extension, which keeps every request and
   answer, names and quoted text included (INSTALL.md, "Reading the
   server log"); Codex's session files (`~/.codex/sessions`) and Claude
   Code's transcripts (`~/.claude/projects/`). Say where each is kept,
@@ -2061,8 +2125,8 @@ will ask, and the summary above depends on them:
     `prepare_names_list` says, and entries that cannot be written as one
     line of the file stay in `pseudonyms.json`, where you can see them.
     QualCoder's own guidance is to remove `pseudonyms.json` and store it
-    securely once the import is done (`manage_files.py` at the 9bddf17
-    pin), and that applies here too. `speakers.json` and
+    securely once the import is done (QualCoder 4.0's `manage_files.py`,
+    line 739), and that applies here too. `speakers.json` and
     `speaker_regex.json` can hold names as well; the preview reports whether they are present and never reads
     them.
   - **The names file** (`Names to replace.txt`), if you made one with
@@ -2185,10 +2249,13 @@ will ask, and the summary above depends on them:
     To recognise a rename back, `rename_file` reads this file's earlier
     name from the project's backups (see "Backups, project copies, and
     the `ai_data/` folder").
-  - **QualCoder 4.0's `ai_data/` folder.** Its chat history may quote the
-    previous text and its search index still holds it until QualCoder
-    reopens the project and re-indexes. Exegete never reads or
-    writes anything in there.
+  - **QualCoder's `ai_data/` folder.** Its chat history may quote the
+    previous text, and its search index (QualCoder 4.0's
+    `search.sqlite`, or QualCoder 3.8's `vectorstore/faiss_store.bin`)
+    still holds it until QualCoder indexes the project again; Exegete's
+    backups keep QualCoder 3.8's store. Exegete opens no file in there:
+    it checks only which files are there and when they changed, and a
+    restore puts back the backup's copy of the folder.
   - **Exegete's own session files** in `~/.exegete/sessions/`.
     A coding session records the excerpt each suggestion refers to,
     with the file's name and the reason given for it (which may quote

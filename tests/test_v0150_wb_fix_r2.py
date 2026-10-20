@@ -195,11 +195,12 @@ class TestClaudeCodesLimitsOnEveryPython:
 
 # The three notes' new ending, each said as Exegete's gap or on a condition
 NOTES = {
+    # (v0.15.1: the export is kept, its known faults named, ruling 85,
+    # item 2; the ending the review asked for is unchanged)
     "DEPRECATED_REFI_EXPORT": (
-        "rejected suggestions unmarked. Exegete has no other REFI-QDA "
-        "export yet; QualCoder's own export (Project, Export, REFI-QDA "
-        "Project export), for researchers who have QualCoder, keeps each "
-        "coder, the cases, notes and media."),
+        "Exegete has no other REFI-QDA export yet; QualCoder's own export "
+        "(Project, Export, REFI-QDA Project export), for researchers who "
+        "have QualCoder, keeps each coder, the cases, notes and media."),
     "DEPRECATED_JOURNAL_ATTRIBUTES": (
         "which Exegete can set but never reads back (QualCoder's Journals "
         "window, for researchers who use it, sets and shows them)."),
@@ -245,12 +246,14 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
     def test_the_documents(self):
         # the guide's opening box, without its quotation marks
         guide = _flat(_read("AI_CODING_GUIDE.md").replace("\n> ", "\n"))
-        assert ("it files every coding under the AI coder name. Exegete has "
-                "no other REFI-QDA export yet; QualCoder's own export, if "
-                "you use QualCoder, keeps each coder: Project, Export, "
-                "REFI-QDA Project export.)") in guide
-        assert ("(deprecated, removed in v0.15.1; QualCoder's own export, if "
-                "you use QualCoder, keeps each coder)") in guide
+        # (v0.15.1: the export kept, its faults named, ruling 85, item 2)
+        assert ("it files every coding under the AI coder name, yours "
+                "included. Exegete has no other REFI-QDA export yet; "
+                "QualCoder's own export, if you use QualCoder, keeps each "
+                "coder: Project, Export, REFI-QDA Project export.)") in guide
+        assert ("QualCoder's own export, if you use QualCoder, keeps each "
+                "coder)") in guide
+        assert "removed in v0.15.1; QualCoder's own export" not in guide
         tools = _flat(_read("TOOLS.md"))
         for words in (
                 "Exegete has no other REFI-QDA export yet, and QualCoder's "
@@ -261,7 +264,7 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
                 "Exegete can set them but never reads them back (QualCoder's "
                 "Journals window, for researchers who use it, sets and "
                 "shows them)",
-                "rejected suggestions unmarked. Exegete has no other "
+                "rejected suggestions, unmarked. Exegete has no other "
                 "REFI-QDA export yet; QualCoder's own export (Project, "
                 "Export, REFI-QDA Project export), for researchers who have "
                 "QualCoder, keeps them"):
@@ -355,13 +358,22 @@ class TestTheSmallerPoints:
 
     def test_the_readme_s_lists(self):
         readme = _flat(_read("README.md"))
+        # (the staleness audit of 20 October 2026: saving the names list
+        # previews first too; both lists follow the token registry)
         assert ("the larger ones (merging or deleting codes and categories, "
                 "replacing names, restoring backups, bringing documents in, "
-                "correcting your own coder name) show a preview first"
-                ) in readme
-        assert ("`restore_backup`, `prune_backups`, `set_project_coder_name` "
-                "(your own coder name, while nothing is recorded under it)."
-                ) in readme
+                "correcting your own coder name, saving the names list) show "
+                "a preview first") in readme
+        from exegete import preview_tokens
+        guarded = readme[readme.index("- **Guarded changes**"):]
+        guarded = guarded[:guarded.index("- **Documents in")]
+        for name in set(preview_tokens.REGISTRY) - {"import_documents"}:
+            assert f"`{name}`" in guarded, name
+        assert "`import_documents` (a preview, then the import on its " \
+               "token" in readme
+        assert ("`set_project_coder_name` (your own coder name, while "
+                "nothing is recorded under it), `save_names_list` (saving "
+                "the names list).") in readme
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
         install = _flat(_read("INSTALL.md"))

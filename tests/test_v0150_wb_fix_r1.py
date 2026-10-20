@@ -88,11 +88,23 @@ class TestTheRemovalsInV0151:
         assert "DEPRECATED_IMPORT_SKIP_BACKUP" not in DEPRECATIONS
         assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
 
-    @pytest.mark.parametrize("name", DEPRECATIONS)
+    @pytest.mark.parametrize("name", [n for n in DEPRECATIONS
+                                      if n != "DEPRECATED_REFI_EXPORT"])
     def test_each_sentence_names_v0151(self, name):
         sentence = getattr(server, name)
         assert sentence.startswith("Deprecated, removed in v0.15.1: "), name
         assert not BARE_V015.search(sentence), name
+
+    def test_the_refi_export_is_kept_with_its_faults_named(self):
+        """The owner's decision of 20 October 2026 (ruling 85, item 2): the
+        REFI-QDA export stays, to be fixed, so its sentence names its known
+        faults and announces no removal (under its earlier constant until
+        the piece that fixes it)."""
+        sentence = server.DEPRECATED_REFI_EXPORT
+        assert sentence.startswith("Known faults (a later release is meant "
+                                   "to fix them): ")
+        assert "Deprecated" not in sentence and "removed" not in sentence
+        assert not BARE_V015.search(sentence)
 
     @pytest.mark.parametrize("mode", ["full", "core"])
     def test_no_served_description_names_v015_alone(self, mode):
@@ -106,19 +118,30 @@ class TestTheRemovalsInV0151:
         found = [m.group(0) for m in BARE_V015.finditer(_read(name))]
         assert found == [], name
 
-    def test_what_comes_next_lists_v0151_and_v0152(self):
+    def test_what_comes_next_lists_v0151_to_v0153(self):
+        """The owner's decisions of 20 October 2026 (ruling 85): the
+        safety net in two releases, undo in the second (the sprint moved
+        it whole to v0.15.2), method in v0.15.3 with the earlier tool
+        names and the ignored backup option; the REFI-QDA export kept."""
         readme = _flat(_read("README.md"))
         nxt = readme[readme.index("## What comes next"):]
         nxt = nxt[:nxt.index("## ", 5)]
-        assert ("- v0.15.1, the safety net: undo everything a session did; "
-                "when replacing names, choose which mentions to keep; old "
-                "tools marked as going are retired (TOOLS.md names each)"
-                ) in nxt
-        assert ("- v0.15.2, method: how the assistant supports a study's "
-                "method, reviewed; shorter tool descriptions; the earlier "
-                "names of the two renamed tools retired") in nxt
-        assert "removed in 0.15.1" in readme
-        assert "removed in 0.15)" not in readme
+        items = {item.split(",")[0]: item for item in nxt.split(" - ")[1:]}
+        assert list(items)[:3] == ["v0.15.1", "v0.15.2", "v0.15.3"]
+        assert "a backup before every change, taken by Exegete itself" \
+            in items["v0.15.1"]
+        assert "the REFI-QDA export, which stays" in items["v0.15.1"]
+        assert "undo" not in items["v0.15.1"]
+        assert "undo a session's changes" in items["v0.15.2"]
+        assert "choose which mentions to keep" in items["v0.15.2"]
+        assert "method" in items["v0.15.3"]
+        assert "the earlier names of the two renamed tools" \
+            in items["v0.15.3"]
+        assert "backup option" in items["v0.15.3"]
+        # the REFI-QDA export is kept (ruling 85, item 2): no removal
+        # announced for it anywhere in the README
+        assert "removed in 0.15" not in readme
+        assert "being withdrawn" not in readme
 
 
 # ===========================================================================

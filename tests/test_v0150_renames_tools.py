@@ -682,7 +682,9 @@ BLOCKED = (
 EARLIER_NAMES_SECTION = (
     "## Earlier names\n\nTwo tools were renamed in 0.15.0. Their earlier "
     "names are still listed, and do exactly what the new ones do, until "
-    "a later release (planned as v0.15.2) removes them: "
+    # (the owner's decisions of 20 October 2026, ruling 85, item 1:
+    # method, and with it the earlier names, is v0.15.3)
+    "a later release (planned as v0.15.3) removes them: "
     "`analyze_for_coding` is now `start_coding_session`, and "
     "`analyze_file_with_coding` is now `read_file_with_codings`. If your "
     "host remembers a choice to run one of the earlier names without "
@@ -853,7 +855,7 @@ class TestTheDocuments:
         flat = _flat(_read("PRIVACY.md"))
         assert ("Two tools were renamed in 0.15.0, and their earlier names "
                 "are still listed until a later release (planned as "
-                "v0.15.2) removes them (TOOLS.md, \"Earlier names\"). What "
+                "v0.15.3) removes them (TOOLS.md, \"Earlier names\"). What "
                 "this document says of either tool holds under both its "
                 "names.") in flat
         assert flat.index("Two tools were renamed in 0.15.0") < \

@@ -89,13 +89,19 @@ def test_the_recipe_has_the_seven_steps_the_readme_counts():
 
 def test_the_route_table_no_longer_asks_for_a_guide_for_lm_studio():
     install = _flat(_read("INSTALL.md"))
-    assert "considered on request" in install
+    # (the staleness audit of 20 October 2026, with the sprint's deferred
+    # table: the API-key recipe for Claude Code has numbered steps too, so
+    # no guide for it is "considered on request")
+    assert "considered on request" not in install
     sentence = install[install.index("The recipes for OpenAI's apps"):]
     sentence = sentence[:sentence.index("GitHub Issues")]
-    assert sentence == ("The recipes for OpenAI's apps and for LM Studio go "
-                        "step by step; a guide of that kind for Claude Code "
-                        "is considered on request: ask in [")
-    assert "and LM Studio are considered on request" not in install
+    assert sentence == ("The recipes for OpenAI's apps, for LM Studio and "
+                        "for Claude Code with an Anthropic API key go step "
+                        "by step; Claude Code signed in with a Pro or Max "
+                        "plan follows \"Alternative: Claude Code and other "
+                        "MCP clients\". For another host, ask in [")
+    assert "## Claude Code with an Anthropic API key (Experimental)" in \
+        _read("INSTALL.md")
 
 
 def test_step_1_installs_the_part_for_pdf_and_epub():

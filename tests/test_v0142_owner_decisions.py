@@ -316,9 +316,8 @@ def test_no_document_prescribes_where_exegete_may_be_used():
             "|") in data
     assert ("| **ChatGPT's desktop app and Codex** (Experimental) | Codex: "
             "yes, well beyond its folder, without asking, even in \"Ask for "
-            "approval\" and read-only mode (a setting that stops it has not "
-            "yet been tested with Exegete) | OpenAI | Claude Desktop's chat "
-            "instead |") in data
+            "approval\" and read-only mode (" + CODEX_SETTING + ") | OpenAI "
+            "| Claude Desktop's chat instead |") in data
 
 
 def test_the_prescribing_check_would_notice():
@@ -340,14 +339,27 @@ def test_the_prescribing_check_would_notice():
         assert any(words in old.lower() for words in PRESCRIBING), old
 
 
+# The Codex setting, as the documents say it since the owner dropped its
+# test on 20 October 2026 (ruling 85, item 4): what OpenAI documents,
+# never stronger than its page, and that it is untested, with no test
+# promised ("until", "not yet")
+CODEX_SETTING = ("OpenAI documents a setting, marked Beta, that can keep "
+                 "Codex's own commands from reading outside the folder it "
+                 "works in; it has not been tested with Exegete")
+CODEX_PROMISES = ("until a setting that stops Codex's reads",
+                  "has not yet been tested", "has not yet tested",
+                  "no steps for it until it has", "of its own for now")
+
+
 def test_openais_route_is_warned_of_with_an_alternative():
     """Where a reader meets OpenAI's route, the documents say what Codex
     reads by itself and suggest, for participants' data, an assistant
-    with no file access of its own, as they do for Claude Code."""
+    with no file access of its own, as they do for Claude Code. The
+    setting OpenAI documents is named as untested, in one wording, and
+    no test of it is promised (the owner dropped it, 20 October 2026)."""
     suggestion = ("for participants' data this project suggests an "
                   "assistant with no file access of its own, such as Claude "
-                  "Desktop's chat, until a setting that stops Codex's reads "
-                  "has been tested with Exegete")
+                  "Desktop's chat")
     readme = _between(_flat("README.md"), "### ChatGPT's desktop app and "
                       "Codex (OpenAI)", "1. **Switch training off**")
     assert ("Codex reads files by itself, so " + suggestion + ".") in readme
@@ -358,25 +370,40 @@ def test_openais_route_is_warned_of_with_an_alternative():
     box = _between(install, "## ChatGPT's desktop app and Codex "
                    "(Experimental)", "**Which OpenAI apps can use Exegete.**")
     assert ("Codex reads files on your computer by itself, so " + suggestion
-            + "; step 3 says more.") in box
+            + ".") in box
     step_four = _between(install, "**Step 4. Keep it asking.**",
                          "**If Exegete does not start")
     assert ("and why, for participants' data, this project suggests an "
-            "assistant with no file access of its own for now (the box at "
-            "the top of this section).") in step_four
+            "assistant with no file access of its own (the box at the top "
+            "of this section).") in step_four
     privacy = _flat("PRIVACY.md")
     hosts = _between(privacy, "**For participants' data**, this project "
                      "suggests", "## Keeping notes private")
     checklist = _between(privacy, "- **Which assistant, and whether it opens "
                          "files by itself.**", "- **What stays on")
+    for where, text in (("README, the route", readme),
+                        ("INSTALL, the row", row),
+                        ("INSTALL, the box", box),
+                        ("PRIVACY, summary", hosts),
+                        ("PRIVACY, checklist", checklist)):
+        assert CODEX_SETTING in " ".join(text.split()), where
     for where, text in (("PRIVACY, summary", hosts),
                         ("PRIVACY, checklist", checklist)):
-        assert ("Codex reads well beyond its folder without asking, and a "
-                "setting that stops it has not yet been tested") in text, \
+        assert "Codex reads well beyond its folder without asking." in text, \
             where
-    assert ("Until then, for participants' data, it suggests an assistant "
-            "with no file access of its own, such as Claude Desktop's chat.") \
-        in privacy
+    openai = _between(privacy, "## OpenAI's apps", "**Phones, through a "
+                      "connected computer.**")
+    assert ("OpenAI documents a setting, marked Beta, that can keep Codex's "
+            "own commands from reading outside the folder it works in, a "
+            "\"permission profile\"") in openai
+    assert ("it has not been tested with Exegete, and this project gives no "
+            "steps for it") in openai
+    assert ("for participants' data, this project suggests an assistant "
+            "with no file access of its own, such as Claude Desktop's chat."
+            ) in openai
+    for name in ("README.md", "INSTALL.md", "PRIVACY.md"):
+        for words in CODEX_PROMISES:
+            assert words not in _flat(name), (name, words)
 
 
 def test_cowork_is_out_of_reach_only_with_all_three_conditions():

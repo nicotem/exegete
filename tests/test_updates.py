@@ -1177,5 +1177,9 @@ def test_install_says_the_extension_tells_of_new_versions():
     # title and every setting named by place)
     title = manifest["user_config"]["update_check"]["title"]
     assert f'(the setting "{title}", above)' in updating
+    # (the staleness audit of 20 October 2026: no setting named by its
+    # place, since 0.15.0 put three settings before this one)
+    assert not re.search(r"the (?:first|second|third|fourth|fifth|sixth) "
+                         r"setting", section)
     assert "**Tell me when a new version is out**: on unless you switch " \
            "it off." in section

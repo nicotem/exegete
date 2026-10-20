@@ -1856,8 +1856,10 @@ class TestFixRound2WhatGoesInV015:
         description = server.mcp._tool_manager._tools[tool].description
         assert sentence in description, tool
         # ruling 70 moved the removals to v0.15.1 (the whole-branch
-        # review of v0.15.0, round 1)
-        assert sentence.startswith("Deprecated, removed in v0.15.1: ")
+        # review of v0.15.0, round 1); ruling 85, item 2 keeps the
+        # REFI-QDA export, whose sentence names its known faults instead
+        if sentence is not server.DEPRECATED_REFI_EXPORT:
+            assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
         """v0.15.0 (ruling 78; the files design, piece 5): the name list
@@ -1876,12 +1878,16 @@ class TestFixRound2WhatGoesInV015:
 
     def test_the_refi_qda_exports(self, setup_server, tmp_path):
         self._described("export_refi_qda", server.DEPRECATED_REFI_EXPORT)
-        for words in ("files every coding under the AI coder name",
+        # (v0.15.1: kept, its known faults named, ruling 85, item 2; the
+        # answer's field keeps its name until the piece that fixes it)
+        for words in ("Known faults (a later release is meant to fix them)",
+                      "files every coding under the AI coder name",
                       "leaves out cases, annotations, journals and media",
-                      "includes rejected suggestions unmarked",
+                      "includes every suggestion, rejected ones too",
                       "QualCoder's own export (Project, Export, REFI-QDA "
                       "Project export)"):
             assert words in server.DEPRECATED_REFI_EXPORT, words
+        assert "removed" not in server.DEPRECATED_REFI_EXPORT
         sid = new_session()
         g = record(sid, item())["recorded"][0]["guid"]
         session_export = jcall("export_refi_qda", coding_session_id=sid,

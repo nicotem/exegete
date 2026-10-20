@@ -635,7 +635,10 @@ CHANGED_0150 = {
     # tests/test_v0150_ai_coder_name_setting.py pins both)
     "create_project": (2486, 1975, "3de9483aca76e003"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
-    "export_refi_qda": (2186, 1803, "26fdfe7d1edb6d62"),
+    # v0.15.1, the stale texts: the export is kept, to be fixed (ruling
+    # 85, item 2), and its sentence names its known faults instead of its
+    # removal (2,186 to 2,312 characters on 3.13)
+    "export_refi_qda": (2312, 1904, "a80800d56c24ae10"),
     # not presuming QualCoder, piece 5: the write tools' closing
     # paragraph in 26 descriptions, apply_codings' lock sentence and
     # first safety guarantee, and restore_backup's item 4, each now

@@ -101,7 +101,10 @@ is looked at first.
    describe the behaviour you changed; `PRIVACY.md` is the contract for
    what a tool result may disclose. Links are checked on every push
    (`scripts/check_links.py`): when you rename a heading, it names every
-   link to it, the update page's included.
+   link to it, the update page's included. The facts the documents
+   repeat are checked too (`tests/test_v0151_facts.py`): when you change
+   a folder, a limit or a count in the code, the check names every
+   sentence that still gives the old one.
 
 ## Review before merge
 

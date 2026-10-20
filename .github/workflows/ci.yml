@@ -430,9 +430,12 @@ jobs:
   # relative link and its anchor, and every link to the repository's own
   # documents on main (as the README and the update page give them, so
   # that they work on PyPI and in every installed copy), against the
-  # tracked files of this commit. Standard library only, so nothing is
-  # installed and the answer comes in about a minute. The links to other
-  # sites are checked once a week instead (external-links.yml).
+  # tracked files of this commit. Standard library only, so it runs
+  # before anything is installed. The links to other sites are checked
+  # once a week instead (external-links.yml). Then the facts the
+  # documents repeat (tests/test_v0151_facts.py): the folders, the time
+  # per import call and the tool counts, held to the code's constants,
+  # which needs the package; the answer comes in about two minutes.
   documents:
     name: documents
     runs-on: ubuntu-latest
@@ -453,3 +456,21 @@ jobs:
 
       - name: The links inside the repository
         run: python scripts/check_links.py
+
+      # From the lock, as the libraries' install does: uv, at the version
+      # the extension job uses, in an environment of its own, so it never
+      # joins the path; `--locked` fails when pyproject.toml and uv.lock
+      # disagree; pip installs the exported releases, each checked
+      # against its hash, then the package itself without dependencies.
+      - name: Install the package from the lock
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m venv "$RUNNER_TEMP/uv-env"
+          "$RUNNER_TEMP/uv-env/bin/python" -m pip install "uv==0.9.7"
+          "$RUNNER_TEMP/uv-env/bin/python" -m uv export --locked --extra dev --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
+          python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
+          python -m pip install --no-deps -e .
+
+      - name: The facts the documents repeat
+        run: python -m pytest -q tests/test_v0151_facts.py

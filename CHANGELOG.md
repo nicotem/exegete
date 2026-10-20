@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the links to other sites are checked once a week, by a workflow of
   their own (`external-links.yml`). The placeholder for a screenshot
   that was never added is gone from docs/history/IMPORT_INSTRUCTIONS.md.
+- **The facts the documents repeat are checked against the code**
+  (`tests/test_v0151_facts.py`, in the same job): the folder for
+  projects, the places the project listing searches, the state folder,
+  the time one import call may take and the tool counts. A change to
+  one of them in the code names every sentence that still gives the old
+  value, by file and line.
 - **The early plans, analyses, research notes and security review
   marked historical are now in `docs/history/`**, out of the top of the
   repository, with a README that says what the folder holds; NOTICE

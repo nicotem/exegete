@@ -65,6 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so you can compare an install of your own with it. CI gives the table
   for every commit, from the lock's dry run on six computers
   (`scripts/extension_libraries.py`).
+- **The desktop extension installs certifi 2026.10.19**, the release
+  that fixes advisory GHSA-6q48-6c7w-9gw2 of 20 October 2026, in place
+  of 0.15.0's 2026.7.22 (certifi's list of trusted certificate
+  authorities held an emSign root under which eight intermediate
+  authorities' private keys were compromised); certifi comes with the
+  MCP library, through httpx, and no other library in the lock moves.
 - **Exegete takes one backup before every change, at the last moment.**
   After a tool's checks, Exegete copies the project into the backup,
   all but its database, while other programs can still save; then it

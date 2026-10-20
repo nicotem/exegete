@@ -14,7 +14,7 @@ These tokens are deliberately NOT the authorisation tokens of
 destructive operation was computed and are signed; these say "carry on
 from here" and are signed by nothing, because a caller who forges a
 position gets a page it could have asked for anyway (D4 5.4). The two
-prefixes, `c1.` and `qcp1.`, stay distinct so neither is ever mistaken
+prefixes, `c1.` and `qcp2.`, stay distinct so neither is ever mistaken
 for the other.
 
 The token is bound to the tool and to the call's other arguments through

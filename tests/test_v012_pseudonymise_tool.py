@@ -315,7 +315,7 @@ class TestPreview:
         before = query(project, "SELECT fulltext FROM source WHERE id=1")
         out = preview_of()
         assert out["requires_confirmation"] is True
-        assert re.fullmatch(r"qcp1\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}",
+        assert re.fullmatch(r"qcp2\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}",
                             out["preview_token"])
         assert out["token_valid_for_minutes"] == 60
         assert query(project,
@@ -872,6 +872,59 @@ class TestToken:
                                     "pseudonym": "Zed"}],
                           preview_token=out["preview_token"])["error"])
         _house_rules(texts)
+
+
+class TestATokenOfTheEarlierForm:
+    """v0.15.1 brings the token's bind under its MAC (`qcp2`) and still
+    accepts, for its hour, a token in the form 0.15.0 issued (`qcp1`), so
+    a preview made just before an update can still be run after it.
+
+    This tool is the one path where a bind reaches the researcher's
+    files: the journal entry names the run manifest by it, and the
+    manifest records it as `token_bind`. A run approved with a token in
+    the earlier form records that form's bind, the one the token carries,
+    so the record and the token the researcher approved agree.
+    """
+
+    def test_a_token_minted_as_0_15_0_did_runs_and_its_bind_is_recorded(
+            self, project, monkeypatch):
+        captured = []
+        real_issue = server.issue
+
+        def capturing(tool, args, project_id, state, now=None):
+            captured.append((tool, args, project_id, state))
+            return real_issue(tool, args, project_id, state, now=now)
+
+        monkeypatch.setattr(server, "issue", capturing)
+        out = preview_of()
+        assert len(captured) == 1
+        tool, args, project_id, state = captured[0]
+        assert tool == "pseudonymise_source"
+        # Minted as 0.15.0 minted it, from the format rather than from
+        # the codec under test: version 1, the bind keyed with the secret
+        # and left out of the MAC.
+        key = pt.load_secret().encode("ascii")
+        binding = {"v": 1, "tool": tool, "args": args, "project": project_id}
+        issued = int(pt.time.time())
+        bind = pt.hmac.new(key, pt.canonical(binding).encode("utf-8"),
+                           pt.hashlib.sha256).hexdigest()[:8]
+        mac = pt.hmac.new(key, pt.canonical(
+            dict(binding, state=state, issued=issued)).encode("utf-8"),
+            pt.hashlib.sha256).hexdigest()[:32]
+        earlier = f"qcp1.{issued}.{bind}.{mac}"
+        assert bind != out["preview_token"].split(".")[2]
+
+        result = execute_from(out, preview_token=earlier)
+        assert result.get("success") is True, result
+        assert result["preview_verified"] is True
+        assert len(backups(project)) == 1
+        manifest_path = Path(result["manifest_path"])
+        assert manifest_path.name.endswith(f"_{bind}.json")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert manifest["token_bind"] == bind
+        entries = query(project, "SELECT jentry FROM journal")
+        assert len(entries) == 1
+        assert f"Run manifest: {manifest_path.name}." in entries[0]["jentry"]
 
 
 # =============================================================================

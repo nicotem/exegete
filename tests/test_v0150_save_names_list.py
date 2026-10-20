@@ -1586,7 +1586,7 @@ class TestNoNameAnywhere:
         _write_names(selected, *(f"{r} = {p}" for r, p in
                                  zip(REAL, PSEUDONYMS)))
         token = _preview(selected)["preview_token"]
-        assert re.fullmatch(r"qcp1\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}", token)
+        assert re.fullmatch(r"qcp2\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}", token)
 
 
 # ---------------------------------------------------------------------------

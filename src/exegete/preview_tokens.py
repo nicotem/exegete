@@ -25,7 +25,7 @@ oracle for it (fix round 3, S2).
 
 B4's cursor tokens are a different thing and deliberately do not share
 this codec (D4 3.11): a cursor is a position and is replayable by design;
-these are authorisations. The prefixes `qcp1.` and `c1.` keep them
+these are authorisations. The prefixes `qcp2.` and `c1.` keep them
 distinguishable at a glance.
 """
 
@@ -46,13 +46,21 @@ from . import names, state_folder
 
 logger = logging.getLogger(__name__)
 
-TOKEN_PREFIX = "qcp1"
+TOKEN_PREFIX = "qcp2"
+# The form 0.15.0 and earlier issued, whose `bind` the MAC does not
+# cover. Accepted, never issued: an update restarts Exegete, sometimes
+# while a conversation waits between a preview and its execute, and a
+# token minted just before it would otherwise be refused as "not a token
+# Exegete issued", which is untrue. It lives its hour like any other.
+OLD_TOKEN_PREFIX = "qcp1"
 # The grammar of a token this server issues, so exactly one spelling of
-# each AUTHENTICATED field verifies. `bind` is outside that claim by
-# design: it is non-authoritative (D3 3.2), the MAC does not cover it,
-# and a token with `bind` overwritten still verifies, which a gate
-# confirmed by experiment. Nothing downstream reads it from the token;
-# the flagship recomputes it server-side. Public for the six codebook
+# each field verifies. Since version 2 the MAC covers `bind` as well:
+# a token whose `bind` is overwritten is another operation. In version 1
+# (`OLD_TOKEN_PREFIX`) it was outside the MAC (D3 3.2) and a token with
+# `bind` overwritten still verified, which a gate confirmed by
+# experiment. `bind` is still not what decides: nothing downstream reads
+# it from the token; the verifier and the flagship recompute it
+# server-side. Public for the six codebook
 # tools, whose bound arguments are ids the conversation already holds;
 # keyed with the secret for the flagship, whose bound mapping can be the
 # researcher's reverse key (`KEYED_BIND`). `[0-9]`, never `\d`: in
@@ -67,7 +75,9 @@ TOKEN_PREFIX = "qcp1"
 _ISSUED_RE = re.compile(r"[0-9]{1,12}")
 _BIND_RE = re.compile(r"[0-9a-f]{8}")
 _MAC_RE = re.compile(r"[0-9a-f]{32}")
-TOKEN_VERSION = 1
+TOKEN_VERSION = 2
+# The version each accepted prefix names; any other prefix is malformed.
+_PREFIX_VERSIONS = {TOKEN_PREFIX: TOKEN_VERSION, OLD_TOKEN_PREFIX: 1}
 # Sixty minutes back, five forward: enough for a researcher to read a
 # preview and decide, and enough tolerance for a host whose clock is a
 # few minutes off without making a stale preview usable tomorrow.
@@ -526,14 +536,26 @@ def fingerprint_rows(preview: Any, rows: Any) -> str:
     ).hexdigest()
 
 
-def _binding(tool: str, args: Dict[str, Any], project: str) -> Dict[str, Any]:
-    return {"v": TOKEN_VERSION, "tool": tool, "args": args,
+def _binding(tool: str, args: Dict[str, Any], project: str,
+             version: int = TOKEN_VERSION) -> Dict[str, Any]:
+    return {"v": version, "tool": tool, "args": args,
             "project": project}
 
 
+def token_version(token: Any) -> int:
+    """The version a presented token's prefix names: 1 for the old form,
+    otherwise the current one. It says nothing about whether the token
+    verifies; `verify` decides that."""
+    if isinstance(token, str):
+        return _PREFIX_VERSIONS.get(token.strip().split(".", 1)[0],
+                                    TOKEN_VERSION)
+    return TOKEN_VERSION
+
+
 def bind_id(tool: str, args: Dict[str, Any], project: str,
-            secret: Optional[str] = None) -> str:
-    """The non-authoritative operation id carried in the token.
+            secret: Optional[str] = None,
+            version: int = TOKEN_VERSION) -> str:
+    """The operation id carried in the token, under the MAC since version 2.
 
     Eight hex characters over the binding, so the verifier can tell "this
     token is for another operation" from "the project changed under this
@@ -547,8 +569,13 @@ def bind_id(tool: str, args: Dict[str, Any], project: str,
     on the caller's behalf: a keyed bind computed by any code running
     as the researcher must say so, so that a verifier's recomputation
     cannot be mistaken for an attacker's (fix round 4, L1).
+
+    `version` 1 is the bind of a token in the old form, computed exactly
+    as 0.15.0 computed it; the two versions give different binds for one
+    operation, since the version is part of what is hashed.
     """
-    payload = canonical(_binding(tool, args, project)).encode("utf-8")
+    payload = canonical(_binding(tool, args, project, version)).encode(
+        "utf-8")
     if tool in KEYED_BIND:
         if secret is None:
             raise TypeError(
@@ -560,8 +587,14 @@ def bind_id(tool: str, args: Dict[str, Any], project: str,
 
 
 def _mac(secret: str, tool: str, args: Dict[str, Any], project: str,
-         state: str, issued: int) -> str:
-    payload = _binding(tool, args, project)
+         state: str, issued: int, bind: str,
+         version: int = TOKEN_VERSION) -> str:
+    """The signature. From version 2 it covers `bind`, the one the token
+    carries, so an altered `bind` fails it; version 1's payload is
+    0.15.0's, byte for byte, and leaves `bind` out."""
+    payload = _binding(tool, args, project, version)
+    if version > 1:
+        payload["bind"] = bind
     payload["state"] = state
     payload["issued"] = issued
     return hmac.new(secret.encode("ascii"),
@@ -576,7 +609,7 @@ def issue(tool: str, args: Dict[str, Any], project: str, state: str,
     secret = load_secret()
     bind = bind_id(tool, args, project, secret)
     token = (f"{TOKEN_PREFIX}.{issued}.{bind}."
-             f"{_mac(secret, tool, args, project, state, issued)}")
+             f"{_mac(secret, tool, args, project, state, issued, bind)}")
     logger.debug("Issued preview token for %s (%s)", tool, bind)
     return token
 
@@ -601,6 +634,10 @@ def verify(token: Any, tool: str, args: Dict[str, Any], project: str,
     this operation and the rows have moved since. Expiry is checked
     before the MAC so an old token for the right operation gets the more
     useful message. Every comparison uses `hmac.compare_digest`.
+
+    The prefix picks the version: `qcp2` (signed `bind`) or the old
+    `qcp1`, which is accepted for its hour and never issued. The grammar,
+    the hour and the skew are the same for both.
     """
     if not isinstance(token, str):
         return MALFORMED
@@ -615,9 +652,10 @@ def verify(token: Any, tool: str, args: Dict[str, Any], project: str,
     if not token.isascii():
         return MALFORMED
     parts = token.split(".")
-    if len(parts) != 4 or parts[0] != TOKEN_PREFIX:
+    if len(parts) != 4 or parts[0] not in _PREFIX_VERSIONS:
         return MALFORMED
-    _, issued_text, bind, mac = parts
+    prefix, issued_text, bind, mac = parts
+    version = _PREFIX_VERSIONS[prefix]
     # A grammar, not a predicate: str.isdigit() is True for superscripts
     # and circled digits that int() then REJECTS, raising ValueError
     # past every caller, and int(x, 16) accepts spellings that are not
@@ -636,16 +674,22 @@ def verify(token: Any, tool: str, args: Dict[str, Any], project: str,
     if issued < current - TOKEN_MAX_AGE_SECONDS:
         return EXPIRED
     secret = load_secret()
-    expected = _mac(secret, tool, args, project, state, issued)
+    # Over the `bind` the token CARRIES, never a recomputed one: signing
+    # the recomputed one would let an altered `bind` verify, as it did
+    # in version 1.
+    expected = _mac(secret, tool, args, project, state, issued, bind,
+                    version)
     if not hmac.compare_digest(mac, expected):
         # The MAC covers the state as well as the operation, so a failure
         # means one of the two moved. `bind` is exactly what tells them
         # apart: it covers the tool, the arguments and the project and
         # nothing else, so a token whose bind still matches was issued
         # for THIS operation and the project has changed under it, which
-        # is the more useful thing to say. It is public and proves
-        # nothing on its own; the MAC has already refused either way.
-        if hmac.compare_digest(bind, bind_id(tool, args, project, secret)):
+        # is the more useful thing to say. It proves nothing on its own;
+        # the MAC has already refused either way. An altered `bind` in
+        # version 2 matches nothing, so it is another operation.
+        if hmac.compare_digest(bind, bind_id(tool, args, project, secret,
+                                             version)):
             return PROJECT_CHANGED
         return OTHER_OPERATION
     return OK

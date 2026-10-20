@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The approval token's tag is now under its signature.** The token a
+  two-step tool's preview gives (`preview_token`) carries a short tag
+  naming the operation it was made for; the signature did not cover
+  that tag, so a token whose tag had been altered still worked for its
+  own operation. It now covers it: a token with an altered tag is
+  refused as made for another operation, with nothing changed. Tokens
+  now start `qcp2.`. A token made by 0.15.0 or earlier (`qcp1.`) is
+  still accepted for its hour, so a preview made just before an update
+  can still be run after it, unless the project or the operation has
+  changed since (some operations are refused differently in this
+  release); then preview again. A pseudonymisation run records the tag
+  of the token that approved it, in either form, in its journal entry
+  and its run manifest. A token made by this release is not accepted
+  by 0.15.0, which answers that it is not a token Exegete issued: this
+  matters only when two versions of Exegete run on one computer, or
+  after going back to 0.15.0.
+
 ### For contributors
 
 - **The links in the documents are checked on every push**

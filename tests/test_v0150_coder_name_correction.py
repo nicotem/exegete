@@ -152,7 +152,7 @@ class TestThePreviewThenTheChange:
         digest, siblings = _digest(folder), _siblings(folder)
         answer = _preview(NEW)
         assert _digest(folder) == digest and _siblings(folder) == siblings
-        assert answer["preview_token"].startswith("qcp1.")
+        assert answer["preview_token"].startswith("qcp2.")
         assert answer["preview"]["current_coder_name"] == OLD
         assert answer["preview"]["new_coder_name"] == NEW
         assert answer["preview"]["project_coder_name"] == {"from": OLD,

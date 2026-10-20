@@ -145,6 +145,7 @@ from .preview_tokens import (
     load_secret,
     state_home as preview_tokens_state_home,
     old_state_home as preview_tokens_old_state_home,
+    token_version,
     verify,
 )
 from .project_settings import (
@@ -19323,7 +19324,11 @@ def pseudonymise_source(
     # name in the journal and the name on disk cannot disagree. The
     # bind is keyed with the secret for this tool (`KEYED_BIND`), so
     # the secret is read here, once, and the refusal when it cannot be
-    # is the one the token gate would have given a line later.
+    # is the one the token gate would have given a line later. The bind
+    # is computed in the presented token's version: a run approved by a
+    # token in the old form, accepted for its hour after an update,
+    # records the old form's bind, the one such a token carries, rather
+    # than the current form's.
     when = datetime.now(timezone.utc)
     try:
         secret = load_secret()
@@ -19332,7 +19337,7 @@ def pseudonymise_source(
             _token_error("preview_secret_unavailable", "pseudonymise_source"),
             indent=2)
     bind = bind_id("pseudonymise_source", token_args, _token_project(),
-                   secret)
+                   secret, version=token_version(preview_token))
     manifest_name = f"run_{when.strftime('%Y%m%dT%H%M%SZ')}_{bind}.json"
     # The project path the manifest records, settled here with the rest
     # and never re-resolved after the commit: see _pseudonymise_manifest.

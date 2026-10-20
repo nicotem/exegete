@@ -86,7 +86,7 @@ class TestCanonicalJson:
 
     def test_the_token_shape(self):
         token = pt.issue("delete_code", {"code_id": 1}, "/p/data.qda", "state")
-        assert re.fullmatch(r"qcp1\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}", token)
+        assert re.fullmatch(r"qcp2\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}", token)
 
     def test_a_token_verifies_for_its_own_operation(self):
         args = {"code_id": 1}
@@ -136,9 +136,14 @@ class TestCanonicalJson:
                          "s", now=now) == expected
 
     @pytest.mark.parametrize("bad", [
-        "", "qcp1", "qcp1.1.2.3", "qcp2.1.aaaaaaaa." + "a" * 32,
+        "", "qcp1", "qcp1.1.2.3",
         "qcp1.x.aaaaaaaa." + "a" * 32, "qcp1.1.zzzzzzzz." + "a" * 32,
         "qcp1.1.aaaaaaaa." + "z" * 32, "qcp1.1.aaaaaaa." + "a" * 32,
+        "qcp2", "qcp2.1.2.3",
+        "qcp2.x.aaaaaaaa." + "a" * 32, "qcp2.1.zzzzzzzz." + "a" * 32,
+        "qcp2.1.aaaaaaaa." + "z" * 32, "qcp2.1.aaaaaaa." + "a" * 32,
+        "qcp2.01.aaaaaaaa." + "a" * 32, "QCP2.1.aaaaaaaa." + "a" * 32,
+        "qcp3.1.aaaaaaaa." + "a" * 32,
         17, None,
     ], ids=repr)
     def test_malformed_tokens(self, bad):
@@ -156,13 +161,40 @@ class TestCanonicalJson:
                              "s") != pt.OK, i
 
     def test_a_tampered_bind_is_not_an_authorisation(self):
+        """Inverted in v0.15.1: the MAC now covers `bind`, so a token
+        whose bind is overwritten is another operation. In the form
+        0.15.0 issued it still verified (D3's experiment), which the
+        earlier form keeps for its hour and no longer."""
         args = {"code_id": 1}
         token = pt.issue("delete_code", args, "/p/data.qda", "s")
         prefix, issued, bind, mac = token.split(".")
-        tampered = f"{prefix}.{issued}.{'0' * 8}.{mac}"
+        assert prefix == "qcp2"
+        other = "0" * 8 if bind != "0" * 8 else "1" * 8
+        tampered = f"{prefix}.{issued}.{other}.{mac}"
         assert pt.verify(tampered, "delete_code", args, "/p/data.qda",
-                         "s") == pt.OK, \
-            "bind is public and non-authoritative; the MAC decides"
+                         "s") == pt.OTHER_OPERATION, \
+            "the MAC covers bind: an altered bind is another operation"
+
+    @pytest.mark.parametrize("tool", ["delete_code", "pseudonymise_source"])
+    def test_every_digit_of_the_bind_matters(self, tool):
+        """Each of the eight hex digits is under the MAC, for a public
+        bind and for the flagship's keyed one alike."""
+        args = (pt.canonical_args("delete_code", code_id=1)
+                if tool == "delete_code" else pt.canonical_args(
+                    "pseudonymise_source",
+                    mapping=[{"original": "Thomas", "pseudonym": "Alex",
+                              "variants": []}],
+                    file_id=1, case_mode="exact",
+                    overlap_policy="snap_to_pseudonym",
+                    rewrite_memos=False, save_mapping_to_project=False))
+        token = pt.issue(tool, args, "/p/data.qda", "s")
+        prefix, issued, bind, mac = token.split(".")
+        for i in range(len(bind)):
+            flipped = "0" if bind[i] != "0" else "1"
+            tampered = (f"{prefix}.{issued}."
+                        f"{bind[:i]}{flipped}{bind[i + 1:]}.{mac}")
+            assert pt.verify(tampered, tool, args, "/p/data.qda",
+                             "s") == pt.OTHER_OPERATION, i
 
     def test_comparison_is_constant_time(self, monkeypatch):
         calls = []
@@ -234,8 +266,8 @@ class TestCanonicalJson:
 
     def test_the_codebook_binds_stay_public(self, tmp_path, monkeypatch):
         """The six older tools bind ids the conversation holds; their
-        bind is the plain digest it always was, and D3's tampered-bind
-        experiment above still holds for them."""
+        bind is the plain digest it always was (since v0.15.1 under the
+        MAC, as every bind is)."""
         monkeypatch.setattr(pt, "STATE_HOME", tmp_path / "state")
         args = {"code_id": 1}
         token = pt.issue("delete_code", args, "/p/data.qda", "s")
@@ -354,6 +386,84 @@ class TestCanonicalJson:
         assert pt.canonical_args("merge_category", from_category_id=1,
                                  into_category_id=None)["into_category_id"] \
             is None
+
+
+class TestTheEarlierForm:
+    """A token in the form 0.15.0 issued (`qcp1`, its bind outside the
+    MAC) still verifies for its hour, so a preview made just before an
+    update is not refused as "not a token Exegete issued", which would be
+    untrue. Each string below was minted by `issue` as it stands at
+    `origin/feat/v0150` (0.15.0), from the inputs set here. The secret is
+    given by patching `load_secret`, never written to a file (one written
+    with the default umask is rotated on macOS and Linux), and the
+    project is a literal string, never `_token_project()`, so the pin
+    holds on Windows as well.
+    """
+
+    SECRET = "5ec2e7" + "0123456789abcdef" * 3 + "0a1b2c3d4e"
+    ISSUED = 1_700_000_000
+    PROJECT = "/p/data.qda"
+    PINNED = {
+        "delete_code":
+            "qcp1.1700000000.9a0f56ee.d2693f99944dd52bc2e19df21e7e64ce",
+        "pseudonymise_source":
+            "qcp1.1700000000.8e7fa9bb.9fcc24ee1ec5d172ead153bf10074f32",
+    }
+
+    @pytest.fixture(autouse=True)
+    def _the_secret(self, monkeypatch):
+        monkeypatch.setattr(pt, "load_secret", lambda: self.SECRET)
+
+    @staticmethod
+    def _args(tool, **changed):
+        if tool == "delete_code":
+            return pt.canonical_args("delete_code",
+                                     **{"code_id": 7, **changed})
+        return pt.canonical_args("pseudonymise_source", **{
+            "mapping": [{"original": "Thomas", "pseudonym": "Alex",
+                         "variants": []}],
+            "file_id": 1, "case_mode": "exact",
+            "overlap_policy": "snap_to_pseudonym", "rewrite_memos": False,
+            "save_mapping_to_project": False, **changed})
+
+    @pytest.mark.parametrize("tool", sorted(PINNED))
+    def test_a_token_of_0_15_0_verifies_for_its_hour(self, tool):
+        token, args = self.PINNED[tool], self._args(tool)
+        assert pt.verify(token, tool, args, self.PROJECT, "s1",
+                         now=self.ISSUED + 60) == pt.OK
+        assert pt.verify(token, tool, args, self.PROJECT, "s1",
+                         now=self.ISSUED + 3_601) == pt.EXPIRED
+
+    @pytest.mark.parametrize("tool", sorted(PINNED))
+    def test_its_bind_is_the_one_0_15_0_computed(self, tool):
+        """So its two refusals are still told apart, and the flagship
+        records the bind such a token carries."""
+        token, args = self.PINNED[tool], self._args(tool)
+        bind = token.split(".")[2]
+        assert pt.bind_id(tool, args, self.PROJECT, self.SECRET,
+                          version=1) == bind
+        assert pt.bind_id(tool, args, self.PROJECT, self.SECRET) != bind
+        now = self.ISSUED + 60
+        assert pt.verify(token, tool, args, self.PROJECT, "s2",
+                         now=now) == pt.PROJECT_CHANGED
+        other = (self._args(tool, code_id=8) if tool == "delete_code"
+                 else self._args(tool, case_mode="insensitive"))
+        assert pt.verify(token, tool, other, self.PROJECT, "s1",
+                         now=now) == pt.OTHER_OPERATION
+
+    def test_the_earlier_form_is_accepted_and_never_issued(self):
+        args = self._args("delete_code")
+        token = pt.issue("delete_code", args, self.PROJECT, "s1",
+                         now=self.ISSUED)
+        assert token.split(".")[0] == "qcp2"
+        assert token.split(".")[1:2] == ["1700000000"]
+        assert pt.token_version(token) == 2
+        assert pt.token_version(self.PINNED["delete_code"]) == 1
+        assert pt.token_version(None) == pt.TOKEN_VERSION == 2
+        # Well formed in the current prefix and an hour old: expired,
+        # where it used to be malformed.
+        assert pt.verify("qcp2.1.aaaaaaaa." + "a" * 32, "delete_code",
+                         args, self.PROJECT, "s1") == pt.EXPIRED
 
 
 # =============================================================================
@@ -658,7 +768,7 @@ class TestTwoStepFlow:
                          "SELECT COUNT(*) AS n FROM code_name")[0]["n"]
         out = _preview(server.delete_code, 1)
         assert out["requires_confirmation"] is True
-        assert out["preview_token"].startswith("qcp1.")
+        assert out["preview_token"].startswith("qcp2.")
         assert out["token_valid_for_minutes"] == 60
         assert H.query(qualcoder_db_path,
                        "SELECT COUNT(*) AS n FROM code_name")[0]["n"] == before
@@ -983,7 +1093,7 @@ class TestFileLevelOperations:
         backup = str(Path(qualcoder_db_path).parent / backups[-1])
         out = _preview(server.restore_backup, backup)
         assert out["requires_confirmation"] is True
-        assert out["preview_token"].startswith("qcp1.")
+        assert out["preview_token"].startswith("qcp2.")
         done = _preview(server.restore_backup, backup,
                         preview_token=out["preview_token"])
         assert done.get("success") is True, done
@@ -1600,9 +1710,22 @@ class TestTokenGrammar:
                                                                 token):
         prefix, issued, bind, mac = token.split(".")
         assert self._verify(
-            ".".join((prefix, issued, bind.upper(), mac))) == pt.MALFORMED
-        assert self._verify(
             ".".join((prefix, issued, bind, mac.upper()))) == pt.MALFORMED
+        # A bind of decimal digits alone has no second spelling, and the
+        # bind is fixed by the arguments (in v0.15.1 the one for ARGS is
+        # such a bind), so the bind's half takes arguments whose bind
+        # has a letter.
+        args = next(a for a in ({"code_id": n} for n in range(1, 100))
+                    if not pt.bind_id("delete_code", a,
+                                      self.PROJECT).isdigit())
+        token = pt.issue("delete_code", args, self.PROJECT, self.STATE)
+        prefix, issued, bind, mac = token.split(".")
+        assert bind.upper() != bind
+        assert pt.verify(token, "delete_code", args, self.PROJECT,
+                         self.STATE) == pt.OK
+        assert pt.verify(".".join((prefix, issued, bind.upper(), mac)),
+                         "delete_code", args, self.PROJECT,
+                         self.STATE) == pt.MALFORMED
 
     def test_an_underscore_separator_is_refused(self, token):
         """int(x, 16) accepts '1_2'; the grammar does not."""

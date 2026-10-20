@@ -153,9 +153,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   restore leaves in it; restoring one of QualCoder's that holds some
   says how many files. A recording the project no longer has may now be
   kept only in such a backup, and pruning the backup removes it: copy it
-  out first if you need it. Restoring a backup made by this release
-  with Exegete 0.15.0 (two versions on one computer, or after going
-  back) leaves the project without its audio and video folders; they
+  out first if you need it. `list_backups` says of each backup whether
+  it holds audio or video folders (`holds_audio_or_video`, read from the
+  backup itself, with `audio_video_files`), and the preview of
+  `prune_backups` gives, for each backup it would remove, how many files
+  there neither the project nor a backup it keeps holds, by name and
+  size (`audio_video_files_only_here`), with a note naming the backup
+  and never a file; the preview's token covers those counts, so the
+  removal is refused if the project loses a recording after the
+  preview. Restoring a backup made by this release with Exegete 0.15.0
+  (two versions on one computer, or after going back) leaves the
+  project without its audio and video folders; they
   are then only in the safety backup 0.15.0 takes first. When a restore
   fails and cannot put the project back, its answer now says to copy
   the safety backup's contents into the project folder, leaving the
@@ -164,7 +172,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project cannot be read, now say the same: copy everything in it
   except any audio or video folder into the project folder, leaving the
   project's own where they are, since a backup put in the project's
-  place would leave the project without its recordings. A restore that
+  place would leave the project without its recordings, or, if made by
+  an earlier version, without those added since. A restore that
   fails after another program removed the project folder says that the
   project recovered from the safety backup has no audio or video
   folders, rather than that nothing was lost. Restoring one of
@@ -333,20 +342,20 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (82 tools) | 208,427 | 206,624 | 218,963 | 217,084 |
-| `core` (25 tools) | 68,519 | 68,258 | 71,963 | 71,690 |
+| `full` (82 tools) | 208,927 | 206,624 | 219,495 | 217,084 |
+| `core` (25 tools) | 68,691 | 68,258 | 72,147 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 208,427 characters (about 52.1k tokens
-  at chars/4) over 82 tools, and core = 68,519 (about 17.1k) over 25,
+- Serialised tool JSON: full = 208,927 characters (about 52.2k tokens
+  at chars/4) over 82 tools, and core = 68,691 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 218,963 and
-  71,963. Against 0.15.0's figures (206,624 and 68,258 on 3.13), three
+  which also gives exactly 0.15.0's figures for its tree), 219,495 and
+  72,147. Against 0.15.0's figures (206,624 and 68,258 on 3.13), three
   changes moved them. The first, `create_backup` accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -367,12 +376,13 @@ schemas together, as below; the brief as `read_brief` returns it):
   sentence, which names its known faults instead of its removal: 126
   characters more in `full` on both interpreters (`core` does not serve
   the tool). The third, `list_backups`, `prune_backups` and
-  `restore_backup` say that backups leave out the audio and video
-  folders and that a restore keeps them: 100 characters more in `full`
-  and 36 in `core` (108 and 40 on 3.11). No other tool's entry
-  changed. The full brief says that Exegete takes a backup before every
-  change, rather than "unless the researcher asks for none": 14
-  characters fewer.
+  `restore_backup` say that backups made from 0.15.1 on leave out the
+  audio and video folders, that one made earlier may hold them, and
+  that a restore keeps them, and `copy_project_to_workspace` that it
+  keeps them: 600 characters more in `full` and 208 in `core` (640 and
+  224 on 3.11). No other tool's entry changed. The full brief says
+  that Exegete takes a backup before every change, rather than "unless
+  the researcher asks for none": 14 characters fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
   16,384 through its tool search: in `full`, 32 descriptions pass 2,048
   (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096 (5 on

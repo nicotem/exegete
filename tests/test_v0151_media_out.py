@@ -22,6 +22,14 @@ by hand, which is the way while the database will not open, says to
 leave the project's audio and video folders where they are; when the
 project folder itself has gone during a restore, the answer no longer
 says that nothing was lost.
+
+Fix round 2: a backup made before 0.15.1 holds the audio and video
+folders, and may hold the only copy of a recording the project no longer
+has. The texts on what backups hold say so; list_backups says of each
+backup whether it holds them, read from the folder; the prune preview
+counts, by backup, the files there that neither the project nor a backup
+kept holds, and the token covers that count; links below the folders'
+tops are neither entered nor counted.
 """
 
 import json
@@ -297,9 +305,10 @@ def test_the_imports_note_sizes_the_backup_without_them(selected):
 KEEPS_MEDIA = (
     "To copy one back, copy everything in it except any audio or video "
     "folder into the project folder, leaving the project's own audio and "
-    "video folders where they are: Exegete's backups leave those folders "
-    "out, so a backup put in the project's place would leave the project "
-    "without its recordings.")
+    "video folders where they are: Exegete's backups made from 0.15.1 on "
+    "leave those folders out, and one made earlier holds them as they "
+    "were then, so a backup put in the project's place would leave the "
+    "project without its recordings, or without those added since.")
 
 
 def _refused(parent: Path, name: str, *statements: str) -> str:
@@ -352,3 +361,187 @@ def test_tools_says_a_workspace_copy_keeps_them():
         if line.startswith("- `copy_project_to_workspace("))
     assert "the same exclusions as backups" in line
     assert "keeping the audio and video folders" in line
+
+
+# ---------------------------------------------------------------------------
+# Backups made before 0.15.1 (fix round 2)
+# ---------------------------------------------------------------------------
+
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _description(tool: str) -> str:
+    return _flat(server.mcp._tool_manager._tools[tool].description or "")
+
+
+def _older_backup(project: Path, when: str = "20240101_000000",
+                  family: str = "_backup_") -> Path:
+    """A backup as Exegete 0.15.0 made one (or QualCoder, with `_BKUP_`):
+    the whole project folder, its audio and video folders included."""
+    older = project.parent / f"{project.stem}{family}{when}.qda"
+    shutil.copytree(project, older)
+    return older
+
+
+def _listed() -> dict:
+    answer = json.loads(server.list_backups())
+    return {b["name"]: b for b in answer["backups"]}
+
+
+def test_the_listing_says_of_each_backup_whether_it_holds_them(
+        selected, tmp_path):
+    """Read from the folder, never from its name or date: a backup named
+    as an earlier version named one but without the folders holds none,
+    and one named as today's but with them holds them."""
+    _recordings(selected)
+    older = _older_backup(selected)                       # 0.15.0's way
+    newer = database.backup_project(selected)             # 0.15.1's way
+    old_name_without = _older_backup(selected, "20240102_000000")
+    for kind in ("audio", "video"):
+        shutil.rmtree(old_name_without / kind)
+    new_name_with = _older_backup(selected, "20991231_235959")
+    qualcoders = _older_backup(selected, "20261016_12", family="_BKUP_")
+    linked = _older_backup(selected, "20240103_000000")
+    for kind in ("audio", "video"):
+        shutil.rmtree(linked / kind)
+    outside = tmp_path / "recordings elsewhere"
+    _fill(outside, {"long walk.mp4": "v" * 1000})
+    can_link = True
+    if WINDOWS:
+        _junction(linked / "audio", outside)
+    else:
+        can_link = _symlink(linked / "audio", outside, folder=True)
+    listed = _listed()
+    assert listed[older.name]["holds_audio_or_video"] is True
+    assert listed[older.name]["audio_video_files"] == 3
+    assert listed[newer.name]["holds_audio_or_video"] is False
+    assert "audio_video_files" not in listed[newer.name]
+    assert listed[old_name_without.name]["holds_audio_or_video"] is False
+    assert listed[new_name_with.name]["holds_audio_or_video"] is True
+    assert listed[qualcoders.name]["holds_audio_or_video"] is True
+    assert listed[qualcoders.name]["audio_video_files"] == 3
+    if can_link:
+        # a link or a junction at the name is not a folder it holds
+        assert listed[linked.name]["holds_audio_or_video"] is False
+    # empty folders, as a project made by Exegete has, are still folders
+    for kind in ("audio", "video"):
+        shutil.rmtree(new_name_with / kind)
+        (new_name_with / kind).mkdir()
+    assert _listed()[new_name_with.name]["audio_video_files"] == 0
+
+
+def test_pruning_the_only_copy_of_a_recording_is_said_first(selected):
+    """Review round 2's probe, as a test: a backup made by 0.15.0 holds the
+    only copy of a recording the project no longer has. The listing marks
+    it; the prune preview gives its count by backup, with a note that
+    names the backup and never the file; the execute says what went."""
+    _recordings(selected)
+    older = _older_backup(selected)
+    (selected / "audio" / "interview one.mp3").unlink()
+    newer = database.backup_project(selected)
+    listed = _listed()
+    assert listed[older.name]["holds_audio_or_video"] is True
+    assert listed[newer.name]["holds_audio_or_video"] is False
+    preview = json.loads(server.prune_backups(keep_last=1))
+    assert [b["name"] for b in preview["would_remove"]] == [older.name]
+    assert preview["would_remove"][0]["audio_video_files_only_here"] == 1
+    notes = [note for note in preview["notes"] if older.name in note]
+    assert len(notes) == 1 and "(1 file)" in notes[0]
+    assert "interview" not in json.dumps(preview)
+    answer = json.loads(server.prune_backups(
+        keep_last=1, preview_token=preview["preview_token"]))
+    assert answer["removed"] == [older.name]
+    assert [note for note in answer["notes"]
+            if older.name in note and "(1 file)" in note]
+    assert "interview" not in json.dumps(answer)
+
+
+def test_what_the_project_or_a_kept_backup_holds_is_not_counted(selected):
+    """Compared by the path below the folder and the size: a file the
+    project has, or a backup the prune keeps, is not counted; a file
+    whose size differs from the project's is; QualCoder's own backups,
+    which QualCoder rotates away, keep no copy."""
+    _recordings(selected)
+    first = _older_backup(selected, "20240101_000000")
+    second = _older_backup(selected, "20240102_000000")
+    _older_backup(selected, "20261016_12", family="_BKUP_")
+
+    def counts(keep_last):
+        preview = json.loads(server.prune_backups(keep_last=keep_last))
+        return {b["name"]: b.get("audio_video_files_only_here")
+                for b in preview["would_remove"]}, preview.get("notes", [])
+
+    # the project has every recording
+    found, notes = counts(1)
+    assert found == {first.name: None}
+    assert not [note for note in notes if "audio or video" in note]
+    # gone from the project, but the backup kept holds it
+    (selected / "video" / "walk.mp4").unlink()
+    assert counts(1)[0] == {first.name: None}
+    # with neither kept: the file gone, and the one whose size differs
+    _fill(selected, {"audio/interview one.mp3": "a" * 999})
+    assert counts(0)[0] == {first.name: 2, second.name: 2}
+
+
+def test_a_recording_lost_after_the_preview_refuses_the_execute(selected):
+    """The count is signed: a recording the project loses between the
+    preview and the execute is never removed unsaid."""
+    _recordings(selected)
+    older = _older_backup(selected)
+    database.backup_project(selected)
+    preview = json.loads(server.prune_backups(keep_last=1))
+    assert "audio_video_files_only_here" not in preview["would_remove"][0]
+    (selected / "video" / "walk.mp4").unlink()
+    answer = json.loads(server.prune_backups(
+        keep_last=1, preview_token=preview["preview_token"]))
+    assert answer.get("nothing_changed") is True, answer
+    assert older.is_dir()
+
+
+def test_a_link_below_the_top_is_neither_entered_nor_counted(tmp_path):
+    backup = tmp_path / "Study_BKUP_20261016_12.qda"
+    outside = tmp_path / "recordings elsewhere"
+    _fill(outside, {"a.mp3": "x", "b.mp3": "y"})
+    _fill(backup, {"audio/real.mp3": "r", "video/walk.mp4": "w"})
+    if WINDOWS:
+        _junction(backup / "audio" / "linked", outside)
+    elif not (_symlink(backup / "audio" / "linked", outside, folder=True)
+              and _symlink(backup / "video" / "a link.mp4",
+                           outside / "a.mp3")):
+        pytest.skip("this system cannot make a link")
+    assert server._media_files_in(backup) == 2
+    assert sorted(server._media_files(backup)) == [
+        ("audio", "real.mp3"), ("video", "walk.mp4")]
+
+
+def test_the_texts_on_what_backups_hold_are_true_of_earlier_ones_too():
+    """Each says what backups made from 0.15.1 on leave out and that an
+    earlier one may hold the folders, and none says of every backup that
+    it lacks them (the safety sentence is spelled out above)."""
+    texts = {
+        "list_backups' note": server.BACKUPS_HOLD_NOTE,
+        "list_backups' description": _description("list_backups"),
+        "prune_backups' description": _description("prune_backups"),
+        "the way back by hand": database.BACKUP_BY_HAND_KEEPS_MEDIA,
+    }
+    assert [where for where, text in texts.items()
+            if "from 0.15.1 on" not in _flat(text)
+            or "earlier" not in _flat(text)] == []
+    every_backup = (
+        "Backups hold the whole project folder, except its audio",
+        "project tree except its audio and video",
+        "project tree but its audio and video",
+        "Exegete's backups leave those folders out",
+        "full-project backup")
+    assert [(where, old) for where, text in texts.items()
+            for old in every_backup if old in _flat(text)] == []
+    # each names where the reader finds it out, backup by backup
+    assert "holds_audio_or_video" in server.BACKUPS_HOLD_NOTE
+    assert "holds_audio_or_video" in texts["list_backups' description"]
+    assert ("audio_video_files_only_here"
+            in texts["prune_backups' description"])
+    # and the workspace copy, which keeps them, says so
+    copy = _description("copy_project_to_workspace")
+    assert "keeps the audio and video folders" in copy
+    assert "the same exclusions backups use" not in copy

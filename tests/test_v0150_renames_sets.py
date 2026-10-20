@@ -522,8 +522,9 @@ class TestTheDocuments:
         # ignored, with the texts that offered to skip a backup: 208,201,
         # and the REFI-QDA export's sentence on its known faults (the stale
         # texts): 208,327, and the audio and video folders left out of
-        # backups: 208,427, about 208,000
-        assert (rounded, tokens) == ("208,000", "52k")
+        # backups: 208,427, about 208,000, and its fix round 2: 208,927,
+        # about 209,000
+        assert (rounded, tokens) == ("209,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "

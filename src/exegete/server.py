@@ -6580,10 +6580,10 @@ def copy_project_to_workspace(
     The copy carries the whole project tree, ai_data/ included (the AI
     prompt library and chat history are user data), but omits the
     regenerable ai_data/search.sqlite, sqlite sidecar files (the
-    database's journal and WAL files included) and lock files, the same
-    exclusions backups use. The database is copied with SQLite's own
-    online backup, so a copy taken while QualCoder is writing holds what
-    was last committed; QualCoder's own saves wait while it runs, and on
+    database's journal and WAL files included) and lock files, like
+    backups, but keeps the audio and video folders. The database is
+    copied with SQLite's own online backup, so a copy taken while
+    QualCoder is writing holds what was last committed; QualCoder's own saves wait while it runs, and on
     a database of about 4 GB or more a save in an open QualCoder window
     can fail. QualCoder rebuilds search.sqlite when it opens the copy. Symlinks inside the project
     that point outside the project folder (or dangle) are not followed:
@@ -12939,15 +12939,17 @@ def list_backups() -> str:
     QualCoder's do, so for the hour after the clocks go back two backups
     can be listed out of order.
 
-    Backups carry the whole project tree except its audio and video
-    folders, ai_data/ included (QualCoder 4.0's AI prompt library and
-    chat history are non-regenerable user data), but exclude the
-    regenerable vector-search database ai_data/search.sqlite (which
-    duplicates every text source in plaintext) and sqlite sidecar
-    files, like QualCoder's own backups;
-    QualCoder rebuilds search.sqlite on project open. The project
-    database is copied with SQLite's own online backup, so a backup
-    taken while QualCoder is writing holds what was last committed, and
+    Backups carry the whole project tree, ai_data/ included (QualCoder
+    4.0's AI prompt library and chat history are non-regenerable user
+    data), but exclude the regenerable vector-search database
+    ai_data/search.sqlite (which duplicates every text source in
+    plaintext) and sqlite sidecar files, like QualCoder's own backups;
+    QualCoder rebuilds search.sqlite on project open. Those made from
+    0.15.1 on also leave out the audio and video folders; one made
+    earlier may hold them (holds_audio_or_video, read from the
+    backup). The database is copied with SQLite's own online backup,
+    so a backup taken while QualCoder is writing holds what was last
+    committed, and
     its journal and WAL files are never copied. A backup that holds
     them (copied mid-write, or made before v0.14) is marked `unclean`
     and restore_backup refuses it. Unlike
@@ -12960,7 +12962,8 @@ def list_backups() -> str:
 
     Returns:
         JSON with the project name and an array of backups
-        (name, path, kind, created, dated_from, age_days, size_mb)
+        (name, path, kind, created, dated_from, age_days, size_mb,
+        holds_audio_or_video, audio_video_files)
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -13015,8 +13018,11 @@ QUALCODER_38_BACKUPS_NOTE = (
     "If the researcher uses QualCoder 3.8.0 to 3.8.2, it may keep further "
     "backups in the folder set in its settings; those are not listed "
     "here.")
-# What a backup holds is a fact about Exegete's backups, said always;
-# what it adds on ai_data/ only when the project holds that folder with
+# What a backup holds is a fact about Exegete's backups, said always:
+# those made from 0.15.1 on leave the audio and video folders out, and an
+# earlier one may hold them, which each backup's holds_audio_or_video
+# says, read from the folder (v0.15.1, fix round 2); what it adds on
+# ai_data/ only when the project holds that folder with
 # something in it (fix round 1; v0.15.0: Exegete makes it empty at
 # creation, qualcoder_history.ai_data_found). QualCoder 3.8.2 makes the
 # folder too, with the prompt library (ai_prompts.py:465) and the chat
@@ -13027,8 +13033,12 @@ QUALCODER_38_BACKUPS_NOTE = (
 # privacy reader): the note says so, since 3.8's store holds the sources'
 # text as 4.0's index does, and PRIVACY.md names it.
 BACKUPS_HOLD_NOTE = (
-    "Backups hold the whole project folder, except its audio and video "
-    "folders, lock files and SQLite's working files.")
+    "Exegete's backups hold the whole project folder except lock files "
+    "and SQLite's working files; those made from 0.15.1 on leave out its "
+    "audio and video folders too, while one made by an earlier version "
+    "may hold them, with recordings the project no longer has. Each "
+    "backup's holds_audio_or_video says whether it holds them, read from "
+    "the backup itself.")
 AI_DATA_BACKUPS_NOTE = (
     "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
     "also holds its AI prompt library and chat history, which backups "
@@ -13113,7 +13123,11 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     Families: this server's {name}_backup_{ts}[...].qda (kind 'exegete',
     including the *_prerestore safety copies) and QualCoder's own
     {name}_BKUP_{...}.qda (kind 'qualcoder'). Each entry carries name,
-    path, kind, created, age_days and size_mb.
+    path, kind, created, age_days and size_mb, and whether it holds
+    audio or video folders (`holds_audio_or_video`, read from the
+    folder, never from its name or date: a backup made before 0.15.1
+    holds them, v0.15.1 fix round 2), with `audio_video_files`, the
+    files in them, when it does.
     """
     backups: List[Dict[str, Any]] = []
     order: Dict[str, Tuple[datetime, int]] = {}
@@ -13143,7 +13157,10 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                     "age_days": round(
                         max(0.0, (now - created).total_seconds()) / 86400, 1),
                     "size_mb": round(size_bytes / (1024 * 1024), 2),
+                    "holds_audio_or_video": _holds_media_folder(entry),
                 }
+                if item["holds_audio_or_video"]:
+                    item["audio_video_files"] = len(_media_files(entry))
                 side = unclean_backup_side_files(entry)
                 linked = backup_database_is_link(entry)
                 if side or linked:
@@ -13177,8 +13194,8 @@ def prune_backups(keep_last: Optional[int] = None,
     """Delete this project's own backup snapshots to reclaim disk space.
 
     DESTRUCTIVE to your recovery points: preview first, then execute with
-    the token that preview returns. Every write creates a full-project
-    backup copy and they accumulate forever; this tool prunes them by a
+    the token that preview returns. Every write creates a backup copy of
+    the project and they accumulate forever; this tool prunes them by a
     retention policy you choose:
 
     - keep_last=N: keep only the N newest of Exegete's backups
@@ -13219,11 +13236,16 @@ def prune_backups(keep_last: Optional[int] = None,
     point, which is the trade; keep at least one until you are sure.
 
     This does not touch the live project database, so it works even while
-    QualCoder has the project open. Each backup is the project tree but
-    its audio and video folders, ai_data/ included (minus the
-    regenerable search.sqlite and sqlite sidecars, as in QualCoder's own
-    backups), so pruning also removes those recovery points for the AI
-    prompt library and chat history.
+    QualCoder has the project open. Each backup is the project tree,
+    ai_data/ included (minus the regenerable search.sqlite and sqlite
+    sidecars, as in QualCoder's own backups), so pruning also removes
+    those recovery points for the AI prompt library and chat history.
+    Backups made from 0.15.1 on leave out the audio and video folders;
+    one made earlier may hold them, with recordings the project no
+    longer has, which pruning removes too. So the preview gives, for
+    each backup it would remove, audio_video_files_only_here: the files
+    there that neither the project nor a backup kept holds (same name
+    and size), with a note.
 
     Args:
         keep_last: Keep only this many of Exegete's newest backups (0
@@ -13308,6 +13330,13 @@ def prune_backups(keep_last: Optional[int] = None,
                                              to_remove)
     if only_copies["copies"]:
         notes.append(_prune_only_copies_note(only_copies, done=False))
+    # Recordings only a backup to be removed holds (v0.15.1, fix round
+    # 2): a backup made before 0.15.1 holds the audio and video folders,
+    # and the project may no longer have what is in them
+    media_only = _prune_media_only_copies(project_folder, all_backups,
+                                          to_remove)
+    if media_only:
+        notes.append(_prune_media_only_note(media_only, done=False))
     removes_newest_prerestore = False
     prerestore_removed = [b for b in to_remove if "_prerestore" in b["name"]]
     if prerestore_removed:
@@ -13332,11 +13361,15 @@ def prune_backups(keep_last: Optional[int] = None,
     token_args = canonical_args("prune_backups", keep_last=keep_last,
                                 older_than_days=older_than_days)
     if preview_token is None:
+        only_here = dict(media_only)
         preview = {
             "requires_confirmation": True,
             "would_remove": [
                 {"name": b["name"], "age_days": b["age_days"],
-                 "size_mb": b["size_mb"]} for b in to_remove],
+                 "size_mb": b["size_mb"],
+                 **({"audio_video_files_only_here": only_here[b["name"]]}
+                    if b["name"] in only_here else {})}
+                for b in to_remove],
             "would_keep": [b["name"] for b in kept],
             "reclaimed_mb": reclaimed_mb,
             **_never_removed_block(not_ours),
@@ -13374,7 +13407,11 @@ def prune_backups(keep_last: Optional[int] = None,
                     # Signed, so a set that changes before the execute (a
                     # file removed outside this server) refuses it rather
                     # than removing a copy the preview did not name.
-                    "only_copies": only_copies["copies"]})
+                    "only_copies": only_copies["copies"],
+                    # and so the recordings' (fix round 2): a recording
+                    # the project loses after the preview is not removed
+                    # unsaid
+                    "media_only_copies": media_only})
         except PreviewSecretUnavailable:
             return json.dumps(
                 _token_error("preview_secret_unavailable", "prune_backups"))
@@ -13385,7 +13422,8 @@ def prune_backups(keep_last: Optional[int] = None,
     state = fingerprint_rows(
         {"would_remove": [b["name"] for b in to_remove],
          "would_keep": [b["name"] for b in kept],
-         "only_copies": only_copies["copies"]}, fingerprint)
+         "only_copies": only_copies["copies"],
+         "media_only_copies": media_only}, fingerprint)
     try:
         outcome = verify(preview_token, "prune_backups", token_args,
                          _token_project(), state)
@@ -13426,6 +13464,8 @@ def prune_backups(keep_last: Optional[int] = None,
     notes = []
     if only_copies["copies"]:
         notes.append(_prune_only_copies_note(only_copies, done=True))
+    if media_only:
+        notes.append(_prune_media_only_note(media_only, done=True))
     if removes_newest_prerestore:
         notes.append(_prune_prerestore_note(done=True))
     if notes:
@@ -13507,6 +13547,96 @@ def _prune_only_copies_note(only_copies: Dict[str, List[Any]],
                  + " when a project closes")
     return note + ("." if done else
                    "; copy it somewhere safe first if it is still needed.")
+
+
+def _prune_media_only_copies(project_folder: Path,
+                             backups: List[Dict[str, Any]],
+                             to_remove: List[Dict[str, Any]]
+                             ) -> List[List[Any]]:
+    """The backups a prune would remove that hold files in their audio or
+    video folders (`_media_files`) which neither the project nor any of
+    Exegete's backups the prune keeps holds, compared by the path below
+    the folder and the size, never read out: sorted `[folder name,
+    count]` pairs, which the token signs. A backup made before 0.15.1
+    holds those folders; one made since holds none, so it is passed by
+    without a walk of anything else. QualCoder's own backups do not count
+    as keeping a copy, since QualCoder deletes them past its
+    `backup_num`, as `_prune_only_mapping_copies` holds (v0.15.1, fix
+    round 2)."""
+    removing = {b["name"] for b in to_remove}
+    kept: Optional[set] = None
+    found = []
+    for backup in to_remove:
+        held = _media_files(Path(backup["path"]))
+        if not held:
+            continue
+        if kept is None:
+            kept = {(top.casefold(), below, size)
+                    for other in backups
+                    if other["kind"] == OWN_BACKUP_KIND
+                    and other["name"] not in removing
+                    for (top, below), size in _media_files(
+                        Path(other["path"])).items()}
+        count = sum(
+            1 for (top, below), size in held.items()
+            if (top.casefold(), below, size) not in kept
+            and not _project_has_media_file(project_folder, top, below,
+                                            size))
+        if count:
+            found.append([backup["name"], count])
+    return sorted(found)
+
+
+def _project_has_media_file(project_folder: Path, top: str, below: str,
+                            size: int) -> bool:
+    """Whether the project has a file of `size` bytes at `below` in its
+    audio or video folder `top` (as a backup spells it; the disk takes
+    the name as it takes names), a link there followed, as the project
+    reaches its recordings through one. Never raises."""
+    path = Path(project_folder) / top
+    if below:
+        path = path.joinpath(*below.split("/"))
+    try:
+        info = os.stat(path)
+    except (OSError, ValueError):
+        return False
+    return stat.S_ISREG(info.st_mode) and info.st_size == size
+
+
+def _prune_media_only_note(media_only: List[List[Any]], done: bool) -> str:
+    """The prune's note on the recordings only the backups it removes
+    hold, before (`done` False) or after the removal: each backup's
+    folder name with its count, never a file's name; in the singular
+    where one backup, or one file, is meant."""
+    one = len(media_only) == 1
+    single = sum(count for _, count in media_only) == 1
+    named = ", ".join(
+        f"{name} ({count} file{'' if count == 1 else 's'})"
+        for name, count in media_only)
+    what = ("a file" if single else "files") + (
+        f" in {'its' if one else 'their'} audio or video folders")
+    if done:
+        return (("The backup this removed held " if one
+                 else "Backups this removed held ")
+                + f"{what} that neither the project nor a backup Exegete "
+                f"kept held (by name and size): {named}. "
+                + ("It may have been the only copy of a recording."
+                   if single else
+                   "They may have been the only copies of recordings."))
+    return (("The backup this would remove holds " if one
+             else "Backups this would remove hold ")
+            + f"{what} that neither the project nor a backup Exegete keeps "
+            f"holds (by name and size): {named}. A backup made before "
+            f"0.15.1 holds those folders. Once "
+            + ("it is" if one else "they are")
+            + " removed, Exegete knows of no other copy, so "
+            + ("it may be the only copy of a recording: if it is still "
+               "needed, copy it" if single else
+               "they may be the only copies of recordings: copy any "
+               "still needed")
+            + " out of " + ("the backup" if one else "those backups")
+            + " first, or keep "
+            + (("the backup" if single else "it") if one else "them") + ".")
 
 
 def _prune_prerestore_note(done: bool) -> str:
@@ -13794,25 +13924,69 @@ def _media_kept_note(count: int) -> str:
 
 def _media_files_in(folder: Path) -> int:
     """How many files a backup holds in the entries at its top that a
-    restore leaves out as audio or video (`is_media_folder_entry`): a
-    folder's files at any depth, links never followed; a file there
-    counts one, a link none. Names nothing. Never raises."""
-    count = 0
+    restore leaves out as audio or video (`_media_files`). Names
+    nothing. Never raises."""
+    return len(_media_files(folder))
+
+
+def _media_files(folder: Path) -> Dict[Tuple[str, str], int]:
+    """Every file a project or a backup (`folder`) holds in the entries at
+    its top that a backup leaves out and a restore keeps as audio or
+    video (`is_media_folder_entry`), each as (the entry's name as the
+    folder spells it, the path below it joined with "/", empty for a
+    file at the top) with its size. A folder's files at any depth; a
+    link or a junction, at the top or below it, is neither entered nor
+    counted (v0.15.1; fix round 2, below the top too, where os.walk
+    entered a junction on Windows). The names stay inside Exegete:
+    every caller counts. Never raises."""
+    found: Dict[Tuple[str, str], int] = {}
     try:
         with os.scandir(folder) as entries:
-            tops = [entry for entry in entries
+            tops = [(entry.name, entry.path) for entry in entries
                     if is_media_folder_entry(folder, entry.name)]
-        for entry in tops:
-            if entry.is_symlink() or reading_folder.is_link(Path(entry.path)):
-                continue
-            if entry.is_file(follow_symlinks=False):
-                count += 1
-            elif entry.is_dir(follow_symlinks=False):
-                for _root, _dirs, files in os.walk(entry.path):
-                    count += len(files)
     except Exception:                                   # noqa: BLE001
-        return count
-    return count
+        return found
+    for name, path in tops:
+        pending = [(path, None)]
+        while pending:
+            here, below = pending.pop()
+            try:
+                info = os.lstat(here)
+                if (stat.S_ISLNK(info.st_mode)
+                        or reading_folder.is_link(Path(here))):
+                    continue
+                if stat.S_ISREG(info.st_mode):
+                    found[(name, below or "")] = info.st_size
+                elif stat.S_ISDIR(info.st_mode):
+                    with os.scandir(here) as entries:
+                        for entry in entries:
+                            pending.append((
+                                entry.path,
+                                entry.name if below is None
+                                else f"{below}/{entry.name}"))
+            except Exception:                           # noqa: BLE001
+                continue
+    return found
+
+
+def _holds_media_folder(folder: Path) -> bool:
+    """Whether a backup (or a project) holds a real folder, read with
+    `lstat`, at a top-level name a backup leaves out as audio or video
+    (`is_media_folder_entry`): a link or a junction there is not one.
+    Read from the folder, never from its name or date (v0.15.1, fix
+    round 2). Never raises."""
+    try:
+        with os.scandir(folder) as entries:
+            for entry in entries:
+                if not is_media_folder_entry(folder, entry.name):
+                    continue
+                info = entry.stat(follow_symlinks=False)
+                if (stat.S_ISDIR(info.st_mode)
+                        and not reading_folder.is_link(Path(entry.path))):
+                    return True
+    except Exception:                                   # noqa: BLE001
+        return False
+    return False
 
 
 def _project_holds_exegete_entry(project_folder: Path) -> bool:

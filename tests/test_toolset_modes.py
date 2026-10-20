@@ -476,11 +476,16 @@ class TestThePublishedSchemaBudget:
     # v0.15.1, audio and video left out of backups: list_backups',
     # prune_backups' and restore_backup's sentences on the two folders,
     # which backups leave out and a restore keeps, 100 characters more in
-    # `full` and 36 in `core` (108 and 40 on 3.11).
-    FULL_MEASURED = 208_427          # 82 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_519           # 25 tools, same environment
-    FULL_MEASURED_310 = 218_963      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 71_963
+    # `full` and 36 in `core` (108 and 40 on 3.11). Its fix round 2:
+    # list_backups and prune_backups say so of the backups made from
+    # 0.15.1 on, that one made earlier may hold the two folders, and name
+    # the answers' fields that say which, and copy_project_to_workspace
+    # that it keeps them, 500 characters more in `full` and 172 in `core`
+    # (532 and 184 on 3.11).
+    FULL_MEASURED = 208_927          # 82 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_691           # 25 tools, same environment
+    FULL_MEASURED_310 = 219_495      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 72_147
 
     # Why two per cent, away from the reference environment.
     #
@@ -507,9 +512,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "208,427"
-    CORE_CHARS = "68,519"
-    FULL_ROUNDED = "208,000"
+    FULL_CHARS = "208,927"
+    CORE_CHARS = "68,691"
+    FULL_ROUNDED = "209,000"
     CORE_ROUNDED = "69,000"
     FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"

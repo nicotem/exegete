@@ -402,10 +402,11 @@ class TestInstall:
         assert "On Python 3.13, 4 of `full`'s 82 descriptions" in install
         assert "`full` (default) registers 82 tools" in install
         assert ("Exegete offers 82 tools by default, and the serialised "
-                "tool definitions alone measure about 208,000 characters, "
+                "tool definitions alone measure about 209,000 characters, "
                 "roughly 52k tokens") in install
-        # v0.15.1: about 208,000 (create_backup accepted and ignored)
-        assert "(about 208,000 characters with `full`;" in install
+        # v0.15.1: about 208,000 (create_backup accepted and ignored),
+        # then about 209,000 (audio and video left out of backups)
+        assert "(about 209,000 characters with `full`;" in install
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
                 if len(t.description or "") > 4096]
@@ -426,7 +427,7 @@ class TestToolsReadmePrivacy:
     def test_readme(self):
         readme = _read("README.md")
         assert ("| `full` | 82: all, creating a project and two renamed "
-                "tools' earlier names included | about 208,000 characters, "
+                "tools' earlier names included | about 209,000 characters, "
                 "52k tokens |") in readme
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "

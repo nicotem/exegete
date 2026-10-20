@@ -735,11 +735,18 @@ CHANGED_0150 = {
 # prune_backups that a backup copies pseudonyms.json "too" rather than
 # "the whole tree"; restore_backup that a restore keeps the two folders
 # as it keeps the Exegete folder. Their lines above stand for the
-# release they belong to.
+# release they belong to. Its fix round 2: list_backups and
+# prune_backups say this of the backups made from 0.15.1 on, that one
+# made earlier may hold the folders, and name the answers' fields that
+# say so (holds_audio_or_video, audio_video_files_only_here);
+# prune_backups no longer calls a backup "full-project", and
+# copy_project_to_workspace says that it keeps the two folders where it
+# said "the same exclusions backups use".
 CHANGED_0151 = {
     "add_annotation": (1635, 1327, "4bbbbadf442ce4d9"),
     "add_journal_entry": (1075, 864, "12671d098694fc7f"),
     "apply_codings": (2576, 2080, "5bd24c4f519eb9d7"),
+    "copy_project_to_workspace": (1821, 1499, "69ccd8862dabdb2f"),
     "create_attribute_type": (2101, 1669, "514860e96ff9c269"),
     "create_case": (1647, 1362, "058d9acfbdafa8bf"),
     "create_category": (1839, 1456, "1932d23aa946913a"),
@@ -749,10 +756,10 @@ CHANGED_0151 = {
     "delete_coding": (2772, 2226, "20b73b09f4af1cfc"),
     "import_text_file": (3979, 2949, "32c2ba85d34a6301"),
     "link_file_to_case": (1781, 1353, "5b8da085c5673f75"),
-    "list_backups": (2199, 1848, "6d8bf3c3ee42bdaf"),
+    "list_backups": (2348, 1974, "6beb69c8efa75fac"),
     "move_category": (1398, 1072, "cbf3cb5c7691d6b2"),
     "move_code_to_category": (1735, 1370, "aaea0c1644efe794"),
-    "prune_backups": (3057, 2486, "5b72c196f9840739"),
+    "prune_backups": (3380, 2754, "ad1f10aba1338ff2"),
     "pseudonymise_source": (17825, 13103, "e26b83009d0c054a"),
     "recolor_code": (1293, 1061, "1379964b6a5e9ead"),
     "rename_case": (2124, 1733, "39675c0d95087246"),

@@ -515,7 +515,7 @@ def before_the_ignored_argument(name, description):
 # The descriptions v0.15.1's piece on audio and video in backups changed
 # as well, whose 0.15.0 words this piece's put-back cannot give back
 ALSO_CHANGED_BY_MEDIA_OUT = {"list_backups", "prune_backups",
-                             "restore_backup"}
+                             "restore_backup", "copy_project_to_workspace"}
 
 
 def test_the_descriptions_put_back_are_0150s():
@@ -532,7 +532,7 @@ def test_the_descriptions_put_back_are_0150s():
             # v0.15.1, audio and video left out of backups, changed these
             # too (tests/test_v0151_media_out.py pins their words): the
             # put-back finds this piece's lines in list_backups and gives
-            # back 0.15.0's, and leaves the other two as they are
+            # back 0.15.0's, and leaves the other three as they are
             if name == "list_backups":
                 assert "Every write operation (apply_codings, " in put_back
             else:

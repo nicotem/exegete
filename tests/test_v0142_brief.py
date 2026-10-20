@@ -591,8 +591,12 @@ class TestTheSizes:
     # v0.15.1, audio and video left out of backups: list_backups,
     # prune_backups and restore_backup name the two folders; all three
     # are in the tables below already (100 characters more in `full`,
-    # 36 in `core`, where list_backups alone is served).
-    NOW = {"full": 197_519, "core": 65_203}
+    # 36 in `core`, where list_backups alone is served). Its fix round 2:
+    # list_backups and prune_backups say so of the backups made from
+    # 0.15.1 on, and copy_project_to_workspace that it keeps the two
+    # folders (500 characters more in `full`, 172 in `core`, which serves
+    # list_backups and copy_project_to_workspace).
+    NOW = {"full": 198_019, "core": 65_375}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

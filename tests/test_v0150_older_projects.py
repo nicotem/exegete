@@ -95,9 +95,10 @@ def missing_columns(schema, columns="code_text.important"):
 KEEPS_MEDIA = (
     "To copy one back, copy everything in it except any audio or video "
     "folder into the project folder, leaving the project's own audio and "
-    "video folders where they are: Exegete's backups leave those folders "
-    "out, so a backup put in the project's place would leave the project "
-    "without its recordings.")
+    "video folders where they are: Exegete's backups made from 0.15.1 on "
+    "leave those folders out, and one made earlier holds them as they "
+    "were then, so a backup put in the project's place would leave the "
+    "project without its recordings, or without those added since.")
 
 
 def damaged(version, columns="code_text.important"):

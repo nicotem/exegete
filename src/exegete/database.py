@@ -571,13 +571,15 @@ SUBCODES_NEED_CASCADE = (
 # the project's place would leave it without its recordings, which
 # Exegete's backups leave out (MEDIA_FOLDERS), and a backup that holds
 # the folders (an earlier version's, or QualCoder's) would replace the
-# project's.
+# project's. Said of the backups made from 0.15.1 on, since one made by
+# an earlier version holds the folders as they were then (fix round 2).
 BACKUP_BY_HAND_KEEPS_MEDIA = (
     "To copy one back, copy everything in it except any audio or video "
     "folder into the project folder, leaving the project's own audio and "
-    "video folders where they are: Exegete's backups leave those folders "
-    "out, so a backup put in the project's place would leave the project "
-    "without its recordings.")
+    "video folders where they are: Exegete's backups made from 0.15.1 on "
+    "leave those folders out, and one made earlier holds them as they "
+    "were then, so a backup put in the project's place would leave the "
+    "project without its recordings, or without those added since.")
 
 
 # The plain refusal of a database whose project table has no row (v0.14,

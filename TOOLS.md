@@ -448,7 +448,10 @@ minus QualCoder's own backup ignore set (`search.sqlite`,
 and lock files. Since 0.15.1 backups also leave out the project's
 `audio/` and `video/` folders, whatever is at those names, and
 `restore_backup` keeps the project's own, never taking a backup's (an
-older backup's copies stay in it); a workspace copy keeps them. This
+older backup's copies stay in it); a workspace copy keeps them. An
+older backup may so hold the only copy of a recording the project no
+longer has: `list_backups` marks the backups that hold the folders, and
+the preview of `prune_backups` counts such files by backup. This
 departs from QualCoder, whose backups keep audio and video unless its
 setting for them is off: no Exegete tool changes those files. A
 workspace copy of a project with no `ai_data/` gets
@@ -1009,7 +1012,7 @@ declares, and each tool's own description says what each one does.
 > loudly at startup. Measured for 0.15.1 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 208,000 characters for `full`, roughly 52k
+> definitions run to about 209,000 characters for `full`, roughly 52k
 > tokens at four characters per token, and about 69,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -1110,8 +1113,8 @@ still answers empty, and that answer is a finding.
 **Recovery & Safety:**
 - `copy_project_to_workspace(source_path, new_name)` - Copy a project to the safe workspace for AI coding (the database copied consistently and the same exclusions as backups, but keeping the audio and video folders; reports skipped symlinks); a project kept in a project's `Exegete` folder is refused
 - `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` - **WRITES TO DATABASE** - Remove one coded segment (refuses a hidden coder's row or a row carrying a private note unless the override is passed); a coding an AI coding session applied is marked removed in that session, which the answer names
-- `list_backups()` - List this project's backup snapshots (both Exegete's `_backup_` and QualCoder's `_BKUP_` families); a backup holding its database's journal or WAL file, copied while a program was writing, is marked `unclean`
-- `prune_backups(keep_last, older_than_days, preview_token)` - Delete Exegete's own backups by a retention policy (preview first, then the token the preview returns; QualCoder's `_BKUP_` backups are never removed)
+- `list_backups()` - List this project's backup snapshots (both Exegete's `_backup_` and QualCoder's `_BKUP_` families); a backup holding its database's journal or WAL file, copied while a program was writing, is marked `unclean`; each says whether it holds audio or video folders (`holds_audio_or_video`, read from the backup: those made from 0.15.1 on leave them out, an earlier one may hold them)
+- `prune_backups(keep_last, older_than_days, preview_token)` - Delete Exegete's own backups by a retention policy (preview first, then the token the preview returns; QualCoder's `_BKUP_` backups are never removed); the preview counts, for each backup it would remove, the files in its audio or video folders that neither the project nor a backup kept holds (`audio_video_files_only_here`), which may be the only copies of recordings
 - `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused). The project's `Exegete` folder (files the researcher fills in) is kept as it is, never taken from the backup; the preview says when either has one. So are its `audio` and `video` folders
 
 **Interchange & Report Exports (exported files keep full memos, private sections included; give `output_path` as a full path or one starting with `~`: since 0.14 a relative one is refused and nothing is written):**

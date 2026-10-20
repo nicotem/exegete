@@ -58,6 +58,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   leftover once it is an hour old. 0.15.0's notes named this among its
   known limits.
 
+### Exegete's lock file kept fresh for the whole of every write
+
+- **Exegete renews its lock file every five seconds while a write
+  runs**, as QualCoder 3.8.2 does while it has a project open. Before,
+  Exegete wrote the file once, when a write began, so a write running
+  longer than 30 seconds (a backup of a large project, a long import)
+  read as a lock file left over: QualCoder 3.8.2 could open the project
+  in the middle of it, and a second conversation using Exegete could
+  write to it at the same time. Both are now refused for the whole
+  write. A write never commits a change to the project's database over
+  another program's fresh lock: if the lock file no longer holds
+  Exegete's lines just before the change is saved, the change is
+  refused and rolled back, and the answer names the backup taken before
+  it. At the end Exegete removes the file only if it still holds its
+  own lines, so it no longer removes a lock file another program has
+  written meanwhile. Saving the names list is kept fresh in the same
+  way, without that last check, since it changes no row of the
+  project's database. `get_current_project`'s note on a lock file not
+  refreshed for over 30 seconds now says that Exegete leaves one when a
+  write is cut short or its lock file could not be removed, and no
+  longer that a long write shows as one; PRIVACY.md says the file is
+  renewed while the write runs.
+
 ### For contributors
 
 - **The links in the documents are checked on every push**

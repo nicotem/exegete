@@ -507,8 +507,9 @@ project is moved, both folders are searched, and setting it back to
 For the length of each write, Exegete also writes a lock file into the
 project's folder (`project_in_use.lock`, the file QualCoder 3.8.2 uses
 to mark a project open), holding your computer account's name and the
-time; it removes the file when the write ends, though a write that is
-cut off can leave it behind.
+time, which it renews every five seconds while the write runs; it
+removes the file when the write ends if the file still holds its own
+lines, though a write that is cut off can leave it behind.
 
 The files you fill in are never returned to the assistant: Exegete
 reports what is in the folder, never what the files hold, and its brief

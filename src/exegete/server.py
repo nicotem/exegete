@@ -2027,19 +2027,27 @@ def _write_gate_error() -> Optional[Dict[str, Any]]:
     return _qualcoder_open_error()
 
 
-def _recheck_lock_before_commit(project_folder: Path, held: bool) -> None:
+def _recheck_lock_before_commit(project_folder: Path, held) -> None:
     """Close the TOCTOU window between pre-write checks and commit.
 
-    When our own lock is held, QualCoder cannot have opened the project in
-    between (it refuses on a fresh lock). When we proceeded over a stale
-    foreign lock we hold nothing, so re-check right before committing.
+    `held` is the `ProjectLock` `hold_project_lock` yields. While our own
+    lock is held and the file still holds our lines, QualCoder cannot have
+    opened the project in between: the lock is kept fresh for the whole
+    write (v0.15.1), and QualCoder refuses on a fresh lock. Otherwise (we
+    proceeded over a stale foreign lock, or the file no longer holds our
+    lines) re-check right before committing; an error reading the file
+    counts as an unreadable lock, stale, as `qualcoder_lock_state`
+    counts one.
 
     Raises:
         DatabaseLockedError: If QualCoder opened the project mid-write
     """
-    if held:
+    if held and held.still_ours():
         return
-    state, holder = qualcoder_lock_state(project_folder)
+    try:
+        state, holder = qualcoder_lock_state(project_folder)
+    except OSError:
+        return
     if state == "active":
         raise DatabaseLockedError(qualcoder_open_message(holder))
 
@@ -5497,14 +5505,14 @@ def get_current_project() -> str:
                 "state": "stale",
                 "holder": holder or "unknown",
                 # Exegete writes the same file during each of its own
-                # writes (hold_project_lock), once and never refreshed:
-                # a write cut short leaves the same leftover, and a
-                # write still running after 30 seconds reads as one.
+                # writes (hold_project_lock) and keeps it fresh until
+                # the write ends (v0.15.1): a write cut short, or a lock
+                # file it could not remove, leaves the same leftover.
                 "note": "A lock file not refreshed for over 30 seconds: "
                         "QualCoder 3.8.2 leaves one when it does not close "
-                        "cleanly, and a write by Exegete leaves one when "
-                        "it is cut short, or shows as one while it runs "
-                        "longer than that. Writes proceed normally."
+                        "cleanly, and Exegete leaves one when a write is "
+                        "cut short or its lock file could not be removed. "
+                        "Writes proceed normally."
             }
 
         # P1-5: best-effort 4.0 GUI-open heuristics (4.0 writes no lock
@@ -13658,7 +13666,11 @@ def restore_backup(backup_path: str,
         })
 
     try:
-        with hold_project_lock(project_folder):
+        with hold_project_lock(project_folder) as held:
+            # The refresh stops before the clear, which removes the lock
+            # file anyway, so that on Windows the clear never meets the
+            # refresh's open file (v0.15.1)
+            held.stop()
             # Everything in the project goes but its Exegete folder, which
             # stays where it is, as it is, never read or copied (v0.15.0):
             # a file of any name in it, at any depth, saved at any moment,

@@ -646,7 +646,7 @@ class TestHeartbeatProtocol:
         import getpass
         folder = _lock(qualcoder_db_path).parent
         with hold_project_lock(folder) as held:
-            assert held is True
+            assert held.held is True
             lines = _lock(qualcoder_db_path).read_text(encoding="utf-8").splitlines()
             assert len(lines) == 2
             assert lines[0] == getpass.getuser()

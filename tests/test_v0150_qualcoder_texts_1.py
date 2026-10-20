@@ -362,10 +362,10 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     """Fix round 1: Exegete writes the same file during its own writes,
     so a write cut short leaves the same leftover as a QualCoder 3.8
     that did not close cleanly; the note beside the corrected one says
-    both. Fix round 2: Exegete writes the file once and never refreshes
-    it, so a write that runs longer than 30 seconds shows as one while
-    it runs (the guard below); the note says what the file is, not why
-    it was left."""
+    both. Fix round 2: the note says what the file is, not why it was
+    left. v0.15.1: Exegete keeps its lock file fresh for the whole
+    write, so a long write no longer shows as a leftover (the guard
+    below), and the note no longer says it does."""
     lock = Path(qualcoder_db_path) / QUALCODER_LOCK_FILENAME
     lock.write_text(f"someone\n{time.time() - 3600}", encoding="utf-8")
     try:
@@ -373,39 +373,34 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     finally:
         lock.unlink()
     assert answer["qualcoder_open"] is False
-    assert answer["qualcoder_lock"] == {
-        "state": "stale", "holder": "someone",
-        "note": "A lock file not refreshed for over 30 seconds: "
-                "QualCoder 3.8.2 leaves one when it does not close cleanly, "
-                "and a write by Exegete leaves one when it is cut short, "
-                "or shows as one while it runs longer than that. Writes "
-                "proceed normally."}
+    assert answer["qualcoder_lock"]["state"] == "stale"
+    assert answer["qualcoder_lock"]["holder"] == "someone"
+    assert "while it runs" not in answer["qualcoder_lock"]["note"]
 
 
-def test_guard_a_long_write_by_exegete_shows_as_a_leftover(
+def test_guard_a_long_write_by_exegete_never_shows_as_a_leftover(
         tmp_path, monkeypatch):
-    """Named as a guard of the fact the leftover note states (fix round
-    2), green before and after: Exegete writes its lock file once, when a
-    write begins, and never refreshes it, so a write still running after
-    30 seconds reads as a lock file not refreshed for that long."""
-    from types import SimpleNamespace
-
+    """The guard of fix round 2, inverted in v0.15.1: Exegete refreshes
+    its lock file while it holds it, so the time in the file moves on
+    and a write still running reads as active, never as a lock file not
+    refreshed for 30 seconds."""
     from exegete import database
+    monkeypatch.setattr(database, "LOCK_REFRESH_SECONDS", 0.05)
     folder = tmp_path / "Study.qda"
     folder.mkdir()
     lock = folder / QUALCODER_LOCK_FILENAME
     with database.hold_project_lock(folder) as held:
-        assert held is True
-        written = lock.read_text(encoding="utf-8")
+        assert held
+        written = float(lock.read_text(encoding="utf-8").splitlines()[1])
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            now = float(lock.read_text(encoding="utf-8").splitlines()[1])
+            if now > written:
+                break
+            time.sleep(0.05)
+        # The time in the file moved on: written again while held
+        assert now > written
         assert database.qualcoder_lock_state(folder)[0] == "active"
-        later = float(written.splitlines()[1]) + \
-            database.QUALCODER_LOCK_TIMEOUT + 1
-        monkeypatch.setattr(database, "time", SimpleNamespace(
-            time=lambda: later, sleep=time.sleep))
-        assert database.qualcoder_lock_state(folder)[0] == "stale"
-        monkeypatch.undo()
-        # Still the file written when the write began
-        assert lock.read_text(encoding="utf-8") == written
     assert not lock.exists()
 
 

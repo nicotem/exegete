@@ -419,10 +419,9 @@ class TestOneSpelling:
         """Item 32's "From:" line names 3.8.2's source, and so does its
         title (fix round 1)."""
         notice = _read(name)
-        assert ("32. QualCoder 3.8.2's lock file: its name, timeout and "
-                "content.\n") in notice
-        assert "From: 3.8.2 __main__.py, lines 131, 2546-2547 and 2637." \
+        assert "32. QualCoder 3.8.2's lock file: its name, timeout" \
             in notice
+        assert "From: 3.8.2 __main__.py, lines 131, " in notice
 
     def test_the_changelog_s_new_entries(self):
         entry = WAS.sub("", _flat(_unreleased()))

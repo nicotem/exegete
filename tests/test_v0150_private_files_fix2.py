@@ -537,9 +537,11 @@ class TestTheTexts:
         assert ("For the length of each write, Exegete also writes a lock "
                 "file into the project's folder (`project_in_use.lock`, the "
                 "file QualCoder 3.8.2 uses to mark a project open), holding "
-                "your computer account's name and the time; it removes the "
-                "file when the write ends, though a write that is cut off "
-                "can leave it behind.") in section
+                "your computer account's name and the time, which it renews "
+                "every five seconds while the write runs; it removes the "
+                "file when the write ends if the file still holds its own "
+                "lines, though a write that is cut off can leave it "
+                "behind.") in section
         assert ("A backup or a copy that leaves out a link kept there counts "
                 "it the same way.") in section
         assert ("the reading folder's files at its first tidy once they are "

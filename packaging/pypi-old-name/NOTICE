@@ -351,10 +351,12 @@ a project this server has written. They are restated in this project's
 own code; where the statement is a table or column list, it is the one
 the format dictates.
 
-32. QualCoder 3.8.2's lock file: its name, timeout and content.
+32. QualCoder 3.8.2's lock file: its name, timeout, content and
+    heartbeat interval.
     Here: src/exegete/database.py, QUALCODER_LOCK_FILENAME,
-    QUALCODER_LOCK_TIMEOUT and hold_project_lock.
-    From: 3.8.2 __main__.py, lines 131, 2546-2547 and 2637.
+    QUALCODER_LOCK_TIMEOUT, LOCK_REFRESH_SECONDS, ProjectLock and
+    hold_project_lock.
+    From: 3.8.2 __main__.py, lines 131, 133, 151-159, 2546-2547 and 2637.
 
 33. The names of QualCoder's coder-visibility views, and the four
     tables they show.

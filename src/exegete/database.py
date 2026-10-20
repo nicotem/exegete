@@ -10,6 +10,7 @@ import os
 import sqlite3
 import stat
 import sys
+import threading
 from pathlib import Path
 from typing import (Optional, List, Dict, Any, Callable, NamedTuple,
                     Sequence, Tuple, Union)
@@ -640,15 +641,22 @@ def _is_locked_error(e: sqlite3.Error) -> bool:
 QUALCODER_LOCK_FILENAME = "project_in_use.lock"
 QUALCODER_LOCK_TIMEOUT = 30.0  # seconds; QualCoder __main__.py:131 — do not change
 LOCK_READ_MAX_BYTES = 4096  # a real lock is two short lines; cap the read
+# Exegete refreshes its own lock file this often while it holds it, as
+# QualCoder 3.8.2's heartbeat does (__main__.py:133), so that a write of
+# any length is never read as a lock file left behind (v0.15.1)
+LOCK_REFRESH_SECONDS = 5.0
+# No wait, join or mutex of that refresh lasts longer than this
+LOCK_WAIT_LIMIT_SECONDS = 10.0
 
 
 def qualcoder_open_message(holder: Optional[str]) -> str:
     """The refusal of every write while the lock file is active.
 
     Exegete writes the same file during each of its own writes
-    (`hold_project_lock`), so an active lock file means QualCoder 3.8.2
-    has the project open or another conversation using Exegete is writing
-    to it; the message names both (v0.15.0).
+    (`hold_project_lock`) and keeps it fresh for the whole write
+    (v0.15.1), so an active lock file means QualCoder 3.8.2 has the
+    project open or another conversation using Exegete is writing to it;
+    the message names both (v0.15.0).
     """
     return (
         f"This project is in use by another program: its lock file is "
@@ -1291,38 +1299,271 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
     return signals
 
 
+class ProjectLock:
+    """Exegete's hold on a project's lock file, kept fresh (v0.15.1).
+
+    While Exegete holds the file it rewrites the time in it every
+    `LOCK_REFRESH_SECONDS`, as QualCoder 3.8.2's heartbeat does, so a
+    write of any length reads as active to QualCoder 3.8.2 and to a
+    second copy of Exegete; at the end the file is removed only if it
+    still holds Exegete's own lines.
+
+    `text` is the two lines last confirmed written (the user, then the
+    time to six decimals, so every write has one length and nothing is
+    ever cut); `trying` the lines of a write whose outcome an error left
+    unknown, also counted as Exegete's. Its truth value is `held`:
+    whether Exegete made the file for this write. Every touch of the file
+    happens under one mutex; no wait, join or mutex lasts past
+    `LOCK_WAIT_LIMIT_SECONDS`.
+
+    Departures from QualCoder's heartbeat (3.8.2 `__main__.py` 151 to
+    159, and its removal, 2552 to 2560), named: QualCoder opens the file
+    with "w" and writes `str(time.time())`, and removes whatever file is
+    there; Exegete opens it with "r+", never creating or emptying it,
+    writes the time to six decimals (which QualCoder's `float()` reads,
+    2643), and never writes over, or removes, another program's lines.
+    """
+
+    def __init__(self, path: Union[str, Path]):
+        self.path = Path(path)
+        self.text: Optional[str] = None
+        self.trying: Optional[str] = None
+        self._user: Optional[str] = None
+        self._mutex = threading.Lock()
+        self._stopped = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self._logged: set = set()
+
+    @property
+    def held(self) -> bool:
+        return self.text is not None
+
+    def __bool__(self) -> bool:
+        return self.held
+
+    def _lines(self) -> str:
+        return f"{self._user}\n{time.time():.6f}"
+
+    def _log_once(self, key, message: str, *args) -> None:
+        # Each kind once per hold; the kind only, never the error's
+        # message, which names the project's path (v0.14)
+        if key in self._logged:
+            return
+        self._logged.add(key)
+        logger.warning(message, *args)
+
+    def create(self) -> None:
+        """Make the file with mode "x" and Exegete's two lines.
+
+        The lines are computed before the open, so a user name that
+        cannot be found leaves nothing behind; a write that fails after
+        the file was made removes the file Exegete has just made.
+
+        Raises:
+            FileExistsError: another program made the file first
+            OSError: the file could not be made or written
+        """
+        self._user = getpass.getuser()
+        lines = self._lines()
+        made = False
+        try:
+            with open(self.path, "x", encoding="utf-8") as f:
+                made = True
+                # Same two-line format QualCoder writes
+                # (__main__.py:2546-2547)
+                f.write(lines)
+        except BaseException:
+            if made:
+                try:
+                    self.path.unlink()
+                except OSError:
+                    pass
+            raise
+        self.text = lines
+
+    def start(self) -> None:
+        """Start the refresh, a daemon thread."""
+        thread = threading.Thread(target=self._run,
+                                  name="exegete-lock-refresh", daemon=True)
+        thread.start()
+        self._thread = thread
+
+    def _run(self) -> None:
+        while not self._stopped.wait(LOCK_REFRESH_SECONDS):
+            try:
+                if not self.refresh_once():
+                    return
+            except Exception as e:  # never let the refresh raise
+                self._log_once(("refresh", error_label(e)),
+                               "The project lock file's refresh failed, "
+                               "retried: %s", error_label(e))
+
+    def refresh_once(self) -> bool:
+        """Rewrite the time in the file if it still holds Exegete's lines.
+
+        Returns False when the refresh should end: stopped, the file
+        gone, or another program's lines in it.
+        """
+        if self._stopped.is_set():
+            return False
+        if not self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS):
+            return True
+        try:
+            if self._stopped.is_set():
+                return False
+            try:
+                # "r+" never creates the file nor empties it
+                with open(self.path, "r+", encoding="utf-8",
+                          errors="replace") as f:
+                    seen = f.read(LOCK_READ_MAX_BYTES)
+                    if seen == self.trying:
+                        self.text, self.trying = seen, None
+                    elif seen != self.text:
+                        self._log_once(
+                            "another", "The project lock file holds another "
+                            "program's lines; Exegete stops refreshing it")
+                        return False
+                    lines = self._lines()
+                    self.trying = lines
+                    f.seek(0)
+                    f.write(lines)
+                self.text, self.trying = lines, None
+                return True
+            except FileNotFoundError as e:
+                self._log_once(
+                    "gone", "The project lock file was removed during a "
+                    "write; Exegete stops refreshing it: %s", error_label(e))
+                return False
+            except OSError as e:
+                # Disk full, permission, a file held on Windows, or one
+                # pending deletion there: the last lines kept, retried
+                self._log_once(
+                    ("retry", error_label(e)), "Could not refresh the "
+                    "project lock file, retried: %s", error_label(e))
+                return True
+        finally:
+            self._mutex.release()
+
+    def _whose(self) -> str:
+        """"ours", "another", "gone" or "unreadable": what the file holds.
+
+        Exegete's lines are taken before and after the read, so a refresh
+        running beside it is never mistaken for another program's lines.
+        The file is closed before this returns.
+        """
+        before = (self.text, self.trying)
+        try:
+            with open(self.path, "r", encoding="utf-8",
+                      errors="replace") as f:
+                seen = f.read(LOCK_READ_MAX_BYTES)
+        except FileNotFoundError:
+            return "gone"
+        except OSError:
+            return "unreadable"
+        return "ours" if seen in before + (self.text, self.trying) \
+            else "another"
+
+    def still_ours(self) -> bool:
+        """Whether the file still holds Exegete's lines, for the check
+        before a commit; a file gone is not Exegete's.
+
+        Unreadable, or the mutex not taken: read once more after 0.5
+        seconds (`qualcoder_lock_state`'s wait), not waiting on the
+        mutex again; still so, the file counts as Exegete's while the
+        time last confirmed written is within `QUALCODER_LOCK_TIMEOUT` of
+        now, since only a stale lock is taken over. Never raises OSError.
+        """
+        if not self.held:
+            return False
+        whose = "unreadable"
+        if self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS):
+            try:
+                whose = self._whose()
+            finally:
+                self._mutex.release()
+        if whose == "unreadable":
+            time.sleep(0.5)
+            whose = self._whose()
+        if whose == "unreadable":
+            confirmed = float(self.text.splitlines()[1])
+            return time.time() - confirmed <= QUALCODER_LOCK_TIMEOUT
+        return whose == "ours"
+
+    def stop(self) -> None:
+        """Stop the refresh: the flag, then the join. Safe to repeat."""
+        self._stopped.set()
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(LOCK_WAIT_LIMIT_SECONDS)
+
+    def end(self) -> None:
+        """Stop the refresh, then remove the file only if it still reads
+        as Exegete's; otherwise leave it, with one log line by kind."""
+        self.stop()
+        # Without the mutex if it is not taken: a stuck refresh never
+        # creates the file, so the read before the removal still holds
+        got = self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS)
+        try:
+            whose = self._whose()
+            if whose == "unreadable":
+                time.sleep(0.5)
+                whose = self._whose()
+            if whose == "unreadable":
+                logger.warning("The project lock file could not be read at "
+                               "the end of a write; it was left in place")
+            elif whose == "another":
+                logger.warning("The project lock file holds another "
+                               "program's lines at the end of a write; it "
+                               "was left in place")
+            elif whose == "gone":
+                logger.warning("The project lock file was already gone at "
+                               "the end of a write")
+            else:
+                # The read above has closed its file, so that on Windows
+                # the removal is not refused by Exegete's own handle
+                try:
+                    self.path.unlink()
+                except OSError as e:
+                    # The kind only (v0.14): the error's text is the lock
+                    # file's path, the project folder's name in it.
+                    logger.warning("Could not remove project lock file: %s",
+                                   error_label(e))
+        finally:
+            if got:
+                self._mutex.release()
+
+
 @contextmanager
 def hold_project_lock(project_dir: Union[str, Path]):
     """Hold QualCoder's project lock for the duration of an MCP write.
 
     Mirrors QualCoder's own protocol: refuse when the lock is active; when
     it is absent, create it (username + epoch, mode 'x') so a QualCoder
-    launched mid-write politely refuses to open the project; delete it on
-    exit. A stale foreign lock is left alone (QualCoder's next open shows
-    its "not properly closed" prompt) and we proceed WITHOUT holding;
-    callers must re-check the lock state immediately before committing.
+    launched mid-write politely refuses to open the project, and keep it
+    fresh every `LOCK_REFRESH_SECONDS` for the whole write (v0.15.1); at
+    the end remove it only if it still holds Exegete's lines. A stale
+    foreign lock is left alone (QualCoder's next open shows its "not
+    properly closed" prompt) and we proceed WITHOUT holding or
+    refreshing; callers must re-check the lock state immediately before
+    committing.
 
     Yields:
-        True when the lock is held by us, False when proceeding over a
-        stale foreign lock.
+        A `ProjectLock`, true when the lock is held by us, false when
+        proceeding over a stale foreign lock.
 
     Raises:
         DatabaseLockedError: If QualCoder has the project open
     """
     project_dir = Path(project_dir)
-    lock = project_dir / QUALCODER_LOCK_FILENAME
+    lock = ProjectLock(project_dir / QUALCODER_LOCK_FILENAME)
 
     state, holder = qualcoder_lock_state(project_dir)
     if state == "active":
         raise DatabaseLockedError(qualcoder_open_message(holder))
 
-    held = False
     if state == "absent":
         try:
-            with open(lock, "x", encoding="utf-8") as f:
-                # Same two-line format QualCoder writes (__main__.py:2546-2547)
-                f.write(f"{getpass.getuser()}\n{time.time()}")
-            held = True
+            lock.create()
         except FileExistsError:
             # Race: someone created the lock between check and create
             state2, holder2 = qualcoder_lock_state(project_dir)
@@ -1334,18 +1575,12 @@ def hold_project_lock(project_dir: Union[str, Path]):
                            error_label(e))
 
     try:
-        yield held
+        if lock.held:
+            lock.start()
+        yield lock
     finally:
-        if held:
-            try:
-                lock.unlink()
-            except OSError as e:
-                # The kind only (v0.14): the error's text is the lock
-                # file's path, the project folder's name in it, and this
-                # line fires on every restore.
-                logger.warning("Could not remove project lock file: %s",
-                               error_label(e))
-
+        if lock.held:
+            lock.end()
 
 def position_safe(fulltext: str) -> bool:
     """Check whether Qt (GUI) and code-point positions coincide for a text.

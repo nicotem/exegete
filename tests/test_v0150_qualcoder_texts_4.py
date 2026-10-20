@@ -627,6 +627,16 @@ class TestFixRoundOneTheDocuments:
                 "typed there is read as not sure and never given), and "
                 "with a yes or a no it is given even when nothing was "
                 "found, so that answer enters the conversation") in bullet
+        # v0.15.1: the switch, by its title read from the manifest, and
+        # its variable: on, `setting` is yes whatever the text answer
+        # says, and the field is given even when nothing was found
+        switch = TEMPLATE["user_config"]["i_use_qualcoder"]["title"]
+        variable = names.NEW_ONLY_SETTINGS["i_use_qualcoder"]
+        sentence = next((s for s in bullet.split(". ")
+                         if f"\"{switch}\"" in s), "")
+        assert f"`{variable}`" in sentence
+        assert "`setting` is yes whatever that answer says" in sentence
+        assert "given even when nothing was found" in sentence
         # Fix round 2 reworded the closing clause (TestFixRoundTwoTheWords)
         assert ("the field holds plain sentences, a true or false and one "
                 "of those three answers (yes, no or not sure), never a path "

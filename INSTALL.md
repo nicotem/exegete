@@ -43,7 +43,7 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      extension from starting. Installed before 0.15.0, it may show
      `lifecycle`, the earlier name of `full`; it works as `full`. If
      the switch "Use the small tool set, for local models" is on, the
-     smaller set is used whatever this says.
+     smaller set is used whether this says `full` or `core`.
    - **Folder for projects**: where new projects are created and
      working copies of projects are kept. The default,
      `~/Exegete projects` (a folder called "Exegete projects" in
@@ -84,9 +84,8 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    - **I use QualCoder on this computer**: off unless you switch it
      on. On, Exegete takes it that you use QualCoder here and adds the
      notes that matter only if you also open your projects in
-     QualCoder; off, it decides from what it finds on each project and
-     on this computer, unless "Do you also use QualCoder on this
-     computer?" says yes or no. If either says yes, the answer is yes.
+     QualCoder; off, "Do you also use QualCoder on this computer?"
+     decides. If either says yes, the answer is yes.
      Whatever they say, Exegete still refuses to write while QualCoder
      3.8.2 has a project open, and still warns when it sees signs that
      QualCoder 4.0 may have one open.
@@ -762,7 +761,8 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   valid values. Resources and prompts are not affected.
 - `EXEGETE_SMALL_TOOLSET` (0.15.1): the extension's switch "Use the
   small tool set, for local models". `on`, `true` or `1`, in any letter
-  case, gives `core` whatever `EXEGETE_TOOLSET` says; `off`, `false`,
+  case, gives `core` whichever of `full` and `core` `EXEGETE_TOOLSET`
+  says (an unknown word there still stops Exegete); `off`, `false`,
   `0`, unset or blank leaves the choice to `EXEGETE_TOOLSET`. Any other
   value is read as off, and the log says so once at start, never the
   value; it never stops Exegete. Configuring Exegete yourself,

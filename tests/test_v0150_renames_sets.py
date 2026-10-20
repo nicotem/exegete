@@ -351,12 +351,12 @@ class TestTheExtension:
         assert option["default"] == "full"
         # v0.15.1: the words, as before; then the switch "Use the small
         # tool set, for local models", named by its title, gives the
-        # smaller set whatever this says; the restart sentence last
+        # smaller set over either word (tests/test_v0151_switches.py,
+        # what the words say); the restart sentence last
         assert option["description"].startswith(SETTING_DESCRIPTION)
         assert option["description"].endswith(RESTART)
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
-        assert (f"If the switch \"{switch}\" is on, the smaller set is "
-                f"used whatever this says.") in option["description"]
+        assert f"If the switch \"{switch}\" is on" in option["description"]
 
     def test_the_long_description(self):
         text = MANIFEST["long_description"]

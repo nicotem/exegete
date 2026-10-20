@@ -57,7 +57,7 @@
     "toolset": {
       "type": "string",
       "title": "Tool set",
-      "description": "Type one of two words. full: every tool, creating a new project included (recommended). core: a smaller set for local models. If this shows lifecycle, the earlier name of full, it works as full. Any other word stops the extension from starting. If the switch \"Use the small tool set, for local models\" is on, the smaller set is used whatever this says. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "Type one of two words. full: every tool, creating a new project included (recommended). core: a smaller set for local models. If this shows lifecycle, the earlier name of full, it works as full. Any other word stops the extension from starting. If the switch \"Use the small tool set, for local models\" is on, the smaller set is used whether this says full or core. After changing a setting, quit Claude Desktop and open it again.",
       "default": "full",
       "required": false
     },
@@ -85,7 +85,7 @@
     "i_use_qualcoder": {
       "type": "boolean",
       "title": "I use QualCoder on this computer",
-      "description": "On: Exegete takes it that you use QualCoder here and adds some notes that matter only if you also open your projects in QualCoder (such as whether an open QualCoder window shows Exegete's changes). Off: Exegete decides from what it finds on each project and on this computer, unless \"Do you also use QualCoder on this computer?\" says yes or no; if either says yes, the answer is yes. Whatever this says, Exegete still refuses to write while QualCoder 3.8.2 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "On: Exegete takes it that you use QualCoder here and adds some notes that matter only if you also open your projects in QualCoder (such as whether an open QualCoder window shows Exegete's changes). Off: \"Do you also use QualCoder on this computer?\" decides. If either says yes, the answer is yes. Whatever this says, Exegete still refuses to write while QualCoder 3.8.2 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open. After changing a setting, quit Claude Desktop and open it again.",
       "default": false,
       "required": false
     },

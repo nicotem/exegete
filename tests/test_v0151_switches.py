@@ -406,3 +406,60 @@ class TestTheStandInAndCi:
         # after the 0.14.0 update, which keeps its own expectation
         assert job.index("Update over the published 0.14.0 package") < \
             job.index("Update over the published 0.15.0 package")
+
+
+# =============================================================================
+# 9. WHAT THE WORDS SAY THE SWITCHES DO (fix round 1)
+# =============================================================================
+
+INSTALL = " ".join((REPO / "INSTALL.md").read_text(encoding="utf-8").split())
+
+
+def _between(text: str, start: str, end: str) -> str:
+    return text[text.index(start):text.index(end, text.index(start))]
+
+
+def _sentence_with(text: str, part: str) -> str:
+    return next(s for s in text.split(". ") if part in s)
+
+
+class TestTheWordsSayWhatTheSwitchesDo:
+
+    def test_the_tool_set_switch_wins_over_the_two_words_only(self):
+        # An unknown word in "Tool set" still stops the start with the
+        # switch on, so each sentence giving the switch the last word
+        # names the two words it wins over, and never "whatever"
+        texts = {
+            "the page": _sentence_with(
+                " ".join(CONFIG["toolset"]["description"].split()),
+                "the smaller set is used"),
+            "INSTALL, step 4": _sentence_with(
+                _between(INSTALL, "- **Tool set**:",
+                         "- **Folder for projects**"),
+                "the smaller set is used"),
+            "INSTALL, the variable": _sentence_with(
+                _between(INSTALL, f"- `{SMALL}` (0.15.1)",
+                         "- `EXEGETE_WORKSPACE`"),
+                "gives `core`"),
+        }
+        for where, sentence in texts.items():
+            for word in names.TOOLSETS:
+                assert word in sentence, (where, word)
+            assert "whatever" not in sentence, where
+        assert "still stops Exegete" in texts["INSTALL, the variable"]
+
+    def test_off_the_text_setting_decides(self):
+        # With the switch off, the answer is the text setting's; what
+        # Exegete finds weighs as that answer lets it, which the text
+        # setting's own description says
+        title = CONFIG["uses_qualcoder"]["title"]
+        page = " ".join(CONFIG["i_use_qualcoder"]["description"].split())
+        bullet = _between(INSTALL, "- **I use QualCoder on this computer**:",
+                          f"- **{title}**:")
+        for where, clause in (
+                ("the page", page[page.index("Off: "):]),
+                ("INSTALL, step 4", bullet[bullet.index("; off, ") + 2:])):
+            clause = clause.split(". ")[0]
+            assert f"\"{title}\"" in clause, where
+            assert clause.endswith("decides"), where
+            assert "what it finds" not in clause, where

@@ -1400,7 +1400,10 @@ Two further rules touch files on your disk:
   sure; any other word typed there is read as not sure and never
   given), and with a yes or a no it is given even when nothing was
   found, so that answer enters the conversation, as a coder name in the
-  settings does. For the settings folder and the files in `ai_data`,
+  settings does. When the extension's switch "I use QualCoder on this
+  computer" (`EXEGETE_I_USE_QUALCODER`) is on, `setting` is yes whatever
+  that answer says, and the field is then given even when nothing was
+  found. For the settings folder and the files in `ai_data`,
   only presence is checked: the settings folder's contents (QualCoder's
   settings and API keys) are never listed, opened or measured, and the
   field holds plain sentences, a true or false and one of those three

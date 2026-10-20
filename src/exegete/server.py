@@ -5973,7 +5973,8 @@ NO_BACKUP_NAMES_LIST = (
     "No backup could be made, so the names list was not saved. The "
     "researcher can check that the disk has free space and that the "
     "project folder can be written to, then preview again.")
-# restore_backup's words for a backup taken before a change was found
+# A names list changed during the save's backup (v0.15.1: its one use
+# left; every other refusal of the save comes before the backup)
 BACKUP_KEPT_ANYWAY = (
     " A backup had already been taken before the change was detected; it "
     "is unchanged and can be pruned.")
@@ -6352,8 +6353,8 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
                 _token_error("preview_secret_unavailable", "save_names_list"))
         return json.dumps(payload, indent=2)
 
-    # The save, as restore_backup's: the token, the lock file, a backup,
-    # then everything read again under the lock
+    # The save (v0.15.1): the token, the lock file, everything read again
+    # under the lock, then a backup, so a refusal leaves none
     state = fingerprint_rows(review.preview, review.rows)
     try:
         outcome = verify(preview_token, "save_names_list", token_args,
@@ -6368,35 +6369,38 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
         return json.dumps({**lock_error, "reason": "project_locked",
                            "nothing_changed": True})
     try:
-        backup = backup_project(folder)
-    except Exception as e:                              # noqa: BLE001
-        logger.error("save_names_list made no backup: %s", error_label(e))
-        return json.dumps({"error": NO_BACKUP_NAMES_LIST,
-                           "reason": "no_backup",
-                           "nothing_changed": True}, indent=2)
-    kept_backup = {"nothing_changed": True, "backup": backup.name}
-    try:
         with hold_project_lock(folder):
             again = _names_list_review(folder)
             if again.refusal is not None:
-                # A refusal found only now, after the backup: its own
-                # words, and the backup named
-                return json.dumps({
-                    **again.refusal,
-                    "error": again.refusal["error"] + BACKUP_KEPT_ANYWAY,
-                    **kept_backup}, indent=2)
+                return json.dumps(again.refusal, indent=2)
             if again.blocking or \
                     fingerprint_rows(again.preview, again.rows) != state:
                 return json.dumps({
                     "error": TOKEN_ERROR_TEXTS_BY_TOOL[(
-                        "save_names_list", "project_changed")]
-                    + BACKUP_KEPT_ANYWAY,
-                    "reason": "project_changed", **kept_backup}, indent=2)
+                        "save_names_list", "project_changed")],
+                    "reason": "project_changed", "nothing_changed": True},
+                    indent=2)
+            # The list as the token signed it and as it was read again
+            kept = again.rows["list"]
+            try:
+                backup = backup_project(folder)
+            except Exception as e:                      # noqa: BLE001
+                logger.error("save_names_list made no backup: %s",
+                             error_label(e))
+                return json.dumps({"error": NO_BACKUP_NAMES_LIST,
+                                   "reason": "no_backup",
+                                   "nothing_changed": True}, indent=2)
+            kept_backup = {"nothing_changed": True, "backup": backup.name}
             tmp: Optional[Path] = None
             try:
                 tmp = _write_pseudonyms_json_data_tmp(folder, again.data,
                                                       again.existing_mode)
-                os.replace(str(tmp), str(folder / PSEUDONYMS_JSON_NAME))
+                # The lock file does not keep every program from the
+                # list: one written since it was read again is not
+                # written over (below)
+                if pseudonyms_json_fingerprint(folder) == kept:
+                    os.replace(str(tmp), str(folder / PSEUDONYMS_JSON_NAME))
+                    tmp = None
             except Exception as e:                      # noqa: BLE001
                 if tmp is not None:
                     try:
@@ -6409,12 +6413,24 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
                     "error": NAMES_LIST_NOT_WRITTEN.format(
                         kind=type(e).__name__, backup=backup.name),
                     "reason": "not_saved", **kept_backup}, indent=2)
+            if tmp is not None:
+                # The list changed during the backup: left as the other
+                # program wrote it, and the backup made first named
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
+                return json.dumps({
+                    "error": TOKEN_ERROR_TEXTS_BY_TOOL[(
+                        "save_names_list", "project_changed")]
+                    + BACKUP_KEPT_ANYWAY,
+                    "reason": "project_changed", **kept_backup}, indent=2)
     except DatabaseLockedError as e:
-        # The lock file appeared between the check and the lock
+        # The lock file appeared between the check and the lock, before
+        # anything was read again or backed up
         return json.dumps({
-            "error": f"{e} The names list was not saved; the backup made "
-                     f"first is kept: {backup.name}.",
-            "reason": "project_locked", **kept_backup}, indent=2)
+            "error": f"{e} The names list was not saved.",
+            "reason": "project_locked", "nothing_changed": True}, indent=2)
     logger.info("save_names_list saved the project's names list "
                 "(%d entries).", len(again.data))
     return json.dumps({
@@ -12275,6 +12291,16 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
     try:
         with hold_project_lock(project_folder) as lock_held:
             doc_import.sweep_temporary_copies(project_folder / "documents")
+            # Each file read again under the lock file and before the
+            # backup (v0.15.1): one changed since the preview is refused
+            # with no backup. SQLite's lock does not guard files outside
+            # the project, so this read holds neither.
+            try:
+                doc_import.read_again(result, ctx)
+            except doc_import.BatchFailed as e:
+                return json.dumps({
+                    "error": doc_import.BATCH_FAILURES[e.code],
+                    "nothing_changed": True}, indent=2, ensure_ascii=False)
             # One backup, always (v0.15.1): the project but its database
             # copied, SQLite's write lock, the backup's database
             backup_path, stopped = _backup_before_change(
@@ -12287,6 +12313,9 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                     write_db.insert_imported_document, result, ctx, owner,
                     written)
                 if not taken:
+                    # The one refusal left after its backup (v0.15.1),
+                    # named with its reason in the tests of that promise
+                    # (test_v0151_one_backup.py)
                     return json.dumps(_with_backup({
                         "error": "No file was imported: every file was held "
                                  "back or refused when read again.",
@@ -13762,6 +13791,27 @@ def restore_backup(backup_path: str,
     # where it is (v0.15.0), for the note.
     exegete_had = _holds_exegete_folder(project_folder)
 
+    # Close the connection, check both databases again, back up, swap the
+    # folder, reopen read-only
+    global db
+    if db is not None:
+        try:
+            db.close()
+        except Exception:
+            pass
+        db = None
+
+    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
+        # The project (or the backup) changed between the preview and
+        # this moment: refused before the safety backup (v0.15.1), so a
+        # refusal leaves no backup.
+        return json.dumps({
+            "error": TOKEN_ERROR_TEXTS["project_changed"].format(
+                tool="restore_backup"),
+            "reason": "project_changed",
+            "nothing_changed": True,
+        })
+
     # Safety backup of the current state (rename to mark it as pre-restore)
     safety_report: Dict[str, Any] = {}
     safety_backup = backup_project(project_folder, report=safety_report)
@@ -13773,29 +13823,6 @@ def restore_backup(backup_path: str,
         safety_backup = marked
     except OSError:
         pass  # keep the unmarked name if rename fails
-
-    # Close the connection, swap the folder, reopen read-only
-    global db
-    if db is not None:
-        try:
-            db.close()
-        except Exception:
-            pass
-        db = None
-
-    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
-        # The project (or the backup) changed between the preview and
-        # this moment. The safety backup above stays; it is exactly the
-        # state the researcher has now.
-        return json.dumps({
-            "error": TOKEN_ERROR_TEXTS["project_changed"].format(
-                tool="restore_backup")
-            + " A backup had already been taken before the change was "
-              "detected; it is unchanged and can be pruned.",
-            "reason": "project_changed",
-            "nothing_changed": True,
-            "safety_backup": str(safety_backup),
-        })
 
     try:
         with hold_project_lock(project_folder) as held:
@@ -16541,7 +16568,7 @@ TOKEN_ERROR_TEXTS = {
     # text names the one thing that is certain, which is that the token
     # did not verify, lists what that is usually caused by, and gives
     # the single remedy they share. Where `project_changed` IS true it
-    # is still said: the in-transaction re-check under `_state_guarded`
+    # is still said: the re-check under the write lock (`_state_check`)
     # fires on a token that DID verify, and keeps its own wording
     # (D3 3.5 plus 4.3; fix round 4, carried to v0.13 A4).
     "project_changed_or_rotated": (
@@ -16711,29 +16738,28 @@ def _token_project() -> str:
     return os.path.normcase(str(validate_qda_path(current_project_path)))
 
 
-def _state_guarded(fingerprint_fn, expected: str, op_fn, tool: str):
-    """Wrap a write so it re-checks the rows after taking the lock (H2).
+def _state_check(state_of_fn, expected: str, tool: str, then=None):
+    """The token's state compared again under SQLite's write lock (H2),
+    as the write's `check` (v0.15.1): before the backup's database is
+    copied, so a project changed since the preview is refused with no
+    backup.
 
-    BEGIN IMMEDIATE takes SQLite's RESERVED lock before we re-read, so
-    between the re-read and the mutation no other writer can commit
-    against the rows we are about to change. Without it the window
-    between the read-only fingerprint and the delete is open, which is
-    exactly the window the token exists to close. Lives here so the
-    flagship's pseudonymisation can reuse it.
+    `_perform_write` takes SQLite's write lock (BEGIN IMMEDIATE) before
+    it calls this, so between the comparison and the change no other
+    writer can commit against the rows about to change. `then(wdb)`, a
+    tool's own checks under the same lock, runs only when the state
+    holds, and answers as a check does.
     """
-    def guarded(wdb):
-        wdb.begin_immediate()
-        if fingerprint_fn(wdb) != expected:
+    def check(wdb):
+        if state_of_fn(wdb) != expected:
             raise StateChangedError({
                 "error": TOKEN_ERROR_TEXTS["project_changed"].format(
-                    tool=tool)
-                + " A backup had already been taken before the change was "
-                  "detected; it is unchanged and can be pruned.",
+                    tool=tool),
                 "reason": PROJECT_CHANGED,
                 "nothing_changed": True,
             })
-        return op_fn(wdb)
-    return guarded
+        return None if then is None else then(wdb)
+    return check
 
 
 def _issue_preview(tool: str, args: Dict[str, Any], preview: Dict[str, Any],
@@ -16842,7 +16868,8 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
                          override_required_fn=None,
                          warnings_fn=None,
                          execute_guard_fn=None,
-                         state_of_fn=None) -> Dict[str, Any]:
+                         state_of_fn=None,
+                         check_fn=None) -> Dict[str, Any]:
     """Preview -> token -> safety-backup gate for destructive operations.
 
     Without a token this returns a preview (read-only, no backup, no
@@ -16850,10 +16877,12 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
     authorises that operation and nothing else. With a token it verifies
     the token against the tool, the arguments, the project and a
     fingerprint of the rows in the blast radius, checks the hidden-coder
-    gate, and only then runs the mutation under the full write discipline
-    with a mandatory backup and an in-transaction re-check.
+    gate, and only then runs the mutation under the full write discipline:
+    the state compared again under SQLite's write lock, then the
+    mandatory backup, then the change (v0.15.1: a project changed since
+    the preview leaves no backup).
 
-    The five optional hooks exist so the flagship reuses this gate rather
+    The six optional hooks exist so the flagship reuses this gate rather
     than paralleling it, and every one of them defaults to the behaviour
     the six codebook tools already had:
 
@@ -16878,7 +16907,11 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
       exists because the default route recomputes a whole readable
       preview, presentation and all, inside the write transaction: for
       the flagship that meant a second full residue scan of every memo
-      in the project while holding SQLite's RESERVED lock.
+      in the project while holding SQLite's RESERVED lock;
+    - `check_fn(write_db)` is the tool's own checks again, under SQLite's
+      write lock after the state is compared, before the backup's
+      database (v0.15.1): None goes on, a dict is the answer, and either
+      way a refusal there leaves no backup.
     """
     def state_of(db_) -> str:
         """The signed state: what the preview says AND which rows it covers.
@@ -16938,7 +16971,9 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
         if refusal is not None:
             return refusal
 
-    result = _perform_write(_state_guarded(state_of, state, op_fn, tool),
+    result = _perform_write(op_fn,
+                            check=_state_check(state_of, state, tool,
+                                               check_fn),
                             backup_fail_detail=backup_fail_detail)
     if isinstance(result, dict) and "error" not in result \
             and "collateral" in preview:
@@ -19667,6 +19702,26 @@ def pseudonymise_source(
         return fingerprint_rows(wdb.pseudonymise_effect(plan, memo_plan),
                                 wdb.pseudonymise_row_digests(plan, memo_plan))
 
+    def _save_check(wdb):
+        """The save's checks again, under SQLite's write lock and before
+        the backup's database (v0.15.1): a names list that cannot be
+        saved, or that conflicts, is refused with no backup. The merge is
+        kept for `_op`, with the fingerprint of the file taken before it
+        was read, so a file changed after this read is merged again."""
+        if not save:
+            return None
+        folder = _current_project_folder()
+        fingerprint = pseudonyms_json_fingerprint(folder)
+        try:
+            merge = _pseudonyms_json_merge(folder, validated)
+        except _SaveRefused as e:
+            return _pseudonyms_json_refusal(e)
+        if merge["conflicts"]:
+            return _pseudonyms_json_conflict(merge)
+        captured["pseudonyms_json_merge"] = merge
+        captured["pseudonyms_json_fingerprint"] = fingerprint
+        return None
+
     def _op(wdb):
         plan = captured.get("write_plan")
         if plan is None:                  # pragma: no cover - defensive
@@ -19697,19 +19752,24 @@ def pseudonymise_source(
         if save:
             # The save, between the rewrite and the journal entry: the
             # merged list to a temporary file beside the target, renamed
-            # into place only after the commit. Checked again here, under
-            # the lock and after the backup: the file may have moved since
-            # the check before the backup, and a refusal now rolls the run
-            # back and names the backup.
+            # into place only after the commit. The merge is the one the
+            # check made under the lock, before the backup; SQLite's lock
+            # does not guard the file, so its fingerprint is taken again
+            # here, and a file changed during the backup is merged again,
+            # a refusal now rolling the run back and naming the backup.
             folder = _current_project_folder()
-            try:
-                merge = _pseudonyms_json_merge(folder, validated)
-            except _SaveRefused as e:
-                raise RuntimeError(_pseudonyms_json_refusal(e)["error"]) \
-                    from None
-            if merge["conflicts"]:
-                raise RuntimeError(_pseudonyms_json_conflict(merge)["error"])
-            captured["pseudonyms_json_merge"] = merge
+            merge = captured.get("pseudonyms_json_merge")
+            if merge is None or pseudonyms_json_fingerprint(folder) != \
+                    captured.get("pseudonyms_json_fingerprint"):
+                try:
+                    merge = _pseudonyms_json_merge(folder, validated)
+                except _SaveRefused as e:
+                    raise RuntimeError(
+                        _pseudonyms_json_refusal(e)["error"]) from None
+                if merge["conflicts"]:
+                    raise RuntimeError(
+                        _pseudonyms_json_conflict(merge)["error"])
+                captured["pseudonyms_json_merge"] = merge
             captured["pseudonyms_json_tmp"] = _write_pseudonyms_json_tmp(
                 folder, merge["merged"], merge["existing_mode"])
         retention["entries_to_add"] = (
@@ -19792,6 +19852,7 @@ def pseudonymise_source(
             warnings_fn=_pseudonymise_warnings,
             execute_guard_fn=_collisions_refusal,
             state_of_fn=_state_on_write_connection,
+            check_fn=_save_check,
         )
     finally:
         # A run that did not commit leaves no pseudonyms.json behind for

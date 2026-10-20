@@ -1143,30 +1143,38 @@ class TestFileLevelOperations:
         was not, and replacing the comparison with `if False:` left the
         suite green.
 
-        The racing write lands inside the window by riding on the safety
-        backup itself, so no sleep and no wall clock are involved.
+        The racing write lands inside the window by riding on the last
+        check before it, whether another program is writing to the
+        database, so no sleep and no wall clock are involved. Since
+        v0.15.1 the re-check comes before the safety backup, so the
+        refusal leaves none.
         """
         H.execute_destructive(server.delete_code, 2)   # makes a backup
         backups = _backups(qualcoder_db_path)
         backup = str(Path(qualcoder_db_path).parent / backups[-1])
         token = _preview(server.restore_backup, backup)["preview_token"]
 
-        real_backup = server.backup_project
+        real_check = server._project_is_write_locked
+        fired = []
 
-        def racing_backup(folder, *args, **kwargs):
-            made = real_backup(folder, *args, **kwargs)
+        def racing_check(*args, **kwargs):
+            locked = real_check(*args, **kwargs)
+            fired.append(True)
             H.execute(qualcoder_db_path,
                       "INSERT INTO code_name (cid, name, memo, catid, "
                       "owner, date, color) VALUES (99, 'RacedIn', '', NULL, "
                       "'TestCoder', '2024-01-15', '#FF0000')")
-            return made
+            return locked
 
-        monkeypatch.setattr(server, "backup_project", racing_backup)
+        monkeypatch.setattr(server, "_project_is_write_locked",
+                            racing_check)
         out = _preview(server.restore_backup, backup, preview_token=token)
+        assert fired, "the race never happened; the test proves nothing"
         assert out["reason"] == "project_changed", out
         assert out["nothing_changed"] is True
-        assert "A backup had already been taken" in out["error"]
-        assert Path(out["safety_backup"]).exists()
+        assert "A backup had already been taken" not in out["error"]
+        assert "safety_backup" not in out
+        assert _backups(qualcoder_db_path) == backups
         # The racing row is still there: the folder was not destroyed.
         assert H.query(qualcoder_db_path,
                        "SELECT COUNT(*) AS n FROM code_name WHERE cid=99"

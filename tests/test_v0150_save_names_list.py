@@ -1364,8 +1364,9 @@ class TestTheSave:
 
 
 def _after_the_backup(monkeypatch, then):
-    """backup_project as it is, then `then(folder)`: what happens between
-    the token's check and the lock."""
+    """backup_project as it is, then `then(folder)`: what happens during
+    the save's backup, under the lock and after everything was read
+    again (v0.15.1)."""
     real = server.backup_project
 
     def backup(folder, report=None):
@@ -1373,6 +1374,22 @@ def _after_the_backup(monkeypatch, then):
         then(Path(folder))
         return made
     monkeypatch.setattr(server, "backup_project", backup)
+
+
+def _before_the_lock(monkeypatch, folder, then):
+    """The lock file's check as it is, then `then(folder)`: what happens
+    between the token's check and the lock, before anything is read
+    again or backed up (v0.15.1)."""
+    real = server._qualcoder_open_error
+    fired = []
+
+    def check():
+        answer = real()
+        fired.append(True)
+        then(folder)
+        return answer
+    monkeypatch.setattr(server, "_qualcoder_open_error", check)
+    return fired
 
 
 def _no_temporary_file(folder):
@@ -1388,21 +1405,68 @@ class TestBetweenTheTokenAndTheWrite:
         before = _list_bytes(selected)
         _write_names(selected, GOOD)
         token = _preview(selected)["preview_token"]
-        _after_the_backup(monkeypatch, lambda folder: _write_names(
-            folder, "Quorvin Ashdale = Participant R"))
+        fired = _before_the_lock(monkeypatch, selected, lambda folder:
+                                 _write_names(
+                                     folder,
+                                     "Quorvin Ashdale = Participant R"))
         answer = _save(token)
+        assert fired, "the change never happened; the test proves nothing"
         assert answer["reason"] == "project_changed"
         assert answer["nothing_changed"] is True
-        assert answer["error"].endswith(
-            " A backup had already been taken before the change was "
-            "detected; it is unchanged and can be pruned.")
-        # fix round 1: in the names file's words, not of rows
+        # fix round 1: in the names file's words, not of rows; v0.15.1:
+        # read again before the backup, so none is made or named
         assert answer["error"].startswith(TOKEN_CHANGED_UNDER_THE_LOCK)
-        assert _backups(selected) == [answer["backup"]]
+        assert "already been taken" not in answer["error"]
+        assert "backup" not in answer
+        assert _backups(selected) == []
         assert _list_bytes(selected) == before
         assert _no_temporary_file(selected)
 
-    def test_a_refusal_found_under_the_lock_names_the_backup(
+    def test_a_refusal_found_under_the_lock_leaves_no_backup(
+            self, selected, monkeypatch, tmp_path):
+        _write_names(selected, GOOD)
+        token = _preview(selected)["preview_token"]
+        target = tmp_path / "kept.json"
+        target.write_text("[]", encoding="utf-8")
+        if not _symlink(tmp_path / "probe", target):
+            pytest.skip("links cannot be made here")
+        fired = _before_the_lock(monkeypatch, selected, lambda folder:
+                                 _symlink(folder / "pseudonyms.json",
+                                          target))
+        answer = _save(token)
+        assert fired, "the link was never made; the test proves nothing"
+        assert answer["reason"] == "pseudonyms_json_is_a_link"
+        assert answer["nothing_changed"] is True
+        assert "backup" not in answer
+        assert "can be pruned" not in answer["error"]
+        assert _backups(selected) == []
+        assert target.read_text(encoding="utf-8") == "[]"
+
+    def test_a_list_written_during_the_backup_is_left_as_written(
+            self, selected, monkeypatch):
+        """SQLite's lock and the lock file keep no program from
+        pseudonyms.json (QualCoder 4.0 writes it in place): one written
+        while the backup is made is left as that program wrote it, and
+        the backup made first is named."""
+        _write_list(selected, [("Ottoline", "Participant O")])
+        _write_names(selected, GOOD)
+        token = _preview(selected)["preview_token"]
+        _after_the_backup(monkeypatch, lambda folder: _write_list(
+            folder, [("Ottoline", "Participant O"),
+                     ("Wilfreda", "Participant W")]))
+        answer = _save(token)
+        assert answer["reason"] == "project_changed"
+        assert answer["nothing_changed"] is True
+        assert answer["error"].startswith(TOKEN_CHANGED_UNDER_THE_LOCK)
+        assert answer["error"].endswith(
+            " A backup had already been taken before the change was "
+            "detected; it is unchanged and can be pruned.")
+        assert _backups(selected) == [answer["backup"]]
+        assert [entry["original"] for entry in json.loads(
+            _list_bytes(selected))] == ["Ottoline", "Wilfreda"]
+        assert _no_temporary_file(selected)
+
+    def test_a_link_made_during_the_backup_is_left_alone(
             self, selected, monkeypatch, tmp_path):
         _write_names(selected, GOOD)
         token = _preview(selected)["preview_token"]
@@ -1413,12 +1477,11 @@ class TestBetweenTheTokenAndTheWrite:
         _after_the_backup(monkeypatch, lambda folder: _symlink(
             folder / "pseudonyms.json", target))
         answer = _save(token)
-        assert answer["reason"] == "pseudonyms_json_is_a_link"
-        assert answer["nothing_changed"] is True
+        assert answer["reason"] == "project_changed"
         assert _backups(selected) == [answer["backup"]]
-        assert answer["error"].endswith("it is unchanged and can be "
-                                        "pruned.")
+        assert (selected / "pseudonyms.json").is_symlink()
         assert target.read_text(encoding="utf-8") == "[]"
+        assert _no_temporary_file(selected)
 
     def test_a_failed_write_leaves_no_temporary_file(self, selected,
                                                      monkeypatch):
@@ -1467,14 +1530,16 @@ class TestBetweenTheTokenAndTheWrite:
                                                      monkeypatch):
         _write_names(selected, GOOD)
         token = _preview(selected)["preview_token"]
-        _after_the_backup(monkeypatch, lambda folder: (
+        fired = _before_the_lock(monkeypatch, selected, lambda folder: (
             folder / "project_in_use.lock").write_text(
                 f"someone\n{time.time()}\n", encoding="utf-8"))
         answer = _save(token)
+        assert fired, "the lock never appeared; the test proves nothing"
         assert "QualCoder" in answer["error"]
-        assert answer["error"].endswith(
-            f"The names list was not saved; the backup made first is kept: "
-            f"{answer['backup']}.")
+        # v0.15.1: the lock is taken before the backup, so none is made
+        assert answer["error"].endswith("The names list was not saved.")
+        assert "backup" not in answer
+        assert _backups(selected) == []
         assert answer["nothing_changed"] is True
         # fix round 1: a reason, as every other refusal of the tool has
         assert answer["reason"] == "project_locked"

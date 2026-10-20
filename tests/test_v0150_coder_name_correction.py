@@ -502,7 +502,9 @@ class TestAChangeAfterThePreview:
     def test_the_change_is_rechecked_inside_the_transaction(
             self, tmp_path, monkeypatch):
         """A row recorded between the token's check and the write: the
-        re-check under the write lock refuses, after the backup."""
+        re-check under the write lock refuses; since v0.15.1 it is the
+        write's check, before the backup's database, so no backup is
+        left."""
         folder = _make(tmp_path)
         token = _preview(NEW)["preview_token"]
         real = database.QualcoderDatabase.begin_immediate
@@ -516,7 +518,8 @@ class TestAChangeAfterThePreview:
         answer = _call(NEW, token)
         assert answer["reason"] == "project_changed", answer
         assert _stored(folder)[0] == OLD
-        assert Path(answer["backup_path"]).is_dir()
+        assert "backup_path" not in answer
+        assert list(folder.parent.glob(f"{folder.stem}_backup_*")) == []
 
     def test_a_token_for_another_name_is_refused(self, tmp_path):
         folder = _make(tmp_path)

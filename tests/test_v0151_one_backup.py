@@ -84,6 +84,13 @@ def snapshot(folder):
                            if names_list.is_file() else None)}
 
 
+def documents_in(folder):
+    """The names in the project's folder of originals."""
+    documents = Path(folder) / "documents"
+    return (sorted(p.name for p in documents.iterdir())
+            if documents.is_dir() else [])
+
+
 def refused(result, text):
     """An answer carrying "error", or a call returning isError. A write
     that answers in text (apply_codings) is judged by its effect."""
@@ -643,21 +650,59 @@ async def race_import_documents(client, folder, root, patch, race):
     return "import_documents", arguments
 
 
+async def two_interviews_previewed(client, root):
+    interviews = root / "interviews"
+    interviews.mkdir()
+    for name in ("int3.txt", "int4.txt"):
+        (interviews / name).write_text(f"Notes in {name}.\n",
+                                       encoding="utf-8")
+    preview = await call(client, "import_documents",
+                         {"paths": [str(interviews)]})
+    assert preview.get("preview_token"), preview
+    return interviews, {"paths": [str(interviews)],
+                        "preview_token": preview["preview_token"]}
+
+
+async def race_import_file_gone(client, folder, root, patch, race):
+    """A file the preview read removed, and the other one left as it
+    was: the read that finds it gone refuses before the backup."""
+    interviews, arguments = await two_interviews_previewed(client, root)
+    at_first_call(patch, doc_import, "sweep_temporary_copies", race(
+        lambda: (interviews / "int4.txt").unlink()))
+    return "import_documents", arguments
+
+
+async def race_import_file_too_large(client, folder, root, patch, race):
+    """A file grown past its format's limit: read again, it is too
+    large to read (no bytes), which refuses before the backup."""
+    interviews, arguments = await two_interviews_previewed(client, root)
+    limit = doc_import.SIZE_LIMITS[doc_import.doc_readers.TEXT]
+    at_first_call(patch, doc_import, "sweep_temporary_copies", race(
+        lambda: (interviews / "int4.txt").write_bytes(b"x" * (limit + 1))))
+    return "import_documents", arguments
+
+
+# The one refusal left after its backup (the design's choice, for v0.15.1
+# alone): import_documents' "No file was imported: every file was held
+# back or refused when read again", when the preview's kept text is gone.
+# It keeps its backup and names it; moving it before the lock is for the
+# next release.
+
 # (what changes, the arrangement, and why it still leaves a backup, None
-# once it does not: the first three since piece 3's re-checks)
+# once it does not: every race since piece 3's re-checks)
 RACES = [
     ("a case of that name added", race_create_case, None),
     ("a case renamed to a name added", race_rename_case, None),
     ("a file renamed to a name added", race_rename_file, None),
-    ("a coding added to a code being deleted", race_delete_code,
-     "delete_code checks its preview again only after its backup"),
+    ("a coding added to a code being deleted", race_delete_code, None),
     ("a conflicting names list written while pseudonymising",
-     race_pseudonymise_source,
-     "pseudonymise_source checks the names list again only after its "
-     "backup"),
+     race_pseudonymise_source, None),
     ("a file changed when the import takes the lock",
-     race_import_documents,
-     "import_documents reads its files again only after its backup"),
+     race_import_documents, None),
+    ("a file removed when the import takes the lock",
+     race_import_file_gone, None),
+    ("a file grown past its limit when the import takes the lock",
+     race_import_file_too_large, None),
 ]
 
 
@@ -689,16 +734,23 @@ def test_a_change_inside_the_window_leaves_no_backup(tmp_path, monkeypatch,
             tool, arguments = await arrange(client, folder, tmp_path, patch,
                                             race)
             before = snapshot(folder)
+            originals = documents_in(folder)
             result = await client.call_tool(tool, arguments)
-        return tool, before, snapshot(folder), result
+        return (tool, before, snapshot(folder), result, originals,
+                documents_in(folder))
 
-    tool, before, after, result = host_session(drive)
+    tool, before, after, result, originals, originals_after = \
+        host_session(drive)
     assert fired, "the race never happened; the test proves nothing"
     # what the other program left is the state the call must keep
     raced = {**fired[0], "backups": before["backups"]}
     record = judge(tool, raced, after, refused(result, text_of(result)))
     assert not record["changed"], text_of(result)[:300]
     promise(record["broken"])
+    # nothing left in the folder of originals, and the answer says so
+    assert originals_after == originals
+    if tool == "import_documents":
+        assert body_of(text_of(result))["nothing_changed"] is True
 
 
 # ---------------------------------------------------------------------------

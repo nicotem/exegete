@@ -1385,6 +1385,37 @@ class Written:
         self.temps, self.finals = [], []
 
 
+def read_again(result: Survey, ctx: Context,
+               now: Optional[Callable[[], float]] = None) -> None:
+    """Each ready file read again before the import's backup (v0.15.1),
+    in `write_batch`'s order and under its rule for time, the rest left
+    for the next call as there, and its digest compared with the
+    survey's; no bytes are kept. Raises BatchFailed("changed") for a
+    file that changed, went or grew past its limit since the preview,
+    as `write_batch` does, so that refusal leaves no backup;
+    `write_batch` compares again for the seconds after."""
+    now = now or clock
+    started = ctx.call_started if ctx.call_started is not None else now()
+    first = True
+    stopped = False
+    for item in result.items:
+        if item.status != "ready":
+            continue
+        timeout = None if stopped else _time_for(
+            IMPORT_FILE_SECONDS, ctx.call_seconds, started, first, now)
+        if timeout is None:
+            stopped = True
+            item.status, item.code = "later", NOT_IMPORTED_THIS_TIME
+            continue
+        first = False
+        try:
+            data, _size = read_bytes(item.path, SIZE_LIMITS[item.kind])
+        except _ReadRefusal:
+            raise BatchFailed("changed") from None
+        if data is None or digest_of(data) != item.digest:
+            raise BatchFailed("changed")
+
+
 def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
                 ctx: Context, owner: str, written: Written,
                 now: Optional[Callable[[], float]] = None) -> List[Item]:

@@ -62,6 +62,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the same words as before; so does a call refused because another
   program changed the row just before, such as a private section added
   to an annotation being deleted.
+- **A two-step change, a names list or an import refused because
+  something changed leaves no backup.** `merge_codes`, `delete_code`,
+  `delete_category`, `merge_category`, `set_project_coder_name` and
+  `pseudonymise_source` compare the project with their preview again
+  under SQLite's write lock, before the backup's database is copied: a
+  project changed since the preview is refused with nothing changed and
+  no backup, and the answer no longer says that a backup had been taken.
+  `pseudonymise_source` checks its save into `pseudonyms.json` there
+  too; a `pseudonyms.json` written while the backup is made is merged
+  again before the run writes it, and a conflict found then rolls the
+  run back and names the backup, as before. `save_names_list` takes the
+  project's lock file and reads the names file and the names list again
+  before its backup, so a refusal there leaves none; a names list
+  another program writes while the backup is made is left as it was
+  written, and the save is refused with the backup named.
+  `import_documents` reads each file again under the lock file before
+  its backup: a file changed, removed or grown past its limit since the
+  preview is refused with no backup. `restore_backup` compares both
+  databases again before its safety backup, so a restore refused
+  because either changed leaves no safety backup.
 
 ### Fixed
 

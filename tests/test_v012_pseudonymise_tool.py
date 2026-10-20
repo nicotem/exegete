@@ -2978,7 +2978,9 @@ class TestTheNoteRewriteIsSignedAndShown:
         refused = execute_from(out)
         assert fired, "the race never happened; the test proves nothing"
         assert refused["reason"] == "project_changed", refused
-        assert "A backup had already been taken" in refused["error"]
+        # v0.15.1: refused before the backup, and no backup claimed
+        assert "A backup had already been taken" not in refused["error"]
+        assert backups(project) == []
         assert query(project, "SELECT fulltext FROM source WHERE id=1"
                      )[0]["fulltext"] == TEXT
         # Nothing was written: each note holds what the race left in it.
@@ -4683,13 +4685,14 @@ class TestSavingTheMappingIntoPseudonymsJson:
                                                     "pseudonym": "Pat"}
 
     @POSIX_ONLY
-    def test_the_kept_mode_is_the_mode_of_the_file_read(
+    def test_a_link_swapped_in_after_the_check_read_the_file_is_refused(
             self, project, tmp_path, monkeypatch):
-        """Fix round 2, RS-2 (Security's B3c): just after the merge inside
-        the run's transaction has read the file, the name is swapped for a
-        link to a file anyone may write. The mode kept is the mode of the
-        file that was read, from the reader's own fstat, not the link
-        target's."""
+        """Fix round 2, RS-2 (Security's B3c), and v0.15.1: just after the
+        merge under the run's lock has read the file, the name is swapped
+        for a link to a file anyone may write. The file changed after it
+        was read, so the run merges again, meets the link, and is refused
+        and rolled back with its backup named: the link is left as made
+        and the file linked to is not touched."""
         _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"}])
         os.chmod(project / "pseudonyms.json", 0o600)
         loud = tmp_path / "world.json"
@@ -4701,7 +4704,7 @@ class TestSavingTheMappingIntoPseudonymsJson:
         def reader(folder):
             value = real(folder)
             calls.append(1)
-            if len(calls) == 4:     # the merge inside the run's transaction
+            if len(calls) == 4:     # the merge under the run's lock
                 target = project / "pseudonyms.json"
                 target.rename(project / "aside.json")
                 target.symlink_to(loud)
@@ -4709,14 +4712,13 @@ class TestSavingTheMappingIntoPseudonymsJson:
 
         monkeypatch.setattr(server, "read_project_pseudonyms_with_raw",
                             reader)
-        _, result = _save_run()
+        _, refused = _save_run()
         assert len(calls) == 4
-        assert result["mapping_saved"] is True
-        target = project / "pseudonyms.json"
-        assert not target.is_symlink()
-        assert stat.S_IMODE(target.stat().st_mode) == 0o600
-        assert json.loads(_written(project))[0] == {"original": "Peter",
-                                                    "pseudonym": "Pat"}
+        assert "symbolic link" in refused["error"]
+        assert backups(project) == [Path(refused["backup_path"]).name]
+        assert query(project, "SELECT fulltext FROM source WHERE id=1"
+                     )[0]["fulltext"] == TEXT
+        assert (project / "pseudonyms.json").is_symlink()
         # The file linked to is not touched.
         assert stat.S_IMODE(loud.stat().st_mode) == 0o666
         assert loud.read_text(encoding="utf-8") == "[]"
@@ -4724,12 +4726,13 @@ class TestSavingTheMappingIntoPseudonymsJson:
     @POSIX_ONLY
     def test_the_kept_mode_is_read_before_the_reader_closes_the_file(
             self, project, tmp_path, monkeypatch):
-        """v0.13's re-verification (RF2-2) and v0.14's item 5: the swap
-        above comes after the reader has returned, so a reader that took
-        the mode by path after closing its descriptor would pass it. Here
-        the name is swapped for a link at the reader's own close, inside
-        the merge the run's transaction makes, so only a mode taken from
-        the descriptor that was read is 0600."""
+        """v0.13's re-verification (RF2-2) and v0.14's item 5: a reader
+        that took the mode by path after closing its descriptor would
+        take a link's. Here the name is swapped for a link at the
+        reader's own close, inside the merge the run makes again after
+        the file changed during its backup (v0.15.1: the last read
+        before the save), so only a mode taken from the descriptor that
+        was read is 0600."""
         from exegete import database as database_module
         _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"}])
         os.chmod(project / "pseudonyms.json", 0o600)
@@ -4738,7 +4741,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
         os.chmod(loud, 0o666)
         real_reader = server.read_project_pseudonyms_with_raw
         real_os = database_module.os
-        calls, armed, swapped = [], [], []
+        real_backup = QualcoderDatabase.backup_before_write
+        backed_up, armed, swapped = [], [], []
 
         class OsWithASwapAtClose:
             """The module's `os`, with `close` swapping the name for a
@@ -4756,24 +4760,35 @@ class TestSavingTheMappingIntoPseudonymsJson:
                     target.symlink_to(loud)
                     swapped.append(1)
 
+        def backing_up(self):
+            made = real_backup(self)
+            # another program adds an entry while the backup is made
+            _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"},
+                                    {"original": "Lena", "pseudonym": "Lou"}])
+            backed_up.append(1)
+            return made
+
         def reader(folder):
-            calls.append(1)
-            if len(calls) == 4:     # the merge inside the run's transaction
+            if backed_up:           # the merge made again
                 armed.append(1)
             try:
                 return real_reader(folder)
             finally:
                 armed.clear()
 
+        monkeypatch.setattr(QualcoderDatabase, "backup_before_write",
+                            backing_up)
         monkeypatch.setattr(database_module, "os", OsWithASwapAtClose())
         monkeypatch.setattr(server, "read_project_pseudonyms_with_raw",
                             reader)
         _, result = _save_run()
-        assert len(calls) == 4 and swapped == [1]
+        assert backed_up == [1] and swapped == [1]
         assert result["mapping_saved"] is True
         target = project / "pseudonyms.json"
         assert not target.is_symlink()
         assert stat.S_IMODE(target.stat().st_mode) == 0o600
+        assert [entry["original"] for entry in json.loads(
+            _written(project))][:2] == ["Peter", "Lena"]
         # The file linked to is not touched.
         assert stat.S_IMODE(loud.stat().st_mode) == 0o666
         assert loud.read_text(encoding="utf-8") == "[]"
@@ -5220,6 +5235,92 @@ class TestSavingTheMappingIntoPseudonymsJson:
 # =============================================================================
 # v0.13 Brief 2: the two inspection routes (ruling 14b; tests 58 and 59)
 # =============================================================================
+
+class TestTheMappingWrittenWhileTheRunRuns:
+    """v0.15.1: the save's checks are the write's check, under SQLite's
+    lock before the backup's database; SQLite's lock does not keep any
+    program from pseudonyms.json, so the run takes the file's
+    fingerprint again before it writes the merged list, and merges again
+    when it changed."""
+
+    OTHER = {"original": "Peter", "pseudonym": "Lou"}
+
+    @staticmethod
+    def _during_the_backup(monkeypatch, then):
+        """The backup's database copied, then `then()`: after the check,
+        before the change."""
+        original = QualcoderDatabase.backup_before_write
+        fired = []
+
+        def backing_up(self):
+            made = original(self)
+            if not fired:
+                fired.append(True)
+                then()
+            return made
+        monkeypatch.setattr(QualcoderDatabase, "backup_before_write",
+                            backing_up)
+        return fired
+
+    def test_a_conflicting_list_written_during_the_backup_ends_the_run(
+            self, project, monkeypatch):
+        out = preview_of(save_mapping_to_project=True)
+        written = [{"original": "Mary Ann", "pseudonym": "Zelda"}]
+        fired = self._during_the_backup(
+            monkeypatch, lambda: _sidecar_file(project, written))
+        refused = execute_strictly(out)
+        assert fired, "the write never happened; the test proves nothing"
+        assert "maps a name the file already maps" in refused["error"]
+        # the backup made first is named, and the run rolled back
+        assert backups(project) == [Path(refused["backup_path"]).name]
+        assert query(project, "SELECT fulltext FROM source WHERE id=1"
+                     )[0]["fulltext"] == TEXT
+        # the file as the other program left it
+        assert json.loads(_written(project)) == written
+        assert list(project.glob("pseudonyms.json.*")) == []
+
+    def test_a_list_written_during_the_backup_is_merged_again(
+            self, project, monkeypatch):
+        out = preview_of(save_mapping_to_project=True)
+        fired = self._during_the_backup(
+            monkeypatch, lambda: _sidecar_file(project, [self.OTHER]))
+        result = execute_strictly(out)
+        assert fired, "the write never happened; the test proves nothing"
+        assert result.get("success") is True, result
+        assert result["mapping_saved"] is True
+        assert [entry["original"] for entry in json.loads(
+            _written(project))] == ["Peter", "Mary Ann", "Thomas", "Tom"]
+
+    def test_a_list_written_just_after_the_check_read_it_is_merged_again(
+            self, project, monkeypatch):
+        """The fingerprint the check keeps is taken before its read, so a
+        file changed between the read and the fingerprint is not taken
+        for the one the merge parsed."""
+        _sidecar_file(project, [])
+        out = preview_of(save_mapping_to_project=True)
+        original_begin = QualcoderDatabase.begin_immediate
+        original_read = server.read_project_pseudonyms_with_raw
+        locked = []
+        fired = []
+
+        def begin(self):
+            locked.append(True)
+            return original_begin(self)
+
+        def read(folder):
+            answer = original_read(folder)
+            if locked and not fired:
+                fired.append(True)
+                _sidecar_file(project, [self.OTHER])
+            return answer
+        monkeypatch.setattr(QualcoderDatabase, "begin_immediate", begin)
+        monkeypatch.setattr(server, "read_project_pseudonyms_with_raw", read)
+        result = execute_strictly(out)
+        assert fired, "the write never happened; the test proves nothing"
+        assert result.get("success") is True, result
+        assert [entry["original"] for entry in json.loads(
+            _written(project))] == ["Peter", "Mary Ann", "Thomas", "Tom"]
+
 
 # =============================================================================
 # The merge fix (M3): the mapping across a restore and a prune
@@ -6461,8 +6562,9 @@ class TestConcurrencyAndFaults:
             self, project, monkeypatch):
         """BEGIN IMMEDIATE takes the RESERVED lock before the re-read, so
         another writer can only commit strictly before it. The re-read
-        then sees the change and refuses with the backup already taken,
-        and says so."""
+        then sees the change and refuses; since v0.15.1 it is the write's
+        check, before the backup's database, so no backup is left or
+        claimed."""
         out = preview_of()
         original = QualcoderDatabase.begin_immediate
         fired = []
@@ -6482,8 +6584,9 @@ class TestConcurrencyAndFaults:
         refused = execute_from(out)
         assert fired, "the race never happened; the test proves nothing"
         assert refused["reason"] == "project_changed"
-        assert "A backup had already been taken" in refused["error"]
-        assert len(backups(project)) == 1
+        assert "A backup had already been taken" not in refused["error"]
+        assert backups(project) == []
+        assert "backup_path" not in refused
         assert server.db.read_only is True
 
     def test_the_reserved_lock_blocks_a_second_writer(self, project,

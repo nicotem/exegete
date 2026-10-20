@@ -76,6 +76,8 @@ from .database import (
     backup_database_is_link,
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
+    CATEGORY_CYCLE_REFUSAL,
+    SUBCODES_NEED_CASCADE,
     _is_locked_error,
     default_workspace,
     earlier_workspace_holds_projects,
@@ -9942,11 +9944,13 @@ def _proposal_merged_refusal(p) -> str:
             f"merged into.")
 
 
-def _code_name_collisions(name: str) -> Optional[str]:
+def _code_name_collisions(name: str, codes=None) -> Optional[str]:
     """Existing code name(s) a proposal name collides with (QA5-1 style:
     exact match first, else case-insensitive matches under name_key), or
-    None."""
-    codes = get_db().list_codes()
+    None. `codes` is the codebook read on the caller's connection, the
+    selected project's otherwise."""
+    if codes is None:
+        codes = get_db().list_codes()
     exact = [c["name"] for c in codes if c["name"] == name]
     if exact:
         return exact[0]
@@ -10973,6 +10977,119 @@ Use `apply_codings` with session ID `{session_id}` to write approved suggestions
     return output
 
 
+# A suggestion whose reasoning is not text (a session file made by hand
+# or damaged): refused before any lock, as the marker is, rather than
+# failing in the write after the backup or written as its printed form
+# (v0.15.1).
+REASONING_NOT_TEXT = ("its reasoning is not text. Reject this suggestion "
+                      "and record it again.")
+
+
+class _CodingsChecked(NamedTuple):
+    """What apply_codings' checks found on one connection."""
+    failures: List[Dict[str, Any]]
+    file_cache: Dict[int, Optional[Dict[str, Any]]]
+    memos: Dict[str, str]
+    to_write: List[Any]
+    already_existing: List[Dict[str, Any]]
+
+
+def _check_approved_codings(db_, approved, owner: str) -> _CodingsChecked:
+    """apply_codings' checks, which only read: each approved suggestion
+    against the project (its reasoning text, the file, the code, the
+    positions and the text at them), each one's memo made, then the
+    codings already there. Run on the read-only connection before any
+    lock, and again on the write connection under SQLite's write lock,
+    before the backup's database is copied (v0.15.1), so what another
+    program changed meanwhile is refused, or found already there, with
+    no backup. The search runs only when nothing failed."""
+    codes_by_id = {c["id"] for c in db_.list_codes()}
+    file_cache: Dict[int, Optional[Dict[str, Any]]] = {}
+    failures: List[Dict[str, Any]] = []
+    memos: Dict[str, str] = {}
+    for sugg in approved:
+        problem = None
+        if sugg.file_id not in file_cache:
+            file_cache[sugg.file_id] = db_.get_file_content(sugg.file_id)
+        file_content = file_cache[sugg.file_id]
+        fulltext = (file_content or {}).get("content") or ""
+        marker = private_marker_refusal(sugg.reasoning, "its reasoning")
+        if marker is not None:
+            # a session recorded before v0.14 refused the marker
+            problem = {"reason": marker + " Reject this suggestion and "
+                                          "record it again."}
+        elif sugg.reasoning is not None and \
+                not isinstance(sugg.reasoning, str):
+            problem = {"reason": REASONING_NOT_TEXT}
+        elif file_content is None:
+            problem = {"reason": f"file_id {sugg.file_id} does not exist"}
+        elif _unusable_pdf_reason(file_content) is not None:
+            problem = {"reason": _unusable_pdf_reason(file_content)}
+        elif not file_content.get("is_text") or not fulltext:
+            problem = {"reason": f"file '{file_content['name']}' is not a text "
+                                 f"source; text codings require text content"}
+        elif sugg.code_id not in codes_by_id:
+            problem = {"reason": f"code_id {sugg.code_id} does not exist"}
+        elif not (isinstance(sugg.start_pos, int) and isinstance(sugg.end_pos, int)
+                  and 0 <= sugg.start_pos < sugg.end_pos <= len(fulltext)):
+            problem = {"reason": f"positions {sugg.start_pos}-{sugg.end_pos} are "
+                                 f"out of range for the file (length {len(fulltext)})"}
+        elif fulltext[sugg.start_pos:sugg.end_pos] not in (
+                sugg.segment_text, sugg.segment_text.replace("\u2029", "\n")):
+            problem = {
+                "reason": "segment text does not match the file text at the "
+                          "stored positions; re-record this suggestion with "
+                          "record_suggestions (it verifies and corrects positions)",
+                "expected_snippet": _snippet(fulltext[sugg.start_pos:sugg.end_pos]),
+                "provided_snippet": _snippet(sugg.segment_text),
+            }
+        if problem is not None:
+            failures.append({
+                "guid": sugg.guid,
+                "file_id": sugg.file_id,
+                "code_name": sugg.code_name,
+                **problem
+            })
+        else:
+            # The reading in words, then the reasoning; never a number
+            # (owner rulings 21 and 25)
+            memos[sugg.guid] = memo_with_reading(sugg.reasoning,
+                                                 sugg.reading)
+
+    # Idempotency per suggestion (D5 section 3.3; 4.0's per-coding
+    # already_exists, ai_mcp_server.py:1602-1619 at 9bddf17): an approved
+    # suggestion whose identical coding (code, file, span, owner) is
+    # already in the BASE table is left as it is, marked applied in the
+    # session, and reported with its ctid; the others are written in one
+    # transaction. Detected before the backup so a fully redundant batch
+    # costs nothing and cannot fail on the unique constraint.
+    already_existing: List[Dict[str, Any]] = []
+    to_write: List[Any] = []
+    if not failures:
+        for sugg in approved:
+            ctid = db_.find_text_coding(sugg.code_id, sugg.file_id,
+                                        sugg.start_pos, sugg.end_pos, owner)
+            if ctid is None:
+                to_write.append(sugg)
+            else:
+                already_existing.append({"guid": sugg.guid, "ctid": ctid,
+                                         "file": sugg.file_name,
+                                         "code": sugg.code_name})
+    return _CodingsChecked(failures, file_cache, memos, to_write,
+                           already_existing)
+
+
+def _codings_failed_validation(failures, total_approved: int
+                               ) -> Dict[str, Any]:
+    return {
+        "error": f"{len(failures)} approved suggestion(s) failed validation; "
+                 f"nothing was written and no backup was created. Fix or "
+                 f"reject the listed suggestions, then apply again.",
+        "failures": failures,
+        "total_approved": total_approved
+    }
+
+
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 @_deprecated(DEPRECATED_OWNER, before="Args:",
@@ -11075,78 +11192,13 @@ def apply_codings(
     # BEFORE upgrading and BEFORE creating a backup (SEC D-2). This catches
     # missing files/codes, non-text sources (QA F6), and position/text
     # mismatches (QA F7) without leaving backup litter or partial state.
-    ro_db = get_db()
-    codes_by_id = {c["id"] for c in ro_db.list_codes()}
-    file_cache: Dict[int, Optional[Dict[str, Any]]] = {}
-    failures = []
-    for sugg in approved:
-        problem = None
-        if sugg.file_id not in file_cache:
-            file_cache[sugg.file_id] = ro_db.get_file_content(sugg.file_id)
-        file_content = file_cache[sugg.file_id]
-        fulltext = (file_content or {}).get("content") or ""
-        marker = private_marker_refusal(sugg.reasoning, "its reasoning")
-        if marker is not None:
-            # a session recorded before v0.14 refused the marker
-            problem = {"reason": marker + " Reject this suggestion and "
-                                          "record it again."}
-        elif file_content is None:
-            problem = {"reason": f"file_id {sugg.file_id} does not exist"}
-        elif _unusable_pdf_reason(file_content) is not None:
-            problem = {"reason": _unusable_pdf_reason(file_content)}
-        elif not file_content.get("is_text") or not fulltext:
-            problem = {"reason": f"file '{file_content['name']}' is not a text "
-                                 f"source; text codings require text content"}
-        elif sugg.code_id not in codes_by_id:
-            problem = {"reason": f"code_id {sugg.code_id} does not exist"}
-        elif not (isinstance(sugg.start_pos, int) and isinstance(sugg.end_pos, int)
-                  and 0 <= sugg.start_pos < sugg.end_pos <= len(fulltext)):
-            problem = {"reason": f"positions {sugg.start_pos}-{sugg.end_pos} are "
-                                 f"out of range for the file (length {len(fulltext)})"}
-        elif fulltext[sugg.start_pos:sugg.end_pos] not in (
-                sugg.segment_text, sugg.segment_text.replace("\u2029", "\n")):
-            problem = {
-                "reason": "segment text does not match the file text at the "
-                          "stored positions; re-record this suggestion with "
-                          "record_suggestions (it verifies and corrects positions)",
-                "expected_snippet": _snippet(fulltext[sugg.start_pos:sugg.end_pos]),
-                "provided_snippet": _snippet(sugg.segment_text),
-            }
-        if problem is not None:
-            failures.append({
-                "guid": sugg.guid,
-                "file_id": sugg.file_id,
-                "code_name": sugg.code_name,
-                **problem
-            })
-
-    if failures:
-        return json.dumps({
-            "error": f"{len(failures)} approved suggestion(s) failed validation; "
-                     f"nothing was written and no backup was created. Fix or "
-                     f"reject the listed suggestions, then apply again.",
-            "failures": failures,
-            "total_approved": len(approved)
-        }, indent=2)
-
-    # Idempotency per suggestion (D5 section 3.3; 4.0's per-coding
-    # already_exists, ai_mcp_server.py:1602-1619 at 9bddf17): an approved
-    # suggestion whose identical coding (code, file, span, owner) is
-    # already in the BASE table is left as it is, marked applied in the
-    # session, and reported with its ctid; the others are written in one
-    # transaction. Detected before the backup so a fully redundant batch
-    # costs nothing and cannot fail on the unique constraint.
-    already_existing = []
-    to_write = []
-    for sugg in approved:
-        ctid = ro_db.find_text_coding(sugg.code_id, sugg.file_id,
-                                      sugg.start_pos, sugg.end_pos, owner)
-        if ctid is None:
-            to_write.append(sugg)
-        else:
-            already_existing.append({"guid": sugg.guid, "ctid": ctid,
-                                     "file": sugg.file_name,
-                                     "code": sugg.code_name})
+    # The same checks run again under SQLite's write lock (v0.15.1).
+    checked = _check_approved_codings(get_db(), approved, owner)
+    if checked.failures:
+        return json.dumps(_codings_failed_validation(
+            checked.failures, len(approved)), indent=2)
+    already_existing = checked.already_existing
+    to_write = checked.to_write
 
     def _already_existing_lines() -> List[str]:
         if not already_existing:
@@ -11163,7 +11215,7 @@ def apply_codings(
                          f"guid={r['guid']})")
         return lines
 
-    if not to_write:
+    def _nothing_to_write() -> str:
         session.mark_applied([r["guid"] for r in already_existing],
                              ctids={r["guid"]: r["ctid"]
                                     for r in already_existing})
@@ -11176,6 +11228,9 @@ def apply_codings(
                       "report that the suggestions were already applied.")
         return "\n".join(output)
 
+    if not to_write:
+        return _nothing_to_write()
+
     # Refuse on pre-v14 schemas and while QualCoder has the project open
     # (heartbeat lock file: SQLite locks say nothing about an idle session)
     lock_error = _write_gate_error()
@@ -11187,6 +11242,36 @@ def apply_codings(
     # Upgrade to read-write mode for writing codings
     write_db = get_db(read_only=False)
 
+    # The checks again on the write connection, under SQLite's write
+    # lock and before the backup's database (v0.15.1): a refusal, or every
+    # coding found already there, stops the write with no backup.
+    validated_texts = checked.file_cache
+    rechecked: List[_CodingsChecked] = []
+
+    def _check(wdb):
+        again = _check_approved_codings(wdb, approved, owner)
+        if again.failures:
+            return _codings_failed_validation(again.failures, len(approved))
+        # C7: every file to be coded still holds the text the positions
+        # were validated against before any lock (catches a lockless
+        # QualCoder 4.0 editor and any stale-lock race the gate missed);
+        # from here to the commit SQLite's lock keeps it so
+        for fid in sorted({s.file_id for s in again.to_write}):
+            validated_text = (validated_texts[fid] or {}).get(
+                "content") or ""
+            try:
+                wdb.verify_fulltext_unchanged(
+                    fid, wdb.fingerprint_of_text(validated_text))
+            except ValueError as e:
+                return {"error": f"Failed to apply codings (all changes "
+                                 f"rolled back): {error_text(e)}",
+                        "applied_before_failure": 0,
+                        "total_approved": len(approved)}
+        rechecked.append(again)
+        if not again.to_write:
+            return {"nothing_to_write": True}
+        return None
+
     # Apply all codings in a single transaction (all-or-nothing), holding
     # QualCoder's project lock so it cannot open the project mid-write
     results = []
@@ -11195,11 +11280,12 @@ def apply_codings(
     try:
         with hold_project_lock(project_folder) as lock_held:
             # One backup, always (v0.15.1): the project but its database
-            # copied, SQLite's write lock, the backup's database
+            # copied, SQLite's write lock, the checks again, the backup's
+            # database
             try:
                 backup_path, stopped = _backup_before_change(
                     write_db, "Aborting to protect your data: nothing was "
-                              "written.",
+                              "written.", _check,
                     backup_fail_detail="no codings were applied")
             except BaseException:
                 _rollback_if_open(write_db)
@@ -11208,13 +11294,21 @@ def apply_codings(
             if stopped is not None:
                 _rollback_if_open(write_db)
                 _downgrade_to_readonly()
+                if rechecked and not rechecked[0].to_write:
+                    # Another program wrote them meanwhile: the session
+                    # is saved after the rollback, the check only read
+                    already_existing = rechecked[0].already_existing
+                    return _nothing_to_write()
                 return json.dumps(stopped)
 
+            # What the checks found under the lock is what is written
+            under_lock = rechecked[0]
+            to_write = under_lock.to_write
+            already_existing = under_lock.already_existing
+            file_cache = under_lock.file_cache
             try:
                 for sugg in to_write:
-                    # The reading in words, then the reasoning; never a
-                    # number (owner rulings 21 and 25)
-                    memo = memo_with_reading(sugg.reasoning, sugg.reading)
+                    memo = under_lock.memos[sugg.guid]
 
                     # Write the authoritative fulltext slice (validated above)
                     # so seltext always equals fulltext[pos0:pos1] on disk
@@ -11240,14 +11334,6 @@ def apply_codings(
                         "guid": sugg.guid
                     })
 
-                # C7: the writes above hold SQLite's reserved lock; verify
-                # every touched file's text still matches what positions
-                # were validated against (catches a lockless QualCoder 4.0
-                # editor and any stale-lock race the gate missed)
-                for fid in sorted({s.file_id for s in to_write}):
-                    validated_text = (file_cache[fid] or {}).get("content") or ""
-                    write_db.verify_fulltext_unchanged(
-                        fid, write_db.fingerprint_of_text(validated_text))
                 # Close the TOCTOU window, then commit all at once
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
@@ -11570,6 +11656,30 @@ def import_text_file(
     # Upgrade to read-write mode
     write_db = get_db(read_only=False)
 
+    def _check(wdb):
+        """The validation and the case's lookup again, on the write
+        connection under SQLite's write lock and before the backup's
+        database (v0.15.1): a file name taken or a case gone meanwhile is
+        refused with no backup, in the same words."""
+        nonlocal case, case_match
+        try:
+            wdb.validate_text_file_import(
+                name=filename.strip(), content=content, owner=owner,
+                memo=memo)
+        except (ValueError, TypeError) as e:
+            return {"error": str(e)}
+        except DatabaseLockedError:
+            raise
+        except RuntimeError as e:
+            return {"error": f"Database error: {str(e)}"}
+        if case_name is not None:
+            again, match, case_error = _resolve_case_argument(
+                wdb.list_cases(), None, case_name, takes_case_id=False)
+            if case_error is not None:
+                return case_error
+            case, case_match = again, match
+        return None
+
     # SEC C-1: this tool keeps its bespoke error contract (TypeError and a
     # "Database error:" prefix on RuntimeError, and a two-write transaction),
     # so it is NOT migrated to _perform_write — but it now carries the
@@ -11586,9 +11696,10 @@ def import_text_file(
     try:
         with hold_project_lock(project_folder) as lock_held:
             # One backup, always (v0.15.1): the project but its database
-            # copied, SQLite's write lock, the backup's database
+            # copied, SQLite's write lock, the checks again, the backup's
+            # database
             backup_path, stopped = _backup_before_change(
-                write_db, "Aborting to protect your data.",
+                write_db, "Aborting to protect your data.", _check,
                 backup_fail_detail="the file was not imported")
             if stopped is not None:
                 return json.dumps(stopped)
@@ -15293,6 +15404,92 @@ def update_proposal_status(coding_session_id: str,
     }, indent=2)
 
 
+# What a proposal holds that is not text (a session file made by hand or
+# damaged), refused before any lock rather than failing in the write
+# after the backup or written as its printed form (v0.15.1). The rationale
+# is not checked: this tool never writes it, and update_proposal cannot
+# set it.
+PROPOSAL_NOT_TEXT = ("its {field} is not text. Set it again with "
+                     "update_proposal.")
+
+
+def _check_approved_proposals(db_, approved):
+    """create_proposed_codes' checks, which only read: (refusal, category
+    ids), the refusal None when every approved proposal can be created.
+    Run on the read-only connection before any lock, and again on the
+    write connection under SQLite's write lock, before the backup's
+    database is copied (v0.15.1)."""
+    cats = db_.list_categories()
+    codes = db_.list_codes()
+    failures = []
+    batch_names: set = set()
+    category_ids: Dict[str, int] = {}
+
+    for p in approved:
+        problem = None
+        not_text = next((field for field, value in (
+            ("name", p.name), ("definition (memo)", p.memo))
+            if (value is None and field == "name")
+            or (value is not None and not isinstance(value, str))), None)
+        if not_text is not None:
+            failures.append({"guid": p.guid,
+                             "name": p.name if not_text != "name" else None,
+                             "reason": PROPOSAL_NOT_TEXT.format(
+                                 field=not_text)})
+            continue
+        # name_key, not strip().lower(): 'Work  stress' and 'Work stress'
+        # are one name to add_code (it stores normalize_name), so keying
+        # the batch any other way lets twins through pre-validation and
+        # collide on the insert, after the backup (D5 section 3.3 promises
+        # validation before the backup and the write).
+        key = name_key(p.name)
+        collision = _code_name_collisions(p.name, codes)
+        marker = private_marker_refusal(p.memo, "its definition (memo)")
+        if marker is not None:
+            # a session recorded before v0.14 refused the marker
+            problem = marker + " Set it again with update_proposal."
+        elif collision:
+            problem = (f"name collides with existing code '{collision}'; "
+                       f"rename the proposal (update_proposal) or apply the "
+                       f"existing code instead")
+        elif p.color is not None and not (
+                isinstance(p.color, str)
+                and re.fullmatch(r"#[0-9A-Fa-f]{6}", p.color)):
+            # Same promise as the comment above, for the colour. propose_codes
+            # and update_proposal both enforce #RRGGBB, so this is only
+            # reachable from a session file written by an earlier release,
+            # edited by hand or corrupted, and before fix round 4 it was
+            # add_code that refused it: inside the write, AFTER the backup
+            # had been taken. Measured, not assumed (one backup created for
+            # nothing). Checking it here keeps D5 section 3.3's promise and
+            # makes review_proposals' "create_proposed_codes refuses the
+            # batch on it" exact (fix round 4, T7).
+            problem = (f"color {p.color!r} is not #RRGGBB; set a valid "
+                       f"colour with update_proposal, or re-propose the code")
+        elif key in batch_names:
+            problem = "another approved proposal in this batch has the same name"
+        elif p.category is not None:
+            match = next((c for c in cats
+                          if c["name"].lower() == p.category.lower()), None)
+            if match is None:
+                problem = (f"category '{p.category}' does not exist; create "
+                           f"it first with create_category")
+            else:
+                category_ids[p.category] = match["id"]
+        if problem is not None:
+            failures.append({"guid": p.guid, "name": p.name, "reason": problem})
+        else:
+            batch_names.add(key)
+
+    if failures:
+        return {
+            "error": f"{len(failures)} approved proposal(s) failed validation; "
+                     f"nothing was written and no backup was created.",
+            "failures": failures,
+        }, category_ids
+    return None, category_ids
+
+
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
@@ -15356,68 +15553,25 @@ def create_proposed_codes(coding_session_id: str,
                           indent=2)
 
     # ---- pre-validation on the read-only connection (before backup) ----
-    ro_db = get_db()
-    cats = ro_db.list_categories()
-    failures = []
-    batch_names: set = set()
-    category_ids: Dict[str, int] = {}
-
-    for p in approved:
-        problem = None
-        # name_key, not strip().lower(): 'Work  stress' and 'Work stress'
-        # are one name to add_code (it stores normalize_name), so keying
-        # the batch any other way lets twins through pre-validation and
-        # collide on the insert, after the backup (D5 section 3.3 promises
-        # validation before the backup and the write).
-        key = name_key(p.name)
-        collision = _code_name_collisions(p.name)
-        marker = private_marker_refusal(p.memo, "its definition (memo)")
-        if marker is not None:
-            # a session recorded before v0.14 refused the marker
-            problem = marker + " Set it again with update_proposal."
-        elif collision:
-            problem = (f"name collides with existing code '{collision}'; "
-                       f"rename the proposal (update_proposal) or apply the "
-                       f"existing code instead")
-        elif p.color is not None and not (
-                isinstance(p.color, str)
-                and re.fullmatch(r"#[0-9A-Fa-f]{6}", p.color)):
-            # Same promise as the comment above, for the colour. propose_codes
-            # and update_proposal both enforce #RRGGBB, so this is only
-            # reachable from a session file written by an earlier release,
-            # edited by hand or corrupted, and before fix round 4 it was
-            # add_code that refused it: inside the write, AFTER the backup
-            # had been taken. Measured, not assumed (one backup created for
-            # nothing). Checking it here keeps D5 section 3.3's promise and
-            # makes review_proposals' "create_proposed_codes refuses the
-            # batch on it" exact (fix round 4, T7).
-            problem = (f"color {p.color!r} is not #RRGGBB; set a valid "
-                       f"colour with update_proposal, or re-propose the code")
-        elif key in batch_names:
-            problem = "another approved proposal in this batch has the same name"
-        elif p.category is not None:
-            match = next((c for c in cats
-                          if c["name"].lower() == p.category.lower()), None)
-            if match is None:
-                problem = (f"category '{p.category}' does not exist; create "
-                           f"it first with create_category")
-            else:
-                category_ids[p.category] = match["id"]
-        if problem is not None:
-            failures.append({"guid": p.guid, "name": p.name, "reason": problem})
-        else:
-            batch_names.add(key)
-
-    if failures:
-        return json.dumps({
-            "error": f"{len(failures)} approved proposal(s) failed validation; "
-                     f"nothing was written and no backup was created.",
-            "failures": failures,
-        }, indent=2)
+    # The same checks run again under SQLite's write lock (v0.15.1)
+    refusal, _ = _check_approved_proposals(get_db(), approved)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
 
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
+
+    # The checks again on the write connection, under SQLite's write lock
+    # and before the backup's database (v0.15.1): a name taken or a
+    # category removed meanwhile is refused with no backup, and the
+    # categories' ids are the ones read under the lock
+    category_ids: Dict[str, int] = {}
+
+    def _check(wdb):
+        refusal, ids = _check_approved_proposals(wdb, approved)
+        category_ids.update(ids)
+        return refusal
 
     def _op(wdb):
         created = []
@@ -15456,7 +15610,8 @@ def create_proposed_codes(coding_session_id: str,
                            f"is coded yet",
                 "created_codes": created}
 
-    result = _perform_write(_op, backup_fail_detail="no codes were created")
+    result = _perform_write(_op, check=_check,
+                            backup_fail_detail="no codes were created")
 
     if "error" not in result:
         for p in approved:
@@ -15759,13 +15914,20 @@ def create_code(name: str, category: Optional[str] = None,
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
-    def _op(wdb):
-        # In-transaction re-check: a row that appeared while we prepared
-        # (another writer) yields the same answer, decorated with the
-        # backup_path _perform_write adds (disclosed, not hidden)
+    def _check(wdb):
+        """Under SQLite's write lock, before the backup's database
+        (v0.15.1): the duplicate again, then add_code's checks of where
+        the code goes (the category and the parent code, ids resolved
+        before any lock, on the write connection's own reading of the
+        schema). A row that appeared or went while we prepared (another
+        writer) is answered here, with no backup."""
         dup = _existing(wdb.list_codes())
         if dup is not None:
             return dup
+        wdb.check_add_code(category_id, parent_code_id)
+        return None
+
+    def _op(wdb):
         cid = wdb.add_code(name=norm_name, owner=owner, memo=memo,
                            category_id=category_id, color=color,
                            parent_code_id=parent_code_id,
@@ -15793,7 +15955,7 @@ def create_code(name: str, category: Optional[str] = None,
         }
 
     result = _perform_write(
-        _op, backup_fail_detail="the code was not created")
+        _op, check=_check, backup_fail_detail="the code was not created")
     return _ai_json(result, indent=2)
 
 
@@ -15850,16 +16012,14 @@ def rename_code(code_id: int, new_name: str,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer, _ = _precheck(wdb.list_codes())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         return {"success": True, "changed": True, "message": "Renamed code",
                 **wdb.rename_code(code_id, new_name, auto_commit=False)}
 
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1): a refusal or "unchanged" leaves no backup
     result = _perform_write(
-        _op, backup_fail_detail="the code was not renamed")
+        _op, check=lambda wdb: _precheck(wdb.list_codes())[0],
+        backup_fail_detail="the code was not renamed")
     return json.dumps(result, indent=2)
 
 
@@ -15915,11 +16075,6 @@ def recolor_code(code_id: int, color: str,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb)
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         out = wdb.recolor_code(code_id, color, auto_commit=False)
         message = (f"Recoloured code '{out['name']}' from {out['old_color']} "
                    f"to {out['new_color']}")
@@ -15930,8 +16085,11 @@ def recolor_code(code_id: int, color: str,
         return {"success": True, "changed": True, "message": message,
                 **out, **disclosure}
 
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
     result = _perform_write(
-        _op, backup_fail_detail="the code colour was not changed")
+        _op, check=_precheck,
+        backup_fail_detail="the code colour was not changed")
     return json.dumps(result, indent=2)
 
 
@@ -15983,10 +16141,19 @@ def move_code_to_category(code_id: int,
     caps = getattr(ro_db, "capabilities", None)
     has_supercid = bool(caps is not None and caps.has_supercid)
 
-    def _precheck(rows):
+    def _precheck(db_):
+        rows = db_.list_codes()
         row = next((c for c in rows if c["id"] == code_id), None)
         if row is None:
             return {"error": f"Code ID {code_id} does not exist"}
+        if category_id is not None:
+            # Resolved by name before any lock: looked up again by id, so
+            # under SQLite's write lock a category removed meanwhile is
+            # refused before the backup (v0.15.1), in the write's words
+            try:
+                db_.check_category_exists(category_id)
+            except ValueError as e:
+                return {"error": str(e)}
         # 4.0 compares BOTH parent pointers (ai_mcp_server.py:2046 at
         # 9bddf17): a sub-code (supercid set, catid NULL) moved to "no
         # category" clears supercid, so it is not a no-op
@@ -16005,16 +16172,11 @@ def move_code_to_category(code_id: int,
     gate = _write_gate_error()
     if gate is not None:
         return json.dumps(gate)
-    answer = _precheck(ro_db.list_codes())
+    answer = _precheck(ro_db)
     if answer is not None:
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb.list_codes())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         moved = wdb.move_code_to_category(code_id, category_id,
                                          auto_commit=False)
         # Name the category the write landed in, not only its id (fix
@@ -16040,7 +16202,10 @@ def move_code_to_category(code_id: int,
                 "message": f"Moved code '{moved['name']}' {where}",
                 "new_category": new_name, **moved}
 
-    result = _perform_write(_op, backup_fail_detail="the code was not moved")
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
+    result = _perform_write(_op, check=_precheck,
+                            backup_fail_detail="the code was not moved")
     return json.dumps(result, indent=2)
 
 
@@ -16099,21 +16264,32 @@ def create_category(name: str, parent_category: Optional[str] = None,
             rows, norm_name, parent_category=parent_category,
             supercatid=supercatid, memo=memo)
 
+    def _check(db_):
+        """The duplicate, then the parent (resolved by name before any
+        lock, looked up again by id): None to write, the already_exists
+        answer, or the write's refusal."""
+        dup = _existing(db_.list_categories())
+        if dup is not None:
+            return dup
+        if supercatid is not None:
+            try:
+                db_.check_category_exists(supercatid)
+            except ValueError as e:
+                return {"error": str(e)}
+        return None
+
     gate = _write_gate_error()
     if gate is not None:
         return json.dumps(gate)
-    dup = _existing(get_db().list_categories())
-    if dup is not None:
-        return _ai_json(dup, indent=2)
+    answer = _check(get_db())
+    if answer is not None:
+        return _ai_json(answer, indent=2)
 
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
     def _op(wdb):
-        dup = _existing(wdb.list_categories())
-        if dup is not None:
-            return dup
         created = wdb.add_category(norm_name, owner, supercatid=supercatid,
                                    memo=memo, auto_commit=False)
         # parent_category is resolved by name, so say which row it hit,
@@ -16127,8 +16303,12 @@ def create_category(name: str, parent_category: Optional[str] = None,
                 "message": message,
                 "category": {**created, "parent_name": parent_name}}
 
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1): a row that appeared or went while we prepared
+    # (another writer) is answered there, with no backup
     result = _perform_write(
-        _op, backup_fail_detail="the category was not created")
+        _op, check=_check,
+        backup_fail_detail="the category was not created")
     return _ai_json(result, indent=2)
 
 
@@ -16180,18 +16360,16 @@ def rename_category(category_id: int, new_name: str,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb.list_categories())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         return {"success": True, "changed": True,
                 "message": "Renamed category",
                 **wdb.rename_category(category_id, new_name,
                                       auto_commit=False)}
 
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
     result = _perform_write(
-        _op, backup_fail_detail="the category was not renamed")
+        _op, check=lambda wdb: _precheck(wdb.list_categories()),
+        backup_fail_detail="the category was not renamed")
     return json.dumps(result, indent=2)
 
 
@@ -16238,10 +16416,19 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
         if row is None:
             return {"error": f"Category ID {category_id} does not exist"}
         # 4.0's order (ai_mcp_server.py:1968-1982 at 9bddf17): existence,
-        # then the cycle guard, then unchanged. A cycle is left to the DB
-        # layer's refusal so the error precedence is preserved.
+        # then the cycle guard, then unchanged; the write's own order
+        # (move_category in database.py) puts the parent's existence
+        # between the first two. The cycle is refused here, before any
+        # lock and again under SQLite's write lock, in the write's words
+        # (v0.15.1): it used to be left to the write, after the backup.
+        if new_supercatid is not None:
+            # resolved by name before any lock, looked up again by id
+            try:
+                db_.check_category_exists(new_supercatid)
+            except ValueError as e:
+                return {"error": str(e)}
         if db_.would_create_category_cycle(category_id, new_supercatid):
-            return None
+            return {"error": CATEGORY_CYCLE_REFUSAL}
         if row.get("parent_id") == new_supercatid:
             if new_supercatid is None:
                 where = "at the top level"
@@ -16263,11 +16450,6 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb)
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         moved = wdb.move_category(category_id, new_supercatid,
                                   auto_commit=False)
         # The parent is resolved by name too (fix round 3, S4).
@@ -16278,8 +16460,11 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
                 "message": f"Moved category '{moved['name']}' {where}",
                 "new_parent": parent_name, **moved}
 
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
     result = _perform_write(
-        _op, backup_fail_detail="the category was not moved")
+        _op, check=_precheck,
+        backup_fail_detail="the category was not moved")
     return json.dumps(result, indent=2)
 
 
@@ -16884,6 +17069,15 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
             row_owner=ro.code_owner(code_id))
         return preview
 
+    def _branch_needs_cascade(preview):
+        """A code with sub-codes, executed without cascade=true: refused
+        before any lock, from the preview the token signs, in the write's
+        own words (v0.15.1); the write refused it after its backup."""
+        count = preview.get("subcode_count", 0)
+        if count and not cascade:
+            return {"error": SUBCODES_NEED_CASCADE.format(count=count)}
+        return None
+
     execute_args: Dict[str, Any] = {"code_id": code_id}
     if cascade:
         execute_args["cascade"] = True
@@ -16905,6 +17099,7 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
                      "breakdown, then call delete_code again with "
                      "preview_token. A backup is made first.",
         execute_arguments=execute_args,
+        execute_guard_fn=_branch_needs_cascade,
     )
     return json.dumps(result, indent=2)
 
@@ -20045,16 +20240,17 @@ def create_case(name: str, memo: Optional[str] = None,
         return json.dumps(owner_error, indent=2)
 
     def _op(wdb):
-        dup = _existing(wdb.list_cases())
-        if dup is not None:
-            return dup
         created = wdb.add_case(norm_name, owner, memo=memo, auto_commit=False)
         return {"success": True, "created": True,
                 "message": f"Created case '{created['name']}'",
                 "case": created}
 
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1): a case of that name added meanwhile (another
+    # writer) is answered there, with no backup
     result = _perform_write(
-        _op, backup_fail_detail="the case was not created")
+        _op, check=lambda wdb: _existing(wdb.list_cases()),
+        backup_fail_detail="the case was not created")
     return _ai_json(result, indent=2)
 
 
@@ -20257,15 +20453,6 @@ def rename_case(case_id: int, new_name: str,
     qualcoder_seen = history is not None and history.level != "none"
 
     def _op(wdb):
-        # SQLite's write lock first, then the re-check: the write gate is
-        # blind to QualCoder 4.0, so this re-check is the only guard
-        # against another writer, and it holds until the commit.
-        wdb.begin_immediate()
-        answer = _precheck(wdb.case_name_rows())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         renamed = wdb.rename_case(case_id, new_name, auto_commit=False)
         left_in = wdb.old_name_left_in("case", case_id, renamed["old_name"])
         return {"success": True, "changed": True, "message": "Renamed case",
@@ -20274,8 +20461,13 @@ def rename_case(case_id: int, new_name: str,
                 "note": _rename_case_note(left_in, _rename_signs(
                     wdb, project_folder, qualcoder_seen))}
 
+    # SQLite's write lock first, then the re-check, before the backup's
+    # database (v0.15.1): the write gate is blind to QualCoder 4.0, so
+    # this re-check is the only guard against another writer, and the
+    # lock holds it true until the commit.
     result = _perform_write(
-        _op, backup_fail_detail="the case was not renamed")
+        _op, check=lambda wdb: _precheck(wdb.case_name_rows()),
+        backup_fail_detail="the case was not renamed")
     return json.dumps(result, indent=2)
 
 
@@ -20778,13 +20970,6 @@ def rename_file(file_id: int, new_name: str,
     qualcoder_seen = history is not None and history.level != "none"
 
     def _op(wdb):
-        # SQLite's write lock first, then the re-check (as rename_case).
-        wdb.begin_immediate()
-        answer = _file_rename_precheck(wdb, file_id, candidate, evidence)
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         rows = wdb.file_name_rows()
         row = next(r for r in rows if r["id"] == file_id)
         stored = _stored_copy_block(wdb, row["mediapath"], row["name"])
@@ -20805,8 +20990,12 @@ def rename_file(file_id: int, new_name: str,
                 "note": _rename_file_note(left_in, _rename_signs(
                     wdb, project_folder, qualcoder_seen))}
 
+    # SQLite's write lock first, then the re-check, before the backup's
+    # database (as rename_case, v0.15.1)
     result = _perform_write(
-        _op, backup_fail_detail="the file was not renamed")
+        _op, check=lambda wdb: _file_rename_precheck(
+            wdb, file_id, candidate, evidence),
+        backup_fail_detail="the file was not renamed")
     if result.get("changed"):
         _forget_reading_copies([file_id])
     # A rename back that only a backup licensed goes in v0.15.1 (owner

@@ -607,11 +607,13 @@ class TestIdempotentCreates:
         assert out["category"]["name"] == "Theme"
         assert _count(qualcoder_db_path, "code_cat") == 3
 
-    def test_race_path_discloses_backup(self, setup_server, qualcoder_db_path,
-                                         monkeypatch):
-        """The read-only pre-check misses (simulated), the in-transaction
-        re-check finds the row: same answer, plus the backup_path that was
-        taken (disclosed, not hidden)."""
+    def test_race_path_leaves_no_backup(self, setup_server, qualcoder_db_path,
+                                        monkeypatch):
+        """The read-only pre-check misses (simulated), the re-check under
+        SQLite's write lock finds the row: the same answer, and since
+        v0.15.1 no backup, the re-check running before the backup's
+        database is copied (it used to answer with the backup_path that
+        had been taken)."""
         real = QualcoderDatabase.list_codes
         calls = {"n": 0}
 
@@ -622,7 +624,8 @@ class TestIdempotentCreates:
         monkeypatch.setattr(QualcoderDatabase, "list_codes", flaky)
         out = json.loads(server.create_code("Stress"))
         assert out["created"] is False and out["reason"] == "already_exists"
-        assert "backup_path" in out and calls["n"] >= 2
+        assert "backup_path" not in out and calls["n"] >= 2
+        assert _backups(qualcoder_db_path) == []
         assert _count(qualcoder_db_path, "code_name") == 2
 
     def test_successful_creates_carry_created_true(self, setup_server,
@@ -886,10 +889,12 @@ class TestResolvedCategoryNameIsReported:
 class TestRecolourRacePath:
     """Fix round 1, F7. D5 section 3.4 step 3: when the stored colour
     becomes equal to the target between the read-only pre-check and the
-    write, the op returns the same `unchanged` answer decorated with
-    backup_path. Only the create_code race was pinned."""
+    write, the same `unchanged` answer comes back. Since v0.15.1 the
+    re-check runs under SQLite's write lock before the backup's database
+    is copied, so it leaves no backup (it used to be decorated with the
+    backup_path that had been taken)."""
 
-    def test_recolour_race_returns_unchanged_with_the_backup_disclosed(
+    def test_recolour_race_returns_unchanged_with_no_backup(
             self, setup_server, qualcoder_db_path, monkeypatch):
         real = QualcoderDatabase.get_code_details
         calls = {"n": 0}
@@ -914,17 +919,17 @@ class TestRecolourRacePath:
         assert out["color_requested"] == "#0d47a1"
         assert out["color_snapped"] is False
         assert out["code"] == {"id": 1, "name": "Stress", "color": "#0D47A1"}
-        assert "backup_path" in out                 # taken, so disclosed
+        assert "backup_path" not in out
         assert calls["n"] >= 2
-        assert len(_backups(qualcoder_db_path)) == len(before) + 1
+        assert _backups(qualcoder_db_path) == before
         assert _row(qualcoder_db_path,
                     "SELECT color FROM code_name WHERE cid=1")["color"] == "#0D47A1"
 
     def test_code_deleted_between_the_precheck_and_the_write(
             self, setup_server, qualcoder_db_path, monkeypatch):
         """The other arm of the same re-check: the row is gone by the time
-        the write connection looks, so the op raises and _perform_write
-        turns that into an error with nothing written."""
+        the write connection looks, so the write is refused with nothing
+        written and, since v0.15.1, no backup."""
         real = QualcoderDatabase.get_code_details
         calls = {"n": 0}
 
@@ -960,12 +965,11 @@ class TestRecolourRacePath:
         assert _row(qualcoder_db_path,
                     "SELECT color FROM code_name WHERE cid=1")["color"] == "#FF0000"
         assert reached_the_commit == [], (
-            "the op returned instead of raising: the transaction reached "
-            "the commit rather than being rolled back")
-        # The backup was taken before the op ran, so it is on disk, and
-        # since A5 the envelope says which one it is.
-        assert Path(out["backup_path"]) in _backups(qualcoder_db_path)
-        assert len(_backups(qualcoder_db_path)) == len(before) + 1
+            "the refusal reached the commit rather than being rolled back")
+        # Refused under SQLite's lock, before the backup's database
+        # (v0.15.1): no backup to name
+        assert "backup_path" not in out
+        assert _backups(qualcoder_db_path) == before
 
 
 class TestNoOpMovesAndRenames:

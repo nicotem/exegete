@@ -460,9 +460,11 @@ async def reasoning_a_number(client, ctx):
 TOO_LONG_NOTE = "x" * (database.MAX_TEXT_CONTENT_LENGTH + 1)
 
 # (what is refused, the tool, the call refused, given the state
-# refusal_project leaves and what the preparation adds). The first nine
-# are refused before any backup today, and guard it; the others are
-# refused after the backup today.
+# refusal_project leaves and what the preparation adds). Those with no
+# reason are refused before any backup, and guard it (the first nine
+# from the start; the cycle and the reasoning since the re-checks and the
+# two apply tools of piece 3); the others are refused after the backup
+# today.
 REFUSALS = [
     ("a code under a category that does not exist", "create_code",
      given({"name": "New", "category": "Nowhere"}), None),
@@ -523,11 +525,9 @@ REFUSALS = [
      given({"file_id": 1, "case_name": "P1"}),
      "link_file_to_case finds the link after its backup"),
     ("a category moved under its own child", "move_category",
-     given({"category_id": 1, "parent_category": "Other"}),
-     "move_category checks the parent after its backup"),
+     given({"category_id": 1, "parent_category": "Other"}), None),
     ("a suggestion whose reasoning is a number", "apply_codings",
-     reasoning_a_number,
-     "apply_codings checks the session after its backup"),
+     reasoning_a_number, None),
     # (a proposal whose definition is the number 5 is not refused:
     # create_proposed_codes writes it as the text "5", so it has no row)
 ]
@@ -642,13 +642,12 @@ async def race_import_documents(client, folder, root, patch, race):
     return "import_documents", arguments
 
 
+# (what changes, the arrangement, and why it still leaves a backup, None
+# once it does not: the first three since piece 3's re-checks)
 RACES = [
-    ("a case of that name added", race_create_case,
-     "create_case checks again only after its backup"),
-    ("a case renamed to a name added", race_rename_case,
-     "rename_case checks again only after its backup"),
-    ("a file renamed to a name added", race_rename_file,
-     "rename_file checks again only after its backup"),
+    ("a case of that name added", race_create_case, None),
+    ("a case renamed to a name added", race_rename_case, None),
+    ("a file renamed to a name added", race_rename_file, None),
     ("a coding added to a code being deleted", race_delete_code,
      "delete_code checks its preview again only after its backup"),
     ("a conflicting names list written while pseudonymising",
@@ -662,7 +661,8 @@ RACES = [
 
 
 @pytest.mark.parametrize("arrange", [
-    pytest.param(arrange, id=label, marks=piece_3(why))
+    pytest.param(arrange, id=label,
+                 marks=() if why is None else piece_3(why))
     for label, arrange, why in RACES])
 def test_a_change_inside_the_window_leaves_no_backup(tmp_path, monkeypatch,
                                                      arrange):

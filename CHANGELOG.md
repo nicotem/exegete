@@ -63,6 +63,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `restore_backup`. The next backup of the project removes such a
   leftover once it is an hour old. 0.15.0's notes named this among its
   known limits.
+- **More refused changes leave no backup.** The checks of the codebook's
+  and the cases' changes (`create_code`, `rename_code`, `recolor_code`,
+  `move_code_to_category`, `create_category`, `rename_category`,
+  `move_category`, `create_case`, `rename_case`, `rename_file`), of
+  `apply_codings`, `create_proposed_codes` and `import_text_file` run
+  again under SQLite's write lock, before the backup's database is
+  copied: a name taken, or a category, code, case or text changed by
+  another program since the first checks, is refused there with no
+  backup, as is an "unchanged" or "already exists" answer found there.
+  A category or parent code given by name is looked up again by its id.
+  Refused before any backup now: a category moved under its own
+  sub-category, a code given a parent code that does not exist, and
+  `delete_code` without `cascade=true` on a code with sub-codes.
+  `apply_codings` writes only the codings not already in the project
+  when it takes the lock, so a coding another program wrote meanwhile is
+  reported as already there rather than failing after the backup. In a
+  coding session file made or changed by hand, a suggestion's reasoning,
+  or a proposal's name or definition, that is not text is refused before
+  any backup, where it was written as its printed form or failed after
+  the backup.
 
 ### Exegete's lock file kept fresh for the whole of every write
 

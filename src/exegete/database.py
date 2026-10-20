@@ -545,6 +545,19 @@ class UnsupportedSchemaError(RuntimeError):
     """Raised when the project database schema is too old for this server."""
 
 
+# Two refusals said in two places, so that each has one source of words
+# (v0.15.1): move_category's own, and the tool's check before any lock;
+# delete_code's own, and the tool's refusal from its preview before any
+# lock.
+CATEGORY_CYCLE_REFUSAL = (
+    "That move would make the category its own ancestor (a cycle), which "
+    "would cut it and its codes off from the code tree; refusing.")
+SUBCODES_NEED_CASCADE = (
+    "{count} sub-code(s) will also be deleted. Move the sub-codes first if "
+    "they are needed, or call again with cascade=true to delete the whole "
+    "branch and all its codings.")
+
+
 # The plain refusal of a database whose project table has no row (v0.14,
 # the create-project study's finding 7): not a usable QualCoder project.
 NO_PROJECT_ROW_MESSAGE = (
@@ -8422,47 +8435,20 @@ class QualcoderDatabase:
         ).fetchone()
         return int(row["ctid"]) if row else None
 
-    def add_code(
-        self,
-        name: str,
-        owner: str,
-        memo: Optional[str] = None,
-        category_id: Optional[int] = None,
-        color: Optional[str] = None,
-        parent_code_id: Optional[int] = None,
-        auto_commit: bool = True
-    ) -> int:
-        """Add a new code to the project.
-
-        Args:
-            name: Code name (must be unique)
-            owner: Name of the person creating the code
-            memo: Optional description/definition of the code
-            category_id: Optional category ID to place code in
-            color: Hex colour code #RRGGBB (default: random pick from
-                   QualCoder's own palette, like GUI-created codes)
-            auto_commit: Commit immediately (default True). Pass False to
-                         defer the commit to the caller (batch/lock recheck).
-
-        Returns:
-            The cid (code ID) of the newly created code
+    def check_add_code(self, category_id: Optional[int] = None,
+                       parent_code_id: Optional[int] = None
+                       ) -> Tuple[Optional[int], Optional[int]]:
+        """add_code's checks of where the code goes, which only read: the
+        category exists; a parent code, never with a category, on a
+        project with sub-codes, exists. add_code calls it first, and
+        create_code calls it before any lock and again under SQLite's
+        write lock, before its backup's database is copied (v0.15.1), so
+        a category or a parent code removed meanwhile is refused with no
+        backup. Returns the two ids, validated.
 
         Raises:
-            ValueError: If validation fails
-            RuntimeError: If database is read-only or operation fails
+            ValueError: the refusal, in add_code's words
         """
-        self._require_write_access()
-        # Collapse whitespace runs and strip, refusing whitespace-only names
-        # (QA5-3; QualCoder 4.0's own normalisation, normalize_name),
-        # consistent with add_category/rename_code/rename_category
-        name = normalize_name(name)
-        if not name:
-            raise ValueError("name must be a non-empty string")
-        validate_string(name, "name")
-
-        if not owner or not isinstance(owner, str):
-            raise ValueError("owner must be a non-empty string")
-
         # Validate category if provided
         if category_id is not None:
             category_id = validate_id(category_id, "category_id")
@@ -8504,6 +8490,51 @@ class QualcoderDatabase:
             if not parent_check:
                 raise ValueError(
                     f"Parent code ID {parent_code_id} does not exist")
+        return category_id, parent_code_id
+
+    def add_code(
+        self,
+        name: str,
+        owner: str,
+        memo: Optional[str] = None,
+        category_id: Optional[int] = None,
+        color: Optional[str] = None,
+        parent_code_id: Optional[int] = None,
+        auto_commit: bool = True
+    ) -> int:
+        """Add a new code to the project.
+
+        Args:
+            name: Code name (must be unique)
+            owner: Name of the person creating the code
+            memo: Optional description/definition of the code
+            category_id: Optional category ID to place code in
+            color: Hex colour code #RRGGBB (default: random pick from
+                   QualCoder's own palette, like GUI-created codes)
+            auto_commit: Commit immediately (default True). Pass False to
+                         defer the commit to the caller (batch/lock recheck).
+
+        Returns:
+            The cid (code ID) of the newly created code
+
+        Raises:
+            ValueError: If validation fails
+            RuntimeError: If database is read-only or operation fails
+        """
+        self._require_write_access()
+        # Collapse whitespace runs and strip, refusing whitespace-only names
+        # (QA5-3; QualCoder 4.0's own normalisation, normalize_name),
+        # consistent with add_category/rename_code/rename_category
+        name = normalize_name(name)
+        if not name:
+            raise ValueError("name must be a non-empty string")
+        validate_string(name, "name")
+
+        if not owner or not isinstance(owner, str):
+            raise ValueError("owner must be a non-empty string")
+
+        category_id, parent_code_id = self.check_add_code(
+            category_id, parent_code_id)
 
         # Default to a random QualCoder palette colour (what the GUI does);
         # a supplied colour is validated strictly, then snapped onto the
@@ -9389,6 +9420,14 @@ class QualcoderDatabase:
             raise ValueError(f"Category ID {category_id} does not exist")
         return row
 
+    def check_category_exists(self, category_id: int) -> None:
+        """Refuse a category id that names no category, in the words the
+        write methods use (v0.15.1): a tool that resolved a category's
+        name before any lock looks its id up again under SQLite's write
+        lock, before its backup's database is copied, so a category
+        removed meanwhile is refused with no backup."""
+        self._get_category_row(category_id)
+
     def rename_code(self, code_id: int, new_name: str,
                     auto_commit: bool = True) -> Dict[str, Any]:
         """Rename a code (code_name.name, unique among codes).
@@ -10166,11 +10205,7 @@ class QualcoderDatabase:
             if new_supercatid is not None:
                 self._get_category_row(new_supercatid)  # parent must exist
             if self.would_create_category_cycle(category_id, new_supercatid):
-                raise ValueError(
-                    "That move would make the category its own ancestor "
-                    "(a cycle), which would cut it and its codes off from "
-                    "the code tree; refusing."
-                )
+                raise ValueError(CATEGORY_CYCLE_REFUSAL)
             self.conn.execute(
                 "UPDATE code_cat SET supercatid = ? WHERE catid = ?",
                 (new_supercatid, category_id)
@@ -10501,11 +10536,8 @@ class QualcoderDatabase:
         preview = self.preview_delete_code(code_id)
         branch = self.get_branch_cids(code_id)
         if len(branch) > 1 and not cascade:
-            raise ValueError(
-                f"{len(branch) - 1} sub-code(s) will also be deleted. Move "
-                f"the sub-codes first if they are needed, or call again "
-                f"with cascade=true to delete the whole branch and all its "
-                f"codings.")
+            raise ValueError(SUBCODES_NEED_CASCADE.format(
+                count=len(branch) - 1))
         try:
             for cid in branch:
                 self.conn.execute("DELETE FROM code_text WHERE cid = ?", (cid,))

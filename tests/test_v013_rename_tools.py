@@ -339,8 +339,10 @@ class TestRenameCaseRaces:
     def test_a_clash_between_precheck_and_write_is_refused(
             self, project, monkeypatch):
         """The re-check runs under BEGIN IMMEDIATE, on the write
-        connection; a clash found there keeps the text and the backup
-        path, and nothing is written."""
+        connection, before the backup's database (v0.15.1); a clash found
+        there is answered as the read-only pre-check answers one (the
+        text and the candidates, which the old route after the backup
+        dropped), nothing is written and no backup is left."""
         original = server.QualcoderDatabase.begin_immediate
 
         raced = []
@@ -356,9 +358,12 @@ class TestRenameCaseRaces:
         monkeypatch.setattr(server.QualcoderDatabase, "begin_immediate",
                             racing)
         out = _case(1, "P01")
+        assert raced, "the race never happened; the test proves nothing"
         assert out["error"] == "Another case already uses the name " \
                                "'p01' (id 9)."
-        assert "backup_path" in out and "candidates" not in out
+        assert out["candidates"] == [{"id": 9, "name": "p01"}]
+        assert "backup_path" not in out
+        assert _backups(project) == []
         assert _rows(project, "SELECT name FROM cases WHERE caseid = 1") \
             == [{"name": "Case A"}]
 
@@ -379,10 +384,9 @@ class TestRenameCaseRaces:
         monkeypatch.setattr(server.QualcoderDatabase, "case_name_rows", rows)
         assert _case(1, "P01", create_backup=False)["changed"] is True
         # The read-only pre-check, then the lock (taken before the
-        # backup's database, v0.15.1; the rename's own call inside the
-        # transaction does nothing), then the re-check.
-        assert calls == [("rows", False), ("begin", False), ("begin", True),
-                         ("rows", True)]
+        # backup's database, v0.15.1), then the re-check under it; the
+        # rename takes no lock of its own.
+        assert calls == [("rows", False), ("begin", False), ("rows", True)]
 
     def test_a_unique_failure_at_the_update_is_the_clash_answer(
             self, project):
@@ -671,8 +675,7 @@ class TestRenameFile:
         # A respelling of its own name.
         assert _file(2, "Notes.TXT", create_backup=False)["changed"] is True
 
-    def test_a_race_is_refused_with_the_backup_path(self, project,
-                                                    monkeypatch):
+    def test_a_race_is_refused_with_no_backup(self, project, monkeypatch):
         original = server.QualcoderDatabase.begin_immediate
 
         raced = []
@@ -688,9 +691,13 @@ class TestRenameFile:
         monkeypatch.setattr(server.QualcoderDatabase, "begin_immediate",
                             racing)
         out = _file(1, "P01.txt")
+        assert raced, "the race never happened; the test proves nothing"
         assert out["error"] == "Another file already uses the name " \
                                "'P01.txt' (id 9)."
-        assert "backup_path" in out
+        # refused under SQLite's lock, before the backup's database
+        # (v0.15.1)
+        assert "backup_path" not in out
+        assert _backups(project) == []
         assert _rows(project, "SELECT name FROM source WHERE id = 1") == \
             [{"name": "interview.txt"}]
 

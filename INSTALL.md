@@ -279,12 +279,25 @@ guide (project configuration, testing, updating) applies unchanged.
 
 An install from PyPI takes the newest release of each library Exegete
 allows, so it can be newer than the releases the tests ran with and the
-desktop extension installs. Exegete sets an upper limit on the libraries
-whose next major release could stop it from starting or change what it
-reads from a PDF or an EPUB, so a new major release of one of them
-reaches you with a release of Exegete that has been tried with it. An
-environment of its own, as above, keeps these limits from clashing with
-what other programs need.
+desktop extension installs. Exegete sets an upper limit, at the next
+major release, on five libraries: the MCP library, pydantic and anyio,
+and, in the optional part for PDF and EPUB below, PyMuPDF and lxml. A
+new major release of one of these reaches you only with a release of
+Exegete that has been tried with it. Many others have no upper limit,
+EbookLib (which reads EPUBs) and Starlette (which the MCP library loads
+every time Exegete starts) among them, so a new release of one of them
+can reach you before Exegete has been tried with it, and could stop
+Exegete from starting or change what it reads from a document.
+
+If you would rather have the releases the tests ran with, the Claude
+Desktop extension above installs exactly those. If an update stops
+Exegete from starting, installing the release of that library you had
+before, in Exegete's own environment, can bring it back: with plain
+pip, `~/exegete-venv/bin/pip install "<library>==<release>"`; pipx and
+`uv tool` have their own ways to add a library to a program's
+environment (`pipx inject`, and `uv tool install` with `--with`). An
+environment of its own, as above, also keeps these limits from clashing
+with what other programs need.
 
 ### PDF and EPUB: the optional part
 

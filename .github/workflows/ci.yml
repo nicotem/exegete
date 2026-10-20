@@ -532,9 +532,13 @@ jobs:
   newest-libraries:
     name: the newest library releases (reports only)
     runs-on: ubuntu-latest
-    # The suite on Ubuntu takes 15 minutes at most (the `test` job's
-    # comment); 45 is three times that, and a hang ends well before the
-    # suite's own limit.
+    # Measured on its first run (20 October 2026, run 39416267478): this
+    # job took 28 minutes, its install included, and the suite on Ubuntu
+    # 21 and 26 minutes in the `test` jobs. 45 is about one and a half
+    # times this job's run, the margin the `test` job's own limit keeps
+    # over its slowest green job; a hang is named first, by the per-test
+    # limit. A run that reaches the limit ends red, which here only
+    # reports, as any red in this job does.
     timeout-minutes: 45
     permissions:
       contents: read
@@ -564,11 +568,12 @@ jobs:
           "$uvpy" -m uv pip install --system --python "$(python -c 'import sys; print(sys.executable)')" -e ".[dev,pdf-epub]"
 
       # Before the suite, so it is read even when the suite fails or runs
-      # out of time.
+      # out of time. Its table is written under the runner's temporary
+      # folder, never into the checkout the suite then runs in.
       - name: The releases installed, and the newest on PyPI
         shell: bash
         run: |
-          python - <<'EOF'
+          python - "$RUNNER_TEMP/releases.md" <<'EOF'
           import json, re, subprocess, sys, tomllib
           from packaging.specifiers import SpecifierSet
 
@@ -604,37 +609,39 @@ jobs:
                       not SpecifierSet(limits[name]).contains(newest):
                   print(f"::warning title=a release beyond a limit::{name} "
                         f"{newest} is on PyPI, beyond {limit}")
-          with open("releases.md", "w", encoding="utf-8") as handle:
+          with open(sys.argv[1], "w", encoding="utf-8") as handle:
               handle.write("\n".join(rows) + "\n")
           EOF
           {
             echo "### The newest library releases: ubuntu-latest / py3.13"
             echo ""
-            cat releases.md
+            cat "$RUNNER_TEMP/releases.md"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # The suite as the `test` job runs it; its summary line and its
-      # failures go to the summary and to annotations, as there.
+      # failures go to the summary and to annotations, as there. Its
+      # output, too, is kept under the runner's temporary folder.
       - name: The suite on the newest releases
         shell: bash
         run: |
           set +e
-          python -m pytest -ra --tb=short -q 2>&1 | tee pytest_output.txt
+          out="$RUNNER_TEMP/pytest_output.txt"
+          python -m pytest -ra --tb=short -q 2>&1 | tee "$out"
           code=${PIPESTATUS[0]}
-          summary=$(grep -E "^[0-9]+ (passed|failed|error)|^(=+ )?[0-9]+ (failed|passed|errors?)[ ,]" pytest_output.txt | tail -1)
+          summary=$(grep -E "^[0-9]+ (passed|failed|error)|^(=+ )?[0-9]+ (failed|passed|errors?)[ ,]" "$out" | tail -1)
           {
             echo "### pytest on the newest releases: ubuntu-latest / py3.13"
             echo ""
             echo '```'
             echo "${summary:-no summary line: the run ended before pytest wrote one}"
-            grep -E "^(FAILED|ERROR) " pytest_output.txt | head -60
+            grep -E "^(FAILED|ERROR) " "$out" | head -60
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          grep -E "^(FAILED|ERROR) " pytest_output.txt | head -10 \
+          grep -E "^(FAILED|ERROR) " "$out" | head -10 \
             | sed -e 's/%/%25/g' -e 's/^/::error title=pytest, newest releases::/'
           if [ -n "$summary" ]; then
             echo "::notice title=pytest summary, newest releases::$(echo "$summary" | sed 's/%/%25/g')"
           else
-            tail -10 pytest_output.txt | sed -e 's/%/%25/g' -e 's/^/::error title=pytest output tail::/'
+            tail -10 "$out" | sed -e 's/%/%25/g' -e 's/^/::error title=pytest output tail::/'
           fi
           exit $code

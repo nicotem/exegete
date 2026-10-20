@@ -57,8 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the ones the desktop extension installs, each checked against its
   hash, rather than the newest on PyPI: on 19 October 2026 the suite on
   Ubuntu with Python 3.13 took PyMuPDF 2.0 overnight while the lock held
-  1.28.2. A change to `pyproject.toml` without `uv lock` now fails on
-  the push.
+  1.28.2. A change to the requirements or the version in
+  `pyproject.toml` without `uv lock` now fails on the push.
 - **A job on the newest releases.** One more job, on Ubuntu with Python
   3.13, runs the suite with the newest release of each library Exegete
   allows, what an install from PyPI takes today. It may fail and only

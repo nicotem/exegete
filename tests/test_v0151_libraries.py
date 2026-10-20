@@ -16,11 +16,18 @@
   for the guarded imports listed here with their reasons.
 - The rename job's wheelhouse takes Exegete's requirements from
   pyproject.toml, so the limits reach it.
+- What the documents and comments say of these is what is so: INSTALL.md
+  names the libraries with an upper limit and two without; the lock check
+  catches a change of the requirements or the version, not of every line
+  of pyproject.toml; anyio serves the one tool that waits in a thread; the
+  newest job's limit rests on its measured run, and the job writes
+  nothing into the checkout the suite runs in.
 """
 
 import ast
 import re
 import sys
+from importlib import metadata
 from pathlib import Path
 
 import pytest
@@ -286,3 +293,171 @@ def test_a_requirement_taken_away_is_found():
     found = unnamed_imports(set(_requirements()) - {"pydantic"})
     assert [guarded for _, guarded in found["pydantic"]] == [False]
     assert found["pydantic"][0][0].startswith("src/exegete/server.py:")
+
+
+# ---------------------------------------------------------------------------
+# What the documents and comments say of the limits, the lock and the job
+# ---------------------------------------------------------------------------
+
+# How INSTALL.md names each library it speaks of
+SHOWN_AS = {"mcp": "MCP library", "pydantic": "pydantic", "anyio": "anyio",
+            "pymupdf": "PyMuPDF", "lxml": "lxml", "ebooklib": "EbookLib",
+            "starlette": "Starlette"}
+# Two libraries with no upper limit, which INSTALL.md names so: EbookLib
+# reads every EPUB, and the MCP library loads Starlette at every start.
+NOT_BOUNDED = {"ebooklib", "starlette"}
+# The newest job's first run, 20 October 2026 (run 39416267478): 28 min 15 s
+NEWEST_JOB_MINUTES = 28
+
+
+def _sentences(text):
+    text = re.sub(r"```.*?```", " ", text, flags=re.S)
+    return re.split(r"(?<=[.!?])\s+(?=[A-Z])", " ".join(text.split()))
+
+
+def _named_in(sentence):
+    return {name for name, shown in SHOWN_AS.items()
+            if re.search(rf"(?<![\w-]){re.escape(shown)}(?![\w-])",
+                         sentence)}
+
+
+def _has_upper_limit(specifier):
+    return any(s.operator in {"<", "<=", "==", "===", "~="}
+               for s in specifier)
+
+
+def _comment_above(lines, at):
+    """The comment lines directly above line `at`, joined in order."""
+    above = []
+    for line in reversed(lines[:at]):
+        if not line.strip().startswith("#"):
+            break
+        above.append(line.strip().lstrip("#").strip())
+    return " ".join(reversed(above))
+
+
+def test_install_names_the_libraries_with_a_limit_and_two_without():
+    """INSTALL.md names the libraries an install from PyPI holds below
+    their next major release, and warns that others, EbookLib and
+    Starlette among them, have no upper limit: checked against
+    pyproject.toml and the MCP library's own requirements."""
+    requirements = _requirements()
+    bounded = {name for name, requirement in requirements.items()
+               if any(s.operator == "<" for s in requirement.specifier)}
+    assert bounded == set(LIMITS)
+    assert not _has_upper_limit(requirements["ebooklib"].specifier)
+    assert "starlette" not in requirements
+    by_mcp = [Requirement(line) for line in metadata.requires("mcp")
+              if canonicalize_name(Requirement(line).name) == "starlette"]
+    assert by_mcp and not any(_has_upper_limit(r.specifier) for r in by_mcp)
+    import exegete.server  # noqa: F401  (the MCP library loads Starlette)
+    assert "starlette" in sys.modules
+
+    text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+    section = text[text.index("## Recommended: Install from PyPI"):
+                   text.index("### PDF and EPUB: the optional part")]
+    said = [s for s in _sentences(section) if "upper limit" in s]
+    with_limit = [s for s in said if "no upper limit" not in s]
+    without = [s for s in said if "no upper limit" in s]
+    assert len(with_limit) == 1 and len(without) == 1, said
+    assert _named_in(with_limit[0]) == bounded, with_limit[0]
+    assert NOT_BOUNDED <= _named_in(without[0]), without[0]
+    # the MCP library is named there only as what loads Starlette
+    assert not _named_in(without[0]) & (bounded - {"mcp"}), without[0]
+
+
+def test_what_the_lock_check_catches_is_said_as_it_is():
+    """`uv export --locked` compares pyproject.toml with what the lock
+    records of Exegete: its version and its requirements with their
+    limits, never its description or its links (with uv 0.9.7, a changed
+    description passes; a changed floor, limit or version fails). So a
+    claim that a change "without `uv lock`" fails on the push names the
+    requirements and the version, not every change to pyproject.toml."""
+    ours = [p for p in _lock()["package"] if p["name"] == PROJECT["name"]]
+    assert Version(ours[0]["version"]) == Version(PROJECT["version"])
+    recorded = {(d["name"], str(SpecifierSet(d.get("specifier", ""))),
+                 d.get("marker", ""))
+                for d in ours[0]["metadata"]["requires-dist"]}
+    declared = {(canonicalize_name(Requirement(line).name),
+                 str(Requirement(line).specifier), "")
+                for line in PROJECT["dependencies"]}
+    for extra, lines in PROJECT["optional-dependencies"].items():
+        declared |= {(canonicalize_name(Requirement(line).name),
+                      str(Requirement(line).specifier),
+                      f"extra == '{extra}'") for line in lines}
+    assert recorded == declared
+    assert "description" not in ours[0]
+    assert "description" not in ours[0]["metadata"]
+
+    changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased = changelog[changelog.index("## [Unreleased]"):]
+    unreleased = unreleased[:unreleased.index("\n## [", 1)]
+    contributing = (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    for where, text in (("CHANGELOG.md", unreleased),
+                        ("CONTRIBUTING.md", contributing)):
+        for claim in _sentences(text):
+            if "`uv lock`" in claim and "fails on the push" in claim:
+                assert "requirements" in claim and "version" in claim, \
+                    (where, claim)
+
+
+def _thread_waiters():
+    """Exegete's functions that wait in a worker thread through anyio."""
+    found = set()
+    for path in sorted((REPO / "src" / "exegete").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for function in ast.walk(tree):
+            if not isinstance(function, (ast.FunctionDef,
+                                         ast.AsyncFunctionDef)):
+                continue
+            for node in ast.walk(function):
+                if isinstance(node, ast.Attribute) and \
+                        node.attr == "run_sync" and \
+                        isinstance(node.value, ast.Attribute) and \
+                        node.value.attr == "to_thread":
+                    found.add(function.name)
+    return found
+
+
+def test_the_anyio_comment_names_the_one_tool_that_waits_in_a_thread():
+    """Every other tool runs on the event loop (server.py, at
+    check_for_updates)."""
+    waiters = _thread_waiters()
+    assert waiters == {"check_for_updates"}
+    lines = (REPO / "pyproject.toml").read_text(encoding="utf-8") \
+        .splitlines()
+    at = next(i for i, line in enumerate(lines)
+              if line.strip().startswith('"anyio'))
+    comment = _comment_above(lines, at)
+    for name in waiters:
+        assert name in comment, comment
+
+
+def test_the_newest_jobs_limit_rests_on_its_measured_run():
+    lines = _ci_jobs()["newest-libraries"]["lines"]
+    at = next(i for i, line in enumerate(lines)
+              if re.match(r"^\s*timeout-minutes:", line))
+    limit = int(lines[at].split(":")[1])
+    assert f"{NEWEST_JOB_MINUTES} minutes" in _comment_above(lines, at)
+    # the margin the suite's own limit keeps over its slowest green job
+    assert limit >= 1.5 * NEWEST_JOB_MINUTES
+
+
+def test_the_newest_job_writes_nothing_into_the_checkout():
+    """The suite runs in the checkout, so a file the job wrote there (its
+    table of releases, the suite's output) would be among the files a
+    test looks through."""
+    lines = _ci_jobs()["newest-libraries"]["lines"]
+    text = "\n".join(line for line in lines
+                     if not line.lstrip().startswith("#"))
+    names = dict(re.findall(r'^\s*(\w+)="([^"]+)"\s*$', text, flags=re.M))
+    targets = re.findall(r'(?:>>?|\btee)\s+("[^"]*"|[^\s|;&)]+)', text)
+    assert len(targets) >= 3, targets
+    for target in targets:
+        target = target.strip('"')
+        if target.startswith("$") and target[1:] in names:
+            target = names[target[1:]]
+        assert target == "$GITHUB_STEP_SUMMARY" or \
+            target.startswith("$RUNNER_TEMP/"), target
+    assert not re.search(r"open\(\s*[\"'][^\"']+[\"']\s*,\s*[\"'][wax]",
+                         text)

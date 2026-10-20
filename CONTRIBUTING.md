@@ -65,11 +65,12 @@ is looked at first.
    the one on the newest releases below, install the libraries from the
    lock, `uv.lock`, each release checked against its hash: the releases
    the desktop extension installs, so a new release on PyPI cannot turn
-   a job red overnight, and a change to `pyproject.toml` without
-   `uv lock` fails on the push. Ten run the suite, on Python 3.10
-   and 3.13: one job each on Ubuntu and on macOS, and three on Windows,
-   where the suite is slowest and runs in three parts made of whole test
-   files (`tests/conftest.py`). To run one part on your own computer,
+   a job red overnight, and a change to the requirements or the version
+   in `pyproject.toml` without `uv lock` fails on the push. Ten run the
+   suite, on Python 3.10 and 3.13: one job each on Ubuntu and on macOS,
+   and three on Windows, where the suite is slowest and runs in three
+   parts made of whole test files (`tests/conftest.py`). To run one part
+   on your own computer,
    set `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
    three; left empty, every test runs. Three build the desktop
    extension, one on each system, and install and start it as Claude

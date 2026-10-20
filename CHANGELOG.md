@@ -34,7 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   must lead somewhere, and a heading renamed names every link to it;
   the links to other sites are checked once a week, by a workflow of
   their own (`external-links.yml`). The placeholder for a screenshot
-  that was never added is gone from IMPORT_INSTRUCTIONS.md.
+  that was never added is gone from docs/history/IMPORT_INSTRUCTIONS.md.
+- **The early plans, analyses, research notes and security review
+  marked historical are now in `docs/history/`**, out of the top of the
+  repository, with a README that says what the folder holds; NOTICE
+  gives the new paths of the two it cites.
 
 ### Citing Exegete
 

@@ -898,14 +898,17 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
         return found
 
     def test_every_shipped_document(self):
-        documents = sorted(p for p in REPO.glob("*.md")
+        # with the older ones kept in docs/history/ (v0.15.1)
+        documents = sorted(p for p in [*REPO.glob("*.md"),
+                                       *REPO.glob("docs/history/*.md")]
                            if p.name != "CHANGELOG.md")
         assert {"README.md", "TOOLS.md", "AI_CODING_WORKFLOW.md",
                 "INSTALL.md", "PRIVACY.md"} <= {p.name for p in documents}
         offenders = []
         for path in documents:
             offenders += self._offenders(
-                path.name, path.read_text(encoding="utf-8"))
+                path.relative_to(REPO).as_posix(),
+                path.read_text(encoding="utf-8"))
         assert offenders == []
 
     def test_the_check_would_notice(self):

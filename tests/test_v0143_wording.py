@@ -46,14 +46,17 @@ def _changelog_parts():
 def _live_texts():
     """Every document at the top of the repository (of the CHANGELOG,
     the entries above 0.14.2's alone: 0.14.3's and anything written
-    since, under Unreleased), and every module of the code, which holds
-    the tools' descriptions, answers and refusals."""
+    since, under Unreleased), the older ones kept in docs/history/
+    (v0.15.1), and every module of the code, which holds the tools'
+    descriptions, answers and refusals."""
     texts = {}
-    for path in sorted(REPO.glob("*.md")):
-        if path.name == "CHANGELOG.md":
-            texts[path.name] = _changelog_parts()[0]
+    for path in (sorted(REPO.glob("*.md"))
+                 + sorted(REPO.glob("docs/history/*.md"))):
+        name = path.relative_to(REPO).as_posix()
+        if name == "CHANGELOG.md":
+            texts[name] = _changelog_parts()[0]
         else:
-            texts[path.name] = path.read_text(encoding="utf-8")
+            texts[name] = path.read_text(encoding="utf-8")
     for path in sorted((REPO / "src" / "exegete").glob("*.py")):
         texts[f"src/exegete/{path.name}"] = path.read_text(encoding="utf-8")
     manifest = REPO / "packaging" / "desktop-extension" / "manifest.in.json"

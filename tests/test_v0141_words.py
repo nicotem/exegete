@@ -148,7 +148,7 @@ def test_the_check_would_notice():
 SHIPPED = ["README.md", "TOOLS.md", "INSTALL.md", "QUICKSTART.md",
            "PROJECT_SELECTION_GUIDE.md", "PRIVACY.md", "SUPPORT.md",
            "CONTRIBUTING.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
-           "IMPORT_INSTRUCTIONS.md", "example_config.json",
+           "docs/history/IMPORT_INSTRUCTIONS.md", "example_config.json",
            ".github/ISSUE_TEMPLATE/bug_report.yml",
            ".github/ISSUE_TEMPLATE/config.yml", "CITATION.cff", "NOTICE",
            "packaging/desktop-extension/manifest.in.json"]

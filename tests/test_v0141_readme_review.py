@@ -98,13 +98,21 @@ def _without_the_dated_record(name, text):
     return text.replace(DATED_RECORD_0_11_0, "")
 
 
+def _documents():
+    """Every Markdown document at the top of the repository, and the
+    older ones kept in docs/history/ (v0.15.1), by their paths in it."""
+    return [path.relative_to(REPO).as_posix()
+            for path in sorted(REPO.glob("*.md"))
+            + sorted(REPO.glob("docs/history/*.md"))]
+
+
 def test_no_document_says_qualcoders_ai_keeps_the_private_part():
-    for path in sorted(REPO.glob("*.md")):
-        text = _without_the_dated_record(path.name, _flat(path.name))
+    for name in _documents():
+        text = _without_the_dated_record(name, _flat(name))
         for claim in ("QualCoder's own AI features never send",
                       "its built-in AI never sees"):
-            assert claim not in text, (path.name, claim)
-        assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(text), path.name
+            assert claim not in text, (name, claim)
+        assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(text), name
 
 
 def test_the_private_part_is_stated_for_this_server_only():
@@ -222,8 +230,8 @@ def test_the_three_commitments():
 # ---------------------------------------------------------------------------
 
 def test_no_document_says_qualcoders_server_has_no_external_transport():
-    for path in sorted(REPO.glob("*.md")):
-        assert "no external transport" not in _flat(path.name), path.name
+    for name in _documents():
+        assert "no external transport" not in _flat(name), name
 
 
 def test_the_upstream_server_is_stated_as_dated_fact():

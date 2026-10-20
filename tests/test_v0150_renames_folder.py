@@ -328,7 +328,8 @@ DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
              "QUICKSTART.md", "SUPPORT.md", "CONTRIBUTING.md", "CLAUDE.md",
              "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md")
 # The folder's own spelling, letter case kept: "Qualcoder projects",
-# meaning projects in the format (IMPORT_INSTRUCTIONS.md), is not it
+# meaning projects in the format (docs/history/IMPORT_INSTRUCTIONS.md),
+# is not it
 EARLIER_FOLDER = re.compile(r"QualCoder projects")
 
 

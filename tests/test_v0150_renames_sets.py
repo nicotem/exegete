@@ -649,9 +649,12 @@ class TestTheDocuments:
         changelog = _flat("CHANGELOG.md")
         unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                                changelog.index("## [0.14.3")]
-        texts = {name.name: _flat(name.name)
-                 for name in sorted(REPO.glob("*.md"))
-                 if name.name != "CHANGELOG.md"}
+        # and in the older documents kept in docs/history/ (v0.15.1)
+        names = [path.relative_to(REPO).as_posix()
+                 for path in sorted(REPO.glob("*.md"))
+                 + sorted(REPO.glob("docs/history/*.md"))]
+        texts = {name: _flat(name) for name in names
+                 if name != "CHANGELOG.md"}
         texts["CHANGELOG.md, [0.15.0-alpha]"] = unreleased
         quoted = {where: self._quoted_titles(text)
                   for where, text in texts.items()}

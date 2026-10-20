@@ -479,7 +479,7 @@ Typical workflow:
 If you encounter issues:
 
 1. **Check this guide** troubleshooting section
-2. **Review [AI_CODING_GUIDE.md](AI_CODING_GUIDE.md)** for workflow issues
+2. **Review [AI_CODING_GUIDE.md](../../AI_CODING_GUIDE.md)** for workflow issues
 3. **Consult [Qualcoder docs](https://github.com/ccbogel/QualCoder/wiki)** for import problems
 4. **Test with a small export** to isolate the issue
 5. **Check Qualcoder version** supports REFI-QDA import

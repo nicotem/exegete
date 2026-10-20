@@ -418,12 +418,14 @@ class TestNothingSaysExegeteOpensAQualCoderProject:
                      "packaging/pypi-old-name/README.md",
                      "issue template bug_report.yml"):
             assert name in docs, name
-        # the historical ones carry their banner, and are records
+        # the historical ones carry their banner, and are records (in
+        # docs/history/ since v0.15.1)
         for name in ("QUALCODER_IMPORT_CAPABILITIES.md",
                      "RESEARCH_SUMMARY.md", "SECURITY_FIXES.md",
                      "FEATURE_ANALYSIS.md", "SECURITY_REVIEW.md"):
             assert name not in docs, name
-            assert _historical((REPO / name).read_text(encoding="utf-8"))
+            assert _historical((REPO / "docs" / "history" / name)
+                               .read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------

@@ -682,11 +682,16 @@ async def race_import_file_too_large(client, folder, root, patch, race):
     return "import_documents", arguments
 
 
-# The one refusal left after its backup (the design's choice, for v0.15.1
-# alone): import_documents' "No file was imported: every file was held
-# back or refused when read again", when the preview's kept text is gone.
-# It keeps its backup and names it; moving it before the lock is for the
-# next release.
+# The refusals of import_documents left after its backup (v0.15.1), each
+# keeping the backup and naming it, all write_batch's: a file changed in
+# the seconds after the read again (pinned in
+# test_v0151_import_read_again.py), a file read differently than at the
+# preview ("differs"), a name taken in the folder of originals meanwhile,
+# and that folder no longer an ordinary folder. The design's "one
+# exception", "No file was imported: every file was held back or refused
+# when read again", cannot be reached: write_batch takes the first ready
+# file or raises, and a batch with no ready file is refused before the
+# lock.
 
 # (what changes, the arrangement, and why it still leaves a backup, None
 # once it does not: every race since piece 3's re-checks)

@@ -79,9 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   written, and the save is refused with the backup named.
   `import_documents` reads each file again under the lock file before
   its backup: a file changed, removed or grown past its limit since the
-  preview is refused with no backup. `restore_backup` compares both
-  databases again before its safety backup, so a restore refused
-  because either changed leaves no safety backup.
+  preview is refused with no backup; one changed in the seconds after
+  that read is still refused, with the backup named. `restore_backup`
+  compares both databases again before its safety backup, so a restore
+  refused because either changed leaves no safety backup; it compares
+  them once more after it, and a change made while the safety backup
+  is made is refused, as before, with the safety backup named.
 
 ### Fixed
 

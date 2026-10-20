@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+import exegete.database as database_module
 import exegete.server as server
 import track5_helpers as H
 from exegete import preview_tokens as pt
@@ -1133,21 +1134,17 @@ class TestFileLevelOperations:
 
     def test_a_write_inside_the_restore_window_stops_it(
             self, setup_server, qualcoder_db_path, monkeypatch):
-        """B2.4's recheck immediately before `rmtree` (QA round 1, F12).
+        """B2.4's recheck between the token and the safety backup (QA
+        round 1, F12; v0.15.1).
 
-        It is the only guard for the window between verifying the token
-        and destroying the project folder, and that window spans the
-        whole safety-backup copy of the project tree, so it is the more
-        destructive of the two recheck sites. The codebook path's
-        equivalent window is pinned in test_v012_collateral.py; this one
-        was not, and replacing the comparison with `if False:` left the
-        suite green.
+        The first of the restore's two comparisons: a change between
+        verifying the token and the safety backup is refused before the
+        backup, so this refusal leaves none. The second, after the
+        safety backup, is pinned by the test below.
 
         The racing write lands inside the window by riding on the last
         check before it, whether another program is writing to the
-        database, so no sleep and no wall clock are involved. Since
-        v0.15.1 the re-check comes before the safety backup, so the
-        refusal leaves none.
+        database, so no sleep and no wall clock are involved.
         """
         H.execute_destructive(server.delete_code, 2)   # makes a backup
         backups = _backups(qualcoder_db_path)
@@ -1175,6 +1172,62 @@ class TestFileLevelOperations:
         assert "A backup had already been taken" not in out["error"]
         assert "safety_backup" not in out
         assert _backups(qualcoder_db_path) == backups
+        # The racing row is still there: the folder was not destroyed.
+        assert H.query(qualcoder_db_path,
+                       "SELECT COUNT(*) AS n FROM code_name WHERE cid=99"
+                       )[0]["n"] == 1
+
+    @pytest.mark.parametrize("module, name", [
+        (server, "backup_project"),
+        (database_module, "_copy_project_tree"),
+        (database_module, "_copy_database"),
+    ], ids=["as the safety backup ends", "during its copy of the tree",
+            "as its copy of the database ends"])
+    def test_a_write_during_the_safety_backup_stops_the_restore(
+            self, setup_server, qualcoder_db_path, monkeypatch, module,
+            name):
+        """B2.4's recheck immediately before the swap (QA round 1, F12;
+        v0.15.1 review round 1).
+
+        It is the only guard for the window between the start of the
+        safety backup and destroying the project folder, which spans the
+        whole safety-backup copy of the project tree and its database. A
+        save another program queued behind the backup's copy of the
+        database lands as that copy ends: restored over, it would be in
+        neither the project nor the safety backup. The restore is
+        refused, as 0.15.0 refused it, with the safety backup named and
+        kept, and the project left as the other program saved it.
+
+        The racing write rides on the safety backup itself, at three
+        points, so no sleep and no wall clock are involved.
+        """
+        H.execute_destructive(server.delete_code, 2)   # makes a backup
+        backups = _backups(qualcoder_db_path)
+        backup = str(Path(qualcoder_db_path).parent / backups[-1])
+        token = _preview(server.restore_backup, backup)["preview_token"]
+
+        real = getattr(module, name)
+        fired = []
+
+        def racing(*args, **kwargs):
+            made = real(*args, **kwargs)
+            if not fired:
+                fired.append(True)
+                H.execute(qualcoder_db_path,
+                          "INSERT INTO code_name (cid, name, memo, catid, "
+                          "owner, date, color) VALUES (99, 'RacedIn', '', "
+                          "NULL, 'TestCoder', '2024-01-15', '#FF0000')")
+            return made
+
+        monkeypatch.setattr(module, name, racing)
+        out = _preview(server.restore_backup, backup, preview_token=token)
+        assert fired, "the race never happened; the test proves nothing"
+        assert out["reason"] == "project_changed", out
+        assert out["nothing_changed"] is True
+        # The safety sentence is the fact: a backup was made and stays
+        assert out["error"].endswith(server.BACKUP_KEPT_ANYWAY)
+        assert Path(out["safety_backup"]).is_dir()
+        assert len(_backups(qualcoder_db_path)) == len(backups) + 1
         # The racing row is still there: the folder was not destroyed.
         assert H.query(qualcoder_db_path,
                        "SELECT COUNT(*) AS n FROM code_name WHERE cid=99"

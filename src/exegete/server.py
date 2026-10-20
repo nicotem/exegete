@@ -5973,8 +5973,10 @@ NO_BACKUP_NAMES_LIST = (
     "No backup could be made, so the names list was not saved. The "
     "researcher can check that the disk has free space and that the "
     "project folder can be written to, then preview again.")
-# A names list changed during the save's backup (v0.15.1: its one use
-# left; every other refusal of the save comes before the backup)
+# A change found once a backup is made (v0.15.1): a names list written
+# during save_names_list's backup, and a project or backup changed during
+# restore_backup's safety backup. Every other refusal of these two comes
+# before the backup.
 BACKUP_KEPT_ANYWAY = (
     " A backup had already been taken before the change was detected; it "
     "is unchanged and can be pruned.")
@@ -12313,9 +12315,15 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                     write_db.insert_imported_document, result, ctx, owner,
                     written)
                 if not taken:
-                    # The one refusal left after its backup (v0.15.1),
-                    # named with its reason in the tests of that promise
-                    # (test_v0151_one_backup.py)
+                    # Not reached: write_batch takes the first ready file
+                    # (it always has its whole time) or raises, and a
+                    # batch with no ready file is refused before the lock.
+                    # Kept as a guard. The refusals that do come after
+                    # the backup, and name it, are write_batch's below: a
+                    # file changed in the seconds after the read again, a
+                    # file read differently (differs), a name taken in
+                    # the folder of originals, that folder no longer an
+                    # ordinary folder (v0.15.1; test_v0151_one_backup.py)
                     return json.dumps(_with_backup({
                         "error": "No file was imported: every file was held "
                                  "back or refused when read again.",
@@ -13791,8 +13799,8 @@ def restore_backup(backup_path: str,
     # where it is (v0.15.0), for the note.
     exegete_had = _holds_exegete_folder(project_folder)
 
-    # Close the connection, check both databases again, back up, swap the
-    # folder, reopen read-only
+    # Close the connection, check both databases again, back up, check
+    # them once more, swap the folder, reopen read-only
     global db
     if db is not None:
         try:
@@ -13803,8 +13811,8 @@ def restore_backup(backup_path: str,
 
     if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
         # The project (or the backup) changed between the preview and
-        # this moment: refused before the safety backup (v0.15.1), so a
-        # refusal leaves no backup.
+        # this moment: refused before the safety backup (v0.15.1), so
+        # this refusal leaves no backup.
         return json.dumps({
             "error": TOKEN_ERROR_TEXTS["project_changed"].format(
                 tool="restore_backup"),
@@ -13823,6 +13831,21 @@ def restore_backup(backup_path: str,
         safety_backup = marked
     except OSError:
         pass  # keep the unmarked name if rename fails
+
+    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
+        # Changed while the safety backup was made (a save queued behind
+        # the backup's copy of the database lands as it ends, and would
+        # be in neither the restored project nor the backup; the lock
+        # file is taken only for the swap). Refused, as 0.15.0 refused
+        # it, with the safety backup named; the project is left as the
+        # other program saved it.
+        return json.dumps({
+            "error": TOKEN_ERROR_TEXTS["project_changed"].format(
+                tool="restore_backup") + BACKUP_KEPT_ANYWAY,
+            "reason": "project_changed",
+            "nothing_changed": True,
+            "safety_backup": str(safety_backup),
+        })
 
     try:
         with hold_project_lock(project_folder) as held:

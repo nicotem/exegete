@@ -104,3 +104,31 @@ def test_a_changed_file_is_refused_in_the_imports_words(project, folder,
                     "nothing_changed": True}
     assert _backups(project) == []
     assert _rows(project) == []
+
+
+def test_a_file_changed_after_the_read_again_names_the_backup(
+        project, folder, clock, monkeypatch):
+    """A file changed in the seconds after the read again: the backup
+    is made by then, and the import's own read refuses the batch with
+    nothing imported and the backup named (one of the refusals that
+    still come after it)."""
+    _files(folder, (5, 5), (5, 5))
+    preview, _took = _call(clock, paths=[str(folder)])
+    real = doc_import.read_again
+    fired = []
+
+    def read_again(result, ctx, now=None):
+        read = real(result, ctx, now)
+        fired.append(True)
+        (folder / "P01.txt").write_text("preview=5 import=5\nChanged.\n",
+                                        encoding="utf-8")
+        return read
+    monkeypatch.setattr(doc_import, "read_again", read_again)
+    done = json.loads(server.import_documents(
+        paths=[str(folder)], preview_token=preview["preview_token"]))
+    assert fired, "the file never changed; the test proves nothing"
+    assert done["error"] == doc_import.BATCH_FAILURES["changed"], done
+    assert done["nothing_changed"] is True
+    assert Path(done["backup_path"]).name in _backups(project)
+    assert len(_backups(project)) == 1
+    assert _rows(project) == []

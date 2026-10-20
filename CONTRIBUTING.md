@@ -61,7 +61,7 @@ is looked at first.
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
 5. **Continuous integration** runs on every pushed branch and on pull
-   requests to `main`: eighteen jobs. Ten run the suite, on Python 3.10
+   requests to `main`: nineteen jobs. Ten run the suite, on Python 3.10
    and 3.13: one job each on Ubuntu and on macOS, and three on Windows,
    where the suite is slowest and runs in three parts made of whole test
    files (`tests/conftest.py`). To run one part on your own computer,
@@ -74,12 +74,16 @@ is looked at first.
    text the import stores with QualCoder's own extraction: one against
    QualCoder 4.0, and one watching QualCoder's newest code, whose
    changes are a notice, never a failure. Two try the upgrade from the
-   package's earlier name, on Ubuntu and on Windows. Every job must be
-   green, the watch apart. The workflow actions are pinned by commit SHA
-   with a version comment beside each pin; if you add or bump an action,
-   keep that shape (Dependabot maintains the pins). A bump also means
-   recording the new SHA against the tag it really is, in
-   `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`;
+   package's earlier name, on Ubuntu and on Windows. One checks the
+   links in the documents (`scripts/check_links.py`); their links to
+   other sites are checked once a week instead, by a workflow of its
+   own (`external-links.yml`), where a page that is gone fails and a
+   site that turns robots away or answers slowly is a notice. Every
+   job must be green, the watch apart. The workflow actions are pinned
+   by commit SHA with a version comment beside each pin; if you add or
+   bump an action, keep that shape (Dependabot maintains the pins). A
+   bump also means recording the new SHA against the tag it really is,
+   in `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`;
    that module's docstring carries the two API calls that resolve it.
    The tests fail on an unrecorded SHA on purpose: Dependabot has left a
    version comment stale beside a bumped SHA before, and nothing else
@@ -95,7 +99,9 @@ is looked at first.
    the documentation the AI model reads. Update `TOOLS.md` (the tool
    reference), `README.md`, `INSTALL.md` and `PRIVACY.md` where they
    describe the behaviour you changed; `PRIVACY.md` is the contract for
-   what a tool result may disclose.
+   what a tool result may disclose. Links are checked on every push
+   (`scripts/check_links.py`): when you rename a heading, it names every
+   link to it, the update page's included.
 
 ## Review before merge
 

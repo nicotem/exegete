@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### For contributors
+
+- **The links in the documents are checked on every push**
+  (`scripts/check_links.py`, a new job in CI): each relative link, its
+  anchor, and each link to the repository's own documents on `main`
+  must lead somewhere, and a heading renamed names every link to it;
+  the links to other sites are checked once a week, by a workflow of
+  their own (`external-links.yml`). The placeholder for a screenshot
+  that was never added is gone from IMPORT_INSTRUCTIONS.md.
 
 ## [0.15.0-alpha] - 2026-10-20
 

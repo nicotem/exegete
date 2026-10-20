@@ -93,8 +93,6 @@ Decide:
 3. Hover over **Import**
 4. Click **REFI-QDA Project**
 
-![Import Menu](https://placeholder-for-screenshot)
-
 **Menu path**: `File > Import > REFI-QDA Project`
 
 **Keyboard shortcut**: None (must use menu)

@@ -235,7 +235,9 @@ TOO_LARGE = b" " * (database.PSEUDONYMS_JSON_MAX_BYTES + 1)
     ("removed", LIST, None),
     ("brought_back", None, LIST),
     ("unknown", TOO_LARGE, LIST),
-])
+], ids=["neither", "same", "replaced", "removed", "brought back",
+        "unknown"])   # short ids: Windows caps an environment variable,
+                      # which pytest fills with the test's id
 def test_the_names_list_note_by_kind(selected, kind, project, backup):
     backup_folder = database.backup_project(selected)
     _names_list(selected, project)

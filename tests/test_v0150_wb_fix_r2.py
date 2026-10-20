@@ -140,8 +140,9 @@ class TestClaudeCodesLimitsOnEveryPython:
         lengths = {name: length for length, name in over}
         long = _long_paragraph()
         # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5)
-        said = re.search(r"On Python 3\.13, 4 of `full`'s 82 descriptions "
+        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
+        # removed three tools, as announced in 0.14
+        said = re.search(r"On Python 3\.13, 4 of `full`'s 79 descriptions "
                          r"are longer than 4,096 characters \(([^)]*)\)",
                          long).group(1)
         four = re.findall(r"`(\w+)`", said)

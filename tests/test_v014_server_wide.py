@@ -565,8 +565,12 @@ class TestEveryNamedToolIsThere:
 
     def test_core_marks_what_it_lacks_and_full_does_not(self):
         core, _ = served_texts("core")
-        marked = "restore_backup" + server.NOT_IN_THIS_TOOL_SET
+        # v0.15.1: restore_backup is in core, so list_backups' description
+        # names it unmarked, and marks import_text_file, which core lacks
+        marked = "import_text_file" + server.NOT_IN_THIS_TOOL_SET
         assert marked in core["description of list_backups"]
+        assert ("restore_backup" + server.NOT_IN_THIS_TOOL_SET
+                not in core["description of list_backups"])
         # v0.14.2: the opening text is the brief's short version, which
         # names only read_brief, in every set; the brief's full version,
         # served as a resource in core too, is where the marks are
@@ -2295,7 +2299,14 @@ def _core_reachable_texts():
     # SERVER_INSTRUCTIONS is marked by _refresh_served_texts whenever a
     # set is applied (v0.15.0: LIFECYCLE_TOOLS, a list of names never
     # sent, went with the `lifecycle` set)
-    settled = {"SERVER_INSTRUCTIONS"}
+    settled = {"SERVER_INSTRUCTIONS",
+               # v0.15.1, restore_backup in core, whose token refusals
+               # reach these: each text in TOKEN_ERROR_TEXTS_BY_TOOL is
+               # served only for the tool its key names
+               # (`_token_error(reason, tool)`), save_names_list and
+               # pseudonymise_source, which core does not register, and
+               # KEYED_BIND is a set of names that is never served
+               "TOKEN_ERROR_TEXTS_BY_TOOL", "KEYED_BIND"}
 
     def refs(node):
         out = set()

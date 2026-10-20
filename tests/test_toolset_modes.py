@@ -34,7 +34,7 @@ REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
 EXPECTED_FULL = FULL_TOOLS      # tests/tool_counts.py
-EXPECTED_CORE = 25              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), and the earlier names of the two tools renamed in 0.15.0; check_for_updates, import_documents and create_project are not in core
+EXPECTED_CORE = 26              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), the earlier names of the two tools renamed in 0.15.0, and restore_backup (v0.15.1); check_for_updates, import_documents and create_project are not in core
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -496,10 +496,18 @@ class TestThePublishedSchemaBudget:
     # proposals now, 172 more (184): 4,101 fewer in all (4,273 on 3.11).
     # `core` serves none of the three. The rounded figures become about
     # 205,000 and 69,000 characters, and the tokens 51k and 17k.
-    FULL_MEASURED = 205_044          # 79 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_780           # 25 tools, same environment
-    FULL_MEASURED_310 = 215_452      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 72_240
+    # v0.15.1, the restore: restore_backup's description says what its
+    # preview gives and that the lock file is held for the whole
+    # restore, 399 characters more in `full` (423 on 3.11); and `core`
+    # gains the tool (3,733 characters; 3,957 on 3.11) while
+    # list_backups' and delete_coding's descriptions lose the four marks
+    # that said it was not in the set: 3,603 more in `core` (3,827). The
+    # rounded figures become about 205,000 and 72,000 characters, the
+    # tokens 51k and 18k.
+    FULL_MEASURED = 205_443          # 79 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 72_383           # 26 tools, same environment
+    FULL_MEASURED_310 = 215_875      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 76_067
 
     # Why two per cent, away from the reference environment.
     #
@@ -526,12 +534,12 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,044"
-    CORE_CHARS = "68,780"
+    FULL_CHARS = "205,443"
+    CORE_CHARS = "72,383"
     FULL_ROUNDED = "205,000"
-    CORE_ROUNDED = "69,000"
+    CORE_ROUNDED = "72,000"
     FULL_TOKENS = "51k"
-    CORE_TOKENS = "17k"
+    CORE_TOKENS = "18k"
 
     @staticmethod
     def _read(name):
@@ -844,7 +852,7 @@ class TestThePublishedSchemaBudget:
         assert (f"measure about {self.FULL_ROUNDED} characters, roughly "
                 f"{self.FULL_TOKENS} tokens, against about "
                 f"{self.CORE_ROUNDED} characters, roughly "
-                f"{self.CORE_TOKENS} tokens, for the 25 tools of `core` "
+                f"{self.CORE_TOKENS} tokens, for the 26 tools of `core` "
                 f"({self.FULL_CHARS} and {self.CORE_CHARS} characters, "
                 f"measured for 0.15.1 on Python 3.13;") in install
 

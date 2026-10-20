@@ -326,14 +326,15 @@ class TestNoShippedTextNamesIt:
 
 class TestTheCount:
 
-    def test_full_has_82_tools_and_core_25(self):
+    def test_full_has_79_tools_and_core_26(self):
         """82 at this piece; 79 since v0.15.1 removed three tools, as
-        announced in 0.14 (tests/test_v0151_removed_tools.py)."""
-        assert (FULL_TOOLS, CORE_TOOLS) == (79, 25)
+        announced in 0.14 (tests/test_v0151_removed_tools.py); core 26
+        since v0.15.1, restore_backup joining it."""
+        assert (FULL_TOOLS, CORE_TOOLS) == (79, 26)
         server._apply_toolset("full")
         assert len(_listed()) == 79
         server._apply_toolset("core")
-        assert len(_listed()) == 25
+        assert len(_listed()) == 26
 
 
 # ---------------------------------------------------------------------------
@@ -414,7 +415,8 @@ class TestInstall:
         # (test_toolset_modes.py): about 208,000 with create_backup
         # accepted and ignored, then about 209,000 with audio and video
         # left out of backups, as the small corrections leave it, then
-        # about 205,000 with the three tools removed
+        # about 205,000 with the three tools removed, still about
+        # 205,000 with the restore's paragraph on its preview
         assert "On Python 3.13, 4 of `full`'s 79 descriptions" in install
         assert "`full` (default) registers 79 tools" in install
         rounded = _rounded_full()

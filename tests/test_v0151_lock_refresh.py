@@ -478,27 +478,31 @@ def test_the_check_cannot_take_the_mutex(setup_server, qualcoder_db_path,
 
 
 # ---------------------------------------------------------------------------
-# 9. A restore stops the refresh before its clear
+# 9. A restore keeps the refresh through its clear (the restore piece)
 # ---------------------------------------------------------------------------
 
-def test_a_restore_stops_the_refresh_before_the_clear(
+def test_a_restore_keeps_the_refresh_through_the_clear(
         setup_server, qualcoder_db_path, monkeypatch):
-    """On Windows the clear cannot remove a file the refresh has open.
-    Red without the stop."""
+    """Inverted by the restore's piece (v0.15.1): the restore keeps its
+    lock file, and the refresh, through the clear and the copy (the clear
+    passes over the file it holds, so on Windows it never meets the
+    refresh's open file), and the hold's end removes both. Red with the
+    stop this test once pinned put back before the clear."""
     made = json.loads(server.create_code(name="Kept", create_backup=True))
     backup = made["backup_path"]
     alive = []
     real = server._clear_all_but_exegete_folder
 
-    def clearing(folder):
-        alive.append(len(_refresh_threads()))
-        return real(folder)
+    def clearing(folder, **kwargs):
+        alive.append((len(_refresh_threads()),
+                      _lock(qualcoder_db_path).exists()))
+        return real(folder, **kwargs)
     monkeypatch.setattr(server, "_clear_all_but_exegete_folder", clearing)
     preview = json.loads(server.restore_backup(backup))
     restored = json.loads(server.restore_backup(
         backup, preview_token=preview["preview_token"]))
     assert restored.get("success") is True, restored
-    assert alive == [0]
+    assert alive == [(1, True)]
     assert _refresh_threads() == []
     assert not _lock(qualcoder_db_path).exists()
 

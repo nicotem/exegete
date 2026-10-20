@@ -853,17 +853,15 @@ class TestNoNamesOrPathsInTheLog:
                 name=name, create_backup=True))
         backups = self._backups(marked)
         assert len(backups) == 2
-        # Every restore: the swap has already removed the lock file, and
-        # the end of the hold says so in one line naming no project
-        # (v0.15.1: it reads the file before removing it).
+        # A restore: the swap keeps the lock file it holds (v0.15.1, the
+        # restore piece), and the end of the hold removes it, so no line
+        # about the lock file is logged at all, and none names a project.
         preview = json.loads(server.restore_backup(str(backups[0])))
         restored = json.loads(server.restore_backup(
             str(backups[0]), preview_token=preview["preview_token"]))
         assert restored.get("success") is True, restored
         assert [line for line in _logged(caplog)
-                if "lock file" in line] \
-            == ["The project lock file was already gone at the end of a "
-                "write"]
+                if "lock file" in line] == []
         # The prune's error line, with a removal refused.
         def refuse(path, *args, **kwargs):
             raise PermissionError(13, "Permission denied", str(path))

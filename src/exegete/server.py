@@ -4,6 +4,7 @@ use in conversation with an AI assistant, compatible with QualCoder. It runs
 as a Model Context Protocol server."""
 
 import errno
+import fnmatch
 import os
 import re
 import sys
@@ -39,6 +40,7 @@ from .database import (
     error_label,
     error_text,
     pseudonyms_json_fingerprint,
+    project_counts,
     CoderVisibilityUnreadable,
     coder_is_hidden,
     CoderListUnreadable,
@@ -6104,9 +6106,9 @@ NO_BACKUP_NAMES_LIST = (
     "researcher can check that the disk has free space and that the "
     "project folder can be written to, then preview again.")
 # A change found once a backup is made (v0.15.1): a names list written
-# during save_names_list's backup, and a project or backup changed during
-# restore_backup's safety backup. Every other refusal of these two comes
-# before the backup.
+# during save_names_list's backup, and a project or backup changed, or
+# the project's lock file taken over, during restore_backup's safety
+# backup. Every other refusal of these two comes before the backup.
 BACKUP_KEPT_ANYWAY = (
     " A backup had already been taken before the change was detected; it "
     "is unchanged and can be pruned.")
@@ -12920,8 +12922,9 @@ def list_backups() -> str:
     notes = _list_backups_notes(
         project_folder, any(b["kind"] == "qualcoder" for b in backups),
         history.level if history is not None else "none")
-    # The notes and the hint name restore_backup and prune_backups, which
-    # the core set does not register; there they are marked so.
+    # The notes and the hint name prune_backups, which the core set does
+    # not register (restore_backup is in it since v0.15.1); there they
+    # are marked so.
     return json.dumps({
         **answer,
         "notes": [_mark_unregistered(note) for note in notes],
@@ -13084,7 +13087,7 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                     "name": entry.name,
                     "path": str(entry),
                     "kind": kind,
-                    "created": created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "created": created.strftime(BACKUP_TIME_FORMAT),
                     "dated_from": dated_from,
                     "age_days": round(
                         max(0.0, (now - created).total_seconds()) / 86400, 1),
@@ -13597,43 +13600,155 @@ def _project_is_write_locked(data_qda: Path) -> bool:
                 pass
 
 
+# The project's names list (pseudonyms.json) in a restore (v0.15.1): how
+# the backup's compares with the project's, as one kind
+# (`_names_list_change`) from which the preview's sentence and the success
+# note (`_restore_pseudonyms_json_note`) are both built. By fingerprints
+# of the two files' bytes only, never a name or a count of names.
+NAMES_LIST_SENTENCES = {
+    "same": "The project's names list (pseudonyms.json) is the same in the "
+            "backup.",
+    "replaced": "The project's names list (pseudonyms.json) is replaced by "
+                "the backup's, which differs.",
+    "removed": "The project's names list (pseudonyms.json) is removed: the "
+               "backup has none.",
+    "brought_back": "The backup's names list is brought back: the project "
+                    "has none now.",
+    "link": "The project's names list is a symbolic link, which the restore "
+            "removes without changing the file it points to.",
+    "unknown": "Whether the names list changes cannot be told: one of the "
+               "two could not be read.",
+}
+# Said after it when the list changes and the project's Exegete folder
+# holds the names file, which a restore keeps as it is (v0.15.0)
+NAMES_FILE_OUT_OF_STEP = (
+    "The names file in the project's Exegete folder is kept as it is, so it "
+    "may no longer match the names list; saving the list again "
+    "(save_names_list) brings them back in step.")
+
+
+def _names_list_change(before: Optional[str],
+                       after: Optional[str]) -> Optional[str]:
+    """How a restore changes the project's names list, from
+    `pseudonyms_json_fingerprint` of the project (`before`) and of the
+    backup, or of the project once restored (`after`): None when neither
+    has one; "link" when the project's is a symbolic link; "unknown" when
+    both have one and either could not be read; otherwise "same",
+    "removed", "brought_back" or "replaced" (v0.15.1)."""
+    if before is None and after is None:
+        return None
+    if before == "link":
+        return "link"
+    if "unreadable" in (before, after) and None not in (before, after):
+        return "unknown"
+    if before == after:
+        return "same"
+    if after is None:
+        return "removed"
+    if before is None:
+        return "brought_back"
+    return "replaced"
+
+
+def _names_list_note(project_folder: Path, before: Optional[str],
+                     after: Optional[str]) -> Optional[str]:
+    """The restore preview's sentence on the names list, with
+    NAMES_FILE_OUT_OF_STEP when the list changes and the names file is
+    in the project's Exegete folder (looked at, never read); None when
+    neither has a list."""
+    kind = _names_list_change(before, after)
+    if kind is None:
+        return None
+    note = NAMES_LIST_SENTENCES[kind]
+    if kind != "same":
+        try:
+            names_file_there = os.path.lexists(private_files.place(
+                project_folder, private_files.NAMES_FILE))
+        except (OSError, ValueError):
+            names_file_there = False
+        if names_file_there:
+            # It names save_names_list, which the core set does not
+            # register: marked where it is written
+            note = f"{note} {_mark_unregistered(NAMES_FILE_OUT_OF_STEP)}"
+    return note
+
+
 def _restore_pseudonyms_json_note(before: Optional[str],
                                   after: Optional[str],
                                   safety_backup: Path) -> Optional[str]:
     """What a restore did to the project's pseudonyms.json, when it did
-    anything: the file appeared, disappeared or changed. The one the
-    project had is said to be in the safety backup only when that
-    backup's own file is the same (a link is not copied into a backup).
-    Names no file's content; the safety backup by its folder name."""
-    if before == after:
+    anything: the file appeared, disappeared or changed, by the kind
+    `_names_list_change` gives (v0.15.1; nothing said when the two are
+    alike, even both unreadable, as before). The one the project had is
+    said to be in the safety backup only when that backup's own file is
+    the same (a link is not copied into a backup). Names no file's
+    content; the safety backup by its folder name. The tools it names
+    that the core set does not register are marked where they are
+    written."""
+    kind = _names_list_change(before, after)
+    if kind in (None, "same") or before == after:
         return None
     kept = (before is not None
             and pseudonyms_json_fingerprint(safety_backup) == before)
     where = (f"The one the project had is in the safety backup "
              f"{safety_backup.name}; keep that backup, or copy the file "
              f"back into the project folder, while it is still needed: "
-             f"prune_backups removes safety backups too."
+             + _mark_unregistered("prune_backups removes safety backups "
+                                  "too.")
              if kept else
              f"The safety backup {safety_backup.name} holds no copy of the "
              f"one the project had (a symbolic link is not copied into a "
              f"backup).")
     if after is None:
+        # "removed", or the project's link where the backup has none
         return (f"This project had a pseudonyms.json before the restore and "
                 f"the backup restored has none, so the project no longer "
                 f"has one. That file may be the only record of a "
-                f"pseudonymisation mapping (a pseudonymise_source run's save "
-                f"writes one). {where}")
-    if before is None:
+                f"pseudonymisation mapping (a "
+                + _mark_unregistered("pseudonymise_source")
+                + f" run's save writes one). {where}")
+    if kind == "brought_back":
         return (f"The backup restored carries a pseudonyms.json that this "
                 f"project did not have before the restore; its names are "
                 f"replaced on later text or transcript imports: by "
-                f"Exegete's import_documents unless apply_project_pseudonyms "
+                f"Exegete's " + _mark_unregistered("import_documents")
+                + f" unless apply_project_pseudonyms "
                 f"is false, and by QualCoder on every one (not a PDF). "
                 f"The safety backup {safety_backup.name} holds the project "
                 f"as it was, without one.")
     return (f"The backup restored carries a pseudonyms.json that differs "
             f"from the one this project had before the restore, which may "
             f"be the only record of a pseudonymisation mapping. {where}")
+
+
+# A restore's preview and its answer count the rows of each kind
+# (database.project_counts, v0.15.1); said when a database could not be
+# read for them, its counts then null
+COUNTS_NOT_READ = {
+    "project": "The project's database could not be read just now "
+               "(another program may be writing to it, or it cannot be "
+               "opened), so its counts are null.",
+    "backup": "The backup's database could not be read (it cannot be "
+              "opened), so its counts are null.",
+    "both": "Neither database could be read just now (another program may "
+            "be writing to the project's, or one cannot be opened), so "
+            "both counts are null.",
+}
+# How a backup's time is written, in list_backups and a restore (v0.15.1)
+BACKUP_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _backup_taken(backup_folder: Path, prefix: str,
+                  qualcoder_made: bool) -> Tuple[Optional[str], Optional[str]]:
+    """When a backup was taken and what that time is read from, as
+    list_backups gives them (`created` and `dated_from`); (None, None)
+    when the folder cannot be read. Never raises."""
+    try:
+        created, _counter, dated_from = backup_sort_key(
+            backup_folder, prefix, to_the_hour=qualcoder_made)
+    except (OSError, ValueError, OverflowError):
+        return None, None
+    return created.strftime(BACKUP_TIME_FORMAT), dated_from
 
 
 # A restore keeps the project's Exegete folder as it is, never taking the
@@ -13701,15 +13816,20 @@ def _is_exegete_entry(top: Path, name: str) -> bool:
         own.st_dev, own.st_ino)
 
 
-def _kept_by_restore(folder: Path, name: str) -> bool:
+def _kept_by_restore(folder: Path, name: str,
+                     lock_held: bool = False) -> bool:
     """Whether a restore keeps the top-level entry `name` of the project
     folder (or leaves it out of the backup it copies from, `folder`): the
     entry at the Exegete folder's name (`_is_exegete_entry`), or one at
     the audio or the video folder's name, whatever it is (v0.15.1). The
     media test is the one a backup's leave-out makes
     (`database.is_media_folder_entry`), so what a backup leaves out is
-    exactly what a restore keeps. Never raises."""
-    return (_is_exegete_entry(folder, name)
+    exactly what a restore keeps. With `lock_held`, the restore holds the
+    project's lock file, which it keeps where it is until its hold ends
+    (v0.15.1): QualCoder 3.8.2 and a second copy of Exegete find the
+    project in use for the whole copy. Never raises."""
+    return ((lock_held and name == QUALCODER_LOCK_FILENAME)
+            or _is_exegete_entry(folder, name)
             or is_media_folder_entry(folder, name))
 
 
@@ -13762,11 +13882,13 @@ def _gone_already(function, path, failure) -> None:
         raise error
 
 
-def _clear_all_but_exegete_folder(project_folder: Path) -> None:
+def _clear_all_but_exegete_folder(project_folder: Path,
+                                  lock_held: bool = False) -> None:
     """Remove every top-level entry of the project folder but those a
     restore keeps (`_kept_by_restore`: the one at the Exegete folder's
     name, v0.15.0, and those at the audio and the video folder's names,
-    v0.15.1, whatever is there: a folder, a file, a link), which a
+    v0.15.1, whatever is there: a folder, a file, a link; with
+    `lock_held`, the lock file the restore holds, v0.15.1), which a
     restore leaves where they are, as they are: nothing in them is read,
     copied or removed. A link or a junction is removed as a link, never
     followed; a folder with everything in it. An entry another program
@@ -13775,7 +13897,8 @@ def _clear_all_but_exegete_folder(project_folder: Path) -> None:
     restore's recovery from the safety backup answers."""
     with os.scandir(project_folder) as entries:
         going = [entry.path for entry in entries
-                 if not _kept_by_restore(project_folder, entry.name)]
+                 if not _kept_by_restore(project_folder, entry.name,
+                                         lock_held)]
     for path in going:
         try:
             info = os.lstat(path)
@@ -13801,16 +13924,21 @@ def _copy_around_exegete_folder(source: Path, project_folder: Path,
     the project folder, around the entries `_clear_all_but_exegete_folder`
     left. The source's top-level entries at the audio and the video
     folder's names are always left out, whatever they are (v0.15.1: the
-    project's own are kept); with `leave_out_folder`, so is its entry at
-    the Exegete folder's name (each name `_is_exegete_entry` takes);
-    nothing below the top is. Any other entry of the source that would
-    land on something still in the project raises before anything is
-    copied, rather than mixing the source's files into a folder kept.
+    project's own are kept), and so are its top-level lock files, named
+    as a backup leaves them out (`*.lock`, v0.15.1: a backup made by an
+    earlier version, or by QualCoder, can hold one, which would meet the
+    lock file the restore holds); with `leave_out_folder`, so is its
+    entry at the Exegete folder's name (each name `_is_exegete_entry`
+    takes); nothing below the top is. Any other entry of the source that
+    would land on something still in the project raises before anything
+    is copied, rather than mixing the source's files into a folder kept.
     Raises on any failure."""
     top = os.path.normcase(os.path.abspath(source))
 
     def leave_out(name: str) -> bool:
         if is_media_folder_entry(source, name):
+            return True
+        if fnmatch.fnmatch(name, "*.lock"):
             return True
         return leave_out_folder and _is_exegete_entry(source, name)
 
@@ -13980,6 +14108,13 @@ def restore_backup(backup_path: str,
     as it is, never taken from the backup; the preview says when either
     has one. So are its audio and video folders.
 
+    The preview gives when the backup was taken (backup_taken), how many
+    files, codes, codings and the rest the project has now and the backup
+    has (counts), and what happens to the names list, pseudonyms.json
+    (names_list_note). The project's lock file is held, kept fresh, for
+    the whole restore, so QualCoder 3.8.2, or another conversation using
+    Exegete, finds the project in use until it ends.
+
     Args:
         backup_path: Path to the backup folder (from list_backups)
         preview_token: The token from this operation's preview; omit it to
@@ -14056,6 +14191,28 @@ def restore_backup(backup_path: str,
             "hint": "Call restore_backup again with the preview_token to "
                     "proceed."
         }
+        # What the restore would bring back (v0.15.1), outside the signed
+        # state, as the signs below are: when the backup was taken, as
+        # list_backups gives it; how many rows of each kind the project
+        # has now and the backup has, every coder's together, no coder
+        # named (the backup read-only and immutable, its side files
+        # refused above); and what happens to the names list, by the two
+        # files' fingerprints, never a name
+        preview["backup_taken"], preview["backup_dated_from"] = \
+            _backup_taken(backup_folder,
+                          prefixes[1] if qualcoder_made else prefixes[0],
+                          qualcoder_made)
+        counts_now = project_counts(project_folder)
+        counts_backup = project_counts(backup_folder, immutable=True)
+        preview["counts"] = {"now": counts_now, "in_backup": counts_backup}
+        if counts_now is None or counts_backup is None:
+            preview["counts_note"] = COUNTS_NOT_READ[
+                "both" if counts_now is None and counts_backup is None
+                else "project" if counts_now is None else "backup"]
+        names_note = _names_list_note(project_folder,
+                                      *fingerprint["names_lists"])
+        if names_note:
+            preview["names_list_note"] = names_note
         if qualcoder_made:
             # A restore keeps the project's audio and video folders and
             # never takes the backup's (v0.15.1): said always, with a
@@ -14120,123 +14277,187 @@ def restore_backup(backup_path: str,
     if _project_is_write_locked(project_data):
         return json.dumps({"error": DB_LOCKED_MESSAGE})
 
-    # The AI coder name before the swap: the restore replaces the whole
-    # project folder, sidecar included, so the setting reverts to the
-    # backup's version and the result has to say so (B1.14).
-    name_before = read_sidecar(project_folder).name
-    # The same for pseudonyms.json, which the swap replaces with the
-    # backup's (or removes): the result says so, because the file the
-    # project had may be the only record of a pseudonymisation mapping
-    # (Brief 2, merge fix M3). A fingerprint only, never the bytes.
-    mapping_before = pseudonyms_json_fingerprint(project_folder)
-    # Whether the project has its Exegete folder, which the swap leaves
-    # where it is (v0.15.0), for the note.
-    exegete_had = _holds_exegete_folder(project_folder)
-
-    # Close the connection, check both databases again, back up, check
-    # them once more, swap the folder, reopen read-only
     global db
-    if db is not None:
-        try:
-            db.close()
-        except Exception:
-            pass
-        db = None
-
-    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
-        # The project (or the backup) changed between the preview and
-        # this moment: refused before the safety backup (v0.15.1), so
-        # this refusal leaves no backup.
-        return json.dumps({
-            "error": TOKEN_ERROR_TEXTS["project_changed"].format(
-                tool="restore_backup"),
-            "reason": "project_changed",
-            "nothing_changed": True,
-        })
-
-    # Safety backup of the current state (rename to mark it as pre-restore)
+    # The project's lock file is held from here to the end of the copy,
+    # or of the recovery, kept fresh as every write's is (v0.15.1):
+    # QualCoder 3.8.2, and another conversation using Exegete, find the
+    # project in use for the whole restore, safety backup included. The
+    # clear and the recovery keep the file where it is (`lock_held`), so
+    # it never goes while the project is part copied. Over a stale lock
+    # another program left, nothing is held, as before: the clear removes
+    # that file. A refusal on entering the hold comes before anything is
+    # made.
     safety_report: Dict[str, Any] = {}
-    safety_backup = backup_project(project_folder, report=safety_report)
-    marked = safety_backup.with_name(
-        safety_backup.name[:-len(".qda")] + "_prerestore.qda"
-    )
-    try:
-        safety_backup.rename(marked)
-        safety_backup = marked
-    except OSError:
-        pass  # keep the unmarked name if rename fails
-
-    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
-        # Changed while the safety backup was made (a save queued behind
-        # the backup's copy of the database lands as it ends, and would
-        # be in neither the restored project nor the backup; the lock
-        # file is taken only for the swap). Refused, as 0.15.0 refused
-        # it, with the safety backup named; the project is left as the
-        # other program saved it.
-        return json.dumps({
-            "error": TOKEN_ERROR_TEXTS["project_changed"].format(
-                tool="restore_backup") + BACKUP_KEPT_ANYWAY,
-            "reason": "project_changed",
-            "nothing_changed": True,
-            "safety_backup": str(safety_backup),
-        })
-
+    failed_mid_swap = False
+    recovered = False
+    folder_kept = False
+    folder_gone = False
     try:
         with hold_project_lock(project_folder) as held:
-            # The refresh stops before the clear, which removes the lock
-            # file anyway, so that on Windows the clear never meets the
-            # refresh's open file (v0.15.1)
-            held.stop()
-            # Everything in the project goes but its Exegete folder, which
-            # stays where it is, as it is, never read or copied (v0.15.0):
-            # a file of any name in it, at any depth, saved at any moment,
-            # is kept. Then everything from the backup but its entry of
-            # that name. A failure in either goes to the recovery below,
-            # which leaves the folder where it is too.
-            _clear_all_but_exegete_folder(project_folder)
-            _copy_around_exegete_folder(backup_folder, project_folder,
-                                        leave_out_folder=True)
-            # Old backups may contain a copied lock file; QualCoder never
-            # puts lock files in backups and neither do we (anymore)
-            for stray_lock in project_folder.glob("*.lock"):
+            # The AI coder name before the swap: the restore replaces the
+            # whole project folder, sidecar included, so the setting
+            # reverts to the backup's version and the result has to say
+            # so (B1.14).
+            name_before = read_sidecar(project_folder).name
+            # The same for pseudonyms.json, which the swap replaces with
+            # the backup's (or removes): the result says so, because the
+            # file the project had may be the only record of a
+            # pseudonymisation mapping (Brief 2, merge fix M3). A
+            # fingerprint only, never the bytes.
+            mapping_before = pseudonyms_json_fingerprint(project_folder)
+            # Whether the project has its Exegete folder, which the swap
+            # leaves where it is (v0.15.0), for the note.
+            exegete_had = _holds_exegete_folder(project_folder)
+
+            # Close the connection, check both databases again, back up,
+            # check them once more, swap the folder, reopen read-only
+            if db is not None:
                 try:
-                    stray_lock.unlink()
-                except OSError:
+                    db.close()
+                except Exception:
                     pass
+                db = None
+
+            if _restore_fingerprint(project_folder,
+                                    backup_folder) != fingerprint:
+                # The project (or the backup) changed between the preview
+                # and this moment: refused before the safety backup
+                # (v0.15.1), so this refusal leaves no backup.
+                return json.dumps({
+                    "error": TOKEN_ERROR_TEXTS["project_changed"].format(
+                        tool="restore_backup"),
+                    "reason": "project_changed",
+                    "nothing_changed": True,
+                })
+
+            # Safety backup of the current state (rename to mark it as
+            # pre-restore). A failure here raises past the recovery
+            # below, which only ever starts once the safety backup is
+            # made: no safety backup, nothing cleared.
+            safety_backup = backup_project(project_folder,
+                                           report=safety_report)
+            marked = safety_backup.with_name(
+                safety_backup.name[:-len(".qda")] + "_prerestore.qda"
+            )
+            try:
+                safety_backup.rename(marked)
+                safety_backup = marked
+            except OSError:
+                pass  # keep the unmarked name if rename fails
+
+            if _restore_fingerprint(project_folder,
+                                    backup_folder) != fingerprint:
+                # Changed while the safety backup was made (QualCoder 4.0,
+                # which writes no lock file, saving as the backup's copy of
+                # the database ends would land in neither the restored
+                # project nor the backup). Refused, as 0.15.0 refused it,
+                # with the safety backup named; the project is left as the
+                # other program saved it.
+                return json.dumps({
+                    "error": TOKEN_ERROR_TEXTS["project_changed"].format(
+                        tool="restore_backup") + BACKUP_KEPT_ANYWAY,
+                    "reason": "project_changed",
+                    "nothing_changed": True,
+                    "safety_backup": str(safety_backup),
+                })
+
+            # The lock file checked once more before anything is removed,
+            # as every write checks it before its change (v0.15.1): a
+            # lock another program took over while this one was stale
+            # (Exegete asleep past 30 seconds, say), or one that is now
+            # active over a stale lock this restore did not hold, refuses
+            # the restore, nothing changed, the safety backup named.
+            try:
+                _recheck_lock_before_commit(project_folder, held)
+            except DatabaseLockedError as e:
+                return json.dumps({
+                    "error": str(e) + BACKUP_KEPT_ANYWAY,
+                    "nothing_changed": True,
+                    "safety_backup": str(safety_backup),
+                })
+
+            try:
+                # Everything in the project goes but its Exegete folder,
+                # which stays where it is, as it is, never read or copied
+                # (v0.15.0), its audio and video folders (v0.15.1) and the
+                # lock file this restore holds (v0.15.1): a file of any
+                # name in the Exegete folder, at any depth, saved at any
+                # moment, is kept. Then everything from the backup but its
+                # entries of those names and its lock files. A failure in
+                # either goes to the recovery below, which leaves them
+                # where they are too.
+                _clear_all_but_exegete_folder(project_folder,
+                                              lock_held=bool(held))
+                _copy_around_exegete_folder(backup_folder, project_folder,
+                                            leave_out_folder=True)
+                # Lock files left out of the copy, a lock file another
+                # program made during it is removed, as one an older
+                # backup brought used to be; never the one this restore
+                # holds, which its hold's end removes
+                for stray_lock in project_folder.glob("*.lock"):
+                    if held and stray_lock.name == QUALCODER_LOCK_FILENAME:
+                        continue
+                    try:
+                        stray_lock.unlink()
+                    except OSError:
+                        pass
+            except Exception as e:
+                # Attempt recovery from the safety backup, still holding
+                # the lock file. A copytree that fails PARTWAY (e.g. disk
+                # full) leaves a PARTIAL project folder — the backup's
+                # data.qda without the rest — which the previous
+                # exists()-guard mistook for "project still there",
+                # leaving a live half-replaced project that the next read
+                # tool silently reconnects to (fault-injection D1). Remove
+                # any partial folder first so the safety-backup recovery
+                # always runs on a clean slate.
+                logger.error("Restore failed mid-swap: %s", error_label(e))
+                failed_mid_swap = True
+                try:
+                    if os.path.lexists(project_folder):
+                        # Everything here but the Exegete folder (and the
+                        # lock file held) was cleared or is a partial copy:
+                        # cleared again, the folder left where it is, and
+                        # the safety backup copied around it; the safety
+                        # backup's own copy of the folder comes back only
+                        # when nothing is at that name any more (v0.15.0)
+                        _clear_all_but_exegete_folder(
+                            project_folder, lock_held=bool(held))
+                        folder_kept = _project_holds_exegete_entry(
+                            project_folder)
+                        _copy_around_exegete_folder(
+                            safety_backup, project_folder,
+                            leave_out_folder=folder_kept)
+                    else:
+                        # Another program removed the project folder, with
+                        # its audio and video folders, which the safety
+                        # backup does not hold (v0.15.1, fix round 1)
+                        folder_gone = True
+                        shutil.copytree(safety_backup, project_folder)
+                    recovered = True
+                except Exception as recovery_error:
+                    logger.error("Recovery also failed: %s",
+                                 error_label(recovery_error))
     except DatabaseLockedError:
-        # QualCoder opened the project between the check and the swap
+        # Another program's lock file, active as the hold began, or the
+        # database kept locked through the safety backup's copy (which
+        # removes its unfinished folder): nothing was made, so no safety
+        # backup is named
         switch_project(current_project_path)
         raise
-    except Exception as e:
-        # Attempt recovery from the safety backup. A copytree that fails
-        # PARTWAY (e.g. disk full) leaves a PARTIAL project folder — the
-        # backup's data.qda without the rest — which the previous
-        # exists()-guard mistook for "project still there", leaving a live
-        # half-replaced project that the next read tool silently reconnects
-        # to (fault-injection D1). Remove any partial folder first so the
-        # safety-backup recovery always runs on a clean slate.
-        logger.error("Restore failed mid-swap: %s", error_label(e))
-        folder_kept = False
-        folder_gone = False
-        try:
-            if os.path.lexists(project_folder):
-                # Everything here but the Exegete folder was cleared or
-                # is a partial copy: cleared again, the folder left where
-                # it is, and the safety backup copied around it; the
-                # safety backup's own copy of the folder comes back only
-                # when nothing is at that name any more (v0.15.0)
-                _clear_all_but_exegete_folder(project_folder)
-                folder_kept = _project_holds_exegete_entry(project_folder)
-                _copy_around_exegete_folder(safety_backup, project_folder,
-                                            leave_out_folder=folder_kept)
-            else:
-                # Another program removed the project folder, with its
-                # audio and video folders, which the safety backup does
-                # not hold (v0.15.1, fix round 1)
-                folder_gone = True
-                shutil.copytree(safety_backup, project_folder)
-            switch_project(current_project_path)
-            recovered: Dict[str, Any] = {
+
+    if failed_mid_swap:
+        # The hold has ended: the lock file is gone, so a project folder
+        # left empty can go too (below)
+        if recovered:
+            try:
+                switch_project(current_project_path)
+            except Exception as recovery_error:
+                logger.error("Recovery also failed: %s",
+                             error_label(recovery_error))
+                recovered = False
+        if recovered:
+            answer: Dict[str, Any] = {
                 "error": "Restore failed, but the project was recovered "
                          "from the safety backup; nothing was lost.",
                 "safety_backup": str(safety_backup),
@@ -14250,7 +14471,7 @@ def restore_backup(backup_path: str,
                 # be false here (fix round 4). Links in the project's
                 # Exegete folder are lost only when the folder was not
                 # left in place (v0.15.0)
-                recovered["error"] = (
+                answer["error"] = (
                     "Restore failed, but the project was recovered from "
                     "the safety backup. That backup skipped the symlinks "
                     f"{_skipped_where(safety_report)}, so the "
@@ -14260,16 +14481,13 @@ def restore_backup(backup_path: str,
             if folder_gone:
                 # "Nothing was lost" would be untrue: the recordings went
                 # with the folder
-                recovered["error"] = (
-                    recovered["error"].replace("; nothing was lost.", ".")
+                answer["error"] = (
+                    answer["error"].replace("; nothing was lost.", ".")
                     + " " + RECOVERED_WITHOUT_MEDIA)
-            _attach_skipped_symlinks(recovered, safety_report,
+            _attach_skipped_symlinks(answer, safety_report,
                                      prefix="safety_backup_",
                                      folder_kept=folder_kept)
-            return json.dumps(recovered)
-        except Exception as recovery_error:
-            logger.error("Recovery also failed: %s",
-                         error_label(recovery_error))
+            return json.dumps(answer)
         failed: Dict[str, Any] = {
             "error": "Restore failed. The pre-restore state is preserved in "
                      "the safety backup; copy its contents back into the "
@@ -14280,7 +14498,8 @@ def restore_backup(backup_path: str,
         # The project's Exegete folder is never removed by the swap or the
         # recovery, so it is normally still there, as it was (v0.15.0).
         # A project folder left empty goes, as it went before the folder
-        # was kept (a folder holding anything stays)
+        # was kept (a folder holding anything stays); the lock file the
+        # restore held went at the hold's end, above
         try:
             os.rmdir(project_folder)
         except OSError:
@@ -14323,6 +14542,14 @@ def restore_backup(backup_path: str,
     # where a broken promise did the damage, so it does not rely on one
     # (fix round 4, S1).
     try:
+        # When the backup restored was taken, as the preview said, and
+        # what the project now holds, by kind (v0.15.1)
+        result["backup_taken"] = _backup_taken(
+            backup_folder, prefixes[1] if qualcoder_made else prefixes[0],
+            qualcoder_made)[0]
+        result["counts"] = project_counts(project_folder)
+        if result["counts"] is None:
+            result["counts_note"] = COUNTS_NOT_READ["project"]
         name_after = read_sidecar(project_folder).name
         if name_after != name_before:
             if name_after is None:
@@ -14361,7 +14588,6 @@ def restore_backup(backup_path: str,
             "folder); nothing further was changed.")
         result.setdefault("safety_backup", str(safety_backup))
     return json.dumps(result, indent=2)
-
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
@@ -16826,11 +17052,17 @@ def _restore_state_core(project_folder, backup_folder) -> Dict[str, Any]:
 
 
 def _restore_fingerprint(project_folder, backup_folder) -> Dict[str, Any]:
-    """What a restore would overwrite, and what it would overwrite it with."""
+    """What a restore would overwrite, and what it would overwrite it with:
+    the two databases and, since v0.15.1, the two names lists
+    (`pseudonyms_json_fingerprint`), so that a list saved, changed or
+    removed after the preview makes its token stale, refused as a changed
+    project."""
     return {
         "project": _qda_file_stamp(Path(project_folder) / "data.qda"),
         "backup": _qda_file_stamp(Path(backup_folder) / "data.qda"),
         "backup_name": Path(backup_folder).name,
+        "names_lists": [pseudonyms_json_fingerprint(project_folder),
+                        pseudonyms_json_fingerprint(backup_folder)],
     }
 
 
@@ -23269,8 +23501,11 @@ CORE_TOOLSET = frozenset({
     # needs an owner refuses until the project's AI coder name is set,
     # so a core-mode host must be able to answer that (ruling 10)
     "set_project_ai_coder_name",
-    # the safety pair: workspace isolation and undo
+    # the safety tools: a copy of the project, undoing a coding, the
+    # backups and the restore (restore_backup since v0.15.1, as decided
+    # on 27 September 2026)
     "copy_project_to_workspace", "delete_coding", "list_backups",
+    "restore_backup",
     # the earlier names of start_coding_session and read_file_with_codings
     # (0.15.0, RENAMED_TOOLS), in every set that has the new ones, until
     # the release on method removes them
@@ -23387,9 +23622,9 @@ def _refresh_served_texts() -> Dict[str, Any]:
     tool it names that this set does not register (v0.14, server-wide).
 
     The instructions and the tool descriptions are written for the full
-    set; in `core` they name tools `core` lacks (restore_backup,
-    search_memos, explain_ai_coding_tools), and a model told to call a
-    tool it cannot see is sent nowhere. The prompts and the methods
+    set; in `core` they name tools `core` lacks (search_memos,
+    explain_ai_coding_tools), and a model told to call a tool it cannot
+    see is sent nowhere. The prompts and the methods
     notes are marked when they are read (`_mark_unregistered`), since
     they are rendered on each request.
 

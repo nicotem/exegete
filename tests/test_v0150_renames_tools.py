@@ -35,7 +35,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server  # noqa: E402
-from tool_counts import FULL_TOOLS  # noqa: E402
+from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).parent))
 from test_v0150_qualcoder_texts_5 import (  # noqa: E402
@@ -144,7 +144,7 @@ class TestTheRegistry:
             assert not hasattr(server, old), old
 
     @pytest.mark.parametrize("mode, count", [("full", FULL_TOOLS),
-                                             ("core", 25)])
+                                             ("core", CORE_TOOLS)])
     def test_each_earlier_name_beside_its_new_one(self, mode, count):
         tools = _listed(mode)
         assert len(tools) == count
@@ -752,21 +752,23 @@ class TestTheDocuments:
         # removed three tools, as announced in 0.14
         assert ("registers 79 tools, two of them the earlier names of two "
                 "renamed tools (see \"Earlier names\" below)") in tools
-        assert ("only the 25-tool supervised coding set is registered: "
+        # 26 since restore_backup joined `core` (v0.15.1)
+        assert ("only the 26-tool supervised coding set is registered: "
                 "read_brief,") in tools.replace("> ", "")
-        assert ("copy_project_to_workspace, delete_coding, list_backups, and "
-                "the two earlier names below.") in tools.replace("> ", "")
+        assert ("copy_project_to_workspace, delete_coding, list_backups, "
+                "restore_backup, and the two earlier names below."
+                ) in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
         assert "`full` (default) registers 79 tools, every tool," in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
-        assert "`core` registers the 25-tool supervised coding set" in install
+        assert "`core` registers the 26-tool supervised coding set" in install
         assert "Exegete offers 79 tools by default" in install
-        assert "register only the 25-tool supervised coding set" in install
+        assert "register only the 26-tool supervised coding set" in install
         readme = _read("README.md")
         assert ("| `full` | 79: all, creating a project and two renamed "
                 "tools' earlier names included |") in readme
-        assert "| `core` | 25: the coding loop and its safety tools |" \
+        assert "| `core` | 26: the coding loop and its safety tools |" \
             in readme
         for name in DOCUMENTS:
             flat = _flat(_read(name))

@@ -997,7 +997,7 @@ declares, and each tool's own description says what each one does.
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in Exegete's environment (in the extension,
 > the switch "Use the small tool set, for local models"), only the
-> 25-tool supervised coding set is registered: read_brief,
+> 26-tool supervised coding set is registered: read_brief,
 > list_available_projects, select_project, get_current_project,
 > get_project_summary,
 > search_files, read_file_with_codings, open_file_for_reading,
@@ -1006,15 +1006,15 @@ declares, and each tool's own description says what each one does.
 > record_suggestions, review_suggestions, edit_suggestion,
 > update_suggestion_status, apply_codings, create_code, set_memo,
 > set_project_ai_coder_name,
-> copy_project_to_workspace, delete_coding, list_backups, and the two
-> earlier names below.
+> copy_project_to_workspace, delete_coding, list_backups,
+> restore_backup, and the two earlier names below.
 > Required for local models, optional elsewhere; unknown values fail
 > loudly at startup. Measured for 0.15.1 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
 > definitions run to about 205,000 characters for `full`, roughly 51k
-> tokens at four characters per token, and about 69,000 characters for
-> `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
+> tokens at four characters per token, and about 72,000 characters for
+> `core`, roughly 18k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
 > LM Studio recipe in INSTALL.md for what that means for context
@@ -1112,7 +1112,7 @@ still answers empty, and that answer is a finding.
 - `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` - **WRITES TO DATABASE** - Remove one coded segment (refuses a hidden coder's row or a row carrying a private note unless the override is passed); a coding an AI coding session applied is marked removed in that session, which the answer names
 - `list_backups()` - List this project's backup snapshots (both Exegete's `_backup_` and QualCoder's `_BKUP_` families); a backup holding its database's journal or WAL file, copied while a program was writing, is marked `unclean`; each says whether it holds audio or video folders (`holds_audio_or_video`, read from the backup: those made from 0.15.1 on leave them out, an earlier one may hold them)
 - `prune_backups(keep_last, older_than_days, preview_token)` - Delete Exegete's own backups by a retention policy (preview first, then the token the preview returns; QualCoder's `_BKUP_` backups are never removed); the preview counts, for each backup it would remove, the files in its audio or video folders that neither the project nor a backup kept holds (`audio_video_files_only_here`), which may be the only copies of recordings
-- `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused). The project's `Exegete` folder (files the researcher fills in) is kept as it is, never taken from the backup; the preview says when either has one. So are its `audio` and `video` folders
+- `restore_backup(backup_path, preview_token)` - Guarded project restore (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused). The project's `Exegete` folder (files the researcher fills in) is kept as it is, never taken from the backup; the preview says when either has one. So are its `audio` and `video` folders. The preview gives when the backup was taken (`backup_taken`, as `list_backups` dates it); how many files, codes, categories, codings, cases, annotations and journal entries the project has now and the backup has (`counts`, every coder's rows together); and whether the project's names list (`pseudonyms.json`) is the same in the backup, replaced, removed or brought back (`names_list_note`, never a name), naming the names file in the project's `Exegete` folder when it may then no longer match the list. A names list saved or changed after the preview makes its token stale. The project's lock file is held, kept fresh, from the checks to the end of the copy, so QualCoder 3.8.2, or another conversation using Exegete, finds the project in use until the restore ends; if another program takes the lock file over before the project is cleared, the restore is refused with nothing removed, and the safety backup named. The answer repeats `backup_taken` and gives the restored project's `counts`. In `core` since 0.15.1
 
 **Interchange & Report Exports (exported files keep full memos, private sections included; give `output_path` as a full path or one starting with `~`: since 0.14 a relative one is refused and nothing is written):**
 - `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder/NVivo/ATLAS.ti/MAXQDA. **Known faults** (a later release is meant to fix them): it files every coding under the AI coder name, yours included, and leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions, unmarked. Exegete has no other REFI-QDA export yet; QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps them
@@ -1165,8 +1165,8 @@ rows carry a `#####` private note. Of these, `merge_codes` and
 `delete_code` require `allow_hidden_coder=true` to execute when hidden
 coders' codings are affected. `restore_backup` rolls the project
 back (all but its `Exegete`, `audio` and `video` folders, which a
-restore keeps): its preview
-does not count codings by owner, and it has no such gate;
+restore keeps): its preview counts each kind of row, every coder's
+together, never by owner, and it has no such gate;
 `pseudonymise_source` reports hidden coders' rows as counts and gates a
 narrower set (see its own entry).
 

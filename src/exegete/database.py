@@ -656,6 +656,17 @@ def _sqlite_ro_uri(path: Union[str, Path]) -> str:
     return f"{Path(path).resolve().as_uri()}?mode=ro"
 
 
+def _sqlite_ro_immutable_uri(path: Union[str, Path]) -> str:
+    """`_sqlite_ro_uri` with `immutable=1`: SQLite reads the main file as
+    it stands, takes no lock and makes no side file beside it (no
+    journal, no -wal, no -shm). Only for a database no program writes,
+    a backup, and only once its side files have been checked
+    (`unclean_backup_side_files`, `backup_database_is_link`): immutable
+    would read the main file without a journal or WAL file that holds
+    what was committed (v0.15.1, the form the earlier names' read used)."""
+    return _sqlite_ro_uri(path) + "&immutable=1"
+
+
 def _is_locked_error(e: sqlite3.Error) -> bool:
     """Check whether a sqlite3 error indicates a locked/busy database."""
     msg = str(e).lower()
@@ -4041,6 +4052,53 @@ def pseudonyms_json_fingerprint(folder: Union[str, Path]) -> Optional[str]:
         return hashlib.sha256(raw).hexdigest()
     except Exception:                                   # noqa: BLE001
         return "unreadable"
+
+
+# What a restore's preview counts in the project now and in the backup
+# (v0.15.1): each kind of row by the format's own tables, every coder's
+# rows together. Codings are the text, image and audio-video codings
+# together.
+PROJECT_COUNT_TABLES = (
+    ("files", ("source",)),
+    ("codes", ("code_name",)),
+    ("categories", ("code_cat",)),
+    ("codings", ("code_text", "code_image", "code_av")),
+    ("cases", ("cases",)),
+    ("annotations", ("annotation",)),
+    ("journal_entries", ("journal",)),
+)
+
+
+def project_counts(folder: Union[str, Path], immutable: bool = False
+                   ) -> Optional[Dict[str, Optional[int]]]:
+    """How many rows of each kind (`PROJECT_COUNT_TABLES`) the project, or
+    the backup, in `folder` holds: every coder's rows, no coder named.
+    A kind whose table the schema lacks is None (codings: when it lacks
+    all three tables).
+
+    Never waits: the database is opened read-only with no wait on
+    another program's lock, so a database being written, or one that
+    cannot be opened, gives None, as a whole. A backup (`immutable`) is
+    opened immutable too, so no side file is ever made beside its
+    database; the caller has refused an unclean backup, or one whose
+    database is a link, first. Never raises."""
+    data = Path(folder) / "data.qda"
+    try:
+        uri = (_sqlite_ro_immutable_uri(data) if immutable
+               else _sqlite_ro_uri(data))
+        with closing(sqlite3.connect(uri, uri=True, timeout=0)) as con:
+            tables = {row[0].lower() for row in con.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'")}
+            counts: Dict[str, Optional[int]] = {}
+            for kind, names in PROJECT_COUNT_TABLES:
+                present = [name for name in names if name in tables]
+                counts[kind] = (sum(
+                    con.execute(f'SELECT COUNT(*) FROM "{name}"')
+                    .fetchone()[0] for name in present)
+                    if present else None)
+            return counts
+    except Exception:                                   # noqa: BLE001
+        return None
 
 
 def read_project_pseudonyms(project_folder: Union[str, Path]
@@ -11902,7 +11960,7 @@ class QualcoderDatabase:
                 if unclean_backup_side_files(entry) or \
                         backup_database_is_link(entry):
                     continue
-                uri = _sqlite_ro_uri(data) + "&immutable=1"
+                uri = _sqlite_ro_immutable_uri(data)
                 with closing(sqlite3.connect(uri, uri=True)) as con:
                     if same_text:
                         row = con.execute(

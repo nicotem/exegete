@@ -749,7 +749,7 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   creating a project included, so that a study can be started from the
   conversation (TOOLS.md, "Starting a project from the conversation");
   two of them are the earlier names of two renamed tools (TOOLS.md,
-  "Earlier names"). `core` registers the 25-tool supervised coding set
+  "Earlier names"). `core` registers the 26-tool supervised coding set
   for local models (see the LM Studio recipe), which cannot create a
   project. `lifecycle`, the earlier name of `full` (the desktop
   extension's default before 0.15.0), is read as `full` until v1.0, and
@@ -1126,19 +1126,19 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 79 tools by
 default, and the serialised tool definitions alone measure about
-205,000 characters, roughly 51k tokens, against about 69,000
-characters, roughly 17k tokens, for the 25 tools of `core` (205,044
-and 68,780 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
+205,000 characters, roughly 51k tokens, against about 72,000
+characters, roughly 18k tokens, for the 26 tools of `core` (205,443
+and 72,383 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far
 past where small-model tool selection degrades. Set
 `EXEGETE_TOOLSET=core` (in the config of Step 5) to register only the
-25-tool supervised coding set.
+26-tool supervised coding set.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-17k tokens of schema exceed the 8k default context. When loading the
+18k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
-(that leaves about 15k tokens for your transcript excerpts and
+(that leaves about 14k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
 or 64k if you must run the full surface (its schema alone is about 51k
 tokens).

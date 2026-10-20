@@ -1080,12 +1080,23 @@ def _partial_copytree_patch(monkeypatch, env: Env, unrecoverable: bool = False):
 
 class TestRestoreBackupFaults:
 
-    def test_successful_restore_is_fully_new_with_safety_backup(self, restore_env):
-        """Baseline contract (also covers the stray-lock unlink OSError at
-        server.py:2847-2848 via an un-unlinkable *.lock directory inside the
-        backup): project == backup afterwards, safety backup == old state."""
+    def test_successful_restore_is_fully_new_with_safety_backup(
+            self, restore_env, monkeypatch):
+        """Baseline contract: project == backup afterwards, safety backup
+        == old state. Also covers the stray-lock unlink OSError: since
+        v0.15.1 a backup's top-level *.lock entries are left out of the
+        copy (the backup's old.lock folder never arrives), so the
+        un-unlinkable stuck.lock folder is made in the project during the
+        copy, as another program might."""
         env = restore_env
-        (env.backup_folder / "stuck.lock").mkdir()  # dir: unlink() -> OSError
+        (env.backup_folder / "old.lock").mkdir()
+        real_copy = server._copy_around_exegete_folder
+
+        def copy_then_stuck_lock(source, project_folder, **kwargs):
+            real_copy(source, project_folder, **kwargs)
+            (project_folder / "stuck.lock").mkdir()  # unlink() -> OSError
+        monkeypatch.setattr(server, "_copy_around_exegete_folder",
+                            copy_then_stuck_lock)
         pre_hash = env.hash()
         pre_state = env.state()
         backup_hash = db_hash(env.backup_folder)
@@ -1095,6 +1106,8 @@ class TestRestoreBackupFaults:
 
         data = json.loads(result)
         assert data.get("success") is True, data
+        assert (env.folder / "stuck.lock").is_dir()
+        assert not (env.folder / "old.lock").exists()
         assert env.hash() == backup_hash, "project is not fully the backup state"
         new = env.backup_names() - before
         assert len(new) == 1 and "_prerestore" in next(iter(new))
@@ -1105,36 +1118,72 @@ class TestRestoreBackupFaults:
 
     def test_lock_appears_between_probe_and_swap(self, restore_env, monkeypatch):
         """QualCoder opens the project between the write-lock probe and the
-        folder swap (server.py:2849-2852): nothing is replaced, the project
-        stays fully old, the connection is restored."""
+        restore's hold of the lock file, which since v0.15.1 begins before
+        the safety backup and lasts through the copy: refused as the hold
+        begins, nothing made (no safety backup), the project fully old,
+        the foreign lock left, the connection restored."""
         env = restore_env
         pre_hash = env.hash()
         pre_state = env.state()
         before = env.backup_names()
 
-        real_backup_project = server.backup_project
+        real_probe = server._project_is_write_locked
 
-        def backup_then_lock(project_path, **kwargs):
-            # mirrors backup_project's real signature (the report= keyword
-            # the safety backup passes since fix round 3, R3)
-            out = real_backup_project(project_path, **kwargs)
+        def probe_then_lock(data_qda):
+            locked = real_probe(data_qda)
             env.plant_lock(fresh=True)  # QualCoder grabs the project now
-            return out
+            return locked
 
-        monkeypatch.setattr(server, "backup_project", backup_then_lock)
+        monkeypatch.setattr(server, "_project_is_write_locked",
+                            probe_then_lock)
 
         result = H.execute_destructive(server.restore_backup, str(env.backup_folder))
 
-        assert_structured_error(result, "is in use by another program")
+        data = assert_structured_error(result, "is in use by another program")
+        assert "safety_backup" not in data
         assert env.hash() == pre_hash
         assert env.state() == pre_state, "project folder changed despite refusal"
-        # the safety backup made before the refusal is by design; it must
-        # hold the pre-call state
-        new = env.backup_names() - before
-        assert len(new) == 1
-        assert db_hash(env.work / next(iter(new))) == pre_hash
+        assert env.backup_names() == before
         assert env.lock.exists(), "foreign lock file was removed"
         assert_connection_recovered(env)
+
+    def test_safety_backup_fails_while_the_lock_is_held(
+            self, restore_env, monkeypatch):
+        """v0.15.1: the restore's hold of the lock file begins before its
+        safety backup, while the recovery begins only at the clear. A
+        safety backup that fails (a full disk) leaves the project as it
+        was, byte for byte, nothing beside it, no safety backup named; a
+        second restore of the same backup then succeeds. Red if the
+        recovery's `try` wraps the safety backup: the recovery clears the
+        project with no backup to copy back."""
+        env = restore_env
+        data_before = (env.folder / "data.qda").read_bytes()
+        pre_state = env.state()
+        siblings = set(p.name for p in env.work.iterdir())
+        held = []
+        real_backup_project = server.backup_project
+
+        def backup_fails(project_path, **kwargs):
+            held.append(server.qualcoder_lock_state(env.folder)[0])
+            raise OSError(28, "Injected: no space left on device")
+
+        monkeypatch.setattr(server, "backup_project", backup_fails)
+        result = H.execute_destructive(server.restore_backup,
+                                       str(env.backup_folder))
+        data = assert_structured_error(result)
+        assert held == ["active"]
+        assert "safety_backup" not in data
+        assert "success" not in data
+        assert (env.folder / "data.qda").read_bytes() == data_before
+        assert env.state() == pre_state
+        assert set(p.name for p in env.work.iterdir()) == siblings
+        assert not env.lock.exists()
+
+        monkeypatch.setattr(server, "backup_project", real_backup_project)
+        result = H.execute_destructive(server.restore_backup,
+                                       str(env.backup_folder))
+        assert json.loads(result).get("success") is True, result
+        assert env.hash() == db_hash(env.backup_folder)
 
     def test_swap_fails_before_any_copy_recovers_from_safety_backup(
             self, restore_env, monkeypatch):

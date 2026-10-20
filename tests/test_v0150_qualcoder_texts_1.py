@@ -622,12 +622,14 @@ def test_guard_exegetes_import_applies_the_longer_name_first(
     assert text == "Participant B met Participant A.\n"
 
 
-def test_in_core_the_visibility_text_marks_restore_backup(tmp_path):
-    """Core does not register restore_backup, so the text marks it where
-    it is written, as every text a core tool can reach does
-    (tests/test_v014_server_wide.py)."""
+def test_in_core_the_visibility_text_names_restore_backup_unmarked(
+        tmp_path):
+    """Core registers restore_backup since v0.15.1 (it did not before,
+    and the text marked it where it is written, as every text a core
+    tool can reach does, tests/test_v014_server_wide.py): the text now
+    names it unmarked."""
     server._apply_toolset("core")       # the registry fixture restores it
-    assert "restore_backup" not in server.mcp._tool_manager._tools
+    assert "restore_backup" in server.mcp._tool_manager._tools
     folder = tmp_path / "Study.qda"
     new_project.write_project(folder, new_project.creation_statements(
         "Researcher", "x (Exegete)", "2026-10-13 10:00:00"))
@@ -643,5 +645,5 @@ def test_in_core_the_visibility_text_marks_restore_backup(tmp_path):
     finally:
         server.db.close()
         server.db, server.current_project_path = original
-    assert answer == {"error": VISIBILITY.replace(
-        "restore_backup", "restore_backup" + server.NOT_IN_THIS_TOOL_SET)}
+    assert answer == {"error": VISIBILITY}
+    assert server.NOT_IN_THIS_TOOL_SET not in answer["error"]

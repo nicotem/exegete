@@ -291,10 +291,13 @@ class TestTheSecondDoors:
         text = _resource("exegete://guidance/brief")
         assert text == server._mark_unregistered(server.BRIEF_FULL)
         mark = server.NOT_IN_THIS_TOOL_SET
-        for name in ("restore_backup", "compare_coders"):
+        # v0.15.1: restore_backup is in `core`, so export_codebook stands
+        # for the tools it lacks
+        for name in ("export_codebook", "compare_coders"):
             assert f"{name}{mark}" in text
         assert f"explain_ai_coding_tools(){mark}" in text
         assert f"read_brief{mark}" not in text
+        assert f"restore_backup{mark}" not in text
 
 
 # ---------------------------------------------------------------------------
@@ -609,7 +612,12 @@ class TestTheSizes:
     # characters here (198,237 before); explain_ai_coding_tools loses the
     # help topics' deprecation sentence (166 fewer) and propose_codes says
     # how to merge two proposals now (172 more).
-    NOW = {"full": 194_136, "core": 65_464}
+    # v0.15.1, the restore: restore_backup's paragraph on its preview and
+    # its lock file (399 characters more in `full`); in `core`, which it
+    # joins and where it is left out here as a tool added to the set
+    # after 0.14.2 (ADDED_TO_CORE_AFTER_0142), list_backups and
+    # delete_coding no longer mark it (132 characters fewer).
+    NOW = {"full": 194_535, "core": 65_332}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -690,7 +698,9 @@ class TestTheSizes:
             # stay 0.14.2's (0.14.3: import_documents and
             # open_file_for_reading)
             payload = [e for e in payload
-                       if e["name"] not in ADDED_AFTER_0142]
+                       if e["name"] not in ADDED_AFTER_0142
+                       and not (mode == "core"
+                                and e["name"] in ADDED_TO_CORE_AFTER_0142)]
             others = [e for e in payload if e["name"] not in self.NEW]
             new = {e["name"]: e for e in payload if e["name"] in self.NEW}
             assert set(new) == {name for name, (_, sets) in self.NEW.items()
@@ -720,6 +730,9 @@ ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading",
                     "analyze_for_coding", "analyze_file_with_coding",
                     "set_project_coder_name", "prepare_names_list",
                     "save_names_list")
+# Tools that joined `core` after 0.14.2, left out of its figure likewise
+# (v0.15.1: restore_backup)
+ADDED_TO_CORE_AFTER_0142 = ("restore_backup",)
 
 
 # ---------------------------------------------------------------------------

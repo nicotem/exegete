@@ -107,7 +107,7 @@ class TestTheSet:
         server._apply_toolset("core")
         registered = set(server.mcp._tool_manager._tools)
         assert registered == set(server.CORE_TOOLSET)
-        assert len(registered) == EXPECTED_CORE == 25   # the two earlier names (0.15.0)
+        assert len(registered) == EXPECTED_CORE == 26   # the two earlier names (0.15.0), restore_backup (v0.15.1)
         assert "create_project" not in registered
 
 
@@ -527,7 +527,9 @@ class TestTheDocuments:
         # and copy_project_to_workspace's descriptions (the small
         # corrections): 209,145, about 209,000; and v0.15.1's removals,
         # three tools and four help topics, as announced in 0.14: 79
-        # tools, 205,044, about 205,000
+        # tools, 205,044, about 205,000; and restore_backup's paragraph
+        # on its preview and its lock file (the restore): 205,443, still
+        # about 205,000
         assert (rounded, tokens) == ("205,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "

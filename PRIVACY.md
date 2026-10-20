@@ -1277,10 +1277,16 @@ and keep that copy.
 
 Besides `restore_backup`, which checks that no journal or WAL file
 sits beside the database of the backup you choose, opens it to check
-it, reads its first bytes for the preview and copies it back, and
-which compares a fingerprint of the bytes of the project's
-`pseudonyms.json` before and after (once restored, the backup's copy)
-to say whether that file appears, disappears or changes, and besides
+it, reads its first bytes for the preview and copies it back; whose
+preview counts the rows of each kind in that database and in the
+project's (files, codes, codings and the like, every coder's together:
+numbers only, never a row's content or an owner's name), opening the
+backup's read-only and immutable, so that the count writes nothing
+into the backup; and which compares a fingerprint of the bytes of the project's
+`pseudonyms.json` with the backup's in the preview, and before and
+after the restore (once restored, the backup's copy), to say whether
+that file is the same, appears, disappears or changes, reading no name
+in either; and besides
 `prune_backups`, which reads the `pseudonyms.json` of each backup
 beside the project only to compare such fingerprints (no name in it is
 read out or returned; "Practical mitigations", on `pseudonyms.json`,
@@ -2088,6 +2094,9 @@ will ask, and the summary above depends on them:
     folders, which a restore keeps), this file with it, so restoring a
     backup taken before a save takes the file out of the project, and
     restoring one that holds another version puts that one back. The
+    restore's preview says beforehand whether the backup's file is the
+    same, differs or is missing (by a fingerprint of the two files'
+    bytes, never a name). The
     restore result says so when the file appears, disappears or changes, and the one
     the project had stays in the pre-restore safety backup, which
     `prune_backups` can remove; its preview names any backup it would

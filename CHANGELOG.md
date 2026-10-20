@@ -205,6 +205,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   folders, rather than that nothing was lost. Restoring one of
   QualCoder's backups always says that the project's audio and video
   folders are kept as they are.
+- **A restore's preview says what it would bring back, and the project
+  stays in use for the whole restore.** `restore_backup`'s preview now
+  gives when the backup was taken (`backup_taken`, with
+  `backup_dated_from`, as `list_backups` dates it); how many files,
+  codes, categories, codings, cases, annotations and journal entries
+  the project has now and the backup has (`counts`, every coder's rows
+  together, never naming one; null, with `counts_note`, for a database
+  that cannot be read at that moment); and whether the project's names
+  list (`pseudonyms.json`) is the same in the backup, replaced by the
+  backup's, removed or brought back (`names_list_note`, from a
+  fingerprint of the two files' bytes, never a name), adding, when the
+  list changes and the names file is in the project's `Exegete` folder,
+  that the names file may then no longer match the list until the list
+  is saved again. A names list saved, changed or removed after the
+  preview makes its token stale: the restore is refused, and previewed
+  again. The project's lock file is now held, and kept fresh, from the
+  restore's checks to the end of its copy, or of its recovery; before,
+  the restore took it only for the copy, and its own clearing of the
+  project removed it, so the copy ran without one. QualCoder 3.8.2, or
+  another conversation using Exegete, now finds the project in use
+  until the restore ends, rather than being able to open it half
+  copied. A lock file another program takes over before the project is
+  cleared (possible only once Exegete's has gone unrefreshed for 30
+  seconds, as when the computer sleeps) refuses the restore with
+  nothing removed, and the answer names the safety backup. A lock file in the backup is
+  never copied into the project. The answer repeats `backup_taken` and
+  gives the restored project's `counts`. A restore previewed with
+  0.15.0 is refused as a changed project after the update: preview it
+  again.
+- **`restore_backup` is in the `core` set**, beside `list_backups`, so a
+  local model working with the smaller set can restore a backup, in the
+  same two steps. `core` now has 26 tools (see "Measured").
 
 ### Removed: three tools and four help topics, as announced in 0.14
 
@@ -426,22 +458,22 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (79 tools; 82 in 0.15.0) | 205,044 | 206,624 | 215,452 | 217,084 |
-| `core` (25 tools) | 68,780 | 68,258 | 72,240 | 71,690 |
+| `full` (79 tools; 82 in 0.15.0) | 205,443 | 206,624 | 215,875 | 217,084 |
+| `core` (26 tools; 25 in 0.15.0) | 72,383 | 68,258 | 76,067 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 205,044 characters (about 51.3k tokens
-  at chars/4) over 79 tools, and core = 68,780 (about 17.2k) over 25,
+- Serialised tool JSON: full = 205,443 characters (about 51.4k tokens
+  at chars/4) over 79 tools, and core = 72,383 (about 18.1k) over 26,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 215,452 and
-  72,240. Against 0.15.0's figures (206,624 over 82 tools and 68,258 on
-  3.13), five changes moved them. The first, `create_backup` accepted
-  and ignored.
+  which also gives exactly 0.15.0's figures for its tree), 215,875 and
+  76,067. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
+  25 on 3.13), six changes moved them. The first, `create_backup`
+  accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
   is null rather than true: 91 characters more in each entry (92 in
@@ -476,12 +508,17 @@ schemas together, as below; the brief as `read_brief` returns it):
   deprecation sentence, 166 fewer (162 on 3.11); and `propose_codes`'
   description, which now says how to merge two proposals, 172 more
   (184). In all, 4,101 characters fewer in `full` (4,273 on 3.11);
-  `core` serves none of the three tools. Rounded, the figures are about
-  205,000 and 69,000 characters, about 51k and 17k tokens. No other
-  tool's entry changed. The full brief says that Exegete takes a backup
-  before every change,
-  rather than "unless the researcher asks for none": 14 characters
-  fewer.
+  `core` serves none of the three tools. The sixth, `restore_backup`:
+  its description says what its preview gives and that the lock file
+  is held for the whole restore, 399 characters more in `full` (423 on
+  3.11); and `core` gains the tool, 3,733 characters (3,957 on 3.11),
+  while `list_backups`' and `delete_coding`'s descriptions lose the four
+  marks that said it was not in the set, 132 fewer: 3,603 more in
+  `core` (3,827 on 3.11). Rounded, the figures are about 205,000 and
+  72,000 characters, about 51k and 18k tokens. No other tool's entry
+  changed. The full brief says that Exegete takes a backup before every
+  change, rather than "unless the researcher asks for none": 14
+  characters fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
   16,384 through its tool search: in `full`, 32 descriptions pass 2,048
   (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096 (5 on

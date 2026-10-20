@@ -23,7 +23,6 @@ TOOLS, PRIVACY, the CHANGELOG, the module's own words, the answers that
 speak of a restore).
 """
 
-import contextlib
 import errno
 import io
 import json
@@ -697,21 +696,34 @@ GOING = "removed meanwhile"
 
 
 def _while_the_swap_runs(monkeypatch) -> list:
-    """A flag held while the restore holds the project's lock (the clear
-    and the copy), so that a stand-in for another program acts then only,
-    never during the preview, the safety backup or the recovery."""
-    armed = []
-    real = server.hold_project_lock
+    """A flag held while the restore clears the project and copies the
+    backup in, so that a stand-in for another program acts then only,
+    never during the preview, the safety backup or the recovery. (v0.15.1:
+    the restore's hold of the lock file, which this flag followed, now
+    begins before the safety backup and lasts through the recovery, so
+    the flag follows the swap's own clear and copy.)"""
+    armed, started = [], []
+    clear = server._clear_all_but_exegete_folder
+    copy = server._copy_around_exegete_folder
 
-    @contextlib.contextmanager
-    def holding(*args, **kwargs):
-        with real(*args, **kwargs) as held:
-            armed.append(True)
-            try:
-                yield held
-            finally:
-                armed.clear()
-    monkeypatch.setattr(server, "hold_project_lock", holding)
+    def clearing(*args, **kwargs):
+        if started:
+            return clear(*args, **kwargs)
+        started.append(True)
+        armed.append(True)
+        try:
+            return clear(*args, **kwargs)
+        except BaseException:
+            armed.clear()
+            raise
+
+    def copying(*args, **kwargs):
+        try:
+            return copy(*args, **kwargs)
+        finally:
+            armed.clear()
+    monkeypatch.setattr(server, "_clear_all_but_exegete_folder", clearing)
+    monkeypatch.setattr(server, "_copy_around_exegete_folder", copying)
     return armed
 
 
@@ -1228,7 +1240,10 @@ def without_the_folder_paragraph(description):
     as served on any interpreter (on 3.10 to 3.12 it keeps its
     indentation), so that a test of an earlier piece still compares with
     what that piece measured; the sentence v0.15.1 added at its end
-    (MEDIA_SENTENCE) goes with it."""
+    (MEDIA_SENTENCE) goes with it, and so does the paragraph the restore
+    piece of v0.15.1 added after it (tests/test_v0151_restore.py)."""
+    from test_v0151_restore import without_the_preview_paragraph
+    description = without_the_preview_paragraph(description)
     words = [re.escape(word) for word in SENTENCE.split()]
     media = [re.escape(word) for word in MEDIA_SENTENCE.split()]
     pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words)
@@ -1277,10 +1292,12 @@ class TestTheTexts:
         assert ("`list_backups` + `restore_backup` roll the project back "
                 "to a snapshot, all but its `Exegete`, `audio` and `video` "
                 "folders, which a restore keeps.") in tools
+        # v0.15.1, the restore: its preview counts rows by kind, every
+        # coder's together, never by owner
         assert ("`restore_backup` rolls the project back (all but its "
                 "`Exegete`, `audio` and `video` folders, which a restore "
-                "keeps): its preview does not count codings by owner"
-                ) in tools
+                "keeps): its preview counts each kind of row, every coder's "
+                "together, never by owner") in tools
         assert "whole project back" not in tools
 
     def test_privacy(self):

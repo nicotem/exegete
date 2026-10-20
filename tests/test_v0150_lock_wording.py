@@ -332,11 +332,14 @@ class TestTheSixDescriptions:
                   "delete_coding": (2867, 2307, "be5e2d1ea0338a1e")}
         # and v0.15.1's ignored create_backup: put back first
         from test_v0151_ignored_argument import before_the_ignored_argument
+        # and the restore piece's paragraph (tests/test_v0151_restore.py)
+        from test_v0151_restore import without_the_preview_paragraph
         server._apply_toolset("full")
         for name, (length, solid, digest) in before.items():
             text = put_back_the_lock_wording(
                 name, before_the_ignored_argument(
-                    name, server.mcp.original_descriptions[name]).replace(
+                    name, without_the_preview_paragraph(
+                        server.mcp.original_descriptions[name])).replace(
                         " " + MEDIA_SENTENCE, ""))
             got = _fingerprint(text)
             assert got[1:] == (solid, digest), name

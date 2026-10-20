@@ -190,14 +190,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **A named pipe, a socket, a device or a folder where a project keeps
-  its lock file, or where SQLite keeps its side files beside `data.qda`,
-  no longer makes a tool wait for ever.** Exegete looks at such an entry
-  before opening anything and names its kind: at the lock file, reads go
-  on and every change is refused until the entry is moved out of the
-  project folder; beside `data.qda`, where a link is refused too, the
-  project, backup or copy is refused, and a backup holding one is marked
-  unclean.
+- **A named pipe where a project keeps its lock file, or where SQLite
+  keeps its side files beside `data.qda`, no longer makes a tool wait
+  for ever.** Exegete now looks at such an entry before opening
+  anything, and a named pipe, a socket, a device or a folder there is
+  refused in words naming its kind: at the lock file, reads go on and
+  every change to the project's database is refused until the entry is
+  moved out of the project folder; beside `data.qda`, where a link is
+  refused too, the project, backup or copy is refused, and a backup
+  holding one is marked unclean.
 
 ### For contributors
 

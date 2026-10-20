@@ -669,7 +669,9 @@ LOCK_REFRESH_SECONDS = 5.0
 LOCK_WAIT_LIMIT_SECONDS = 10.0
 # The lock state of a lock file that is not a regular file (v0.15.1): a
 # named pipe, a socket, a device or a folder at its name, never opened
-# for reading. Every write is refused while it is there; reads go on.
+# for reading. Every write to the database is refused while it is
+# there; reads go on, and so do Exegete's writes to its own files in
+# the project folder (exegete.json, the names list to fill in).
 # A departure from QualCoder 3.8.2, which opens the file without looking
 # at it (__main__.py 2640), and waits for ever at a named pipe.
 LOCK_NOT_A_FILE = "not_a_file"
@@ -710,8 +712,9 @@ def lock_not_a_file_warning(kind: str) -> str:
     get_current_project, start_coding_session)."""
     return (
         f"This project's lock file, {QUALCODER_LOCK_FILENAME}, "
-        f"{is_kind(kind)}. Reads work; every change will be refused until "
-        f"that entry is moved out of the project folder."
+        f"{is_kind(kind)}. Reads work; every change to the project's "
+        f"database will be refused until that entry is moved out of the "
+        f"project folder."
     )
 
 

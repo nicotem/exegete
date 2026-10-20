@@ -3536,18 +3536,9 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
             "error": "No project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         }
-    try:
-        session_db_path = validate_qda_path(session.project_path)
-    except (DatabaseLockedError, ProjectFileKindError):
-        # Their own words (v0.15.1: a side file that is not a regular
-        # file), never "could not be found"
-        raise
-    except Exception:
-        return {
-            "error": "The project this session was created in could not be found "
-                     "(it may have been moved or deleted). Sessions can only be "
-                     "used with the project they were created in."
-        }
+    # The open project first (v0.15.1, fix round 1): its own refusals
+    # in their own words, so that a side file refused below is known to
+    # belong to the session's project, another one
     try:
         current_db_path = validate_qda_path(current_project_path)
     except (DatabaseLockedError, ProjectFileKindError):
@@ -3555,18 +3546,50 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
     except Exception:
         return {"error": "The currently open project could not be resolved. "
                          "Re-open it with select_project."}
+    try:
+        session_db_path = validate_qda_path(session.project_path)
+    except DatabaseLockedError:
+        raise
+    except ProjectFileKindError:
+        # A side file of the session's project that is not a regular
+        # file: the open project passed the same look just now, so the
+        # session belongs to another project, whose entry the open
+        # project does not hold (v0.15.1, fix round 1). The same project
+        # under another spelling can only mean the entry appeared since:
+        # its own words
+        if SessionManager.same_project(session.project_path,
+                                       current_db_path):
+            raise
+        return _different_project_answer(
+            Path(SessionManager.canonical_database_path(
+                session.project_path)).parent.name,
+            current_db_path.parent.name)
+    except Exception:
+        return {
+            "error": "The project this session was created in could not be found "
+                     "(it may have been moved or deleted). Sessions can only be "
+                     "used with the project they were created in."
+        }
 
     # One project under two spellings of its path (letter case, Unicode
     # form) is one database: compared as files, not strings (fix round 1)
     if not SessionManager.same_project(session_db_path, current_db_path):
-        return {
-            "error": "This session belongs to a different project than the one "
-                     "currently open. Writes are bound to the session's project; "
-                     "open it with select_project first.",
-            "session_project": session_db_path.parent.name,
-            "current_project": current_db_path.parent.name,
-        }
+        return _different_project_answer(session_db_path.parent.name,
+                                         current_db_path.parent.name)
     return None
+
+
+def _different_project_answer(session_project: str,
+                              current_project: str) -> Dict[str, Any]:
+    """The refusal of a session-bound write while another project is
+    open, naming both projects' folders."""
+    return {
+        "error": "This session belongs to a different project than the one "
+                 "currently open. Writes are bound to the session's project; "
+                 "open it with select_project first.",
+        "session_project": session_project,
+        "current_project": current_project,
+    }
 
 
 def _find_occurrences(text: str, needle: str, max_hits: int = 11) -> List[int]:
@@ -10004,7 +10027,9 @@ def _contexts_for_display(session: AICodingSession,
         open_here = _check_session_project(session) is None
     except ProjectFileKindError:
         # The open project's side file (v0.15.1): its own words, never
-        # the note that the session's project is another
+        # the note that the session's project is another. A side file
+        # of the session's project, when another is open, gives the
+        # different-project answer there, and so the note (fix round 1)
         raise
     except Exception:
         open_here = False

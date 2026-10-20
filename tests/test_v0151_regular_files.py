@@ -297,6 +297,47 @@ def test_a_pipe_lock_is_reported_and_reads_go_on(fresh, tmp_path):
     assert _is_pipe(fresh / LOCK)
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@PIPES
+def test_a_pipe_lock_refuses_the_databases_changes_and_says_so(fresh,
+                                                               tmp_path):
+    """With a pipe at the lock, the AI coder name, kept in exegete.json
+    beside the database, can still be set while a change to the database
+    is refused: the warning and the documents say the project's database,
+    never every change (fix round 1)."""
+    os.mkfifo(fresh / LOCK)
+    rows = _rows(fresh)
+
+    def sequence():
+        out = _selected(server.select_project(str(fresh)))
+        named = json.loads(server.set_project_ai_coder_name("Assistant B"))
+        assert "error" not in named, named
+        _refused_for(server.create_code("Refused"), LOCK, "a named pipe")
+        return out["warning"]
+
+    warning = watched(sequence, tmp_path)
+    assert _rows(fresh) == rows
+    assert "Assistant B" in (fresh / "exegete.json").read_text(
+        encoding="utf-8")
+    assert "project's database" in warning
+    tools = (ROOT / "TOOLS.md").read_text(encoding="utf-8")
+    clause = tools.split("`qualcoder_lock` names the lock file's kind",
+                         1)[1].split(";", 1)[0]
+    assert "project's database" in clause
+    unreleased = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split(
+        "## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    before, after = unreleased.split("no longer makes a tool wait", 1)
+    entry = after.split("\n- ", 1)[0]
+    assert "project's database" in entry
+    # Only a named pipe ever made a tool wait: the others the entry names
+    # read as a stale lock or met SQLite's own error before
+    waited = before.rsplit("\n- **", 1)[1]
+    assert "named pipe" in waited
+    assert not any(kind in waited for kind in ("socket", "device", "folder"))
+
+
 # --------------------------------------------------------------------------
 # 3. A pipe at the lock: every route that writes is refused first
 # --------------------------------------------------------------------------
@@ -485,6 +526,82 @@ def test_a_pipe_put_beside_the_database_later_is_refused(fresh, tmp_path):
         _selected(server.select_project(str(other)))
         os.unlink(journal)
         assert _rows(fresh) == rows
+
+    watched(sequence, tmp_path)
+
+
+@PIPES
+def test_a_pipe_beside_the_sessions_other_project_gives_the_session_answers(
+        fresh, tmp_path):
+    """A session made in another project, whose journal is then a named
+    pipe, with a clean project open: the session's writes get the answer
+    for a session of another project, naming both, and its review the
+    note that contexts are not shown, never the other project's entry as
+    if the open project held it (fix round 1)."""
+    other = _another(fresh, tmp_path)
+    journal = other / "data.qda-journal"
+
+    def sequence():
+        _selected(server.select_project(str(other)))
+        sid = _approved_session()
+        _selected(server.select_project(str(fresh)))
+        rows = (_rows(fresh), _rows(other))
+        os.mkfifo(journal)
+        for answer in (server.apply_codings(sid),
+                       server.record_suggestions(sid, [{
+                           "reading": "explicit", "file_id": 1,
+                           "code_name": "Stress", "start_pos": 0,
+                           "end_pos": 4, "segment_text": FULLTEXT[:4]}])):
+            out = json.loads(answer)
+            assert out.get("session_project") == other.name, out
+            assert out.get("current_project") == fresh.name, out
+            assert journal.name not in answer
+        review = server.review_suggestions(sid)
+        assert server.CONTEXT_NOT_SHOWN_NOTE in review
+        assert journal.name not in review
+        info = json.loads(server.get_coding_session_info(sid))
+        assert "error" not in info, info
+        assert info["suggestions"][0]["context_note"] \
+            == server.CONTEXT_NOT_SHOWN_NOTE
+        # The open project's own entry still answers in its own words
+        own = fresh / "data.qda-journal"
+        os.mkfifo(own)
+        _refused_for(server.apply_codings(sid), own.name, "a named pipe")
+        _refused_for(server.review_suggestions(sid), own.name,
+                     "a named pipe")
+        os.unlink(own)
+        os.unlink(journal)
+        assert (_rows(fresh), _rows(other)) == rows
+        assert _backups(fresh) == _backups(other) == []
+
+    watched(sequence, tmp_path)
+
+
+def test_the_open_projects_entry_met_at_the_second_look_keeps_its_words(
+        fresh, tmp_path, monkeypatch):
+    """The session's project is the open one, named by another path, and
+    a side file is refused only at the second look (an entry that
+    appeared between the two): the refusal keeps its own words, never
+    the answer for a session of another project (fix round 1)."""
+    real = server.validate_qda_path
+
+    def sequence():
+        _selected(server.select_project(str(fresh)))
+        sid = _approved_session()
+        session = server.session_manager.load_session(sid)
+        assert str(session.project_path) != str(server.current_project_path)
+        looks = []
+
+        def second_look(path):
+            looks.append(path)
+            if len(looks) == 2:
+                raise server.ProjectFileKindError("the second look")
+            return real(path)
+
+        monkeypatch.setattr(server, "validate_qda_path", second_look)
+        with pytest.raises(server.ProjectFileKindError):
+            server._check_session_project(session)
+        assert len(looks) == 2
 
     watched(sequence, tmp_path)
 

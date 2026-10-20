@@ -212,7 +212,10 @@ WORKFLOW_JOBS = {
                # 0.14.3: the import's text against QualCoder's own code.
                "qualcoder-parity",
                # v0.15.1: the links in the documents, on every push.
-               "documents"},
+               "documents",
+               # v0.15.1: the suite on the newest library releases,
+               # reporting only.
+               "newest-libraries"},
     "publish.yml": {"build", "publish-to-testpypi", "publish-to-pypi"},
     # v0.14.2: the update site, deployed from Actions, never from a branch
     # (the owner's decision of 5 October 2026)

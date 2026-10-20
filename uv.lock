@@ -569,8 +569,10 @@ name = "exegete"
 version = "0.15.0a0"
 source = { editable = "." }
 dependencies = [
+    { name = "anyio" },
     { name = "defusedxml" },
     { name = "mcp" },
+    { name = "pydantic" },
     { name = "striprtf" },
 ]
 
@@ -592,13 +594,15 @@ pdf-epub = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anyio", specifier = ">=4.5,<5" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
     { name = "charset-normalizer", marker = "extra == 'dev'", specifier = ">=3.4" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "ebooklib", marker = "extra == 'pdf-epub'", specifier = ">=0.20" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
-    { name = "lxml", marker = "extra == 'pdf-epub'", specifier = ">=6.1.0" },
+    { name = "lxml", marker = "extra == 'pdf-epub'", specifier = ">=6.1.0,<7" },
     { name = "mcp", specifier = ">=1.17.0,<2" },
+    { name = "pydantic", specifier = ">=2.11.0,<3" },
     { name = "pymupdf", marker = "extra == 'pdf-epub'", specifier = ">=1.26.7,<2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },

@@ -217,17 +217,19 @@ NETWORK_ONLY = ("socket", "ssl", "urllib.request")
 
 def test_it_has_no_ai_of_its_own():
     """"It has no AI of its own" (README, "How it works"): its
-    dependencies are the MCP library and, from 0.14.3, the two small
+    dependencies are the MCP library; from v0.15.1, pydantic and anyio,
+    named because Exegete imports them and the MCP library already loads
+    them (tests/test_v0151_libraries.py); and, from 0.14.3, the two small
     libraries the document import reads with (a safe XML parser,
-    QualCoder's RTF reader), neither a model's client nor a network
-    library; nothing in its source imports a model's client or asks the
-    host's model through MCP's sampling call; and a network library only
-    in the check for new versions, which the README names. The day that
-    changes, this fails."""
+    QualCoder's RTF reader); none of them a model's client. Nothing in
+    its source imports a model's client or asks the host's model through
+    MCP's sampling call, and a network library only in the check for new
+    versions (updates.py), which the README names and the import check
+    below holds. The day that changes, this fails."""
     with open(REPO / "pyproject.toml", "rb") as handle:
         dependencies = tomllib.load(handle)["project"]["dependencies"]
     assert [re.match(r"[A-Za-z0-9_.-]+", d).group(0) for d in dependencies] \
-        == ["mcp", "defusedxml", "striprtf"]
+        == ["mcp", "pydantic", "anyio", "defusedxml", "striprtf"]
     found = {}
     for path in sorted((REPO / "src").rglob("*.py")):
         uses = _model_or_network_uses(path.read_text(encoding="utf-8"))

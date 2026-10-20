@@ -55,6 +55,17 @@ dependencies = [
     # (verified empirically in a fresh venv). Lifting the cap is an
     # explicit migration project, not a routine bump.
     "mcp>=1.17.0,<2",
+    # Two libraries the MCP library brings, named because Exegete imports
+    # them itself (server.py), and a library Exegete imports is among its
+    # requirements (CONTRIBUTING.md); neither is a model's client. Each
+    # takes the MCP library's own range (mcp 1.30.0 asks for these
+    # floors), with an upper limit at its next major release, so that an
+    # install from PyPI meets a new major release only with a release of
+    # Exegete that has been tried with it.
+    # pydantic, for an argument's description (Field); a compiled core.
+    "pydantic>=2.11.0,<3",
+    # anyio, for the threads Exegete's tools run in (to_thread.run_sync).
+    "anyio>=4.5,<5",
     # Document import (0.14.3). defusedxml parses the XML inside Word
     # files and refuses entity declarations; striprtf is QualCoder's RTF
     # reader, pinned exactly because the stored text must not change
@@ -86,14 +97,16 @@ Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 # whole, under the AGPL's terms, as QualCoder's own installs are;
 # Exegete's own code stays LGPL, and a PyPI install without the part is
 # untouched. lxml (which EbookLib needs) at 6.1.0 or newer, the release
-# that fixed its latest advisory; PyMuPDF at 1.26.7 or newer, for the
+# that fixed its latest advisory, and below 7 (v0.15.1: a compiled library
+# EPUBs are read through, so its next major release waits for a release
+# of Exegete tried with it); PyMuPDF at 1.26.7 or newer, for the
 # same reason, and below 2 (0.15.0): PyMuPDF 2.0 brings new libraries of
 # its own and has not been looked at yet, so every route (pip, PyPI and
 # the extension's lock) reads PDFs with the 1.x the checks passed with.
 pdf-epub = [
     "pymupdf>=1.26.7,<2",
     "ebooklib>=0.20",
-    "lxml>=6.1.0",
+    "lxml>=6.1.0,<7",
 ]
 dev = [
     # QualCoder's own character set guesser, for scripts/qualcoder_parity.py

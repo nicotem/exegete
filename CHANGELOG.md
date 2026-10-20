@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by 0.15.0, which answers that it is not a token Exegete issued: this
   matters only when two versions of Exegete run on one computer, or
   after going back to 0.15.0.
+- **Two libraries named, and a limit on lxml.** pydantic
+  (`>=2.11.0,<3`) and anyio (`>=4.5,<5`) are now among Exegete's
+  requirements, since Exegete imports both; the MCP library already
+  brought them, with the same floors. lxml, in the optional part
+  `pdf-epub`, now asks for a release below 7. An install from PyPI takes
+  the same releases as before; a new major release of one of these waits
+  for a release of Exegete that has been tried with it.
 
 ### For contributors
 
@@ -45,6 +52,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   marked historical are now in `docs/history/`**, out of the top of the
   repository, with a README that says what the folder holds; NOTICE
   gives the new paths of the two it cites.
+- **CI's tests install the libraries from the lock.** Every CI job that
+  runs tests, but the new one below, installs the releases in `uv.lock`,
+  the ones the desktop extension installs, each checked against its
+  hash, rather than the newest on PyPI: on 19 October 2026 the suite on
+  Ubuntu with Python 3.13 took PyMuPDF 2.0 overnight while the lock held
+  1.28.2. A change to `pyproject.toml` without `uv lock` now fails on
+  the push.
+- **A job on the newest releases.** One more job, on Ubuntu with Python
+  3.13, runs the suite with the newest release of each library Exegete
+  allows, what an install from PyPI takes today. It may fail and only
+  reports: its summary gives the releases it installed and, for each
+  library with an upper limit, the newest release on PyPI, so a new
+  major release beyond a limit is seen without being installed. CI now
+  runs twenty jobs.
 
 ### Citing Exegete
 

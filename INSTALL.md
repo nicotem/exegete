@@ -277,6 +277,15 @@ This gives you an `exegete` command; get its absolute path with
 configuration of Step 6 (no `args` needed). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
 
+An install from PyPI takes the newest release of each library Exegete
+allows, so it can be newer than the releases the tests ran with and the
+desktop extension installs. Exegete sets an upper limit on the libraries
+whose next major release could stop it from starting or change what it
+reads from a PDF or an EPUB, so a new major release of one of them
+reaches you with a release of Exegete that has been tried with it. An
+environment of its own, as above, keeps these limits from clashing with
+what other programs need.
+
 ### PDF and EPUB: the optional part
 
 `import_documents` reads Word, OpenDocument, RTF, plain text, Markdown,

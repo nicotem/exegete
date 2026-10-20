@@ -61,7 +61,12 @@ is looked at first.
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
 5. **Continuous integration** runs on every pushed branch and on pull
-   requests to `main`: nineteen jobs. Ten run the suite, on Python 3.10
+   requests to `main`: twenty jobs. The jobs that run tests, all but
+   the one on the newest releases below, install the libraries from the
+   lock, `uv.lock`, each release checked against its hash: the releases
+   the desktop extension installs, so a new release on PyPI cannot turn
+   a job red overnight, and a change to `pyproject.toml` without
+   `uv lock` fails on the push. Ten run the suite, on Python 3.10
    and 3.13: one job each on Ubuntu and on macOS, and three on Windows,
    where the suite is slowest and runs in three parts made of whole test
    files (`tests/conftest.py`). To run one part on your own computer,
@@ -78,12 +83,17 @@ is looked at first.
    links in the documents (`scripts/check_links.py`); their links to
    other sites are checked once a week instead, by a workflow of its
    own (`external-links.yml`), where a page that is gone fails and a
-   site that turns robots away or answers slowly is a notice. Every
-   job must be green, the watch apart. The workflow actions are pinned
-   by commit SHA with a version comment beside each pin; if you add or
-   bump an action, keep that shape (Dependabot maintains the pins). A
-   bump also means recording the new SHA against the tag it really is,
-   in `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`;
+   site that turns robots away or answers slowly is a notice. One runs
+   the suite on Ubuntu with Python 3.13 on the newest release of each
+   library `pyproject.toml` allows, what an install from PyPI takes
+   today; it may fail and only reports, and its summary gives the
+   releases it installed and the newest of each bounded library on
+   PyPI. Every job must be green, the watch and the newest releases
+   apart. The workflow actions are pinned by commit SHA with a version
+   comment beside each pin; if you add or bump an action, keep that
+   shape (Dependabot maintains the pins). A bump also means recording
+   the new SHA against the tag it really is, in `VERIFIED_TAGS` in
+   `tests/test_v012_workflow_pins.py`;
    that module's docstring carries the two API calls that resolve it.
    The tests fail on an unrecorded SHA on purpose: Dependabot has left a
    version comment stale beside a bumped SHA before, and nothing else
@@ -164,15 +174,30 @@ rather than fewer.
   `coding_session_id`. Check new argument names against other
   routing-flavoured names (`request_id`, `conversation_id`, `user_id`,
   `context`, `metadata`) as well.
-- **Runtime dependencies stay minimal.** The package has one runtime
-  dependency, `mcp>=1.17.0,<2`: the floor is the first release with
-  `FastMCP.remove_tool`, which the core toolset needs, and the cap keeps
-  out mcp 2.x, which removed `mcp.server.fastmcp`. A new dependency
-  needs a reason in the pull request; anything optional must stay
-  optional and import-guarded (the way `psutil` is used). If you change
-  a dependency in `pyproject.toml`, regenerate `uv.lock` with `uv lock`
-  in the same change, so that `uv lock --check` passes and the lock file
-  agrees with the package.
+- **Runtime dependencies stay minimal.** The package has five runtime
+  dependencies: the MCP library, `mcp>=1.17.0,<2` (the floor is the
+  first release with `FastMCP.remove_tool`, which the core toolset
+  needs, and the limit keeps out mcp 2.x, which removed
+  `mcp.server.fastmcp`); pydantic and anyio, which the MCP library
+  brings and Exegete imports itself; and the two small libraries the
+  document import reads with, defusedxml and striprtf. PDF and EPUB
+  come through the optional part `pdf-epub`. A new dependency needs a
+  reason in the pull request; anything optional must stay optional and
+  import-guarded (the way `psutil` is used). A library Exegete imports
+  is named among its requirements (`tests/test_v0151_libraries.py`
+  checks). Such a library, or one the MCP library loads at start
+  without a limit of its own, takes an upper limit at its next major
+  release when it is large or fast-moving, so an install from PyPI
+  meets a new major release only with a release of Exegete tried with
+  it. Not bounded today: cryptography (the largest after PyMuPDF, never
+  loaded by Exegete, held per computer by `[tool.uv]`), pywin32
+  (Windows only), uvicorn, python-multipart and sse-starlette (a limit
+  at their next minor release would hold back routine fixes),
+  defusedxml, striprtf (already exact), EbookLib (small, about one
+  release a year) and Starlette (neither large nor imported by
+  Exegete). If you change a dependency or a limit in `pyproject.toml`,
+  regenerate `uv.lock` with `uv lock` in the same commit, so that
+  `uv lock --check` passes and the lock file agrees with the package.
 - **Synthetic test data only.** Never commit a `.qda` project, a real
   transcript or any research text. Test fixtures are built in code.
 - **British English in all prose.** Documentation, docstrings, tool

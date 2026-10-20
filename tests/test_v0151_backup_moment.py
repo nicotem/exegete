@@ -345,7 +345,10 @@ def copy_then_end(src, dst, *args, **kwargs):
     return out
 real_copytree = shutil.copytree
 def copytree(src, dst, *args, **kwargs):
-    kwargs["copy_function"] = copy_then_end
+    # The top call only: copytree calls itself for each subfolder with
+    # its copy function among the positional arguments
+    if len(args) < 3:
+        kwargs["copy_function"] = copy_then_end
     return real_copytree(src, dst, *args, **kwargs)
 database.shutil.copytree = copytree
 if sys.argv[2] == "backup":

@@ -108,7 +108,14 @@ AI_DATA = (
     "keep (and pruning removes). Backups leave out QualCoder 4.0's AI "
     "search index, ai_data/search.sqlite, which QualCoder rebuilds when it "
     "next opens the project with AI enabled, so a restored project without "
-    "one is normal.")
+    "one is normal."
+    # v0.15.1, the stale texts (the privacy reader): QualCoder 3.8's
+    # store, which no ignore pattern matches (held to
+    # database.BACKUP_IGNORE_PATTERNS in tests/test_v0151_stale_texts.py)
+    " They keep QualCoder 3.8's AI search store, "
+    "ai_data/vectorstore/faiss_store.bin, which holds the text of the "
+    "project's sources, so each backup of a project that has one holds "
+    "another copy of that text.")
 ONLINE_BACKUP = (
     "Since v0.14 Exegete copies the project database with SQLite's own "
     "online backup, so a backup taken while another program is writing to "

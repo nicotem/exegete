@@ -679,12 +679,28 @@ BLOCKED = (
     "carry over to its new name: if you blocked one, you may want to block "
     "the new name too.")
 
+def _planned_release_of_the_earlier_names():
+    """The release the README's "What comes next" plans for retiring the
+    earlier names (the owner's decisions of 20 October 2026, ruling 85,
+    item 1: method, and with it the earlier names, is v0.15.3). The
+    documents name the same release (the staleness audit's fix round:
+    held to the plan, not to a version typed in the test)."""
+    readme = (Path(__file__).parent.parent / "README.md").read_text(
+        encoding="utf-8")
+    plans = readme[readme.index("## What comes next"):]
+    plans = " ".join(plans[:plans.index("\n## ", 5)].split())
+    found = re.findall(r"- (v\d+\.\d+(?:\.\d+)?), [^-]*?the earlier names "
+                       r"of the two renamed tools", plans)
+    assert len(found) == 1, found
+    return found[0]
+
+
+PLANNED = _planned_release_of_the_earlier_names()
+
 EARLIER_NAMES_SECTION = (
     "## Earlier names\n\nTwo tools were renamed in 0.15.0. Their earlier "
     "names are still listed, and do exactly what the new ones do, until "
-    # (the owner's decisions of 20 October 2026, ruling 85, item 1:
-    # method, and with it the earlier names, is v0.15.3)
-    "a later release (planned as v0.15.3) removes them: "
+    f"a later release (planned as {PLANNED}) removes them: "
     "`analyze_for_coding` is now `start_coding_session`, and "
     "`analyze_file_with_coding` is now `read_file_with_codings`. If your "
     "host remembers a choice to run one of the earlier names without "
@@ -855,9 +871,11 @@ class TestTheDocuments:
         flat = _flat(_read("PRIVACY.md"))
         assert ("Two tools were renamed in 0.15.0, and their earlier names "
                 "are still listed until a later release (planned as "
-                "v0.15.3) removes them (TOOLS.md, \"Earlier names\"). What "
-                "this document says of either tool holds under both its "
-                "names.") in flat
+                f"{PLANNED}) removes them (TOOLS.md, \"Earlier names\"). "
+                "What this document says of either tool holds under both "
+                "its names.") in flat
+        assert f"(planned as {PLANNED})" in Path(server.__file__).read_text(
+            encoding="utf-8")
         assert flat.index("Two tools were renamed in 0.15.0") < \
             flat.index("## How your data flows")
         listing = flat[flat.index("**Process listing.**"):]

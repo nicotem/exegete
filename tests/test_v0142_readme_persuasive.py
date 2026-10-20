@@ -266,8 +266,10 @@ def _tools(mode="full"):
 # QualCoder 4.0 window; the names list among the previewed changes; the
 # exceptions past the cut; QualCoder's homepage and the protocol's
 # foundation. That takes 1,593 characters, and the limit is raised by
-# that and no more: 40,445.
-README_LIMIT = 40_445
+# that and no more: 40,445. Its fix round: the backup before each change
+# to the project's database, and PRIVACY's heading on Exegete's log, 23
+# characters more: 40,468.
+README_LIMIT = 40_468
 
 
 def test_the_readme_stays_short():

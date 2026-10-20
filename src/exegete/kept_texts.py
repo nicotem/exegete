@@ -122,7 +122,7 @@ def folder() -> Path:
 def shown() -> str:
     """The folder as the log names it: under `~/.exegete`, or the state
     folder this run uses, never the full path, which holds the account's
-    name (PRIVACY.md, "Error answers and the server's log", whole-branch
+    name (PRIVACY.md, "Error answers and Exegete's log", whole-branch
     review, security, round 1)."""
     return state_folder.in_this_run(
         f"~/{names.STATE_FOLDER}/{FOLDER_NAME}")

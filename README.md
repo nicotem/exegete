@@ -100,8 +100,8 @@ never put participant data in an issue.
   (other identifying details are not looked for).
 - **Export** the codebook, a coding report, frequencies and the
   case-by-code matrix as CSV, text or Markdown.
-- **Go back**: a backup before every change, taken by Exegete itself,
-  and a way to restore one.
+- **Go back**: a backup before every change to the project's database,
+  taken by Exegete itself, and a way to restore one.
 
 **Not in Exegete yet**, and done in QualCoder for now: bringing in
 images, audio and video; coding by selecting text yourself; coding
@@ -244,7 +244,7 @@ where chat and Cowork are one conversation, below):
 **Private notes and names.** Exegete never passes the part of a memo
 from a `#####` mark onward (QualCoder's mark for a private note) to the
 assistant, whichever program made the project, unless the project was
-built to leak it (PRIVACY.md, "Error answers and the server's log").
+built to leak it (PRIVACY.md, "Error answers and Exegete's log").
 The mark works in
 memos, annotations and journal entries, not in the text of a
 transcript, and exported files keep the whole memo, private part

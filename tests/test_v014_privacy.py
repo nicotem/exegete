@@ -990,10 +990,34 @@ class TestTheDocumentsSayWhatTheLogCarries:
                 "Desktop's server log") in privacy
         assert ("The rule closes one channel, SQLite's message; it does "
                 "not make a project built to leak safe to open.") in privacy
-        # (the staleness audit of 20 October 2026: the secret keys the
-        # kept texts too, kept_texts.py, so three effects)
-        assert ("Exegete replaces the secret by itself, with the same "
-                "effects") in privacy
+        # (the staleness audit of 20 October 2026, and its fix round: held
+        # to the code) Three parts of Exegete read the secret: the tokens,
+        # pseudonymise_source's run manifests and the texts an import's
+        # preview keeps; the paragraph names each use and what losing the
+        # secret does to it, and a replaced secret does the same
+        from exegete import kept_texts, preview_tokens
+        for module, call in ((preview_tokens, "secret = load_secret()"),
+                             (kept_texts, "preview_tokens.load_secret()")):
+            assert call in Path(module.__file__).read_text(
+                encoding="utf-8"), module.__name__
+        source = Path(server.__file__).read_text(encoding="utf-8")
+        run = source[source.index("def pseudonymise_source("):]
+        assert "secret = load_secret()" in run[:run.index("\n@mcp.tool")]
+        secret = privacy[privacy.index("the preview-token secret "
+                                       "(`~/.exegete/preview_secret`)"):]
+        secret = secret[:secret.index("logs that it did")]
+        for use, lost in (
+                ("sign the tokens that approve a two-step operation",
+                 "invalidates outstanding preview tokens"),
+                ("key the digests in the pseudonymisation run manifests",
+                 "the keyed digests in the run manifests already written "
+                 "can then no longer be checked"),
+                ("name and sign the texts an import's preview keeps",
+                 "the texts an import's preview kept can no longer be "
+                 "used")):
+            assert use in secret and lost in secret, use
+        assert "Exegete replaces the secret by itself, with the same " \
+            "effects" in secret
         assert ("they share one memory of it") in privacy
 
 

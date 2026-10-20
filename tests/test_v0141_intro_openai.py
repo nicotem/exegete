@@ -231,10 +231,11 @@ class TestTheIntroduction:
                 "export_codebook", "export_code_report",
                 "export_frequencies_csv", "export_case_code_matrix_csv"],
             # v0.15.1: before every change, whatever create_backup says;
-            # the backup's moment: Exegete takes it itself
-            "**Go back**: a backup before every change, taken by Exegete "
-            "itself, and a way to restore one": ["list_backups",
-                                                 "restore_backup"],
+            # the backup's moment: Exegete takes it itself, before each
+            # change to the project's database
+            "**Go back**: a backup before every change to the project's "
+            "database, taken by Exegete itself, and a way to restore one": [
+                "list_backups", "restore_backup"],
         }
         for words, needed in claims.items():
             assert words in covers, words
@@ -1044,16 +1045,22 @@ class TestTheStepsANewcomerCanGetWrong:
         section = _install_openai()
         before = section[:section.index("```toml")]
         flat = " ".join(before.split())
-        # (the staleness audit of 20 October 2026: on Linux the home
-        # folder is under /home, as step 1 says)
-        for words in ("On a Mac or Linux, change `YOUR_USERNAME` in the "
-                      "`command` line to your own, and on Linux also "
-                      "`/Users` to `/home` (the full path from step 1), "
-                      "typing no quote marks",
-                      "On Windows, replace the whole value after "
-                      "`command =`, its double quotes included, with your "
-                      "path between single quotes"):
-            assert words in flat, words
+        # (the staleness audit of 20 October 2026, and its fix round: held
+        # to the fact) The entry is written with a Mac's `/Users`, step 1
+        # gives Linux's path under `/home`, so the sentence says to change
+        # both there
+        entry = section[section.index("```toml"):]
+        entry = entry[:entry.index("```", 7)]
+        assert 'command = "/Users/YOUR_USERNAME/' in entry
+        assert "`/home/YOUR_USERNAME/exegete-venv/bin/exegete` on Linux" \
+            in flat
+        paste = flat[flat.index("On a Mac or Linux, change `YOUR_USERNAME`"):]
+        paste = paste[:paste.index("On Windows")]
+        assert "on Linux also `/Users` to `/home`" in paste
+        assert "typing no quote marks" in paste
+        assert ("On Windows, replace the whole value after `command =`, its "
+                "double quotes included, with your path between single "
+                "quotes") in flat
         # Why: a Windows path between double quotes does not read as TOML,
         # and the same path between single quotes does
         path = r"C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe"
@@ -1489,13 +1496,19 @@ class TestAssistantsOwnFileAccess:
                                                      qualcoder_db_path):
         # "Exegete's own answers tell the assistant where a project is"
         section = _privacy_hosts()
-        # (the staleness audit of 20 October 2026: the copy and the
-        # backups are named by their place too)
+        # (the staleness audit of 20 October 2026, and its fix round: the
+        # copy and the backups are named by their place too, each tool
+        # that answers with one named; tests/test_v0151_stale_texts.py
+        # holds the backups' fields)
         assert ("(`list_available_projects`, `select_project`, "
                 "`get_current_project` and `create_project` answer with its "
-                "path, `copy_project_to_workspace` with its copy's, and "
-                "`list_backups` with each backup's, a whole copy of the "
-                "project)") in section
+                "path") in section
+        for words in ("`copy_project_to_workspace` with its copy's",
+                      "`list_backups` with each backup's, a whole copy of "
+                      "the project", "every change's answer with the backup "
+                      "taken before it", "`restore_backup` with the backup "
+                      "restored"):
+            assert words in section, words
         folder = Path(qualcoder_db_path).parent
         current = json.loads(server.get_current_project())
         assert str(folder) in current["current_project"]

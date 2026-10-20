@@ -512,11 +512,12 @@ details.
      - if you use QualCoder, `~/Documents/QualCoder_projects/MyProject/MyProject.qda/`
        or `~/QualCoder/ProjectName/ProjectName.qda/`
 
-   Or in Terminal, searching your home folder four levels down, which
-   takes in every place Exegete's project listing searches:
+   Or in Terminal, searching your home folder five levels down, which
+   takes in the usual places Exegete's project listing searches (a
+   folder for projects set outside your home folder is not among them):
    ```bash
    # Search for .qda project folders
-   find ~ -maxdepth 4 -name "*.qda" -type d 2>/dev/null
+   find ~ -maxdepth 5 -name "*.qda" -type d 2>/dev/null
    ```
 
 2. **Open Claude Desktop Configuration** (same as Option A, step 3)
@@ -1180,9 +1181,9 @@ overflow; lower the tool surface (core mode), raise the context, or
 shorten the chat. After editing mcp.json or upgrading the package,
 toggle the server off and on or restart LM Studio so the new process
 is the one in use. LM Studio may also restart the MCP server process
-between turns (observed with LM Studio 0.4.12, before the recipe was
-verified against 0.4.22 on 7 September 2026), which drops the in-memory
-project selection. Since 0.11 every "no project selected" error names
+between turns (observed with LM Studio 0.4.12; the check of 7
+September 2026 names 0.4.22), which drops the in-memory project
+selection. Since 0.11 every "no project selected" error names
 the last project used on this machine, so recovery is one
 `select_project` call. If you work on a single project, set
 `EXEGETE_PROJECT_PATH` in the LM Studio entry (as in Step 5) so that
@@ -1342,8 +1343,9 @@ On Windows, in PowerShell: `mkdir -Force $HOME\.codex` and then
 `notepad $HOME\.codex\config.toml` (Notepad offers to create the file).
 Paste these lines at the end of the file. On a Mac or Linux, change
 `YOUR_USERNAME` in the `command` line to your own, and on Linux also
-`/Users` to `/home` (the full path from step 1), typing no quote marks: TextEdit can turn a typed quote
-mark into a curly one, which Codex cannot read. On Windows, replace the
+`/Users` to `/home` (the full path from step 1), typing no quote marks:
+TextEdit can turn a typed quote mark into a curly one, which Codex
+cannot read. On Windows, replace the
 whole value after `command =`, its double quotes included, with your
 path between single quotes, as "What the lines do" shows below: a
 Windows path between double quotes makes the whole file unreadable.
@@ -1686,10 +1688,10 @@ Bringing documents in (`import_documents`, 0.14.3) takes
 two calls: the first only looks and changes nothing in the project (if
 letters look garbled, it can open a page on your screen to check them
 on); the second brings the files in. Claude Code from 2.1.199 asks
-before every import whatever is set, since the import carries the mark
-above. In a host that does not read that mark (Codex; perhaps LM
-Studio and Claude Desktop's chat, whose makers do not say), set to
-"always allow", the import would run without asking, and a document's
+before every import whatever is set, or in `dontAsk` refuses it, since
+the import carries the mark above. In a host that does not read that
+mark (Codex; perhaps LM Studio and Claude Desktop's chat, whose makers
+do not say), set to "always allow", the import would run without asking, and a document's
 hidden instructions could then have an assistant bring in another file
 unasked; allowing it once, after reading the preview, keeps you asked
 each time. PRIVACY.md, "Bringing documents in", says what reaches the AI
@@ -1784,8 +1786,9 @@ Analyse the transcript for file 1 with all its coding
 
 1. **Check your paths**:
    - Make sure the command path is correct in your config
-   - With a PyPI install, type `echo ~/exegete-venv/bin/exegete` in
-     Terminal for the plain virtual environment, or `which exegete`
+   - With a PyPI install, type `ls ~/exegete-venv/bin/exegete` in
+     Terminal for the plain virtual environment (it prints the full
+     path, or says there is no such file), or `which exegete`
      after pipx or uv tool; with a source install, activate the venv
      and type `which python`
    - Use that full path in your Claude config
@@ -2403,17 +2406,18 @@ delete the old clone and its venv. Keeping them around breaks nothing.
 The old venv holds the old name's package, qualcoder-mcp, installed
 from the clone, and a plain `pip install exegete` there puts Exegete
 beside it (above). Take the old package out first, then install
-Exegete:
+Exegete (the clone here is `~/Documents/qualcoder_mcp`, as in the entry
+above: put your clone's folder in its place):
 
 ```bash
-~/Documents/exegete/venv/bin/pip uninstall qualcoder-mcp
-~/Documents/exegete/venv/bin/pip install exegete
+~/Documents/qualcoder_mcp/venv/bin/pip uninstall qualcoder-mcp
+~/Documents/qualcoder_mcp/venv/bin/pip install exegete
 # for PDF and EPUB as well: "exegete[pdf-epub]" in place of exegete
 ```
 
 Then change the entry to start the `exegete` command, by its full path
-(`~/Documents/exegete/venv/bin/exegete` written out) and with no
-`args`, as in step 3 above: Exegete's package does not hold the module
+(`~/Documents/qualcoder_mcp/venv/bin/exegete`, with your clone's folder,
+written out) and with no `args`, as in step 3 above: Exegete's package does not hold the module
 the old entry runs (`-m qualcoder_mcp.server`). These steps have not
 been run in this form. The catch, and why the fresh venv is
 recommended instead: from that moment `git pull` in the clone no
@@ -2445,13 +2449,19 @@ If you want to remove the MCP server:
 
 1. **Remove it from your client**:
    - Claude Desktop with the extension: Settings > Extensions,
-     Exegete, Uninstall (Claude removes its own copy of the
-     server; skip step 2). Three things stay: the Python and the
+     Exegete, Uninstall (Claude Desktop removes its own copy of
+     Exegete; skip step 2). Four things stay: the Python and the
      download cache uv keeps for every program that uses it (about 80 MB;
      on macOS `~/.local/share/uv` and `~/.cache/uv`, on Windows
      `%APPDATA%\uv` and `%LOCALAPPDATA%\uv\cache`; `uv cache clean`
      empties the cache, if uv is on your computer), Exegete's own state
-     in `~/.exegete` (step 3), and its reading folder (step 4)
+     in `~/.exegete` (step 3), its reading folder (step 4), and Claude
+     Desktop's log of the extension. That log, `mcp-server-Exegete.log`
+     in `~/Library/Logs/Claude` (macOS) or `%APPDATA%\Claude\logs`
+     (Windows), with `mcp-server-qualcoder-mcp.log` beside it from
+     before 0.14.1, keeps every request and every answer in full, names,
+     paths and quoted text included (Settings > Developer > Show Logs
+     shows it). Exegete never removes it.
    - Claude Desktop configured by hand: Settings > Developer > Edit Config, delete the
      "exegete" section (or "qualcoder", from an earlier version of this
      guide), save, then fully quit and reopen Claude Desktop
@@ -2462,6 +2472,18 @@ If you want to remove the MCP server:
      extension): with the app quit, delete the `[mcp_servers.exegete]`
      table from `~/.codex/config.toml`, with the tables under it whose
      names start `[mcp_servers.exegete.`
+
+   Each host's own record of your conversations stays as well, and is
+   the host's to remove: Claude Code's transcripts
+   (`~/.claude/projects/`), Codex's session files (`~/.codex/sessions`),
+   and whatever else a host keeps, such as LM Studio's log
+   (`~/Library/Logs/LM Studio/main.log` on macOS). Like Claude Desktop's
+   log, a transcript holds the conversation, names, paths and quoted
+   text included: if you are clearing a study's traces from the
+   computer, look at these too. [PRIVACY.md's
+   checklist](PRIVACY.md#before-you-use-real-participant-data-check-these)
+   lists what stays, under "What stays on the computer, and for how
+   long".
 
 2. **Remove the package**:
    ```bash

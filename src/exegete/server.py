@@ -12911,7 +12911,9 @@ QUALCODER_38_BACKUPS_NOTE = (
 # history (ai_chat.py:185-187) in it and
 # its own search index under ai_data/vectorstore (ai_vectorstore.py:297),
 # at the tag 3.8.2, which backups keep; only 4.0's ai_data/search.sqlite
-# is left out (BACKUP_IGNORE_PATTERNS).
+# is left out (BACKUP_IGNORE_PATTERNS). v0.15.1, the stale texts (the
+# privacy reader): the note says so, since 3.8's store holds the sources'
+# text as 4.0's index does, and PRIVACY.md names it.
 BACKUPS_HOLD_NOTE = (
     "Backups hold the whole project folder, except lock files and "
     "SQLite's working files.")
@@ -12921,7 +12923,10 @@ AI_DATA_BACKUPS_NOTE = (
     "keep (and pruning removes). Backups leave out QualCoder 4.0's AI "
     "search index, ai_data/search.sqlite, which QualCoder rebuilds when it "
     "next opens the project with AI enabled, so a restored project without "
-    "one is normal.")
+    "one is normal. They keep QualCoder 3.8's AI search store, "
+    "ai_data/vectorstore/faiss_store.bin, which holds the text of the "
+    "project's sources, so each backup of a project that has one holds "
+    "another copy of that text.")
 
 
 def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,

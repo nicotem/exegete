@@ -122,9 +122,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   known faults instead of its removal; the plans give undo to v0.15.2
   and method to v0.15.3; the setting OpenAI documents for Codex is said
   to be untested, with no test promised; PRIVACY.md names QualCoder
-  3.8's AI search store, which backups keep, what `compare_coders`
-  names and what stays on the computer, the reading folder included;
-  the install and update commands carry the optional part for PDF and
+  3.8's AI search store, which backups keep (as `list_backups`' note now
+  says), what `compare_coders` names and what stays on the computer, the
+  reading folder included; the steps for uninstalling say that Claude
+  Desktop's log of the extension and the assistants' own records of the
+  conversation stay; the install and update commands carry the optional part for PDF and
   EPUB; and the account of the extension's folder setting after an
   update says what was seen, and where.
 

@@ -623,13 +623,16 @@ def test_computer_use_sees_the_screen():
                   "\"This means Claude can see any information visible on "
                   "your screen or those apps, including personal data, "
                   "sensitive documents, or private information belonging to "
-                  "you or others.\"",
-                  # (the staleness audit of 20 October 2026: QualCoder's
-                  # window only if the researcher uses it)
-                  "So through any window on the screen, a file viewer's, "
-                  "or QualCoder's if you use it, it can see a project, the "
-                  "private part of memos included."):
+                  "you or others.\""):
         assert words in privacy, words
+    # What follows from the quotes, by its parts: any window, a project's
+    # private notes included; QualCoder's window named only for a
+    # researcher who uses it (the staleness audit of 20 October 2026)
+    so = privacy[privacy.index("So through any window on the screen"):]
+    so = so[:so.index(".") + 1]
+    assert "it can see a project, the private part of memos included" in so
+    assert "a file viewer's" in so
+    assert "QualCoder's if you use it" in so
     assert "Through an application you allow, such as QualCoder" \
         not in privacy
     # v0.14.2, the README's first round of checks: the README says once,
@@ -671,9 +674,11 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             # and the run records, which PRIVACY's table already listed)
             "the reading folder's pages, with a file's whole text and its "
             "codings",
-            "(macOS `~/Library/Caches/Exegete/Reading.noindex`, Windows "
-            "`%LOCALAPPDATA%\\Exegete\\Reading`, Linux "
-            "`~/.cache/exegete/reading`)",
+            # (each place as reading_folder.root gives it, held there by
+            # tests/test_v0151_stale_texts.py, $XDG_CACHE_HOME included)
+            "macOS `~/Library/Caches/Exegete/Reading.noindex`",
+            "Windows `%LOCALAPPDATA%\\Exegete\\Reading`",
+            "Linux `~/.cache/exegete/reading`",
             "the pseudonymisation run records "
             "(`~/.exegete/pseudonymisation/`)",
             "Claude Desktop's log of the extension, which keeps every "

@@ -120,13 +120,16 @@ def test_the_private_part_is_stated_for_this_server_only():
     data = readme[readme.index("## Where your data goes"):
                   readme.index("## Start here")]
     # (the staleness audit of 20 October 2026: with the exception
-    # PRIVACY.md names, a project built to leak it)
+    # PRIVACY.md names, a project built to leak it; its fix round: the
+    # reference is to a heading PRIVACY.md has, which names Exegete)
     assert ("Exegete never passes the part of a memo from a `#####` "
             "mark onward (QualCoder's mark for a private note) to the "
             "assistant, whichever program made the project, unless the "
-            "project was built to leak it (PRIVACY.md, \"Error answers and "
-            "the server's log\").") in data
-    assert "**Error answers and the server's log.**" in _flat("PRIVACY.md")
+            "project was built to leak it (PRIVACY.md, \"") in data
+    cited = data.split("project was built to leak it (PRIVACY.md, \"")[1]
+    cited = cited[:cited.index("\").")]
+    assert f"**{cited}.**" in _flat("PRIVACY.md")
+    assert "server" not in cited
     assert ("exported files keep the whole memo, private part "
             "included") in data
     privacy = _flat("PRIVACY.md")

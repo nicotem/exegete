@@ -170,15 +170,25 @@ class TestThePlacesAndTheTable:
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
         # folder chosen by hand not yet checked (the staleness audit of 20
-        # October 2026: one account in every document)
-        assert ("the extension's was `~/QualCoder projects` before 0.15.0: "
-                "on the maintainer's Mac on 19 October 2026, the update "
-                "moved a setting left at that default to `~/Exegete "
-                "projects`, and a folder chosen by hand should be kept (not "
-                "yet checked), so after updating, look at the setting. No "
-                "project is moved, both folders are searched, and setting "
-                "it back to `~/QualCoder projects` keeps new projects "
-                "beside the earlier ones.") in section
+        # October 2026: one account in every document, held by its parts
+        # in tests/test_v0150_last_blockers.py; its fix round: the folders
+        # by their names in the code, both among the usual places)
+        from test_v0150_last_blockers import _says_the_account
+        from exegete import names
+        earlier = f"`~/{names.OLD_EXTENSION_WORKSPACE_FOLDER}`"
+        now = f"`~/{names.EXTENSION_WORKSPACE_FOLDER}`"
+        account = section[section.index(
+            f"the extension's was {earlier} before 0.15.0"):]
+        account = account[:account.index("| Kind |")]
+        _says_the_account(account)
+        assert now in account
+        for folder in (names.EXTENSION_WORKSPACE_FOLDER,
+                       names.OLD_EXTENSION_WORKSPACE_FOLDER):
+            assert "~/" + folder in server._USUAL_SEARCH_PLACES, folder
+        for words in ("No project is moved", "both folders are searched",
+                      f"setting it back to {earlier} keeps new projects "
+                      "beside the earlier ones"):
+            assert words in account, words
         assert "until you change its setting" not in section
 
     def test_the_rows_say_what_exegete_really_removes(self):

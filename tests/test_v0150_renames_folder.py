@@ -398,16 +398,18 @@ class TestTheDocuments:
         # setting left at the earlier default; said as seen, once, with a
         # folder chosen by hand not yet checked (the staleness audit of 20
         # October 2026; tests/test_v0150_last_blockers.py holds the account
-        # in every place that tells it)
-        assert ("Installed before 0.15.0, a setting left at the earlier "
-                "default, `~/QualCoder projects`, was moved to "
-                "`~/Exegete projects` by the update on the maintainer's Mac "
-                "on 19 October 2026; a folder chosen by hand should be kept "
-                "(not yet checked). After updating, look at the setting. No "
-                "project is moved, and both folders are searched, so the "
-                "projects in the earlier one are still found. To keep new "
-                "projects beside the earlier ones, set it back to "
-                "`~/QualCoder projects`.") in item
+        # in every place that tells it; its fix round: here, the folders by
+        # their names in the code, both among the usual places)
+        from test_v0150_last_blockers import _says_the_account
+        _says_the_account(item)
+        earlier = f"`~/{names.OLD_EXTENSION_WORKSPACE_FOLDER}`"
+        for folder in (names.EXTENSION_WORKSPACE_FOLDER,
+                       names.OLD_EXTENSION_WORKSPACE_FOLDER):
+            assert "~/" + folder in server._USUAL_SEARCH_PLACES, folder
+        for words in (f"a setting left at the earlier default, {earlier}",
+                      "No project is moved", "both folders are searched",
+                      f"set it back to {earlier}"):
+            assert words in item, words
         assert "may still show" not in item
         assert "it keeps working" not in item
 

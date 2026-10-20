@@ -355,7 +355,7 @@ DIGEST = "ab" * 32
 
 
 # How the log names the folder: never by its path, which holds the
-# account's name (PRIVACY.md, "Error answers and the server's log").
+# account's name (PRIVACY.md, "Error answers and Exegete's log").
 SHOWN = "~/.exegete/import-texts.noindex"
 
 

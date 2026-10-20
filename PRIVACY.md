@@ -22,9 +22,11 @@ switched on, is a small public file that says whether a newer version
 of Exegete exists, and it sends nothing from your projects to get it
 ("Checking for new versions", below, says exactly what is sent, and
 how to switch it off). Installing Exegete downloads it and the
-libraries it needs from PyPI; the desktop extension does so itself,
-through uv, when it first starts and after each update. Nothing from
-your projects is sent with those downloads either.
+libraries it needs from PyPI (a copy of the source comes from GitHub);
+the desktop extension, which carries Exegete itself, downloads the
+libraries through uv when it first starts and after each update, and a
+Python for them where it finds none to use. Nothing from your projects
+is sent with those downloads either.
 
 **But the results of tool calls enter the conversation.** That
 is the entire point of an MCP server, and it has a consequence you
@@ -227,8 +229,8 @@ What stays local, always, unless a sync service copies the folder it is in:
   where the pseudonyms now sit, kept so a run can be accounted for
   afterwards. It is not a way back; the backup taken before the run is.
 
-**Error answers and the server's log.** An error answer goes to the AI
-provider like any other result, and the server's log lines go to the
+**Error answers and Exegete's log.** An error answer goes to the AI
+provider like any other result, and Exegete's log lines go to the
 host, which may keep them on disk (INSTALL.md, "Reading the server
 log"). Since v0.14 neither carries SQLite's message: an error from the
 database is reported by its kind and SQLite's short name for it (for
@@ -318,7 +320,9 @@ see such a read or stop it. Exegete's own answers tell the assistant
 where a project is (`list_available_projects`, `select_project`,
 `get_current_project` and `create_project` answer with its path,
 `copy_project_to_workspace` with its copy's, and `list_backups` with
-each backup's, a whole copy of the project).
+each backup's, a whole copy of the project, as does every change's
+answer with the backup taken before it, and `restore_backup` with the
+backup restored and the one it took first).
 
 What follows was checked on 30 September 2026 against each maker's
 documentation (and, for Codex, its source code), assistant by
@@ -1160,8 +1164,9 @@ Seven cautions:
   formats, the refusal of hidden places and links, the preview and your
   approval stand against it. Exegete marks the import as a tool to ask
   about on every call (`anthropic/requiresUserInteraction`), and Claude
-  Code from version 2.1.199 asks before every import whatever is set
-  (INSTALL.md, "What hosts do with the tools' read and write marks").
+  Code from version 2.1.199 asks before every import whatever is set,
+  or in `dontAsk` refuses it (INSTALL.md, "What hosts do with the
+  tools' read and write marks").
   In a host that does not read that mark (Codex; perhaps LM Studio and
   Claude Desktop's chat, whose makers do not say), set to "always
   allow", the import would run without asking, and such instructions
@@ -1209,17 +1214,19 @@ while `search.sqlite` is a rebuildable search index. Be aware that
 **`ai_data/search.sqlite` contains a full plaintext copy of every text
 source in the project** (QualCoder chunks source fulltext into it for
 retrieval), which matters to anyone sharing or syncing project
-folders. QualCoder 3.8, where its AI search was used, keeps the same
-kind of copy in a store of its own,
+folders. QualCoder 3.8, if it opened the project with its AI switched
+on (whether or not a search was run), keeps the same kind of copy in a
+store of its own,
 `ai_data/vectorstore/faiss_store.bin`, which holds the sources' text
 in chunks beside its index (QualCoder 3.8.2's `ai_vectorstore.py`,
 lines 297 and 344-357).
 
-Exegete opens no file in `ai_data/` (it is QualCoder's own territory):
-it checks only which files are there and when they changed, and a
-restore puts back the backup's copy of the folder, chat history
-included. Since 0.15.0 it makes the folder, empty, when it creates a
-project or copies one that has none into the workspace, so that
+Exegete reads no file in `ai_data/` for any answer (it is QualCoder's
+own territory): it checks only which files are there and when they
+changed; its backups and copies take the folder (below), and a restore
+puts back the backup's copy of it, chat history included. Since
+0.15.0 it makes the folder, empty, when it creates a project or copies
+one that has none into the workspace, so that
 QualCoder 4.0's first open finds it. Its backups and workspace copies
 include `ai_data/` whole, minus exactly the files QualCoder 4.0's own backups skip
 (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`, `*.sqlite-wal` and
@@ -1249,8 +1256,9 @@ such as QualCoder, is writing holds only what was last committed, and
 the database's journal and WAL files are not copied. Only a database
 SQLite cannot read that way (not a database, damaged, or left with a
 crash's journal) is copied as a file with its side files, and the
-result says so; the backup Exegete takes before a change is never
-copied as a file: the change is refused instead. QualCoder's ignore set does not match
+result says so; the backup Exegete takes before a change to the
+project's database is never copied as a file: the change is refused
+instead. QualCoder's ignore set does not match
 them, and a journal copied mid-write holds pages of a write that was
 never committed, which some SQLite builds then show and others refuse
 to read. A backup that holds them (copied while a program was writing,
@@ -2036,7 +2044,8 @@ will ask, and the summary above depends on them:
   letters, until Exegete's first tidy once they are a week old (an hour
   for an import's page), and longer while Exegete is not running
   (macOS `~/Library/Caches/Exegete/Reading.noindex`, Windows
-  `%LOCALAPPDATA%\Exegete\Reading`, Linux `~/.cache/exegete/reading`);
+  `%LOCALAPPDATA%\Exegete\Reading`, Linux `~/.cache/exegete/reading`,
+  or `exegete/reading` under `$XDG_CACHE_HOME` if it is set);
   the pseudonymisation run records (`~/.exegete/pseudonymisation/`),
   until you delete them; Claude Desktop's log of the extension, which keeps every request and
   answer, names and quoted text included (INSTALL.md, "Reading the
@@ -2253,9 +2262,10 @@ will ask, and the summary above depends on them:
     previous text, and its search index (QualCoder 4.0's
     `search.sqlite`, or QualCoder 3.8's `vectorstore/faiss_store.bin`)
     still holds it until QualCoder indexes the project again; Exegete's
-    backups keep QualCoder 3.8's store. Exegete opens no file in there:
-    it checks only which files are there and when they changed, and a
-    restore puts back the backup's copy of the folder.
+    backups keep QualCoder 3.8's store. Exegete reads no file in there
+    for any answer: it checks only which files are there and when they
+    changed; its backups and copies take the folder, and a restore puts
+    back the backup's copy of it.
   - **Exegete's own session files** in `~/.exegete/sessions/`.
     A coding session records the excerpt each suggestion refers to,
     with the file's name and the reason given for it (which may quote

@@ -16,6 +16,7 @@ makes none (Windows); the folder cases run everywhere.
 """
 
 import json
+import logging
 import os
 import shutil
 import socket
@@ -416,6 +417,104 @@ def test_the_lock_holder_and_the_recheck_refuse_a_pipe(tmp_path,
 
     watched(sequence, tmp_path)
     assert _is_pipe(tmp_path / LOCK)
+
+
+# --------------------------------------------------------------------------
+# 4, continued. An entry put at Exegete's own lock during a held write
+# --------------------------------------------------------------------------
+
+REFRESH_THREAD = "exegete-lock-refresh"
+
+
+def _lock_lines(caplog):
+    return [r.getMessage() for r in caplog.records
+            if "lock file" in r.getMessage()]
+
+
+def _put_at(lock, kind):
+    lock.unlink()
+    if kind == "a named pipe":
+        os.mkfifo(lock)
+    else:
+        lock.mkdir()
+
+
+def _kind_is_there(lock, kind):
+    return _is_pipe(lock) if kind == "a named pipe" else lock.is_dir()
+
+
+@pytest.mark.parametrize("kind", ["a named pipe", "a folder"])
+def test_an_entry_put_at_a_held_lock_is_not_exegetes(tmp_path, kind, caplog):
+    """The lock kept fresh (`DESIGN_0151_lock-refresh.md`) reads its own
+    file at each refresh, at the check before a commit and at the end of
+    the write. A named pipe or a folder put at its name while Exegete
+    holds it: the refresh stops, the file is not Exegete's, the check
+    refuses in the words naming its kind, and the end returns, leaving
+    it. Red with a plain `open` there: the pipe waits for ever (the
+    watchdog fires) and the refresh retries it; a folder counts as
+    Exegete's for 30 seconds, so the check lets the commit through."""
+    if kind == "a named pipe" and not hasattr(os, "mkfifo"):
+        pytest.skip("this system makes no named pipes")
+    caplog.set_level(logging.DEBUG)
+    folder = tmp_path / "Study.qda"
+    folder.mkdir()
+    lock = folder / LOCK
+
+    def sequence():
+        with hold_project_lock(folder) as held:
+            assert held
+            with held._mutex:
+                _put_at(lock, kind)
+            assert held.refresh_once() is False
+            assert held.still_ours() is False
+            with pytest.raises(DatabaseLockedError, match=kind):
+                server._recheck_lock_before_commit(folder, held)
+
+    watched(sequence, tmp_path)
+    assert _kind_is_there(lock, kind)
+    words = f"is {kind}, not an ordinary file"
+    assert _lock_lines(caplog) == [
+        f"The project lock file {words}; Exegete stops refreshing it",
+        f"The project lock file {words}; it was left in place at the end "
+        f"of a write"]
+
+
+@PIPES
+def test_a_pipe_put_at_the_lock_during_a_tool_write(fresh, tmp_path,
+                                                    monkeypatch, caplog):
+    """The same through `create_code`: the pipe put at the lock while the
+    change is being made, the refresh running every 0.05 seconds. The
+    change is refused at the commit in the pipe's words, the backup
+    named, no row changed, no refresh left running, the pipe left, and
+    the log names its kind and no path. Red with a plain `open` at the
+    check or at the end: the watchdog fires."""
+    caplog.set_level(logging.DEBUG)
+    monkeypatch.setattr(database, "LOCK_REFRESH_SECONDS", 0.05)
+    real = database.QualcoderDatabase.add_code
+
+    def add_code(self, *args, **kwargs):
+        _put_at(fresh / LOCK, "a named pipe")
+        time.sleep(0.15)
+        return real(self, *args, **kwargs)
+    monkeypatch.setattr(database.QualcoderDatabase, "add_code", add_code)
+
+    def sequence():
+        _selected(server.select_project(str(fresh)))
+        rows = _rows(fresh)
+        answer = json.loads(server.create_code("Over the pipe"))
+        _refused_for(answer, LOCK, "a named pipe")
+        assert Path(answer["backup_path"]).is_dir(), answer
+        assert _rows(fresh) == rows
+
+    watched(sequence, tmp_path)
+    assert _is_pipe(fresh / LOCK)
+    assert not [t for t in threading.enumerate()
+                if t.name == REFRESH_THREAD and t.is_alive()]
+    lines = _lock_lines(caplog)
+    assert any("a named pipe" in line and "left in place" in line
+               for line in lines), lines
+    assert not [line for line in lines
+                if str(tmp_path) in line or fresh.name in line]
 
 
 # --------------------------------------------------------------------------

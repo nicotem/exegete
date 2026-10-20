@@ -727,6 +727,35 @@ class _LockNotAFile(Exception):
         self.kind = kind
 
 
+@contextmanager
+def _open_lock_file(path: Path, mode: str):
+    """Exegete's own lock file opened without waiting, and given to the
+    caller only once the opened file is known to be regular (v0.15.1),
+    for the refresh, the check before a commit and the end of a write.
+
+    Anything else put at its name during the write raises `_LockNotAFile`
+    naming its kind: a named pipe by the opened file's own `fstat` (or,
+    opened "r+", which a pipe cannot be, by a look after the failed
+    open), a folder or a socket, which fail at the open, by that look.
+    A missing file raises FileNotFoundError, any other failure its own
+    OSError, as a plain `open` does."""
+    try:
+        f = open(path, mode, encoding="utf-8", errors="replace",
+                 opener=nonblocking_opener)
+    except FileNotFoundError:
+        raise
+    except OSError:
+        kind = odd_kind(path, follow=True)
+        if kind is not None:
+            raise _LockNotAFile(kind) from None
+        raise
+    with f:
+        kind_mode = os.fstat(f.fileno()).st_mode
+        if not stat.S_ISREG(kind_mode):
+            raise _LockNotAFile(kind_word(kind_mode))
+        yield f
+
+
 def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
     """Read QualCoder's project_in_use.lock heartbeat.
 
@@ -1491,9 +1520,10 @@ class ProjectLock:
             if self._stopped.is_set():
                 return False
             try:
-                # "r+" never creates the file nor empties it
-                with open(self.path, "r+", encoding="utf-8",
-                          errors="replace") as f:
+                # "r+" never creates the file nor empties it; anything
+                # but a regular file at the name is not Exegete's file,
+                # never waited on (v0.15.1)
+                with _open_lock_file(self.path, "r+") as f:
                     seen = f.read(LOCK_READ_MAX_BYTES)
                     if seen == self.trying:
                         self.text, self.trying = seen, None
@@ -1508,6 +1538,13 @@ class ProjectLock:
                     f.write(lines)
                 self.text, self.trying = lines, None
                 return True
+            except _LockNotAFile as e:
+                # The kind is one of `kind_word`'s fixed words, never a path
+                kind = e.kind
+                self._log_once(
+                    ("not_a_file", kind), "The project lock file %s; "
+                    "Exegete stops refreshing it", is_kind(kind))
+                return False
             except FileNotFoundError as e:
                 self._log_once(
                     "gone", "The project lock file was removed during a "
@@ -1529,11 +1566,14 @@ class ProjectLock:
         Exegete's lines are taken before and after the read, so a refresh
         running beside it is never mistaken for another program's lines.
         The file is closed before this returns.
+
+        Raises:
+            _LockNotAFile: anything but a regular file is at the name, a
+                named pipe say, never waited on (v0.15.1)
         """
         before = (self.text, self.trying)
         try:
-            with open(self.path, "r", encoding="utf-8",
-                      errors="replace") as f:
+            with _open_lock_file(self.path, "r") as f:
                 seen = f.read(LOCK_READ_MAX_BYTES)
         except FileNotFoundError:
             return "gone"
@@ -1550,19 +1590,25 @@ class ProjectLock:
         seconds (`qualcoder_lock_state`'s wait), not waiting on the
         mutex again; still so, the file counts as Exegete's while the
         time last confirmed written is within `QUALCODER_LOCK_TIMEOUT` of
-        now, since only a stale lock is taken over. Never raises OSError.
+        now, since only a stale lock is taken over. Anything but a
+        regular file at the name is not Exegete's (v0.15.1): the check
+        before the commit then refuses in its words. Never raises
+        OSError.
         """
         if not self.held:
             return False
         whose = "unreadable"
-        if self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS):
-            try:
+        try:
+            if self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS):
+                try:
+                    whose = self._whose()
+                finally:
+                    self._mutex.release()
+            if whose == "unreadable":
+                time.sleep(0.5)
                 whose = self._whose()
-            finally:
-                self._mutex.release()
-        if whose == "unreadable":
-            time.sleep(0.5)
-            whose = self._whose()
+        except _LockNotAFile:
+            return False
         if whose == "unreadable":
             confirmed = float(self.text.splitlines()[1])
             return time.time() - confirmed <= QUALCODER_LOCK_TIMEOUT
@@ -1583,10 +1629,19 @@ class ProjectLock:
         # creates the file, so the read before the removal still holds
         got = self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS)
         try:
-            whose = self._whose()
-            if whose == "unreadable":
-                time.sleep(0.5)
+            try:
                 whose = self._whose()
+                if whose == "unreadable":
+                    time.sleep(0.5)
+                    whose = self._whose()
+            except _LockNotAFile as e:
+                # A named pipe, say, put at the name during the write:
+                # never waited on, never removed (v0.15.1). The kind is
+                # one of `kind_word`'s fixed words, never a path
+                kind = e.kind
+                logger.warning("The project lock file %s; it was left in "
+                               "place at the end of a write", is_kind(kind))
+                return
             if whose == "unreadable":
                 logger.warning("The project lock file could not be read at "
                                "the end of a write; it was left in place")

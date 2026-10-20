@@ -1168,11 +1168,14 @@ def test_install_says_the_extension_tells_of_new_versions():
     updating = section[section.index("**Updating**"):
                        section.index("**Removing**")]
     assert "does not look for new versions" not in section
-    assert updating == (
+    assert updating.startswith(
         "**Updating**: download the newer `.mcpb` and install it the same "
         "way. Exegete asks Claude to tell you when a newer version is "
-        "out, unless you switch that off (the third setting, above); with "
-        "a GitHub account, Watch, then Custom, then Releases, on the "
-        "repository's page also sends you a notice of each. ")
+        "out, unless you switch that off")
+    # the setting named by its title in the manifest, never by its place
+    # (the facts check, tests/test_v0151_facts.py, holds every quoted
+    # title and every setting named by place)
+    title = manifest["user_config"]["update_check"]["title"]
+    assert f'(the setting "{title}", above)' in updating
     assert "**Tell me when a new version is out**: on unless you switch " \
            "it off." in section

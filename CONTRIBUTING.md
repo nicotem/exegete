@@ -81,7 +81,8 @@ is looked at first.
    QualCoder 4.0, and one watching QualCoder's newest code, whose
    changes are a notice, never a failure. Two try the upgrade from the
    package's earlier name, on Ubuntu and on Windows. One checks the
-   links in the documents (`scripts/check_links.py`); their links to
+   documents: their links (`scripts/check_links.py`) and the facts
+   they repeat (`tests/test_v0151_facts.py`, below); their links to
    other sites are checked once a week instead, by a workflow of its
    own (`external-links.yml`), where a page that is gone fails and a
    site that turns robots away or answers slowly is a notice. One runs
@@ -113,9 +114,16 @@ is looked at first.
    what a tool result may disclose. Links are checked on every push
    (`scripts/check_links.py`): when you rename a heading, it names every
    link to it, the update page's included. The facts the documents
-   repeat are checked too (`tests/test_v0151_facts.py`): when you change
-   a folder, a limit or a count in the code, the check names every
-   sentence that still gives the old one.
+   repeat are checked too (`tests/test_v0151_facts.py`): the folders,
+   the time per import call and the tool counts against the code's
+   constants; every install command of Exegete names the optional part
+   for PDF and EPUB, in its brackets or its paragraph; the extension's
+   settings are named by their titles, never by their place in the
+   list; and every name a document calls a tool or an argument is one
+   Exegete has. When you change one of them in the code, the check
+   names every sentence that still gives the old one. When you remove a
+   tool or an argument, add it, with the release, to the test's
+   `RETIRED` table.
 
 ## Review before merge
 
@@ -205,8 +213,8 @@ rather than fewer.
   and prompt descriptions, error strings, result notes, CHANGELOG
   entries and commit messages use British spelling (behaviour, colour,
   analyse, organise, initialise, licence as a noun). Identifiers are
-  never changed: tool names (`sanitize_formulas`, `recolor_code`),
-  argument names, JSON result keys, environment
+  never changed: tool names (`recolor_code`), argument names
+  (`sanitize_formulas`), JSON result keys, environment
   variable names, file names, SQL, and proper names such as "GNU
   Lesser General Public License" keep their exact spelling, including
   when a sentence mentions them. Code comments follow the same rule when a line is

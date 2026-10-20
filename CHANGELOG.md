@@ -136,6 +136,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the time one import call may take and the tool counts. A change to
   one of them in the code names every sentence that still gives the old
   value, by file and line.
+- **The facts check reads more documents and checks three more
+  facts.** It now reads CONTRIBUTING.md, NOTICE and the issue templates
+  too, and checks that every install command of Exegete names the
+  optional part for PDF and EPUB, in its brackets or its paragraph;
+  that the extension's settings are named by their titles, never by
+  their place; and that every name a document calls a tool or an
+  argument is one Exegete has, or one it has retired.
 - **The early plans, analyses, research notes and security review
   marked historical are now in `docs/history/`**, out of the top of the
   repository, with a README that says what the folder holds; NOTICE

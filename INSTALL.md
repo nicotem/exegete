@@ -147,7 +147,8 @@ team decides.
 
 **Updating**: download the newer `.mcpb` and install it the same way.
 Exegete asks Claude to tell you when a newer version is out, unless
-you switch that off (the third setting, above); with a GitHub account,
+you switch that off (the setting "Tell me when a new version is out",
+above); with a GitHub account,
 Watch, then Custom, then Releases, on the repository's page also sends
 you a notice of each.
 **Removing**: Settings, Extensions, Exegete, Uninstall. Neither
@@ -276,6 +277,8 @@ This gives you an `exegete` command; get its absolute path with
 `which exegete` and use THAT as the `command` in the Claude
 configuration of Step 6 (no `args` needed). Everything else in this
 guide (project configuration, testing, updating) applies unchanged.
+These commands leave out the optional part for PDF and EPUB ("PDF and
+EPUB: the optional part", below, adds it).
 
 An install from PyPI takes the newest release of each library Exegete
 allows, so it can be newer than the releases the tests ran with and the
@@ -1956,7 +1959,9 @@ $HOME\exegete-venv\Scripts\pip install --upgrade exegete
 `uv tool upgrade exegete` keeps a version that was pinned when Exegete
 was installed, as the steps Exegete gives pin one (`uv tool install
 --force "exegete==<version>"`); to move on from such a pin, run those
-steps again with the newer version.
+steps again with the newer version. Those steps name no optional part
+for PDF and EPUB: to be sure of keeping it, write
+`"exegete[pdf-epub]==<version>"` in them.
 
 **uvx**: if your MCP client's entry starts Exegete with `uvx exegete`
 (or `uvx qualcoder-mcp`, the earlier name), uvx keeps running the copy
@@ -1966,7 +1971,9 @@ name, qualcoder-mcp) in that entry to `exegete@` and the newest version
 as PyPI spells it (for example `exegete@0.15.0a0`), and open the client
 again: it fetches that version when it next starts, which needs the
 internet that once. With the check for new versions on, "How do I
-update Exegete?" gives this step with the version filled in.
+update Exegete?" gives this step with the version filled in. An entry
+that runs `uvx exegete` has no optional part for PDF and EPUB unless it
+names it, as `uvx --from "exegete[pdf-epub]" exegete` does.
 
 **Git (contributor) install**, when new versions are released. First
 **fully quit your MCP client** (Claude Desktop: Cmd+Q; Claude Code: end
@@ -1984,7 +1991,8 @@ source venv/bin/activate
 # Pull the latest changes
 git pull
 
-# Reinstall
+# Reinstall (with the optional part for PDF and EPUB, if you use it:
+# pip install -e ".[pdf-epub]")
 pip install -e .
 ```
 
@@ -2068,6 +2076,11 @@ yet, and the first start after the update moves the server's own folder
   the new address: `git remote set-url origin
   https://github.com/nicotem/exegete.git` (the old address redirects,
   so this is optional); the folder's own name does not matter.
+- **PDF and EPUB.** The commands above that install `exegete` leave out
+  its optional part for PDF and EPUB: write `"exegete[pdf-epub]"` in
+  place of `exegete` (with uvx, `uvx --from "exegete[pdf-epub]"
+  exegete`), or `pip install -e ".[pdf-epub]"` in a copy of the source
+  ("PDF and EPUB: the optional part", above).
 - **Keep your entry.** If a host's configuration already has an entry
   for Exegete under the name `qualcoder`, keep it, and do not add
   an `exegete` entry beside it: that would start two servers, show
@@ -2178,7 +2191,8 @@ release will say plainly that it is the last.
 ## Upgrading from an earlier (git) install
 
 *For everyone who installed a pre-0.9 version with `git clone` +
-`pip install -e .` and configured their Claude client with
+`pip install -e .` (before the optional part for PDF and EPUB, which
+came in 0.14.3) and configured their Claude client with
 `venv/bin/python` + `"args": ["-m", "qualcoder_mcp.server"]` (the
 program was then called qualcoder-mcp; "Coming from qualcoder-mcp",
 above, says what the rename changes).*
@@ -2209,6 +2223,7 @@ files change. Then:
 cd ~/Documents/qualcoder_mcp   # your clone, whatever its folder is called
 git pull
 venv/bin/pip install -e .
+# for PDF and EPUB as well: venv/bin/pip install -e ".[pdf-epub]"
 ```
 
 Then reopen your Claude client. Your existing configuration keeps
@@ -2221,8 +2236,9 @@ your setup.
 *Available from v0.9.0 (the first release published to PyPI).*
 
 **Use a FRESH environment. Do not install into the old clone's venv.**
-(If you run `pip install exegete` inside the old venv, pip installs
-Exegete beside the clone's own package rather than in its place, and
+(If you run `pip install exegete` inside the old venv, with or without
+the optional part for PDF and EPUB, pip installs Exegete beside the
+clone's own package rather than in its place, and
 an entry that still runs `-m qualcoder_mcp.server` keeps running the
 clone's code, the program as it was, until the clone itself is updated:
 one environment then holds two copies of the server, from two places.
@@ -2235,6 +2251,7 @@ python3 -m venv ~/exegete-venv
 ~/exegete-venv/bin/pip install exegete
 # or:  pipx install exegete
 # or:  uv tool install exegete
+# for PDF and EPUB as well: "exegete[pdf-epub]" in place of exegete
 ```
 
 **2. Find the command path:**
@@ -2308,6 +2325,7 @@ explicitly:
 
 ```bash
 ~/Documents/exegete/venv/bin/pip install --upgrade exegete
+# for PDF and EPUB as well: "exegete[pdf-epub]" in place of exegete
 ```
 
 or uninstall the editable first:
@@ -2315,6 +2333,7 @@ or uninstall the editable first:
 ```bash
 ~/Documents/exegete/venv/bin/pip uninstall exegete
 ~/Documents/exegete/venv/bin/pip install exegete
+# for PDF and EPUB as well: "exegete[pdf-epub]" in place of exegete
 ```
 
 Both verified: pip cleanly removes the editable hooks and the wheel

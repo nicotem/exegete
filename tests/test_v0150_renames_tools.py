@@ -766,9 +766,19 @@ class TestTheDocuments:
             assert f"about {pins.CORE_ROUNDED} characters" in text
 
     def test_contributing_keeps_its_other_examples(self):
+        # The examples of names kept as written, neither of them a renamed
+        # tool: a tool's name and an argument's, each one Exegete has (the
+        # facts check, tests/test_v0151_facts.py, holds every name a
+        # document calls a tool or an argument)
         text = _flat(_read("CONTRIBUTING.md"))
-        assert ("never changed: tool names (`sanitize_formulas`, "
-                "`recolor_code`), argument names,") in text
+        examples = re.search(r"never changed: tool names \(`(\w+)`\), "
+                             r"argument names \(`(\w+)`\),", text)
+        assert examples, "CONTRIBUTING's examples of names"
+        tool, argument = examples.groups()
+        assert tool in server.STANDARD_TOOL_NAMES
+        assert tool not in RENAMED and tool not in RENAMED.values()
+        assert any(argument in each.parameters.get("properties", {})
+                   for each in server.mcp._tool_manager._tools.values())
 
     def test_the_changelog(self):
         text = _read("CHANGELOG.md")

@@ -171,9 +171,12 @@ def test_every_job_that_runs_tests_installs_from_the_lock():
     running = {name for name, job in jobs.items()
                if "python -m pytest" in _text(job)}
     assert running == {"test", "qualcoder-parity", "rename-upgrade",
-                       "newest-libraries"}
+                       "documents", "newest-libraries"}
+    # `documents` runs the facts the documents repeat, which need the
+    # package but not the optional part.
     extras = {"test": " --extra pdf-epub",
-              "qualcoder-parity": " --extra pdf-epub", "rename-upgrade": ""}
+              "qualcoder-parity": " --extra pdf-epub", "rename-upgrade": "",
+              "documents": ""}
     for name in sorted(running - {"newest-libraries"}):
         text = _text(jobs[name])
         lines = [line.strip() for line in jobs[name]["lines"]]

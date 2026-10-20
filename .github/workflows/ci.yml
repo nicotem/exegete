@@ -511,8 +511,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m venv "$RUNNER_TEMP/uv-env"
-          "$RUNNER_TEMP/uv-env/bin/python" -m pip install "uv==0.9.7"
-          "$RUNNER_TEMP/uv-env/bin/python" -m uv export --locked --extra dev --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
+          uvpy="$RUNNER_TEMP/uv-env/bin/python"
+          "$uvpy" -m pip install "uv==0.9.7"
+          "$uvpy" -m uv export --locked --extra dev --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
           python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
           python -m pip install --no-deps -e .
 

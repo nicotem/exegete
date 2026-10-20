@@ -17,6 +17,7 @@ if the tool stops passing its check).
 """
 
 import sqlite3
+import sys
 from contextlib import closing
 from pathlib import Path
 
@@ -215,9 +216,11 @@ def denying_writes(conn, attempts):
     conn.set_authorizer(authorise)
 
     def off():
-        try:
+        # Python 3.10 calls a None authoriser, which fails and so denies
+        # every statement after it; 3.11 and later take None as none
+        if sys.version_info >= (3, 11):
             conn.set_authorizer(None)
-        except TypeError:   # Python 3.10 takes no None
+        else:
             conn.set_authorizer(lambda *args: sqlite3.SQLITE_OK)
     return off
 

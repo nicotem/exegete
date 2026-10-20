@@ -44,6 +44,7 @@ from .database import (
     _sqlite_ro_uri,
     documents_name_key,
     file_name_rule,
+    odd_database_side_file,
 )
 
 # The schema label a new project carries, and the build that writes it.
@@ -820,10 +821,12 @@ def classify_existing(path: Path) -> str:
     is missing or empty. PROJECT for a readable database with a project
     row. UNREADABLE for anything else in a folder, which includes a real
     project that another program was writing when it stopped (a full
-    `data.qda` with a journal beside it) and a `data.qda` that is a link,
-    which is never followed. The database is opened read-only, so a
-    stranger's journal is never rolled back; NOT_A_FOLDER for a file or a
-    link.
+    `data.qda` with a journal beside it), a `data.qda` that is a link,
+    which is never followed, and one with a side file of SQLite's beside
+    it that is not a regular file (v0.15.1: a named pipe there would make
+    the open below wait for ever), which is not opened. The database is
+    opened read-only, so a stranger's journal is never rolled back;
+    NOT_A_FOLDER for a file or a link.
     """
     info = _lstat(path)
     if info is None or not stat.S_ISDIR(info.st_mode):
@@ -835,6 +838,8 @@ def classify_existing(path: Path) -> str:
     entry = _lstat(database)
     if entry is None or not stat.S_ISREG(entry.st_mode):
         return UNREADABLE          # a link, a folder, a device: not opened
+    if odd_database_side_file(database) is not None:
+        return UNREADABLE          # a named pipe beside it: not opened
     conn = None
     try:
         conn = sqlite3.connect(_sqlite_ro_uri(database), uri=True)

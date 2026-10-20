@@ -261,6 +261,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── state_folder.py      # The state folder and its one move
 │   │   ├── server.py            # Main MCP server with resources, tools, prompts
 │   │   ├── database.py          # SQLite database interface
+│   │   ├── file_kinds.py        # What kind of entry sits at a name: a named pipe is refused, never opened (0.15.1)
 │   │   ├── memo_privacy.py      # QualCoder's '#####' private-memo convention
 │   │   ├── new_project.py       # create_project: the folder and its schema v17 database
 │   │   ├── sessions.py          # AI coding session management

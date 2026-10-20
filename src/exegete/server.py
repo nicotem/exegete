@@ -85,6 +85,10 @@ from .database import (
     WORKSPACE_ENV,
     qualcoder_lock_state,
     qualcoder_open_message,
+    LOCK_NOT_A_FILE,
+    lock_not_a_file_message,
+    lock_not_a_file_warning,
+    odd_database_side_file,
     qualcoder_gui_signals,
     normalize_coder,
     hold_project_lock,
@@ -105,6 +109,7 @@ from . import pseudonymise as pseudo
 from . import new_project
 from . import names_file, parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
+from .file_kinds import ProjectFileKindError
 from . import doc_import, doc_readers, kept_texts
 from . import qualcoder_history
 from .cursors import (
@@ -1749,6 +1754,10 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             db = QualcoderDatabase(current_project_path, read_only=read_only)
             logger.info("Reconnected to the selected project")
             return db
+        except ProjectFileKindError:
+            # A side file that is not a regular file (v0.15.1): refused in
+            # its own words, never a fall through to another project
+            raise
         except Exception as e:
             logger.error("Failed to reconnect to database: %s",
                          error_label(e))
@@ -1767,9 +1776,11 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             # Neither the path nor the folder's name (v0.14)
             logger.info("Connected to the project set in %s",
                         env_settings.read("project_path").name)
-        except (DatabaseLockedError, UnsupportedSchemaError):
+        except (DatabaseLockedError, UnsupportedSchemaError,
+                ProjectFileKindError):
             # Their own texts, which carry no path: a lock is a moment,
-            # an old schema has its advice
+            # an old schema has its advice, a side file that is not a
+            # regular file its way through (v0.15.1)
             raise
         except (ValueError, OSError, RuntimeError, sqlite3.Error) as e:
             # One text for a configured project that cannot be opened,
@@ -1779,6 +1790,12 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             raise ConfiguredProjectError(
                 CONFIGURED_PROJECT_UNAVAILABLE) from None
 
+    # The open connection's side files, looked at again at every call
+    # (v0.15.1): a named pipe put beside data.qda after the selection
+    # would make SQLite's next read of it wait for ever
+    odd = odd_database_side_file(db.db_path)
+    if odd is not None:
+        raise ProjectFileKindError(odd)
     return db
 
 
@@ -2018,7 +2035,19 @@ def _qualcoder_open_error() -> Optional[Dict[str, Any]]:
     state, holder = qualcoder_lock_state(_current_project_folder())
     if state == "active":
         return {"error": qualcoder_open_message(holder)}
+    if state == LOCK_NOT_A_FILE:
+        # The lock file's name holds a named pipe, a folder or the like
+        # (v0.15.1): every write refused here, before its backup
+        return {"error": lock_not_a_file_message(holder)}
     return None
+
+
+def _lock_not_a_file_block(kind: str) -> Dict[str, Any]:
+    """`qualcoder_lock` while the lock file's name holds a named pipe, a
+    folder or the like (v0.15.1), as get_current_project and
+    start_coding_session give it: the state, the kind and the warning."""
+    return {"state": LOCK_NOT_A_FILE, "kind": kind,
+            "note": lock_not_a_file_warning(kind)}
 
 
 def _schema_block() -> Dict[str, Any]:
@@ -2090,6 +2119,8 @@ def _recheck_lock_before_commit(project_folder: Path, held) -> None:
         return
     if state == "active":
         raise DatabaseLockedError(qualcoder_open_message(holder))
+    if state == LOCK_NOT_A_FILE:
+        raise DatabaseLockedError(lock_not_a_file_message(holder))
 
 
 def _resolve_category_by_name(name: str):
@@ -3507,7 +3538,9 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
         }
     try:
         session_db_path = validate_qda_path(session.project_path)
-    except DatabaseLockedError:
+    except (DatabaseLockedError, ProjectFileKindError):
+        # Their own words (v0.15.1: a side file that is not a regular
+        # file), never "could not be found"
         raise
     except Exception:
         return {
@@ -3517,7 +3550,7 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
         }
     try:
         current_db_path = validate_qda_path(current_project_path)
-    except DatabaseLockedError:
+    except (DatabaseLockedError, ProjectFileKindError):
         raise
     except Exception:
         return {"error": "The currently open project could not be resolved. "
@@ -4448,6 +4481,11 @@ def select_project(project_path: str) -> str:
     except DatabaseLockedError as e:
         logger.error("Project locked during select: %s", error_label(e))
         answer = {"success": False, "error": str(e)}
+    except ProjectFileKindError as e:
+        # A side file of SQLite's that is not a regular file (v0.15.1):
+        # its own words, which name no path, before the ValueError clause
+        logger.error("Project refused during select: %s", error_label(e))
+        answer = {"success": False, "error": str(e)}
     except UnsupportedSchemaError as e:
         logger.error("Unsupported schema during select: %s",
                      error_label(e))
@@ -4602,6 +4640,11 @@ def _select_project(project_path: str) -> Dict[str, Any]:
             f"data."
         )
     else:
+        if state == LOCK_NOT_A_FILE:
+            # v0.15.1: the lock file's name holds a named pipe, a folder
+            # or the like; reads work, writes are refused, and the signs
+            # below are gathered as for any lock that is not active
+            warnings.append(lock_not_a_file_warning(holder))
         # C5/T17 + P1-5: only released QualCoder (3.x) signals "open"
         # via the lock file; 4.0 removed the protocol, so detection
         # falls back to best-effort heuristics (WARN rung only; the
@@ -5552,6 +5595,9 @@ def get_current_project() -> str:
                         "active. Ask the researcher to close it in "
                         "QualCoder, or wait a moment, then re-check."
             }
+        elif state == LOCK_NOT_A_FILE:
+            # v0.15.1: not a regular file, never read; writes refused
+            result["qualcoder_lock"] = _lock_not_a_file_block(holder)
         elif state == "stale":
             result["qualcoder_lock"] = {
                 "state": "stale",
@@ -9606,6 +9652,13 @@ def start_coding_session(
 qualcoder_open: true
 action_required: {action_required}
 """
+    elif state == LOCK_NOT_A_FILE:
+        # v0.15.1: no banner (no program has the project open), but the
+        # session's approved codings could not be written until the
+        # entry is moved, so the instructions say so first
+        qualcoder_banner = f"""
+**Note:** {lock_not_a_file_warning(holder)}
+"""
 
     not_found_lines = ""
     if not_found:
@@ -9688,6 +9741,9 @@ Once the assistant records and presents suggestions, you can:
     if state == "active":
         envelope["action_required"] = action_required
     else:
+        if state == LOCK_NOT_A_FILE:
+            # As get_current_project gives it (v0.15.1)
+            envelope["qualcoder_lock"] = _lock_not_a_file_block(holder)
         # P1-5: the ask rung of the ladder also listens to the 4.0
         # GUI-open heuristics (4.0 writes no lock file). WARN-level: ask
         # the user, never refuse on a heuristic.
@@ -9946,6 +10002,10 @@ def _contexts_for_display(session: AICodingSession,
     which is the only place a span's text is shown."""
     try:
         open_here = _check_session_project(session) is None
+    except ProjectFileKindError:
+        # The open project's side file (v0.15.1): its own words, never
+        # the note that the session's project is another
+        raise
     except Exception:
         open_here = False
     if not open_here:
@@ -11636,6 +11696,10 @@ def import_text_file(
             # refusal text quotes a value from it (D1 3.10, Security S3).
             validated = pseudo.validate_mapping(entries, "exact",
                                                 may_echo_names=False)
+        except ProjectFileKindError:
+            # The project's side file (v0.15.1), not pseudonyms.json:
+            # its own words, without the advice on that file
+            raise
         except (ValueError, OSError, RuntimeError) as e:
             return json.dumps({"error": _pseudonyms_json_error(
                 e, PSEUDONYMS_JSON_ADVICE_IMPORT)}, indent=2)
@@ -12970,10 +13034,11 @@ def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
 UNCLEAN_BACKUP_NOTE = (
     "This backup holds its database's journal or WAL file beside it (it "
     "was copied while a program was writing to the project; backups made "
-    "before v0.14 copied these files), or its data.qda is a link. What it "
-    "holds depends on the platform that opens it, or on where the link "
-    "points, so restore_backup refuses it; choose another backup. It can "
-    "be pruned like any other.")
+    "before v0.14 copied these files), or its data.qda is a link, or a "
+    "side file of its database is not an ordinary file. What it holds "
+    "depends on the platform that opens it, or on where the link points, "
+    "so restore_backup refuses it; choose another backup. It can be "
+    "pruned like any other.")
 
 
 def _backup_log_name(name: str, project_folder: Path) -> str:
@@ -19502,6 +19567,9 @@ def pseudonymise_source(
         try:
             mapping, sidecar_encoding = read_project_pseudonyms(
                 _current_project_folder())
+        except ProjectFileKindError:
+            # The project's side file (v0.15.1), not pseudonyms.json
+            raise
         except (ValueError, OSError, RuntimeError) as e:
             return json.dumps({"error": _pseudonyms_json_error(
                 e, PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE)}, indent=2)

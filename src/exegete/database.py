@@ -29,6 +29,13 @@ from contextlib import closing, contextmanager
 import glob
 
 from . import doc_readers, env_settings, names
+from .file_kinds import (
+    ProjectFileKindError,
+    is_kind,
+    kind_word,
+    nonblocking_opener,
+    odd_kind,
+)
 from .memo_privacy import (
     PERSONAL_NOTE_MARK,
     extract_ai_memo,
@@ -660,6 +667,12 @@ LOCK_READ_MAX_BYTES = 4096  # a real lock is two short lines; cap the read
 LOCK_REFRESH_SECONDS = 5.0
 # No wait, join or mutex of that refresh lasts longer than this
 LOCK_WAIT_LIMIT_SECONDS = 10.0
+# The lock state of a lock file that is not a regular file (v0.15.1): a
+# named pipe, a socket, a device or a folder at its name, never opened
+# for reading. Every write is refused while it is there; reads go on.
+# A departure from QualCoder 3.8.2, which opens the file without looking
+# at it (__main__.py 2640), and waits for ever at a named pipe.
+LOCK_NOT_A_FILE = "not_a_file"
 
 
 def qualcoder_open_message(holder: Optional[str]) -> str:
@@ -680,6 +693,37 @@ def qualcoder_open_message(holder: Optional[str]) -> str:
     )
 
 
+def lock_not_a_file_message(kind: str) -> str:
+    """The refusal of every write while the lock file is not a regular
+    file (v0.15.1): its name and kind, nothing changed, reads go on, and
+    the way through."""
+    return (
+        f"This project's lock file, {QUALCODER_LOCK_FILENAME}, "
+        f"{is_kind(kind)}, so Exegete made no change to the project. "
+        f"Reads go on as usual; moving that entry out of the project "
+        f"folder lets changes go ahead."
+    )
+
+
+def lock_not_a_file_warning(kind: str) -> str:
+    """The same state in an answer that refuses nothing (select_project,
+    get_current_project, start_coding_session)."""
+    return (
+        f"This project's lock file, {QUALCODER_LOCK_FILENAME}, "
+        f"{is_kind(kind)}. Reads work; every change will be refused until "
+        f"that entry is moved out of the project folder."
+    )
+
+
+class _LockNotAFile(Exception):
+    """The opened lock file is not a regular file: a named pipe, say,
+    put at its name after the first look."""
+
+    def __init__(self, kind: str):
+        super().__init__(kind)
+        self.kind = kind
+
+
 def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
     """Read QualCoder's project_in_use.lock heartbeat.
 
@@ -689,28 +733,47 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
     Returns:
         (state, holder) where state is 'absent', 'active' (heartbeat within
         30 s, QualCoder is running with this project open) or 'stale'
-        (QualCoder crashed or the file is unreadable).
+        (QualCoder crashed or the file is unreadable), or, for the fourth
+        state, (LOCK_NOT_A_FILE, kind): the name holds a named pipe, a
+        socket, a device or a folder, which is never read (v0.15.1).
     """
     lock = Path(project_dir) / QUALCODER_LOCK_FILENAME
     if not lock.exists():
         return "absent", None
+    # Looked at before it is opened (v0.15.1): opening a named pipe for
+    # reading waits until a program writes to it. A link is read
+    # through, as before, so its kind is the kind of what it leads to.
+    kind = odd_kind(lock, follow=True)
+    if kind is not None:
+        return LOCK_NOT_A_FILE, kind
 
     def _read():
         # Read only a bounded prefix: a real lock is two short lines
         # (username + epoch). A crafted/corrupt multi-gigabyte lock in a
         # shared project must not be slurped into memory (SEC S-3).
-        with open(lock, "r", encoding="utf-8", errors="replace") as f:
+        # Opened without waiting, and read only once the opened file is
+        # known to be regular: an entry put at the name after the look
+        # above is answered at once, never read (v0.15.1).
+        with open(lock, "r", encoding="utf-8", errors="replace",
+                  opener=nonblocking_opener) as f:
+            mode = os.fstat(f.fileno()).st_mode
+            if not stat.S_ISREG(mode):
+                raise _LockNotAFile(kind_word(mode))
             head = f.read(LOCK_READ_MAX_BYTES)
         lines = head.splitlines()
         return lines[0], time.time() - float(lines[1])
 
     try:
         holder, age = _read()
+    except _LockNotAFile as e:
+        return LOCK_NOT_A_FILE, e.kind
     except Exception:
         # QualCoder itself retries once after 0.5 s (__main__.py:2647-2651)
         time.sleep(0.5)
         try:
             holder, age = _read()
+        except _LockNotAFile as e:
+            return LOCK_NOT_A_FILE, e.kind
         except Exception:
             # Unreadable lock = treated as a dead process, like QualCoder's
             # own break-the-lock fallback (__main__.py:2652-2656)
@@ -1565,7 +1628,9 @@ def hold_project_lock(project_dir: Union[str, Path]):
         proceeding over a stale foreign lock.
 
     Raises:
-        DatabaseLockedError: If QualCoder has the project open
+        DatabaseLockedError: If QualCoder has the project open, or the
+            lock file's name holds something other than a regular file
+            (v0.15.1), refused before anything is made
     """
     project_dir = Path(project_dir)
     lock = ProjectLock(project_dir / QUALCODER_LOCK_FILENAME)
@@ -1573,6 +1638,8 @@ def hold_project_lock(project_dir: Union[str, Path]):
     state, holder = qualcoder_lock_state(project_dir)
     if state == "active":
         raise DatabaseLockedError(qualcoder_open_message(holder))
+    if state == LOCK_NOT_A_FILE:
+        raise DatabaseLockedError(lock_not_a_file_message(holder))
 
     if state == "absent":
         try:
@@ -1582,6 +1649,9 @@ def hold_project_lock(project_dir: Union[str, Path]):
             state2, holder2 = qualcoder_lock_state(project_dir)
             if state2 == "active":
                 raise DatabaseLockedError(qualcoder_open_message(holder2)) from None
+            if state2 == LOCK_NOT_A_FILE:
+                raise DatabaseLockedError(
+                    lock_not_a_file_message(holder2)) from None
             # stale — leave the file alone and proceed unheld
         except OSError as e:
             logger.warning("Could not create project lock file: %s",
@@ -1970,6 +2040,9 @@ def validate_qda_path(db_path: str) -> Path:
     Raises:
         ValueError: If path is invalid
         FileNotFoundError: If database file doesn't exist
+        ProjectFileKindError: If a side file of SQLite's beside the
+            database is not a regular file (v0.15.1), before SQLite
+            opens anything
     """
     try:
         # Resolve to absolute path, following symlinks
@@ -2018,6 +2091,12 @@ def validate_qda_path(db_path: str) -> Path:
             )
     else:
         raise ValueError(f"Path is neither a file nor a directory: {path}")
+
+    # SQLite's side files, looked at before SQLite opens them (v0.15.1):
+    # a named pipe there would make every open wait for ever
+    odd = odd_database_side_file(path)
+    if odd is not None:
+        raise ProjectFileKindError(odd)
 
     # Basic SQLite validation (read-only check)
     conn = None
@@ -2960,13 +3039,68 @@ BACKUP_WITHOUT_DATABASE_MESSAGE = (
 def _side_file_is_live(path: str) -> bool:
     """A side file that SQLite would act on: a link, or a file with
     something in it (an empty journal or WAL file is ignored by SQLite,
-    fix round 1)."""
+    fix round 1). Read by `lstat` (v0.15.1): a link, or anything that is
+    not a regular file (a named pipe, a folder), counts as live, so a
+    backup holding one is never taken for clean."""
     try:
-        if os.path.islink(path):
-            return True
-        return os.path.isfile(path) and os.path.getsize(path) > 0
+        info = os.lstat(path)
     except (OSError, ValueError):
         return False
+    if not stat.S_ISREG(info.st_mode):
+        return True
+    return info.st_size > 0
+
+
+# What SQLite keeps under each side file's suffix, for the refusal below
+_SIDE_FILE_ROLES = {"-journal": "journal", "-wal": "write-ahead log",
+                    "-shm": "shared-memory file"}
+
+
+def odd_database_side_file(data_qda: Union[str, Path]) -> Optional[str]:
+    """The refusal for a side file of SQLite's that is not a regular
+    file, or None when there is none (v0.15.1).
+
+    SQLite opens `data.qda-journal`, `-wal` and `-shm` beside a database
+    without asking, and a named pipe there makes it wait for ever. Each
+    is looked at by `lstat` beside `data_qda` and, when `data_qda` is a
+    link, beside the file it leads to (where SQLite names them, as
+    `unclean_backup_side_files` reads them); a link there counts too.
+    Nothing is opened. The words name no path and fit a project, a
+    backup and a copy's source alike; a link gets no advice to move it,
+    since it may lead to a journal SQLite needs to finish an earlier
+    write, and a regular journal is never refused.
+    """
+    base = os.fspath(data_qda)
+    places = [(base, False)]
+    try:
+        if os.path.islink(base):
+            places.append((os.path.realpath(base), True))
+    except (OSError, ValueError):
+        pass
+    for database, beside_target in places:
+        for suffix in _SIDE_SUFFIXES:
+            kind = odd_kind(database + suffix)
+            if kind is None:
+                continue
+            role = _SIDE_FILE_ROLES[suffix]
+            if beside_target:
+                what = (f"The entry whose name ends in {suffix} beside "
+                        f"the file data.qda links to")
+            else:
+                what = f"The entry data.qda{suffix} beside data.qda"
+            text = (f"{what} {is_kind(kind)}, so Exegete opened and "
+                    f"changed nothing: SQLite keeps the database's {role} "
+                    f"under that name.")
+            if kind == "a link":
+                text += (" A link there may lead to a journal SQLite needs "
+                         "to finish an earlier write, so moving it is not "
+                         "suggested; it is worth finding where it leads "
+                         "first.")
+            else:
+                text += (" Moving that entry out of its folder lets "
+                         "Exegete open the database.")
+            return text
+    return None
 
 
 def backup_database_is_link(folder: Union[str, Path]) -> bool:
@@ -3073,14 +3207,19 @@ def backup_sort_key(entry: Path, prefix: str, to_the_hour: bool = False,
 def unclean_backup_side_files(folder: Union[str, Path]) -> List[str]:
     """The side files that make a backup folder unclean, by name: a
     journal or a WAL file beside its `data.qda` that is not empty (a
-    link counts too), and, when `data.qda` is a link, one beside the
-    file it points to (fix round 1: SQLite names a linked database's
-    journal after the target)."""
+    link counts too, and from v0.15.1 anything that is not a regular
+    file, as does a shared-memory file that is not one), and, when
+    `data.qda` is a link, one beside the file it points to (fix round
+    1: SQLite names a linked database's journal after the target)."""
     out = []
     base = os.fspath(folder)
     for name in UNCLEAN_BACKUP_SIDE_FILES:
         if _side_file_is_live(os.path.join(base, name)):
             out.append(name)
+    # The shared-memory file too when it is not a regular file (v0.15.1):
+    # SQLite opens it, and a named pipe there would make it wait
+    if odd_kind(os.path.join(base, "data.qda-shm")) is not None:
+        out.append("data.qda-shm")
     if backup_database_is_link(folder):
         try:
             real = os.path.realpath(os.path.join(base, "data.qda"))
@@ -3089,6 +3228,8 @@ def unclean_backup_side_files(folder: Union[str, Path]) -> List[str]:
         for suffix in ("-journal", "-wal"):
             if _side_file_is_live(real + suffix):
                 out.append(os.path.basename(real) + suffix)
+        if odd_kind(real + "-shm") is not None:
+            out.append(os.path.basename(real) + "-shm")
     return out
 
 

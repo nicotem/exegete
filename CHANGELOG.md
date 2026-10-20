@@ -51,6 +51,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   database file as it is. Deleting a coding or a note that carries a
   private note no longer adds `backup_note` to the answer, since every
   change takes a backup.
+- **A change these nine tools refuse leaves no backup.** `set_memo`,
+  `add_journal_entry`, `add_annotation`, `update_annotation`,
+  `delete_annotation`, `delete_coding`, `create_attribute_type`,
+  `set_attribute` and `link_file_to_case` check the call again once
+  they hold SQLite's write lock, before the backup's database is
+  copied. A call they refuse (a name already in use, an annotation
+  past the end of its file, a value that is not a number or a link
+  that exists, for instance) now changes nothing and leaves no backup,
+  in the same words as before; so does a call refused because another
+  program changed the row just before, such as a private section added
+  to an annotation being deleted.
 
 ### Fixed
 

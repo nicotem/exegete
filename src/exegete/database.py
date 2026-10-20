@@ -8687,6 +8687,38 @@ class QualcoderDatabase:
             "important": bool(row["important"]),
         }
 
+    def check_delete_coding(self, coding_id: int,
+                            allow_hidden_coder: bool = False,
+                            confirm_private_note_deletion: bool = False
+                            ) -> Dict[str, Any]:
+        """`delete_coding`'s checks, which only read (v0.15.1): the
+        coding exists, and a hidden coder's row or a private note is
+        not deleted without its override. `delete_coding` calls it
+        first; the tool calls it again on the write connection under
+        SQLite's write lock, before the backup's database is copied, so
+        that a refusal leaves no backup.
+
+        Returns:
+            What the write uses: the coding ("existing"), whether its
+            coder is visible and whether its memo carries a private note
+
+        Raises:
+            ValueError: the refusal, in `delete_coding`'s words
+        """
+        existing = self.get_coding(coding_id)
+        if existing is None:
+            raise ValueError(f"Coding ID {coding_id} does not exist")
+        visible = self.coding_is_visible(coding_id)
+        private = memo_has_private_zone(existing.get("memo"))
+        refusals = []
+        if not visible and not allow_hidden_coder:
+            refusals.append(hidden_coder_refusal("Coding", coding_id))
+        if private and not confirm_private_note_deletion:
+            refusals.append(private_note_refusal("Coding", coding_id))
+        if refusals:
+            raise ValueError(" ".join(refusals))
+        return {"existing": existing, "visible": visible, "private": private}
+
     def delete_coding(self, coding_id: int, auto_commit: bool = True,
                       allow_hidden_coder: bool = False,
                       confirm_private_note_deletion: bool = False
@@ -8723,18 +8755,10 @@ class QualcoderDatabase:
             RuntimeError: If database is read-only or the delete fails
         """
         self._require_write_access()
-        existing = self.get_coding(coding_id)
-        if existing is None:
-            raise ValueError(f"Coding ID {coding_id} does not exist")
-        visible = self.coding_is_visible(coding_id)
-        private = memo_has_private_zone(existing.get("memo"))
-        refusals = []
-        if not visible and not allow_hidden_coder:
-            refusals.append(hidden_coder_refusal("Coding", coding_id))
-        if private and not confirm_private_note_deletion:
-            refusals.append(private_note_refusal("Coding", coding_id))
-        if refusals:
-            raise ValueError(" ".join(refusals))
+        checked = self.check_delete_coding(
+            coding_id, allow_hidden_coder, confirm_private_note_deletion)
+        existing, visible, private = (checked["existing"], checked["visible"],
+                                      checked["private"])
 
         try:
             self.conn.execute(
@@ -9012,6 +9036,95 @@ class QualcoderDatabase:
                 f"Failed to import text file: "
                 f"{sqlite_error_label(e)}") from None
 
+    def check_link_file_to_case(self, case_id: int, file_id: int,
+                                owner: str) -> Dict[str, Any]:
+        """`link_file_to_case`'s checks, which only read (v0.15.1): the
+        owner, the case, the file, a PDF with no usable text, and a link
+        that exists. `link_file_to_case` calls it first; the tool calls
+        it again on the write connection under SQLite's write lock,
+        before the backup's database is copied, so that a refusal leaves
+        no backup.
+
+        Returns:
+            What the write uses: the ids, the case's and the file's
+            names, and the whole-file span
+
+        Raises:
+            ValueError: the refusal, in `link_file_to_case`'s words
+            RuntimeError: a read that failed
+        """
+        case_id = validate_id(case_id, "case_id")
+        file_id = validate_id(file_id, "file_id")
+        if not owner or not isinstance(owner, str) or not owner.strip():
+            raise ValueError("owner must be a non-empty string")
+
+        try:
+            case_row = self.conn.execute(
+                "SELECT caseid, name FROM cases WHERE caseid = ?", (case_id,)
+            ).fetchone()
+            file_row = self.conn.execute(
+                "SELECT id, name, fulltext FROM source WHERE id = ?", (file_id,)
+            ).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "link_file_to_case", "Failed to link file to case")
+
+        if not case_row:
+            raise ValueError(f"Case ID {case_id} does not exist")
+        if not file_row:
+            raise ValueError(f"File ID {file_id} does not exist")
+        problem = self.unusable_pdf_problem(file_id)
+        if problem is not None:
+            raise ValueError(unusable_pdf_link_refusal(file_row["name"],
+                                                       problem))
+
+        # Whole-file span. Write convention standardized on
+        # pos1 = len(fulltext): master's unified choice
+        # (case_file_manager.py:208-210) and already 3.8.2's own file
+        # manager convention (3.8.2:manage_files.py:755-764). The old
+        # 3.8.2 case-manager convention (len-1) coexists in real data;
+        # the duplicate pre-check below treats both as the same link.
+        fulltext = file_row["fulltext"]
+        pos0 = 0
+        pos1 = len(fulltext) if fulltext else 0
+
+        try:
+            # Overlap-aware duplicate check (cases-attributes.md §2.6):
+            # upstream has TWO conflicting whole-file conventions — the case
+            # file manager writes pos1 = len(fulltext)-1, while Manage Files
+            # "Assign case" and survey import write pos1 = len(fulltext) —
+            # and each GUI path's own probe only matches its own convention,
+            # silently double-linking across paths. case_text has NO unique
+            # constraint, so this app-side probe is the only protection:
+            # treat ANY existing row that already covers the whole file
+            # (either convention, or a superset span) as a duplicate.
+            # (0, len-1) and (0, len) are the SAME whole-file link (W12):
+            # the threshold is the smaller convention so either spelling,
+            # from any QualCoder version or this server, is caught.
+            dedupe_floor = max(0, pos1 - 1)
+            existing = self.conn.execute(
+                "SELECT id, pos0, pos1 FROM case_text WHERE caseid = ? "
+                "AND fid = ? AND pos0 <= 0 AND pos1 >= ?",
+                (case_id, file_id, dedupe_floor)
+            ).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "link_file_to_case",
+                               "Failed to link file to case")
+        if existing:
+            convention = ""
+            if (existing["pos0"], existing["pos1"]) != (pos0, pos1):
+                convention = (
+                    f" (existing span {existing['pos0']}-"
+                    f"{existing['pos1']}, QualCoder's other whole-file "
+                    f"convention)"
+                )
+            raise ValueError(
+                f"File '{file_row['name']}' is already linked to case "
+                f"'{case_row['name']}'{convention}"
+            )
+        return {"case_id": case_id, "case_name": case_row["name"],
+                "file_id": file_id, "file_name": file_row["name"],
+                "pos0": pos0, "pos1": pos1}
+
     def link_file_to_case(
         self,
         case_id: int,
@@ -9047,74 +9160,13 @@ class QualcoderDatabase:
             RuntimeError: If database is read-only or the insert fails
         """
         self._require_write_access()
-        case_id = validate_id(case_id, "case_id")
-        file_id = validate_id(file_id, "file_id")
-        if not owner or not isinstance(owner, str) or not owner.strip():
-            raise ValueError("owner must be a non-empty string")
-
-        try:
-            case_row = self.conn.execute(
-                "SELECT caseid, name FROM cases WHERE caseid = ?", (case_id,)
-            ).fetchone()
-            file_row = self.conn.execute(
-                "SELECT id, name, fulltext FROM source WHERE id = ?", (file_id,)
-            ).fetchone()
-        except sqlite3.Error as e:
-            _raise_query_error(e, "link_file_to_case", "Failed to link file to case")
-
-        if not case_row:
-            raise ValueError(f"Case ID {case_id} does not exist")
-        if not file_row:
-            raise ValueError(f"File ID {file_id} does not exist")
-        problem = self.unusable_pdf_problem(file_id)
-        if problem is not None:
-            raise ValueError(unusable_pdf_link_refusal(file_row["name"],
-                                                       problem))
-
-        # Whole-file span. Write convention standardized on
-        # pos1 = len(fulltext): master's unified choice
-        # (case_file_manager.py:208-210) and already 3.8.2's own file
-        # manager convention (3.8.2:manage_files.py:755-764). The old
-        # 3.8.2 case-manager convention (len-1) coexists in real data;
-        # the duplicate pre-check below treats both as the same link.
-        fulltext = file_row["fulltext"]
-        pos0 = 0
-        pos1 = len(fulltext) if fulltext else 0
+        checked = self.check_link_file_to_case(case_id, file_id, owner)
+        case_id, file_id = checked["case_id"], checked["file_id"]
+        pos0, pos1 = checked["pos0"], checked["pos1"]
 
         date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         try:
-            # Overlap-aware duplicate check (cases-attributes.md §2.6):
-            # upstream has TWO conflicting whole-file conventions — the case
-            # file manager writes pos1 = len(fulltext)-1, while Manage Files
-            # "Assign case" and survey import write pos1 = len(fulltext) —
-            # and each GUI path's own probe only matches its own convention,
-            # silently double-linking across paths. case_text has NO unique
-            # constraint, so this app-side probe is the only protection:
-            # treat ANY existing row that already covers the whole file
-            # (either convention, or a superset span) as a duplicate.
-            # (0, len-1) and (0, len) are the SAME whole-file link (W12):
-            # the threshold is the smaller convention so either spelling,
-            # from any QualCoder version or this server, is caught.
-            dedupe_floor = max(0, pos1 - 1)
-            existing = self.conn.execute(
-                "SELECT id, pos0, pos1 FROM case_text WHERE caseid = ? "
-                "AND fid = ? AND pos0 <= 0 AND pos1 >= ?",
-                (case_id, file_id, dedupe_floor)
-            ).fetchone()
-            if existing:
-                convention = ""
-                if (existing["pos0"], existing["pos1"]) != (pos0, pos1):
-                    convention = (
-                        f" (existing span {existing['pos0']}-"
-                        f"{existing['pos1']}, QualCoder's other whole-file "
-                        f"convention)"
-                    )
-                raise ValueError(
-                    f"File '{file_row['name']}' is already linked to case "
-                    f"'{case_row['name']}'{convention}"
-                )
-
             self.conn.execute(
                 "INSERT INTO case_text (caseid, fid, pos0, pos1, owner, date, memo) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -9123,8 +9175,6 @@ class QualcoderDatabase:
             if auto_commit:
                 self.conn.commit()
             logger.info(f"Linked file {file_id} to case {case_id} ({pos0}-{pos1})")
-        except ValueError:
-            raise
         except sqlite3.Error as e:
             try:
                 self.conn.rollback()
@@ -9134,9 +9184,9 @@ class QualcoderDatabase:
 
         return {
             "case_id": case_id,
-            "case_name": case_row["name"],
+            "case_name": checked["case_name"],
             "file_id": file_id,
-            "file_name": file_row["name"],
+            "file_name": checked["file_name"],
             "position_start": pos0,
             "position_end": pos1,
         }
@@ -9155,6 +9205,82 @@ class QualcoderDatabase:
         "coding": ("code_text", "ctid", None),
         "case": ("cases", "caseid", "name"),
     }
+
+    def check_set_memo(self, target_type: str, target_id: Optional[int],
+                       memo: str, allow_hidden_coder: bool = False
+                       ) -> Dict[str, Any]:
+        """`set_memo`'s checks, which only read (v0.15.1): the kind, the
+        memo as text and its length, the target (for the project, its
+        record), and a hidden coder's coding. `set_memo` calls it
+        first; the tool calls it again on the write connection under
+        SQLite's write lock, before the backup's database is copied, so
+        that a refusal leaves no backup.
+
+        Returns:
+            What the write uses: the target's id, its label and the
+            memo stored on it now
+
+        Raises:
+            ValueError: the refusal, in `set_memo`'s words
+            RuntimeError: a read that failed
+        """
+        if target_type not in self._MEMO_TARGETS and target_type != "project":
+            raise ValueError(
+                f"target_type must be one of: "
+                f"{', '.join(sorted([*self._MEMO_TARGETS, 'project']))}"
+            )
+        if not isinstance(memo, str):
+            raise ValueError("memo must be a string")
+        # Reject over-length rather than silently truncate (memos have no
+        # length limit in QualCoder; validate_string would truncate — a
+        # silent corruption of the user's note, memos-journals.md §6.7/#8)
+        _reject_if_too_long(memo, "memo")
+        if target_type == "project":
+            try:
+                row = self.conn.execute("SELECT memo FROM project").fetchone()
+            except sqlite3.Error as e:
+                _raise_query_error(e, "set_memo", "Failed to set memo")
+            if row is None:
+                # restore_backup is marked where a tool set lacks it
+                raise ValueError(_mark_unregistered(
+                    "This project has no project record, so it has no "
+                    "project memo, and it is not a usable project in "
+                    "Exegete or in QualCoder. Nothing was written; a backup "
+                    "made before the record was lost has it (list_backups, "
+                    "restore_backup)."))
+            return {"target_id": None, "label": "project",
+                    "memo": row["memo"]}
+        target_id = validate_id(target_id, "target_id")
+
+        table, id_col, name_col = self._MEMO_TARGETS[target_type]
+
+        # Verify the row exists, capture a label for the confirmation, and
+        # read the existing memo for the privacy-preserving merge
+        select_cols = (f"{name_col}, memo" if name_col else f"{id_col}, memo")
+        try:
+            row = self.conn.execute(
+                f"SELECT {select_cols} FROM {table} WHERE {id_col} = ?",
+                (target_id,)
+            ).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "set_memo", "Failed to set memo")
+        if not row:
+            raise ValueError(
+                f"{target_type.capitalize()} ID {target_id} does not exist"
+            )
+        if target_type == "coding":
+            # The visibility query runs with or without the override, as
+            # in delete_coding / update_annotation / delete_annotation: a
+            # view that cannot answer raises (R1 fail-closed rule), so the
+            # override never writes through an unreadable state. Codes,
+            # categories, files and cases have no per-coder visibility
+            # and never consult the view.
+            visible = self.coding_is_visible(target_id)
+            if not visible and not allow_hidden_coder:
+                raise ValueError(hidden_coder_refusal("Coding", target_id))
+        return {"target_id": target_id,
+                "label": row[0] if name_col else f"{target_type} {target_id}",
+                "memo": row["memo"]}
 
     def set_memo(
         self,
@@ -9186,55 +9312,19 @@ class QualcoderDatabase:
             RuntimeError: If database is read-only or the update fails
         """
         self._require_write_access()
-        if target_type not in self._MEMO_TARGETS and target_type != "project":
-            raise ValueError(
-                f"target_type must be one of: "
-                f"{', '.join(sorted([*self._MEMO_TARGETS, 'project']))}"
-            )
-        if not isinstance(memo, str):
-            raise ValueError("memo must be a string")
-        # Reject over-length rather than silently truncate (memos have no
-        # length limit in QualCoder; validate_string would truncate — a
-        # silent corruption of the user's note, memos-journals.md §6.7/#8)
-        _reject_if_too_long(memo, "memo")
+        found = self.check_set_memo(target_type, target_id, memo,
+                                    allow_hidden_coder)
         if target_type == "project":
-            return self._set_project_memo(memo, auto_commit)
-        target_id = validate_id(target_id, "target_id")
-
-        table, id_col, name_col = self._MEMO_TARGETS[target_type]
-
-        # Verify the row exists, capture a label for the confirmation, and
-        # read the existing memo for the privacy-preserving merge
-        select_cols = (f"{name_col}, memo" if name_col else f"{id_col}, memo")
-        try:
-            row = self.conn.execute(
-                f"SELECT {select_cols} FROM {table} WHERE {id_col} = ?",
-                (target_id,)
-            ).fetchone()
-        except sqlite3.Error as e:
-            _raise_query_error(e, "set_memo", "Failed to set memo")
-        if not row:
-            raise ValueError(
-                f"{target_type.capitalize()} ID {target_id} does not exist"
-            )
-        label = row[0] if name_col else f"{target_type} {target_id}"
-        if target_type == "coding":
-            # The visibility query runs with or without the override, as
-            # in delete_coding / update_annotation / delete_annotation: a
-            # view that cannot answer raises (R1 fail-closed rule), so the
-            # override never writes through an unreadable state. Codes,
-            # categories, files and cases have no per-coder visibility
-            # and never consult the view.
-            visible = self.coding_is_visible(target_id)
-            if not visible and not allow_hidden_coder:
-                raise ValueError(hidden_coder_refusal("Coding", target_id))
+            return self._set_project_memo(memo, found["memo"], auto_commit)
+        target_id, label = found["target_id"], found["label"]
+        table, id_col = self._MEMO_TARGETS[target_type][:2]
 
         # Memo privacy (QC 4.0 '#####' convention): replace only the
         # AI-visible public text; an existing private suffix survives
         # verbatim, and a marker in the NEW text is dropped (an AI write
         # can never create, read, replace, or delete the private zone).
         # Mirrors upstream ai_memo.merge_public_memo semantics exactly.
-        stored_memo = merge_public_memo(row["memo"], memo)
+        stored_memo = merge_public_memo(found["memo"], memo)
         public_memo = extract_ai_memo(stored_memo)
 
         # Content-only: QualCoder's memo edits for code_name/code_cat/source/
@@ -9268,7 +9358,7 @@ class QualcoderDatabase:
             "cleared": public_memo == "",
         }
 
-    def _set_project_memo(self, memo: str, auto_commit: bool
+    def _set_project_memo(self, memo: str, existing: Any, auto_commit: bool
                           ) -> Dict[str, Any]:
         """The project memo (v0.14): the project row's `memo`, written
         with QualCoder's own statement, `update project set memo=?`
@@ -9276,19 +9366,10 @@ class QualcoderDatabase:
         every other memo, only the public part is replaced: the private
         part after '#####' survives verbatim and is never returned.
         QualCoder 4.0's own assistant reads the public part as the
-        project's context (ai_chat.py:2731)."""
-        try:
-            row = self.conn.execute("SELECT memo FROM project").fetchone()
-        except sqlite3.Error as e:
-            _raise_query_error(e, "set_memo", "Failed to set memo")
-        if row is None:
-            # restore_backup is marked where a tool set lacks it
-            raise ValueError(_mark_unregistered(
-                "This project has no project record, so it has no project "
-                "memo, and it is not a usable project in Exegete or in "
-                "QualCoder. Nothing was written; a backup made before the "
-                "record was lost has it (list_backups, restore_backup)."))
-        stored_memo = merge_public_memo(row["memo"], memo)
+        project's context (ai_chat.py:2731). `existing` is the memo
+        `check_set_memo` read from the project record, which it refuses
+        when there is none."""
+        stored_memo = merge_public_memo(existing, memo)
         public_memo = extract_ai_memo(stored_memo)
         try:
             self.conn.execute("UPDATE project SET memo = ?", (stored_memo,))
@@ -9309,30 +9390,22 @@ class QualcoderDatabase:
             "cleared": public_memo == "",
         }
 
-    def add_journal_entry(
-        self,
-        name: str,
-        entry: str,
-        owner: str,
-        auto_commit: bool = True
-    ) -> Dict[str, Any]:
-        """Add a research journal entry.
-
-        Args:
-            name: Journal entry name/title (must be unique; journal has
-                  unique(name))
-            entry: The journal text (jentry)
-            owner: Coder name for attribution
-            auto_commit: Commit immediately (default True)
+    def check_add_journal_entry(self, name: str, entry: str, owner: str
+                                ) -> Dict[str, str]:
+        """`add_journal_entry`'s checks, which only read (v0.15.1): the
+        name, the entry as text and its length, the owner, a name in
+        use. `add_journal_entry` calls it first; the tool calls it again
+        on the write connection under SQLite's write lock, before the
+        backup's database is copied, so that a refusal leaves no backup.
 
         Returns:
-            Dict with the new entry's id, name and date
+            The name and the entry as the write stores them: the name
+            without its outer spaces, the entry's public part
 
         Raises:
-            ValueError: If validation fails or the name already exists
-            RuntimeError: If database is read-only or the insert fails
+            ValueError: the refusal, in `add_journal_entry`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         if not name or not isinstance(name, str) or not name.strip():
             raise ValueError("name must be a non-empty string")
         name = name.strip()
@@ -9370,6 +9443,34 @@ class QualcoderDatabase:
                                "Failed to add journal entry")
         if existing:
             raise ValueError(f"A journal entry named '{name}' already exists")
+        return {"name": name, "entry": entry}
+
+    def add_journal_entry(
+        self,
+        name: str,
+        entry: str,
+        owner: str,
+        auto_commit: bool = True
+    ) -> Dict[str, Any]:
+        """Add a research journal entry.
+
+        Args:
+            name: Journal entry name/title (must be unique; journal has
+                  unique(name))
+            entry: The journal text (jentry)
+            owner: Coder name for attribution
+            auto_commit: Commit immediately (default True)
+
+        Returns:
+            Dict with the new entry's id, name and date
+
+        Raises:
+            ValueError: If validation fails or the name already exists
+            RuntimeError: If database is read-only or the insert fails
+        """
+        self._require_write_access()
+        checked = self.check_add_journal_entry(name, entry, owner)
+        name, entry = checked["name"], checked["entry"]
 
         date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
@@ -10664,18 +10765,24 @@ class QualcoderDatabase:
             "date": row["date"],
         }
 
-    def add_annotation(self, file_id: int, start_pos: int, end_pos: int,
-                       memo: str, owner: str,
-                       auto_commit: bool = True) -> Dict[str, Any]:
-        """Create an annotation on a text span.
+    def check_add_annotation(self, file_id: int, start_pos: int,
+                             end_pos: int, memo: str, owner: str
+                             ) -> Dict[str, Any]:
+        """`add_annotation`'s checks, which only read (v0.15.1): the
+        note, the owner, the positions, the file and its text, a span
+        past the end, and an annotation already there or overlapping.
+        `add_annotation` calls it first; the tool calls it again on the
+        write connection under SQLite's write lock, before the backup's
+        database is copied, so that a refusal leaves no backup.
 
-        QualCoder contract (memos-journals.md §4.1): insert ONLY when the
-        memo is non-empty; an annotation never exists with memo='' (the
-        memo is the annotation). Positions are character offsets into the
-        file's fulltext; unique(fid,pos0,pos1,owner) is pre-checked
-        app-side for a clean error.
+        Returns:
+            What the write uses: the file's id and name, its text, and
+            the note's public part
+
+        Raises:
+            ValueError: the refusal, in `add_annotation`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         file_id = validate_id(file_id, "file_id")
         if not isinstance(memo, str) or not memo.strip():
             raise ValueError(
@@ -10718,7 +10825,6 @@ class QualcoderDatabase:
                 f"end_pos ({end_pos}) exceeds file length ({len(fulltext)})"
             )
 
-        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             # unique(fid,pos0,pos1,owner) pre-check for a clean error
             existing = self.conn.execute(
@@ -10753,6 +10859,30 @@ class QualcoderDatabase:
                     f"coder; edit the existing one with update_annotation, "
                     f"or delete it first"
                 )
+        except sqlite3.Error as e:
+            _raise_query_error(e, "add_annotation", "Failed to add annotation")
+        return {"file_id": file_id, "file_name": file_content["name"],
+                "fulltext": fulltext, "memo": memo}
+
+    def add_annotation(self, file_id: int, start_pos: int, end_pos: int,
+                       memo: str, owner: str,
+                       auto_commit: bool = True) -> Dict[str, Any]:
+        """Create an annotation on a text span.
+
+        QualCoder contract (memos-journals.md §4.1): insert ONLY when the
+        memo is non-empty; an annotation never exists with memo='' (the
+        memo is the annotation). Positions are character offsets into the
+        file's fulltext; unique(fid,pos0,pos1,owner) is pre-checked
+        app-side for a clean error.
+        """
+        self._require_write_access()
+        checked = self.check_add_annotation(file_id, start_pos, end_pos,
+                                            memo, owner)
+        file_id, memo = checked["file_id"], checked["memo"]
+        fulltext = checked["fulltext"]
+
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
             cursor = self.conn.execute(
                 "INSERT INTO annotation (fid, pos0, pos1, memo, owner, date) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
@@ -10786,13 +10916,42 @@ class QualcoderDatabase:
         return {
             "annotation_id": anid,
             "file_id": file_id,
-            "file_name": file_content["name"],
+            "file_name": checked["file_name"],
             "position_start": start_pos,
             "position_end": end_pos,
             "memo": memo,
             "owner": owner,
             "date": date_str,
         }
+
+    def check_update_annotation(self, annotation_id: int, memo: str,
+                                allow_hidden_coder: bool = False
+                                ) -> Dict[str, Any]:
+        """`update_annotation`'s checks, which only read (v0.15.1): the
+        note as text and its length, the annotation, and a hidden
+        coder's row. `update_annotation` calls it first; the tool calls
+        it again on the write connection under SQLite's write lock,
+        before the backup's database is copied, so that a refusal leaves
+        no backup.
+
+        Returns:
+            What the write uses: the annotation ("existing") and whether
+            its coder is visible
+
+        Raises:
+            ValueError: the refusal, in `update_annotation`'s words
+            RuntimeError: a read that failed
+        """
+        if not isinstance(memo, str):
+            raise ValueError("memo must be a string")
+        _reject_if_too_long(memo, "memo")
+        existing = self.get_annotation(annotation_id)
+        if existing is None:
+            raise ValueError(f"Annotation ID {annotation_id} does not exist")
+        visible = self.annotation_is_visible(annotation_id)
+        if not visible and not allow_hidden_coder:
+            raise ValueError(hidden_coder_refusal("Annotation", annotation_id))
+        return {"existing": existing, "visible": visible}
 
     def update_annotation(self, annotation_id: int, memo: str,
                           auto_commit: bool = True,
@@ -10812,15 +10971,9 @@ class QualcoderDatabase:
         applies here.
         """
         self._require_write_access()
-        if not isinstance(memo, str):
-            raise ValueError("memo must be a string")
-        _reject_if_too_long(memo, "memo")
-        existing = self.get_annotation(annotation_id)
-        if existing is None:
-            raise ValueError(f"Annotation ID {annotation_id} does not exist")
-        visible = self.annotation_is_visible(annotation_id)
-        if not visible and not allow_hidden_coder:
-            raise ValueError(hidden_coder_refusal("Annotation", annotation_id))
+        checked = self.check_update_annotation(annotation_id, memo,
+                                               allow_hidden_coder)
+        existing, visible = checked["existing"], checked["visible"]
 
         # Memo privacy ('#####'): replace only the public text; a private
         # suffix the researcher put on this annotation survives verbatim
@@ -10879,6 +11032,40 @@ class QualcoderDatabase:
             result["cleared"] = True
         return result
 
+    def check_delete_annotation(self, annotation_id: int,
+                                allow_hidden_coder: bool = False,
+                                confirm_private_note_deletion: bool = False
+                                ) -> Dict[str, Any]:
+        """`delete_annotation`'s checks, which only read (v0.15.1): the
+        annotation exists, and a hidden coder's row or a private note is
+        not deleted without its override. `delete_annotation` calls it
+        first; the tool calls it again on the write connection under
+        SQLite's write lock, before the backup's database is copied, so
+        that a refusal leaves no backup.
+
+        Returns:
+            What the write uses: the annotation ("existing"), whether
+            its coder is visible and whether its note carries a private
+            section
+
+        Raises:
+            ValueError: the refusal, in `delete_annotation`'s words
+            RuntimeError: a read that failed
+        """
+        existing = self.get_annotation(annotation_id)
+        if existing is None:
+            raise ValueError(f"Annotation ID {annotation_id} does not exist")
+        visible = self.annotation_is_visible(annotation_id)
+        private = memo_has_private_zone(existing.get("memo"))
+        refusals = []
+        if not visible and not allow_hidden_coder:
+            refusals.append(hidden_coder_refusal("Annotation", annotation_id))
+        if private and not confirm_private_note_deletion:
+            refusals.append(private_note_refusal("Annotation", annotation_id))
+        if refusals:
+            raise ValueError(" ".join(refusals))
+        return {"existing": existing, "visible": visible, "private": private}
+
     def delete_annotation(self, annotation_id: int,
                           auto_commit: bool = True,
                           allow_hidden_coder: bool = False,
@@ -10893,18 +11080,10 @@ class QualcoderDatabase:
         in one message when both apply.
         """
         self._require_write_access()
-        existing = self.get_annotation(annotation_id)
-        if existing is None:
-            raise ValueError(f"Annotation ID {annotation_id} does not exist")
-        visible = self.annotation_is_visible(annotation_id)
-        private = memo_has_private_zone(existing.get("memo"))
-        refusals = []
-        if not visible and not allow_hidden_coder:
-            refusals.append(hidden_coder_refusal("Annotation", annotation_id))
-        if private and not confirm_private_note_deletion:
-            refusals.append(private_note_refusal("Annotation", annotation_id))
-        if refusals:
-            raise ValueError(" ".join(refusals))
+        checked = self.check_delete_annotation(
+            annotation_id, allow_hidden_coder, confirm_private_note_deletion)
+        existing, visible, private = (checked["existing"], checked["visible"],
+                                      checked["private"])
         try:
             self.conn.execute(
                 "DELETE FROM annotation WHERE anid = ?", (annotation_id,)
@@ -11633,27 +11812,26 @@ class QualcoderDatabase:
         "journal": ("journal", "jid"),
     }
 
-    def add_attribute_type(self, name: str, owner: str, applies_to: str,
-                           value_type: str = "character",
-                           memo: Optional[str] = None,
-                           auto_commit: bool = True) -> Dict[str, Any]:
-        """Define a new attribute (cases-attributes.md §3.1/§3.2).
+    def check_add_attribute_type(self, name: str, owner: str,
+                                 applies_to: str,
+                                 value_type: str = "character",
+                                 memo: Optional[str] = None
+                                 ) -> Dict[str, str]:
+        """`add_attribute_type`'s checks, which only read (v0.15.1): the
+        name, the owner, the domain, the kind of value, the reserved
+        names, the memo's length, and a name in use. `add_attribute_type`
+        calls it first; the tool calls it again on the write connection
+        under SQLite's write lock, before the backup's database is
+        copied, so that a refusal leaves no backup.
 
-        Writes the attribute_type row exactly as every QualCoder entry
-        point does, then performs the placeholder back-fill: one empty
-        ('' value) attribute row per existing entity of the domain. The
-        back-fill is load-bearing; QualCoder's GUI table, exports and
-        sorting assume every entity has a row for every attribute of its
-        domain, and the case-side auto-heal is a no-op in 3.8.2, so
-        skipping it here would leave cases silently dropped from
-        attribute joins.
+        Returns:
+            The name and the memo as the write stores them: the name
+            without its outer spaces, the memo's public part
 
-        Attribute names are GLOBAL (attribute_type.name is the primary
-        key across all three domains). Both Ref_Author and Ref_Authors
-        spellings are reserved (upstream reserves only the singular but
-        its RIS importer creates the plural).
+        Raises:
+            ValueError: the refusal, in `add_attribute_type`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         if not name or not isinstance(name, str) or not name.strip():
             raise ValueError("name must be a non-empty string")
         name = name.strip()
@@ -11679,20 +11857,50 @@ class QualcoderDatabase:
         # add_coding)
         memo = extract_ai_memo(memo or "")
 
-        entity_table, entity_id_col = self._ATTRIBUTE_DOMAINS[applies_to]
-        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             existing = self.conn.execute(
                 "SELECT name, caseOrFile FROM attribute_type WHERE name = ?",
                 (name,)
             ).fetchone()
-            if existing:
-                raise ValueError(
-                    f"An attribute named '{name}' already exists (as a "
-                    f"{existing['caseOrFile']} attribute); attribute names "
-                    f"are global across cases, files and journals"
-                )
+        except sqlite3.Error as e:
+            _raise_query_error(e, "add_attribute_type",
+                               "Failed to add attribute type")
+        if existing:
+            raise ValueError(
+                f"An attribute named '{name}' already exists (as a "
+                f"{existing['caseOrFile']} attribute); attribute names "
+                f"are global across cases, files and journals"
+            )
+        return {"name": name, "memo": memo}
 
+    def add_attribute_type(self, name: str, owner: str, applies_to: str,
+                           value_type: str = "character",
+                           memo: Optional[str] = None,
+                           auto_commit: bool = True) -> Dict[str, Any]:
+        """Define a new attribute (cases-attributes.md §3.1/§3.2).
+
+        Writes the attribute_type row exactly as every QualCoder entry
+        point does, then performs the placeholder back-fill: one empty
+        ('' value) attribute row per existing entity of the domain. The
+        back-fill is load-bearing; QualCoder's GUI table, exports and
+        sorting assume every entity has a row for every attribute of its
+        domain, and the case-side auto-heal is a no-op in 3.8.2, so
+        skipping it here would leave cases silently dropped from
+        attribute joins.
+
+        Attribute names are GLOBAL (attribute_type.name is the primary
+        key across all three domains). Both Ref_Author and Ref_Authors
+        spellings are reserved (upstream reserves only the singular but
+        its RIS importer creates the plural).
+        """
+        self._require_write_access()
+        checked = self.check_add_attribute_type(name, owner, applies_to,
+                                                value_type, memo)
+        name, memo = checked["name"], checked["memo"]
+
+        entity_table, entity_id_col = self._ATTRIBUTE_DOMAINS[applies_to]
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
             self.conn.execute(
                 "INSERT INTO attribute_type (name, date, owner, memo, "
                 "caseOrFile, valuetype) VALUES (?, ?, ?, ?, ?, ?)",
@@ -11715,8 +11923,6 @@ class QualcoderDatabase:
                 self.conn.commit()
             logger.info("Added an attribute type (%s/%s), %s placeholder(s)",
                         applies_to, value_type, len(entity_ids))
-        except ValueError:
-            raise
         except sqlite3.IntegrityError:
             try:
                 self.conn.rollback()
@@ -11744,34 +11950,27 @@ class QualcoderDatabase:
             "placeholders_created": len(entity_ids),
         }
 
-    def set_attribute_value(self, target_type: str, target_id: int,
-                            attr_name: str, value: str, owner: str,
-                            auto_commit: bool = True) -> Dict[str, Any]:
-        """Set an attribute value for a case, file or journal.
+    def check_set_attribute_value(self, target_type: str, target_id: int,
+                                  attr_name: str, value: str, owner: str
+                                  ) -> Dict[str, Any]:
+        """`set_attribute_value`'s checks, which only read (v0.15.1): the
+        kind of target, the attribute's name, the value as text and its
+        length, the owner, the target and the attribute exist and fit,
+        and a numeric attribute's value is a number. `set_attribute_value`
+        calls it first; the tool calls it again on the write connection
+        under SQLite's write lock, before the backup's database is
+        copied, so that a refusal leaves no backup. A rule only the
+        database applies still fails at the write.
 
-        QualCoder contract (cases-attributes.md §4.1/§4.2): input is
-        stripped; the domain-filtered valuetype gates numeric values;
-        the write is insert-if-missing then update, keyed
-        (id, name, attr_type); never assume the placeholder row exists
-        (QualCoder's case-side placeholder heal is a no-op in 3.8.2).
-        Every path writes the value with this server's owner and the
-        date (v0.14, claims audit item 18), as QualCoder's case path does
-        (cases.py:741-750 at 9bddf17; 3.8.2 cases.py:670-679). A named
-        departure: QualCoder's file and
-        journal edits write the value alone (manage_files.py:1259,
-        :2257, journals.py:827 at 9bddf17), so a placeholder QualCoder
-        made kept "Researcher" and its old date under the AI's value,
-        and get_file_attributes named the researcher as its owner, while
-        README promises every row this server writes carries the AI
-        coder name. QualCoder reads a value's owner only to list coders
-        in its charts window (view_charts.py:84).
+        Returns:
+            What the write uses: the target's id, the attribute's name
+            and the value without their outer spaces, the target's row
+            ("entity") and the attribute's ("attribute")
 
-        Deliberate deviation (documented): a non-castable value for a
-        numeric attribute is REJECTED with an error; QualCoder silently
-        replaces it with '' (interactive data loss). '' itself is the
-        canonical "unset" and is always accepted.
+        Raises:
+            ValueError: the refusal, in `set_attribute_value`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         if target_type not in self._ATTRIBUTE_DOMAINS:
             raise ValueError(
                 "target_type must be 'case', 'file' or 'journal'"
@@ -11802,29 +12001,69 @@ class QualcoderDatabase:
                 "SELECT valuetype, caseOrFile FROM attribute_type "
                 "WHERE name = ?", (attr_name,)
             ).fetchone()
-            if not att:
-                raise ValueError(
-                    f"Attribute '{attr_name}' does not exist; create it "
-                    f"first with create_attribute_type"
-                )
-            if att["caseOrFile"] != target_type:
-                raise ValueError(
-                    f"'{attr_name}' is a {att['caseOrFile']} attribute; it "
-                    f"cannot be set on a {target_type}"
-                )
-            if att["valuetype"] == "numeric" and value != "" \
-                    and finite_number(value) is None:
-                raise ValueError(
-                    f"'{attr_name}' is a numeric attribute and '{value}' "
-                    f"is not a number Exegete can compare: give "
-                    f"digits, optionally with a sign, a decimal point or "
-                    f"an exponent (\"30\", \"4.5\", \"1e3\"); not "
-                    f"\"nan\" or \"inf\", not underscores, not digits "
-                    f"outside 0 to 9. QualCoder blanks or reverts a value "
-                    f"that is not a number, with a warning; Exegete "
-                    f"refuses it, so nothing changes. Pass '' to unset."
-                )
+        except sqlite3.Error as e:
+            _raise_query_error(e, "set_attribute_value",
+                               "Failed to set attribute value")
+        if not att:
+            raise ValueError(
+                f"Attribute '{attr_name}' does not exist; create it "
+                f"first with create_attribute_type"
+            )
+        if att["caseOrFile"] != target_type:
+            raise ValueError(
+                f"'{attr_name}' is a {att['caseOrFile']} attribute; it "
+                f"cannot be set on a {target_type}"
+            )
+        if att["valuetype"] == "numeric" and value != "" \
+                and finite_number(value) is None:
+            raise ValueError(
+                f"'{attr_name}' is a numeric attribute and '{value}' "
+                f"is not a number Exegete can compare: give "
+                f"digits, optionally with a sign, a decimal point or "
+                f"an exponent (\"30\", \"4.5\", \"1e3\"); not "
+                f"\"nan\" or \"inf\", not underscores, not digits "
+                f"outside 0 to 9. QualCoder blanks or reverts a value "
+                f"that is not a number, with a warning; Exegete "
+                f"refuses it, so nothing changes. Pass '' to unset."
+            )
+        return {"target_id": target_id, "attr_name": attr_name,
+                "value": value, "entity": entity, "attribute": att}
 
+    def set_attribute_value(self, target_type: str, target_id: int,
+                            attr_name: str, value: str, owner: str,
+                            auto_commit: bool = True) -> Dict[str, Any]:
+        """Set an attribute value for a case, file or journal.
+
+        QualCoder contract (cases-attributes.md §4.1/§4.2): input is
+        stripped; the domain-filtered valuetype gates numeric values;
+        the write is insert-if-missing then update, keyed
+        (id, name, attr_type); never assume the placeholder row exists
+        (QualCoder's case-side placeholder heal is a no-op in 3.8.2).
+        Every path writes the value with this server's owner and the
+        date (v0.14, claims audit item 18), as QualCoder's case path does
+        (cases.py:741-750 at 9bddf17; 3.8.2 cases.py:670-679). A named
+        departure: QualCoder's file and
+        journal edits write the value alone (manage_files.py:1259,
+        :2257, journals.py:827 at 9bddf17), so a placeholder QualCoder
+        made kept "Researcher" and its old date under the AI's value,
+        and get_file_attributes named the researcher as its owner, while
+        README promises every row this server writes carries the AI
+        coder name. QualCoder reads a value's owner only to list coders
+        in its charts window (view_charts.py:84).
+
+        Deliberate deviation (documented): a non-castable value for a
+        numeric attribute is REJECTED with an error; QualCoder silently
+        replaces it with '' (interactive data loss). '' itself is the
+        canonical "unset" and is always accepted.
+        """
+        self._require_write_access()
+        checked = self.check_set_attribute_value(target_type, target_id,
+                                                 attr_name, value, owner)
+        target_id, attr_name = checked["target_id"], checked["attr_name"]
+        value = checked["value"]
+        entity, att = checked["entity"], checked["attribute"]
+
+        try:
             date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             existing = self.conn.execute(
                 "SELECT attrid, value FROM attribute "
@@ -11857,8 +12096,6 @@ class QualcoderDatabase:
                 self.conn.commit()
             logger.info("Set an attribute on %s %s", target_type,
                         target_id)
-        except ValueError:
-            raise
         except sqlite3.Error as e:
             try:
                 self.conn.rollback()

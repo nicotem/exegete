@@ -3270,6 +3270,18 @@ def _answer_of_check(write_db, check, backup_fail_detail: str
     return answer
 
 
+def _write_methods_checks(run):
+    """A write method's own checks as `_perform_write`'s `check`
+    (v0.15.1): `run(write_db)` calls the method's `check_*`, which only
+    reads and raises the refusal in the method's words. What the checks
+    found is not kept: the write method calls them again, under the same
+    lock, before it writes."""
+    def check(write_db):
+        run(write_db)
+        return None
+    return check
+
+
 def _backup_before_change(write_db, fail_message: str, check=None,
                           backup_fail_detail: str = "nothing was written"):
     """Steps (4) to (7) of every write's order (v0.15.1): Exegete, not
@@ -12521,7 +12533,11 @@ def link_file_to_case(
             "case_match": case_match,
         }
 
-    result = _perform_write(_op, backup_fail_detail="nothing was linked")
+    result = _perform_write(
+        _op, check=_write_methods_checks(
+            lambda wdb: wdb.check_link_file_to_case(case["id"], file_id,
+                                                    owner)),
+        backup_fail_detail="nothing was linked")
     return json.dumps(result, indent=2)
 
 
@@ -12623,7 +12639,12 @@ def delete_coding(coding_id: int, create_backup: bool = True,
             "deleted_coding": deleted,
         }
 
-    result = _perform_write(_op, backup_fail_detail="nothing was deleted")
+    result = _perform_write(
+        _op, check=_write_methods_checks(
+            lambda wdb: wdb.check_delete_coding(
+                coding_id, allow_hidden_coder,
+                confirm_private_note_deletion)),
+        backup_fail_detail="nothing was deleted")
     # The loop's undo tells the loop (v0.14, the claims audit's item 10)
     deleted = result.get("deleted_coding") if isinstance(result, dict) else None
     if (result.get("success") and isinstance(deleted, dict)
@@ -15753,6 +15774,8 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
             **wdb.set_memo(target_type, target_id, memo, auto_commit=False,
                            allow_hidden_coder=allow_hidden_coder),
         },
+        check=_write_methods_checks(lambda wdb: wdb.check_set_memo(
+            target_type, target_id, memo, allow_hidden_coder)),
         backup_fail_detail="the memo was not changed",
     )
     return _ai_json(result, indent=2)
@@ -15799,6 +15822,8 @@ def add_journal_entry(name: str, entry: str,
             "journal_entry": wdb.add_journal_entry(
                 name, entry, owner, auto_commit=False),
         },
+        check=_write_methods_checks(
+            lambda wdb: wdb.check_add_journal_entry(name, entry, owner)),
         backup_fail_detail="the journal entry was not added",
     )
     return json.dumps(result, indent=2)
@@ -20050,7 +20075,10 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
         return result
 
     result = _perform_write(
-        _op, backup_fail_detail="the annotation was not added")
+        _op, check=_write_methods_checks(
+            lambda wdb: wdb.check_add_annotation(file_id, start_pos, end_pos,
+                                                 memo, owner)),
+        backup_fail_detail="the annotation was not added")
     return _ai_json(result, indent=2)
 
 
@@ -20109,6 +20137,8 @@ def update_annotation(annotation_id: int, memo: str,
                      **wdb.update_annotation(
                          annotation_id, memo, auto_commit=False,
                          allow_hidden_coder=allow_hidden_coder)},
+        check=_write_methods_checks(lambda wdb: wdb.check_update_annotation(
+            annotation_id, memo, allow_hidden_coder)),
         backup_fail_detail="the annotation was not changed",
     )
     _attach_hidden_target_note(result)
@@ -20172,6 +20202,9 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
                          allow_hidden_coder=allow_hidden_coder,
                          confirm_private_note_deletion=(
                              confirm_private_note_deletion))},
+        check=_write_methods_checks(lambda wdb: wdb.check_delete_annotation(
+            annotation_id, allow_hidden_coder,
+            confirm_private_note_deletion)),
         backup_fail_detail="the annotation was not deleted",
     )
     _attach_hidden_target_note(result)
@@ -21063,6 +21096,8 @@ def create_attribute_type(name: str, applies_to: str,
                      "attribute_type": wdb.add_attribute_type(
                          name, owner, applies_to, value_type=value_type,
                          memo=memo, auto_commit=False)},
+        check=_write_methods_checks(lambda wdb: wdb.check_add_attribute_type(
+            name, owner, applies_to, value_type, memo)),
         backup_fail_detail="the attribute was not created",
     )
     if "error" not in result:
@@ -21123,6 +21158,9 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
                      "attribute": wdb.set_attribute_value(
                          target_type, target_id, attribute_name, value,
                          owner, auto_commit=False)},
+        check=_write_methods_checks(
+            lambda wdb: wdb.check_set_attribute_value(
+                target_type, target_id, attribute_name, value, owner)),
         backup_fail_detail="the attribute value was not changed",
     )
     return json.dumps(result, indent=2)

@@ -273,16 +273,17 @@ class TestTheMemoOfAProjectWithNoProjectRecord:
     def test_set_memo_says_it_is_not_a_usable_project(self, opened,
                                                       monkeypatch):
         """The record is gone between the connection and the memo's write
-        (the connection itself refuses a project with none)."""
+        (the connection itself refuses a project with none): since
+        v0.15.1 set_memo's check finds it gone, under SQLite's lock."""
         folder = opened("v17")
         _select(folder)
-        real = QualcoderDatabase._set_project_memo
+        real = QualcoderDatabase.check_set_memo
 
-        def record_gone(self, memo, auto_commit):
+        def record_gone(self, *args, **kwargs):
             self.conn.execute("DELETE FROM project")
-            return real(self, memo, auto_commit)
+            return real(self, *args, **kwargs)
 
-        monkeypatch.setattr(QualcoderDatabase, "_set_project_memo",
+        monkeypatch.setattr(QualcoderDatabase, "check_set_memo",
                             record_gone)
         out = json.loads(server.set_memo("project", None, "x",
                                          create_backup=False))

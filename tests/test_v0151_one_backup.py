@@ -460,11 +460,12 @@ async def reasoning_a_number(client, ctx):
 TOO_LONG_NOTE = "x" * (database.MAX_TEXT_CONTENT_LENGTH + 1)
 
 # (what is refused, the tool, the call refused, given the state
-# refusal_project leaves and what the preparation adds). Those with no
-# reason are refused before any backup, and guard it (the first nine
-# from the start; the cycle and the reasoning since the re-checks and the
-# two apply tools of piece 3); the others are refused after the backup
-# today.
+# refusal_project leaves and what the preparation adds). Each is
+# refused before any backup, and guards it: the first nine from the
+# start; the next twelve under SQLite's lock, before the backup's
+# database is copied (piece 3, part 1a); the cycle and the reasoning
+# since the re-checks and the two apply tools of piece 3. A row with a
+# reason would be one still refused after the backup.
 REFUSALS = [
     ("a code under a category that does not exist", "create_code",
      given({"name": "New", "category": "Nowhere"}), None),
@@ -485,45 +486,45 @@ REFUSALS = [
      "pseudonymise_source", names_list_conflict_after_preview, None),
     ("a note on code 999", "set_memo",
      given({"target_type": "code", "target_id": 999, "memo": "A note"}),
-     "set_memo finds the code missing after its backup"),
+     None),
     ("a journal entry name in use", "add_journal_entry",
      given({"name": "Week one", "entry": "Again."}),
-     "add_journal_entry finds the name in use after its backup"),
+     None),
     ("a journal entry name holding a slash", "add_journal_entry",
      given({"name": "Week/two", "entry": "Second."}),
-     "add_journal_entry checks the name after its backup"),
+     None),
     ("a note past the file's end", "add_annotation",
      given({"file_id": 1, "start_pos": 0, "end_pos": len(TEXT_1) + 10,
             "memo": "Too far"}),
-     "add_annotation checks the span after its backup"),
+     None),
     ("a note on file 999", "add_annotation",
      given({"file_id": 999, "start_pos": 0, "end_pos": 5,
             "memo": "Nowhere"}),
-     "add_annotation finds the file missing after its backup"),
+     None),
     ("a note past the length limit", "update_annotation",
      given({"annotation_id": 1, "memo": TOO_LONG_NOTE}),
-     "update_annotation checks the length after its backup"),
+     None),
     ("an attribute name in use", "create_attribute_type",
      given({"name": "Age", "applies_to": "case", "value_type": "numeric"}),
-     "create_attribute_type finds the name in use after its backup"),
+     None),
     ("an attribute named Ref_Title", "create_attribute_type",
      given({"name": "Ref_Title", "applies_to": "file"}),
-     "create_attribute_type checks reserved names after its backup"),
+     None),
     ("text in a numeric attribute", "set_attribute",
      given({"target_type": "case", "target_id": 1, "attribute_name": "Age",
             "value": "abc"}),
-     "set_attribute checks the value after its backup"),
+     None),
     ("an attribute on case 999", "set_attribute",
      given({"target_type": "case", "target_id": 999,
             "attribute_name": "Age", "value": "30"}),
-     "set_attribute finds the case missing after its backup"),
+     None),
     ("an attribute that does not exist", "set_attribute",
      given({"target_type": "case", "target_id": 1,
             "attribute_name": "Height", "value": "3"}),
-     "set_attribute finds the attribute missing after its backup"),
+     None),
     ("a link that exists", "link_file_to_case",
      given({"file_id": 1, "case_name": "P1"}),
-     "link_file_to_case finds the link after its backup"),
+     None),
     ("a category moved under its own child", "move_category",
      given({"category_id": 1, "parent_category": "Other"}), None),
     ("a suggestion whose reasoning is a number", "apply_codings",

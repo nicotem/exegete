@@ -1071,13 +1071,11 @@ class TestNoOpMovesAndRenames:
             assert out["error"].endswith(
                 f"must be at most {bound}, got {too_big}"), (name, out)
             # Seven of the eight validate the id before the write gate, so
-            # the refusal costs no backup. set_memo is the exception and it
-            # is pre-existing, not this batch's: it validates target_type
-            # on the read-only connection but leaves target_id to
-            # db.set_memo, which runs inside _perform_write, after the
-            # backup. Pinned as it is so a change either way is deliberate.
-            expected = 1 if name == "set_memo" else 0
-            assert len(_backups(qualcoder_db_path)) == expected, name
+            # the refusal costs no backup. set_memo validates target_type
+            # on the read-only connection and leaves target_id to its
+            # check, which runs under SQLite's lock before the backup's
+            # database is copied (v0.15.1), so it costs none either.
+            assert len(_backups(qualcoder_db_path)) == 0, name
         # The bound is SQLite's: the largest id it can hold is still a
         # normal "does not exist" answer, not a refusal.
         assert json.loads(server.recolor_code(bound, "#FF0000"))["error"] == \

@@ -974,20 +974,23 @@ class TestVisibilityGuardFailsClosed:
         # the write runs. The db layer queries the view again, with the
         # override, and refuses (the set_memo cell that was open)
         real_perform_write = server._perform_write
+        broken = []
 
         def break_then_write(op, **kwargs):
             _break_views(visibility_db, "missing_table")
+            broken.append(True)
             return real_perform_write(op, **kwargs)
 
         monkeypatch.setattr(server, "_perform_write", break_then_write)
         raw = server.set_memo("coding", 3, "probe", create_backup=False,
                               allow_hidden_coder=True)
+        assert broken, "the view never broke; the test proves nothing"
         out = self._assert_failed_closed(raw)
         assert "nothing was changed" in out["error"]
-        # The view breaks after the checks, so the refusal comes inside
-        # the change, after the backup Exegete takes before every change
-        # whatever create_backup says (v0.15.1)
-        self._rows_intact(visibility_db, backups=1)
+        # The view breaks after the read-only checks; set_memo's checks
+        # run again under SQLite's lock, before the backup's database is
+        # copied, so the refusal leaves no backup (v0.15.1)
+        self._rows_intact(visibility_db, backups=0)
 
     def test_locked_database_surfaces_as_locked_not_hidden(
             self, visibility_db, monkeypatch):

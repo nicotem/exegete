@@ -15,6 +15,7 @@ offers to skip a backup.
 
 import json
 import re
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -32,6 +33,8 @@ from test_v0151_one_backup import (QUOTE, TEXT_1, Holder, Measured, call,
 REPO = Path(__file__).resolve().parent.parent
 KEY = "create_backup_ignored"
 ABSENT = object()
+RECOLOUR = "#EB7333"
+OTHER_COLOUR = next(c for c in server.QUALCODER_COLORS if c != RECOLOUR)
 
 # The values a saved instruction may give: a JSON true, false or null,
 # and false as text, which the host's argument model reads as false
@@ -69,7 +72,10 @@ async def each_change_with(client, root, value):
                                       "content": TEXT_1})
     await change("create_category", {"name": "Feelings"})
     await change("create_category", {"name": "Other"})
-    await change("create_code", {"name": "Trust", "category": "Feelings"})
+    # A colour of its own, so the recolour below always changes it (a
+    # code made without one takes a random palette colour)
+    await change("create_code", {"name": "Trust", "category": "Feelings",
+                                 "color": OTHER_COLOUR})
     await change("create_code", {"name": "Doubt"})
     await change("create_case", {"name": "P1"})
     await change("link_file_to_case", {"file_id": 1, "case_name": "P1"})
@@ -90,7 +96,7 @@ async def each_change_with(client, root, value):
     await change("set_memo", {"target_type": "code", "target_id": 1,
                               "memo": "Reliance on others"})
     await change("rename_code", {"code_id": 1, "new_name": "Trusting"})
-    await change("recolor_code", {"code_id": 1, "color": "#EB7333"})
+    await change("recolor_code", {"code_id": 1, "color": RECOLOUR})
     await change("move_code_to_category", {"code_id": 2,
                                            "category": "Feelings"})
     await change("rename_category", {"category_id": 2, "new_name": "Misc"})
@@ -164,6 +170,109 @@ def test_a_refusal_the_tool_answers_carries_it_too(tmp_path):
             server.IGNORED_CREATE_BACKUP, answer
     for answer in answers[ABSENT]:
         assert "error" in answer and said(answer) is None, answer
+
+
+
+async def refusals_raised_inside(client, root, monkeypatch):
+    """Refusals raised inside the tool and answered by the guard around
+    it: no project selected, a colour the validator refuses, the
+    database busy (another connection holding SQLite's write lock), an
+    unexpected error; each with create_backup=false and without it."""
+    holder = Holder()
+    measured = Measured(client, holder)
+    answers = {False: [], ABSENT: []}
+    monkeypatch.setattr(server, "db", None)
+    monkeypatch.setattr(server, "current_project_path", None)
+    for given in (False, ABSENT):
+        extra = {} if given is ABSENT else {"create_backup": given}
+        answers[given].append(("no project", await call(
+            measured, "create_code", {"name": "Early", **extra})))
+    expected = {"no project": server._no_project_message()}
+    with pytest.raises(ValueError) as refused:
+        database.validate_color("nothex")
+    expected["bad colour"] = str(refused.value)
+    expected["busy"] = database.DB_LOCKED_MESSAGE
+    expected["unexpected"] = server.UNEXPECTED_ERROR.format(kind="KeyError")
+    holder.folder = await new_project(client, root)
+    await call(client, "create_code", {"name": "Trust"})
+    for given in (False, ABSENT):
+        extra = {} if given is ABSENT else {"create_backup": given}
+        answers[given].append(("bad colour", await call(
+            measured, "recolor_code",
+            {"code_id": 1, "color": "nothex", **extra})))
+        with monkeypatch.context() as patch:
+            impatient = database.QualcoderDatabase.begin_immediate
+
+            def at_once(self):
+                self.conn.execute("PRAGMA busy_timeout = 50")
+                return impatient(self)
+            patch.setattr(database.QualcoderDatabase, "begin_immediate",
+                          at_once)
+            other = sqlite3.connect(str(holder.folder / "data.qda"))
+            other.execute("BEGIN IMMEDIATE")
+            try:
+                answers[given].append(("busy", await call(
+                    measured, "create_code", {"name": "Locked", **extra})))
+            finally:
+                other.rollback()
+                other.close()
+        with monkeypatch.context() as patch:
+            def unexpected(*args, **kwargs):
+                raise KeyError("not a refusal Exegete words")
+            patch.setattr(server, "_color_disclosure", unexpected)
+            answers[given].append(("unexpected", await call(
+                measured, "recolor_code",
+                {"code_id": 1, "color": RECOLOUR, **extra})))
+    return answers, expected, holder.counted
+
+
+def test_a_refusal_raised_inside_the_tool_carries_it_too(tmp_path,
+                                                         monkeypatch):
+    """The refusals the guard around the tool makes carry the key as the
+    tool's own do: no backup, nothing changed, the key exactly when
+    given."""
+    server._apply_toolset("full")
+    answers, expected, counted = host_session(
+        lambda client: refusals_raised_inside(client, tmp_path, monkeypatch))
+    assert len(counted) == 6
+    for record in counted:
+        assert record["refused"] and not record["changed"], record
+        assert not record["new_backups"], record
+    wrong = []
+    for given in (False, ABSENT):
+        kinds = dict(answers[given])
+        assert list(kinds) == list(expected)
+        for kind, answer in kinds.items():
+            assert answer["error"] == expected[kind], (kind, answer)
+            if said(answer) != (server.IGNORED_CREATE_BACKUP
+                                if given is False else None):
+                wrong.append((kind, "given" if given is False else "absent"))
+    assert wrong == []
+
+
+
+async def unreadable(client, root):
+    holder = Holder()
+    measured = Measured(client, holder)
+    holder.folder = await new_project(client, root)
+    result = await measured.call_tool("create_code", {
+        "name": "Unread", "create_backup": "maybe"})
+    return result, holder.counted
+
+
+def test_a_value_that_is_not_true_or_false_is_refused_before_exegete(
+        tmp_path):
+    """A value the host's argument model cannot read as true or false is
+    refused by the MCP library before the tool runs, as in 0.15.0: an
+    error result, no backup, nothing changed, and no sentence (the
+    CHANGELOG's "Upgrading from 0.15.0" says so)."""
+    server._apply_toolset("full")
+    result, counted = host_session(lambda client: unreadable(client,
+                                                             tmp_path))
+    assert result.isError
+    assert server.IGNORED_CREATE_BACKUP not in text_of(result)
+    assert len(counted) == 1 and counted[0]["refused"]
+    assert not counted[0]["changed"] and not counted[0]["new_backups"]
 
 
 async def imports(client, root):

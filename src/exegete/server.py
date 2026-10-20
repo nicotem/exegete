@@ -774,7 +774,8 @@ def _deprecated(sentence: Any, before: Optional[str],
     70): the
     sentence in the tool's description (before the line holding
     `before`), and in every answer the tool gives, or, for an option,
-    only when `when(arguments)` holds. Sits inside _tool_guard.
+    only when `when(arguments)` holds. Sits inside _tool_guard, but for
+    `_ignores_create_backup`, which sits above it.
 
     The answer carries it under `key`, "deprecated" unless another is
     given: create_backup's sentence has a key of its own,
@@ -811,8 +812,12 @@ def _deprecated(sentence: Any, before: Optional[str],
 
 # The 22 tools that take create_backup: a call that gives it, whatever its
 # value, is answered with IGNORED_CREATE_BACKUP under create_backup_ignored,
-# refusals the tool answers itself included; a call without it carries
-# nothing. Each tool's Args line says so, in place of its description.
+# every refusal included; a call without it carries nothing. Each tool's
+# Args line says so, in place of its description. It sits above
+# _tool_guard (fix round 1), so the refusals the guard makes of an error
+# raised inside the tool (a validator's, a busy database, no project
+# selected, an unexpected error) carry it too; the wrapper itself raises
+# nothing (_with_deprecation and the binding catch their own errors).
 _ignores_create_backup = _deprecated(
     IGNORED_CREATE_BACKUP, before=None, key="create_backup_ignored",
     in_description=False, when=lambda a: a.get("create_backup") is not None)
@@ -11149,8 +11154,8 @@ def _codings_failed_validation(failures, total_approved: int
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_deprecated(DEPRECATED_OWNER, before="Args:",
              when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Safety guarantees:")
@@ -11516,8 +11521,8 @@ def apply_codings(
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_deprecated(DEPRECATED_OWNER, before="Args:",
              when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
@@ -12511,8 +12516,8 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def link_file_to_case(
     file_id: int,
     case_id: Optional[int] = None,
@@ -12614,8 +12619,8 @@ def link_file_to_case(
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def delete_coding(coding_id: int, create_backup: Optional[bool] = None,
                   allow_hidden_coder: bool = False,
                   confirm_private_note_deletion: bool = False) -> str:
@@ -15593,8 +15598,8 @@ def _check_approved_proposals(db_, approved):
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_proposed_codes(coding_session_id: str,
                           create_backup: Optional[bool] = None) -> str:
@@ -15765,8 +15770,8 @@ def create_proposed_codes(coding_session_id: str,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def set_memo(target_type: str, target_id: Optional[int] = None,
              memo: str = Field(...),
@@ -15867,8 +15872,8 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_journal_entry(name: str, entry: str,
                       create_backup: Optional[bool] = None) -> str:
@@ -15921,8 +15926,8 @@ def add_journal_entry(name: str, entry: str,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Colours are stored")
 def create_code(name: str, category: Optional[str] = None,
                 color: Optional[str] = None, memo: Optional[str] = None,
@@ -16074,8 +16079,8 @@ def create_code(name: str, category: Optional[str] = None,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def rename_code(code_id: int, new_name: str,
                 create_backup: Optional[bool] = None) -> str:
     """Rename a code. THIS WRITES TO THE DATABASE. Names are unique.
@@ -16140,8 +16145,8 @@ def rename_code(code_id: int, new_name: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def recolor_code(code_id: int, color: str,
                  create_backup: Optional[bool] = None) -> str:
     """Set a code's colour (#RRGGBB). THIS WRITES TO THE DATABASE.
@@ -16212,8 +16217,8 @@ def recolor_code(code_id: int, color: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def move_code_to_category(code_id: int,
                           category: Optional[str] = None,
                           create_backup: Optional[bool] = None) -> str:
@@ -16330,8 +16335,8 @@ def move_code_to_category(code_id: int,
 
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_category(name: str, parent_category: Optional[str] = None,
                     memo: Optional[str] = None,
@@ -16435,8 +16440,8 @@ def create_category(name: str, parent_category: Optional[str] = None,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def rename_category(category_id: int, new_name: str,
                     create_backup: Optional[bool] = None) -> str:
     """Rename a category. THIS WRITES TO THE DATABASE. Names are unique.
@@ -16498,8 +16503,8 @@ def rename_category(category_id: int, new_name: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def move_category(category_id: int, parent_category: Optional[str] = None,
                   create_backup: Optional[bool] = None) -> str:
     """Reparent a category under another category (or to the top level).
@@ -20148,8 +20153,8 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
                    create_backup: Optional[bool] = None) -> str:
@@ -20221,8 +20226,8 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def update_annotation(annotation_id: int, memo: str,
                       create_backup: Optional[bool] = None,
@@ -20286,8 +20291,8 @@ def update_annotation(annotation_id: int, memo: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def delete_annotation(annotation_id: int,
                       create_backup: Optional[bool] = None,
                       allow_hidden_coder: bool = False,
@@ -20356,8 +20361,8 @@ def delete_annotation(annotation_id: int,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_case(name: str, memo: Optional[str] = None,
                 create_backup: Optional[bool] = None) -> str:
@@ -20559,8 +20564,8 @@ _RENAME_QC40_PARAGRAPH = (
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 def rename_case(case_id: int, new_name: str,
                 create_backup: Optional[bool] = None) -> str:
     """Rename a case. THIS WRITES TO THE DATABASE. Only the name changes.
@@ -21063,8 +21068,8 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_with_guidance(DEPRECATED_RENAME_BACK, before="The result carries")
 def rename_file(file_id: int, new_name: str,
                 create_backup: Optional[bool] = None) -> str:
@@ -21186,8 +21191,8 @@ def rename_file(file_id: int, new_name: str,
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
              when=lambda a: _is(a.get("applies_to"), "journal"))
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
@@ -21258,8 +21263,8 @@ def create_attribute_type(name: str, applies_to: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
 @_ignores_create_backup
+@_tool_guard
 @_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
              when=lambda a: _is(a.get("target_type"), "journal"))
 def set_attribute(target_type: str, target_id: int, attribute_name: str,

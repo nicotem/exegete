@@ -1853,8 +1853,10 @@ class TestPerformWriteUnexpectedException:
         # Since v0.14 the tool guard answers an error of a kind it does
         # not name by its kind, rather than letting it reach the MCP
         # library with its message; the clean-up is what this pins.
-        out = json.loads(server.set_memo("code", 1, "x",
-                                         create_backup=False))
+        # Called without create_backup, which no longer does anything
+        # (v0.15.1): a call that gives it is answered with a sentence
+        # saying so, refusals included.
+        out = json.loads(server.set_memo("code", 1, "x"))
         assert out == {"error": server.UNEXPECTED_ERROR.format(
             kind="KeyError")}
 

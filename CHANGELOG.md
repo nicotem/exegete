@@ -12,18 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`create_backup` no longer does anything.** Exegete takes one backup
   before every change, whatever the argument says, so a call with
   `create_backup=false` takes one as well. The 22 tools that take it
-  still accept it, with any value, so that saved instructions keep
-  working, until v0.15.2, the method release, removes it with the two
-  tools' earlier names; a call that gives it is told so, under
+  still accept every value they accepted before, so that saved
+  instructions keep working, until v0.15.2, the method release, removes
+  it with the two tools' earlier names. A call that gives it is told so
+  in every answer Exegete gives it, refusals included, under
   `create_backup_ignored` in an answer in JSON, or in a last paragraph
-  of one in text, a refusal included, though not the answer that no
-  project is selected or that an unexpected error stopped the tool. A
-  call without it, or with null, is told nothing. `import_text_file`'s
-  `create_backup=false`, which 0.14.3 deprecated, is accepted in the
-  same way and no longer adds `deprecated` to the answer. A script or a
-  saved instruction that passes `create_backup=false` to save time or
-  disk space now takes a backup at each change: `prune_backups` removes
-  old ones.
+  of one in text. A call whose arguments do not fit the tool (a value
+  that cannot be read as true or false, a required argument missing) is
+  refused before it reaches Exegete, as before, and that refusal does
+  not carry it. A call without it, or with null, is told nothing.
+  `import_text_file`'s `create_backup=false`, which 0.14.3 deprecated,
+  is accepted in the same way and no longer adds `deprecated` to the
+  answer. A script or a saved instruction that passes
+  `create_backup=false` to save time or disk space now takes a backup at
+  each change: `prune_backups` removes old ones.
 
 ### Changed
 
